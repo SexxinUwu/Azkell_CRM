@@ -140,7 +140,7 @@ async function iniciarSesion(event, formObj) {
 
     try {
         // Hacemos la llamada HTTP a nuestro propio servidor Node.js
-        const response = await fetch('http://localhost:3000/api/login', {
+        const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ correo: formObj.correo.value, password: formObj.password.value })
@@ -981,7 +981,7 @@ function procesarEliminacion() {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Borrando...';
 
-        fetch('http://localhost:3000/api/script/eliminarDocumento', {
+        fetch('/api/script/eliminarDocumento', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1311,7 +1311,7 @@ function enviarStatusFlota(event, formObj) {
         }
     };
 
-    fetch('http://localhost:3000/api/script/guardarStatusFlota', {
+    fetch('/api/script/guardarStatusFlota', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formDataObj)
@@ -1533,7 +1533,7 @@ function procesarGuardadoInspeccion() {
     };
 
     // 4. Enviar al Servidor Node.js
-    fetch('http://localhost:3000/api/script/guardarInspeccion', {
+    fetch('/api/script/guardarInspeccion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos)
