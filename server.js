@@ -2,10 +2,19 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); 
+app.use(express.json({ limit: '50mb' }));
+
+// Le decimos que permita leer los archivos estáticos (tu estilos.css y logica.js)
+app.use(express.static(__dirname));
+
+// Le decimos qué mostrar en la puerta principal (tu link de Render)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Index.html')); // Respeta tu mayúscula
+});
 
 // 1. Configurar conexión a MySQL
 const db = mysql.createConnection({
