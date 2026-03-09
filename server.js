@@ -10,9 +10,13 @@ app.use(express.json({ limit: '50mb' }));
 // 1. Configurar conexión a MySQL
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false // Esto simula el "Require" que usamos en Workbench
+    }
 });
 
 db.connect(err => {
