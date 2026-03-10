@@ -259,6 +259,141 @@ app.post('/api/script/:metodo', async (req, res) => {
         return;
     }
 
+    // --- GUARDAR / ACTUALIZAR USUARIOS ---
+    if (metodo === 'guardarUsuario' || metodo === 'actualizarUsuario') {
+        const form = req.body.args[0];
+        const isEdit = metodo === 'actualizarUsuario';
+        const id = isEdit ? form.idUsuarioEdit : `USR-${Date.now()}`;
+        const nombre = isEdit ? form.nombreUsuarioEdit : form.nombreUsuario;
+        const cargo = isEdit ? form.cargoUsuarioEdit : form.cargoUsuario;
+        const correo = isEdit ? form.correoUsuarioEdit : form.correoUsuario;
+        const password = isEdit ? form.passwordUsuarioEdit : form.passwordUsuario;
+        const rol = isEdit ? form.rolUsuarioEdit : form.rolUsuario;
+        const estado = isEdit ? form.estadoUsuarioEdit : form.estadoUsuario;
+
+        const query = `
+            INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            nombre=?, cargo=?, correo=?, password=?, rol=?, estado=?
+        `;
+        const values = [id, nombre, cargo, correo, password, rol, estado];
+        db.query(query, [...values, nombre, cargo, correo, password, rol, estado], (err) => {
+            if (err) return res.json({ data: "Error BD: " + err.message });
+            return res.json({ data: "Éxito" });
+        });
+        return;
+    }
+
+    // --- GUARDAR / ACTUALIZAR PLACAS ---
+    if (metodo === 'guardarPlaca' || metodo === 'actualizarPlaca') {
+        const form = req.body.args[0];
+        const isEdit = metodo === 'actualizarPlaca';
+        const placa = (isEdit ? form.editP_placa : form.p_placa).toUpperCase();
+        const cliente = isEdit ? form.editP_cliente : form.p_cliente;
+        const tipo = isEdit ? form.editP_tipo : form.p_tipo;
+        const modelo = isEdit ? form.editP_modelo : form.p_modelo;
+        const marca = isEdit ? form.editP_marca : form.p_marca;
+        const ruc = isEdit ? form.editP_ruc : form.p_ruc;
+        const conf = isEdit ? form.editP_conf : form.p_conf;
+        const comb = isEdit ? form.editP_comb : form.p_comb;
+        const estado = isEdit ? form.editP_estado : form.p_estado;
+        const operativo = isEdit ? form.editP_operativo : form.p_operativo;
+        const uts = isEdit ? form.editP_uts : form.p_uts;
+        const motora = isEdit ? form.editP_motora : form.p_motora;
+        const llantas = isEdit ? form.editP_llantas : form.p_llantas;
+        const enuso = isEdit ? form.editP_enuso : form.p_enuso;
+
+        const query = `
+            INSERT INTO placas (placa, cliente, tipo, modelo_uts, marca, ruc_dni, configuracion, combustible, estado, operativo, uts, motora, llantas, en_uso)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            cliente=?, tipo=?, modelo_uts=?, marca=?, ruc_dni=?, configuracion=?, combustible=?, estado=?, operativo=?, uts=?, motora=?, llantas=?, en_uso=?
+        `;
+        const values = [placa, cliente, tipo, modelo, marca, ruc, conf, comb, estado, operativo, uts, motora, llantas, enuso];
+        db.query(query, [...values, cliente, tipo, modelo, marca, ruc, conf, comb, estado, operativo, uts, motora, llantas, enuso], (err) => {
+            if (err) return res.json({ data: "Error BD: " + err.message });
+            return res.json({ data: "Éxito" });
+        });
+        return;
+    }
+
+    // --- GUARDAR / ACTUALIZAR FLEETRUN ---
+    if (metodo === 'guardarFleetrun' || metodo === 'actualizarFleetrun') {
+        const form = req.body.args[0];
+        const isEdit = metodo === 'actualizarFleetrun';
+        const id = isEdit ? form.editF_id : (form.f_id || `FL-${Date.now()}`);
+        const fecha = isEdit ? form.editF_fecha : form.f_fecha;
+        const mes = isEdit ? form.editF_mes : form.f_mes;
+        const anio = isEdit ? form.editF_anio : form.f_anio;
+        const placa = (isEdit ? form.editF_placa : form.f_placa).toUpperCase();
+        const marca = isEdit ? form.editF_marca : form.f_marca;
+        const dueno = isEdit ? form.editF_dueno : form.f_dueno;
+        const uts = isEdit ? form.editF_uts : form.f_uts;
+        const tipomp = isEdit ? form.editF_tipomp : form.f_tipomp;
+        const kmact = isEdit ? form.editF_kmact : form.f_kmact;
+        const freckm = isEdit ? form.editF_freckm : form.f_freckm;
+        const kmprox = isEdit ? form.editF_kmprox : form.f_kmprox;
+        const kmgps = isEdit ? form.editF_kmgps : form.f_kmgps;
+        const tec = isEdit ? form.editF_tec : form.f_tec;
+        const obs = isEdit ? form.editF_obs : form.f_obs;
+
+        const query = `
+            INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
+        `;
+        const values = [id, fecha, mes, anio, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, obs, tec, kmgps];
+        db.query(query, [...values, fecha, mes, anio, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, obs, tec, kmgps], (err) => {
+            if (err) return res.json({ data: "Error BD: " + err.message });
+            return res.json({ data: "Éxito" });
+        });
+        return;
+    }
+
+    // --- GUARDAR / ACTUALIZAR SEGURIDAD ---
+    if (metodo === 'guardarReporte' || metodo === 'actualizarReporte') {
+        const form = req.body.args[0];
+        const isEdit = metodo === 'actualizarReporte';
+        const id = isEdit ? form.idReporte : `SEG-${Date.now()}`;
+        const inspector = isEdit ? form.inspectorEdit : form.inspector;
+        const tipo = isEdit ? form.tipoIncidenteEdit : form.tipoIncidente;
+        const estado = isEdit ? form.estadoEdit : "Pendiente";
+        const fecha = new Date().toLocaleDateString('es-PE');
+
+        if (isEdit) {
+            db.query('UPDATE seguridad SET inspector=?, tipo=?, estado=? WHERE idReporte=?', [inspector, tipo, estado, id], (err) => {
+                if (err) return res.json({ data: "Error BD: " + err.message });
+                return res.json({ data: "Éxito" });
+            });
+        } else {
+            const detalle = form.detalle || "";
+            db.query('INSERT INTO seguridad (idReporte, fecha, inspector, tipo, detalle, estado) VALUES (?, ?, ?, ?, ?, ?)', [id, fecha, inspector, tipo, detalle, estado], (err) => {
+                if (err) return res.json({ data: "Error BD: " + err.message });
+                return res.json({ data: "Éxito" });
+            });
+        }
+        return;
+    }
+
+    // --- LISTAS DE APOYO (Para Mantenimientos) ---
+    if (metodo === 'obtenerTiposMantenimiento') {
+        db.query('SELECT * FROM tipos_mantenimiento', (err, results) => {
+            if (err) return res.json({ data: [] });
+            return res.json({ data: results });
+        });
+        return;
+    }
+    if (metodo === 'obtenerTPMP') {
+        db.query('SELECT * FROM tp_mp', (err, results) => {
+            if (err) return res.json({ data: [] });
+            const data = results.map(r => r.tipo_mant);
+            return res.json({ data });
+        });
+        return;
+    }
+
     // --- 📡 API DE WIALON GPS (Nativo Node.js) ---
     if (metodo === 'obtenerDatosWialon') {
         const token = "b0a4947147e59c66f42703bca5df48a1B33E01E58063AD32AF788F04F09F24F4F88692AC";
