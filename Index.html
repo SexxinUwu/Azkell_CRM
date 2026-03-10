@@ -230,11 +230,10 @@
                             <select class="form-select form-select-sm fw-bold" id="filtroStatusCorte" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 100px; color: var(--text);"><option value="">Todos los Cortes</option><option value="1">Corte 1</option><option value="2">Corte 2</option><option value="3">Corte 3</option></select>
                             <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatusFlota" onkeyup="filtrarStatusFlotaAvanzado()" placeholder="Buscar Placa, Conductor..."></div>
                             <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
-                            <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Zona</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFZona"></ul></div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota">Sin cargar</span></span>
-                            <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="recargarModulo('statusFlota')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                            <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="resetearYRecargarStatusFlota()"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
                             <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
@@ -348,18 +347,8 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Zona de Flota</label>
-                <select class="form-select" name="sf_zona" id="sf_zona" required>
-                    <option value="">Selecciona Zona...</option>
-                    <option value="Camion-Carreta">Camión - Carreta</option>
-                    <option value="Camion">Camión</option>
-                    <option value="Carretas">Carretas</option>
-                    <option value="Tracto-Remolque">Tracto Remolque</option>
-                    <option value="Semirremolque">Semirremolque</option>
-                </select>
-            </div>
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Conductor</label><input type="text" class="form-control text-uppercase" name="sf_conductor" id="sf_conductor" placeholder="Opcional"></div>
+            <input type="hidden" name="sf_zona" id="sf_zona" value="">
+            <div class="col-md-12 mb-3"><label class="form-label fw-bold">Conductor</label><input type="text" class="form-control text-uppercase" name="sf_conductor" id="sf_conductor" placeholder="Opcional"></div>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="sf_estado" id="sf_estado" required><option value="Vacío">Vacío</option><option value="Cargado">Cargado</option><option value="Con Devolución">Con Devolución</option><option value="Mantenimiento">Mantenimiento</option></select></div>
