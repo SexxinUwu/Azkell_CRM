@@ -12,9 +12,18 @@ class GoogleRunner {
     withFailureHandler(cb) { this.failureCb = cb; return this.proxyRef; }
     async _call(method, ...args) {
         try {
+            let parsedArgs = args.map(arg => {
+                if (arg instanceof HTMLFormElement) {
+                    let obj = {};
+                    new FormData(arg).forEach((value, key) => obj[key] = value);
+                    return obj;
+                }
+                return arg;
+            });
+
             let res = await fetch('/api/script/' + method, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ args: args })
+                body: JSON.stringify({ args: parsedArgs })
             });
             let json = await res.json();
             if (this.successCb) this.successCb(json.data);
