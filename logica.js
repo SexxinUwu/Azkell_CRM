@@ -59,7 +59,7 @@ let usuarioLogueado   = ''; let rolLogueado       = ''; const TIEMPO_INACTIVIDAD
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
-const CACHE = { placas: null, fleetrun: null, usuarios: null, seguridad: null, auditoria: null, statusMant: null, statusFlota: null, wialon: null };
+const CACHE = { placas: null, fleetrun: null, usuarios: null, seguridad: null, auditoria: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
 const CACHE_TIME = {};
 
 let dataGlobalPlacas  = []; let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
@@ -1767,16 +1767,23 @@ function mostrarConductores(datos) {
     let html = '';
     let listOpciones = new Set();
 
+    const limpiarN = (txt) => {
+        if (!txt) return "";
+        return txt.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ');
+    };
+
     if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="6" class="text-center py-4">No hay conductores registrados.</td></tr>';
+        html = '<tr><td colspan="7" class="text-center py-4">No hay conductores registrados.</td></tr>';
     } else {
         let mapEstados = new Map();
+
         datos.forEach(fila => {
             let estado = fila.estado || "Desconocido";
             if (!mapEstados.has(estado)) mapEstados.set(estado, []);
             mapEstados.get(estado).push(fila);
-            if (estado.toLowerCase() === 'activo' && fila.nombre) {
-                listOpciones.add(toTitleCase(fila.nombre.toString()));
+
+            if(estado.toLowerCase() === 'activo' && fila.nombre) {
+                listOpciones.add(toTitleCase(limpiarN(fila.nombre.toString())));
             }
         });
 
@@ -1788,7 +1795,7 @@ function mostrarConductores(datos) {
             let colorEstado = estado === 'Activo' ? 'text-success' : (estado === 'Cesado' ? 'text-secondary' : 'text-danger');
 
             html += `<tr class="group-header" style="cursor:pointer;" onclick="toggleGroupRowCond('${claseE}')">
-                <td colspan="6" class="text-start" style="padding-left: 20px;">
+                <td colspan="7" class="text-start" style="padding-left: 20px;">
                     <i class="bi ${iconClass} ms-1 me-2 ${colorEstado}"></i>
                     <i class="bi bi-people-fill ${colorEstado} me-2"></i><span class="text-uppercase fw-bold">${estado}</span>
                     <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
@@ -1797,7 +1804,8 @@ function mostrarConductores(datos) {
 
             if (isExpandido) {
                 registros.forEach(f => {
-                    let nombre = toTitleCase(f.nombre ? f.nombre.toString() : "-");
+                    let nombreLimpio = limpiarN(f.nombre || "-");
+                    let nombre = toTitleCase(nombreLimpio);
                     let empresa = f.empresa ? f.empresa.toString().replace(/TERCERO/gi, '3ro') : "-";
                     let telf = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : "";
                     let dni = f.dni ? f.dni.toString() : "-";
@@ -1808,8 +1816,8 @@ function mostrarConductores(datos) {
                         let wspLink = `https://wa.me/51${telf}`;
                         linkTelf = `
                             <div class="d-flex gap-1">
-                                <a href="tel:${telf}" class="btn btn-sm btn-outline-primary p-1 px-2 shadow-sm" title="Llamar"><i class="bi bi-telephone-fill"></i></a>
-                                <a href="${wspLink}" target="_blank" class="btn btn-sm btn-success p-1 px-2 shadow-sm" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                                <a href="tel:${telf}" class="btn btn-sm btn-outline-primary p-1 px-2 shadow-sm" title="Llamar" onclick="event.stopPropagation();"><i class="bi bi-telephone-fill"></i></a>
+                                <a href="${wspLink}" target="_blank" class="btn btn-sm btn-success p-1 px-2 shadow-sm" title="WhatsApp" onclick="event.stopPropagation();"><i class="bi bi-whatsapp"></i></a>
                                 <span class="align-self-center ms-1 fw-bold" style="font-size:0.85rem;">${telf}</span>
                             </div>
                         `;
@@ -1821,12 +1829,13 @@ function mostrarConductores(datos) {
                     let jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
 
                     html += `<tr class="clickable-row" onclick='abrirModalConductor(${jsonSeguro})'>
-                        <td class="fw-bold" style="color: #1e293b;"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
-                        <td class="text-uppercase text-secondary">${empresa}</td>
-                        <td>${dni}</td>
-                        <td class="text-uppercase">${licencia}</td>
-                        <td>${linkTelf}</td>
-                        <td>${bEst}</td>
+                        <td class="fw-bold" style="color: #1e293b;" data-value="${nombre}"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
+                        <td class="d-none" data-value="${empresa}">${empresa}</td>
+                        <td data-value="${dni}">${dni}</td>
+                        <td class="d-none" data-value="${licencia}">${licencia}</td>
+                        <td data-value="${telf}">${linkTelf}</td>
+                        <td class="d-none" data-value="${estado}">${estado}</td>
+                        <td></td>
                     </tr>`;
                 });
             }
@@ -1842,10 +1851,16 @@ function abrirModalConductor(f = null) {
     document.getElementById('c_foto_base64').value = "";
     document.getElementById('c_foto_preview').src = "https://via.placeholder.com/120";
 
+    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
+    const camposSelect = ['c_estado'];
+
     if (f) {
         document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Conductor';
+
+        const limpiar = t => t ? t.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
+
         document.getElementById('c_id').value = f.idConductor;
-        document.getElementById('c_nombre').value = toTitleCase(f.nombre);
+        document.getElementById('c_nombre').value = toTitleCase(limpiar(f.nombre));
         document.getElementById('c_empresa').value = f.empresa || "";
         document.getElementById('c_telefono').value = f.telefono || "";
         document.getElementById('c_dni').value = f.dni || "";
@@ -1855,11 +1870,39 @@ function abrirModalConductor(f = null) {
             document.getElementById('c_foto_preview').src = f.foto;
             document.getElementById('c_foto_base64').value = f.foto;
         }
+
+        camposText.forEach(id => document.getElementById(id).readOnly = true);
+        camposSelect.forEach(id => document.getElementById(id).disabled = true);
+        document.getElementById('c_foto_preview').style.pointerEvents = 'none';
+
+        document.getElementById('btnEditarConductor').style.display = 'inline-block';
+        document.getElementById('btnGuardarConductor').style.display = 'none';
+
     } else {
         document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Conductor';
         document.getElementById('c_id').value = "";
+
+        camposText.forEach(id => document.getElementById(id).readOnly = false);
+        camposSelect.forEach(id => document.getElementById(id).disabled = false);
+        document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
+
+        document.getElementById('btnEditarConductor').style.display = 'none';
+        document.getElementById('btnGuardarConductor').style.display = 'inline-block';
     }
+
     new bootstrap.Modal(document.getElementById('modalConductor')).show();
+}
+
+function activarEdicionConductor() {
+    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
+    const camposSelect = ['c_estado'];
+
+    camposText.forEach(id => document.getElementById(id).readOnly = false);
+    camposSelect.forEach(id => document.getElementById(id).disabled = false);
+    document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
+
+    document.getElementById('btnEditarConductor').style.display = 'none';
+    document.getElementById('btnGuardarConductor').style.display = 'inline-block';
 }
 
 function previsualizarFotoConductor(input) {
