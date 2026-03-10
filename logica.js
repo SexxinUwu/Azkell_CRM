@@ -12,7 +12,7 @@ class GoogleRunner {
     withFailureHandler(cb) { this.failureCb = cb; return this.proxyRef; }
     async _call(method, ...args) {
         try {
-            let res = await fetch('http://127.0.0.1:3000/api/script/' + method, {
+            let res = await fetch('/api/script/' + method, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ args: args })
             });
