@@ -36,16 +36,26 @@ db.connect(err => {
 // 2. API de Login
 app.post('/api/login', (req, res) => {
     const { correo, password } = req.body;
-    const sql = 'SELECT * FROM Usuarios WHERE correo = ?';
+
+    // 'usuarios' todo en minúscula
+    const sql = 'SELECT * FROM usuarios WHERE correo = ?';
+
     db.query(sql, [correo], (err, results) => {
-        if (err) return res.status(500).json({ exito: false, mensaje: "Error BD" });
+        if (err) {
+            console.error("⚠️ ERROR REAL DE AIVEN:", err);
+            return res.status(500).json({ exito: false, mensaje: "Error BD" });
+        }
         if (results.length > 0) {
             const usuario = results[0];
             if (usuario.password === password) {
                 if (usuario.estado === 'Inactivo') return res.json({ exito: false, mensaje: "Cuenta inactiva." });
                 return res.json({ exito: true, nombre: usuario.nombre, rol: usuario.rol });
-            } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
-        } else { return res.json({ exito: false, mensaje: "El correo no está registrado." }); }
+            } else {
+                return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
+            }
+        } else {
+            return res.json({ exito: false, mensaje: "El correo no está registrado." });
+        }
     });
 });
 
