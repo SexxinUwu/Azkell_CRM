@@ -308,19 +308,20 @@ function recargarModulo(nombre) {
     seguridad: () => cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'),
     auditoria: () => cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'),
     statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'),
+    conductores: () => cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'),
     statusFlota: () => cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota')
   };
   if (acciones[nombre]) acciones[nombre]();
 }
 
 
-const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'seguridad': ['Administrador', 'Inspector', 'Flota'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'] };
+const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'seguridad': ['Administrador', 'Inspector', 'Flota'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
 
 function cambiarModulo(modulo, idBoton) {
   const permitidos = PERMISOS_MODULO[modulo] || [];
   if (rolLogueado && !permitidos.includes(rolLogueado)) return;
 
-  ['moduloSeguridad','moduloUsuarios','moduloAuditoria','moduloPlacas','moduloFleetrun','moduloStatus', 'moduloUbicacion', 'moduloStatusFlota'].forEach(m => {
+  ['moduloSeguridad','moduloUsuarios','moduloAuditoria','moduloPlacas','moduloFleetrun','moduloStatus', 'moduloUbicacion', 'moduloStatusFlota', 'moduloConductores'].forEach(m => {
     let el = document.getElementById(m); if(el) el.style.display = 'none';
   });
 
@@ -336,6 +337,7 @@ function cambiarModulo(modulo, idBoton) {
   else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
   else if (modulo === 'statusFlota') { let el=document.getElementById('moduloStatusFlota'); if(el) el.style.display = 'flex'; titulo.innerText = 'Status de Flota'; cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota'); }
   else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
+  else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
 
   if (window.innerWidth <= 768) closeSidebar();
 }
@@ -1128,7 +1130,7 @@ function obtenerTipoCompuesto(motora, nomotora) {
 
 function mostrarStatusFlota(datos) {
     if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
-        document.getElementById('cuerpoTablaStatusFlota').innerHTML = '<tr><td colspan="8" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
+        document.getElementById('cuerpoTablaStatusFlota').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
         google.script.run.withSuccessHandler(insp => {
             dataGlobalInspecciones = insp;
             mostrarStatusFlota(datos);
@@ -1146,7 +1148,7 @@ function mostrarStatusFlota(datos) {
     dataGlobalStatusFlota = datos;
     let html = '';
     if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="8" class="text-center py-4 text-muted">No hay registros de Status Flota.</td></tr>';
+        html = '<tr><td colspan="9" class="text-center py-4 text-muted">No hay registros de Status Flota.</td></tr>';
     } else {
         let mapTipos = new Map();
         let setClis = new Set();
@@ -1167,7 +1169,7 @@ function mostrarStatusFlota(datos) {
             let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
 
             html += `<tr class="group-header data-row-sf" style="cursor:pointer;" onclick="toggleGroupRowSF('${claseZ}')" data-group-clase="${claseZ}">
-                <td colspan="8" class="text-start" style="padding-left: 20px;">
+                <td colspan="9" class="text-start" style="padding-left: 20px;">
                     <i class="bi ${iconClass} ms-1 me-2 text-warning"></i>
                     <i class="bi bi-truck text-primary me-2"></i><span class="text-uppercase fw-bold">${tipoName}</span>
                     <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
@@ -1178,6 +1180,7 @@ function mostrarStatusFlota(datos) {
                 let id = fila[0]; let fecha = fila[1]; let corte = fila[2];
                 let motora = fila[3]; let nomotora = fila[4];
                 let cliMot = fila[5]; let cliNoMot = fila[6];
+                let zona = fila[7] || '';
                 let conductor = fila[8]; let estado = fila[9]; let obs = fila[10] || 'Sin observaciones';
 
                 let getDias = (placa) => {
@@ -1207,7 +1210,8 @@ function mostrarStatusFlota(datos) {
                     else return `<span class="badge bg-success text-white shadow-sm">Faltan ${dias}d</span>`;
                 };
 
-                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : (estado === 'Mantenimiento' ? '<span class="text-warning fw-bold">MANT</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`);
+                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
+                let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
 
                 let menuAcciones = `
                     <div class="dropstart text-center">
@@ -1226,6 +1230,7 @@ function mostrarStatusFlota(datos) {
                     <td>${getDias(nomotora)}</td>
                     <td class="text-uppercase">${conductor || '-'}</td>
                     <td>${bEst}</td>
+                    <td>${bZona}</td>
                     <td class="text-wrap" style="max-width: 150px;">${obs}</td>
                     <td>${menuAcciones}</td>
                 </tr>`;
@@ -1445,7 +1450,7 @@ function generarPDFStatusFlota() {
             if (row.classList.contains('group-header')) {
                 let txtTipo = row.querySelector('span.text-uppercase');
                 if (txtTipo) {
-                    htmlCuerpo += `<tr><td colspan="5" style="background-color: #cbd5e1; font-weight: bold; padding: 10px 15px; color:#1e293b; text-align:left; font-size: 14px;">${txtTipo.innerText}</td></tr>`;
+                    htmlCuerpo += `<tr><td colspan="6" style="background-color: #cbd5e1; font-weight: bold; padding: 10px 15px; color:#1e293b; text-align:left; font-size: 14px;">${txtTipo.innerText}</td></tr>`;
                 }
             } else if (row.classList.contains('child-row-sf')) {
                 let celdas = row.querySelectorAll('td');
@@ -1454,13 +1459,14 @@ function generarPDFStatusFlota() {
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b;">${celdas[2]?.innerText || ''}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[4]?.innerText || ''}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[5]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${celdas[6]?.innerText || ''}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${celdas[6]?.innerText || ''}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${celdas[7]?.innerText || ''}</td>
                 </tr>`;
             }
         }
     });
 
-    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="5" class="text-center py-4">No hay datos en la pantalla para exportar.</td></tr>';
+    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="6" class="text-center py-4">No hay datos en la pantalla para exportar.</td></tr>';
 
     document.getElementById('pdf-sf-body').innerHTML = htmlCuerpo;
 
@@ -1732,4 +1738,177 @@ window.addEventListener('appinstalled', () => {
     document.getElementById('contenedor-instalar').style.display = 'none';
     console.log('Azkell CRM fue instalado como App nativa');
 });
+
+// ==========================================
+// 🧑‍✈️ MÓDULO DE CONDUCTORES
+// ==========================================
+let dataGlobalConductores = [];
+let expandCondMap = {};
+let expandAllCondState = true;
+
+function toTitleCase(str) {
+    if (!str) return "";
+    return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+}
+
+function toggleGroupRowCond(claseEst) {
+    expandCondMap[claseEst] = !expandCondMap[claseEst];
+    mostrarConductores(dataGlobalConductores);
+}
+
+function toggleAllCondGroups() {
+    expandAllCondState = !expandAllCondState;
+    for (let key in expandCondMap) expandCondMap[key] = expandAllCondState;
+    mostrarConductores(dataGlobalConductores);
+}
+
+function mostrarConductores(datos) {
+    dataGlobalConductores = datos;
+    let html = '';
+    let listOpciones = new Set();
+
+    if (!datos || datos.length === 0) {
+        html = '<tr><td colspan="6" class="text-center py-4">No hay conductores registrados.</td></tr>';
+    } else {
+        let mapEstados = new Map();
+        datos.forEach(fila => {
+            let estado = fila.estado || "Desconocido";
+            if (!mapEstados.has(estado)) mapEstados.set(estado, []);
+            mapEstados.get(estado).push(fila);
+            if (estado.toLowerCase() === 'activo' && fila.nombre) {
+                listOpciones.add(toTitleCase(fila.nombre.toString()));
+            }
+        });
+
+        mapEstados.forEach((registros, estado) => {
+            let claseE = normalizarClase(estado.toString());
+            if (expandCondMap[claseE] === undefined) expandCondMap[claseE] = expandAllCondState;
+            let isExpandido = expandCondMap[claseE];
+            let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+            let colorEstado = estado === 'Activo' ? 'text-success' : (estado === 'Cesado' ? 'text-secondary' : 'text-danger');
+
+            html += `<tr class="group-header" style="cursor:pointer;" onclick="toggleGroupRowCond('${claseE}')">
+                <td colspan="6" class="text-start" style="padding-left: 20px;">
+                    <i class="bi ${iconClass} ms-1 me-2 ${colorEstado}"></i>
+                    <i class="bi bi-people-fill ${colorEstado} me-2"></i><span class="text-uppercase fw-bold">${estado}</span>
+                    <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
+                </td>
+            </tr>`;
+
+            if (isExpandido) {
+                registros.forEach(f => {
+                    let nombre = toTitleCase(f.nombre ? f.nombre.toString() : "-");
+                    let empresa = f.empresa ? f.empresa.toString().replace(/TERCERO/gi, '3ro') : "-";
+                    let telf = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : "";
+                    let dni = f.dni ? f.dni.toString() : "-";
+                    let licencia = f.licencia ? f.licencia.toString() : "-";
+
+                    let linkTelf = "-";
+                    if (telf.length >= 9) {
+                        let wspLink = `https://wa.me/51${telf}`;
+                        linkTelf = `
+                            <div class="d-flex gap-1">
+                                <a href="tel:${telf}" class="btn btn-sm btn-outline-primary p-1 px-2 shadow-sm" title="Llamar"><i class="bi bi-telephone-fill"></i></a>
+                                <a href="${wspLink}" target="_blank" class="btn btn-sm btn-success p-1 px-2 shadow-sm" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                                <span class="align-self-center ms-1 fw-bold" style="font-size:0.85rem;">${telf}</span>
+                            </div>
+                        `;
+                    } else if (telf) {
+                        linkTelf = `<span class="text-muted">${telf}</span>`;
+                    }
+
+                    let bEst = estado === 'Activo' ? '<span class="badge bg-success">Activo</span>' : (estado === 'Cesado' ? '<span class="badge bg-secondary">Cesado</span>' : '<span class="badge bg-danger">Bloqueado</span>');
+                    let jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
+
+                    html += `<tr class="clickable-row" onclick='abrirModalConductor(${jsonSeguro})'>
+                        <td class="fw-bold" style="color: #1e293b;"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
+                        <td class="text-uppercase text-secondary">${empresa}</td>
+                        <td>${dni}</td>
+                        <td class="text-uppercase">${licencia}</td>
+                        <td>${linkTelf}</td>
+                        <td>${bEst}</td>
+                    </tr>`;
+                });
+            }
+        });
+    }
+
+    document.getElementById('cuerpoTablaConductores').innerHTML = html;
+    rellenarDatalist('dl-conductores', listOpciones);
+}
+
+function abrirModalConductor(f = null) {
+    document.getElementById('formConductor').reset();
+    document.getElementById('c_foto_base64').value = "";
+    document.getElementById('c_foto_preview').src = "https://via.placeholder.com/120";
+
+    if (f) {
+        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Conductor';
+        document.getElementById('c_id').value = f.idConductor;
+        document.getElementById('c_nombre').value = toTitleCase(f.nombre);
+        document.getElementById('c_empresa').value = f.empresa || "";
+        document.getElementById('c_telefono').value = f.telefono || "";
+        document.getElementById('c_dni').value = f.dni || "";
+        document.getElementById('c_licencia').value = f.licencia || "";
+        document.getElementById('c_estado').value = f.estado || "Activo";
+        if (f.foto) {
+            document.getElementById('c_foto_preview').src = f.foto;
+            document.getElementById('c_foto_base64').value = f.foto;
+        }
+    } else {
+        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Conductor';
+        document.getElementById('c_id').value = "";
+    }
+    new bootstrap.Modal(document.getElementById('modalConductor')).show();
+}
+
+function previsualizarFotoConductor(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('c_foto_preview').src = e.target.result;
+            document.getElementById('c_foto_base64').value = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function guardarConductor(event, formObj) {
+    event.preventDefault();
+    const btn = document.getElementById('btnGuardarConductor');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+
+    let datos = {
+        idConductor: document.getElementById('c_id').value,
+        c_nombre: document.getElementById('c_nombre').value,
+        c_empresa: document.getElementById('c_empresa').value,
+        c_telefono: document.getElementById('c_telefono').value,
+        c_dni: document.getElementById('c_dni').value,
+        c_licencia: document.getElementById('c_licencia').value,
+        c_estado: document.getElementById('c_estado').value,
+        c_foto_base64: document.getElementById('c_foto_base64').value
+    };
+
+    fetch('/api/script/guardarConductor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [datos] })
+    })
+    .then(res => res.json())
+    .then(r => {
+        if (r.data === 'Éxito') {
+            bootstrap.Modal.getInstance(document.getElementById('modalConductor')).hide();
+            recargarModulo('conductores');
+        } else {
+            alert("Error: " + r.data);
+        }
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Conductor';
+    }).catch(e => {
+        alert("Error: " + e.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Conductor';
+    });
+}
 

@@ -58,6 +58,7 @@
                     <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
                     <a id="btnMenuStatusFlota" onclick="cambiarModulo('statusFlota', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
                     <a id="btnMenuSeguridad" onclick="cambiarModulo('seguridad', this.id)"><i class="bi bi-shield-check"></i> <span class="link-text">Seguridad</span></a>
+                    <a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a>
                 </div>
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
@@ -241,8 +242,27 @@
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
-                        <thead><tr><th>Tracto / Camión</th><th>Prox Insp. T/C</th><th>Carreta / Remolque</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="8" class="text-center py-5">Cargando Status Flota...</td></tr></tbody>
+                        <thead><tr><th>Tracto / Camión</th><th>Prox Insp. T/C</th><th>Carreta / Remolque</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Zona</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5">Cargando Status Flota...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloConductores" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
+                        <div class="input-group input-group-sm" style="max-width: 300px;">
+                            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores" onkeyup="filtrarTabla('cuerpoTablaConductores', 'buscadorConductores')" placeholder="Buscar por Nombre, DNI...">
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
+                            <button class="btn-reload-cache" onclick="recargarModulo('conductores')"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
+                        </div>
+                    </div>
+                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaConductores">
+                        <thead><tr><th>Nombre del Conductor</th><th>Empresa</th><th>DNI</th><th>Licencia</th><th>Contacto (Tel / WSP)</th><th>Estado</th></tr></thead>
+                        <tbody id="cuerpoTablaConductores"><tr><td colspan="6" class="text-center py-5">Cargando Conductores...</td></tr></tbody>
                     </table></div></div>
                 </div>
 
@@ -347,12 +367,23 @@
             </div>
         </div>
         <div class="row">
-            <input type="hidden" name="sf_zona" id="sf_zona" value="">
-            <div class="col-md-12 mb-3"><label class="form-label fw-bold">Conductor</label><input type="text" class="form-control text-uppercase" name="sf_conductor" id="sf_conductor" placeholder="Opcional"></div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Zona</label>
+                <input type="text" class="form-control" name="sf_zona" id="sf_zona" list="dl-zonas" placeholder="Elige o escribe nueva...">
+                <datalist id="dl-zonas"><option value="Lavado"><option value="Mantenimiento"></datalist>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Conductor</label>
+                <input type="text" class="form-control text-uppercase" name="sf_conductor" id="sf_conductor" list="dl-conductores" placeholder="Buscar conductor...">
+            </div>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="sf_estado" id="sf_estado" required><option value="Vacío">Vacío</option><option value="Cargado">Cargado</option><option value="Con Devolución">Con Devolución</option><option value="Mantenimiento">Mantenimiento</option></select></div>
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Observaciones</label><textarea class="form-control" name="sf_obs" id="sf_obs" rows="1" placeholder="Sin observaciones"></textarea></div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Estado</label>
+                <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado" list="dl-estados" placeholder="Elige o escribe nuevo...">
+                <datalist id="dl-estados"><option value="Vacío"><option value="Cargado"><option value="Con Devolución"></datalist>
+            </div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Observaciones</label><textarea class="form-control" name="sf_obs" id="sf_obs" rows="1"></textarea></div>
         </div>
     </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF">Guardar Registro</button></div></form></div></div></div>
 
@@ -471,7 +502,7 @@
             <div style="margin-bottom: 25px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
                     <thead style="background-color: #1e293b; color: white;">
-                        <tr><th style="padding: 10px;">TRACTO/CAMIÓN</th><th style="padding: 10px;">CARRETA/REMOLQUE</th><th style="padding: 10px;">CONDUCTOR</th><th style="padding: 10px;">ESTADO</th><th style="padding: 10px;">OBSERVACIONES</th></tr>
+                        <tr><th style="padding: 10px;">TRACTO/CAMIÓN</th><th style="padding: 10px;">CARRETA/REMOLQUE</th><th style="padding: 10px;">CONDUCTOR</th><th style="padding: 10px;">ESTADO</th><th style="padding: 10px;">ZONA</th><th style="padding: 10px;">OBSERVACIONES</th></tr>
                     </thead>
                     <tbody id="pdf-sf-body"></tbody>
                 </table>
@@ -483,6 +514,31 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="modalConductor" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold" id="tituloModalConductor"><i class="bi bi-person-badge"></i> Ficha de Conductor</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <form id="formConductor" onsubmit="guardarConductor(event, this)">
+        <input type="hidden" name="idConductor" id="c_id">
+        <input type="hidden" name="c_foto_base64" id="c_foto_base64">
+        <div class="modal-body">
+            <div class="text-center mb-3">
+                <img id="c_foto_preview" src="https://via.placeholder.com/120" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 3px solid #cbd5e1; cursor: pointer;" onclick="document.getElementById('c_foto_input').click()" title="Toca para cambiar foto">
+                <input type="file" id="c_foto_input" accept="image/*" style="display: none;" onchange="previsualizarFotoConductor(this)">
+                <div class="small text-muted mt-1">Toca la imagen para subir foto</div>
+            </div>
+            <div class="mb-3"><label class="fw-bold text-primary">Nombre Completo</label><input type="text" class="form-control fw-bold" name="c_nombre" id="c_nombre" required></div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label class="fw-bold">Empresa</label><input type="text" class="form-control text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC"></div>
+                <div class="col-md-6 mb-3"><label class="fw-bold">Teléfono</label><input type="text" class="form-control" name="c_telefono" id="c_telefono"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label class="fw-bold">DNI</label><input type="text" class="form-control" name="c_dni" id="c_dni"></div>
+                <div class="col-md-6 mb-3"><label class="fw-bold">Licencia</label><input type="text" class="form-control text-uppercase" name="c_licencia" id="c_licencia"></div>
+            </div>
+            <div class="mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="c_estado" id="c_estado"><option value="Activo">Activo</option><option value="Cesado">Cesado</option><option value="Bloqueado">Bloqueado</option></select></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarConductor">Guardar Conductor</button></div>
+    </form></div></div></div>
+
+    <datalist id="dl-conductores"></datalist>
 
 </body>
 </html>

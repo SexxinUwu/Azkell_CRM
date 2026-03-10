@@ -377,6 +377,45 @@ app.post('/api/script/:metodo', async (req, res) => {
         return;
     }
 
+    // --- CONDUCTORES ---
+    if (metodo === 'obtenerDatosConductores') {
+        db.query('SELECT * FROM conductores', (err, results) => {
+            if (err) return res.json({ data: [] });
+            return res.json({ data: results });
+        });
+        return;
+    }
+
+    if (metodo === 'guardarConductor') {
+        const form = req.body.args[0];
+        const isEdit = form.idConductor ? true : false;
+        const nombre = form.c_nombre || "";
+        const empresa = form.c_empresa || "";
+        const telefono = form.c_telefono || "";
+        const dni = form.c_dni || "";
+        const licencia = form.c_licencia || "";
+        const estado = form.c_estado || "Activo";
+        const foto = form.c_foto_base64 || "";
+
+        if (isEdit) {
+            let sql = 'UPDATE conductores SET nombre=?, empresa=?, telefono=?, dni=?, licencia=?, estado=?';
+            let params = [nombre, empresa, telefono, dni, licencia, estado];
+            if (foto) { sql += ', foto=?'; params.push(foto); }
+            sql += ' WHERE idConductor=?'; params.push(form.idConductor);
+            db.query(sql, params, (err) => {
+                if (err) return res.json({ data: "Error BD: " + err.message });
+                return res.json({ data: "Éxito" });
+            });
+        } else {
+            db.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [nombre, empresa, telefono, dni, licencia, estado, foto], (err) => {
+                if (err) return res.json({ data: "Error BD: " + err.message });
+                return res.json({ data: "Éxito" });
+            });
+        }
+        return;
+    }
+
     // --- LISTAS DE APOYO (Para Mantenimientos) ---
     if (metodo === 'obtenerTiposMantenimiento') {
         db.query('SELECT * FROM tipos_mantenimiento', (err, results) => {
