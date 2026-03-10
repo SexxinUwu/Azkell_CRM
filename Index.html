@@ -62,7 +62,11 @@
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
             <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
-            <div class="mt-auto mb-3 mx-2"><a onclick="cerrarSesion()" class="text-danger"><i class="bi bi-box-arrow-left"></i> <span class="link-text">Salir</span></a></div>
+            <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
+    <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+        <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
+    </a>
+</div>
         </div>
         
         <div class="content">

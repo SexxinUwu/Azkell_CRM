@@ -1675,3 +1675,40 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// ==========================================
+// 📲 BOTÓN DE INSTALACIÓN PWA (EN EL MENÚ LATERAL)
+// ==========================================
+let deferredPrompt;
+
+// 1. Atrapamos el evento del navegador
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    const contenedorInstall = document.getElementById('contenedor-instalar');
+    if (contenedorInstall) {
+        contenedorInstall.style.display = 'block';
+    }
+});
+
+// 2. Acción al hacer clic en Instalar App en el menú
+document.getElementById('btn-install-sidebar')?.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+
+        if (outcome === 'accepted') {
+            console.log('El usuario instaló Azkell CRM');
+        }
+
+        deferredPrompt = null;
+        document.getElementById('contenedor-instalar').style.display = 'none';
+    }
+});
+
+// 3. Ocultar si ya se instaló
+window.addEventListener('appinstalled', () => {
+    document.getElementById('contenedor-instalar').style.display = 'none';
+    console.log('Azkell CRM fue instalado como App nativa');
+});
+
