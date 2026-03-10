@@ -257,12 +257,23 @@
                             <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
                             <button class="btn-reload-cache" onclick="recargarModulo('conductores')"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
                             <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaConductores">
-                        <thead><tr><th>Nombre del Conductor</th><th>Empresa</th><th>DNI</th><th>Licencia</th><th>Contacto (Tel / WSP)</th><th>Estado</th></tr></thead>
-                        <tbody id="cuerpoTablaConductores"><tr><td colspan="6" class="text-center py-5">Cargando Conductores...</td></tr></tbody>
+                        <thead>
+                            <tr>
+                                <th>Nombre del Conductor</th>
+                                <th class="d-none">Empresa</th>
+                                <th>DNI</th>
+                                <th class="d-none">Licencia</th>
+                                <th>Contacto (Tel / WSP)</th>
+                                <th class="d-none">Estado</th>
+                                <th><i class="bi bi-three-dots-vertical"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaConductores"><tr><td colspan="7" class="text-center py-5">Cargando Conductores...</td></tr></tbody>
                     </table></div></div>
                 </div>
 
@@ -535,7 +546,11 @@
             </div>
             <div class="mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="c_estado" id="c_estado"><option value="Activo">Activo</option><option value="Cesado">Cesado</option><option value="Bloqueado">Bloqueado</option></select></div>
         </div>
-        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarConductor">Guardar Conductor</button></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="button" class="btn btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()"><i class="bi bi-pencil-square"></i> Editar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardarConductor"><i class="bi bi-save"></i> Guardar Conductor</button>
+        </div>
     </form></div></div></div>
 
     <datalist id="dl-conductores"></datalist>
