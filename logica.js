@@ -1037,24 +1037,53 @@ function enviarEdicionUsuario(event, formObj) { event.preventDefault(); const bt
 function enviarDatos(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalSeguridad')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).guardarReporte(formObj); }
 function abrirModalEditar(id, inspector, tipo, estado) { document.getElementById('formEditar').reset(); document.getElementById('edit-id').value = id; document.getElementById('edit-inspector').value = inspector; document.getElementById('edit-tipo').value = tipo; document.getElementById('edit-estado').value = estado; const btn = document.getElementById('btnActualizar'); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; new bootstrap.Modal(document.getElementById('modalEditar')).show(); }
 function enviarEdicion(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).actualizarReporte(formObj); }
-function enviarPreguntaIA() { const input = document.getElementById('inputPregunta'); const pregunta = input.value.trim(); if (!pregunta) return; const historial = document.getElementById('chat-historial'); historial.innerHTML += `<div class="mb-2 text-end"><span class="border p-2 rounded d-inline-block chat-bubble bg-warning text-dark">${pregunta}</span></div>`; input.value = ''; const btn = document.getElementById('btnEnviarIA'); btn.disabled = true; const allData = [...(dataGlobalPlacas || [])]; google.script.run.withSuccessHandler(r => { historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble">${r}</span></div>`; historial.scrollTop = historial.scrollHeight; btn.disabled = false; }).withFailureHandler(e => { historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble text-danger">Error: ${e.message}</span></div>`; btn.disabled = false; }).consultarGemini(pregunta, allData); }
+function enviarPreguntaIA() {
+    const input = document.getElementById('inputPregunta');
+    const pregunta = input.value.trim();
+    if (!pregunta) return;
+
+    const historial = document.getElementById('chat-historial');
+    historial.innerHTML += `<div class="mb-2 text-end"><span class="border p-2 rounded d-inline-block chat-bubble bg-warning text-dark">${pregunta}</span></div>`;
+    input.value = '';
+
+    const btn = document.getElementById('btnEnviarIA');
+    btn.disabled = true;
+
+    // Le enviamos un resumen ligero en vez de toda la base de datos para que no se cuelgue
+    let resumenContexto = "Resumen actual de BD: " + dataGlobalPlacas.length + " placas, " + dataGlobalInspecciones.length + " inspecciones.";
+
+    google.script.run.withSuccessHandler(r => {
+        historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--surface); color: var(--text);">${r}</span></div>`;
+        historial.scrollTop = historial.scrollHeight;
+        btn.disabled = false;
+    }).withFailureHandler(e => {
+        historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble text-danger">Error: ${e.message}</span></div>`;
+        btn.disabled = false;
+    }).consultarGemini(pregunta, resumenContexto);
+}
 
 // ==========================================
-// 🚛 MODULE STATUS FLOTA
+// 🚛 MODULE STATUS FLOTA (AGRUPADO POR TIPO DINÁMICO)
 // ==========================================
+
+function resetearYRecargarStatusFlota() {
+    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    let hoyISO = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    document.getElementById('filtroStatusFecha').value = hoyISO;
+    document.getElementById('filtroStatusCorte').value = "";
+    recargarModulo('statusFlota');
+}
+
 function abrirModalNuevoStatusFlota() {
     document.getElementById('formStatusFlota').reset();
     document.getElementById('sf_id').value = '';
-
-    // Limpiar campos de cliente
     document.getElementById('sf_cliente_motora').value = '';
     document.getElementById('sf_cliente_nomotora').value = '';
+    document.getElementById('sf_zona').value = '';
 
-    // Auto-cálculo de Fecha
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
     document.getElementById('sf_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
 
-    // Auto-cálculo de Corte Inteligente basado en hora del sistema
     let hora = new Date().getHours();
     if (hora >= 4 && hora < 12) document.getElementById('corte1').checked = true;
     else if (hora >= 12 && hora < 16) document.getElementById('corte2').checked = true;
@@ -1068,15 +1097,50 @@ function toggleGroupRowSF(claseZ) {
     filtrarStatusFlotaAvanzado();
 }
 
+// Lector de Mentes: Busca el tipo de ambas placas y las junta
+function obtenerTipoCompuesto(motora, nomotora) {
+    // Limpiador automático de tildes rotas (UTF-8)
+    const limpiarTexto = (txt) => {
+        if (!txt) return "";
+        return txt.toUpperCase()
+            .replace(/Ã³/g, 'Ó')
+            .replace(/Ã"/g, 'Ó')
+            .replace(/CAMIÃ³N/g, 'CAMIÓN')
+            .replace(/CAMIÃ"N/g, 'CAMIÓN');
+    };
+
+    let tMot = "", tNoMot = "";
+
+    if (motora && motora !== "-") {
+        let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(motora));
+        if (p && p[2] && p[2] !== "-") tMot = limpiarTexto(p[2]);
+    }
+    if (nomotora && nomotora !== "-") {
+        let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(nomotora));
+        if (p && p[2] && p[2] !== "-") tNoMot = limpiarTexto(p[2]);
+    }
+
+    if (tMot && tNoMot) return `${tMot} - ${tNoMot}`;
+    if (tMot) return tMot;
+    if (tNoMot) return tNoMot;
+    return "SIN TIPO REGISTRADO";
+}
+
 function mostrarStatusFlota(datos) {
-    // SOLUCIÓN AL "S/I": Si no hay inspecciones cargadas, las obligamos a descargar ANTES de dibujar
     if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
         document.getElementById('cuerpoTablaStatusFlota').innerHTML = '<tr><td colspan="8" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
         google.script.run.withSuccessHandler(insp => {
             dataGlobalInspecciones = insp;
-            mostrarStatusFlota(datos); // Recursivo: volver a llamar con datos listos
+            mostrarStatusFlota(datos);
         }).obtenerDatosInspecciones();
         return;
+    }
+
+    // Configurar Fecha de Hoy por defecto si no hay nada escrito
+    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    let hoyISO = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    if (!document.getElementById('filtroStatusFecha').value) {
+        document.getElementById('filtroStatusFecha').value = hoyISO;
     }
 
     dataGlobalStatusFlota = datos;
@@ -1084,100 +1148,67 @@ function mostrarStatusFlota(datos) {
     if (!datos || datos.length === 0) {
         html = '<tr><td colspan="8" class="text-center py-4 text-muted">No hay registros de Status Flota.</td></tr>';
     } else {
-        let mapZonas = new Map();
-        let setClis = new Set(), setZonas = new Set();
+        let mapTipos = new Map();
+        let setClis = new Set();
 
-        // Agrupar por zonas
         datos.forEach(fila => {
-            let zona = fila[7] || "Sin Zona";
-            if (!mapZonas.has(zona)) mapZonas.set(zona, []);
-            mapZonas.get(zona).push(fila);
-            setClis.add(fila[5]);
-            setClis.add(fila[6]);
-            setZonas.add(zona);
+            let motora = fila[3];
+            let nomotora = fila[4];
+            let tipoDinamico = obtenerTipoCompuesto(motora, nomotora);
+
+            if (!mapTipos.has(tipoDinamico)) mapTipos.set(tipoDinamico, []);
+            mapTipos.get(tipoDinamico).push(fila);
+            setClis.add(fila[5]); setClis.add(fila[6]);
         });
 
-        mapZonas.forEach((registros, zona) => {
-            let claseZ = normalizarClase(zona);
-            let isExpandido = expandSFMap[claseZ] !== false; // Por defecto expandido
+        mapTipos.forEach((registros, tipoName) => {
+            let claseZ = normalizarClase(tipoName);
+            let isExpandido = expandSFMap[claseZ] !== false;
             let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
 
-            // Cabecera agrupable con ícono de flecha
             html += `<tr class="group-header data-row-sf" style="cursor:pointer;" onclick="toggleGroupRowSF('${claseZ}')" data-group-clase="${claseZ}">
-                <td colspan="8">
+                <td colspan="8" class="text-start" style="padding-left: 20px;">
                     <i class="bi ${iconClass} ms-1 me-2 text-warning"></i>
-                    <i class="bi bi-geo-alt-fill text-primary me-2"></i><span class="text-uppercase fw-bold">${zona}</span>
-                    <span class="group-count badge bg-secondary">${registros.length}</span>
+                    <i class="bi bi-truck text-primary me-2"></i><span class="text-uppercase fw-bold">${tipoName}</span>
+                    <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
                 </td>
             </tr>`;
 
             registros.forEach(fila => {
-                let id = fila[0];
-                let fecha = fila[1];
-                let corte = fila[2];
-                let motora = fila[3];
-                let nomotora = fila[4];
-                let cliMot = fila[5];
-                let cliNoMot = fila[6];
-                let conductor = fila[8];
-                let estado = fila[9];
-                let obs = fila[10] || 'Sin observaciones';
+                let id = fila[0]; let fecha = fila[1]; let corte = fila[2];
+                let motora = fila[3]; let nomotora = fila[4];
+                let cliMot = fila[5]; let cliNoMot = fila[6];
+                let conductor = fila[8]; let estado = fila[9]; let obs = fila[10] || 'Sin observaciones';
 
-                // Función para calcular días con badges mejorados
                 let getDias = (placa) => {
                     if (!placa || placa === "-") return "-";
-                    let inspList = dataGlobalInspecciones.filter(i => {
-                        let iPlaca = i.placa ? normalizeStr(i.placa) : (i[0] ? normalizeStr(i[0]) : '');
-                        return iPlaca === normalizeStr(placa);
-                    });
+                    let inspList = dataGlobalInspecciones.filter(i => normalizeStr(i.placa) === normalizeStr(placa));
                     if (inspList.length === 0) return `<span class="badge bg-secondary">S/I</span>`;
 
                     let parseD = (str) => {
                         if (!str) return 0;
-                        if (str.includes('/')) {
-                            let p = str.split('/');
-                            return new Date(p[2], p[1] - 1, p[0]).getTime();
-                        }
+                        if (str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1] - 1, p[0]).getTime(); }
                         return new Date(str + "T00:00:00").getTime() || 0;
                     };
 
-                    inspList.sort((a, b) => {
-                        let aFecha = a.fecha_ingreso || a[1];
-                        let bFecha = b.fecha_ingreso || b[1];
-                        return parseD(bFecha) - parseD(aFecha);
-                    });
+                    inspList.sort((a, b) => parseD(b.fecha_ingreso || b[1]) - parseD(a.fecha_ingreso || a[1]));
                     let insp = inspList[0];
-
                     let fIngreso = insp.fecha_ingreso || insp[1];
                     let dProp = parseInt(insp.dias_propuestos || insp[6]) || 30;
 
-                    let fIng;
-                    if (fIngreso && fIngreso.includes('/')) {
-                        let p = fIngreso.split('/');
-                        fIng = new Date(p[2], p[1] - 1, p[0]);
-                    } else {
-                        fIng = new Date(fIngreso + "T00:00:00");
-                    }
-
+                    let fIng = fIngreso.includes('/') ? new Date(fIngreso.split('/')[2], fIngreso.split('/')[1] - 1, fIngreso.split('/')[0]) : new Date(fIngreso + "T00:00:00");
                     fIng.setDate(fIng.getDate() + dProp);
-                    let hoy = new Date();
-                    hoy.setHours(0, 0, 0, 0);
+
+                    let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
                     let dias = Math.ceil((fIng - hoy) / (1000 * 60 * 60 * 24));
 
-                    if (dias < 0) {
-                        return `<span class="badge bg-danger text-white shadow-sm">Vencido ${Math.abs(dias)}d</span>`;
-                    } else if (dias <= 7) {
-                        return `<span class="badge bg-warning text-dark shadow-sm">Faltan ${dias}d</span>`;
-                    } else {
-                        return `<span class="badge bg-success text-white shadow-sm">Faltan ${dias}d</span>`;
-                    }
+                    if (dias < 0) return `<span class="badge bg-danger text-white shadow-sm">Vencido ${Math.abs(dias)}d</span>`;
+                    else if (dias <= 7) return `<span class="badge bg-warning text-dark shadow-sm">Faltan ${dias}d</span>`;
+                    else return `<span class="badge bg-success text-white shadow-sm">Faltan ${dias}d</span>`;
                 };
 
-                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' :
-                           (estado === 'Mantenimiento' ? '<span class="text-warning fw-bold">MANT</span>' :
-                           `<span class="text-primary fw-bold text-uppercase">${estado}</span>`);
+                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : (estado === 'Mantenimiento' ? '<span class="text-warning fw-bold">MANT</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`);
 
-                // Menú de 3 puntitos con opción de Editar y Eliminar
                 let menuAcciones = `
                     <div class="dropstart text-center">
                         <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
@@ -1188,7 +1219,7 @@ function mostrarStatusFlota(datos) {
                         </ul>
                     </div>`;
 
-                html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${zona}" data-fecha="${fecha}" data-corte="${corte}">
+                html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${tipoName}" data-fecha="${fecha}" data-corte="${corte}">
                     <td class="fw-bold text-secondary">${motora || '-'}</td>
                     <td>${getDias(motora)}</td>
                     <td class="fw-bold text-secondary">${nomotora || '-'}</td>
@@ -1202,17 +1233,9 @@ function mostrarStatusFlota(datos) {
         });
 
         rellenarFiltroCheck('filtroSFCliente', setClis, 'filtrarStatusFlotaAvanzado');
-        rellenarFiltroCheck('filtroSFZona', setZonas, 'filtrarStatusFlotaAvanzado');
     }
 
     document.getElementById('cuerpoTablaStatusFlota').innerHTML = html;
-
-    // Auto-completar fecha si no hay filtro
-    if (!document.getElementById('filtroStatusFecha').value) {
-        let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-        document.getElementById('filtroStatusFecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-    }
-
     filtrarStatusFlotaAvanzado();
 }
 
@@ -1221,16 +1244,6 @@ function filtrarStatusFlotaAvanzado() {
     const dateF = document.getElementById('filtroStatusFecha')?.value || '';
     const corte = document.getElementById('filtroStatusCorte')?.value || '';
     const chkCli = Array.from(document.querySelectorAll('#filtroSFCliente input:checked')).map(e => e.value);
-    const chkZona = Array.from(document.querySelectorAll('#filtroSFZona input:checked')).map(e => e.value);
-
-    // Convertir fecha a formato DD/MM/YYYY para comparación
-    let fechaComparar = '';
-    if (dateF) {
-        let p = dateF.split('-');
-        fechaComparar = `${p[2]}/${p[1]}/${p[0]}`;
-    }
-
-    let isFiltering = txt !== '' || dateF !== '' || corte !== '' || chkCli.length > 0 || chkZona.length > 0;
 
     const headers = document.querySelectorAll('#cuerpoTablaStatusFlota tr.group-header');
     headers.forEach(header => {
@@ -1240,35 +1253,35 @@ function filtrarStatusFlotaAvanzado() {
         let isExpanded = expandSFMap[claseZ] !== false;
 
         childRows.forEach(row => {
-            const rCliMot = row.getAttribute('data-climot');
-            const rCliNoMot = row.getAttribute('data-clinomot');
-            const rZona = row.getAttribute('data-zona');
-            const rCorte = row.getAttribute('data-corte');
-            const rFecha = row.getAttribute('data-fecha');
+            const rCliMot = row.getAttribute('data-climot'); const rCliNoMot = row.getAttribute('data-clinomot');
+            const rCorte = row.getAttribute('data-corte'); const rFecha = row.getAttribute('data-fecha');
             const textoFila = row.innerText.toLowerCase();
 
             const matchTxt = !txt || textoFila.includes(txt);
             const matchCli = !chkCli.length || chkCli.includes(rCliMot) || chkCli.includes(rCliNoMot);
-            const matchZone = !chkZona.length || chkZona.includes(rZona);
             const matchCorte = !corte || corte === rCorte;
-            const matchFecha = !fechaComparar || rFecha === fechaComparar;
 
-            const pasaFiltro = matchTxt && matchCli && matchZone && matchCorte && matchFecha;
+            let matchFecha = true;
+            if (dateF) {
+                let dbFecha = rFecha;
+                if (dbFecha && dbFecha.includes('T')) dbFecha = dbFecha.split('T')[0];
+                if (dbFecha && dbFecha.includes('/')) dbFecha = dbFecha.split('/').reverse().join('-');
+                matchFecha = (dbFecha === dateF);
+            }
 
-            if (pasaFiltro && isExpanded) {
-                row.style.display = '';
+            const pasaFiltro = matchTxt && matchCli && matchCorte && matchFecha;
+
+            if (pasaFiltro) {
+                row.style.display = isExpanded ? '' : 'none';
                 hasVisibleChild = true;
             } else {
                 row.style.display = 'none';
             }
         });
 
-        // Actualizar header
         header.style.display = hasVisibleChild ? '' : 'none';
         let icon = header.querySelector('i:first-child');
-        if (icon) {
-            icon.className = isExpanded ? 'bi bi-chevron-down ms-1 me-2 text-warning' : 'bi bi-chevron-right ms-1 me-2 text-warning';
-        }
+        if (icon) icon.className = isExpanded ? 'bi bi-chevron-down ms-1 me-2 text-warning' : 'bi bi-chevron-right ms-1 me-2 text-warning';
     });
 }
 
@@ -1418,21 +1431,26 @@ function generarPDFStatusFlota() {
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
     btn.classList.add('disabled');
 
+    // Extraer Filtros Actuales para el Título
+    let corteSeleccionado = document.getElementById('filtroStatusCorte')?.value;
+    let textoCorte = corteSeleccionado ? `Corte ${corteSeleccionado}` : "Todos los cortes";
+    let fechaRaw = document.getElementById('filtroStatusFecha')?.value || new Date().toISOString().split('T')[0];
+    let fechaBonita = fechaRaw.split('-').reverse().join('/');
+
     let htmlCuerpo = '';
     const filas = document.querySelectorAll('#cuerpoTablaStatusFlota tr');
+
     filas.forEach(row => {
         if (row.style.display !== 'none') {
             if (row.classList.contains('group-header')) {
-                let txtZona = row.querySelector('span.text-uppercase');
-                if (txtZona) {
-                    htmlCuerpo += `<tr><td colspan="5" style="background-color: #cbd5e1; font-weight: bold; padding: 8px; color:#1e293b;">ZONA: ${txtZona.innerText}</td></tr>`;
+                let txtTipo = row.querySelector('span.text-uppercase');
+                if (txtTipo) {
+                    htmlCuerpo += `<tr><td colspan="5" style="background-color: #cbd5e1; font-weight: bold; padding: 10px 15px; color:#1e293b; text-align:left; font-size: 14px;">${txtTipo.innerText}</td></tr>`;
                 }
             } else if (row.classList.contains('child-row-sf')) {
                 let celdas = row.querySelectorAll('td');
-                // Saltamos las celdas 1 y 3 porque son las de los "días"
-                // Estructura: [0]=motora, [1]=días_motora, [2]=nomotora, [3]=días_nomotora, [4]=conductor, [5]=estado, [6]=obs, [7]=menu
                 htmlCuerpo += `<tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${celdas[0]?.innerText || ''}</td>
+                    <td style="padding: 8px 15px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2563eb;">${celdas[0]?.innerText || ''}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b;">${celdas[2]?.innerText || ''}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[4]?.innerText || ''}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[5]?.innerText || ''}</td>
@@ -1441,19 +1459,22 @@ function generarPDFStatusFlota() {
             }
         }
     });
+
+    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="5" class="text-center py-4">No hay datos en la pantalla para exportar.</td></tr>';
+
     document.getElementById('pdf-sf-body').innerHTML = htmlCuerpo;
+
+    // Inyectar el título con Fecha y Corte
+    document.querySelector('#pdf-status-flota p').innerHTML = `Reporte de Status de Flota <br> <b>Fecha:</b> ${fechaBonita} | <b>Turno:</b> ${textoCorte}`;
     document.getElementById('pdf-sf-fecha-gen').innerText = new Date().toLocaleDateString('es-PE');
 
     const elemento = document.getElementById('pdf-status-flota');
     document.getElementById('contenedor-pdf-status-flota').style.display = 'block';
-    let nombreArchivo = `Status_Flota_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    let nombreArchivo = `Status_Flota_${textoCorte.replace(/ /g, '_')}_${fechaRaw}.pdf`;
 
     html2pdf().set({
-        margin: 10,
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: 10, filename: nombreArchivo, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(elemento).save().then(() => {
         document.getElementById('contenedor-pdf-status-flota').style.display = 'none';
         btn.innerHTML = txtOriginal;

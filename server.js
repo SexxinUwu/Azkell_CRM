@@ -394,6 +394,36 @@ app.post('/api/script/:metodo', async (req, res) => {
         return;
     }
 
+    // --- ASISTENTE IA GEMINI ---
+    if (metodo === 'consultarGemini') {
+        const prompt = req.body.args[0];
+        const resumenContexto = req.body.args[1];
+
+        const apiKey = "AIzaSyAOloEWep_cl3_5fwfJdLJqE1elj_Kd_qU";
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+
+        const payload = {
+            "contents": [{
+                "parts": [{
+                    "text": "Eres el asistente experto del CRM de AZKELL. " + resumenContexto + ".\nResponde de forma útil, breve y profesional a esta consulta del usuario: " + prompt
+                }]
+            }]
+        };
+
+        try {
+            const aiRes = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const json = await aiRes.json();
+            if (json.error) return res.json({ data: "Error IA: " + json.error.message });
+            return res.json({ data: json.candidates[0].content.parts[0].text });
+        } catch (e) {
+            return res.json({ data: "Error conexión IA: " + e.message });
+        }
+    }
+
     // --- 📡 API DE WIALON GPS (Nativo Node.js) ---
     if (metodo === 'obtenerDatosWialon') {
         const token = "b0a4947147e59c66f42703bca5df48a1B33E01E58063AD32AF788F04F09F24F4F88692AC";
