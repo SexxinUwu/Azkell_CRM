@@ -142,7 +142,7 @@
                                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
                                 <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatus', 'Analisis_Inspecciones')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
+                                <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
                             </div>
                         </div>
                     </div>
@@ -172,7 +172,7 @@
                                 <span id="cache-badge-placas" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-placas">Sin cargar</span></span>
                                 <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
                                 <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacas', 'Base_Placas')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()"><i class="bi bi-plus-lg"></i> Registrar</button>
+                                <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
                             </div>
                         </div>
                     </div>
@@ -196,7 +196,7 @@
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                             <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun">Historial</span></button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaFleetrun', 'Fleetrun_Mantenimiento')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoFleetrun" onclick="abrirModalNuevoFleetrun()"><i class="bi bi-plus-lg"></i> Agregar</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoFleetrun" onclick="abrirModalNuevoFleetrun()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Agregar</button>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaFleetrun">
@@ -215,7 +215,7 @@
                             <span id="cache-badge-seguridad" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-seguridad">Sin cargar</span></span>
                             <button class="btn-reload-cache" id="btn-reload-seguridad" onclick="recargarModulo('seguridad')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaSeguridad', 'Reportes_Seguridad')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevoReporteSeguridad" data-bs-toggle="modal" data-bs-target="#modalSeguridad" onclick="document.getElementById('formSeg').reset()"><i class="bi bi-plus-lg"></i> Nuevo Reporte</button>
+                            <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevoReporteSeguridad" data-bs-toggle="modal" data-bs-target="#modalSeguridad" onclick="document.getElementById('formSeg').reset()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Nuevo Reporte</button>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaSeguridad" data-sort-dir="asc">
@@ -238,7 +238,7 @@
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
                             <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()"><i class="bi bi-plus-lg"></i> Agregar</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Agregar</button>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
@@ -258,7 +258,7 @@
                             <button class="btn-reload-cache" onclick="recargarModulo('conductores')"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()" data-perm-crear="flota"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaConductores">
@@ -283,7 +283,7 @@
                         <div class="d-flex gap-2 align-items-center">
                             <span id="cache-badge-usuarios" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-usuarios">Sin cargar</span></span>
                             <button class="btn-reload-cache" id="btn-reload-usuarios" onclick="recargarModulo('usuarios')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoUsuario" data-bs-toggle="modal" data-bs-target="#modalUsuario" onclick="document.getElementById('formUsuario').reset()"><i class="bi bi-person-plus"></i> Nuevo Usuario</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalGestorUsuario()" data-perm-crear="usuarios"><i class="bi bi-person-plus"></i> Nuevo Usuario</button>
                         </div>
                     </div>
                     <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUsuarios" data-sort-dir="asc">
@@ -400,8 +400,49 @@
 
     <div class="modal fade" id="modalSeguridad" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Registrar Incidente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formSeg" onsubmit="enviarDatos(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><div class="mb-3"><label class="form-label fw-bold">Inspector</label><input type="text" class="form-control" name="inspector" id="input-inspector-nuevo" required readonly></div><div class="mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select" name="tipoIncidente" required><option value="Condición Insegura">Condición Insegura</option><option value="Acto Inseguro">Acto Inseguro</option><option value="EPP Faltante">EPP Faltante</option><option value="Incidente Vehicular">Incidente Vehicular</option></select></div><div class="mb-3"><label class="form-label fw-bold">Detalle</label><textarea class="form-control" name="detalle" rows="3" required></textarea></div><div class="mb-3"><label class="form-label fw-bold">Evidencia</label><input type="file" class="form-control" name="fotoIncidente" accept="image/*"></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button></div></form></div></div></div>
     <div class="modal fade" id="modalEditar" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Editar Reporte</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formEditar" onsubmit="enviarEdicion(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><input type="hidden" id="edit-id" name="idReporte"><div class="mb-3"><label class="form-label fw-bold">Inspector</label><input type="text" class="form-control" id="edit-inspector" name="inspectorEdit" required readonly></div><div class="mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select" id="edit-tipo" name="tipoIncidenteEdit" required><option value="Condición Insegura">Condición</option><option value="Acto Inseguro">Acto</option><option value="EPP Faltante">EPP</option><option value="Incidente Vehicular">Incidente</option></select></div><div class="mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" id="edit-estado" name="estadoEdit" required><option value="Pendiente">Pendiente</option><option value="Revisado">Revisado</option></select></div><div class="mb-3"><label class="form-label fw-bold text-danger">Gestión de Foto</label><input type="file" class="form-control mb-2" name="fotoEdit" accept="image/*"><div class="form-check"><input class="form-check-input" type="checkbox" value="si" id="checkEliminar" name="eliminarFoto"><label class="form-check-label text-danger" for="checkEliminar">Eliminar foto actual</label></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizar">Actualizar</button></div></form></div></div></div>
-    <div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Nuevo Usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formUsuario" onsubmit="enviarUsuario(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><div class="mb-3"><label class="form-label fw-bold">Nombre</label><input type="text" class="form-control" name="nombreUsuario" required></div><div class="mb-3"><label class="form-label fw-bold">Cargo</label><input type="text" class="form-control" name="cargoUsuario" required></div><div class="mb-3"><label class="form-label fw-bold">Correo</label><input type="email" class="form-control" name="correoUsuario" required></div><div class="mb-3"><label class="form-label fw-bold">Contraseña</label><input type="text" class="form-control" name="passwordUsuario" required></div><div class="row"><div class="col-md-6 mb-3"><label class="form-label fw-bold">Rol</label><select class="form-select" name="rolUsuario" required><option value="Administrador">Admin</option><option value="Inspector">Inspector</option><option value="Mantenimiento">Mantenimiento</option><option value="Flota">Flota</option><option value="Almacén">Almacén</option></select></div><div class="col-md-6 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="estadoUsuario" required><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarUsuario">Guardar</button></div></form></div></div></div>
-    <div class="modal fade" id="modalEditarUsuario" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Editar Usuario</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formEditarUsuario" onsubmit="enviarEdicionUsuario(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><input type="hidden" id="editU-id" name="idUsuarioEdit"><div class="mb-3"><label class="form-label fw-bold">Nombre</label><input type="text" class="form-control" id="editU-nombre" name="nombreUsuarioEdit" required></div><div class="mb-3"><label class="form-label fw-bold">Cargo</label><input type="text" class="form-control" id="editU-cargo" name="cargoUsuarioEdit" required></div><div class="mb-3"><label class="form-label fw-bold">Correo</label><input type="email" class="form-control" id="editU-correo" name="correoUsuarioEdit" required></div><div class="mb-3"><label class="form-label fw-bold">Contraseña</label><input type="text" class="form-control" id="editU-password" name="passwordUsuarioEdit" required></div><div class="row"><div class="col-md-6 mb-3"><label class="form-label fw-bold">Rol</label><select class="form-select" id="editU-rol" name="rolUsuarioEdit" required><option value="Administrador">Admin</option><option value="Inspector">Inspector</option><option value="Mantenimiento">Mantenimiento</option><option value="Flota">Flota</option><option value="Almacén">Almacén</option></select></div><div class="col-md-6 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" id="editU-estado" name="estadoUsuarioEdit" required><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarUsuario">Actualizar</button></div></form></div></div></div>
+    <div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold" id="tituloModalUser"><i class="bi bi-shield-lock-fill text-warning"></i> Gestor de Accesos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formGestorUsuario" onsubmit="procesarGuardadoUsuario(event, this)">
+                    <input type="hidden" name="idUsuarioEdit" id="gu_id">
+                    <input type="hidden" name="permisos_json" id="gu_permisos">
+                    <div class="modal-body bg-light">
+                        <div class="card p-3 shadow-sm mb-3 border-0">
+                            <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill"></i> Datos del Personal</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="fw-bold">Nombre Completo</label><input type="text" class="form-control fw-bold" name="nombreUsuarioEdit" id="gu_nombre" required></div>
+                                <div class="col-md-6 mb-3"><label class="fw-bold">Cargo</label><input type="text" class="form-control" name="cargoUsuarioEdit" id="gu_cargo" required></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5 mb-3"><label class="fw-bold">Correo (Usuario)</label><input type="email" class="form-control" name="correoUsuarioEdit" id="gu_correo" required></div>
+                                <div class="col-md-4 mb-3"><label class="fw-bold">Contraseña</label><input type="text" class="form-control" name="passwordUsuarioEdit" id="gu_password" required></div>
+                                <div class="col-md-3 mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="estadoUsuarioEdit" id="gu_estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
+                            </div>
+                        </div>
+                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                            <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-grid-3x3-gap-fill"></i> Matriz de Permisos (Checkboxes)</div>
+                            <div class="table-responsive m-0">
+                                <table class="table table-hover table-bordered text-center align-middle mb-0 bg-white" style="font-size: 0.9rem;" id="tablaMatrizPermisos">
+                                    <thead class="table-light">
+                                        <tr><th class="text-start">Módulo de Sistema</th><th><i class="bi bi-eye text-primary"></i> Leer</th><th><i class="bi bi-plus-circle text-success"></i> Crear</th><th><i class="bi bi-pencil text-warning"></i> Editar</th><th><i class="bi bi-trash text-danger"></i> Eliminar</th></tr>
+                                    </thead>
+                                    <tbody id="bodyMatrizPermisos"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4" id="btnGuardarUser"><i class="bi bi-save"></i> Guardar Accesos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-danger border-2"><div class="modal-header bg-danger"><h5 class="modal-title fw-bold text-white">Confirmación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4"><p class="fs-5 mb-1">Eliminar: <strong id="delete-record-id" class="text-danger"></strong></p><div class="mt-4 text-start"><label class="form-label" id="label-confirmar">Escribe Si:</label><input type="text" id="input-confirmar-eliminar" class="form-control text-center fw-bold" autocomplete="off"><div id="msg-error-eliminar" class="text-danger mt-2 fw-bold text-center" style="display: none;">Error.</div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="btn-procesar-eliminar" onclick="procesarEliminacion()">Eliminar</button></div></div></div></div>
 
     <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist>

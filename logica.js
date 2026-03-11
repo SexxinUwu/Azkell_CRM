@@ -55,7 +55,7 @@ const google = {
 //  JS_Logica.html — Azkell CRM (Fase Final: Caché + API Wialon)
 // ============================================================
 
-let usuarioLogueado   = ''; let rolLogueado       = ''; const TIEMPO_INACTIVIDAD = 30 * 60 * 1000;
+let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}; const TIEMPO_INACTIVIDAD = 30 * 60 * 1000;
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
@@ -101,42 +101,132 @@ function parseDateToDDMMYYYY(dateStr) { if(!dateStr) return "-"; if(dateStr.matc
 function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
 
 function verificarSesionGuardada() {
-  const guardadoUser = localStorage.getItem('crm_user'); const guardadoRol = localStorage.getItem('crm_rol'); const guardadoTime = localStorage.getItem('crm_ultimo_acceso'); const guardadoCorreo = localStorage.getItem('crm_correo');
-  if (guardadoUser && guardadoRol && guardadoTime && Date.now() - parseInt(guardadoTime) < TIEMPO_INACTIVIDAD) {
-    usuarioLogueado = guardadoUser; rolLogueado = guardadoRol.trim(); registrarActividad();
-    document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
-    document.getElementById('perfil-nombre').innerText = usuarioLogueado;
-    if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
-    let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
-    let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = badgeRol(rolLogueado);
-    let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerText = rolLogueado;
+    const guardadoUser = localStorage.getItem('crm_user');
+    const guardadoTime = localStorage.getItem('crm_ultimo_acceso');
+    const guardadoCorreo = localStorage.getItem('crm_correo');
+    const guardadoPermisos = localStorage.getItem('crm_permisos');
+    const guardadoRol = localStorage.getItem('crm_rol'); // Recuperamos el rol real
 
-    const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
-    const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
-    [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
-    [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
-    ['nav-mantenimiento','nav-almacen','nav-flota'].forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-expanded', 'false'); });
+    if (guardadoUser && guardadoTime && Date.now() - parseInt(guardadoTime) < TIEMPO_INACTIVIDAD) {
+        usuarioLogueado = guardadoUser;
+        rolLogueado = guardadoRol && guardadoRol !== 'null' ? guardadoRol : 'Personalizado';
+        registrarActividad();
 
-    if (rolLogueado === 'Administrador') { [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'block'; }); [cMant, cAlm, cFlo].forEach(el => { if (el) el.style.removeProperty('display'); }); if (cMant) { cMant.classList.add('show'); } const tMant = document.getElementById('nav-mantenimiento'); if (tMant) tMant.setAttribute('aria-expanded', 'true'); cambiarModulo('statusMant', 'btnMenuStatusMant'); } 
-    else if (rolLogueado === 'Inspector') { [nMant, nAlm, nFlo, nUsu].forEach(el => { if (el) el.style.display = 'block'; }); [cMant, cAlm, cFlo].forEach(el => { if (el) el.style.removeProperty('display'); }); if (cMant) { cMant.classList.add('show'); } const tMant = document.getElementById('nav-mantenimiento'); if (tMant) tMant.setAttribute('aria-expanded', 'true'); cambiarModulo('statusMant', 'btnMenuStatusMant'); } 
-    else if (rolLogueado === 'Mantenimiento') { if (nMant) nMant.style.display = 'block'; if (cMant) { cMant.style.removeProperty('display'); cMant.classList.add('show'); } const tMant = document.getElementById('nav-mantenimiento'); if (tMant) tMant.setAttribute('aria-expanded', 'true'); cambiarModulo('statusMant', 'btnMenuStatusMant'); } 
-    else if (rolLogueado === 'Almacén' || rolLogueado === 'Almacen') { if (nAlm) nAlm.style.display = 'block'; if (cAlm) { cAlm.style.removeProperty('display'); cAlm.classList.add('show'); } const tAlm = document.getElementById('nav-almacen'); if (tAlm) tAlm.setAttribute('aria-expanded', 'true'); cambiarModulo('almacenPlacas', 'btnMenuPlacasAlmacen'); } 
-    else if (rolLogueado === 'Flota') { if (nFlo) nFlo.style.display = 'block'; if (cFlo) { cFlo.style.removeProperty('display'); cFlo.classList.add('show'); } const tFlo = document.getElementById('nav-flota'); if (tFlo) tFlo.setAttribute('aria-expanded', 'true'); cambiarModulo('seguridad', 'btnMenuSeguridad'); }
+        // 🧠 Lector seguro de JSON (Anti-crasheos)
+        try {
+            let parsed = JSON.parse(guardadoPermisos || '{}');
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            permisosUsuario = parsed;
+        } catch(e) {
+            permisosUsuario = {};
+        }
 
-    google.script.run.withSuccessHandler(d => dataTiposMant = d).obtenerTiposMantenimiento();
-    google.script.run.withSuccessHandler(d => rellenarDatalist('dl-tpmp', new Set(d))).obtenerTPMP();
-    
-    // 🔥 Carga inicial Base de Datos + WIALON silencioso
-    google.script.run.withSuccessHandler(d => {
-        dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
-        let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
-        rellenarDatalist('dl-placas', placasSet);
-        recargarWialon(); // Traemos GPS en segundo plano
-    }).obtenerDatosPlacas();
+        document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
+        document.getElementById('perfil-nombre').innerText = usuarioLogueado;
+        if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
+        let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
 
-    document.getElementById('pantalla-login').style.display = 'none'; document.getElementById('app-crm').style.display = 'flex'; return;
-  }
-  document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
+        // Etiqueta visual
+        let esFundador = guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com';
+        let rolHtml = esFundador ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+                    : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`;
+
+        let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = rolHtml;
+        let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerHTML = rolHtml;
+
+        // Ocultar todos los menús por defecto
+        const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
+        const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
+        [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
+        [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
+        ['nav-mantenimiento','nav-almacen','nav-flota'].forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-expanded', 'false'); });
+
+        // Mostrar menús según permisos seguros
+        if (permisosUsuario.mantenimiento?.leer) { if(nMant) nMant.style.display = 'block'; if(cMant) { cMant.style.removeProperty('display'); cMant.classList.add('show'); } const tM = document.getElementById('nav-mantenimiento'); if(tM) tM.setAttribute('aria-expanded','true'); }
+        if (permisosUsuario.almacen?.leer) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) { cAlm.style.removeProperty('display'); cAlm.classList.add('show'); } const tA = document.getElementById('nav-almacen'); if(tA) tA.setAttribute('aria-expanded','true'); }
+        if (permisosUsuario.flota?.leer) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) { cFlo.style.removeProperty('display'); cFlo.classList.add('show'); } const tF = document.getElementById('nav-flota'); if(tF) tF.setAttribute('aria-expanded','true'); }
+        if (permisosUsuario.usuarios?.leer) { if(nUsu) nUsu.style.display = 'block'; }
+        if (permisosUsuario.auditoria?.leer) { if(nAud) nAud.style.display = 'block'; }
+
+        document.getElementById('pantalla-login').style.display = 'none';
+        document.getElementById('app-crm').style.display = 'flex';
+
+        // 🚀 REDIRECCIÓN INTELIGENTE AL ENTRAR
+        if (permisosUsuario.mantenimiento?.leer) cambiarModulo('statusMant', 'btnMenuStatusMant');
+        else if (permisosUsuario.flota?.leer) cambiarModulo('statusFlota', 'btnMenuStatusFlota');
+        else if (permisosUsuario.almacen?.leer) cambiarModulo('almacenPlacas', 'btnMenuPlacasAlmacen');
+        else if (permisosUsuario.usuarios?.leer) cambiarModulo('usuarios', 'nav-usuarios');
+        else if (permisosUsuario.auditoria?.leer) cambiarModulo('auditoria', 'nav-auditoria');
+        else {
+            // EL ESCUDO ANTI PANTALLA BLANCA
+            document.getElementById('tituloTopBar').innerText = "Acceso Restringido";
+            document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+            let modStatus = document.getElementById('moduloStatus');
+            if(modStatus) {
+                modStatus.style.display = 'flex';
+                document.getElementById('cuerpoTablaStatus').innerHTML = '<tr><td colspan="10" class="text-center py-5"><i class="bi bi-shield-lock-fill text-warning" style="font-size:4rem;"></i><br><h4 class="mt-3 text-dark fw-bold">Cuenta Restringida</h4><p class="text-muted">No tienes módulos asignados. Contacta al administrador.</p></td></tr>';
+                let pGraficos = document.getElementById('panelGraficosStatus'); if(pGraficos) pGraficos.style.display = 'none';
+            }
+        }
+
+        aplicarPermisosBotonesUI();
+
+        google.script.run.withSuccessHandler(d => {
+            dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
+            let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
+            rellenarDatalist('dl-placas', placasSet);
+            recargarWialon();
+        }).obtenerDatosPlacas();
+        return;
+    }
+    document.getElementById('app-crm').style.display = 'none';
+    document.getElementById('pantalla-login').style.display = 'flex';
+}
+
+function inicializarMenu() {
+    console.log("Inicializando Menú con permisos:", permisosUsuario);
+
+    const contenedorMenu = document.getElementById('contenedorMenu');
+    if (!contenedorMenu) return;
+
+    let primerModuloAccesible = null;
+
+    MODULOS_SISTEMA.forEach((modulo) => {
+        // Obtenemos los permisos específicos para este módulo
+        const pMod = permisosUsuario[modulo.id] || {};
+        const tieneAcceso = (pMod.leer === true);
+
+        // Buscamos el elemento del menú correspondiente en el HTML
+        const elementoMenu = document.querySelector(`.nav-link[onclick*="recargarModulo('${modulo.id}')"]`);
+
+        if (elementoMenu) {
+            if (tieneAcceso) {
+                elementoMenu.parentElement.style.display = 'block'; // Mostramos el botón
+                // Guardamos el primer módulo al que el usuario SI tiene acceso
+                if (!primerModuloAccesible) primerModuloAccesible = modulo.id;
+            } else {
+                elementoMenu.parentElement.style.display = 'none'; // Ocultamos el botón
+            }
+        }
+    });
+
+    // 🚀 LÓGICA DE ENTRADA INTELIGENTE:
+    if (primerModuloAccesible) {
+        console.log(`Cargando primer módulo accesible: ${primerModuloAccesible}`);
+        recargarModulo(primerModuloAccesible);
+    } else {
+        // Si no tiene acceso a NADA (Usuario nuevo sin permisos)
+        console.warn("El usuario no tiene permisos para ningún módulo.");
+        document.getElementById('contenedorPrincipal').innerHTML = `
+            <div class="container text-center mt-5">
+                <div class="card shadow-lg p-5 bg-light border-warning">
+                    <i class="bi bi-shield-lock-fill text-warning" style="font-size: 4rem;"></i>
+                    <h2 class="mt-3 text-dark">Acceso Restringido</h2>
+                    <p class="lead text-muted">Su cuenta está activa, pero aún no tiene módulos asignados.<br>Por favor, contacte al administrador para configurar sus accesos.</p>
+                </div>
+            </div>
+        `;
+    }
 }
 
 async function iniciarSesion(event, formObj) {
@@ -161,6 +251,7 @@ async function iniciarSesion(event, formObj) {
             localStorage.setItem('crm_user', respuesta.nombre);
             localStorage.setItem('crm_rol', respuesta.rol);
             localStorage.setItem('crm_correo', formObj.correo.value);
+            localStorage.setItem('crm_permisos', respuesta.permisos || '{}');
             localStorage.setItem('crm_ultimo_acceso', Date.now());
             formObj.reset();
             btn.disabled = false;
@@ -181,9 +272,38 @@ async function iniciarSesion(event, formObj) {
 }
 
 function cerrarSesion() {
-  localStorage.removeItem('crm_user'); localStorage.removeItem('crm_rol'); localStorage.removeItem('crm_correo'); localStorage.removeItem('crm_ultimo_acceso'); usuarioLogueado = ''; rolLogueado = '';
-  ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.classList.remove('show'); el.style.display = 'none'; const inst = bootstrap.Collapse.getInstance(el); if (inst) inst.dispose(); });
-  document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
+    localStorage.removeItem('crm_user'); localStorage.removeItem('crm_rol'); localStorage.removeItem('crm_correo'); localStorage.removeItem('crm_ultimo_acceso'); localStorage.removeItem('crm_permisos');
+    usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
+
+    // 🧹 Limpieza Total de Pantalla (Evita que el siguiente usuario vea pantallas que no debe)
+    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.classList.remove('show'); el.style.display = 'none'; const inst = bootstrap.Collapse.getInstance(el); if (inst) inst.dispose(); });
+    document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+
+    document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
+}
+
+function aplicarPermisosBotonesUI() {
+    // Oculta botones de acción según permisos del usuario actual
+    const pMant = permisosUsuario.mantenimiento || {};
+    const pFlota = permisosUsuario.flota || {};
+    const pAlm = permisosUsuario.almacen || {};
+    const pUsu = permisosUsuario.usuarios || {};
+
+    // Botones de crear/guardar — ocultar si no tiene permiso crear
+    document.querySelectorAll('[data-perm-crear]').forEach(el => {
+        let mod = el.getAttribute('data-perm-crear');
+        el.style.display = (permisosUsuario[mod]?.crear) ? '' : 'none';
+    });
+    // Botones de editar — ocultar si no tiene permiso editar
+    document.querySelectorAll('[data-perm-editar]').forEach(el => {
+        let mod = el.getAttribute('data-perm-editar');
+        el.style.display = (permisosUsuario[mod]?.editar) ? '' : 'none';
+    });
+    // Botones de eliminar — ocultar si no tiene permiso eliminar
+    document.querySelectorAll('[data-perm-eliminar]').forEach(el => {
+        let mod = el.getAttribute('data-perm-eliminar');
+        el.style.display = (permisosUsuario[mod]?.eliminar) ? '' : 'none';
+    });
 }
 
 // ============================================================
@@ -318,28 +438,38 @@ function recargarModulo(nombre) {
 const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'seguridad': ['Administrador', 'Inspector', 'Flota'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
 
 function cambiarModulo(modulo, idBoton) {
-  const permitidos = PERMISOS_MODULO[modulo] || [];
-  if (rolLogueado && !permitidos.includes(rolLogueado)) return;
+    let bloqueado = false;
+    let p = permisosUsuario || {}; // Verificación segura
 
-  ['moduloSeguridad','moduloUsuarios','moduloAuditoria','moduloPlacas','moduloFleetrun','moduloStatus', 'moduloUbicacion', 'moduloStatusFlota', 'moduloConductores'].forEach(m => {
-    let el = document.getElementById(m); if(el) el.style.display = 'none';
-  });
+    // Filtro de seguridad que no crashea
+    if (modulo.includes('Mant') || modulo === 'placas' || modulo === 'fleetrun') { if (!p.mantenimiento || !p.mantenimiento.leer) bloqueado = true; }
+    else if (modulo === 'almacenPlacas') { if (!p.almacen || !p.almacen.leer) bloqueado = true; }
+    else if (modulo === 'statusFlota' || modulo === 'seguridad' || modulo === 'conductores' || modulo === 'ubicacion') { if (!p.flota || !p.flota.leer) bloqueado = true; }
+    else if (modulo === 'usuarios') { if (!p.usuarios || !p.usuarios.leer) bloqueado = true; }
+    else if (modulo === 'auditoria') { if (!p.auditoria || !p.auditoria.leer) bloqueado = true; }
 
-  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-  if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
-  const titulo = document.getElementById('tituloTopBar');
+    if (bloqueado) return;
 
-  if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
-  else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
-  else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
-  else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
-  else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
-  else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
-  else if (modulo === 'statusFlota') { let el=document.getElementById('moduloStatusFlota'); if(el) el.style.display = 'flex'; titulo.innerText = 'Status de Flota'; cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota'); }
-  else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
-  else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
+    // 1. Ocultar todos los módulos forzosamente
+    document.querySelectorAll('.modulo-wrapper').forEach(m => { m.style.display = 'none'; });
 
-  if (window.innerWidth <= 768) closeSidebar();
+    // 2. Pintar menú
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
+    const titulo = document.getElementById('tituloTopBar');
+
+    // 3. Cargar Módulo permitido
+    if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
+    else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
+    else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
+    else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
+    else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
+    else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
+    else if (modulo === 'statusFlota') { let el=document.getElementById('moduloStatusFlota'); if(el) el.style.display = 'flex'; titulo.innerText = 'Status de Flota'; cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota'); }
+    else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
+    else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
+
+    if (window.innerWidth <= 768) closeSidebar();
 }
 
 function procesadorErroresCuota(datos, containerId) {
@@ -1009,8 +1139,8 @@ function procesarEliminacion() {
                 else if (itemAEliminarCol === 'Placas') cargarTablaPlacas(true);
                 else if (itemAEliminarCol === 'Fleetrun') cargarTablaFleetrun(true);
                 else if (itemAEliminarCol === 'StatusFlota') recargarModulo('statusFlota');
-                else if (itemAEliminarCol === 'Inspecciones') { dataGlobalInspecciones = []; cargarStatusInspecciones(true); }
-                else cargarTablaUsuarios();
+                else if (itemAEliminarCol === 'Inspecciones') { dataGlobalInspecciones = []; recargarModulo('statusMant'); }
+                else if (itemAEliminarCol === 'Usuarios') recargarModulo('usuarios');
             } else {
                 alert('Error: ' + r.data);
             }
@@ -1031,11 +1161,211 @@ function procesarEliminacion() {
 function cargarTablaAuditoria(forzarRefresh = false) { if(!forzarRefresh && dataGlobalAuditoria.length > 0) { mostrarAuditoria(dataGlobalAuditoria); return; } document.getElementById('cuerpoTablaAuditoria').innerHTML = '<tr><td colspan="4" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando bitácora...</td></tr>'; google.script.run.withSuccessHandler(mostrarAuditoria).obtenerDatosAuditoria(); }
 function mostrarAuditoria(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaAuditoria')) return; dataGlobalAuditoria = datos; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="4" class="text-center py-4" style="color:var(--subtext)!important">Aún no hay registros de actividad.</td></tr>'; } else { datos.forEach(fila => { const badge = fila[2] === 'CREÓ' ? '<span class="badge bg-success">CREÓ</span>' : fila[2] === 'MODIFICÓ' ? '<span class="badge bg-warning text-dark">MODIFICÓ</span>' : '<span class="badge bg-danger">ELIMINÓ</span>'; html += `<tr><td style="color:var(--subtext)!important"><i class="bi bi-clock"></i> ${fila[0]}</td><td class="fw-bold">${fila[1]}</td><td>${badge}</td><td class="text-wrap">${fila[3]}</td></tr>`; }); } document.getElementById('cuerpoTablaAuditoria').innerHTML = html; }
 
-function cargarTablaUsuarios(forzarRefresh = false) { const btn = document.getElementById('btnNuevoUsuario'); if (btn) btn.style.display = rolLogueado === 'Administrador' ? 'inline-block' : 'none'; if(!forzarRefresh && dataGlobalUsuarios.length > 0) { mostrarUsuarios(dataGlobalUsuarios); return; } document.getElementById('cuerpoTablaUsuarios').innerHTML = '<tr><td colspan="7" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Obteniendo directorio...</td></tr>'; google.script.run.withSuccessHandler(mostrarUsuarios).obtenerDatosUsuarios(); }
-function mostrarUsuarios(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaUsuarios')) return; dataGlobalUsuarios = datos; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="7" class="text-center py-4" style="color:var(--subtext)!important">No hay usuarios registrados.</td></tr>'; } else { datos.forEach(fila => { const rolBadge = fila[4] === 'Administrador' ? '<span class="badge bg-dark text-warning">Administrador</span>' : `<span class="badge bg-secondary">${fila[4]}</span>`; const estadoBadge = fila[5] === 'Activo' ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-danger">Inactivo</span>'; const passSegura = (fila[6]||'').replace(/./g, '●'); let menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; if (rolLogueado === 'Administrador') { menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow"><li><a class="dropdown-item" href="#" onclick="abrirModalEditarUsuario('${fila[0]}','${fila[1]}','${fila[2]}','${fila[3]}','${fila[4]}','${fila[5]}','${passSegura}')"><i class="bi bi-pencil text-primary"></i> Editar Usuario</a></li><li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Usuarios')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li></ul></div>`; } html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td>${rolBadge}</td><td>${estadoBadge}</td><td>${menuAcciones}</td></tr>`; }); } document.getElementById('cuerpoTablaUsuarios').innerHTML = html; }
-function enviarUsuario(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarUsuario'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide(); dataGlobalUsuarios = []; cargarTablaUsuarios(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar Usuario'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Usuario'; }).guardarUsuario(formObj); }
-function abrirModalEditarUsuario(id, nombre, cargo, correo, rol, estado, password) { document.getElementById('formEditarUsuario').reset(); document.getElementById('editU-id').value = id; document.getElementById('editU-nombre').value = nombre; document.getElementById('editU-cargo').value = cargo; document.getElementById('editU-correo').value = correo; document.getElementById('editU-rol').value = rol; document.getElementById('editU-estado').value = estado; document.getElementById('editU-password').value = password; const btn = document.getElementById('btnActualizarUsuario'); btn.disabled = false; btn.innerHTML = 'Actualizar Usuario'; new bootstrap.Modal(document.getElementById('modalEditarUsuario')).show(); }
-function enviarEdicionUsuario(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarUsuario'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarUsuario')).hide(); dataGlobalUsuarios = []; cargarTablaUsuarios(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar Usuario'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar Usuario'; }).actualizarUsuario(formObj); }
+// ==========================================
+// 🛡️ SÚPER GESTOR DE USUARIOS Y PERMISOS
+// ==========================================
+const MODULOS_SISTEMA = [
+    { id: 'mantenimiento', nombre: 'Mantenimiento (Insp/Fleet)' },
+    { id: 'almacen', nombre: 'Almacén (Inventario)' },
+    { id: 'flota', nombre: 'Flota (Status/GPS/Seg/Cond)' },
+    { id: 'usuarios', nombre: 'Gestión de Usuarios' },
+    { id: 'auditoria', nombre: 'Auditoría y Logs', soloLectura: true }
+];
+
+function mostrarUsuarios(datos) {
+    dataGlobalUsuarios = datos;
+    let html = '';
+    if (!datos || datos.length === 0) {
+        html = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay usuarios registrados.</td></tr>';
+    } else {
+        datos.forEach((fila) => {
+            const estadoBadge = fila[5] === 'Activo' ? '<span class="badge bg-success shadow-sm">Activo</span>' : '<span class="badge bg-danger shadow-sm">Inactivo</span>';
+            let permisosObj = {};
+            try { permisosObj = JSON.parse(fila[7] || '{}'); } catch(e){}
+
+            let esAdminMaster = (fila[3] || '').trim().toLowerCase() === 'admin@azkell.com';
+            let esAdmin = esAdminMaster || (permisosObj.usuarios && permisosObj.usuarios.crear && permisosObj.mantenimiento && permisosObj.mantenimiento.crear);
+
+            const rolBadge = esAdminMaster
+                ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+                : (esAdmin
+                    ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Admin Global</span>'
+                    : '<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> Personalizado</span>');
+
+            let menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
+            if (rolLogueado === 'Administrador' || rolLogueado === 'Personalizado') {
+                menuAcciones = `<div class="dropstart text-center">
+                    <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                    <ul class="dropdown-menu shadow">
+                        <li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalGestorUsuario('${fila[0]}', false)"><i class="bi bi-pencil text-primary"></i> Editar Permisos</a></li>
+                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="abrirModalGestorUsuario('${fila[0]}', true)"><i class="bi bi-copy"></i> Clonar Usuario</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Usuarios')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>
+                    </ul>
+                </div>`;
+            }
+            html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td class="fw-bold" style="color:#1e293b;">${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td>${rolBadge}</td><td>${estadoBadge}</td><td>${menuAcciones}</td></tr>`;
+        });
+    }
+    document.getElementById('cuerpoTablaUsuarios').innerHTML = html;
+}
+
+function generarMatrizUI() {
+    let html = '';
+    MODULOS_SISTEMA.forEach(m => {
+        let disabledExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-crear disabled-by-sys"' : 'class="form-check-input perm-chk p-crear"';
+        let editExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-editar disabled-by-sys"' : 'class="form-check-input perm-chk p-editar"';
+        let delExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-eliminar disabled-by-sys"' : 'class="form-check-input perm-chk p-eliminar"';
+        html += `<tr data-mod="${m.id}">
+            <td class="text-start fw-bold text-secondary bg-light">${m.nombre}</td>
+            <td><input class="form-check-input perm-chk p-leer" type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'leer')"></td>
+            <td><input ${disabledExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'crear')"></td>
+            <td><input ${editExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'editar')"></td>
+            <td><input ${delExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'eliminar')"></td>
+        </tr>`;
+    });
+    document.getElementById('bodyMatrizPermisos').innerHTML = html;
+}
+
+function logicaCheckboxes(chk, moduloId, accion) {
+    let tr = chk.closest('tr');
+    let chkLeer = tr.querySelector('.p-leer');
+    if (chk.checked && accion !== 'leer') {
+        chkLeer.checked = true;
+    }
+    if (!chk.checked && accion === 'leer') {
+        tr.querySelectorAll('.perm-chk').forEach(c => c.checked = false);
+    }
+}
+
+function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
+    // Protección contra clics directos del HTML
+    if (typeof idBusqueda === 'object') idBusqueda = null;
+
+    document.getElementById('formGestorUsuario').reset();
+    generarMatrizUI();
+
+    let filaData = null;
+    if (idBusqueda) {
+        filaData = dataGlobalUsuarios.find(u => u[0] === idBusqueda);
+    }
+
+    // 🧹 LIMPIEZA PROFUNDA: Liberamos todas las casillas antes de usarlas
+    document.querySelectorAll('.perm-chk').forEach(c => {
+        c.checked = false;
+        if(!c.classList.contains('disabled-by-sys')) c.disabled = false;
+    });
+    document.getElementById('gu_estado').disabled = false;
+    document.getElementById('gu_correo').readOnly = false;
+
+    if (!filaData) {
+        // MODO CREAR NUEVO
+        document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-person-plus-fill text-success"></i> Crear Nuevo Personal';
+        document.getElementById('gu_id').value = '';
+        document.querySelectorAll('.perm-chk:not([disabled])').forEach(c => c.checked = true);
+    } else {
+        // MODO EDITAR / CLONAR
+        if (esClon) {
+            document.getElementById('tituloModalUser').innerHTML = `<i class="bi bi-copy text-success"></i> Clonando permisos de: ${filaData[1]}`;
+            document.getElementById('gu_id').value = '';
+            document.getElementById('gu_nombre').value = '';
+            document.getElementById('gu_correo').value = '';
+            document.getElementById('gu_password').value = '';
+            document.getElementById('gu_cargo').value = filaData[2];
+        } else {
+            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-pencil-square text-warning"></i> Editar Accesos de Personal';
+            document.getElementById('gu_id').value = filaData[0];
+            document.getElementById('gu_nombre').value = filaData[1];
+            document.getElementById('gu_cargo').value = filaData[2];
+            document.getElementById('gu_correo').value = filaData[3];
+            document.getElementById('gu_password').value = filaData[6];
+            document.getElementById('gu_estado').value = filaData[5];
+        }
+
+        // 🧠 LECTOR AVANZADO DE JSON (A prueba de errores de formato)
+        let pObj = {};
+        try {
+            let rawData = filaData[7] || '{}';
+            if (typeof rawData === 'string') {
+                pObj = JSON.parse(rawData);
+                // Si la BD lo envolvió doble, lo desencapsulamos
+                if (typeof pObj === 'string') pObj = JSON.parse(pObj);
+            } else {
+                pObj = rawData;
+            }
+        } catch(e) { console.error("Error interpretando permisos", e); pObj = {}; }
+
+        // Pintar casillas
+        document.querySelectorAll('#bodyMatrizPermisos tr').forEach(tr => {
+            let modId = tr.getAttribute('data-mod');
+            if (modId && pObj[modId]) {
+                let p = pObj[modId];
+                if (p.leer)     tr.querySelector('.p-leer').checked = true;
+                if (p.crear)    tr.querySelector('.p-crear').checked = true;
+                if (p.editar)   tr.querySelector('.p-editar').checked = true;
+                if (p.eliminar) tr.querySelector('.p-eliminar').checked = true;
+            }
+        });
+
+        // 👑 BLOQUEO VISUAL DEL FUNDADOR
+        if ((filaData[3] || '').trim().toLowerCase() === 'admin@azkell.com' && !esClon) {
+            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-shield-lock-fill text-warning"></i> Cuenta Fundador (Intocable)';
+            document.querySelectorAll('.perm-chk').forEach(c => { c.checked = true; c.disabled = true; });
+            document.getElementById('gu_estado').value = 'Activo';
+            document.getElementById('gu_estado').disabled = true;
+            document.getElementById('gu_correo').readOnly = true;
+        }
+    }
+    new bootstrap.Modal(document.getElementById('modalGestorUsuario')).show();
+}
+
+function procesarGuardadoUsuario(event, formObj) {
+    event.preventDefault();
+    const btn = document.getElementById('btnGuardarUser');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+
+    // Empaquetar permisos limpiamente
+    let permisosFinales = {};
+    document.querySelectorAll('#bodyMatrizPermisos tr').forEach(tr => {
+        let modId = tr.getAttribute('data-mod');
+        if(modId) {
+            permisosFinales[modId] = {
+                leer:     tr.querySelector('.p-leer')?.checked || false,
+                crear:    tr.querySelector('.p-crear')?.checked || false,
+                editar:   tr.querySelector('.p-editar')?.checked || false,
+                eliminar: tr.querySelector('.p-eliminar')?.checked || false
+            };
+        }
+    });
+
+    document.getElementById('gu_permisos').value = JSON.stringify(permisosFinales);
+
+    fetch('/api/script/actualizarUsuario', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [{
+            idUsuarioEdit:     document.getElementById('gu_id').value,
+            nombreUsuarioEdit: document.getElementById('gu_nombre').value,
+            cargoUsuarioEdit:  document.getElementById('gu_cargo').value,
+            correoUsuarioEdit: document.getElementById('gu_correo').value,
+            passwordUsuarioEdit: document.getElementById('gu_password').value,
+            estadoUsuarioEdit: document.getElementById('gu_estado').value,
+            permisos_json:     document.getElementById('gu_permisos').value
+        }]})
+    })
+    .then(r => r.json())
+    .then(r => {
+        if (r.data === 'Éxito') {
+            bootstrap.Modal.getInstance(document.getElementById('modalGestorUsuario')).hide();
+            recargarModulo('usuarios'); // 👈 Refresca correctamente la tabla
+        } else { alert("Error: " + r.data); }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
+    })
+    .catch(e => {
+        alert("Error de Red: " + e.message);
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
+    });
+}
 function enviarDatos(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalSeguridad')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).guardarReporte(formObj); }
 function abrirModalEditar(id, inspector, tipo, estado) { document.getElementById('formEditar').reset(); document.getElementById('edit-id').value = id; document.getElementById('edit-inspector').value = inspector; document.getElementById('edit-tipo').value = tipo; document.getElementById('edit-estado').value = estado; const btn = document.getElementById('btnActualizar'); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; new bootstrap.Modal(document.getElementById('modalEditar')).show(); }
 function enviarEdicion(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).actualizarReporte(formObj); }
