@@ -50,9 +50,9 @@ app.post('/api/login', (req, res) => {
                 let permisosFinales = usuario.permisos_json || "{}";
                 let rolFinal = usuario.rol || "Personalizado";
 
-                // 👑 EL BLINDAJE DEL FUNDADOR (Garantiza acceso total siempre)
+                // 👑 EL BLINDAJE DEL FUNDADOR (Nuevo JSON Master)
                 if (correo.toLowerCase() === 'admin@azkell.com') {
-                    permisosFinales = JSON.stringify({"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}});
+                    permisosFinales = JSON.stringify({ admin: true });
                     rolFinal = "Administrador";
                 }
 
@@ -127,7 +127,7 @@ app.post('/api/script/:metodo', async (req, res) => {
 
                 // 👑 EL BLINDAJE DEL FUNDADOR: Ignoramos lo que diga la BD para este correo
                 if (correoMin === 'admin@azkell.com') {
-                    permisosFinales = {"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}};
+                    permisosFinales = { admin: true };
                 } else {
                     // 🧠 LECTOR SEGURO DE JSON PARA OTROS USUARIOS
                     try {
@@ -300,7 +300,7 @@ app.post('/api/script/:metodo', async (req, res) => {
 
             // Bloquear edición maliciosa del Fundador
             if (correo.trim().toLowerCase() === 'admin@azkell.com') {
-                permisos = JSON.stringify({"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}});
+                permisos = JSON.stringify({ admin: true });
                 estado = "Activo"; rol = "Administrador";
             }
 

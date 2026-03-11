@@ -100,65 +100,87 @@ function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspecto
 function parseDateToDDMMYYYY(dateStr) { if(!dateStr) return "-"; if(dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return dateStr; let d = new Date(dateStr); if(isNaN(d.getTime())) return dateStr; let day = d.getDate().toString().padStart(2, '0'); let month = (d.getMonth() + 1).toString().padStart(2, '0'); let year = d.getFullYear(); return `${day}/${month}/${year}`; }
 function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
 
+// =======================================================
+// 🛡️ NÚCLEO DE SEGURIDAD Y ENRUTAMIENTO RBAC
+// =======================================================
+
 function verificarSesionGuardada() {
     const guardadoUser = localStorage.getItem('crm_user');
     const guardadoTime = localStorage.getItem('crm_ultimo_acceso');
     const guardadoCorreo = localStorage.getItem('crm_correo');
     const guardadoPermisos = localStorage.getItem('crm_permisos');
-    const guardadoRol = localStorage.getItem('crm_rol'); // Recuperamos el rol real
+    const guardadoRol = localStorage.getItem('crm_rol');
 
     if (guardadoUser && guardadoTime && Date.now() - parseInt(guardadoTime) < TIEMPO_INACTIVIDAD) {
         usuarioLogueado = guardadoUser;
         rolLogueado = guardadoRol && guardadoRol !== 'null' ? guardadoRol : 'Personalizado';
         registrarActividad();
 
-        // 🧠 Lector seguro de JSON (Anti-crasheos)
         try {
             let parsed = JSON.parse(guardadoPermisos || '{}');
             if (typeof parsed === 'string') parsed = JSON.parse(parsed);
             permisosUsuario = parsed;
-        } catch(e) {
-            permisosUsuario = {};
-        }
+        } catch(e) { permisosUsuario = {}; }
 
         document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
         document.getElementById('perfil-nombre').innerText = usuarioLogueado;
         if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
         let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
 
-        // Etiqueta visual
-        let esFundador = guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com';
-        let rolHtml = esFundador ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
-                    : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`;
+        let p = permisosUsuario || {};
+        // 👑 ESCUDO DEFINITIVO: Si eres admin@azkell.com, eres Dios, sin importar la memoria
+        let isAdm = p.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+
+        let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+                    : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
+                    : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`);
 
         let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = rolHtml;
         let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerHTML = rolHtml;
 
-        // Ocultar todos los menús por defecto
+        // 🧹 Ocultar Menús Base
         const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
         const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
         [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
         [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
-        ['nav-mantenimiento','nav-almacen','nav-flota'].forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-expanded', 'false'); });
 
-        // Mostrar menús según permisos seguros
-        if (permisosUsuario.mantenimiento?.leer) { if(nMant) nMant.style.display = 'block'; if(cMant) { cMant.style.removeProperty('display'); cMant.classList.add('show'); } const tM = document.getElementById('nav-mantenimiento'); if(tM) tM.setAttribute('aria-expanded','true'); }
-        if (permisosUsuario.almacen?.leer) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) { cAlm.style.removeProperty('display'); cAlm.classList.add('show'); } const tA = document.getElementById('nav-almacen'); if(tA) tA.setAttribute('aria-expanded','true'); }
-        if (permisosUsuario.flota?.leer) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) { cFlo.style.removeProperty('display'); cFlo.classList.add('show'); } const tF = document.getElementById('nav-flota'); if(tF) tF.setAttribute('aria-expanded','true'); }
-        if (permisosUsuario.usuarios?.leer) { if(nUsu) nUsu.style.display = 'block'; }
-        if (permisosUsuario.auditoria?.leer) { if(nAud) nAud.style.display = 'block'; }
+        // 🧠 APERTURA INTELIGENTE: Si tiene permiso en un hijo, abre el padre automáticamente
+        let showMant = isAdm || p.mod_mant || p.insp?.l || p.placas?.l || p.fleet?.l;
+        let showAlm = isAdm || p.mod_alm || p.placas?.l;
+        let showFlota = isAdm || p.mod_flota || p.gps?.l || p.status?.l || p.seg?.l || p.cond?.l;
+
+        // 👁️ Renderizar Sidebar según Matriz
+        const mStatus = document.getElementById('btnMenuStatusMant'); const mPlacas = document.getElementById('btnMenuPlacasMant'); const mFleet = document.getElementById('btnMenuFleetrun');
+        const aPlacas = document.getElementById('btnMenuPlacasAlmacen');
+        const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fSeg = document.getElementById('btnMenuSeguridad'); const fCond = document.getElementById('btnMenuConductores');
+
+        if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) { cMant.style.removeProperty('display'); cMant.classList.add('show'); } }
+        if (mStatus) mStatus.style.display = (isAdm || p.insp?.l) ? 'block' : 'none';
+        if (mPlacas) mPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
+        if (mFleet) mFleet.style.display = (isAdm || p.fleet?.l) ? 'block' : 'none';
+
+        if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) { cAlm.style.removeProperty('display'); cAlm.classList.add('show'); } }
+        if (aPlacas) aPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
+
+        if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) { cFlo.style.removeProperty('display'); cFlo.classList.add('show'); } }
+        if (fGps) fGps.style.display = (isAdm || p.gps?.l) ? 'block' : 'none';
+        if (fStatus) fStatus.style.display = (isAdm || p.status?.l) ? 'block' : 'none';
+        if (fSeg) fSeg.style.display = (isAdm || p.seg?.l) ? 'block' : 'none';
+        if (fCond) fCond.style.display = (isAdm || p.cond?.l) ? 'block' : 'none';
+
+        if (isAdm) { if(nUsu) nUsu.style.display = 'block'; }
+        if (isAdm || p.mod_auditoria) { if(nAud) nAud.style.display = 'block'; }
 
         document.getElementById('pantalla-login').style.display = 'none';
         document.getElementById('app-crm').style.display = 'flex';
 
-        // 🚀 REDIRECCIÓN INTELIGENTE AL ENTRAR
-        if (permisosUsuario.mantenimiento?.leer) cambiarModulo('statusMant', 'btnMenuStatusMant');
-        else if (permisosUsuario.flota?.leer) cambiarModulo('statusFlota', 'btnMenuStatusFlota');
-        else if (permisosUsuario.almacen?.leer) cambiarModulo('almacenPlacas', 'btnMenuPlacasAlmacen');
-        else if (permisosUsuario.usuarios?.leer) cambiarModulo('usuarios', 'nav-usuarios');
-        else if (permisosUsuario.auditoria?.leer) cambiarModulo('auditoria', 'nav-auditoria');
+        // 🚀 Redirección Automática
+        if (isAdm || p.insp?.l) cambiarModulo('statusMant', 'btnMenuStatusMant');
+        else if (p.status?.l) cambiarModulo('statusFlota', 'btnMenuStatusFlota');
+        else if (p.placas?.l) cambiarModulo('placas', 'btnMenuPlacasMant');
+        else if (p.fleet?.l) cambiarModulo('fleetrun', 'btnMenuFleetrun');
+        else if (p.gps?.l) cambiarModulo('ubicacion', 'btnMenuUbicacion');
         else {
-            // EL ESCUDO ANTI PANTALLA BLANCA
             document.getElementById('tituloTopBar').innerText = "Acceso Restringido";
             document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
             let modStatus = document.getElementById('moduloStatus');
@@ -169,18 +191,14 @@ function verificarSesionGuardada() {
             }
         }
 
-        aplicarPermisosBotonesUI();
-
         google.script.run.withSuccessHandler(d => {
             dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
             let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
-            rellenarDatalist('dl-placas', placasSet);
-            recargarWialon();
+            rellenarDatalist('dl-placas', placasSet); recargarWialon();
         }).obtenerDatosPlacas();
         return;
     }
-    document.getElementById('app-crm').style.display = 'none';
-    document.getElementById('pantalla-login').style.display = 'flex';
+    document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
 }
 
 function inicializarMenu() {
@@ -283,27 +301,24 @@ function cerrarSesion() {
 }
 
 function aplicarPermisosBotonesUI() {
-    // Oculta botones de acción según permisos del usuario actual
-    const pMant = permisosUsuario.mantenimiento || {};
-    const pFlota = permisosUsuario.flota || {};
-    const pAlm = permisosUsuario.almacen || {};
-    const pUsu = permisosUsuario.usuarios || {};
+    let p = permisosUsuario || {};
+    let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+    let isAdm = p.admin === true || correoActual === 'admin@azkell.com';
 
-    // Botones de crear/guardar — ocultar si no tiene permiso crear
-    document.querySelectorAll('[data-perm-crear]').forEach(el => {
-        let mod = el.getAttribute('data-perm-crear');
-        el.style.display = (permisosUsuario[mod]?.crear) ? '' : 'none';
-    });
-    // Botones de editar — ocultar si no tiene permiso editar
-    document.querySelectorAll('[data-perm-editar]').forEach(el => {
-        let mod = el.getAttribute('data-perm-editar');
-        el.style.display = (permisosUsuario[mod]?.editar) ? '' : 'none';
-    });
-    // Botones de eliminar — ocultar si no tiene permiso eliminar
-    document.querySelectorAll('[data-perm-eliminar]').forEach(el => {
-        let mod = el.getAttribute('data-perm-eliminar');
-        el.style.display = (permisosUsuario[mod]?.eliminar) ? '' : 'none';
-    });
+    const check = (selector, permiso) => {
+        // Aplicamos a TODOS los botones que coincidan (para asegurar que se borre bien)
+        document.querySelectorAll(selector).forEach(btn => {
+            btn.style.display = (isAdm || permiso === true) ? 'inline-block' : 'none';
+        });
+    };
+
+    check('button[onclick="abrirModalNuevaInspeccion()"]', p.insp?.c);
+    check('#btnNuevaPlaca', p.placas?.c);
+    check('#btnNuevoFleetrun', p.fleet?.c);
+    check('button[onclick="abrirModalNuevoStatusFlota()"]', p.status?.c);
+    check('#btnNuevoReporteSeguridad', p.seg?.c);
+    check('button[onclick="abrirModalConductor()"]', p.cond?.c);
+    check('button[onclick="abrirModalGestorUsuario()"]', false); // Oculto directo, se abre desde tabla
 }
 
 // ============================================================
@@ -439,26 +454,28 @@ const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimient
 
 function cambiarModulo(modulo, idBoton) {
     let bloqueado = false;
-    let p = permisosUsuario || {}; // Verificación segura
+    let p = permisosUsuario || {};
+    let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+    let isAdm = p.admin === true || correoActual === 'admin@azkell.com';
 
-    // Filtro de seguridad que no crashea
-    if (modulo.includes('Mant') || modulo === 'placas' || modulo === 'fleetrun') { if (!p.mantenimiento || !p.mantenimiento.leer) bloqueado = true; }
-    else if (modulo === 'almacenPlacas') { if (!p.almacen || !p.almacen.leer) bloqueado = true; }
-    else if (modulo === 'statusFlota' || modulo === 'seguridad' || modulo === 'conductores' || modulo === 'ubicacion') { if (!p.flota || !p.flota.leer) bloqueado = true; }
-    else if (modulo === 'usuarios') { if (!p.usuarios || !p.usuarios.leer) bloqueado = true; }
-    else if (modulo === 'auditoria') { if (!p.auditoria || !p.auditoria.leer) bloqueado = true; }
+    // Muro de Contención Estricto
+    if (modulo === 'statusMant' && !isAdm && !p.insp?.l) bloqueado = true;
+    if ((modulo === 'placas' || modulo === 'almacenPlacas') && !isAdm && !p.placas?.l) bloqueado = true;
+    if (modulo === 'fleetrun' && !isAdm && !p.fleet?.l) bloqueado = true;
+    if (modulo === 'ubicacion' && !isAdm && !p.gps?.l) bloqueado = true;
+    if (modulo === 'statusFlota' && !isAdm && !p.status?.l) bloqueado = true;
+    if (modulo === 'seguridad' && !isAdm && !p.seg?.l) bloqueado = true;
+    if (modulo === 'conductores' && !isAdm && !p.cond?.l) bloqueado = true;
+    if (modulo === 'usuarios' && !isAdm) bloqueado = true;
+    if (modulo === 'auditoria' && !isAdm && !p.mod_auditoria) bloqueado = true;
 
     if (bloqueado) return;
 
-    // 1. Ocultar todos los módulos forzosamente
     document.querySelectorAll('.modulo-wrapper').forEach(m => { m.style.display = 'none'; });
-
-    // 2. Pintar menú
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
     if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
     const titulo = document.getElementById('tituloTopBar');
 
-    // 3. Cargar Módulo permitido
     if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
@@ -470,8 +487,8 @@ function cambiarModulo(modulo, idBoton) {
     else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
 
     if (window.innerWidth <= 768) closeSidebar();
+    aplicarPermisosBotonesUI();
 }
-
 function procesadorErroresCuota(datos, containerId) {
     if (typeof datos === 'string' && datos.includes('ERROR_BACKEND')) { 
         let msg = datos;
@@ -598,13 +615,18 @@ function mostrarStatusInspecciones(inspecciones) {
                   </div>`;
               }
 
+              let pInsp = permisosUsuario || {};
+              let isAdmInsp = pInsp.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+              let canEditInsp = isAdmInsp || pInsp.insp?.e === true;
+              let canDelInsp = isAdmInsp || pInsp.insp?.d === true;
+
               let menuAcciones = '';
               if (insp && insp.id) {
                   let items = `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Resumen</a></li>`;
                   items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
-                  items += `<li><hr class="dropdown-divider"></li>`;
-                  items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
-                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
+                  if(canEditInsp || canDelInsp) items += `<li><hr class="dropdown-divider"></li>`;
+                  if(canEditInsp) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
+                  if(canDelInsp) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
@@ -967,7 +989,7 @@ function generarPDFInspeccion() {
 }
 
 function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('cuerpoTablaPlacas').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
-function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; const canEditP = ['Administrador','Mantenimiento','Almacén','Almacen'].includes(rolLogueado); const canDeleteP = rolLogueado === 'Administrador'; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}">${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
+function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}">${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
 function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[5] && p[5].trim() !== "" && p[5].trim() !== "-"); if (match) { rucInput.value = match[5].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
@@ -1019,7 +1041,7 @@ function mostrarFleetrun(datos) {
   let html = '';
   if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="10" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; } 
   else {
-      let canEditF = ['Administrador', 'Mantenimiento'].includes(rolLogueado); let canDeleteF = rolLogueado === 'Administrador'; let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map(); 
+      let p = permisosUsuario || {}; let isAdmF = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; let canEditF = isAdmF || p.fleet?.e === true; let canDeleteF = isAdmF || p.fleet?.d === true; let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map(); 
       datosAMostrar.forEach((fila) => { let placaRaw = fila[4] || "-"; if(!mapPlacas.has(placaRaw)) mapPlacas.set(placaRaw, []); mapPlacas.get(placaRaw).push(fila); });
       mapPlacas.forEach((mantenimientos, placaRaw) => {
           let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = infoP ? infoP[10] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
@@ -1097,7 +1119,7 @@ window.obtenerDireccion = async function(lat, lng, btn) {
 };
 
 function cargarTablaSeguridad(forzarRefresh = false) { if(!forzarRefresh && dataGlobalSeguridad.length > 0) { mostrarDatosSeguridad(dataGlobalSeguridad); return; } document.getElementById('cuerpoTabla').innerHTML = '<tr><td colspan="6" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</td></tr>'; google.script.run.withSuccessHandler(mostrarDatosSeguridad).obtenerDatosSeguridad(); }
-function mostrarDatosSeguridad(datos) { if(procesadorErroresCuota(datos, 'cuerpoTabla')) return; dataGlobalSeguridad = datos; const canEditS = ['Administrador','Flota'].includes(rolLogueado); const canDeleteS = rolLogueado === 'Administrador'; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="6" class="text-center py-4" style="color:var(--subtext)!important">No hay registros aún.</td></tr>'; } else { datos.forEach(fila => { const estadoPuro = fila[6]; const badgeEstado = estadoPuro === 'Pendiente' ? '<span class="badge bg-danger">Pendiente</span>' : '<span class="badge bg-success">Revisado</span>'; const inspectorSeguro = (fila[2]||'').replace(/'/g, "\'"); const linkFoto = fila[5]; const itemFoto = linkFoto && linkFoto !== '' ? `<li><a class="dropdown-item" href="${linkFoto}" target="_blank"><i class="bi bi-image text-primary"></i> Ver Fotografía</a></li>` : `<li><a class="dropdown-item disabled" href="#"><i class="bi bi-image-alt"></i> Sin fotografía</a></li>`; const itemPdf = `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="generarPDF(event,'${fila[0]}','${fila[1]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}','${linkFoto||''}')"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`; let itemsAdmin = ''; if (canEditS) itemsAdmin += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditar('${fila[0]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}')"><i class="bi bi-pencil text-warning"></i> Editar Reporte</a></li>`; if (canEditS && canDeleteS) itemsAdmin += `<li><hr class="dropdown-divider"></li>`; if (canDeleteS) itemsAdmin += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Seguridad')"><i class="bi bi-trash"></i> Eliminar Registro</a></li>`; const separador = itemsAdmin !== '' ? '<li><hr class="dropdown-divider"></li>' : ''; const menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemFoto}${itemPdf}${separador}${itemsAdmin}</ul></div>`; html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td data-estado="${estadoPuro}">${badgeEstado}</td><td>${menuAcciones}</td></tr>`; }); } document.getElementById('cuerpoTabla').innerHTML = html; }
+function mostrarDatosSeguridad(datos) { if(procesadorErroresCuota(datos, 'cuerpoTabla')) return; dataGlobalSeguridad = datos; let pS = permisosUsuario || {}; let isAdmS = pS.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditS = isAdmS || pS.seg?.e === true; const canDeleteS = isAdmS || pS.seg?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="6" class="text-center py-4" style="color:var(--subtext)!important">No hay registros aún.</td></tr>'; } else { datos.forEach(fila => { const estadoPuro = fila[6]; const badgeEstado = estadoPuro === 'Pendiente' ? '<span class="badge bg-danger">Pendiente</span>' : '<span class="badge bg-success">Revisado</span>'; const inspectorSeguro = (fila[2]||'').replace(/'/g, "\'"); const linkFoto = fila[5]; const itemFoto = linkFoto && linkFoto !== '' ? `<li><a class="dropdown-item" href="${linkFoto}" target="_blank"><i class="bi bi-image text-primary"></i> Ver Fotografía</a></li>` : `<li><a class="dropdown-item disabled" href="#"><i class="bi bi-image-alt"></i> Sin fotografía</a></li>`; const itemPdf = `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="generarPDF(event,'${fila[0]}','${fila[1]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}','${linkFoto||''}')"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`; let itemsAdmin = ''; if (canEditS) itemsAdmin += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditar('${fila[0]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}')"><i class="bi bi-pencil text-warning"></i> Editar Reporte</a></li>`; if (canEditS && canDeleteS) itemsAdmin += `<li><hr class="dropdown-divider"></li>`; if (canDeleteS) itemsAdmin += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Seguridad')"><i class="bi bi-trash"></i> Eliminar Registro</a></li>`; const separador = itemsAdmin !== '' ? '<li><hr class="dropdown-divider"></li>' : ''; const menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemFoto}${itemPdf}${separador}${itemsAdmin}</ul></div>`; html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td data-estado="${estadoPuro}">${badgeEstado}</td><td>${menuAcciones}</td></tr>`; }); } document.getElementById('cuerpoTabla').innerHTML = html; }
 function generarPDF(event, id, fecha, inspector, tipo, estado, urlImagen) { event.preventDefault(); const btnElement = event.currentTarget; const textoOriginal = btnElement.innerHTML; btnElement.innerHTML = '<i class="bi bi-hourglass-split"></i> Creando...'; btnElement.classList.add('disabled'); document.getElementById('pdf-id').innerText = id; document.getElementById('pdf-fecha').innerText = fecha; document.getElementById('pdf-inspector').innerText = inspector; document.getElementById('pdf-tipo').innerText = tipo; document.getElementById('pdf-estado').innerText = estado; const imgElement = document.getElementById('pdf-imagen'); const pSinImagen = document.getElementById('pdf-sin-imagen'); function dispararPDF() { const elemento = document.getElementById('reporte-imprimir'); document.getElementById('contenedor-pdf').style.display = 'block'; html2pdf().set({ margin:10, filename:`Reporte_${id}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(elemento).save().then(() => { document.getElementById('contenedor-pdf').style.display = 'none'; btnElement.innerHTML = textoOriginal; btnElement.classList.remove('disabled'); }); } if (urlImagen && urlImagen.includes('drive.google.com')) { google.script.run.withSuccessHandler(base64 => { if (base64) { imgElement.src = base64; imgElement.style.display='block'; pSinImagen.style.display='none'; imgElement.onload = () => dispararPDF(); } else { imgElement.style.display='none'; pSinImagen.style.display='block'; pSinImagen.innerText='Error al cargar foto'; dispararPDF(); } }).obtenerImagenBase64(urlImagen); } else { imgElement.style.display = 'none'; pSinImagen.style.display = 'block'; pSinImagen.innerText = 'No se adjuntó evidencia fotográfica'; dispararPDF(); } }
 function filtrarTablaAvanzado() { const filtroTexto = document.getElementById('buscador')?.value.toLowerCase() || ''; const filtroFechaRaw = document.getElementById('buscadorFecha')?.value || ''; let fechaComparar = ''; if (filtroFechaRaw) { const p = filtroFechaRaw.split('-'); fechaComparar = p[2]+'/'+p[1]+'/'+p[0]; } const filas = document.getElementById('tablaSeguridad').getElementsByTagName('tr'); for (let i = 1; i < filas.length; i++) { const celdas = filas[i].getElementsByTagName('td'); if (celdas.length < 1) continue; const textoFila = filas[i].textContent || filas[i].innerText; const textoFecha = celdas[1] ? (celdas[1].textContent || celdas[1].innerText) : ''; const coincideTexto = textoFila.toLowerCase().indexOf(filtroTexto) > -1; const coincideFecha = !filtroFechaRaw || textoFecha.includes(fechaComparar); filas[i].style.display = (coincideTexto && coincideFecha) ? '' : 'none'; } }
 function filtrarTabla(idTabla, idBuscador) { const filtro = document.getElementById(idBuscador || 'buscadorAuditoria')?.value.toLowerCase() || ''; const filas = document.getElementById(idTabla).getElementsByTagName('tr'); for (let i = 1; i < filas.length; i++) { const textoFila = filas[i].textContent || filas[i].innerText; filas[i].style.display = textoFila.toLowerCase().indexOf(filtro) > -1 ? '' : 'none'; } }
@@ -1172,6 +1194,18 @@ const MODULOS_SISTEMA = [
     { id: 'auditoria', nombre: 'Auditoría y Logs', soloLectura: true }
 ];
 
+window.syncPlacasUI = function(el, type) {
+    document.querySelectorAll(`.p-chk.sync-placas.p-${type}`).forEach(c => c.checked = el.checked);
+}
+window.toggleAdminUI = function(isAdmin) {
+    document.querySelectorAll('.p-chk, .p-mod').forEach(c => {
+        if (isAdmin) { c.checked = true; c.disabled = true; }
+        else { c.disabled = false; }
+    });
+    let sw = document.getElementById('gu_is_admin');
+    if (sw) sw.checked = isAdmin;
+}
+
 function mostrarUsuarios(datos) {
     dataGlobalUsuarios = datos;
     let html = '';
@@ -1180,20 +1214,25 @@ function mostrarUsuarios(datos) {
     } else {
         datos.forEach((fila) => {
             const estadoBadge = fila[5] === 'Activo' ? '<span class="badge bg-success shadow-sm">Activo</span>' : '<span class="badge bg-danger shadow-sm">Inactivo</span>';
-            let permisosObj = {};
-            try { permisosObj = JSON.parse(fila[7] || '{}'); } catch(e){}
+            let pObj = {};
+            try {
+                let raw = fila[7] || '{}';
+                pObj = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                if (typeof pObj === 'string') pObj = JSON.parse(pObj);
+            } catch(e){}
 
             let esAdminMaster = (fila[3] || '').trim().toLowerCase() === 'admin@azkell.com';
-            let esAdmin = esAdminMaster || (permisosObj.usuarios && permisosObj.usuarios.crear && permisosObj.mantenimiento && permisosObj.mantenimiento.crear);
+            let esAdmin = esAdminMaster || pObj.admin === true;
 
-            const rolBadge = esAdminMaster
-                ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
-                : (esAdmin
-                    ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Admin Global</span>'
-                    : '<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> Personalizado</span>');
+            const rolBadge = esAdminMaster ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+                           : (esAdmin ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
+                           : '<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> Personalizado</span>');
 
             let menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
-            if (rolLogueado === 'Administrador' || rolLogueado === 'Personalizado') {
+
+            // 👑 Solo los Administradores y el Fundador ven los 3 puntitos
+            let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+            if (permisosUsuario.admin === true || correoActual === 'admin@azkell.com') {
                 menuAcciones = `<div class="dropstart text-center">
                     <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                     <ul class="dropdown-menu shadow">
@@ -1211,20 +1250,52 @@ function mostrarUsuarios(datos) {
 }
 
 function generarMatrizUI() {
-    let html = '';
-    MODULOS_SISTEMA.forEach(m => {
-        let disabledExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-crear disabled-by-sys"' : 'class="form-check-input perm-chk p-crear"';
-        let editExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-editar disabled-by-sys"' : 'class="form-check-input perm-chk p-editar"';
-        let delExtras = m.soloLectura ? 'disabled class="form-check-input perm-chk p-eliminar disabled-by-sys"' : 'class="form-check-input perm-chk p-eliminar"';
-        html += `<tr data-mod="${m.id}">
-            <td class="text-start fw-bold text-secondary bg-light">${m.nombre}</td>
-            <td><input class="form-check-input perm-chk p-leer" type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'leer')"></td>
-            <td><input ${disabledExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'crear')"></td>
-            <td><input ${editExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'editar')"></td>
-            <td><input ${delExtras} type="checkbox" style="width:20px; height:20px; cursor:pointer;" onchange="logicaCheckboxes(this, '${m.id}', 'eliminar')"></td>
-        </tr>`;
-    });
-    document.getElementById('bodyMatrizPermisos').innerHTML = html;
+    const target = document.getElementById('bodyMatrizPermisos');
+    if (!target) return;
+    target.innerHTML = `
+        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">MANTENIMIENTO</th></tr>
+        <tr data-k="insp"><td class="text-start ps-3 fw-semibold text-secondary small">Inspecciones</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="fleet"><td class="text-start ps-3 fw-semibold text-secondary small">Fleetrun</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">ALMACÉN</th></tr>
+        <tr data-k="placas"><td class="text-start ps-3 fw-semibold text-secondary small">Placas <small class="text-muted">(Mant+Alm)</small></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'l')"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'c')"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'e')"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'d')"></td></tr>
+        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">FLOTA</th></tr>
+        <tr data-k="status"><td class="text-start ps-3 fw-semibold text-secondary small">Status Flota</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="seg"><td class="text-start ps-3 fw-semibold text-secondary small">Seguridad</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="cond"><td class="text-start ps-3 fw-semibold text-secondary small">Conductores</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td></tr>
+        <tr data-k="gps"><td class="text-start ps-3 fw-semibold text-secondary small">GPS / Ubicación</td>
+            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="gps" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
+            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td></tr>
+        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">MÓDULOS EXTRA</th></tr>
+        <tr><td class="text-start ps-3 fw-semibold text-secondary small">Auditoría</td>
+            <td><input type="checkbox" class="form-check-input p-mod" data-k="mod_auditoria" style="width:18px;height:18px;cursor:pointer;"></td>
+            <td colspan="3" class="text-muted small text-center">Solo lectura</td></tr>
+    `;
 }
 
 function logicaCheckboxes(chk, moduloId, accion) {
@@ -1239,32 +1310,23 @@ function logicaCheckboxes(chk, moduloId, accion) {
 }
 
 function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
-    // Protección contra clics directos del HTML
     if (typeof idBusqueda === 'object') idBusqueda = null;
 
     document.getElementById('formGestorUsuario').reset();
     generarMatrizUI();
 
-    let filaData = null;
-    if (idBusqueda) {
-        filaData = dataGlobalUsuarios.find(u => u[0] === idBusqueda);
-    }
-
-    // 🧹 LIMPIEZA PROFUNDA: Liberamos todas las casillas antes de usarlas
-    document.querySelectorAll('.perm-chk').forEach(c => {
-        c.checked = false;
-        if(!c.classList.contains('disabled-by-sys')) c.disabled = false;
-    });
+    document.querySelectorAll('.p-chk, .p-mod').forEach(c => { c.checked = false; c.disabled = false; });
     document.getElementById('gu_estado').disabled = false;
     document.getElementById('gu_correo').readOnly = false;
+    let adminSwitch = document.getElementById('gu_is_admin');
+    if (adminSwitch) { adminSwitch.checked = false; adminSwitch.disabled = false; }
+
+    let filaData = idBusqueda ? dataGlobalUsuarios.find(u => u[0] === idBusqueda) : null;
 
     if (!filaData) {
-        // MODO CREAR NUEVO
         document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-person-plus-fill text-success"></i> Crear Nuevo Personal';
         document.getElementById('gu_id').value = '';
-        document.querySelectorAll('.perm-chk:not([disabled])').forEach(c => c.checked = true);
     } else {
-        // MODO EDITAR / CLONAR
         if (esClon) {
             document.getElementById('tituloModalUser').innerHTML = `<i class="bi bi-copy text-success"></i> Clonando permisos de: ${filaData[1]}`;
             document.getElementById('gu_id').value = '';
@@ -1282,35 +1344,35 @@ function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
             document.getElementById('gu_estado').value = filaData[5];
         }
 
-        // 🧠 LECTOR AVANZADO DE JSON (A prueba de errores de formato)
         let pObj = {};
         try {
-            let rawData = filaData[7] || '{}';
-            if (typeof rawData === 'string') {
-                pObj = JSON.parse(rawData);
-                // Si la BD lo envolvió doble, lo desencapsulamos
-                if (typeof pObj === 'string') pObj = JSON.parse(pObj);
-            } else {
-                pObj = rawData;
-            }
-        } catch(e) { console.error("Error interpretando permisos", e); pObj = {}; }
+            let raw = filaData[7] || '{}';
+            pObj = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+            if (typeof pObj === 'string') pObj = JSON.parse(pObj);
+        } catch(e) { pObj = {}; }
 
-        // Pintar casillas
-        document.querySelectorAll('#bodyMatrizPermisos tr').forEach(tr => {
-            let modId = tr.getAttribute('data-mod');
-            if (modId && pObj[modId]) {
-                let p = pObj[modId];
-                if (p.leer)     tr.querySelector('.p-leer').checked = true;
-                if (p.crear)    tr.querySelector('.p-crear').checked = true;
-                if (p.editar)   tr.querySelector('.p-editar').checked = true;
-                if (p.eliminar) tr.querySelector('.p-eliminar').checked = true;
-            }
-        });
+        if (adminSwitch) adminSwitch.checked = pObj.admin === true;
+        if (pObj.admin === true) toggleAdminUI(true);
 
-        // 👑 BLOQUEO VISUAL DEL FUNDADOR
+        const setRow = (key, obj) => {
+            if (!obj) return;
+            document.querySelectorAll(`.p-chk[data-k="${key}"]`).forEach(chk => {
+                if (chk.classList.contains('p-l') && obj.l) chk.checked = true;
+                if (chk.classList.contains('p-c') && obj.c) chk.checked = true;
+                if (chk.classList.contains('p-e') && obj.e) chk.checked = true;
+                if (chk.classList.contains('p-d') && obj.d) chk.checked = true;
+            });
+        };
+        setRow('insp', pObj.insp); setRow('placas', pObj.placas); setRow('fleet', pObj.fleet);
+        setRow('gps', { l: pObj.gps?.l });
+        setRow('status', pObj.status); setRow('seg', pObj.seg); setRow('cond', pObj.cond);
+        let modAud = document.querySelector('.p-mod[data-k="mod_auditoria"]');
+        if (modAud) modAud.checked = !!pObj.mod_auditoria;
+
         if ((filaData[3] || '').trim().toLowerCase() === 'admin@azkell.com' && !esClon) {
             document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-shield-lock-fill text-warning"></i> Cuenta Fundador (Intocable)';
-            document.querySelectorAll('.perm-chk').forEach(c => { c.checked = true; c.disabled = true; });
+            if (adminSwitch) { adminSwitch.checked = true; adminSwitch.disabled = true; }
+            toggleAdminUI(true);
             document.getElementById('gu_estado').value = 'Activo';
             document.getElementById('gu_estado').disabled = true;
             document.getElementById('gu_correo').readOnly = true;
@@ -1325,39 +1387,40 @@ function procesarGuardadoUsuario(event, formObj) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
 
-    // Empaquetar permisos limpiamente
-    let permisosFinales = {};
-    document.querySelectorAll('#bodyMatrizPermisos tr').forEach(tr => {
-        let modId = tr.getAttribute('data-mod');
-        if(modId) {
-            permisosFinales[modId] = {
-                leer:     tr.querySelector('.p-leer')?.checked || false,
-                crear:    tr.querySelector('.p-crear')?.checked || false,
-                editar:   tr.querySelector('.p-editar')?.checked || false,
-                eliminar: tr.querySelector('.p-eliminar')?.checked || false
-            };
-        }
-    });
+    const getChk = (key, cls) => document.querySelector(`.p-chk[data-k="${key}"].${cls}`)?.checked || false;
+    const getL = k => getChk(k, 'p-l'), getC = k => getChk(k, 'p-c'), getE = k => getChk(k, 'p-e'), getD = k => getChk(k, 'p-d');
+    let isAdmin = document.getElementById('gu_is_admin')?.checked || false;
+    let pObj = {
+        admin:  isAdmin,
+        insp:   { l: getL('insp'),   c: getC('insp'),   e: getE('insp'),   d: getD('insp')   },
+        placas: { l: getL('placas'), c: getC('placas'), e: getE('placas'), d: getD('placas') },
+        fleet:  { l: getL('fleet'),  c: getC('fleet'),  e: getE('fleet'),  d: getD('fleet')  },
+        gps:    { l: getL('gps') },
+        status: { l: getL('status'), c: getC('status'), e: getE('status'), d: getD('status') },
+        seg:    { l: getL('seg'),    c: getC('seg'),    e: getE('seg'),    d: getD('seg')    },
+        cond:   { l: getL('cond'),   c: getC('cond'),   e: getE('cond'),   d: getD('cond')   },
+        mod_auditoria: document.querySelector('.p-mod[data-k="mod_auditoria"]')?.checked || false
+    };
 
-    document.getElementById('gu_permisos').value = JSON.stringify(permisosFinales);
+    document.getElementById('gu_permisos').value = JSON.stringify(pObj);
 
     fetch('/api/script/actualizarUsuario', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ args: [{
-            idUsuarioEdit:     document.getElementById('gu_id').value,
-            nombreUsuarioEdit: document.getElementById('gu_nombre').value,
-            cargoUsuarioEdit:  document.getElementById('gu_cargo').value,
-            correoUsuarioEdit: document.getElementById('gu_correo').value,
+            idUsuarioEdit:       document.getElementById('gu_id').value,
+            nombreUsuarioEdit:   document.getElementById('gu_nombre').value,
+            cargoUsuarioEdit:    document.getElementById('gu_cargo').value,
+            correoUsuarioEdit:   document.getElementById('gu_correo').value,
             passwordUsuarioEdit: document.getElementById('gu_password').value,
-            estadoUsuarioEdit: document.getElementById('gu_estado').value,
-            permisos_json:     document.getElementById('gu_permisos').value
+            estadoUsuarioEdit:   document.getElementById('gu_estado').value,
+            permisos_json:       document.getElementById('gu_permisos').value
         }]})
     })
     .then(r => r.json())
     .then(r => {
         if (r.data === 'Éxito') {
             bootstrap.Modal.getInstance(document.getElementById('modalGestorUsuario')).hide();
-            recargarModulo('usuarios'); // 👈 Refresca correctamente la tabla
+            recargarModulo('usuarios');
         } else { alert("Error: " + r.data); }
         btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
     })
@@ -1543,15 +1606,15 @@ function mostrarStatusFlota(datos) {
                 let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
                 let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
 
-                let menuAcciones = `
-                    <div class="dropstart text-center">
-                        <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                        <ul class="dropdown-menu shadow">
-                            <li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarStatusFlota('${id}')"><i class="bi bi-pencil text-warning"></i> Editar</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}','StatusFlota')"><i class="bi bi-trash"></i> Eliminar</a></li>
-                        </ul>
-                    </div>`;
+                let pSF = permisosUsuario || {};
+                let isAdmSF = pSF.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+                let canEditSF = isAdmSF || pSF.status?.e === true;
+                let canDeleteSF = isAdmSF || pSF.status?.d === true;
+                let itemsSF = '';
+                if(canEditSF) itemsSF += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarStatusFlota('${id}')"><i class="bi bi-pencil text-warning"></i> Editar</a></li>`;
+                if(canEditSF && canDeleteSF) itemsSF += `<li><hr class="dropdown-divider"></li>`;
+                if(canDeleteSF) itemsSF += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}','StatusFlota')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
+                let menuAcciones = itemsSF ? `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemsSF}</ul></div>` : `<span class="text-muted"><i class="bi bi-dash"></i></span>`;
 
                 html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${tipoName}" data-fecha="${fecha}" data-corte="${corte}">
                     <td class="fw-bold text-secondary">${motora || '-'}</td>
@@ -1996,6 +2059,9 @@ function generarListaAccionesFab() {
     }
 
     buttons.forEach(btn => {
+        // 🛡️ FILTRO ESTRICTO: Si el botón original está oculto, NO lo clonamos
+        if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
+
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
         clonedBtn.className = 'fab-action-item';
