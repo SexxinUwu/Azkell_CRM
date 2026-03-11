@@ -36,26 +36,29 @@ db.connect(err => {
 // 2. API de Login
 app.post('/api/login', (req, res) => {
     const { correo, password } = req.body;
-
-    // 'usuarios' todo en minúscula
     const sql = 'SELECT * FROM usuarios WHERE correo = ?';
 
     db.query(sql, [correo], (err, results) => {
-        if (err) {
-            console.error("⚠️ ERROR REAL DE AIVEN:", err);
-            return res.status(500).json({ exito: false, mensaje: "Error BD" });
-        }
+        if (err) return res.status(500).json({ exito: false, mensaje: "Error BD" });
         if (results.length > 0) {
             const usuario = results[0];
             if (usuario.password === password) {
-                if (usuario.estado === 'Inactivo') return res.json({ exito: false, mensaje: "Cuenta inactiva." });
-                return res.json({ exito: true, nombre: usuario.nombre, rol: usuario.rol });
-            } else {
-                return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
-            }
-        } else {
-            return res.json({ exito: false, mensaje: "El correo no está registrado." });
-        }
+                if (usuario.estado === 'Inactivo' && correo.toLowerCase() !== 'admin@azkell.com') {
+                    return res.json({ exito: false, mensaje: "Cuenta inactiva." });
+                }
+
+                let permisosFinales = usuario.permisos_json || "{}";
+                let rolFinal = usuario.rol || "Personalizado";
+
+                // 👑 EL BLINDAJE DEL FUNDADOR (Garantiza acceso total siempre)
+                if (correo.toLowerCase() === 'admin@azkell.com') {
+                    permisosFinales = JSON.stringify({"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}});
+                    rolFinal = "Administrador";
+                }
+
+                return res.json({ exito: true, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales });
+            } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
+        } else { return res.json({ exito: false, mensaje: "El correo no está registrado." }); }
     });
 });
 
@@ -112,17 +115,39 @@ app.post('/api/script/:metodo', async (req, res) => {
         return;
     }
 
-    // --- LEER USUARIOS DESDE MYSQL ---
+    // --- OBTENER TODOS LOS USUARIOS (BLINDADO CON PERMISOS JSON) ---
     if (metodo === 'obtenerDatosUsuarios') {
-        db.query('SELECT * FROM usuarios', (err, results) => {
-            if (err) return res.json({ data: [] });
-            const data = results.map(r => [
-                r.idUsuario || r.IDUSUARIO || '', r.nombre || r.NOMBRE || '', 
-                r.cargo || r.CARGO || '', r.correo || r.CORREO || '', 
-                r.rol || r.ROL || '', r.estado || r.ESTADO || '', 
-                r.password || r.PASSWORD || ''
-            ]);
-            return res.json({ data });
+        const query = "SELECT idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json FROM usuarios";
+        db.query(query, (err, results) => {
+            if (err) return res.status(500).json({ data: "Error BD: " + err.message });
+
+            const filas = results.map(r => {
+                let permisosFinales = {};
+                let correoMin = (r.correo || '').trim().toLowerCase();
+
+                // 👑 EL BLINDAJE DEL FUNDADOR: Ignoramos lo que diga la BD para este correo
+                if (correoMin === 'admin@azkell.com') {
+                    permisosFinales = {"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}};
+                } else {
+                    // 🧠 LECTOR SEGURO DE JSON PARA OTROS USUARIOS
+                    try {
+                        let raw = r.permisos_json || '{}';
+                        // Si el JSON se guardó doblemente encapsulado, lo corregimos
+                        permisosFinales = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                        if (typeof permisosFinales === 'string') permisosFinales = JSON.parse(permisosFinales);
+                    } catch (e) {
+                        console.error(`Error parseando permisos de ${r.correo}:`, e);
+                        permisosFinales = {}; // Retornamos vacío si está corrupto
+                    }
+                }
+
+                // Retornamos el formato de matriz que espera la tabla
+                return [
+                    r.idUsuario, r.nombre, r.cargo, r.correo, r.rol, r.estado, r.password,
+                    JSON.stringify(permisosFinales) // Lo enviamos como texto limpio
+                ];
+            });
+            return res.json({ data: filas });
         });
         return;
     }
@@ -259,29 +284,62 @@ app.post('/api/script/:metodo', async (req, res) => {
         return;
     }
 
-    // --- GUARDAR / ACTUALIZAR USUARIOS ---
+    // --- GUARDAR / ACTUALIZAR USUARIOS (SEGURO) ---
     if (metodo === 'guardarUsuario' || metodo === 'actualizarUsuario') {
         const form = req.body.args[0];
-        const isEdit = metodo === 'actualizarUsuario';
-        const id = isEdit ? form.idUsuarioEdit : `USR-${Date.now()}`;
-        const nombre = isEdit ? form.nombreUsuarioEdit : form.nombreUsuario;
-        const cargo = isEdit ? form.cargoUsuarioEdit : form.cargoUsuario;
-        const correo = isEdit ? form.correoUsuarioEdit : form.correoUsuario;
-        const password = isEdit ? form.passwordUsuarioEdit : form.passwordUsuario;
-        const rol = isEdit ? form.rolUsuarioEdit : form.rolUsuario;
-        const estado = isEdit ? form.estadoUsuarioEdit : form.estadoUsuario;
+        const isEdit = (form.idUsuarioEdit && form.idUsuarioEdit.trim() !== '') ? true : false;
 
-        const query = `
-            INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            nombre=?, cargo=?, correo=?, password=?, rol=?, estado=?
-        `;
-        const values = [id, nombre, cargo, correo, password, rol, estado];
-        db.query(query, [...values, nombre, cargo, correo, password, rol, estado], (err) => {
-            if (err) return res.json({ data: "Error BD: " + err.message });
-            return res.json({ data: "Éxito" });
-        });
+        const ejecutarGuardado = (idFinal) => {
+            const nombre = form.nombreUsuarioEdit || '';
+            const cargo = form.cargoUsuarioEdit || '';
+            const correo = form.correoUsuarioEdit || '';
+            const password = form.passwordUsuarioEdit || '';
+            let estado = form.estadoUsuarioEdit || 'Activo';
+            let permisos = form.permisos_json || "{}";
+            let rol = "Personalizado";
+
+            // Bloquear edición maliciosa del Fundador
+            if (correo.trim().toLowerCase() === 'admin@azkell.com') {
+                permisos = JSON.stringify({"mantenimiento":{"leer":true,"crear":true,"editar":true,"eliminar":true},"almacen":{"leer":true,"crear":true,"editar":true,"eliminar":true},"flota":{"leer":true,"crear":true,"editar":true,"eliminar":true},"usuarios":{"leer":true,"crear":true,"editar":true,"eliminar":true},"auditoria":{"leer":true,"crear":true,"editar":true,"eliminar":true}});
+                estado = "Activo"; rol = "Administrador";
+            }
+
+            if (typeof permisos === 'object') permisos = JSON.stringify(permisos);
+
+            if (isEdit) {
+                // 🛠️ UPDATE SEGURO: Actualiza forzosamente el ID exacto
+                const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, estado=?, permisos_json=?, rol=? WHERE idUsuario=?";
+                db.query(sqlUpdate, [nombre, cargo, correo, password, estado, permisos, rol, idFinal], (err) => {
+                    if (err) return res.json({ data: "Error BD: " + err.message });
+                    return res.json({ data: "Éxito" });
+                });
+            } else {
+                // 🛠️ INSERT SEGURO
+                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, rol, estado, permisos], (err) => {
+                    if (err) return res.json({ data: "Error BD: " + err.message });
+                    return res.json({ data: "Éxito" });
+                });
+            }
+        };
+
+        if (isEdit) {
+            ejecutarGuardado(form.idUsuarioEdit);
+        } else {
+            // Generador de ID Perfecto (Busca el número mayor y le suma 1)
+            db.query("SELECT idUsuario FROM usuarios", (err, results) => {
+                let maxId = 1000;
+                if (!err && results) {
+                    results.forEach(r => {
+                        if (r.idUsuario && r.idUsuario.startsWith('USR-')) {
+                            let num = parseInt(r.idUsuario.split('-')[1]);
+                            if (!isNaN(num) && num > maxId) maxId = num;
+                        }
+                    });
+                }
+                ejecutarGuardado(`USR-${maxId + 1}`);
+            });
+        }
         return;
     }
 
