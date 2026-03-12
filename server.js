@@ -33,6 +33,19 @@ db.connect(err => {
     else console.log('✅ Conectado exitosamente a MySQL Workbench');
 });
 
+// ============================================================
+// ⏰ RUTA DESPERTADOR (MANTIENE VIVO A RENDER Y AIVEN)
+// ============================================================
+app.get('/api/ping', (req, res) => {
+    db.query("SELECT 1", (err) => {
+        if (err) {
+            console.error("Error en el Ping a la BD:", err);
+            return res.status(500).send("Render está despierto, pero Aiven falló.");
+        }
+        res.status(200).send("¡Pong! Render y Aiven están 100% despiertos.");
+    });
+});
+
 // 2. API de Login
 app.post('/api/login', (req, res) => {
     const { correo, password } = req.body;
