@@ -362,3 +362,116 @@
         font-size: 0.85rem;
         padding: 4px 12px !important;
     }
+
+/* ============================================================
+   🍎 TEMA PREMIUM "APPLE / CUPERTINO STYLE" (AÑADIDO) 🍎
+   ============================================================ */
+
+/* 1. Variables de Suavizado Apple */
+:root {
+    --apple-radius: 18px;
+    --apple-btn-radius: 10px;
+    --apple-shadow: 0 10px 30px rgba(149, 157, 165, 0.15);
+    --apple-shadow-hover: 0 20px 40px rgba(149, 157, 165, 0.2);
+    --apple-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --crm-accent: #2563eb; /* Color azul premium — cambia a #facc15 para amarillo original */
+}
+
+body.dark {
+    --apple-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --apple-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* 2. Micro-interacciones (El "Click" esponjoso de Apple) */
+button, .btn, .nav-link, .clickable-row, .dropdown-item, .fab-action-item {
+    transition: var(--apple-transition) !important;
+}
+.btn:active, button:active, .dropdown-item:active, .fab-action-item:active {
+    transform: scale(0.94) !important;
+}
+
+/* 3. Cards Flotantes con sombras de luz ambiental */
+.card, .insp-detail-card, .login-card, .modulo-wrapper .card {
+    border-radius: var(--apple-radius) !important;
+    border: 1px solid rgba(0,0,0,0.03) !important;
+    box-shadow: var(--apple-shadow) !important;
+    transition: var(--apple-transition) !important;
+}
+body.dark .card, body.dark .modulo-wrapper .card {
+    border: 1px solid rgba(255,255,255,0.03) !important;
+}
+.card:hover, .modulo-wrapper .card:hover {
+    box-shadow: var(--apple-shadow-hover) !important;
+    transform: translateY(-2px);
+}
+
+/* 4. Glassmorphism en Topbar */
+.topbar {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    box-shadow: none !important;
+}
+body.dark .topbar {
+    background: rgba(30, 41, 59, 0.75) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 5. Modales Premium */
+.modal-content {
+    border-radius: 24px !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.3) !important;
+    overflow: hidden;
+}
+body.dark .modal-content {
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* 6. Botones Redondeados */
+.btn {
+    border-radius: var(--apple-btn-radius) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px;
+}
+.btn-sm { border-radius: 8px !important; }
+
+/* ============================================================
+   🛡️ FORZAR CABECERAS OSCURAS PREMIUM EN MODALES Y TARJETAS
+   ============================================================ */
+.modal-header, .card-header {
+    background-color: var(--crm-sidebar) !important;
+    border-bottom: none !important;
+    padding: 15px 20px !important;
+}
+
+.modal-header .modal-title, .modal-header h5,
+.card-header .modal-title, .card-header h5,
+#tituloModalUser {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+}
+
+/* Forzar que la "X" de cerrar sea blanca para que se vea en el fondo oscuro */
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+    opacity: 0.8;
+}
+.modal-header .btn-close:hover { opacity: 1; }
+
+/* Asegurar que el fondo del body del modal sea claro/uniforme */
+.modal-body {
+    background-color: var(--surface) !important;
+    padding: 20px !important;
+}
+
+/* Arreglo: Fila seleccionada legible (Evita el amarillo que ciega) */
+.clickable-row:active td, .clickable-row:focus td, .is-selected td, .table-active td {
+    background-color: var(--crm-accent) !important;
+    color: #ffffff !important;
+}
+.is-selected .badge, .table-active .badge {
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
