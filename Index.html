@@ -377,17 +377,15 @@
                 <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_nomotora" id="sf_cliente_nomotora" placeholder="Cliente Auto-completado..." readonly>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
+        <div class="mb-3">
                 <label class="form-label fw-bold">Zona</label>
                 <input type="text" class="form-control" name="sf_zona" id="sf_zona" list="dl-zonas" placeholder="Elige o escribe nueva...">
                 <datalist id="dl-zonas"><option value="Lavado"><option value="Mantenimiento"></datalist>
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Conductor</label>
-                <input type="text" class="form-control text-uppercase" name="sf_conductor" id="sf_conductor" list="dl-conductores" placeholder="Buscar conductor...">
+        <div class="mb-3">
+                <label for="input-conductor-nuevo" class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> Conductor</label>
+                <input type="text" class="form-control" id="input-conductor-nuevo" name="sf_conductor" placeholder="Buscar conductor..." list="dl-conductores-status">
             </div>
-        </div>
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold">Estado</label>
@@ -445,7 +443,7 @@
     </div>
     <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-danger border-2"><div class="modal-header bg-danger"><h5 class="modal-title fw-bold text-white">Confirmación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4"><p class="fs-5 mb-1">Eliminar: <strong id="delete-record-id" class="text-danger"></strong></p><div class="mt-4 text-start"><label class="form-label" id="label-confirmar">Escribe Si:</label><input type="text" id="input-confirmar-eliminar" class="form-control text-center fw-bold" autocomplete="off"><div id="msg-error-eliminar" class="text-danger mt-2 fw-bold text-center" style="display: none;">Error.</div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="btn-procesar-eliminar" onclick="procesarEliminacion()">Eliminar</button></div></div></div></div>
 
-    <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist>
+    <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist><datalist id="dl-wialon"></datalist><datalist id="dl-conductores-status"></datalist>
     <datalist id="dl-tecnicos"><option value="Juan Cardenas"><option value="Glen"></datalist>
 
     <!-- FAB: Floating Action Button para Móviles -->

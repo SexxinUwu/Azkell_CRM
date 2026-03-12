@@ -369,10 +369,17 @@ function mostrarUbicaciones(datosWialon) {
         html = '<tr><td colspan="5" class="text-center py-4 text-muted">No se detectaron vehículos conectados al GPS.</td></tr>';
     } else {
         datosWialon.forEach(w => {
-            let linkMapa = (w.lat !== 0 && w.lng !== 0) ? `
-                <div class="d-flex flex-column gap-1 align-items-start">
-                    <button class="btn btn-sm btn-primary shadow-sm fw-bold" onclick="abrirMapaFlotante('${w.placa}', ${w.lat}, ${w.lng})"><i class="bi bi-map-fill"></i> Ver en Mapa</button>
-                    <button class="btn btn-sm btn-outline-secondary shadow-sm" onclick="obtenerDireccion(${w.lat}, ${w.lng}, this)"><i class="bi bi-signpost-2"></i> Extraer Calle</button>
+        let linkMapa = (w.lat !== 0 && w.lng !== 0) ? `
+                <div class="dropstart text-center">
+                    <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" title="Opciones">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu shadow">
+                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="abrirMapaFlotante('${w.placa}', ${w.lat}, ${w.lng})"><i class="bi bi-map-fill"></i> Ver en Mapa</a></li>
+                        <li><a class="dropdown-item fw-bold" href="#" onclick="obtenerDireccion(${w.lat}, ${w.lng}, this)"><i class="bi bi-signpost-split"></i> Extraer Calle</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="event.preventDefault(); compartirUbicacion('${w.nombre_wialon}', ${w.lat}, ${w.lng})"><i class="bi bi-whatsapp"></i> Compartir por Wsp</a></li>
+                    </ul>
                 </div>
             ` : '<span class="text-muted"><i class="bi bi-geo-alt"></i> Sin señal GPS</span>';
             html += `<tr class="data-row-ubicacion">
@@ -615,18 +622,13 @@ function mostrarStatusInspecciones(inspecciones) {
                   </div>`;
               }
 
-              let pInsp = permisosUsuario || {};
-              let isAdmInsp = pInsp.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
-              let canEditInsp = isAdmInsp || pInsp.insp?.e === true;
-              let canDelInsp = isAdmInsp || pInsp.insp?.d === true;
-
               let menuAcciones = '';
               if (insp && insp.id) {
                   let items = `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Resumen</a></li>`;
                   items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
-                  if(canEditInsp || canDelInsp) items += `<li><hr class="dropdown-divider"></li>`;
-                  if(canEditInsp) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
-                  if(canDelInsp) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
+                  items += `<li><hr class="dropdown-divider"></li>`;
+                  items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
+                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
@@ -1485,6 +1487,30 @@ function abrirModalNuevoStatusFlota() {
     else document.getElementById('corte3').checked = true;
 
     new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
+
+    // 🧠 MAGIA: Jalar los conductores automáticamente al abrir la ventana desde Node.js (Aiven)
+    const dlConductores = document.getElementById('dl-conductores-status');
+    if (dlConductores) {
+        fetch('/api/script/obtenerDatosConductores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [] }) // Aquí estaba el truco, nuestro emulador espera 'args'
+        })
+        .then(res => res.json())
+        .then(r => {
+            let htmlOptions = '';
+            // Si viene envuelto en r.data.data lo desencapsulamos
+            let dataArray = r.data && Array.isArray(r.data) ? r.data : (r.data && r.data.data ? r.data.data : []);
+            if (Array.isArray(dataArray)) {
+                dataArray.forEach(fila => {
+                    let nombre = fila.nombre || fila[1];
+                    if (nombre) htmlOptions += `<option value="${nombre}">`;
+                });
+            }
+            dlConductores.innerHTML = htmlOptions;
+        })
+        .catch(e => console.error("Error cargando lista de conductores:", e));
+    }
 }
 
 function toggleGroupRowSF(claseZ) {
@@ -2349,5 +2375,38 @@ function guardarConductor(event, formObj) {
         btn.disabled = false;
         btn.innerHTML = 'Guardar Conductor';
     });
+}
+
+// ==========================================
+// 🛡️ FUNCIONES DE COMPARTIR UBICACIÓN Y CONDUCTORES
+// ==========================================
+
+// Hacemos la función global (window) para que el HTML siempre la encuentre
+window.compartirUbicacion = function(nombreDispositivo, lat, lon) {
+    if (!lat || !lon) {
+        alert("Ubicación GPS aún no detectada.");
+        return;
+    }
+    const urlMaps = `https://www.google.com/maps?q=${lat},${lon}`;
+    const textoWhatsApp = `📍 Ubicación actual de *${nombreDispositivo}*:\n${urlMaps}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoWhatsApp)}`, '_blank');
+}
+
+function inicializarConductoresDatalist(inputID, datalistID) {
+    const elInput = document.getElementById(inputID);
+    if (!elInput) return;
+    elInput.addEventListener('focus', function() {
+        if (CACHE['conductores'] && CACHE['conductores'].length > 0) {
+            let driversSet = new Set();
+            CACHE['conductores'].forEach(r => { if (r[1]) driversSet.add(r[1]); });
+            rellenarDatalist(datalistID, driversSet);
+        } else {
+            google.script.run.withSuccessHandler(d => {
+                let driversSet = new Set();
+                d.forEach(r => { if (r[1]) driversSet.add(r[1]); });
+                rellenarDatalist(datalistID, driversSet);
+            }).obtenerDatosConductores();
+        }
+    }, { once: true });
 }
 
