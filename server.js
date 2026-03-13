@@ -16,21 +16,31 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html')); // Respeta tu mayúscula
 });
 
-// 1. Configurar conexión a MySQL
-const db = mysql.createConnection({
+// ============================================================
+// 🔥 CONEXIÓN INMORTAL A LA BASE DE DATOS (POOL)
+// ============================================================
+const db = mysql.createPool({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: {
-        rejectUnauthorized: false // Esto simula el "Require" que usamos en Workbench
-    }
+    port: process.env.DB_PORT,
+    ssl: { rejectUnauthorized: true },
+    waitForConnections: true,
+    connectionLimit: 10,       // Límite de usuarios simultáneos
+    queueLimit: 0,
+    enableKeepAlive: true,     // Mantiene la conexión despierta
+    keepAliveInitialDelay: 0
 });
 
-db.connect(err => {
-    if (err) console.log('Error conectando a BD:', err);
-    else console.log('✅ Conectado exitosamente a MySQL Workbench');
+// Prueba rápida para confirmar que el pool funciona
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Error al conectar con Aiven:', err.message);
+    } else {
+        console.log('✅ Base de datos conectada con éxito (Pool Activo)');
+        connection.release();
+    }
 });
 
 // ============================================================
