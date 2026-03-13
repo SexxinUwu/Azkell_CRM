@@ -2410,3 +2410,100 @@ function inicializarConductoresDatalist(inputID, datalistID) {
     }, { once: true });
 }
 
+// ============================================================
+// 🔍 LÓGICA DEL BUSCADOR GLOBAL (SPOTLIGHT)
+// ============================================================
+
+function abrirSpotlight() {
+    document.getElementById('spotlight-overlay').style.display = 'flex';
+    setTimeout(() => document.getElementById('spotlight-input').focus(), 100);
+}
+
+function cerrarSpotlight() {
+    document.getElementById('spotlight-overlay').style.display = 'none';
+    document.getElementById('spotlight-input').value = '';
+    document.getElementById('spotlight-results').innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size: 3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar mágicamente en todo el CRM.</small></div>';
+}
+
+// Atajos de teclado Pro (Ctrl+K o Cmd+K para abrir, ESC para cerrar)
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault(); abrirSpotlight();
+    }
+    if (e.key === 'Escape' && document.getElementById('spotlight-overlay').style.display === 'flex') {
+        cerrarSpotlight();
+    }
+});
+
+// Lector de escritura en tiempo real
+document.getElementById('spotlight-input')?.addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase().trim();
+    const resContainer = document.getElementById('spotlight-results');
+
+    if (query.length < 3) {
+        resContainer.innerHTML = '<div class="text-center text-muted py-5"><span class="spinner-grow spinner-grow-sm text-warning mb-2"></span><br><small>Sigue escribiendo...</small></div>';
+        return;
+    }
+
+    let html = '';
+    let count = 0;
+
+    // 1. Buscar Vehículos/Placas
+    if (dataGlobalPlacas && dataGlobalPlacas.length > 0) {
+        dataGlobalPlacas.forEach(p => {
+            if (count >= 8) return;
+            const placa = (p[0]||'').toLowerCase(); const cliente = (p[1]||'').toLowerCase();
+            if (placa.includes(query) || cliente.includes(query)) {
+                let wialonData = buscarWialonPorPlaca(p[0]) || { km: 0 };
+                let kmBadge = wialonData.km > 0 ? `<span class="badge bg-primary shadow-sm"><i class="bi bi-geo-alt-fill"></i> ${wialonData.km.toLocaleString()} km</span>` : '';
+                let estadoColor = p[8] === 'Activa' ? 'text-success' : 'text-danger';
+                html += `
+                <div class="spotlight-card d-flex justify-content-between align-items-center"
+                     onclick="cerrarSpotlight(); cambiarModulo('placas'); setTimeout(() => { document.getElementById('buscadorPlacas').value='${p[0]}'; filtrarPlacasAvanzado(); }, 300);">
+                    <div>
+                        <div class="fw-bold text-primary fs-5" style="letter-spacing: 1px;"><i class="bi bi-truck me-2"></i>${p[0]}</div>
+                        <div class="text-muted small mt-1">
+                            <span class="fw-bold text-dark">${p[1] || 'Sin cliente'}</span> • ${p[2] || 'Sin Tipo'} • <span class="fw-bold ${estadoColor}">${p[8] || ''}</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        ${kmBadge}<br>
+                        <span class="text-warning small fw-bold d-inline-block mt-2">Ir a ficha <i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </div>`;
+                count++;
+            }
+        });
+    }
+
+    // 2. Buscar Conductores
+    if (dataGlobalConductores && dataGlobalConductores.length > 0) {
+        dataGlobalConductores.forEach(c => {
+            if (count >= 12) return;
+            const nombre = (c.nombre || '').toLowerCase(); const dni = (c.dni || '').toLowerCase();
+            if (nombre.includes(query) || dni.includes(query)) {
+                let telLink = c.telefono ? `<i class="bi bi-whatsapp text-success"></i> ${c.telefono}` : '';
+                html += `
+                <div class="spotlight-card d-flex justify-content-between align-items-center"
+                     onclick="cerrarSpotlight(); cambiarModulo('conductores'); setTimeout(() => { document.getElementById('buscadorConductores').value='${c.dni || c.nombre}'; filtrarTabla('cuerpoTablaConductores', 'buscadorConductores'); }, 300);">
+                    <div>
+                        <div class="fw-bold fs-6" style="color: #0ea5e9;"><i class="bi bi-person-vcard me-2"></i>${toTitleCase(c.nombre)}</div>
+                        <div class="text-muted small mt-1">DNI: ${c.dni || '-'} • ${c.empresa || '-'}</div>
+                    </div>
+                    <div class="text-end small text-muted">
+                        ${telLink}<br>
+                        <i class="bi bi-arrow-right mt-2 d-inline-block"></i>
+                    </div>
+                </div>`;
+                count++;
+            }
+        });
+    }
+
+    if (html === '') {
+        html = `<div class="text-center text-muted py-5"><i class="bi bi-emoji-frown fs-1"></i><br><h6 class="mt-3">No encontramos resultados para "${query}"</h6></div>`;
+    }
+
+    resContainer.innerHTML = html;
+});
+
