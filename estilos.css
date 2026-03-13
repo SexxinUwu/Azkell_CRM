@@ -1192,3 +1192,20 @@ body.dark #btn-wialon-status.btn-primary {
     border-color: rgba(59, 130, 246, 0.3) !important;
 }
 body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
+
+/* ============================================================
+   🎯 ALTO CONTRASTE PARA MODALES (UX)
+   ============================================================ */
+.modal-header {
+    background-color: #0f172a !important;
+    border-bottom: none !important;
+}
+.modal-header .modal-title, .modal-header h5, .modal-header i {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+    opacity: 0.8;
+}
+.modal-header .btn-close:hover { opacity: 1; }

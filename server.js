@@ -126,7 +126,8 @@ app.post('/api/script/:metodo', async (req, res) => {
                 r.idRegistro || r.IDREGISTRO || '', r.fecha || r.FECHA || '', r.mes || r.MES || '',
                 r.anio || r.ANIO || '', r.placa || r.PLACA || '', r.marca || r.MARCA || '',
                 r.dueno || r.DUENO || '', r.uts || r.UTS || '', r.tipo_mp || r.TIPO_MP || '',
-                r.km_actual || r.KM_ACTUAL || '', r.frecuencia_km || r.FRECUENCIA_KM || '',
+                r.km_actual || r.KM_ACTUAL || '',
+                r.frecuencia || r.FRECUENCIA || r.frecuencia_km || '',
                 r.km_proximo || r.KM_PROXIMO || '', r.observacion || r.OBSERVACION || '',
                 r.tecnico || r.TECNICO || '', r.km_gps || r.KM_GPS || ''
             ]);
@@ -346,30 +347,24 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'guardarFleetrun' || metodo === 'actualizarFleetrun') {
         const form = req.body.args[0];
         const isEdit = metodo === 'actualizarFleetrun';
-        const id = isEdit ? form.editF_id : (form.f_id || `FL-${Date.now()}`);
-        const fecha = isEdit ? form.editF_fecha : form.f_fecha;
-        const mes = isEdit ? form.editF_mes : form.f_mes;
-        const anio = isEdit ? form.editF_anio : form.f_anio;
-        const placa = (isEdit ? form.editF_placa : form.f_placa).toUpperCase();
-        const marca = isEdit ? form.editF_marca : form.f_marca;
-        const dueno = isEdit ? form.editF_dueno : form.f_dueno;
-        const uts = isEdit ? form.editF_uts : form.f_uts;
-        const tipomp = isEdit ? form.editF_tipomp : form.f_tipomp;
-        const kmact = isEdit ? form.editF_kmact : form.f_kmact;
-        const freckm = isEdit ? form.editF_freckm : form.f_freckm;
-        const kmprox = isEdit ? form.editF_kmprox : form.f_kmprox;
-        const kmgps = isEdit ? form.editF_kmgps : form.f_kmgps;
-        const tec = isEdit ? form.editF_tec : form.f_tec;
-        const obs = isEdit ? form.editF_obs : form.f_obs;
+        const values = [
+            isEdit ? form.editF_id : (form.f_id || `FL-${Date.now()}`),
+            isEdit ? form.editF_fecha : form.f_fecha, isEdit ? form.editF_mes : form.f_mes,
+            isEdit ? form.editF_anio : form.f_anio, (isEdit ? form.editF_placa : form.f_placa).toUpperCase(),
+            isEdit ? form.editF_marca : form.f_marca, isEdit ? form.editF_dueno : form.f_dueno,
+            isEdit ? form.editF_uts : form.f_uts, isEdit ? form.editF_tipomp : form.f_tipomp,
+            isEdit ? form.editF_kmact : form.f_kmact, isEdit ? form.editF_freckm : form.f_freckm,
+            isEdit ? form.editF_kmprox : form.f_kmprox, isEdit ? form.editF_obs : form.f_obs,
+            isEdit ? form.editF_tec : form.f_tec, isEdit ? form.editF_kmgps : form.f_kmgps
+        ];
 
         const query = `
-            INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps)
+            INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia, km_proximo, observacion, tecnico, km_gps)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
+            fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
         `;
-        db.query(query, [id, fecha, mes, anio, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, obs, tec, kmgps,
-                         fecha, mes, anio, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, obs, tec, kmgps], (err) => {
+        db.query(query, [...values, ...values.slice(1)], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             return res.json({ data: "Éxito" });
         });

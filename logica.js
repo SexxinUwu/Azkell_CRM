@@ -159,7 +159,7 @@ function verificarSesionGuardada() {
         [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
         [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
 
-        // 🧠 APERTURA INTELIGENTE: Si tiene permiso en un hijo, abre el padre automáticamente
+        // 🧠 APERTURA INTELIGENTE: Muestra el módulo pero lo mantiene CERRADO
         let showMant = isAdm || p.mod_mant || p.insp?.l || p.placas?.l || p.fleet?.l;
         let showAlm = isAdm || p.mod_alm || p.placas?.l;
         let showFlota = isAdm || p.mod_flota || p.gps?.l || p.status?.l || p.seg?.l || p.cond?.l;
@@ -169,15 +169,16 @@ function verificarSesionGuardada() {
         const aPlacas = document.getElementById('btnMenuPlacasAlmacen');
         const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fSeg = document.getElementById('btnMenuSeguridad'); const fCond = document.getElementById('btnMenuConductores');
 
-        if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) { cMant.style.removeProperty('display'); cMant.classList.add('show'); } }
+        // 👉 EL CAMBIO: Ya no le inyectamos la clase "show" para que arranquen cerrados
+        if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
         if (mStatus) mStatus.style.display = (isAdm || p.insp?.l) ? 'block' : 'none';
         if (mPlacas) mPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
         if (mFleet) mFleet.style.display = (isAdm || p.fleet?.l) ? 'block' : 'none';
 
-        if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) { cAlm.style.removeProperty('display'); cAlm.classList.add('show'); } }
+        if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) cAlm.style.removeProperty('display'); }
         if (aPlacas) aPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
 
-        if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) { cFlo.style.removeProperty('display'); cFlo.classList.add('show'); } }
+        if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) cFlo.style.removeProperty('display'); }
         if (fGps) fGps.style.display = (isAdm || p.gps?.l) ? 'block' : 'none';
         if (fStatus) fStatus.style.display = (isAdm || p.status?.l) ? 'block' : 'none';
         if (fSeg) fSeg.style.display = (isAdm || p.seg?.l) ? 'block' : 'none';
@@ -211,6 +212,16 @@ function verificarSesionGuardada() {
             let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
             rellenarDatalist('dl-placas', placasSet); recargarWialon();
         }).obtenerDatosPlacas();
+
+        google.script.run.withSuccessHandler(d => {
+            dataTiposMant = d;
+        }).obtenerTiposMantenimiento();
+
+        google.script.run.withSuccessHandler(tipos => {
+            let tpMpSet = new Set(tipos);
+            rellenarDatalist('dl-tpmp', tpMpSet);
+        }).obtenerTPMP();
+
         return;
     }
     document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
@@ -1144,8 +1155,68 @@ function autocompletarFleetrun(prefix) {
     } else { document.getElementById(prefix + '_kmgps').value = ''; }
 }
 
-function calcularFrecuencia(prefix) { let marca = normalizeStr(document.getElementById(prefix + '_marca').value); let tipoMP = normalizeStr(document.getElementById(prefix + '_tipomp').value); let uts = normalizeStr(document.getElementById(prefix + '_uts').value); let fVal = 0; if(marca && tipoMP && dataTiposMant.length > 0) { let frecMatch = dataTiposMant.find(t => normalizeStr(t.marca) === marca && normalizeStr(t.tipo_mp) === tipoMP && normalizeStr(t.uts) === uts); if(!frecMatch) frecMatch = dataTiposMant.find(t => normalizeStr(t.marca) === marca && normalizeStr(t.tipo_mp) === tipoMP && normalizeStr(t.uts) === ""); if(!frecMatch) frecMatch = dataTiposMant.find(t => normalizeStr(t.tipo_mp) === tipoMP && normalizeStr(t.uts) === uts && normalizeStr(t.marca) === ""); fVal = frecMatch ? parseInt(frecMatch.frecuencia_km) : 0; } document.getElementById(prefix + '_freckm').value = fVal || ""; calcularProximo(prefix); }
-function calcularProximo(prefix) { let kmAct = parseFloat(document.getElementById(prefix + '_kmact').value) || 0; let frec = parseFloat(document.getElementById(prefix + '_freckm').value) || 0; if(kmAct > 0 && frec > 0) { document.getElementById(prefix + '_kmprox').value = kmAct + frec; } }
+function calcularFrecuencia(prefix) {
+    let marca = normalizeStr(document.getElementById(prefix + '_marca').value);
+    let tipoMP = normalizeStr(document.getElementById(prefix + '_tipomp').value);
+    let uts = normalizeStr(document.getElementById(prefix + '_uts').value);
+    let inputFrecuencia = document.getElementById(prefix + '_freckm');
+    let fVal = 0;
+
+    if (tipoMP && dataTiposMant && dataTiposMant.length > 0) {
+        let frecMatch = dataTiposMant.find(t =>
+            normalizeStr(t.marca) === marca &&
+            normalizeStr(t.tipo_mp) === tipoMP &&
+            normalizeStr(t.uts) === uts
+        );
+        if (!frecMatch) {
+            frecMatch = dataTiposMant.find(t =>
+                normalizeStr(t.marca) === marca &&
+                normalizeStr(t.tipo_mp) === tipoMP &&
+                (normalizeStr(t.uts) === "" || !t.uts)
+            );
+        }
+        if (!frecMatch) {
+            frecMatch = dataTiposMant.find(t =>
+                normalizeStr(t.tipo_mp) === tipoMP &&
+                (normalizeStr(t.uts) === "" || !t.uts) &&
+                (normalizeStr(t.marca) === "" || !t.marca)
+            );
+        }
+        if (frecMatch) {
+            let valorFrecuencia = frecMatch.frecuencia || frecMatch.frecuencia_km || frecMatch.Frecuencia || 0;
+            let valStr = valorFrecuencia.toString().trim();
+
+            let lastDot = valStr.lastIndexOf('.');
+            let lastComma = valStr.lastIndexOf(',');
+            let lastSeparator = Math.max(lastDot, lastComma);
+
+            if (lastSeparator === valStr.length - 3) {
+                valStr = valStr.substring(0, lastSeparator);
+            }
+
+            valStr = valStr.replace(/[,.]/g, '');
+            fVal = parseInt(valStr) || 0;
+        }
+    }
+
+    if (fVal > 0) {
+        inputFrecuencia.value = fVal;
+    }
+    calcularProximo(prefix);
+}
+    }
+    calcularProximo(prefix);
+}
+
+function calcularProximo(prefix) {
+    let kmAct = parseFloat(document.getElementById(prefix + '_kmact').value) || 0;
+    let frec = parseFloat(document.getElementById(prefix + '_freckm').value) || 0;
+    if (kmAct > 0 && frec > 0) {
+        document.getElementById(prefix + '_kmprox').value = kmAct + frec;
+    } else {
+        document.getElementById(prefix + '_kmprox').value = '';
+    }
+}
 function abrirDetalleFleetrun(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalFleetrun[index]; if (!p) return; ['detF-id','detF-fecha','detF-mes','detF-anio','detF-placa','detF-marca','detF-dueno','detF-uts','detF-tipomp','detF-kmact','detF-freckm','detF-kmprox','detF-kmgps','detF-tec','detF-obs'].forEach((id, i) => { let val = p[i] || '-'; if(id === 'detF-fecha') val = parseDateToDDMMYYYY(val); const el = document.getElementById(id); if(el) el.innerText = val; }); new bootstrap.Modal(document.getElementById('modalDetalleFleetrun')).show(); }
 function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = p[3]; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
@@ -1300,7 +1371,7 @@ function generarMatrizUI() {
     const target = document.getElementById('bodyMatrizPermisos');
     if (!target) return;
     target.innerHTML = `
-        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">MANTENIMIENTO</th></tr>
+        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-tools text-warning me-2"></i>MANTENIMIENTO</th></tr>
         <tr data-k="insp"><td class="text-start ps-3 fw-semibold text-secondary small">Inspecciones</td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
@@ -1311,13 +1382,13 @@ function generarMatrizUI() {
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">ALMACÉN</th></tr>
+        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-box-seam text-info me-2"></i>ALMACÉN</th></tr>
         <tr data-k="placas"><td class="text-start ps-3 fw-semibold text-secondary small">Placas <small class="text-muted">(Mant+Alm)</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'l')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'c')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'e')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'d')"></td></tr>
-        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">FLOTA</th></tr>
+        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-truck-front text-success me-2"></i>FLOTA</th></tr>
         <tr data-k="status"><td class="text-start ps-3 fw-semibold text-secondary small">Status Flota</td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
@@ -1338,7 +1409,7 @@ function generarMatrizUI() {
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td></tr>
-        <tr><th colspan="5" class="bg-secondary text-white text-start ps-2 py-1 small">MÓDULOS EXTRA</th></tr>
+        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-shield-fill-check text-primary me-2"></i>MÓDULOS EXTRA</th></tr>
         <tr><td class="text-start ps-3 fw-semibold text-secondary small">Auditoría</td>
             <td><input type="checkbox" class="form-check-input p-mod" data-k="mod_auditoria" style="width:18px;height:18px;cursor:pointer;"></td>
             <td colspan="3" class="text-muted small text-center">Solo lectura</td></tr>
