@@ -3,9 +3,9 @@
 // 🌉 PUENTE MÁGICO: EMULADOR DE GOOGLE APPS SCRIPT PARA NODE.JS
 // ============================================================
 class GoogleRunner {
-    constructor() { 
-        this.successCb = null; 
-        this.failureCb = null; 
+    constructor() {
+        this.successCb = null;
+        this.failureCb = null;
         this.proxyRef = null;
     }
     withSuccessHandler(cb) { this.successCb = cb; return this.proxyRef; }
@@ -26,6 +26,21 @@ class GoogleRunner {
                 body: JSON.stringify({ args: parsedArgs })
             });
             let json = await res.json();
+
+            // 🧹 FILTRO PURIFICADOR GLOBAL: Arregla "CamiÃ³n" y tildes rotas en todo el CRM al instante
+            if (json.data && typeof json.data === 'object') {
+                let strData = JSON.stringify(json.data);
+                strData = strData.replace(/CamiÃ³n/gi, 'Camión')
+                                 .replace(/CAMIÃ.N/g, 'CAMIÓN')
+                                 .replace(/CamiÃ.n/g, 'Camión')
+                                 .replace(/Ã³/g, 'ó')
+                                 .replace(/Ã"/g, 'Ó')
+                                 .replace(/Ã±/g, 'ñ')
+                                 .replace(/Ã'/g, 'Ñ')
+                                 .replace(/Ã/g, 'í');
+                json.data = JSON.parse(strData);
+            }
+
             if (this.successCb) this.successCb(json.data);
         } catch (e) {
             if (this.failureCb) this.failureCb(e); else console.error("Error BD:", e);
@@ -40,7 +55,7 @@ const google = {
                 get: function(target, prop) {
                     if (typeof target[prop] === 'function') return target[prop].bind(target);
                     if (prop in target) return target[prop];
-                    return (...args) => target._call(prop, ...args); // Redirige al Server
+                    return (...args) => target._call(prop, ...args);
                 }
             });
             runner.proxyRef = proxy;
@@ -327,19 +342,19 @@ function aplicarPermisosBotonesUI() {
 function recargarWialon(forzarVista = false) {
     let btn = document.getElementById('btn-wialon-status');
     let txt = document.getElementById('wialon-text');
-    if(btn) { btn.className = 'btn btn-sm btn-outline-warning ms-3 rounded-pill px-3 shadow-sm'; txt.innerText = 'Conectando Satélites...'; }
+    if(btn) { btn.className = 'btn btn-sm btn-outline-warning ms-3'; txt.innerText = 'Conectando...'; }
     
     google.script.run.withSuccessHandler(d => {
         if(d && !d.error) {
             CACHE['wialon'] = d;
-            if(btn) { btn.className = 'btn btn-sm btn-primary ms-3 rounded-pill px-3 shadow-sm text-white'; txt.innerText = 'GPS Activo'; }
+            if(btn) { btn.className = 'btn btn-sm ms-3 btn-primary'; txt.innerText = 'GPS Activo'; }
             
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
             if (document.getElementById('moduloStatus').style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
             if (document.getElementById('moduloFleetrun').style.display === 'flex') mostrarFleetrun(dataGlobalFleetrun);
             if (document.getElementById('moduloUbicacion').style.display === 'flex' || forzarVista) mostrarUbicaciones(d);
         } else {
-            if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 rounded-pill px-3 shadow-sm text-white'; txt.innerText = 'Error GPS'; }
+            if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
             console.error("Error Wialon:", d.error);
         }
     }).obtenerDatosWialon();
@@ -419,15 +434,45 @@ function setBtnLoading(modulo, loading) {
   btn.disabled = loading;
 }
 
+// Creador de Skeletons HTML
+function generarSkeletonHtml(columnas, filas = 6) {
+    let html = '';
+    for (let i = 0; i < filas; i++) {
+        html += '<tr class="skeleton-row">';
+        for (let j = 0; j < columnas; j++) {
+            let width = Math.floor(Math.random() * (90 - 40 + 1) + 40);
+            html += `<td><span class="skeleton-box" style="width: ${width}%;"></span></td>`;
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+
 function cargarModulo(nombre, fnRender, fnBackend) {
   if (CACHE[nombre] !== null && CACHE[nombre].length > 0) {
-    fnRender(CACHE[nombre]); // 0 lecturas Firebase
+    fnRender(CACHE[nombre]);
     actualizarBadge(nombre, false);
     return;
   }
   setBtnLoading(nombre, true);
   const label = document.getElementById(`cache-label-${nombre}`);
   if (label) label.textContent = 'Cargando BD...';
+
+  // ⚡ SKELETONS AL INSTANTE MIENTRAS CARGA LA BD
+  const tablaInfo = {
+      placas:      { id: 'cuerpoTablaPlacas', cols: 9 },
+      fleetrun:    { id: 'cuerpoTablaFleetrun', cols: 10 },
+      usuarios:    { id: 'cuerpoTablaUsuarios', cols: 7 },
+      seguridad:   { id: 'cuerpoTabla', cols: 6 },
+      auditoria:   { id: 'cuerpoTablaAuditoria', cols: 4 },
+      statusMant:  { id: 'cuerpoTablaStatus', cols: 10 },
+      conductores: { id: 'cuerpoTablaConductores', cols: 7 },
+      statusFlota: { id: 'cuerpoTablaStatusFlota', cols: 9 }
+  };
+  if (tablaInfo[nombre]) {
+      let tb = document.getElementById(tablaInfo[nombre].id);
+      if (tb) tb.innerHTML = generarSkeletonHtml(tablaInfo[nombre].cols);
+  }
 
   google.script.run.withSuccessHandler(datos => {
       if (typeof datos === 'string' && datos.includes('Quota exceeded')) { datos = "🚨 Límite Diario de Firebase (50,000 lecturas) Alcanzado por hoy. El sistema reanudará a medianoche."; }
@@ -2435,9 +2480,11 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Lector de escritura en tiempo real
-document.getElementById('spotlight-input')?.addEventListener('input', function(e) {
-    const query = e.target.value.toLowerCase().trim();
+// ============================================================
+// 🔍 LÓGICA DEL BUSCADOR GLOBAL V2 (CENTRO DE CONTROL)
+// ============================================================
+window.buscarSpotlight = function(query) {
+    query = query.toLowerCase().trim();
     const resContainer = document.getElementById('spotlight-results');
 
     if (query.length < 3) {
@@ -2448,27 +2495,36 @@ document.getElementById('spotlight-input')?.addEventListener('input', function(e
     let html = '';
     let count = 0;
 
+    let placas = CACHE.placas || dataGlobalPlacas || [];
+    let conductores = CACHE.conductores || dataGlobalConductores || [];
+
     // 1. Buscar Vehículos/Placas
-    if (dataGlobalPlacas && dataGlobalPlacas.length > 0) {
-        dataGlobalPlacas.forEach(p => {
+    if (placas.length > 0) {
+        placas.forEach(p => {
             if (count >= 8) return;
             const placa = (p[0]||'').toLowerCase(); const cliente = (p[1]||'').toLowerCase();
             if (placa.includes(query) || cliente.includes(query)) {
                 let wialonData = buscarWialonPorPlaca(p[0]) || { km: 0 };
                 let kmBadge = wialonData.km > 0 ? `<span class="badge bg-primary shadow-sm"><i class="bi bi-geo-alt-fill"></i> ${wialonData.km.toLocaleString()} km</span>` : '';
                 let estadoColor = p[8] === 'Activa' ? 'text-success' : 'text-danger';
+
+                // 🔥 TARJETA: CENTRO DE CONTROL
                 html += `
-                <div class="spotlight-card d-flex justify-content-between align-items-center"
-                     onclick="cerrarSpotlight(); cambiarModulo('placas'); setTimeout(() => { document.getElementById('buscadorPlacas').value='${p[0]}'; filtrarPlacasAvanzado(); }, 300);">
-                    <div>
-                        <div class="fw-bold text-primary fs-5" style="letter-spacing: 1px;"><i class="bi bi-truck me-2"></i>${p[0]}</div>
-                        <div class="text-muted small mt-1">
-                            <span class="fw-bold text-dark">${p[1] || 'Sin cliente'}</span> • ${p[2] || 'Sin Tipo'} • <span class="fw-bold ${estadoColor}">${p[8] || ''}</span>
+                <div class="spotlight-card" style="cursor: default;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold text-primary fs-5" style="letter-spacing: 1px;"><i class="bi bi-truck me-2"></i>${p[0]}</div>
+                            <div class="text-muted small mt-1">
+                                <span class="fw-bold text-dark">${p[1] || 'Sin cliente'}</span> • ${p[2] || 'Sin Tipo'} • <span class="fw-bold ${estadoColor}">${p[8] || ''}</span>
+                            </div>
                         </div>
+                        <div class="text-end">${kmBadge}</div>
                     </div>
-                    <div class="text-end">
-                        ${kmBadge}<br>
-                        <span class="text-warning small fw-bold d-inline-block mt-2">Ir a ficha <i class="bi bi-arrow-right"></i></span>
+                    <div class="d-flex gap-2 mt-3 pt-3 border-top">
+                        <button class="btn btn-sm btn-outline-secondary w-100 fw-bold" onclick="cerrarSpotlight(); cambiarModulo('placas'); setTimeout(() => { document.getElementById('buscadorPlacas').value='${p[0]}'; filtrarPlacasAvanzado(); }, 300);"><i class="bi bi-card-list"></i> Ficha</button>
+                        <button class="btn btn-sm btn-outline-info w-100 fw-bold" onclick="cerrarSpotlight(); cambiarModulo('statusMant'); setTimeout(() => { document.getElementById('buscadorStatus').value='${p[0]}'; filtrarStatusAvanzado(); }, 300);"><i class="bi bi-activity"></i> Insp.</button>
+                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold text-dark" onclick="cerrarSpotlight(); cambiarModulo('fleetrun'); setTimeout(() => { document.getElementById('buscadorFleetrun').value='${p[0]}'; filtrarFleetrunAvanzado(); }, 300);"><i class="bi bi-speedometer2"></i> Fleetrun</button>
+                        <button class="btn btn-sm btn-outline-primary w-100 fw-bold" onclick="cerrarSpotlight(); cambiarModulo('statusFlota'); setTimeout(() => { document.getElementById('buscadorStatusFlota').value='${p[0]}'; filtrarStatusFlotaAvanzado(); }, 300);"><i class="bi bi-truck-front"></i> Status</button>
                     </div>
                 </div>`;
                 count++;
@@ -2476,19 +2532,23 @@ document.getElementById('spotlight-input')?.addEventListener('input', function(e
         });
     }
 
-    // 2. Buscar Conductores
-    if (dataGlobalConductores && dataGlobalConductores.length > 0) {
-        dataGlobalConductores.forEach(c => {
+    // 2. Buscar Conductores (soporta objetos BD o arrays posicionales)
+    if (conductores.length > 0) {
+        conductores.forEach(c => {
             if (count >= 12) return;
-            const nombre = (c.nombre || '').toLowerCase(); const dni = (c.dni || '').toLowerCase();
+            const nombre = (c.nombre || c[1] || '').toLowerCase();
+            const dni = (c.dni || c[3] || '').toLowerCase();
+            const empresa = c.empresa || c[2] || '';
+            const telefono = c.telefono || c[4] || '';
+
             if (nombre.includes(query) || dni.includes(query)) {
-                let telLink = c.telefono ? `<i class="bi bi-whatsapp text-success"></i> ${c.telefono}` : '';
+                let telLink = telefono ? `<i class="bi bi-whatsapp text-success"></i> ${telefono}` : '';
                 html += `
                 <div class="spotlight-card d-flex justify-content-between align-items-center"
-                     onclick="cerrarSpotlight(); cambiarModulo('conductores'); setTimeout(() => { document.getElementById('buscadorConductores').value='${c.dni || c.nombre}'; filtrarTabla('cuerpoTablaConductores', 'buscadorConductores'); }, 300);">
+                     onclick="cerrarSpotlight(); cambiarModulo('conductores'); setTimeout(() => { document.getElementById('buscadorConductores').value='${dni || nombre}'; filtrarTabla('cuerpoTablaConductores', 'buscadorConductores'); }, 300);">
                     <div>
-                        <div class="fw-bold fs-6" style="color: #0ea5e9;"><i class="bi bi-person-vcard me-2"></i>${toTitleCase(c.nombre)}</div>
-                        <div class="text-muted small mt-1">DNI: ${c.dni || '-'} • ${c.empresa || '-'}</div>
+                        <div class="fw-bold fs-6" style="color: #0ea5e9;"><i class="bi bi-person-vcard me-2"></i>${toTitleCase(nombre)}</div>
+                        <div class="text-muted small mt-1">DNI: ${dni || '-'} • ${empresa || '-'}</div>
                     </div>
                     <div class="text-end small text-muted">
                         ${telLink}<br>
@@ -2505,5 +2565,5 @@ document.getElementById('spotlight-input')?.addEventListener('input', function(e
     }
 
     resContainer.innerHTML = html;
-});
+};
 

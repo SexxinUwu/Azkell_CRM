@@ -511,3 +511,684 @@ body.dark .modal-content {
     transform: translateX(6px); box-shadow: 0 8px 15px var(--shadow);
 }
 body.dark .spotlight-card:hover { background: rgba(255,255,255,0.08); }
+
+/* ============================================================
+   ⚡ SKELETON LOADERS (EFECTO CARGA TIPO YOUTUBE)
+   ============================================================ */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+.skeleton-box {
+    display: inline-block;
+    height: 1.2em;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--border);
+    border-radius: 6px;
+}
+.skeleton-box::after {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.4) 20%,
+        rgba(255, 255, 255, 0.6) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 1.5s infinite;
+    content: '';
+}
+body.dark .skeleton-box::after {
+    background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0));
+}
+.skeleton-row td { padding: 15px !important; }
+
+/* ============================================================
+   🎨 FASE 4: MÁSCARA FIGMA (UI PREMIUM SAAS)
+   ============================================================ */
+
+/* 1. Cambio de Fuente Global y Fondos */
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    background-color: #f8fafc !important;
+}
+
+/* 2. Variables de Color (Tema Claro Figma) */
+:root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --subtext: #64748b;
+    --border: #e2e8f0;
+    --crm-sidebar: #ffffff;
+    --crm-accent: #2563eb;
+    --apple-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* 3. Re-diseño de la Barra Lateral (Sidebar) */
+.sidebar {
+    background-color: var(--crm-sidebar) !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: none !important;
+}
+.sidebar .brand-text {
+    color: var(--text) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px;
+}
+#sidebarMenu a,
+#sidebarMenu a span.link-text,
+#sidebarMenu a i.bi,
+#sidebarMenu .chevron-icon {
+    color: var(--subtext) !important;
+    font-weight: 500 !important;
+}
+#sidebarMenu a:hover {
+    background-color: #f1f5f9 !important;
+    color: var(--text) !important;
+}
+#sidebarMenu a.active {
+    background-color: #eff6ff !important;
+    color: #2563eb !important;
+    font-weight: 600 !important;
+    border-left: none !important;
+}
+#sidebarMenu a.active i.bi, #sidebarMenu a.active span.link-text {
+    color: #2563eb !important;
+}
+
+/* 4. Topbar Transparente */
+.topbar {
+    background-color: var(--bg) !important;
+    border-bottom: none !important;
+}
+#tituloTopBar { font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+
+/* 5. Buscadores Redondeados Grises */
+#buscadorStatus, #buscadorPlacas, #buscadorFleetrun, #buscadorConductores {
+    background-color: #f1f5f9 !important;
+    border-color: transparent !important;
+    color: var(--text) !important;
+}
+.input-group-text { background-color: #f1f5f9 !important; border-color: transparent !important; }
+
+/* 6. Botones de Filtros (Outline Limpio) */
+.controls-row .btn-outline-secondary,
+.controls-row .btn-outline-info,
+.controls-row .btn-outline-success,
+.controls-row .btn-outline-warning,
+.controls-row .btn-reload-cache,
+.controls-row .dropdown-toggle {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+.controls-row .btn-outline-warning i { color: #f59e0b !important; }
+.controls-row .btn-outline-info i { color: #3b82f6 !important; }
+.controls-row .btn-outline-success i { color: #10b981 !important; }
+.controls-row .btn-primary {
+    background-color: var(--crm-accent) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* 7. Agrupadores de Tabla y Badges Celestitos */
+.group-header td {
+    background-color: var(--surface) !important;
+    border-top: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    font-weight: 700 !important;
+}
+.group-count {
+    background-color: #eff6ff !important;
+    color: #2563eb !important;
+    border-radius: 12px !important;
+    padding: 4px 12px !important;
+    font-size: 0.75rem;
+}
+
+/* 8. MODO OSCURO ADAPTADO A FIGMA */
+body.dark {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --text: #f8fafc;
+    --border: #334155;
+    --subtext: #94a3b8;
+    --crm-sidebar: #1e293b;
+}
+body.dark #sidebarMenu a:hover { background-color: #334155 !important; color: #ffffff !important; }
+body.dark #sidebarMenu a.active { background-color: rgba(37,99,235,0.2) !important; color: #60a5fa !important; }
+body.dark #sidebarMenu a.active i.bi, body.dark #sidebarMenu a.active span.link-text { color: #60a5fa !important; }
+body.dark .controls-row .btn { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
+body.dark .controls-row .btn-primary { background-color: #3b82f6 !important; color: #ffffff !important; border-color: transparent !important; }
+body.dark .group-count { background-color: rgba(37,99,235,0.2) !important; color: #60a5fa !important; }
+body.dark #buscadorStatus, body.dark .input-group-text,
+body.dark #buscadorPlacas, body.dark #buscadorFleetrun, body.dark #buscadorConductores {
+    background-color: #0f172a !important; border-color: #334155 !important;
+}
+
+/* ============================================================
+   🛠️ PARCHE DE CONTRASTE: CABECERAS, TABLAS Y PERFIL
+   ============================================================ */
+
+/* 1. Cabeceras de Formularios (Modales) - Color Distintivo Oscuro */
+.modal-header {
+    background-color: #0f172a !important;
+    border-bottom: none !important;
+}
+.modal-header .modal-title,
+.modal-header h5,
+#tituloModalUser,
+.modal-header i {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+.modal-header .btn-close {
+    filter: invert(1) brightness(200%) !important;
+    opacity: 0.8;
+}
+.modal-header .btn-close:hover { opacity: 1; }
+
+/* 2. Cabecera del Perfil de Usuario (Dropdown) */
+.dropdown-menu .p-4 {
+    background-color: #0f172a !important;
+}
+#perfil-nombre {
+    color: #ffffff !important;
+}
+#perfil-correo {
+    color: #94a3b8 !important;
+}
+
+/* 3. Encabezados de las Tablas */
+.table-custom th {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+}
+
+/* 4. Adaptación para Modo Oscuro */
+body.dark .table-custom th {
+    background-color: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-bottom-color: #334155 !important;
+}
+
+/* ============================================================
+   🍏 DETALLES APPLE Y FIGMA (LOGO, GPS Y SWITCH)
+   ============================================================ */
+
+/* 1. Logo Azkell (Icono Azul) */
+.brand-logo-icon {
+    background-color: var(--crm-accent);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* 2. Botón GPS (Píldora Translúcida) */
+#btn-wialon-status {
+    background-color: #eff6ff !important;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe !important;
+    font-weight: 700 !important;
+    padding: 6px 16px !important;
+    border-radius: 20px !important;
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--apple-transition);
+}
+#btn-wialon-status:hover { background-color: #dbeafe !important; }
+#btn-wialon-status i { font-size: 0.7rem; }
+@keyframes pulseGps {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+#btn-wialon-status.btn-primary i {
+    animation: pulseGps 2s infinite;
+    color: #2563eb !important;
+}
+
+/* 3. Buscador Falso en Topbar (Estilo Figma) */
+.fake-search-bar {
+    background-color: #f1f5f9;
+    border-radius: 12px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--subtext);
+    font-size: 0.9rem;
+    cursor: text;
+    width: 300px;
+    transition: var(--apple-transition);
+    border: 1px solid transparent;
+}
+.fake-search-bar:hover {
+    background-color: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+body.dark .fake-search-bar { background-color: #0f172a; border-color: #334155; }
+
+/* 4. Switch Modo Oscuro (Estilo Apple iOS) */
+.apple-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.apple-switch input { opacity: 0; width: 0; height: 0; }
+.apple-slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s; border-radius: 34px;
+}
+.apple-slider:before {
+    position: absolute; content: "";
+    height: 22px; width: 22px;
+    left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.apple-switch input:checked + .apple-slider { background-color: #3b82f6; }
+.apple-switch input:checked + .apple-slider:before { transform: translateX(22px); }
+body.dark .apple-slider { background-color: #1e293b; border: 1px solid #334155; }
+body.dark .apple-switch input:checked + .apple-slider { background-color: #2563eb; }
+
+/* 5. Ajustes de espaciado en el menú (Figma Layout) */
+#sidebarMenu a { padding: 0 20px !important; margin: 4px 12px !important; }
+.sidebar .collapse a { padding-left: 3.5rem !important; }
+
+/* ============================================================
+   FIGMA & APPLE PIXEL-PERFECT
+   ============================================================ */
+
+/* Sidebar glassmorphism */
+.sidebar {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+}
+
+/* Nav links — iOS style (sin sombras, sin transform, bordes suaves) */
+#sidebarMenu a {
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    color: #3C3C43 !important;
+    transform: none !important;
+}
+#sidebarMenu a:hover {
+    background-color: rgba(0, 122, 255, 0.05) !important;
+    color: #007AFF !important;
+    transform: none !important;
+}
+#sidebarMenu a.active,
+#sidebarMenu a[aria-expanded="true"] {
+    background-color: rgba(0, 122, 255, 0.08) !important;
+    color: #007AFF !important;
+}
+#sidebarMenu a.active i,
+#sidebarMenu a[aria-expanded="true"] i {
+    color: #007AFF !important;
+}
+
+/* Chevron rotation al colapsar/expandir */
+#sidebarMenu a[aria-expanded="false"] .chevron-icon {
+    transform: rotate(-90deg) !important;
+    transition: transform 0.25s ease !important;
+}
+#sidebarMenu a[aria-expanded="true"] .chevron-icon {
+    transform: rotate(0deg) !important;
+    transition: transform 0.25s ease !important;
+}
+
+/* Brand title text color */
+.brand-title-text {
+    color: var(--text) !important;
+}
+
+/* Fake search bar — responsive: círculo en mobile, barra completa en desktop */
+@media (max-width: 767.98px) {
+    .fake-search-bar {
+        width: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+    }
+    .fake-search-bar .search-text {
+        display: none !important;
+    }
+}
+
+/* Dark mode overrides */
+body.dark .sidebar {
+    background: rgba(30, 41, 59, 0.72) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+}
+body.dark #sidebarMenu a {
+    color: #ebebf5 !important;
+}
+body.dark #sidebarMenu a:hover {
+    color: #0A84FF !important;
+    background-color: rgba(10, 132, 255, 0.10) !important;
+}
+body.dark #sidebarMenu a.active,
+body.dark #sidebarMenu a[aria-expanded="true"] {
+    background-color: rgba(10, 132, 255, 0.15) !important;
+    color: #0A84FF !important;
+}
+body.dark #sidebarMenu a.active i,
+body.dark #sidebarMenu a[aria-expanded="true"] i {
+    color: #0A84FF !important;
+}
+
+/* ============================================================
+   🚀 REDISEÑO TOTAL FIGMA (TAILWIND / SHADCN UI ENGINE)
+   ============================================================ */
+
+/* 1. SISTEMA DE VARIABLES PREMIUM (PALETA SLATE DE TAILWIND) */
+:root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --subtext: #64748b;
+    --border: #e2e8f0;
+    --crm-accent: #2563eb;
+    --crm-accent-light: rgba(37, 99, 235, 0.08);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+}
+
+/* 2. MODO OSCURO "PLOMO Y NEGRO" */
+body.dark {
+    --bg: #020617;
+    --surface: #0f172a;
+    --surface-hover: #1e293b;
+    --text: #f8fafc;
+    --subtext: #94a3b8;
+    --border: #1e293b;
+    --crm-accent: #3b82f6;
+    --crm-accent-light: rgba(59, 130, 246, 0.15);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+/* 3. APLICACIÓN GLOBAL */
+body {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 4. TARJETAS Y CONTENEDORES */
+.card, .login-card, .modal-content, .kpi-card {
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-radius: var(--radius-lg) !important;
+    transition: background-color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* 5. MODALES LIMPIOS */
+.modal-header {
+    background-color: var(--surface) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 1.25rem 1.5rem !important;
+    border-top-left-radius: var(--radius-lg) !important;
+    border-top-right-radius: var(--radius-lg) !important;
+}
+.modal-header .modal-title, .modal-header h5, #tituloModalUser, .modal-header i {
+    color: var(--text) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em;
+}
+.modal-body { background-color: var(--bg) !important; padding: 1.5rem !important; }
+.modal-footer { background-color: var(--surface) !important; border-top: 1px solid var(--border) !important; }
+body:not(.dark) .modal-header .btn-close { filter: none !important; opacity: 0.5; }
+body.dark .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%) !important; opacity: 0.8; }
+
+/* 6. SIDEBAR ACTUALIZADO */
+.sidebar {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+body.dark .sidebar {
+    background: rgba(2, 6, 23, 0.75) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+#sidebarMenu a {
+    color: var(--subtext) !important;
+    font-weight: 500 !important;
+    border-radius: var(--radius-md) !important;
+    margin: 4px 16px !important;
+    padding: 10px 16px !important;
+}
+#sidebarMenu a i.bi { color: var(--subtext) !important; font-size: 1.1rem; }
+#sidebarMenu a:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: var(--text) !important;
+}
+body.dark #sidebarMenu a:hover { background: var(--surface-hover) !important; color: var(--text) !important; }
+#sidebarMenu a.active {
+    background: var(--crm-accent-light) !important;
+    color: var(--crm-accent) !important;
+    font-weight: 600 !important;
+}
+#sidebarMenu a.active i.bi, #sidebarMenu a.active span.link-text { color: var(--crm-accent) !important; }
+
+/* 7. TOPBAR */
+.topbar {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+body.dark .topbar { background: rgba(2, 6, 23, 0.75) !important; }
+
+.form-control, .form-select, .input-group-text, .fake-search-bar {
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-sm);
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--crm-accent) !important;
+    box-shadow: 0 0 0 3px var(--crm-accent-light) !important;
+}
+body.dark .form-control:focus, body.dark .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* 8. TABLAS PREMIUM */
+.table-custom { border-collapse: collapse; }
+.table-custom th {
+    background-color: var(--surface) !important;
+    color: var(--subtext) !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border) !important;
+}
+.table-custom td {
+    background-color: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-top: none !important;
+}
+body.dark .table-custom td { background-color: var(--bg) !important; }
+.group-header td {
+    background-color: var(--surface) !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text) !important;
+}
+body.dark .group-header td { background-color: var(--surface-hover) !important; }
+
+/* 9. BOTONES */
+.btn { font-weight: 500 !important; border-radius: var(--radius-md) !important; }
+.controls-row .btn-outline-secondary, .controls-row .btn-outline-info,
+.controls-row .btn-outline-success, .controls-row .btn-outline-warning {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+body.dark .controls-row .btn-outline-secondary, body.dark .controls-row .btn-outline-info {
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+/* ============================================================
+   🔥 FIGMA PIXEL-PERFECT V3: SEPARADORES, SANGRÍA Y GPS MINI 🔥
+   ============================================================ */
+
+/* 1. SEPARADORES DE MÓDULOS */
+#sidebarMenu > div[id^="wrap-"] {
+    border-bottom: 1px solid var(--border) !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 6px !important;
+}
+#sidebarMenu > div[id^="wrap-"]:last-of-type {
+    border-bottom: none !important;
+}
+
+/* 2. MENÚ PRINCIPAL Y SUBMENÚS */
+#sidebarMenu a, .sidebar .collapse a {
+    height: auto !important;
+    border: none !important;
+    border-left: none !important;
+    text-decoration: none !important;
+    min-height: auto !important;
+}
+
+#sidebarMenu a {
+    display: flex !important;
+    align-items: center !important;
+    padding: 6px 12px !important;
+    margin: 2px 12px !important;
+    border-radius: 6px !important;
+    background-color: transparent !important;
+    color: var(--subtext) !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+#sidebarMenu a i.bi {
+    font-size: 1rem !important;
+    margin-right: 10px !important;
+    color: var(--subtext) !important;
+}
+
+.sidebar .collapse {
+    margin-top: 0px !important;
+    margin-bottom: 4px !important;
+}
+.sidebar .collapse a {
+    margin: 1px 12px 1px 3.5rem !important;
+    padding: 5px 10px !important;
+    font-size: 0.8rem !important;
+}
+.sidebar .collapse a i.bi {
+    font-size: 0.9rem !important;
+    margin-right: 8px !important;
+}
+
+#sidebarMenu a:hover {
+    background-color: rgba(15, 23, 42, 0.05) !important;
+    color: var(--text) !important;
+}
+#sidebarMenu a:hover i.bi { color: var(--text) !important; }
+
+#sidebarMenu a.active {
+    background-color: var(--crm-accent) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+    font-weight: 600 !important;
+}
+#sidebarMenu a.active i.bi, #sidebarMenu a.active span.link-text {
+    color: #ffffff !important;
+}
+
+body.dark #sidebarMenu a { color: #94a3b8 !important; }
+body.dark #sidebarMenu a i.bi { color: #94a3b8 !important; }
+body.dark #sidebarMenu a:hover { background-color: var(--surface-hover) !important; color: var(--text) !important; }
+body.dark #sidebarMenu a.active { background-color: #2563eb !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important; }
+
+/* 3. BOTÓN GPS MINI */
+#btn-wialon-status {
+    background-color: transparent !important;
+    color: var(--subtext) !important;
+    border: 1px solid var(--border) !important;
+    font-weight: 600 !important;
+    padding: 2px 10px !important;
+    height: 26px !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem !important;
+    transition: all 0.3s ease;
+}
+#btn-wialon-status i { font-size: 0.6rem !important; }
+
+#btn-wialon-status.btn-outline-warning {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+    color: #f59e0b !important;
+    border-color: rgba(245, 158, 11, 0.2) !important;
+}
+#btn-wialon-status.btn-outline-warning i { color: #f59e0b !important; }
+
+#btn-wialon-status.btn-primary {
+    background-color: rgba(37, 99, 235, 0.08) !important;
+    color: #2563eb !important;
+    border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+@keyframes pulseGpsDot {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+}
+#btn-wialon-status.btn-primary i {
+    color: #2563eb !important;
+    animation: pulseGpsDot 1.5s infinite;
+}
+
+body.dark #btn-wialon-status.btn-primary {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
