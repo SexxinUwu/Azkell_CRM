@@ -1204,9 +1204,6 @@ function calcularFrecuencia(prefix) {
     }
     calcularProximo(prefix);
 }
-    }
-    calcularProximo(prefix);
-}
 
 function calcularProximo(prefix) {
     let kmAct = parseFloat(document.getElementById(prefix + '_kmact').value) || 0;
