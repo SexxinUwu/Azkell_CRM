@@ -1209,3 +1209,48 @@ body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
     opacity: 0.8;
 }
 .modal-header .btn-close:hover { opacity: 1; }
+
+/* ============================================================
+   CORRECCIÓN: BARRA COLAPSADA Y TOOLTIPS (UX)
+   ============================================================ */
+
+/* 1. Salvar el botón de las 3 rayitas al colapsar */
+.sidebar.collapsed .brand-container {
+    justify-content: center !important;
+    padding: 0 !important;
+}
+.sidebar.collapsed .brand-text {
+    display: none !important;
+}
+.sidebar.collapsed .btn-toggle-sidebar {
+    margin: 0 auto !important;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Centrar iconos de los submenús al estar colapsado */
+.sidebar.collapsed .collapse a {
+    padding: 10px !important;
+    margin: 4px 12px !important;
+    justify-content: center !important;
+}
+.sidebar.collapsed a i.bi {
+    margin-right: 0 !important;
+}
+
+/* 2. Diseño Premium para los Tooltips (Burbujas flotantes) */
+.tooltip-inner {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    font-size: 0.85rem !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+}
+.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #1e293b !important;
+}
