@@ -1270,6 +1270,7 @@ body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
     color: #ffffff !important;
     background-color: #1e293b !important;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 /* Mantener fondos grises de las celdas de tabla */
@@ -1277,6 +1278,7 @@ body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
 #pdf-inspeccion .insp-grid-info {
     background-color: #f8fafc !important;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 /* Forzar que los textos "OK" o "FALLA" mantengan sus colores */
@@ -1322,7 +1324,7 @@ body.dark .pregunta-box > label.text-secondary {
 /* Caja de FALLA y su observación */
 body.dark [id^="f_p_"].bg-light {
     background-color: #0f172a !important;
-    border-start-color: #ef4444 !important;
+    border-left-color: #ef4444 !important; /* Borde rojo vivo (Fix) */
 }
 body.dark [id^="f_p_"] .text-danger {
     color: #f87171 !important;

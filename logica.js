@@ -953,7 +953,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
 
                 let extraFotoBtn = "";
                 if (d.foto && d.foto.length > 100) {
-                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia('${d.foto}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
+                    let nombreFallaSeguro = d.item.replace(/'/g, "\\'");
+                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia('${d.foto}', 'Evidencia ${contEvidencias}: ${nombreFallaSeguro}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
                     htmlEvidenciasPDF += `
                         <div class="pdf-evidencia-card">
                             <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
@@ -2107,10 +2108,45 @@ async function procesarGuardadoInspeccion() {
 
 
 // ============================================================
-// AYUDANTES VISUALES DEL WIZARD (OK/FALLA y Porcentajes)
+// 🚀 RESTAURADO: AUTOCOMPLETAR INFO EN INSPECCIONES
+// ============================================================
+window.autocompletarInfoInsp = function() {
+    let placaInput = normalizeStr(document.getElementById('i_placa').value);
+    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
+
+    if(match) {
+        document.getElementById('i_cliente').value = match[1] || "";
+        document.getElementById('i_modelo').value = match[3] || "";
+    } else {
+        document.getElementById('i_cliente').value = "";
+        document.getElementById('i_modelo').value = "";
+    }
+
+    let wialonData = buscarWialonPorPlaca(placaInput);
+    if(wialonData) {
+        document.getElementById('i_kmgps').value = wialonData.km;
+    } else {
+        document.getElementById('i_kmgps').value = '';
+    }
+};
+
+// ============================================================
+// 🚀 RESTAURADO: LÓGICA DE BOTONES OK / FALLA Y PORCENTAJES
 // ============================================================
 
-function toggleFalla(cajaId, isFalla) {
+window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
+    if (el.dataset.chk === '1') {
+        el.checked = false;
+        el.dataset.chk = '0';
+        toggleFalla(cajaId, false);
+    } else {
+        document.getElementsByName(el.name).forEach(e => e.dataset.chk = '0');
+        el.dataset.chk = '1';
+        toggleFalla(cajaId, isFalla);
+    }
+};
+
+window.toggleFalla = function(cajaId, isFalla) {
     let el = document.getElementById(cajaId);
     if(el) {
         el.style.display = isFalla ? 'block' : 'none';
@@ -2118,11 +2154,15 @@ function toggleFalla(cajaId, isFalla) {
             let obsId = cajaId.replace('f_', 'obs_');
             let obsEl = document.getElementById(obsId);
             if(obsEl) obsEl.value = ''; // Limpia obs si cambia a OK
+
+            let fotoId = cajaId.replace('f_', 'foto_');
+            let fotoEl = document.getElementById(fotoId);
+            if(fotoEl) fotoEl.value = ''; // Limpia la foto adjunta si cambia a OK
         }
     }
-}
+};
 
-function seleccionarPorcentaje(uid, pct, btn) {
+window.seleccionarPorcentaje = function(uid, pct, btn) {
     document.getElementById(`val_${uid}`).value = pct;
     document.querySelectorAll(`.pct-${uid}`).forEach(b => {
         b.classList.remove('btn-primary', 'text-white');
@@ -2130,7 +2170,7 @@ function seleccionarPorcentaje(uid, pct, btn) {
     });
     btn.classList.remove('btn-outline-primary');
     btn.classList.add('btn-primary', 'text-white');
-}
+};
 
 // ==========================================
 // 📱 LÓGICA UX MÓVIL: BOTÓN ACCIONES (FAB)
@@ -2617,3 +2657,66 @@ window.buscarSpotlight = function(query) {
     resContainer.innerHTML = html;
 };
 
+// ============================================================
+// RECUPERACIÓN DE BOTONES (INSPECCIÓN Y EVIDENCIAS)
+// ============================================================
+
+// 1. Abre el formulario de Nueva Inspección
+
+// ============================================================
+// BOTONES Y TÍTULOS DINÁMICOS PARA MAPA/FOTOS
+// ============================================================
+
+window.cambiarPestana = function(index) {
+    const tabs = document.querySelectorAll('.wizard-tab');
+    const btns = document.querySelectorAll('.wizard-nav-btn');
+    tabs.forEach((t, i) => t.style.display = (i === index) ? 'block' : 'none');
+    btns.forEach((b, i) => {
+        b.classList.toggle('active', i === index);
+        b.classList.toggle('btn-primary', i === index);
+        b.classList.toggle('btn-outline-secondary', i !== index);
+    });
+};
+
+window.abrirModalNuevaInspeccion = function() {
+    document.getElementById('formNuevaInspeccion').reset();
+    document.getElementById('i_id_inspeccion').value = "";
+    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pct-btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+    });
+    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    cambiarPestana(0);
+    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+};
+
+window.verFotoEvidencia = function(base64Image, tituloEvidencia) {
+    document.getElementById('mapa-placa-titulo').innerHTML = `<i class="bi bi-camera"></i> ${tituloEvidencia || 'Evidencia Fotográfica'}`;
+    let btnExportar = document.getElementById('btn-exportar-gps');
+    if (btnExportar) btnExportar.classList.add('d-none');
+    let el = document.getElementById('iframeMapaGPS');
+    if(el) {
+        el.outerHTML = `<img id="iframeMapaGPS" src="${base64Image}" style="width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0;">`;
+    }
+    new bootstrap.Modal(document.getElementById('modalMapaGPS')).show();
+};
+
+window.abrirMapaFlotante = function(placa, lat, lng) {
+    document.getElementById('mapa-placa-titulo').innerHTML = `<i class="bi bi-geo-alt-fill"></i> Ubicación GPS: ${placa}`;
+    let btnExportar = document.getElementById('btn-exportar-gps');
+    if (btnExportar) btnExportar.classList.remove('d-none');
+    let el = document.getElementById('iframeMapaGPS');
+    let srcMaps = `https://maps.google.com/maps?q=${lat},${lng}&hl=es&z=16&output=embed`;
+    if (el && el.tagName.toLowerCase() === 'img') {
+        el.outerHTML = `<iframe id="iframeMapaGPS" width="100%" height="100%" style="border:0; position: absolute; top: 0; left: 0;" allowfullscreen="" loading="lazy" src="${srcMaps}"></iframe>`;
+    } else if (el) {
+        el.src = srcMaps;
+    }
+    new bootstrap.Modal(document.getElementById('modalMapaGPS')).show();
+};
