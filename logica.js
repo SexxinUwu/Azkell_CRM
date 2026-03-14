@@ -105,7 +105,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function normalizarClase(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, ''); }
-function initTooltips() { tooltipList.forEach(t => t.dispose()); tooltipList = []; const sidebar = document.getElementById('sidebarMenu'); if (sidebar && sidebar.classList.contains('collapsed')) { const items = [].slice.call(document.querySelectorAll('.sidebar a[title]')); tooltipList = items.map(el => new bootstrap.Tooltip(el, { trigger: 'hover', placement: 'right' })); } }
+function initTooltips() {
+    tooltipList.forEach(t => t.dispose());
+    tooltipList = [];
+    const sidebar = document.getElementById('sidebarMenu');
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+        const items = [].slice.call(document.querySelectorAll('.sidebar a'));
+        items.forEach(el => {
+            let textSpan = el.querySelector('.link-text');
+            if (textSpan && textSpan.innerText.trim() !== '') {
+                el.setAttribute('data-bs-title', textSpan.innerText.trim());
+                let t = new bootstrap.Tooltip(el, {
+                    trigger: 'hover',
+                    placement: 'right',
+                    animation: true
+                });
+                el.addEventListener('click', () => t.hide());
+                tooltipList.push(t);
+            }
+        });
+    } else {
+        const items = [].slice.call(document.querySelectorAll('.sidebar a'));
+        items.forEach(el => el.removeAttribute('data-bs-title'));
+    }
+}
 function toggleSidebar() { const sidebar = document.getElementById('sidebarMenu'); const backdrop = document.getElementById('sidebarBackdrop'); if (window.innerWidth <= 768) { const isOpen = sidebar.classList.contains('mobile-open'); sidebar.classList.toggle('mobile-open', !isOpen); backdrop.classList.toggle('active', !isOpen); } else { sidebar.classList.toggle('collapsed'); setTimeout(initTooltips, 300); } }
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
