@@ -330,18 +330,85 @@
     <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="offcanvasIA" style="width: 350px;"><div class="offcanvas-header bg-dark text-white"><h5 class="offcanvas-title text-white !important"><i class="bi bi-stars text-warning"></i> Azkell IA Analyst</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button></div><div class="offcanvas-body d-flex flex-column"><div id="chat-historial" class="flex-grow-1 overflow-auto mb-3 p-2 border rounded shadow-sm" style="background-color: var(--surface);"><div class="mb-3 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--bg);"><em>🤖 ¡Hola! Estoy conectado a tu base de datos. Pregúntame resúmenes o detalles.</em></span></div></div><div class="input-group shadow-sm"><input type="text" id="inputPregunta" class="form-control border-warning" placeholder="Escribe aquí..." onkeypress="if(event.key === 'Enter') enviarPreguntaIA()"><button class="btn btn-warning fw-bold text-dark" onclick="enviarPreguntaIA()" id="btnEnviarIA"><i class="bi bi-send-fill"></i></button></div></div></div>
 
     <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content" style="background-color: var(--bg) !important;">
-                <div class="modal-header bg-white shadow-sm" style="z-index: 10;">
-                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-clipboard2-data text-primary"></i> Resumen de Inspección Mecánica</h5>
-                    <div>
-                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold me-2" onclick="generarPDFInspeccion()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg" style="background-color: var(--bg) !important;">
+                <div class="modal-header shadow-sm" style="background-color: #1e293b; z-index: 10;">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-clipboard2-data text-primary"></i> Resumen de Inspección Mecánica</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="generarPDFInspeccion()">
+                            <i class="bi bi-file-pdf"></i> Exportar PDF
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                 </div>
                 <div class="modal-body p-4 overflow-auto">
-                    <div class="row g-4" id="contenedor-resumen-insp"></div>
+                    <div id="contenedor-resumen-insp" class="row g-4"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contenedor-pdf-inspeccion" style="display: none;">
+        <div id="pdf-inspeccion" style="width: 100%; padding: 10px 15px; background: white; font-family: Arial, sans-serif;">
+            <style>
+                #pdf-inspeccion, #pdf-inspeccion * { color: #000000 !important; background-color: transparent !important; box-sizing: border-box; line-height: 1.2; }
+                #pdf-inspeccion .insp-section-title { color: #ffffff !important; background-color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 8px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 12px;}
+                #pdf-inspeccion .text-danger-pdf { color: #dc2626 !important; font-weight: bold; }
+                #pdf-inspeccion .text-success-pdf { color: #16a34a !important; font-weight: bold; }
+                #pdf-inspeccion .text-info-pdf { color: #0ea5e9 !important; font-weight: bold; }
+                .pdf-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+                .pdf-header-table td { border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: middle; }
+                .pdf-header-table .lbl { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; width: 15%; color: #000000 !important; }
+                .pdf-falla-item { border-bottom: 1px solid #e2e8f0; padding: 4px 0; font-size: 11px; }
+                .pdf-falla-obs { color: #334155 !important; font-size: 12px; font-weight: bold; font-style: italic; display: block; margin-top: 2px; }
+                .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+                .pdf-evidencia-card { border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px; text-align: center; page-break-inside: avoid; }
+                .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; }
+                .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; color: #000 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; font-weight: bold; }
+                .pdf-evidencia-card p { margin: 4px 0 0 0; font-size: 11px; color: #dc2626 !important; font-style: italic; font-weight: bold; }
+            </style>
+
+            <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 5px; margin-bottom: 8px;">
+                <h2 style="margin: 0; font-size: 16px; font-weight: bold; color: #000000 !important;">REPORTE TÉCNICO DE INSPECCIÓN MECÁNICA</h2>
+            </div>
+
+            <table class="pdf-header-table">
+                <tr>
+                    <td class="lbl">Placa:</td>
+                    <td id="pdf-insp-placa" style="font-weight: bold; font-size: 13px;"></td>
+                    <td class="lbl">Fecha:</td>
+                    <td id="pdf-insp-fecha"></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Cliente:</td>
+                    <td id="pdf-insp-cliente"></td>
+                    <td class="lbl">Kilometraje:</td>
+                    <td id="pdf-insp-km"></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Técnico:</td>
+                    <td id="pdf-insp-tecnico" colspan="3" style="text-transform: uppercase;"></td>
+                </tr>
+            </table>
+
+            <div class="insp-section-title">DIAGNÓSTICO</div>
+            <div id="pdf-insp-detalle-fallas" style="min-height: 20px;"></div>
+
+            <div id="pdf-insp-evidencias-container" style="display: none;">
+                <div class="insp-section-title" style="background-color: #dc2626 !important; margin-top: 15px;">EVIDENCIA FOTOGRÁFICA</div>
+                <div id="pdf-insp-evidencias" class="pdf-evidencias-grid"></div>
+            </div>
+
+            <div style="margin-top: 25px; text-align: center; page-break-inside: avoid;">
+                <img id="pdf-insp-firma" src="" alt="Firma" style="max-height: 50px; max-width: 150px; margin-bottom: 2px; display:none;">
+                <div style="border-top: 1px solid #000; width: 220px; margin: 0 auto; padding-top: 3px; font-weight: bold; font-size: 11px;">
+                    Inspector Técnico<br>
+                    <span id="pdf-insp-tecnico-firma" style="font-weight: normal; text-transform: uppercase;"></span>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; text-align: center; font-size: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                Documento generado por AZKELL CRM
             </div>
         </div>
     </div>
@@ -484,11 +551,8 @@
         <div class="modal-dialog modal-lg modal-dialog-centered" style="margin: 0.5rem auto;">
             <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
                 <div class="modal-header text-white d-flex align-items-center justify-content-between" style="background-color: #1e293b; padding: 12px 15px;">
-                    <h6 class="modal-title fw-bold m-0 text-truncate" id="mapa-placa-titulo" style="max-width: 60%; font-size: 0.95rem;">Ubicación GPS en Vivo</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" id="btn-exportar-gps" class="btn btn-outline-danger btn-sm py-1 px-2 fw-bold d-none d-md-inline-block" onclick="descargarUbicacionPDF()"><i class="bi bi-file-pdf"></i> <span class="d-none d-sm-inline">Exportar PDF</span><span class="d-inline d-sm-none">PDF</span></button>
-                        <button type="button" class="btn-close btn-close-white m-0" data-bs-dismiss="modal" style="width: auto; height: auto; padding: 4px; opacity: 1;"></button>
-                    </div>
+                    <h6 class="modal-title fw-bold m-0 text-truncate" id="mapa-placa-titulo" style="max-width: 85%; font-size: 0.95rem;">Ubicación GPS en Vivo</h6>
+                    <button type="button" class="btn-close btn-close-white m-0" data-bs-dismiss="modal" style="width: auto; height: auto; padding: 4px;"></button>
                 </div>
                 <div class="modal-body p-0" style="height: 65vh; max-height: 500px; background: #0f172a; position: relative;">
                     <iframe id="iframeMapaGPS" width="100%" height="100%" style="border:0; position: absolute; top:0; left:0;" allowfullscreen="" loading="lazy"></iframe>
@@ -497,92 +561,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow-lg">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-pdf"></i> Resumen de Inspección</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="contenedor-resumen-insp"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-outline-danger fw-bold" onclick="generarPDFInspeccion()">
-                        <i class="bi bi-file-pdf text-danger"></i> Exportar PDF
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="contenedor-pdf-inspeccion" style="display: none;">
-        <div id="pdf-inspeccion" style="width: 100%; padding: 10px 15px; background: white; font-family: Arial, sans-serif;">
-            <style>
-                #pdf-inspeccion, #pdf-inspeccion * { color: #000000 !important; background-color: transparent !important; box-sizing: border-box; line-height: 1.2; }
-
-                #pdf-inspeccion .insp-section-title { color: #ffffff !important; background-color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 8px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 12px;}
-
-                #pdf-inspeccion .text-danger-pdf { color: #dc2626 !important; font-weight: bold; }
-                #pdf-inspeccion .text-success-pdf { color: #16a34a !important; font-weight: bold; }
-                #pdf-inspeccion .text-info-pdf { color: #0ea5e9 !important; font-weight: bold; }
-
-                .pdf-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
-                .pdf-header-table td { border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: middle; }
-                .pdf-header-table .lbl { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; width: 15%; color: #000000 !important; }
-
-                .pdf-falla-item { border-bottom: 1px solid #e2e8f0; padding: 4px 0; font-size: 11px; }
-                .pdf-falla-obs { color: #334155 !important; font-size: 12px; font-weight: bold; font-style: italic; display: block; margin-top: 2px; }
-
-                .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
-                .pdf-evidencia-card { border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px; text-align: center; page-break-inside: avoid; }
-                .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; }
-                .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; color: #000 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; font-weight: bold; }
-                .pdf-evidencia-card p { margin: 4px 0 0 0; font-size: 11px; color: #dc2626 !important; font-style: italic; font-weight: bold; }
-            </style>
-
-            <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 5px; margin-bottom: 8px;">
-                <h2 style="margin: 0; font-size: 16px; font-weight: bold; color: #000000 !important;">REPORTE TÉCNICO DE INSPECCIÓN MECÁNICA</h2>
-            </div>
-
-            <table class="pdf-header-table">
-                <tr>
-                    <td class="lbl">Placa:</td>
-                    <td id="pdf-insp-placa" style="font-weight: bold; font-size: 13px;"></td>
-                    <td class="lbl">Fecha:</td>
-                    <td id="pdf-insp-fecha"></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Cliente:</td>
-                    <td id="pdf-insp-cliente"></td>
-                    <td class="lbl">Kilometraje:</td>
-                    <td id="pdf-insp-km"></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Técnico:</td>
-                    <td id="pdf-insp-tecnico" colspan="3" style="text-transform: uppercase;"></td>
-                </tr>
-            </table>
-
-            <div class="insp-section-title">DIAGNÓSTICO</div>
-            <div id="pdf-insp-detalle-fallas" style="min-height: 20px;"></div>
-
-            <div id="pdf-insp-evidencias-container" style="display: none;">
-                <div class="insp-section-title" style="background-color: #dc2626 !important; margin-top: 15px;">EVIDENCIA FOTOGRÁFICA</div>
-                <div id="pdf-insp-evidencias" class="pdf-evidencias-grid"></div>
-            </div>
-
-            <div style="margin-top: 15px; text-align: center; page-break-inside: avoid;">
-                <img id="pdf-insp-firma" src="" alt="Firma" style="max-height: 50px; max-width: 150px; margin-bottom: 2px; display:none;">
-                <div style="border-top: 1px solid #000; width: 180px; margin: 0 auto; padding-top: 3px; font-weight: bold; font-size: 10px;">Firma del Inspector</div>
-            </div>
-
-            <div style="margin-top: 10px; text-align: center; font-size: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px;">
-                Documento generado por AZKELL CRM
-            </div>
-        </div>
-    </div>
 
     <div id="contenedor-pdf-status-flota" style="display: none;">
         <div id="pdf-status-flota" style="background: white; padding: 30px; font-family: Arial, sans-serif; color: #000;">

@@ -981,6 +981,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     document.getElementById('pdf-insp-placa').innerText = insp.placa;
     document.getElementById('pdf-insp-fecha').innerText = fIng;
     document.getElementById('pdf-insp-tecnico').innerText = insp.tecnico || '';
+    let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
+    if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
     document.getElementById('pdf-insp-km').innerText = insp.km_tablero || '-';
     document.getElementById('pdf-insp-cliente').innerText = insp.cliente || (dataGlobalPlacas.find(p => normalizeStr(p[0]) === normalizeStr(insp.placa)) || [])[1] || "";
     document.getElementById('pdf-insp-detalle-fallas').innerHTML = htmlFallas;
@@ -2658,24 +2660,30 @@ window.buscarSpotlight = function(query) {
 };
 
 // ============================================================
-// RECUPERACIÓN DE BOTONES (INSPECCIÓN Y EVIDENCIAS)
-// ============================================================
-
-// 1. Abre el formulario de Nueva Inspección
-
-// ============================================================
-// BOTONES Y TÍTULOS DINÁMICOS PARA MAPA/FOTOS
+// 🚀 RECUPERACIÓN DE BOTONES Y NAVEGACIÓN (WIZARD Y FOTOS)
 // ============================================================
 
 window.cambiarPestana = function(index) {
-    const tabs = document.querySelectorAll('.wizard-tab');
-    const btns = document.querySelectorAll('.wizard-nav-btn');
-    tabs.forEach((t, i) => t.style.display = (i === index) ? 'block' : 'none');
-    btns.forEach((b, i) => {
-        b.classList.toggle('active', i === index);
-        b.classList.toggle('btn-primary', i === index);
-        b.classList.toggle('btn-outline-secondary', i !== index);
-    });
+    if(index > 0 && !document.getElementById('i_placa').value) { alert("⚠️ Primero debes ingresar la Placa."); return; }
+    currentTab = index;
+
+    document.querySelectorAll('.wizard-tab').forEach((tab, i) => tab.style.display = (i === index) ? 'block' : 'none');
+    document.querySelectorAll('.wizard-step').forEach((step, i) => step.classList.toggle('active', i === index));
+
+    let activeBtn = document.getElementById('step-btn-' + index);
+    if(activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+    let btnAnt = document.getElementById('btnWizAnterior');
+    if(btnAnt) btnAnt.disabled = (index === 0);
+
+    let isLastTab = (index === WIZARD_SCHEMA.length - 1);
+    let btnSig = document.getElementById('btnWizSiguiente');
+    if(btnSig) btnSig.style.display = isLastTab ? 'none' : 'block';
+
+    let btnGua = document.getElementById('btnWizGuardar');
+    if(btnGua) btnGua.style.display = isLastTab ? 'block' : 'none';
+
+    if(isLastTab) setTimeout(initFirma, 300);
 };
 
 window.abrirModalNuevaInspeccion = function() {
@@ -2692,27 +2700,87 @@ window.abrirModalNuevaInspeccion = function() {
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
 
-    cambiarPestana(0);
+    window.cambiarPestana(0);
+    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+};
+
+// ============================================================
+// 🚀 RESTAURADO: FUNCIÓN PARA EDITAR INSPECCIONES
+// ============================================================
+window.abrirModalEditarInspeccion = function(idBusqueda) {
+    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+    if(!insp) return;
+
+    document.getElementById('formNuevaInspeccion').reset();
+    document.getElementById('i_id_inspeccion').value = insp.id;
+
+    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pct-btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+    });
+    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    let fIngreso;
+    if (insp.fecha_ingreso && insp.fecha_ingreso.includes('/')) {
+        let p = insp.fecha_ingreso.split('/'); fIngreso = `${p[2]}-${p[1]}-${p[0]}`;
+    } else if (insp.fecha_ingreso) {
+        fIngreso = insp.fecha_ingreso.split('T')[0];
+    } else { fIngreso = ""; }
+
+    document.getElementById('i_fecha').value = fIngreso;
+    document.getElementById('i_placa').value = insp.placa || "";
+    document.getElementById('i_kmtablero').value = insp.km_tablero || "";
+    document.getElementById('i_cliente').value = insp.cliente || "";
+    document.getElementById('i_tecnico').value = insp.tecnico || "";
+    document.getElementById('i_dias').value = insp.dias_propuestos || "30";
+
+    if(insp.detalles_json && insp.detalles_json.includes("[")) {
+        try {
+            let arr = JSON.parse(insp.detalles_json);
+            WIZARD_SCHEMA.forEach((sec, i) => {
+                if(sec.items) {
+                    sec.items.forEach((item, j) => {
+                        let lbl = typeof item === 'string' ? item : item.label;
+                        let t = typeof item === 'string' ? 'okfalla' : item.type;
+                        let uid = `p_${i}_${j}`;
+                        let res = arr.find(x => x.item === lbl && x.categoria === sec.tab);
+                        if(res && res.estado !== "SIN DATOS" && res.estado !== "") {
+                            if(t === 'okfalla') {
+                                if(res.estado === 'OK') { document.getElementById(`${uid}_ok`).checked = true; document.getElementById(`${uid}_ok`).dataset.chk = '1'; }
+                                else if (res.estado === 'FALLA') { document.getElementById(`${uid}_fa`).checked = true; document.getElementById(`${uid}_fa`).dataset.chk = '1'; toggleFalla(`f_${uid}`, true); if(res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion; }
+                            } else if (t === 'percent') {
+                                let val = res.estado.replace('%',''); document.getElementById(`val_${uid}`).value = val;
+                                document.querySelectorAll(`.pct-${uid}`).forEach(b => { if(b.innerText === res.estado) { b.classList.remove('btn-outline-primary'); b.classList.add('btn-primary', 'text-white'); } });
+                            } else if (t === 'text') {
+                                if(res.observacion) document.getElementById(`txt_${uid}`).value = res.observacion;
+                            }
+                        }
+                    });
+                }
+            });
+        } catch(e) {}
+    }
+
+    window.cambiarPestana(0);
     new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
 };
 
 window.verFotoEvidencia = function(base64Image, tituloEvidencia) {
     document.getElementById('mapa-placa-titulo').innerHTML = `<i class="bi bi-camera"></i> ${tituloEvidencia || 'Evidencia Fotográfica'}`;
-    let btnExportar = document.getElementById('btn-exportar-gps');
-    if (btnExportar) btnExportar.classList.add('d-none');
     let el = document.getElementById('iframeMapaGPS');
     if(el) {
-        el.outerHTML = `<img id="iframeMapaGPS" src="${base64Image}" style="width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0;">`;
+        el.outerHTML = `<img id="iframeMapaGPS" src="${base64Image}" style="width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0; background: #000;">`;
     }
     new bootstrap.Modal(document.getElementById('modalMapaGPS')).show();
 };
 
 window.abrirMapaFlotante = function(placa, lat, lng) {
     document.getElementById('mapa-placa-titulo').innerHTML = `<i class="bi bi-geo-alt-fill"></i> Ubicación GPS: ${placa}`;
-    let btnExportar = document.getElementById('btn-exportar-gps');
-    if (btnExportar) btnExportar.classList.remove('d-none');
     let el = document.getElementById('iframeMapaGPS');
     let srcMaps = `https://maps.google.com/maps?q=${lat},${lng}&hl=es&z=16&output=embed`;
+
     if (el && el.tagName.toLowerCase() === 'img') {
         el.outerHTML = `<iframe id="iframeMapaGPS" width="100%" height="100%" style="border:0; position: absolute; top: 0; left: 0;" allowfullscreen="" loading="lazy" src="${srcMaps}"></iframe>`;
     } else if (el) {
