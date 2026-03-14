@@ -135,7 +135,20 @@ function togglePassword(inputId, btn) { const input = document.getElementById(in
 function registrarActividad() { if (usuarioLogueado) localStorage.setItem('crm_ultimo_acceso', Date.now()); }
 function verificarInactividad() { if (usuarioLogueado) { const ultimo = localStorage.getItem('crm_ultimo_acceso'); if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) cerrarSesion(); } }
 function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspector':'role-inspector', 'Mantenimiento':'role-mant','Almacén':'role-alm','Almacen':'role-alm','Flota':'role-flota' }; return `<span class="role-badge ${clases[rol]||''}">${rol}</span>`; }
-function parseDateToDDMMYYYY(dateStr) { if(!dateStr) return "-"; if(dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return dateStr; let d = new Date(dateStr); if(isNaN(d.getTime())) return dateStr; let day = d.getDate().toString().padStart(2, '0'); let month = (d.getMonth() + 1).toString().padStart(2, '0'); let year = d.getFullYear(); return `${day}/${month}/${year}`; }
+function parseDateToDDMMYYYY(dateStr) {
+    if(!dateStr) return "-";
+    if(typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return dateStr;
+    if (typeof dateStr === 'string' && dateStr.includes('-')) {
+        let p = dateStr.split('T')[0].split('-');
+        if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+    }
+    let d = new Date(dateStr);
+    if(isNaN(d.getTime())) return dateStr;
+    let day = d.getDate().toString().padStart(2, '0');
+    let month = (d.getMonth() + 1).toString().padStart(2, '0');
+    let year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+}
 function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
 
 // =======================================================
@@ -616,7 +629,8 @@ function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState;
 function mostrarStatusInspecciones(inspecciones) {
   if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
   dataGlobalInspecciones = inspecciones; let hoy = new Date(); hoy.setHours(0,0,0,0);
-  let inspeccionesOrdenadas = [...inspecciones].sort((a,b) => new Date(b.fecha_ingreso) - new Date(a.fecha_ingreso));
+  let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
+  let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
   let dataFinal = [];
 
   let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
@@ -828,6 +842,9 @@ function actualizarColoresGraficos() {
 // ==========================================
 // 🔥 FASE 3: GENERADOR DINÁMICO DEL SÚPER WIZARD 🔥
 // ==========================================
+// ==========================================
+// FASE 3: GENERADOR DINÁMICO DEL SÚPER WIZARD
+// ==========================================
 const WIZARD_SCHEMA = [
     { tab: "1. REGISTRO", type: "registro" },
     { tab: "2. II. MOTOR", items: ["1. Niveles de Motor", "2. Sistema lubricacion de fugas", "3. Sistema Combustible", "4. Sistema de Refrigeracion", "5. Correas, ventilador y accesorios", "6. Codigo Falla", "II.7 Otros"] },
@@ -844,36 +861,44 @@ const WIZARD_SCHEMA = [
 
 function generarWizardFase3() {
     let htmlHeaders = ''; let htmlTabs = '';
-    htmlTabs += `<input type="hidden" id="i_id_inspeccion" value="">`; 
-    
+    htmlTabs += `<input type="hidden" id="i_id_inspeccion" value="">`;
+
     WIZARD_SCHEMA.forEach((sec, i) => {
         htmlHeaders += `<div class="wizard-step ${i===0?'active':''}" id="step-btn-${i}" onclick="cambiarPestana(${i})">${sec.tab}</div>`;
         htmlTabs += `<div class="wizard-tab ${i===0?'active':''}" id="tab-${i}">`;
         htmlTabs += `<h5 class="fw-bold mb-3 border-bottom pb-2 text-primary">${sec.tab.substring(sec.tab.indexOf(' ')+1)}</h5>`;
-        
+
         if(sec.type === "registro") {
-            htmlTabs += `<div class="row"><div class="col-md-4 mb-3"><label class="fw-bold">Fecha de Ingreso</label><input type="date" class="form-control fw-bold text-primary" id="i_fecha" required></div><div class="col-md-4 mb-3"><label class="fw-bold">Placa</label><input type="text" class="form-control text-uppercase" id="i_placa" list="dl-placas" oninput="autocompletarInfoInsp()" required></div><div class="col-md-4 mb-3"><label class="fw-bold">KM Tablero</label><input type="number" class="form-control text-danger fw-bold border-danger" id="i_kmtablero" placeholder="Ej: 150000" required></div></div><div class="row"><div class="col-md-4 mb-3"><label class="fw-bold text-secondary">Dueño (Cliente)</label><input type="text" class="form-control bg-light" id="i_cliente" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Modelo UTS</label><input type="text" class="form-control bg-light" id="i_modelo" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> Kilometraje Wialon GPS</label><input type="number" class="form-control text-primary bg-light fw-bold" id="i_kmgps" readonly placeholder="Calculando..."></div></div>`;
-        } 
+            htmlTabs += `<div class="row"><div class="col-md-4 mb-3"><label class="fw-bold">Fecha de Ingreso</label><input type="date" class="form-control fw-bold text-primary" id="i_fecha" required></div><div class="col-md-4 mb-3"><label class="fw-bold">Placa</label><input type="text" class="form-control text-uppercase" id="i_placa" list="dl-placas" oninput="autocompletarInfoInsp()" required></div><div class="col-md-4 mb-3"><label class="fw-bold">KM Tablero (Opcional)</label><input type="number" class="form-control text-danger fw-bold border-danger" id="i_kmtablero" placeholder="Ej: 150000"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="fw-bold text-secondary">Dueño (Cliente)</label><input type="text" class="form-control bg-light" id="i_cliente" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Modelo UTS</label><input type="text" class="form-control bg-light" id="i_modelo" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> Kilometraje Wialon GPS</label><input type="number" class="form-control text-primary bg-light fw-bold" id="i_kmgps" readonly placeholder="Calculando..."></div></div>`;
+        }
         else if (sec.type === "firma") {
             htmlTabs += `<div class="row"><div class="col-md-8 mb-3"><label class="fw-bold text-primary">Técnico Inspector</label><input type="text" class="form-control fw-bold text-uppercase" id="i_tecnico" list="dl-tecnicos" placeholder="Selecciona o escribe uno nuevo" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary">Días Propuestos</label><input type="number" class="form-control fw-bold" id="i_dias" value="30"></div></div><div class="mb-3"><label class="fw-bold text-primary mb-2"><i class="bi bi-pen"></i> Firma del Técnico</label><canvas id="canvasFirma" class="firma-pad shadow-sm"></canvas><button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirma()"><i class="bi bi-eraser"></i> Borrar Firma</button></div>`;
-        } 
+        }
         else {
             sec.items.forEach((item, j) => {
                 let lbl = typeof item === 'string' ? item : item.label; let t = typeof item === 'string' ? 'okfalla' : item.type; let uid = `p_${i}_${j}`;
                 htmlTabs += `<div class="pregunta-box"><label class="fw-bold text-secondary">${lbl}</label>`;
-                
+
                 if (t === 'okfalla') {
                     htmlTabs += `<div class="btn-group w-100 mt-2 shadow-sm" role="group">
                         <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
                         <label class="btn btn-outline-success fw-bold" for="${uid}_ok">OK</label>
                         <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
                         <label class="btn btn-outline-danger fw-bold" for="${uid}_fa">FALLA</label>
-                    </div><div id="f_${uid}" style="display:none;" class="mt-3 p-3 bg-light rounded border-start border-danger border-4 shadow-inner"><label class="form-label text-danger fw-bold"><i class="bi bi-pencil-square"></i> Observación</label><textarea class="form-control mb-2 border-danger" rows="2" id="obs_${uid}" placeholder="Describe la falla..."></textarea></div>`;
+                    </div>
+                    <div id="f_${uid}" style="display:none;" class="mt-3 p-3 bg-light rounded border-start border-danger border-4 shadow-inner">
+                        <label class="form-label text-danger fw-bold"><i class="bi bi-pencil-square"></i> Observación</label>
+                        <textarea class="form-control mb-2 border-danger" rows="2" id="obs_${uid}" placeholder="Describe la falla..."></textarea>
+                        <label class="form-label text-danger fw-bold mt-2"><i class="bi bi-camera"></i> Evidencia (Opcional)</label>
+                        <input type="file" class="form-control border-danger form-control-sm" id="foto_${uid}" accept="image/*">
+                    </div>`;
                 } else if (t === 'percent') {
                     htmlTabs += `<input type="hidden" id="val_${uid}" value=""><div class="percent-grid mt-2">`;
                     [10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100].forEach(pct => { htmlTabs += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold pct-btn pct-${uid} shadow-sm" onclick="seleccionarPorcentaje('${uid}', ${pct}, this)">${pct}%</button>`; });
                     htmlTabs += `</div>`;
-                } else if (t === 'text') { htmlTabs += `<textarea class="form-control mt-2 border-primary" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..."></textarea>`; }
+                } else if (t === 'text') {
+                    htmlTabs += `<textarea class="form-control mt-2 border-primary" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..."></textarea>`;
+                }
                 htmlTabs += `</div>`;
             });
         }
@@ -884,95 +909,7 @@ function generarWizardFase3() {
     let wD = document.getElementById('wizard-dynamic-tabs'); if(wD) wD.innerHTML = htmlTabs;
 }
 
-function toggleRadioOkFalla(el, cajaId, isFalla) {
-    if (el.dataset.chk === '1') { el.checked = false; el.dataset.chk = '0'; toggleFalla(cajaId, false); } 
-    else { document.getElementsByName(el.name).forEach(e => e.dataset.chk = '0'); el.dataset.chk = '1'; toggleFalla(cajaId, isFalla); }
-}
 
-function abrirModalNuevaInspeccion() {
-    document.getElementById('formNuevaInspeccion').reset();
-    document.getElementById('i_id_inspeccion').value = ""; 
-    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-    
-    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.pct-btn').forEach(btn => { btn.classList.remove('btn-primary', 'text-white'); btn.classList.add('btn-outline-primary'); });
-    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
-    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
-    
-    cambiarPestana(0); new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
-}
-
-function abrirModalEditarInspeccion(idBusqueda) {
-    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda); 
-    if(!insp) return;
-    
-    document.getElementById('formNuevaInspeccion').reset();
-    document.getElementById('i_id_inspeccion').value = insp.id; 
-    
-    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.pct-btn').forEach(btn => { btn.classList.remove('btn-primary', 'text-white'); btn.classList.add('btn-outline-primary'); });
-    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
-    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
-
-    document.getElementById('i_fecha').value = insp.fecha_ingreso || "";
-    document.getElementById('i_placa').value = insp.placa || "";
-    document.getElementById('i_kmtablero').value = insp.km_tablero || "";
-    document.getElementById('i_cliente').value = insp.cliente || "";
-    document.getElementById('i_tecnico').value = insp.tecnico || "";
-    document.getElementById('i_dias').value = insp.dias_propuestos || "30";
-
-    if(insp.detalles_json && insp.detalles_json.includes("[")) {
-        try {
-            let arr = JSON.parse(insp.detalles_json);
-            WIZARD_SCHEMA.forEach((sec, i) => {
-                if(sec.items) {
-                    sec.items.forEach((item, j) => {
-                        let lbl = typeof item === 'string' ? item : item.label; let t = typeof item === 'string' ? 'okfalla' : item.type; let uid = `p_${i}_${j}`;
-                        let res = arr.find(x => x.item === lbl && x.categoria === sec.tab);
-                        if(res && res.estado !== "SIN DATOS") {
-                            if(t === 'okfalla') {
-                                if(res.estado === 'OK') { document.getElementById(`${uid}_ok`).checked = true; document.getElementById(`${uid}_ok`).dataset.chk = '1'; } 
-                                else if (res.estado === 'FALLA') { document.getElementById(`${uid}_fa`).checked = true; document.getElementById(`${uid}_fa`).dataset.chk = '1'; toggleFalla(`f_${uid}`, true); if(res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion; }
-                            } else if (t === 'percent') {
-                                let val = res.estado.replace('%',''); document.getElementById(`val_${uid}`).value = val;
-                                document.querySelectorAll(`.pct-${uid}`).forEach(b => { if(b.innerText === res.estado) { b.classList.remove('btn-outline-primary'); b.classList.add('btn-primary', 'text-white'); } });
-                            } else if (t === 'text') {
-                                if(res.observacion) document.getElementById(`txt_${uid}`).value = res.observacion;
-                            }
-                        }
-                    });
-                }
-            });
-        } catch(e) {}
-    }
-    
-    cambiarPestana(0); new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
-}
-
-function autocompletarInfoInsp() { 
-    let placaInput = normalizeStr(document.getElementById('i_placa').value);
-    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput); 
-    if(match) { document.getElementById('i_cliente').value = match[1] || ""; document.getElementById('i_modelo').value = match[3] || ""; } 
-    
-    let wialonData = buscarWialonPorPlaca(placaInput);
-    if(wialonData) {
-        document.getElementById('i_kmgps').value = wialonData.km;
-    } else { document.getElementById('i_kmgps').value = ''; }
-}
-
-function cambiarPestana(index) {
-    if(index > 0 && !document.getElementById('i_placa').value) { alert("⚠️ Primero debes ingresar la Placa."); return; }
-    currentTab = index;
-    document.querySelectorAll('.wizard-tab').forEach((tab, i) => tab.classList.toggle('active', i === index));
-    document.querySelectorAll('.wizard-step').forEach((step, i) => step.classList.toggle('active', i === index));
-    let activeBtn = document.getElementById('step-btn-' + index); if(activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    let btnAnt = document.getElementById('btnWizAnterior'); if(btnAnt) btnAnt.disabled = (index === 0);
-    let isLastTab = (index === document.querySelectorAll('.wizard-tab').length - 1);
-    let btnSig = document.getElementById('btnWizSiguiente'); if(btnSig) btnSig.style.display = isLastTab ? 'none' : 'block';
-    let btnGua = document.getElementById('btnWizGuardar'); if(btnGua) btnGua.style.display = isLastTab ? 'block' : 'none';
-    if(isLastTab) setTimeout(initFirma, 300); 
-}
 function moverWizard(step) { let n = currentTab + step; if(n >= 0 && n < WIZARD_SCHEMA.length) cambiarPestana(n); }
 function initFirma() { canvasFirma = document.getElementById('canvasFirma'); if(!canvasFirma) return; ctxFirma = canvasFirma.getContext('2d'); canvasFirma.width = canvasFirma.offsetWidth; canvasFirma.height = canvasFirma.offsetHeight; ctxFirma.lineWidth = 3; ctxFirma.lineCap = 'round'; ctxFirma.strokeStyle = '#000000'; canvasFirma.onmousedown = startDrawing; canvasFirma.onmouseup = stopDrawing; canvasFirma.onmousemove = draw; canvasFirma.onmouseout = stopDrawing; canvasFirma.addEventListener('touchstart', startDrawingTouch, {passive: false}); canvasFirma.addEventListener('touchend', stopDrawing); canvasFirma.addEventListener('touchmove', drawTouch, {passive: false}); }
 function startDrawing(e) { dibujando = true; draw(e); } function stopDrawing() { dibujando = false; ctxFirma.beginPath(); }
@@ -982,78 +919,96 @@ function drawTouch(e) { if (!dibujando) return; e.preventDefault(); let rect = c
 function limpiarFirma() { if(ctxFirma && canvasFirma) { ctxFirma.clearRect(0, 0, canvasFirma.width, canvasFirma.height); ctxFirma.beginPath(); } }
 
 function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
-    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda); 
+    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if(!insp) return;
 
     let fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
     let htmlFallas = ""; let countFallas = 0;
-    
+
+    let htmlEvidenciasPDF = ""; let contEvidencias = 1;
+
     try {
-        if(insp.detalles_json && insp.detalles_json.includes("[")) {
-            let detallesArray = JSON.parse(insp.detalles_json);
+        let detallesArray = [];
+        if (typeof insp.detalles_json === 'string') {
+            try { detallesArray = JSON.parse(insp.detalles_json); } catch(e){}
+        } else if (Array.isArray(insp.detalles_json)) {
+            detallesArray = insp.detalles_json;
+        }
+
+        if(detallesArray && detallesArray.length > 0) {
             detallesArray.forEach(d => {
-                let colorTxt = ""; let icon = "";
-                if(d.estado === "FALLA") { colorTxt = "color: #dc2626; font-weight: bold;"; icon = "❌"; countFallas++; }
-                else if(d.estado === "OK") { colorTxt = "color: #16a34a; font-weight: bold;"; icon = "✅"; }
-                else if(d.estado === "SIN DATOS") { colorTxt = "color: #94a3b8; font-style: italic;"; icon = "➖"; }
-                else { colorTxt = "color: #0ea5e9; font-weight: bold;"; icon = "ℹ️"; }
-                
-                htmlFallas += `<div style="border-bottom: 1px solid #e2e8f0; padding: 5px 0;"><strong>${d.categoria.replace(/^\d+\.\s*/, '')} - ${d.item}:</strong> <span style="${colorTxt}">${icon} ${d.estado}</span>${d.observacion ? `<br><em style="color: #64748b; font-size: 11px;">Obs: ${d.observacion}</em>` : ''}</div>`;
-            });
-        } 
-        else { 
-            let ignorarKeys = ["ID", "PLACA", "FECHA_DE_INGRESO", "URL_FIRMA", "DETALLES_JSON", "CLIENTE", "TECNICO", "KM_TABLERO", "DIAS_PROPUESTOS", "ESTADO_INSPECCION", "ESTADO"];
-            Object.keys(insp).forEach(k => {
-                if(ignorarKeys.includes(k.toUpperCase())) return; 
-                let val = insp[k];
-                if(val === null || val === undefined || val === "" || val === "-") return; 
-                val = val.toString().trim(); let valUpper = val.toUpperCase();
-                
-                let colorTxt = "color: #0ea5e9; font-weight: bold;"; let icon = "ℹ️";
-                if(valUpper === "FALLA" || valUpper === "MALO" || valUpper === "NO") { colorTxt = "color: #dc2626; font-weight: bold;"; icon = "❌"; countFallas++; }
-                else if(valUpper === "OK" || valUpper === "BUENO" || valUpper === "SI" || valUpper === "ACTIVA") { colorTxt = "color: #16a34a; font-weight: bold;"; icon = "✅"; }
-                else if(valUpper === "SIN DATOS" || valUpper === "N/A" || valUpper === "NINGUNO") { colorTxt = "color: #94a3b8; font-style: italic;"; icon = "➖"; }
-                
-                htmlFallas += `<div style="border-bottom: 1px solid #e2e8f0; padding: 5px 0;"><strong style="text-transform: capitalize;">${k.replace(/_/g, ' ').toLowerCase()}:</strong> <span style="${colorTxt}">${icon} ${val}</span></div>`;
+                if(d.estado === "SIN DATOS" || d.estado === "") return;
+
+                let colorTxt = ""; let icon = ""; let pdfClass = "";
+                if(d.estado === "FALLA") {
+                    colorTxt = "color: #dc2626; font-weight: bold;"; icon = "❌"; countFallas++;
+                    pdfClass = "text-danger-pdf";
+                } else if(d.estado === "OK") {
+                    colorTxt = "color: #16a34a; font-weight: bold;"; icon = "✅";
+                    pdfClass = "text-success-pdf";
+                } else {
+                    colorTxt = "color: #0ea5e9; font-weight: bold;"; icon = "ℹ️";
+                    pdfClass = "text-info-pdf";
+                }
+
+                let extraFotoBtn = "";
+                if (d.foto && d.foto.length > 100) {
+                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia('${d.foto}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
+                    htmlEvidenciasPDF += `
+                        <div class="pdf-evidencia-card">
+                            <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
+                            <img src="${d.foto}">
+                            ${d.observacion ? `<p>${d.observacion}</p>` : ''}
+                        </div>
+                    `;
+                    contEvidencias++;
+                }
+
+                htmlFallas += `<div class="pdf-falla-item"><strong>${d.categoria.replace(/^\d+\.\s*/, '')} - ${d.item}:</strong> <span class="${pdfClass}" style="${colorTxt}">${icon} ${d.estado}</span>${d.observacion ? `<span class="pdf-falla-obs">Obs: ${d.observacion}</span>` : ''}${extraFotoBtn}</div>`;
             });
         }
     } catch(e) { htmlFallas = "<p class='text-danger'>Error al leer los detalles históricos.</p>"; }
-    
-    if(htmlFallas === "") htmlFallas = "<p class='text-center text-muted mt-3'>No hay fallas ni respuestas registradas en este reporte.</p>";
+
+    if(htmlFallas === "") htmlFallas = "<p class='text-center text-muted mt-3'>No hay fallas ni diagnósticos registrados en este reporte.</p>";
 
     let htmlModal = `
-    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-card-checklist text-primary"></i> REGISTRO GENERAL</div><div class="insp-row"><span>Fecha de Inspección</span><span>${fIng}</span></div><div class="insp-row"><span>Placa</span><span class="text-primary fw-bold">${insp.placa}</span></div><div class="insp-row"><span>Kilometraje</span><span>${insp.km_tablero || '-'}</span></div><div class="insp-row"><span>Fallas Detectadas</span><span class="text-danger fw-bold">${countFallas}</span></div></div></div>
-    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-person-badge text-primary"></i> FIRMA Y RESPONSABLE</div><div class="insp-row"><span>Técnico Inspector</span><span>${insp.tecnico || '-'}</span></div>
+    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-card-checklist text-primary"></i> REGISTRO GENERAL</div><div class="insp-row"><span style="color:var(--text)">Fecha de Inspección</span><span style="color:var(--text)">${fIng}</span></div><div class="insp-row"><span style="color:var(--text)">Placa</span><span class="text-primary fw-bold">${insp.placa}</span></div><div class="insp-row"><span style="color:var(--text)">Kilometraje</span><span style="color:var(--text)">${insp.km_tablero || '-'}</span></div><div class="insp-row"><span style="color:var(--text)">Fallas Detectadas</span><span class="text-danger fw-bold">${countFallas}</span></div></div></div>
+    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-person-badge text-primary"></i> FIRMA Y RESPONSABLE</div><div class="insp-row"><span style="color:var(--text)">Técnico Inspector</span><span style="color:var(--text)">${insp.tecnico || '-'}</span></div>
     <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div></div></div>
-    <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">Detalle de Inspección Completa</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem;">${htmlFallas}</div></div></div>`;
+    <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">DIAGNÓSTICO</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem; color:var(--text);">${htmlFallas}</div></div></div>`;
 
-    document.getElementById('pdf-insp-placa').innerText = insp.placa; 
-    document.getElementById('pdf-insp-fecha').innerText = fIng; 
+    document.getElementById('pdf-insp-placa').innerText = insp.placa;
+    document.getElementById('pdf-insp-fecha').innerText = fIng;
     document.getElementById('pdf-insp-tecnico').innerText = insp.tecnico || '';
     document.getElementById('pdf-insp-km').innerText = insp.km_tablero || '-';
     document.getElementById('pdf-insp-cliente').innerText = insp.cliente || (dataGlobalPlacas.find(p => normalizeStr(p[0]) === normalizeStr(insp.placa)) || [])[1] || "";
     document.getElementById('pdf-insp-detalle-fallas').innerHTML = htmlFallas;
-    
-    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal; 
+
+    let ctnEvidencias = document.getElementById('pdf-insp-evidencias-container');
+    if (ctnEvidencias) {
+        if (htmlEvidenciasPDF !== "") {
+            document.getElementById('pdf-insp-evidencias').innerHTML = htmlEvidenciasPDF;
+            ctnEvidencias.style.display = 'block';
+        } else {
+            ctnEvidencias.style.display = 'none';
+        }
+    }
+
+    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
     new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
 
     let firmaImgPDF = document.getElementById('pdf-insp-firma');
-    if(insp.url_firma && insp.url_firma.includes('drive.google')) {
-        google.script.run.withSuccessHandler(base64 => {
-            if(base64) { 
-                firmaImgPDF.src = base64; firmaImgPDF.style.display = 'inline-block'; 
-                document.getElementById('firma-visual-modal').innerHTML = `<img src="${base64}" style="max-height: 100px; max-width:100%;">`;
-                if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500); 
-            } else {
-                firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Error al cargar firma</span>';
-                if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
-            }
-        }).obtenerImagenBase64(insp.url_firma);
-    } else { 
+    if(insp.url_firma && insp.url_firma.length > 100) {
+        firmaImgPDF.src = insp.url_firma;
+        firmaImgPDF.style.display = 'inline-block';
+        document.getElementById('firma-visual-modal').innerHTML = `<img src="${insp.url_firma}" style="max-height: 100px; max-width:100%;">`;
+        if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
+    } else {
         firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Sin firma registrada</span>';
         if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
     }
 }
+
 
 function generarPDFInspeccion() {
     const btnElement = event.currentTarget || document.querySelector('#modalResumenInspeccion .btn-outline-danger'); 
@@ -1063,8 +1018,14 @@ function generarPDFInspeccion() {
     const elemento = document.getElementById('pdf-inspeccion');
     document.getElementById('contenedor-pdf-inspeccion').style.display = 'block';
     
-    html2pdf().set({ margin: 15, filename: `Inspeccion_${document.getElementById('pdf-insp-placa').innerText}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(elemento).save().then(() => { 
-        document.getElementById('contenedor-pdf-inspeccion').style.display = 'none'; 
+    html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `Inspeccion_${document.getElementById('pdf-insp-placa').innerText}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(elemento).save().then(() => {
+        document.getElementById('contenedor-pdf-inspeccion').style.display = 'none';
         if(btnElement) { btnElement.innerHTML = textoOriginal; btnElement.classList.remove('disabled'); }
     });
 }
@@ -1953,15 +1914,26 @@ function toggleAllSFGroups() {
 }
 
 function abrirModalEditarStatusFlota(id) {
+    if (event) event.preventDefault();
+
     let fila = dataGlobalStatusFlota.find(f => f[0] === id);
-    if (!fila) return;
+    if (!fila) {
+        alert("No se encontró el registro para editar.");
+        return;
+    }
 
     document.getElementById('formStatusFlota').reset();
     document.getElementById('sf_id').value = fila[0];
-    document.getElementById('sf_fecha').value = fila[1];
+
+    let dDate = new Date(fila[1] + "T00:00:00");
+    let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0];
+    document.getElementById('sf_fecha').value = fechaFormat || fila[1];
 
     let corte = fila[2];
-    if (corte) document.getElementById('corte' + corte).checked = true;
+    if (corte) {
+        let radio = document.getElementById('corte' + corte);
+        if (radio) radio.checked = true;
+    }
 
     document.getElementById('sf_motora').value = fila[3] || '';
     document.getElementById('sf_nomotora').value = fila[4] || '';
@@ -1972,14 +1944,13 @@ function abrirModalEditarStatusFlota(id) {
     document.getElementById('sf_estado').value = fila[9] || '';
     document.getElementById('sf_obs').value = fila[10] || '';
 
-    // Disparar los colores de días
     autocompletarStatus('motora');
     autocompletarStatus('nomotora');
 
     const btn = document.getElementById('btnGuardarSF');
     btn.innerHTML = '<i class="bi bi-pencil-square"></i> Actualizar';
-    btn.classList.replace('btn-primary', 'btn-warning');
-    btn.classList.add('text-dark');
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-warning', 'text-dark');
 
     new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
 }
@@ -2047,10 +2018,10 @@ function generarPDFStatusFlota() {
 // 🔥 GUARDADO DEL WIZARD DE INSPECCIONES 🔥
 // ==========================================
 
-function procesarGuardadoInspeccion() {
+async function procesarGuardadoInspeccion() {
     const btn = document.getElementById('btnWizGuardar');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
 
     let idInsp = document.getElementById('i_id_inspeccion').value || "INSP-" + Date.now();
     let fecha = document.getElementById('i_fecha').value;
@@ -2060,23 +2031,29 @@ function procesarGuardadoInspeccion() {
     let tecnico = document.getElementById('i_tecnico').value;
     let dias = document.getElementById('i_dias').value || "30";
 
-    if(!placa || !tecnico || !km) {
-        alert("⚠️ La Placa, el Kilometraje y el Técnico son obligatorios.");
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Registro';
+    if(!placa || !tecnico) {
+        alert("⚠️ La Placa y el Técnico son obligatorios.");
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
         return;
     }
 
-    // 1. Recolectar TODAS las respuestas dinámicas del Wizard
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
     let detalles = [];
-    WIZARD_SCHEMA.forEach((sec, i) => {
+
+    for (let i = 0; i < WIZARD_SCHEMA.length; i++) {
+        let sec = WIZARD_SCHEMA[i];
         if(sec.items) {
-            sec.items.forEach((item, j) => {
+            for (let j = 0; j < sec.items.length; j++) {
+                let item = sec.items[j];
                 let lbl = typeof item === 'string' ? item : item.label;
                 let t = typeof item === 'string' ? 'okfalla' : item.type;
                 let uid = `p_${i}_${j}`;
-                let estado = "SIN DATOS";
-                let obs = "";
+                let estado = "SIN DATOS", obs = "", fotoEvidencia = "";
 
                 if(t === 'okfalla') {
                     let ok = document.getElementById(`${uid}_ok`);
@@ -2084,68 +2061,50 @@ function procesarGuardadoInspeccion() {
                     if(ok && ok.dataset.chk === '1') estado = "OK";
                     if(fa && fa.dataset.chk === '1') {
                         estado = "FALLA";
-                        obs = document.getElementById(`obs_${uid}`).value;
+                        let obsEl = document.getElementById(`obs_${uid}`);
+                        if(obsEl) obs = obsEl.value;
+                        let inputFoto = document.getElementById(`foto_${uid}`);
+                        if(inputFoto && inputFoto.files && inputFoto.files.length > 0) {
+                            try {
+                                fotoEvidencia = await fileToBase64(inputFoto.files[0]);
+                            } catch(e) { console.log("Error foto", e); }
+                        }
                     }
                 } else if (t === 'percent') {
                     let val = document.getElementById(`val_${uid}`);
                     if(val && val.value) estado = val.value + "%";
                 } else if (t === 'text') {
                     let txt = document.getElementById(`txt_${uid}`);
-                    if(txt && txt.value) {
-                        estado = "REGISTRADO";
-                        obs = txt.value;
-                    }
+                    if(txt && txt.value) { estado = "REGISTRADO"; obs = txt.value; }
                 }
-                detalles.push({ categoria: sec.tab, item: lbl, estado: estado, observacion: obs });
-            });
+                detalles.push({ categoria: sec.tab, item: lbl, estado: estado, observacion: obs, foto: fotoEvidencia });
+            }
         }
-    });
-
-    // 2. Capturar la Firma Dibujada en Base64
-    let firmaData = "";
-    if(canvasFirma && ctxFirma) {
-        firmaData = canvasFirma.toDataURL("image/png");
     }
 
-    // 3. Empaquetar todo el JSON
+    let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
+
     let datos = {
         form: {
-            id: idInsp,
-            fecha_ingreso: fecha,
-            placa: placa,
-            km_tablero: km,
-            cliente: cliente,
-            tecnico: tecnico,
-            dias_propuestos: dias,
-            detalles_json: JSON.stringify(detalles),
-            firma_base64: firmaData,
-            usuarioAutor: usuarioLogueado
+            id: idInsp, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
+            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: usuarioLogueado
         }
     };
 
-    // 4. Enviar al Servidor Node.js
     fetch('/api/script/guardarInspeccion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos)
     })
     .then(res => res.json())
     .then(r => {
         if(r.data === 'Éxito') {
             bootstrap.Modal.getInstance(document.getElementById('modalInspeccion')).hide();
-            recargarModulo('statusMant'); // Recarga la tabla para mostrar la nueva inspección
-        } else {
-            alert("Error: " + r.data);
-        }
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Registro';
-    })
-    .catch(e => {
-        alert("Error de red: " + e.message);
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Registro';
-    });
+            recargarModulo('statusMant');
+        } else { alert("Error: " + r.data); }
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
+    }).catch(e => { alert("Error de red: " + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; });
 }
+
 
 // ============================================================
 // AYUDANTES VISUALES DEL WIZARD (OK/FALLA y Porcentajes)

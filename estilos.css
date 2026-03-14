@@ -1254,3 +1254,90 @@ body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
 .bs-tooltip-end .tooltip-arrow::before {
     border-right-color: #1e293b !important;
 }
+
+/* ============================================================
+   PROTECCIÓN DE RENDERIZADO PDF (FORZAR MODO CLARO AL IMPRIMIR)
+   ============================================================ */
+#contenedor-pdf-inspeccion *,
+#contenedor-pdf-status-flota *,
+#contenedor-pdf * {
+    color: #1e293b !important;
+    background-color: transparent !important;
+}
+
+/* Mantener el fondo azul oscuro de las cabeceras */
+#pdf-inspeccion .insp-section-title {
+    color: #ffffff !important;
+    background-color: #1e293b !important;
+    -webkit-print-color-adjust: exact;
+}
+
+/* Mantener fondos grises de las celdas de tabla */
+#pdf-inspeccion .insp-grid-label,
+#pdf-inspeccion .insp-grid-info {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+}
+
+/* Forzar que los textos "OK" o "FALLA" mantengan sus colores */
+.text-success-pdf { color: #16a34a !important; }
+.text-danger-pdf { color: #dc2626 !important; }
+.text-info-pdf { color: #0ea5e9 !important; }
+
+/* ============================================================
+   FIX SCROLL: FORMULARIO DE INSPECCIÓN (WIZARD)
+   ============================================================ */
+.wizard-tab {
+    overflow-y: auto !important;
+    max-height: 55vh !important;
+    padding-right: 15px !important;
+}
+
+.wizard-tab::-webkit-scrollbar { width: 6px; }
+.wizard-tab::-webkit-scrollbar-thumb {
+    background: var(--subtext);
+    border-radius: 10px;
+}
+
+/* ============================================================
+   MEJORAS DE CONTRASTE: WIZARD DE INSPECCIONES (MODO OSCURO)
+   ============================================================ */
+
+/* Cajas de las preguntas en el Wizard */
+body.dark .pregunta-box {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+body.dark .pregunta-box:hover {
+    border-color: #3b82f6 !important;
+}
+
+/* Títulos de las preguntas */
+body.dark .pregunta-box > label.text-secondary {
+    color: #e2e8f0 !important;
+    font-size: 0.95rem;
+}
+
+/* Caja de FALLA y su observación */
+body.dark [id^="f_p_"].bg-light {
+    background-color: #0f172a !important;
+    border-start-color: #ef4444 !important;
+}
+body.dark [id^="f_p_"] .text-danger {
+    color: #f87171 !important;
+}
+
+/* Inputs de texto dentro de las preguntas */
+body.dark .pregunta-box textarea,
+body.dark .pregunta-box input[type="file"] {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+/* Títulos de las pestañas (Tabs) */
+body.dark .wizard-tab h5.text-primary {
+    color: #60a5fa !important;
+    border-bottom-color: #334155 !important;
+}

@@ -515,46 +515,68 @@
     </div>
 
     <div id="contenedor-pdf-inspeccion" style="display: none;">
-        <div id="pdf-inspeccion" style="background: white; padding: 30px; font-family: Arial, sans-serif; color: #000;">
-            <div style="text-align: center; border-bottom: 3px solid #003366; padding-bottom: 20px; margin-bottom: 20px;">
-                <h2 style="margin: 0; color: #003366; font-size: 28px; font-weight: bold;">AZKELL CRM</h2>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Reporte de Inspección de Vehículos</p>
+        <div id="pdf-inspeccion" style="width: 100%; padding: 10px 15px; background: white; font-family: Arial, sans-serif;">
+            <style>
+                #pdf-inspeccion, #pdf-inspeccion * { color: #000000 !important; background-color: transparent !important; box-sizing: border-box; line-height: 1.2; }
+
+                #pdf-inspeccion .insp-section-title { color: #ffffff !important; background-color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 8px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 12px;}
+
+                #pdf-inspeccion .text-danger-pdf { color: #dc2626 !important; font-weight: bold; }
+                #pdf-inspeccion .text-success-pdf { color: #16a34a !important; font-weight: bold; }
+                #pdf-inspeccion .text-info-pdf { color: #0ea5e9 !important; font-weight: bold; }
+
+                .pdf-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+                .pdf-header-table td { border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: middle; }
+                .pdf-header-table .lbl { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; width: 15%; color: #000000 !important; }
+
+                .pdf-falla-item { border-bottom: 1px solid #e2e8f0; padding: 4px 0; font-size: 11px; }
+                .pdf-falla-obs { color: #334155 !important; font-size: 12px; font-weight: bold; font-style: italic; display: block; margin-top: 2px; }
+
+                .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+                .pdf-evidencia-card { border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px; text-align: center; page-break-inside: avoid; }
+                .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; }
+                .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; color: #000 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; font-weight: bold; }
+                .pdf-evidencia-card p { margin: 4px 0 0 0; font-size: 11px; color: #dc2626 !important; font-style: italic; font-weight: bold; }
+            </style>
+
+            <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 5px; margin-bottom: 8px;">
+                <h2 style="margin: 0; font-size: 16px; font-weight: bold; color: #000000 !important;">REPORTE TÉCNICO DE INSPECCIÓN MECÁNICA</h2>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-                <div>
-                    <div style="background: #f5f5f5; padding: 15px; border-left: 5px solid #003366; margin-bottom: 15px;">
-                        <h4 style="margin: 0 0 10px 0; color: #003366; font-size: 14px; font-weight: bold;">INFORMACIÓN GENERAL</h4>
-                        <div style="font-size: 11px; line-height: 1.8;">
-                            <div><strong>Placa:</strong> <span id="pdf-insp-placa"></span></div>
-                            <div><strong>Fecha de Ingreso:</strong> <span id="pdf-insp-fecha"></span></div>
-                            <div><strong>Kilometraje:</strong> <span id="pdf-insp-km"></span> km</div>
-                            <div><strong>Cliente:</strong> <span id="pdf-insp-cliente"></span></div>
-                        </div>
-                    </div>
-                </div>
+            <table class="pdf-header-table">
+                <tr>
+                    <td class="lbl">Placa:</td>
+                    <td id="pdf-insp-placa" style="font-weight: bold; font-size: 13px;"></td>
+                    <td class="lbl">Fecha:</td>
+                    <td id="pdf-insp-fecha"></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Cliente:</td>
+                    <td id="pdf-insp-cliente"></td>
+                    <td class="lbl">Kilometraje:</td>
+                    <td id="pdf-insp-km"></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Técnico:</td>
+                    <td id="pdf-insp-tecnico" colspan="3" style="text-transform: uppercase;"></td>
+                </tr>
+            </table>
 
-                <div>
-                    <div style="background: #f5f5f5; padding: 15px; border-left: 5px solid #003366; margin-bottom: 15px;">
-                        <h4 style="margin: 0 0 10px 0; color: #003366; font-size: 14px; font-weight: bold;">RESPONSABLE</h4>
-                        <div style="font-size: 11px; line-height: 1.8;">
-                            <div><strong>Técnico Inspector:</strong> <span id="pdf-insp-tecnico"></span></div>
-                            <div style="margin-top: 20px; text-align: center;">
-                                <img id="pdf-insp-firma" src="" alt="" style="max-height: 80px; max-width: 150px; border: 1px solid #ccc; display: none;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="insp-section-title">DIAGNÓSTICO</div>
+            <div id="pdf-insp-detalle-fallas" style="min-height: 20px;"></div>
+
+            <div id="pdf-insp-evidencias-container" style="display: none;">
+                <div class="insp-section-title" style="background-color: #dc2626 !important; margin-top: 15px;">EVIDENCIA FOTOGRÁFICA</div>
+                <div id="pdf-insp-evidencias" class="pdf-evidencias-grid"></div>
             </div>
 
-            <div style="background: #f5f5f5; padding: 15px; border-left: 5px solid #003366; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 10px 0; color: #003366; font-size: 14px; font-weight: bold;">DETALLE DE INSPECCIÓN</h4>
-                <div id="pdf-insp-detalle-fallas" style="font-size: 10px; line-height: 1.6; color: #333;"></div>
+            <div style="margin-top: 15px; text-align: center; page-break-inside: avoid;">
+                <img id="pdf-insp-firma" src="" alt="Firma" style="max-height: 50px; max-width: 150px; margin-bottom: 2px; display:none;">
+                <div style="border-top: 1px solid #000; width: 180px; margin: 0 auto; padding-top: 3px; font-weight: bold; font-size: 10px;">Firma del Inspector</div>
             </div>
 
-            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 9px; color: #666;">
-                <p style="margin: 0;">Documento generado automáticamente por AZKELL CRM</p>
-                <p style="margin: 0;">Fecha: <span id="pdf-fecha-generacion"></span></p>
+            <div style="margin-top: 10px; text-align: center; font-size: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                Documento generado por AZKELL CRM
             </div>
         </div>
     </div>
