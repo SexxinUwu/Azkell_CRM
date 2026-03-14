@@ -980,7 +980,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
 
     document.getElementById('pdf-insp-placa').innerText = insp.placa;
     document.getElementById('pdf-insp-fecha').innerText = fIng;
-    document.getElementById('pdf-insp-tecnico').innerText = insp.tecnico || '';
+
+    // pdf-insp-tecnico fue eliminado de la tabla HTML; solo llenamos el span de la firma
     let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
     if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
     document.getElementById('pdf-insp-km').innerText = insp.km_tablero || '-';
@@ -2660,7 +2661,7 @@ window.buscarSpotlight = function(query) {
 };
 
 // ============================================================
-// 🚀 RECUPERACIÓN DE BOTONES Y NAVEGACIÓN (WIZARD Y FOTOS)
+// 🚀 RESTAURACIÓN DE NAVEGACIÓN DEL WIZARD Y FOTOS
 // ============================================================
 
 window.cambiarPestana = function(index) {
@@ -2686,6 +2687,11 @@ window.cambiarPestana = function(index) {
     if(isLastTab) setTimeout(initFirma, 300);
 };
 
+window.moverWizard = function(step) {
+    let n = currentTab + step;
+    if(n >= 0 && n < WIZARD_SCHEMA.length) window.cambiarPestana(n);
+};
+
 window.abrirModalNuevaInspeccion = function() {
     document.getElementById('formNuevaInspeccion').reset();
     document.getElementById('i_id_inspeccion').value = "";
@@ -2704,9 +2710,6 @@ window.abrirModalNuevaInspeccion = function() {
     new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
 };
 
-// ============================================================
-// 🚀 RESTAURADO: FUNCIÓN PARA EDITAR INSPECCIONES
-// ============================================================
 window.abrirModalEditarInspeccion = function(idBusqueda) {
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if(!insp) return;
