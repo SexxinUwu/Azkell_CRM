@@ -631,6 +631,7 @@ function mostrarStatusInspecciones(inspecciones) {
   dataGlobalInspecciones = inspecciones; let hoy = new Date(); hoy.setHours(0,0,0,0);
   let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
   let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
+  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada'); // Filtro Papelera
   let dataFinal = [];
 
   let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
@@ -726,7 +727,7 @@ function mostrarStatusInspecciones(inspecciones) {
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
               html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
-              <td class="fw-bold text-primary" data-value="${placa}">${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
+              <td class="fw-bold text-primary" data-value="${placa}">${(insp && insp.id) ? `<input type="checkbox" class="form-check-input me-2 chk-bulk-statusMant" value="${insp.id}" onclick="event.stopPropagation(); toggleBulkBtn('statusMant')">` : ''}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
               <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
               <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
@@ -1035,7 +1036,7 @@ function generarPDFInspeccion() {
 }
 
 function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('cuerpoTablaPlacas').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
-function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}">${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
+function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (window.verPapelera && window.verPapelera['placas']) { if (est !== 'Eliminada') return; } else { if (est === 'Eliminada') return; } if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}"><span class="chk-bulk-container-placas" style="display: ${window.modoSeleccion && window.modoSeleccion['placas'] ? 'inline-block' : 'none'};"><input type="checkbox" class="form-check-input me-2 chk-bulk-placas" value="${fila[0]}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
 function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[5] && p[5].trim() !== "" && p[5].trim() !== "-"); if (match) { rucInput.value = match[5].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
@@ -1116,7 +1117,7 @@ function mostrarFleetrun(datos) {
               
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id); 
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="abrirDetalleFleetrun(event, ${originalIndex})" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}">∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="abrirDetalleFleetrun(event, ${originalIndex})" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}"><input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
           });
       });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
@@ -2208,14 +2209,13 @@ function generarListaAccionesFab() {
 
     if (!moduloActual) return;
 
-    // Radar Extremo: Busca el ÚLTIMO contenedor de herramientas, donde siempre están los botones
     const divBotonesAll = moduloActual.querySelectorAll('.controls-row .d-flex.align-items-center.gap-2');
     const divBotones = divBotonesAll[divBotonesAll.length - 1];
 
     if (!divBotones) return;
 
-    // Solo clona botones y medidores de caché
-    const buttons = divBotones.querySelectorAll('button, .cache-badge');
+    // 🔥 MAGIA: Ahora buscamos botones normales Y TAMBIÉN las opciones dentro de los menús desplegables (.dropdown-item)
+    const buttons = divBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item, .cache-badge');
 
     if (buttons.length === 0) {
         listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
@@ -2223,14 +2223,14 @@ function generarListaAccionesFab() {
     }
 
     buttons.forEach(btn => {
-        // 🛡️ FILTRO ESTRICTO: Si el botón original está oculto, NO lo clonamos
         if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
 
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
-        clonedBtn.className = 'fab-action-item';
 
-        // Mantener los colores de los íconos (Excel Verde, PDF Rojo, etc)
+        // Convertimos el diseño al estándar del botón flotante
+        clonedBtn.className = 'fab-action-item text-decoration-none';
+
         const originalClasses = btn.className;
         const icon = clonedBtn.querySelector('i');
 
@@ -2242,7 +2242,6 @@ function generarListaAccionesFab() {
             else if (originalClasses.includes('primary')) icon.classList.add('text-primary');
         }
 
-        // Si es el texto de "Caché", lo dejamos como informativo (no clickeable)
         if(clonedBtn.tagName.toLowerCase() === 'span') {
             clonedBtn.style.cursor = 'default';
         } else {
@@ -2790,4 +2789,193 @@ window.abrirMapaFlotante = function(placa, lat, lng) {
         el.src = srcMaps;
     }
     new bootstrap.Modal(document.getElementById('modalMapaGPS')).show();
+};
+
+// ============================================================
+// 📥 GENERADOR DE PLANTILLAS Y MOTOR DE IMPORTACIÓN MASIVA
+// ============================================================
+
+window.descargarPlantillaPlacas = function() {
+    let data = [
+        ['PLACA', 'CLIENTE', 'TIPO', 'MARCA', 'ESTADO', 'UTS', 'MOTORA', 'EN_USO'],
+        ['ABC-123', 'EJEMPLO EMPRESA SAC', 'CAMIÓN', 'VOLVO', 'Activa', 'NACIONAL', 'Unidad Motora', 'Si'],
+        ['XYZ-999', 'OTRA EMPRESA SAC', 'CARRETA', 'SCANIA', 'Activa', 'LOCAL', 'Unidad No Motora', 'No']
+    ];
+    let ws = XLSX.utils.aoa_to_sheet(data);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Placas");
+    XLSX.writeFile(wb, "Plantilla_Importacion_Placas.xlsx");
+};
+
+// ── IMPORTACIÓN MASIVA DE PLACAS DESDE EXCEL ─────────────────────────────────
+window.importarExcelPlacas = async function(event) {
+    const file = event.target.files[0];
+    event.target.value = ''; // reset input para permitir reimportar el mismo archivo
+    if (!file) return;
+
+    const leer = () => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
+
+    try {
+        const buffer = await leer();
+        const wb = XLSX.read(buffer, { type: 'arraybuffer' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const filas = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (!filas.length) { alert('⚠️ El archivo está vacío o no tiene filas de datos.'); return; }
+
+        // Normalizar cabeceras: quitar espacios y pasar a minúsculas para mapeo
+        const campos = Object.keys(filas[0]);
+        console.log('Columnas detectadas:', campos);
+
+        const confirmar = confirm(`Se importarán ${filas.length} registros.\n¿Continuar?`);
+        if (!confirmar) return;
+
+        const resultado = await procesarImportacionBD(filas);
+        alert(`✅ Importación completada.\n• Insertados/Actualizados: ${resultado.ok}\n• Errores: ${resultado.errores}`);
+        recargarModulo('placas');
+    } catch (err) {
+        console.error('Error importando Excel:', err);
+        alert('❌ No se pudo leer el archivo. Asegúrate de que sea .xlsx o .xls válido.');
+    }
+};
+
+async function procesarImportacionBD(filas) {
+    // Mapeamos cabeceras flexibles (el Excel puede tener variaciones de mayúsculas)
+    const normalizar = str => String(str).trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita acentos
+
+    const mapear = (fila, ...posibles) => {
+        for (const p of posibles) {
+            for (const k of Object.keys(fila)) {
+                if (normalizar(k) === normalizar(p)) return String(fila[k]).trim();
+            }
+        }
+        return '';
+    };
+
+    const registros = filas.map(fila => ({
+        placa:          mapear(fila, 'placa', 'matricula', 'plate'),
+        tipo_vehiculo:  mapear(fila, 'tipo_vehiculo', 'tipo vehiculo', 'tipo', 'vehicle type'),
+        marca:          mapear(fila, 'marca', 'brand'),
+        modelo:         mapear(fila, 'modelo', 'model'),
+        anio:           mapear(fila, 'anio', 'año', 'year'),
+        propietario:    mapear(fila, 'propietario', 'cliente', 'owner'),
+        estado:         mapear(fila, 'estado', 'status') || 'ACTIVO',
+    })).filter(r => r.placa); // descartar filas sin placa
+
+    if (!registros.length) {
+        alert('⚠️ No se encontró la columna "Placa" en el archivo.');
+        return { ok: 0, errores: 0 };
+    }
+
+    try {
+        const resp = await fetch('/api/importarPlacasMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.json();
+    } catch (err) {
+        console.error('Error enviando al servidor:', err);
+        throw err;
+    }
+}
+
+// ============================================================
+// 🗑️ LÓGICA DE SELECCIÓN, PAPELERA Y BORRADO MASIVO
+// ============================================================
+window.modoSeleccion = { placas: false, statusMant: false, fleetrun: false };
+window.verPapelera = { placas: false, statusMant: false, fleetrun: false };
+
+window.toggleModoSeleccion = function(modulo) {
+    window.modoSeleccion[modulo] = !window.modoSeleccion[modulo];
+    let btn = document.getElementById(`btn-activar-sel-${modulo}`);
+    if(btn) {
+        if(window.modoSeleccion[modulo]) {
+            btn.classList.replace('btn-outline-secondary', 'btn-secondary');
+            btn.classList.add('text-white');
+            btn.innerHTML = '<i class="bi bi-x-circle"></i> Cancelar Selección';
+        } else {
+            btn.classList.replace('btn-secondary', 'btn-outline-secondary');
+            btn.classList.remove('text-white');
+            btn.innerHTML = '<i class="bi bi-ui-checks"></i> Seleccionar';
+            document.querySelectorAll(`.chk-bulk-${modulo}`).forEach(c => c.checked = false);
+            toggleBulkBtn(modulo);
+        }
+    }
+    document.querySelectorAll(`.chk-bulk-container-${modulo}`).forEach(c => {
+        c.style.display = window.modoSeleccion[modulo] ? 'inline-block' : 'none';
+    });
+};
+
+window.toggleVistaPapelera = function(modulo) {
+    window.verPapelera[modulo] = !window.verPapelera[modulo];
+    let btn = document.getElementById(`btn-papelera-${modulo}`);
+    if(btn) {
+        if(window.verPapelera[modulo]) {
+            btn.classList.replace('btn-outline-secondary', 'btn-danger');
+            btn.classList.add('text-white');
+            btn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Salir de Papelera';
+        } else {
+            btn.classList.replace('btn-danger', 'btn-outline-secondary');
+            btn.classList.remove('text-white');
+            btn.innerHTML = '<i class="bi bi-trash"></i> Papelera';
+        }
+    }
+    if(window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
+    recargarModulo(modulo);
+};
+
+window.toggleBulkBtn = function(modulo) {
+    let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
+    let btn = document.getElementById(`btn-bulk-${modulo}`);
+    if(btn) {
+        if(chks.length > 0) {
+            btn.classList.remove('d-none');
+            if (window.verPapelera[modulo]) {
+                btn.classList.replace('btn-danger', 'btn-success');
+                btn.innerHTML = `<i class="bi bi-arrow-counterclockwise"></i> Restaurar (<span id="cnt-bulk-${modulo}">${chks.length}</span>)`;
+            } else {
+                btn.classList.replace('btn-success', 'btn-danger');
+                btn.innerHTML = `<i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-${modulo}">${chks.length}</span>)`;
+            }
+        } else {
+            btn.classList.add('d-none');
+        }
+    }
+};
+
+window.eliminarMasivo = function(coleccion, modulo) {
+    let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
+    let ids = Array.from(chks).map(c => c.value);
+    if(ids.length === 0) return;
+
+    let isRestaurando = window.verPapelera[modulo] === true;
+    let accionTxt = isRestaurando ? "RESTAURAR" : "ENVIAR A LA PAPELERA";
+
+    if(!confirm(`¿Estás seguro de ${accionTxt} ${ids.length} registros?`)) return;
+
+    document.body.style.cursor = 'wait';
+    fetch('/api/script/eliminarDocumento', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, coleccion: coleccion, usuario: usuarioLogueado, restaurar: isRestaurando })
+    })
+    .then(res => res.json())
+    .then(r => {
+        document.body.style.cursor = 'default';
+        if (r.data === 'Éxito') {
+            document.getElementById(`btn-bulk-${modulo}`).classList.add('d-none');
+            if(window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
+            recargarModulo(modulo);
+        } else { alert('Error: ' + r.data); }
+    }).catch(e => {
+        document.body.style.cursor = 'default';
+        alert('Error de red: ' + e.message);
+    });
 };

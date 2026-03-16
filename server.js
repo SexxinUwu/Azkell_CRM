@@ -241,19 +241,28 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     if (metodo === 'eliminarDocumento') {
-        const { id, coleccion } = req.body;
+        // 🔥 AGREGAMOS "restaurar" PARA LA PAPELERA
+        const { id, ids, coleccion, restaurar } = req.body;
+
+        const listaIds = ids && ids.length > 0 ? ids : (id ? [id] : []);
+        if (listaIds.length === 0) return res.json({ data: "No hay registros para procesar" });
+
         let sql = '';
-        if (coleccion === 'Placas') sql = 'DELETE FROM placas WHERE placa = ?';
-        else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro = ?';
-        else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro = ?';
-        else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario = ?';
-        else if (coleccion === 'Seguridad') sql = 'DELETE FROM seguridad WHERE id = ?';
-        else if (coleccion === 'Inspecciones') sql = 'DELETE FROM inspecciones WHERE id = ?';
+        let nuevoEstado = restaurar ? "Activa" : "Eliminada"; // ♻️ Lógica inteligente
+
+        if (coleccion === 'Placas') sql = `UPDATE placas SET estado = "${nuevoEstado}" WHERE placa IN (?)`;
+        else if (coleccion === 'Inspecciones') sql = `UPDATE inspecciones SET estado = "${nuevoEstado}" WHERE id IN (?)`;
+
+        else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
+        else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
+        else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
+        else if (coleccion === 'Seguridad') sql = 'DELETE FROM seguridad WHERE id IN (?)';
 
         if (!sql) return res.json({ data: "Colección no válida" });
-        db.query(sql, [id], (err) => {
-            if (err) { console.error("❌ Error eliminando:", err); return res.json({ data: "Error al eliminar registro" }); }
-            console.log(`✅ Eliminado ${id} de ${coleccion}`);
+
+        db.query(sql, [listaIds], (err) => {
+            if (err) { console.error("❌ Error en BD:", err); return res.json({ data: "Error al procesar registro" }); }
+            console.log(`✅ Procesados ${listaIds.length} registros de ${coleccion} (Restaurar: ${restaurar})`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -509,6 +518,39 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     res.json({ data: [] });
+});
+
+// ── IMPORTACIÓN MASIVA DE PLACAS ─────────────────────────────────────────────
+app.post('/api/importarPlacasMasivo', async (req, res) => {
+    const { registros } = req.body;
+    if (!Array.isArray(registros) || !registros.length) {
+        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
+    }
+
+    const query = `
+        INSERT INTO placas (placa, cliente, tipo, modelo_uts, marca, estado)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+        cliente = IF(VALUES(cliente) != '', VALUES(cliente), cliente),
+        tipo    = IF(VALUES(tipo)    != '', VALUES(tipo),    tipo),
+        modelo_uts = IF(VALUES(modelo_uts) != '', VALUES(modelo_uts), modelo_uts),
+        marca   = IF(VALUES(marca)   != '', VALUES(marca),   marca),
+        estado  = IF(VALUES(estado)  != '', VALUES(estado),  estado)
+    `;
+
+    let ok = 0, errores = 0;
+    const promesas = registros.map(r => new Promise(resolve => {
+        const placa = (r.placa || '').toUpperCase();
+        if (!placa) { errores++; return resolve(); }
+        db.query(query, [placa, r.propietario||'', r.tipo_vehiculo||'', r.modelo||'', r.marca||'', r.estado||'ACTIVO'], err => {
+            if (err) { errores++; console.error('Import error:', placa, err.message); }
+            else ok++;
+            resolve();
+        });
+    }));
+
+    await Promise.all(promesas);
+    res.json({ ok, errores });
 });
 
 // 4. Encender Servidor
