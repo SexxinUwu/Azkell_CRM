@@ -159,6 +159,7 @@
                                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
                                 <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatus', 'Analisis_Inspecciones')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-statusMant">0</span>)</button>
                                 <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
                             </div>
                         </div>
@@ -187,8 +188,22 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <span id="cache-badge-placas" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-placas">Sin cargar</span></span>
-                                <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacas', 'Base_Placas')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-papelera-placas" onclick="toggleVistaPapelera('placas')"><i class="bi bi-trash"></i> Papelera</button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="toggleModoSeleccion('placas')"><i class="bi bi-ui-checks"></i> Seleccionar</button>
+                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-placas">0</span>)</button>
+                                <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')"><i class="bi bi-arrow-clockwise"></i></button>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-upload"></i> Importar
+                                    </button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaPlacas()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFilePlacas').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
+                                    </ul>
+                                </div>
+                                <input type="file" id="inputFilePlacas" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelPlacas(event)">
+                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacas', 'Base_Placas')"><i class="bi bi-download"></i> Exportar</button>
                                 <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
                             </div>
                         </div>
@@ -213,6 +228,7 @@
                             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                             <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun">Historial</span></button>
                             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaFleetrun', 'Fleetrun_Mantenimiento')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                            <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-fleetrun" onclick="eliminarMasivo('Fleetrun', 'fleetrun')"><i class="bi bi-trash"></i> Borrar (<span id="cnt-bulk-fleetrun">0</span>)</button>
                             <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoFleetrun" onclick="abrirModalNuevoFleetrun()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Agregar</button>
                         </div>
                     </div>
