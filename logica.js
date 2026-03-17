@@ -1036,11 +1036,179 @@ function generarPDFInspeccion() {
 }
 
 function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('cuerpoTablaPlacas').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
-function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (window.verPapelera && window.verPapelera['placas']) { if (est !== 'Eliminada') return; } else { if (est === 'Eliminada') return; } if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}"><span class="chk-bulk-container-placas" style="display: ${window.modoSeleccion && window.modoSeleccion['placas'] ? 'inline-block' : 'none'};"><input type="checkbox" class="form-check-input me-2 chk-bulk-placas" value="${fila[0]}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
-function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
-function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[5] && p[5].trim() !== "" && p[5].trim() !== "-"); if (match) { rucInput.value = match[5].trim(); } }
-function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
-function filtrarPlacasAvanzado() { const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || ''; const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value); const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value); const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value); const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value); let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0; const conteoClientes = {}; const filas = document.querySelectorAll('#cuerpoTablaPlacas tr.data-row'); filas.forEach(row => { const cli = row.getAttribute('data-cliente'); const tip = row.getAttribute('data-tipo'); const mar = row.getAttribute('data-marca'); const est = row.getAttribute('data-estado'); const textoFila = row.innerText.toLowerCase(); const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est))); if (ok) { row.style.display = ''; conteoClientes[cli] = (conteoClientes[cli] || 0) + 1; const t = (tip||'').toLowerCase(); if (t.includes('cami') || t.includes('camion')) kpiCamion++; else if (t.includes('carreta')) kpiCarreta++; else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++; else if (t.includes('tracto')) kpiTracto++; } else { row.style.display = 'none'; } }); document.querySelectorAll('#cuerpoTablaPlacas tr.group-header').forEach(g => { const cli = g.getAttribute('data-group-cliente'); const total = conteoClientes[cli] || 0; g.style.display = total > 0 ? '' : 'none'; const badge = g.querySelector('.group-count'); if (badge) badge.innerText = total; }); const safe = v => document.getElementById(v); if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion; if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta; if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi; if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto; }
+// ============================================================
+// LOGICA DE RENDERIZADO "SAAS ADAPTATIVO" (PLACAS)
+// ============================================================
+window.vistaActualPlacas = 'grid';
+
+window.cambiarVistaPlacas = function(vista) {
+    window.vistaActualPlacas = vista;
+    const g = document.getElementById('btnViewGrid');
+    const l = document.getElementById('btnViewList');
+    if(g) g.classList.toggle('active', vista === 'grid');
+    if(l) l.classList.toggle('active', vista === 'list');
+    const contenedor = document.getElementById('contenedorPlacasDinamico');
+    if(contenedor) contenedor.className = (vista === 'grid' ? 'placas-grid-view' : 'placas-list-view') + ' pb-5';
+};
+
+function mostrarPlacas(datos) {
+    if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
+
+    datos.sort((a, b) => {
+        const cliA = (a[1]||'').trim().toUpperCase();
+        const cliB = (b[1]||'').trim().toUpperCase();
+        const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3;
+        const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3;
+        if (wA !== wB) return wA - wB;
+        if (cliA !== cliB) return cliA.localeCompare(cliB);
+        return (a[0]||'').localeCompare(b[0]||'');
+    });
+    dataGlobalPlacas = datos;
+
+    let p = permisosUsuario || {};
+    let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+    const canEditP = isAdmP || p.placas?.e === true;
+    const canDeleteP = isAdmP || p.placas?.d === true;
+
+    let html = '';
+    let htmlExcel = '<tr><th>Placa</th><th>Cliente</th><th>Tipo</th><th>Marca</th><th>Estado</th><th>UTS</th><th>Unidad</th><th>Llantas</th></tr>';
+    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
+    const setClientes = new Set(), setTipos = new Set(), setEstados = new Set();
+    const dlLists = { 'dl-placas':new Set(), 'dl-clientes':new Set(), 'dl-tipos':new Set(), 'dl-marcas':new Set(), 'dl-modelos':new Set(), 'dl-confs':new Set(), 'dl-combs':new Set(), 'dl-uts':new Set() };
+
+    if (!datos || datos.length === 0) {
+        html = '<div class="w-100 text-center py-5 text-muted">No hay vehículos registrados.</div>';
+    } else {
+        datos.forEach((fila, index) => {
+            if ((fila[0]||'').toUpperCase() === 'PLACA') return;
+
+            const plc = fila[0] ? fila[0].trim() : '';
+            const cli = fila[1] ? fila[1].trim() : 'Sin Asignar';
+            const tip = fila[2] ? fila[2].trim() : '-';
+            const mod = fila[3] ? fila[3].trim() : '-';
+            const mar = fila[4] ? fila[4].trim() : '-';
+            const ruc = fila[5] ? fila[5].trim() : '-';
+            const cnf = fila[6] ? fila[6].trim() : '-';
+            const cmb = fila[7] ? fila[7].trim() : '-';
+            const est = fila[8] ? fila[8].trim() : '';
+            const uts = fila[10] ? fila[10].trim() : '-';
+
+            if (cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli);
+            if (tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip);
+            if (est === 'Activa' || est === 'Inactiva') setEstados.add(est);
+            if(plc && plc!=="-") dlLists['dl-placas'].add(plc);
+            if(cli && cli!=="-") dlLists['dl-clientes'].add(cli);
+            if(tip && tip!=="-") dlLists['dl-tipos'].add(tip);
+            if(mod && mod!=="-") dlLists['dl-modelos'].add(mod);
+            if(mar && mar!=="-") dlLists['dl-marcas'].add(mar);
+            if(cnf && cnf!=="-") dlLists['dl-confs'].add(cnf);
+            if(cmb && cmb!=="-") dlLists['dl-combs'].add(cmb);
+            if(uts && uts!=="-") dlLists['dl-uts'].add(uts);
+
+            // Papelera
+            if (window.verPapelera && window.verPapelera['placas']) {
+                if (est !== 'Eliminada') return;
+            } else {
+                if (est === 'Eliminada') return;
+            }
+
+            // KPIs
+            const t = tip.toLowerCase();
+            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
+            else if (t.includes('carreta')) kpiCarreta++;
+            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
+            else if (t.includes('tracto')) kpiTracto++;
+
+            // Badge
+            let badgeCls = 'badge-theme-gray', iconBadge = '';
+            if(est === 'Activa') { badgeCls = 'badge-theme-green'; iconBadge = '<i class="bi bi-check-circle-fill me-1"></i>'; }
+            else if(est === 'Inactiva') { badgeCls = 'badge-theme-red'; iconBadge = '<i class="bi bi-x-circle-fill me-1"></i>'; }
+
+            // Menu 3 puntos
+            let menuAcciones = '';
+            if (canEditP || canDeleteP) {
+                let items = '';
+                if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`;
+                if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
+                if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${plc}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
+                menuAcciones = `<div class="dropdown" onclick="event.stopPropagation()"><button class="card-menu-btn" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
+            }
+
+            htmlExcel += `<tr class="fila-excel" data-cliente="${cli}" data-tipo="${tip}" data-estado="${est}"><td>${plc}</td><td>${cli}</td><td>${tip}</td><td>${mar}</td><td>${est}</td><td>${uts}</td><td>${fila[11]||'-'}</td><td>${fila[12]||'-'}</td></tr>`;
+
+            html += `
+            <div class="placa-card-theme" onclick="abrirPanelDetallePlaca(event, ${index})" data-index="${index}">
+                <div class="d-flex justify-content-between align-items-start mb-3 card-header-theme">
+                    <div class="d-flex align-items-center">
+                        <span class="card-chk-wrapper"><input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>
+                        <div>
+                            <div class="placa-card-title">${plc}</div>
+                            <div class="placa-card-subtitle mt-1 text-truncate" style="max-width:140px;" title="${cli}">${cli}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-theme ${badgeCls}">${iconBadge}${est}</span>
+                        ${menuAcciones}
+                    </div>
+                </div>
+                <div class="card-body-theme mt-3 pt-3 border-top-theme">
+                    <div class="placa-card-data"><span>TIPO</span> <span>${tip}</span></div>
+                    <div class="placa-card-data"><span>MARCA</span> <span>${mar} ${mod !== '-' ? mod : ''}</span></div>
+                    <div class="placa-card-data"><span>U.T.S</span> <span>${uts}</span></div>
+                </div>
+            </div>`;
+        });
+
+        const fillList = (id, set) => {
+            let ul = document.getElementById(id); if(!ul) return;
+            ul.innerHTML = `<li><button class="dropdown-item text-danger fw-bold py-1" style="font-size:0.75rem;" onclick="document.querySelectorAll('#${id} input').forEach(c=>c.checked=false); filtrarPlacasAvanzado(true)"><i class="bi bi-x-circle"></i> Limpiar</button></li><li><hr class="dropdown-divider"></li>`;
+            Array.from(set).sort().forEach(v => {
+                const sid = 'chk-' + id + '-' + normalizarClase(v);
+                ul.innerHTML += `<li><div class="form-check px-3 py-1"><input class="form-check-input ms-0 me-2" type="checkbox" value="${v}" id="${sid}" onchange="filtrarPlacasAvanzado(true)"><label class="form-check-label small" for="${sid}">${v}</label></div></li>`;
+            });
+        };
+        fillList('filtroCliente', setClientes);
+        fillList('filtroTipo', setTipos);
+        fillList('filtroEstado', setEstados);
+        for (let dl in dlLists) rellenarDatalist(dl, dlLists[dl]);
+    }
+
+    document.getElementById('contenedorPlacasDinamico').innerHTML = html || '<div class="w-100 text-center py-5 text-muted">No hay resultados.</div>';
+    const tph = document.getElementById('tablaPlacasHidden'); if(tph) tph.innerHTML = htmlExcel;
+
+    const safe = v => document.getElementById(v);
+    if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
+    if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
+    if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
+    if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
+}
+
+window.filtrarPlacasAvanzado = function() {
+    const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
+    const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value);
+    const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
+
+    document.querySelectorAll('.placa-card-theme').forEach(card => {
+        const fila = dataGlobalPlacas[card.getAttribute('data-index')];
+        if(!fila) return;
+        const cli = (fila[1]||'').trim(), tip = (fila[2]||'').trim(), est = (fila[8]||'').trim();
+        const ok = (!txt || fila.join(' ').toLowerCase().includes(txt))
+            && (chkCli.length === 0 || chkCli.includes(cli))
+            && (chkTip.length === 0 || chkTip.includes(tip))
+            && (chkEst.length === 0 || chkEst.includes(est));
+        card.style.display = ok ? '' : 'none';
+    });
+
+    document.querySelectorAll('.fila-excel').forEach(row => {
+        const ok = (!txt || row.innerText.toLowerCase().includes(txt))
+            && (chkCli.length === 0 || chkCli.includes(row.dataset.cliente))
+            && (chkTip.length === 0 || chkTip.includes(row.dataset.tipo))
+            && (chkEst.length === 0 || chkEst.includes(row.dataset.estado));
+        row.style.display = ok ? '' : 'none';
+    });
+};
+
 function abrirDetallePlaca(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalPlacas[index]; if (!p) return; ['det-placa','det-cliente','det-tipo','det-modelo','det-marca','det-ruc','det-conf','det-comb','det-estado','det-operativo','det-uts','det-motora','det-llantas','det-enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.innerText = p[i] || '-'; }); new bootstrap.Modal(document.getElementById('modalDetallePlaca')).show(); }
 function abrirModalEditarPlaca(index) { const p = dataGlobalPlacas[index]; if (!p) return; document.getElementById('formEditarPlaca')?.reset(); ['e_placa','e_cliente','e_tipo','e_modelo','e_marca','e_ruc','e_conf','e_comb','e_estado','e_operativo','e_uts','e_motora','e_llantas','e_enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.value = p[i] || ''; }); const btn = document.getElementById('btnActualizarPlaca'); if(btn){ btn.disabled = false; btn.innerHTML = 'Actualizar Placa';} new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show(); }
 function enviarPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
@@ -2912,6 +3080,9 @@ window.toggleModoSeleccion = function(modulo) {
     document.querySelectorAll(`.chk-bulk-container-${modulo}`).forEach(c => {
         c.style.display = window.modoSeleccion[modulo] ? 'inline-block' : 'none';
     });
+
+    const _cpc = document.getElementById('contenedorPlacasDinamico');
+    if(_cpc) _cpc.classList.toggle('modo-seleccion-activo', !!window.modoSeleccion[modulo]);
 };
 
 window.toggleVistaPapelera = function(modulo) {
@@ -2978,4 +3149,56 @@ window.eliminarMasivo = function(coleccion, modulo) {
         document.body.style.cursor = 'default';
         alert('Error de red: ' + e.message);
     });
+};
+
+// ============================================================
+// PANEL DETALLE DERECHO — Apertura Premium (Neon)
+// ============================================================
+window.abrirPanelDetallePlaca = function(event, index) {
+    if (window.modoSeleccion && window.modoSeleccion['placas']) {
+        const tag = event.target.tagName.toLowerCase();
+        if (tag !== 'input' && tag !== 'button' && tag !== 'i') {
+            const chk = event.currentTarget.querySelector('.chk-bulk-placas');
+            if(chk) { chk.checked = !chk.checked; toggleBulkBtn('placas'); }
+        }
+        return;
+    }
+    if (event.target.closest('.dropdown')) return;
+
+    const p = dataGlobalPlacas[index];
+    if (!p) return;
+
+    document.querySelectorAll('.placa-card-theme').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    const setSafe = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || '-'; };
+    setSafe('det-placa-header', p[0]); setSafe('det-marca-header', p[4]); setSafe('det-modelo-header', p[3]);
+
+    const est = (p[8]||'').trim();
+    const badge = document.getElementById('det-estado-badge');
+    if(badge) {
+        badge.className = `badge-theme ${est==='Activa' ? 'badge-theme-green' : 'badge-theme-red'}`;
+        badge.innerHTML = est==='Activa' ? '<i class="bi bi-check-circle-fill me-1"></i>Activa' : '<i class="bi bi-x-circle-fill me-1"></i>Inactiva';
+    }
+
+    setSafe('det-cliente', p[1]); setSafe('det-ruc', p[5]); setSafe('det-uts', p[10]);
+    setSafe('det-operativo', p[9]); setSafe('det-enuso', p[13]);
+    setSafe('det-tipo', p[2]); setSafe('det-motora', p[11]);
+    setSafe('det-conf', p[6]); setSafe('det-comb', p[7]); setSafe('det-llantas', p[12]);
+
+    let perm = permisosUsuario || {};
+    let isAdm = perm.admin === true || (localStorage.getItem('crm_correo')||'').toLowerCase() === 'admin@azkell.com';
+    const btnE = document.getElementById('btnEditPanePlaca');
+    const btnD = document.getElementById('btnDeletePanePlaca');
+    if(btnE) { btnE.style.display = (isAdm || perm.placas?.e) ? '' : 'none'; btnE.onclick = () => abrirModalEditarPlaca(index); }
+    if(btnD) { btnD.style.display = (isAdm || perm.placas?.d) ? '' : 'none'; btnD.onclick = () => eliminarRegistro(p[0], 'Placas'); }
+
+    const pane = document.getElementById('paneDetallePlaca');
+    if(pane) pane.classList.remove('d-none');
+};
+
+window.cerrarPanelDetallePlaca = function() {
+    const pane = document.getElementById('paneDetallePlaca');
+    if(pane) pane.classList.add('d-none');
+    document.querySelectorAll('.placa-card-theme').forEach(c => c.classList.remove('active'));
 };
