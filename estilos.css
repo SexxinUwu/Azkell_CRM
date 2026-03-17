@@ -1577,8 +1577,101 @@ body.dark .right-panel-theme { box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
 .modo-seleccion-activo .card-chk-wrapper { display: inline-block; }
 
 /* ============================================================
+   🚀 REDISEÑO PREMIUM SAAS (REACT / TAILWIND PORT) 🚀
+   ============================================================ */
+:root {
+    --prem-bg: #f8fafc; --prem-surface: #ffffff; --prem-border: #e2e8f0;
+    --prem-text: #0f172a; --prem-muted: #64748b; --prem-primary: #2563eb;
+    --prem-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); --prem-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+    --prem-green-bg: #dcfce7; --prem-green-txt: #15803d;
+    --prem-red-bg: #fee2e2; --prem-red-txt: #b91c1c;
+}
+body.dark {
+    --prem-bg: #020617; --prem-surface: #0f172a; --prem-border: #1e293b;
+    --prem-text: #f8fafc; --prem-muted: #94a3b8; --prem-primary: #3b82f6;
+    --prem-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); --prem-shadow-lg: -10px 0 25px rgba(0,0,0,0.8);
+    --prem-green-bg: rgba(16, 185, 129, 0.15); --prem-green-txt: #10b981;
+    --prem-red-bg: rgba(239, 68, 68, 0.15); --prem-red-txt: #ef4444;
+}
+
+.bg-bg-premium { background-color: var(--prem-bg) !important; transition: 0.3s; }
+.bg-surface-premium { background-color: var(--prem-surface) !important; transition: 0.3s; }
+
+/* Buscador */
+.search-theme-wrapper { position: relative; width: 260px; }
+.search-theme-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
+.search-theme-input {
+    width: 100%; height: 36px; padding: 5px 15px 5px 35px;
+    background-color: var(--prem-surface); border: 1px solid var(--prem-border);
+    border-radius: 8px; color: var(--prem-text); font-size: 0.85rem; transition: 0.2s;
+}
+.search-theme-input:focus { outline: none; border-color: var(--prem-primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+
+.view-toggles { background: var(--prem-surface); border: 1px solid var(--prem-border); border-radius: 8px; padding: 2px; }
+.btn-view-toggle { background: transparent; border: none; border-radius: 6px; color: var(--prem-muted); padding: 4px 10px; transition: 0.2s; }
+.btn-view-toggle.active { background: var(--prem-border); color: var(--prem-text); }
+
+/* KPIs y Grid de Tarjetas */
+.kpi-theme-card { background-color: var(--prem-surface); border: 1px solid var(--prem-border); border-radius: 12px; padding: 15px 20px; min-width: 160px; box-shadow: var(--prem-shadow); transition: 0.3s; border-left: 3px solid var(--prem-primary);}
+.placas-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-content: start; }
+
+/* Tarjetas Premium */
+.card-premium {
+    background-color: var(--prem-surface);
+    border: 1px solid var(--prem-border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: var(--prem-shadow);
+    position: relative;
+}
+.card-premium:hover, .card-premium.active {
+    border-color: var(--prem-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(37,99,235,0.15);
+}
+
+.card-title-prem { font-size: 1.1rem; font-weight: 700; color: var(--prem-text); }
+.card-sub-prem { font-size: 0.75rem; color: var(--prem-muted); font-weight: 600; }
+.card-data-row { font-size: 0.8rem; color: var(--prem-muted); display: flex; justify-content: space-between; margin-bottom: 6px; }
+.card-data-row span:last-child { font-weight: 600; color: var(--prem-text); }
+.card-body-wrap { margin-top: 12px; padding-top: 12px; }
+
+/* Header y Body para tarjetas */
+.card-header-theme { align-items: center !important; margin-bottom: 0 !important; }
+
+/* Badges Premium */
+.badge-premium {
+    padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;
+    display: inline-flex; align-items: center;
+}
+.badge-green { background-color: var(--prem-green-bg); color: var(--prem-green-txt); }
+.badge-red { background-color: var(--prem-red-bg); color: var(--prem-red-txt); }
+
+/* Menú Acciones */
+.btn-dots {
+    background: transparent; border: none; color: var(--prem-muted);
+    padding: 2px 6px; border-radius: 4px; cursor: pointer;
+}
+.btn-dots:hover { background: var(--prem-border); color: var(--prem-text); }
+
+/* Modo Selección */
+.chk-bulk-wrapper { display: none; margin-right: 12px; }
+.modo-seleccion .chk-bulk-wrapper { display: inline-block; }
+
+/* MOBILE RESPONSIVE (Estilo App) */
+@media (max-width: 768px) {
+    .top-controls-buttons { display: none !important; }
+    .placas-grid-view { grid-template-columns: 1fr; }
+    .card-premium { margin-bottom: 8px; }
+    .detail-mobile-overlay { position: fixed; top: 0; right: 0; left: 0; bottom: 0; z-index: 1050; }
+}
+
+/* ============================================================
    📱 ADAPTACIÓN MOBILE TIPO FIGMA (APP NATIVA)
    ============================================================ */
+
 @media (max-width: 768px) {
     /* 1. Ajustes Barra Superior */
     .top-controls-glass { padding: 10px !important; flex-direction: column; align-items: stretch !important; gap: 10px;}
@@ -1625,3 +1718,4 @@ body.dark .right-panel-theme { box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
     .kpi-theme-card { min-width: 110px; padding: 10px; border-radius: 10px; }
     .kpi-theme-card h4 { font-size: 1.3rem; }
 }
+

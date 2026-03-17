@@ -159,7 +159,6 @@
                                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
                                 <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatus', 'Analisis_Inspecciones')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-statusMant">0</span>)</button>
                                 <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
                             </div>
                         </div>
@@ -172,65 +171,92 @@
 
                 <div id="moduloPlacas" class="modulo-wrapper" style="display: none; height: 100%; overflow: hidden;">
 
-                    <div class="top-controls-glass d-flex justify-content-between align-items-center p-3 border-bottom-theme bg-surface-premium">
-                        <div class="d-flex align-items-center gap-3">
-                            <h5 class="m-0 fw-bold theme-text title-mobile-fix"><i class="bi bi-truck text-accent-theme me-2"></i> <span class="d-none d-sm-inline">Base de</span> Vehículos</h5>
-                            <span id="cache-badge-placas" class="cache-badge ms-2 d-none d-md-inline-flex"><i class="bi bi-database"></i> <span id="cache-label-placas">Sin cargar</span></span>
-                            <button class="btn btn-sm btn-outline-secondary ms-1 d-none d-md-inline-block" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar BD"><i class="bi bi-arrow-clockwise"></i></button>
-                        </div>
+                    <div class="top-controls-glass d-flex justify-content-between align-items-center p-3 border-bottom-theme bg-surface-premium flex-wrap gap-2">
+                        <!-- Header Title -->
+                        <h5 class="m-0 fw-bold theme-text"><i class="bi bi-truck text-accent-theme me-2"></i> Base de Vehículos</h5>
 
-                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end top-controls-buttons">
-                            <div class="search-theme-wrapper me-2 search-mobile-fix">
+                        <!-- Desktop Controls -->
+                        <div class="d-none d-md-flex align-items-center gap-2 flex-wrap justify-content-end flex-grow-1">
+                            <div class="search-theme-wrapper">
                                 <i class="bi bi-search text-muted"></i>
-                                <input type="text" id="buscadorPlacas" class="search-theme-input" onkeyup="filtrarPlacasAvanzado(true)" placeholder="Buscar placa...">
+                                <input type="text" id="buscadorPlacas" class="search-theme-input" onkeyup="filtrarPlacasAvanzado(true)" placeholder="Buscar placa, cliente...">
                             </div>
 
-                            <div class="view-toggles d-none d-md-flex bg-theme-surface p-1 rounded-pill border-theme me-2">
+                            <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme">
                                 <button class="btn btn-sm btn-view-toggle active" id="btnViewGrid" onclick="cambiarVistaPlacas('grid')"><i class="bi bi-grid-fill"></i></button>
                                 <button class="btn btn-sm btn-view-toggle" id="btnViewList" onclick="cambiarVistaPlacas('list')"><i class="bi bi-list-ul"></i></button>
                             </div>
 
-                            <div class="d-none d-md-flex align-items-center gap-2">
-                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-papelera-placas" onclick="toggleVistaPapelera('placas')"><i class="bi bi-trash"></i> Papelera</button>
-                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="toggleModoSeleccion('placas')"><i class="bi bi-ui-checks"></i> Seleccionar</button>
-                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-placas">0</span>)</button>
+                            <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-papelera-placas" onclick="toggleVistaPapelera('placas')"><i class="bi bi-trash"></i> Papelera</button>
+                            <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="toggleModoSeleccion('placas')"><i class="bi bi-ui-checks"></i> Seleccionar</button>
+                            <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-placas">0</span>)</button>
 
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
-                                    <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme" style="width: 250px;">
-                                        <h6 class="dropdown-header text-accent-theme">Cliente</h6>
-                                        <ul class="list-unstyled mb-2" id="filtroCliente"></ul>
-                                        <h6 class="dropdown-header text-accent-theme">Tipo</h6>
-                                        <ul class="list-unstyled mb-2" id="filtroTipo"></ul>
-                                        <h6 class="dropdown-header text-accent-theme">Estado</h6>
-                                        <ul class="list-unstyled mb-0" id="filtroEstado"></ul>
-                                    </div>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
+                                <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme" style="width: 250px;">
+                                    <h6 class="dropdown-header text-accent-theme">Cliente</h6>
+                                    <ul class="list-unstyled mb-2" id="filtroCliente"></ul>
+                                    <h6 class="dropdown-header text-accent-theme">Tipo</h6>
+                                    <ul class="list-unstyled mb-2" id="filtroTipo"></ul>
+                                    <h6 class="dropdown-header text-accent-theme">Estado</h6>
+                                    <ul class="list-unstyled mb-0" id="filtroEstado"></ul>
                                 </div>
+                            </div>
 
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-upload"></i></button>
-                                    <ul class="dropdown-menu shadow">
-                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaPlacas()"><i class="bi bi-file-earmark-spreadsheet"></i> Descargar Plantilla</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFilePlacas').click()"><i class="bi bi-cloud-upload"></i> Subir Excel</a></li>
-                                    </ul>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-upload"></i></button>
+                                <ul class="dropdown-menu shadow">
+                                    <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaPlacas()"><i class="bi bi-file-earmark-spreadsheet"></i> Descargar Plantilla</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFilePlacas').click()"><i class="bi bi-cloud-upload"></i> Subir Excel</a></li>
+                                </ul>
+                            </div>
+                            <input type="file" id="inputFilePlacas" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelPlacas(event)">
+                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')" title="Exportar Excel"><i class="bi bi-download"></i></button>
+
+                            <button class="btn btn-primary fw-bold btn-sm" onclick="document.getElementById('formPlaca').reset()" data-bs-toggle="modal" data-bs-target="#modalPlaca" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
+                        </div>
+
+                        <!-- Mobile Controls (collapsed in mobile view) -->
+                        <div class="d-md-none w-100 mt-2">
+                            <div class="d-flex gap-2 w-100 mb-2">
+                                <div class="search-theme-wrapper flex-grow-1" style="min-width: 0;">
+                                    <i class="bi bi-search text-muted"></i>
+                                    <input type="text" id="buscadorPlacas" class="search-theme-input" onkeyup="filtrarPlacasAvanzado(true)" placeholder="Buscar...">
                                 </div>
-                                <input type="file" id="inputFilePlacas" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelPlacas(event)">
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')" title="Exportar Excel"><i class="bi bi-download"></i></button>
-
-                                <button class="btn btn-primary fw-bold btn-sm" onclick="document.getElementById('formPlaca').reset()" data-bs-toggle="modal" data-bs-target="#modalPlaca" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
+                                <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme">
+                                    <button class="btn btn-sm btn-view-toggle active" id="btnViewGridMobile" onclick="cambiarVistaPlacas('grid')"><i class="bi bi-grid-fill"></i></button>
+                                    <button class="btn btn-sm btn-view-toggle" id="btnViewListMobile" onclick="cambiarVistaPlacas('list')"><i class="bi bi-list-ul"></i></button>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <div class="dropdown flex-grow-1" style="min-width: 100px;">
+                                    <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">Cliente</button>
+                                    <ul class="dropdown-menu shadow dropdown-menu-filter w-100" id="filtroCliente-mobile"></ul>
+                                </div>
+                                <div class="dropdown flex-grow-1" style="min-width: 100px;">
+                                    <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">Tipo</button>
+                                    <ul class="dropdown-menu shadow dropdown-menu-filter w-100" id="filtroTipo-mobile"></ul>
+                                </div>
+                                <div class="dropdown flex-grow-1" style="min-width: 100px;">
+                                    <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">Estado</button>
+                                    <ul class="dropdown-menu shadow dropdown-menu-filter w-100" id="filtroEstado-mobile"></ul>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                                <button class="btn btn-outline-secondary fw-bold btn-sm flex-grow-1" id="btn-papelera-placas-mobile" onclick="toggleVistaPapelera('placas')"><i class="bi bi-trash"></i> Papelera</button>
+                                <button class="btn btn-primary fw-bold btn-sm flex-grow-1" onclick="document.getElementById('formPlaca').reset()" data-bs-toggle="modal" data-bs-target="#modalPlaca" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="d-flex w-100 bg-bg-premium split-pane-container" style="height: calc(100% - 65px); overflow: hidden;">
 
-                        <div class="flex-grow-1 p-3 p-md-4 overflow-auto custom-scrollbar bg-theme-main position-relative main-cards-area" id="placas-main-area">
-
-                            <div class="d-flex gap-2 gap-md-3 mb-3 mb-md-4 overflow-auto pb-2 kpi-scroll-mobile">
+                        <div class="flex-grow-1 p-4 overflow-auto custom-scrollbar bg-theme-main position-relative" id="placas-main-area">
+                            <div class="d-flex gap-3 mb-4 overflow-auto pb-2">
                                 <div class="kpi-theme-card"><span class="text-muted small">Camiones</span><h4 class="m-0 fw-bold theme-text" id="kpi-camion">0</h4></div>
                                 <div class="kpi-theme-card"><span class="text-muted small">Carretas</span><h4 class="m-0 fw-bold theme-text" id="kpi-carreta">0</h4></div>
-                                <div class="kpi-theme-card"><span class="text-muted small">Semis</span><h4 class="m-0 fw-bold theme-text" id="kpi-semi">0</h4></div>
+                                <div class="kpi-theme-card"><span class="text-muted small">Semirremolques</span><h4 class="m-0 fw-bold theme-text" id="kpi-semi">0</h4></div>
                                 <div class="kpi-theme-card"><span class="text-muted small">Tractos</span><h4 class="m-0 fw-bold theme-text" id="kpi-tracto">0</h4></div>
                             </div>
 
@@ -241,55 +267,55 @@
                         </div>
 
                         <div class="right-panel-theme d-none d-flex flex-column detail-mobile-overlay" id="paneDetallePlaca">
-                            <div class="p-3 p-md-4 border-bottom-theme d-flex justify-content-between align-items-start bg-theme-surface">
+                            <div class="p-4 border-bottom-theme d-flex justify-content-between align-items-start bg-theme-surface">
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1">
-                                        <button class="btn btn-sm btn-link text-muted p-0 me-2 d-md-none" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-chevron-left fs-4"></i></button>
                                         <h3 class="m-0 fw-bolder theme-text" id="det-placa-header">PLACA</h3>
-                                        <span class="badge-theme badge-theme-green" id="det-estado-badge"><i class="bi bi-check-circle-fill me-1"></i>Activa</span>
+                                        <span class="badge-premium badge-green" id="det-estado-badge"><i class="bi bi-check-circle-fill me-1"></i>Activa</span>
                                     </div>
-                                    <p class="m-0 text-muted small ms-md-0 ms-4"><span id="det-marca-header">MARCA</span> • <span id="det-modelo-header">MODELO</span></p>
+                                    <p class="m-0 text-muted small"><span id="det-marca-header">MARCA</span> • <span id="det-modelo-header">MODELO</span></p>
                                 </div>
-                                <button class="btn btn-close-theme d-none d-md-block" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-x-lg"></i></button>
+                                <button class="btn btn-close-theme" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-x-lg"></i></button>
                             </div>
-                            <div class="px-3 px-md-4 pt-2 pt-md-3 border-bottom-theme bg-theme-surface">
+                            <div class="px-4 pt-3 border-bottom-theme bg-theme-surface">
                                 <ul class="nav nav-tabs tabs-theme" id="myTab" role="tablist">
                                     <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general" type="button">General</button></li>
                                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tecnico" type="button">Técnico</button></li>
                                 </ul>
                             </div>
-                            <div class="tab-content flex-grow-1 overflow-auto custom-scrollbar p-3 p-md-4 bg-theme-main" id="myTabContent">
+                            <div class="tab-content flex-grow-1 overflow-auto custom-scrollbar p-4 bg-theme-main" id="myTabContent">
                                 <div class="tab-pane fade show active" id="tab-general">
-                                    <div class="data-group-theme mb-3 mb-md-4">
+                                    <div class="data-group-theme mb-4">
                                         <label>CLIENTE ASIGNADO</label>
                                         <div class="data-value-theme d-flex align-items-center gap-2"><i class="bi bi-building text-accent-theme"></i> <span id="det-cliente"></span></div>
                                     </div>
-                                    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+                                    <div class="row g-3 mb-4">
                                         <div class="col-6"><div class="data-group-theme"><label>RUC / DNI</label><div class="data-value-theme theme-text" id="det-ruc"></div></div></div>
                                         <div class="col-6"><div class="data-group-theme"><label>ZONA U.T.S.</label><div class="data-value-theme theme-text" id="det-uts"></div></div></div>
                                     </div>
-                                    <div class="row g-2 g-md-3">
+                                    <div class="row g-3">
                                         <div class="col-6"><div class="data-group-theme"><label>ESTADO OPERATIVO</label><div class="data-value-theme theme-text" id="det-operativo"></div></div></div>
                                         <div class="col-6"><div class="data-group-theme"><label>EN USO</label><div class="data-value-theme theme-text" id="det-enuso"></div></div></div>
                                     </div>
                                 </div>
                                 <div class="tab-pane fade" id="tab-tecnico">
-                                    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+                                    <div class="row g-3 mb-4">
                                         <div class="col-6"><div class="data-group-theme"><label>TIPO VEHÍCULO</label><div class="data-value-theme theme-text" id="det-tipo"></div></div></div>
                                         <div class="col-6"><div class="data-group-theme"><label>UNIDAD</label><div class="data-value-theme theme-text" id="det-motora"></div></div></div>
                                     </div>
-                                    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+                                    <div class="row g-3 mb-4">
                                         <div class="col-6"><div class="data-group-theme"><label>CONFIGURACIÓN</label><div class="data-value-theme theme-text" id="det-conf"></div></div></div>
                                         <div class="col-6"><div class="data-group-theme"><label>COMBUSTIBLE</label><div class="data-value-theme theme-text" id="det-comb"></div></div></div>
                                     </div>
                                     <div class="data-group-theme"><label>LLANTAS</label><div class="data-value-theme theme-text"><i class="bi bi-vinyl text-accent-theme me-2"></i> <span id="det-llantas"></span></div></div>
                                 </div>
                             </div>
-                            <div class="p-3 border-top-theme bg-theme-surface d-flex gap-2 pb-md-3 pb-4">
+                            <div class="p-3 border-top-theme bg-theme-surface d-flex gap-2">
                                 <button class="btn btn-outline-secondary flex-grow-1 fw-bold" id="btnEditPanePlaca"><i class="bi bi-pencil me-1"></i> Editar</button>
                                 <button class="btn btn-outline-danger flex-grow-1 fw-bold" id="btnDeletePanePlaca"><i class="bi bi-trash me-1"></i> Eliminar</button>
                             </div>
                         </div>
+
                     </div>
                 </div>
 

@@ -631,7 +631,6 @@ function mostrarStatusInspecciones(inspecciones) {
   dataGlobalInspecciones = inspecciones; let hoy = new Date(); hoy.setHours(0,0,0,0);
   let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
   let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
-  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada'); // Filtro Papelera
   let dataFinal = [];
 
   let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
@@ -650,7 +649,7 @@ function mostrarStatusInspecciones(inspecciones) {
   });
 
   let html = '';
-  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; } 
+  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; }
   else {
       mapTipos.forEach((registros, tipoDisplay) => {
           let classTipo = normalizarClase(tipoDisplay);
@@ -658,7 +657,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
           html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
               <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
-                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i> 
+                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
                   <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
                   <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
               </td></tr>`;
@@ -671,19 +670,14 @@ function mostrarStatusInspecciones(inspecciones) {
 
               if(insp && insp.fecha_ingreso) {
                   fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso); tecnico = insp.tecnico;
-                  // 1. Convertimos la fecha robustamente (soporta "YYYY-MM-DD" o "DD/MM/YYYY")
                   let fIngreso;
                   if (insp.fecha_ingreso.includes('/')) {
-                      let p = insp.fecha_ingreso.split('/'); fIngreso = new Date(p[2], p[1]-1, p[0]);
+                      let pt = insp.fecha_ingreso.split('/'); fIngreso = new Date(pt[2], pt[1]-1, pt[0]);
                   } else {
                       fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
                   }
-
-                  // 2. Sumamos los días propuestos
                   let dProp = parseInt(insp.dias_propuestos) || 30;
                   let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
-
-                  // 3. Calculamos la diferencia
                   diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
               }
 
@@ -703,8 +697,7 @@ function mostrarStatusInspecciones(inspecciones) {
               let badgeProx = diasRestantes === -9999 ? `<span class="badge bg-danger shadow-sm">Sin Registro</span>` : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`;
               let badgeEst = `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
               let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
-              
-              // 🔥 WIALON GPS INYECCIÓN EN TABLA INSPECCIONES 🔥
+
               let ubicacionHtml = '<span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-geo-alt-fill"></i> N/A</span>';
               let wialonData = buscarWialonPorPlaca(placa);
               if (wialonData && wialonData.lat !== 0) {
@@ -722,12 +715,11 @@ function mostrarStatusInspecciones(inspecciones) {
                   items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
                   items += `<li><hr class="dropdown-divider"></li>`;
                   items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
-                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
               html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
-              <td class="fw-bold text-primary" data-value="${placa}">${(insp && insp.id) ? `<input type="checkbox" class="form-check-input me-2 chk-bulk-statusMant" value="${insp.id}" onclick="event.stopPropagation(); toggleBulkBtn('statusMant')">` : ''}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
+              <td class="fw-bold text-primary" data-value="${placa}">${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
               <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
               <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
@@ -736,7 +728,7 @@ function mostrarStatusInspecciones(inspecciones) {
       rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
   }
   document.getElementById('cuerpoTablaStatus').innerHTML = html;
-  filtrarStatusAvanzado(); 
+  filtrarStatusAvanzado();
 }
 
 function filtrarStatusAvanzado() {
@@ -755,22 +747,22 @@ function filtrarStatusAvanzado() {
     let classTipo = matchIcon[1];
     let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
     let visibleCount = 0;
-    
+
     childRows.forEach(row => {
-        let cli = row.getAttribute('data-cliente'); let mar = row.getAttribute('data-marca'); 
+        let cli = row.getAttribute('data-cliente'); let mar = row.getAttribute('data-marca');
         let est = row.getAttribute('data-estado-v2'); let mot = row.getAttribute('data-motor');
-        let dias = parseInt(row.getAttribute('data-dias')); let textoFila = row.textContent.toLowerCase(); 
-        
-        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchMar = (!chkMar.length || chkMar.includes(mar)); 
+        let dias = parseInt(row.getAttribute('data-dias')); let textoFila = row.textContent.toLowerCase();
+
+        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchMar = (!chkMar.length || chkMar.includes(mar));
         let matchEst = (!chkEst.length || chkEst.includes(est)); let matchTxt = (!txt || textoFila.includes(txt));
-        
+
         if(matchCli && matchMar && matchEst && matchTxt) {
             visibleCount++;
             let isVigenteChart = dias >= 0;
-            if(isVigenteChart) { cntTotalVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotVig++; else cntNoMotVig++; } 
+            if(isVigenteChart) { cntTotalVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotVig++; else cntNoMotVig++; }
             else { cntTotalNoVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotNoVig++; else cntNoMotNoVig++; }
-            
-            row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none'; 
+
+            row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
         } else {
             row.style.display = 'none';
         }
@@ -781,8 +773,8 @@ function filtrarStatusAvanzado() {
         header.style.display = '';
         if(spanConteo) spanConteo.innerText = visibleCount + " Unidades";
         if(icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
-    } else { 
-        header.style.display = 'none'; 
+    } else {
+        header.style.display = 'none';
     }
   });
 
@@ -1098,10 +1090,10 @@ function mostrarPlacas(datos) {
             else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
             else if (t.includes('tracto')) kpiTracto++;
 
-            let badgeCls = 'badge-theme-gray';
+            let badgeCls = 'badge-premium';
             let iconBadge = '';
-            if(est === 'Activa') { badgeCls = 'badge-theme-green'; iconBadge = '<i class="bi bi-check-circle-fill me-1"></i>'; }
-            else if(est === 'Inactiva') { badgeCls = 'badge-theme-red'; iconBadge = '<i class="bi bi-x-circle-fill me-1"></i>'; }
+            if(est === 'Activa') { badgeCls = 'badge-premium badge-green'; iconBadge = '<i class="bi bi-check-circle-fill me-1"></i>'; }
+            else if(est === 'Inactiva') { badgeCls = 'badge-premium badge-red'; iconBadge = '<i class="bi bi-x-circle-fill me-1"></i>'; }
 
             let menuAcciones = '';
             if (canEditP || canDeleteP) {
@@ -3225,7 +3217,7 @@ window.abrirPanelDetallePlaca = function(event, index) {
     const p = dataGlobalPlacas[index];
     if (!p) return;
 
-    document.querySelectorAll('.placa-card-theme').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('active'));
     event.currentTarget.classList.add('active');
 
     const setSafe = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || '-'; };
@@ -3234,7 +3226,7 @@ window.abrirPanelDetallePlaca = function(event, index) {
     const est = (p[8]||'').trim();
     const badge = document.getElementById('det-estado-badge');
     if(badge) {
-        badge.className = `badge-theme ${est==='Activa' ? 'badge-theme-green' : 'badge-theme-red'}`;
+        badge.className = `badge-premium ${est==='Activa' ? 'badge-green' : 'badge-red'}`;
         badge.innerHTML = est==='Activa' ? '<i class="bi bi-check-circle-fill me-1"></i>Activa' : '<i class="bi bi-x-circle-fill me-1"></i>Inactiva';
     }
 
@@ -3257,5 +3249,5 @@ window.abrirPanelDetallePlaca = function(event, index) {
 window.cerrarPanelDetallePlaca = function() {
     const pane = document.getElementById('paneDetallePlaca');
     if(pane) pane.classList.add('d-none');
-    document.querySelectorAll('.placa-card-theme').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('active'));
 };
