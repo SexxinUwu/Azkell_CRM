@@ -1039,14 +1039,14 @@ function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlo
 // ============================================================
 // LOGICA DE RENDERIZADO "SAAS ADAPTATIVO" (PLACAS)
 // ============================================================
+// 🌌 LÓGICA DE RENDERIZADO "SAAS ADAPTATIVO" (PLACAS)
+// ============================================================
 window.vistaActualPlacas = 'grid';
 
 window.cambiarVistaPlacas = function(vista) {
     window.vistaActualPlacas = vista;
-    const g = document.getElementById('btnViewGrid');
-    const l = document.getElementById('btnViewList');
-    if(g) g.classList.toggle('active', vista === 'grid');
-    if(l) l.classList.toggle('active', vista === 'list');
+    document.getElementById('btnViewGrid')?.classList.toggle('active', vista === 'grid');
+    document.getElementById('btnViewList')?.classList.toggle('active', vista === 'list');
     const contenedor = document.getElementById('contenedorPlacasDinamico');
     if(contenedor) contenedor.className = (vista === 'grid' ? 'placas-grid-view' : 'placas-list-view') + ' pb-5';
 };
@@ -1054,15 +1054,7 @@ window.cambiarVistaPlacas = function(vista) {
 function mostrarPlacas(datos) {
     if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
 
-    datos.sort((a, b) => {
-        const cliA = (a[1]||'').trim().toUpperCase();
-        const cliB = (b[1]||'').trim().toUpperCase();
-        const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3;
-        const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3;
-        if (wA !== wB) return wA - wB;
-        if (cliA !== cliB) return cliA.localeCompare(cliB);
-        return (a[0]||'').localeCompare(b[0]||'');
-    });
+    datos.sort((a, b) => (a[0]||'').localeCompare(b[0]||''));
     dataGlobalPlacas = datos;
 
     let p = permisosUsuario || {};
@@ -1073,12 +1065,12 @@ function mostrarPlacas(datos) {
     let html = '';
     let htmlExcel = '<tr><th>Placa</th><th>Cliente</th><th>Tipo</th><th>Marca</th><th>Estado</th><th>UTS</th><th>Unidad</th><th>Llantas</th></tr>';
     let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
-    const setClientes = new Set(), setTipos = new Set(), setEstados = new Set();
-    const dlLists = { 'dl-placas':new Set(), 'dl-clientes':new Set(), 'dl-tipos':new Set(), 'dl-marcas':new Set(), 'dl-modelos':new Set(), 'dl-confs':new Set(), 'dl-combs':new Set(), 'dl-uts':new Set() };
 
-    if (!datos || datos.length === 0) {
+    if (!datos || datos.length === 0 || (datos.length === 1 && datos[0][0].toUpperCase() === 'PLACA')) {
         html = '<div class="w-100 text-center py-5 text-muted">No hay vehículos registrados.</div>';
     } else {
+        const setClientes = new Set(), setTipos = new Set(), setEstados = new Set();
+
         datos.forEach((fila, index) => {
             if ((fila[0]||'').toUpperCase() === 'PLACA') return;
 
@@ -1087,74 +1079,61 @@ function mostrarPlacas(datos) {
             const tip = fila[2] ? fila[2].trim() : '-';
             const mod = fila[3] ? fila[3].trim() : '-';
             const mar = fila[4] ? fila[4].trim() : '-';
-            const ruc = fila[5] ? fila[5].trim() : '-';
-            const cnf = fila[6] ? fila[6].trim() : '-';
-            const cmb = fila[7] ? fila[7].trim() : '-';
-            const est = fila[8] ? fila[8].trim() : '';
             const uts = fila[10] ? fila[10].trim() : '-';
+            const est = fila[8] ? fila[8].trim() : '';
 
             if (cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli);
             if (tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip);
             if (est === 'Activa' || est === 'Inactiva') setEstados.add(est);
-            if(plc && plc!=="-") dlLists['dl-placas'].add(plc);
-            if(cli && cli!=="-") dlLists['dl-clientes'].add(cli);
-            if(tip && tip!=="-") dlLists['dl-tipos'].add(tip);
-            if(mod && mod!=="-") dlLists['dl-modelos'].add(mod);
-            if(mar && mar!=="-") dlLists['dl-marcas'].add(mar);
-            if(cnf && cnf!=="-") dlLists['dl-confs'].add(cnf);
-            if(cmb && cmb!=="-") dlLists['dl-combs'].add(cmb);
-            if(uts && uts!=="-") dlLists['dl-uts'].add(uts);
 
-            // Papelera
             if (window.verPapelera && window.verPapelera['placas']) {
                 if (est !== 'Eliminada') return;
             } else {
                 if (est === 'Eliminada') return;
             }
 
-            // KPIs
             const t = tip.toLowerCase();
             if (t.includes('cami') || t.includes('camion')) kpiCamion++;
             else if (t.includes('carreta')) kpiCarreta++;
             else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
             else if (t.includes('tracto')) kpiTracto++;
 
-            // Badge
-            let badgeCls = 'badge-theme-gray', iconBadge = '';
+            let badgeCls = 'badge-theme-gray';
+            let iconBadge = '';
             if(est === 'Activa') { badgeCls = 'badge-theme-green'; iconBadge = '<i class="bi bi-check-circle-fill me-1"></i>'; }
             else if(est === 'Inactiva') { badgeCls = 'badge-theme-red'; iconBadge = '<i class="bi bi-x-circle-fill me-1"></i>'; }
 
-            // Menu 3 puntos
             let menuAcciones = '';
             if (canEditP || canDeleteP) {
                 let items = '';
-                if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`;
+                if (canEditP) items += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Fila</a></li>`;
                 if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
                 if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${plc}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
-                menuAcciones = `<div class="dropdown" onclick="event.stopPropagation()"><button class="card-menu-btn" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
+                menuAcciones = `<div class="dropdown" onclick="event.stopPropagation()"><button class="btn-dots" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
             }
 
             htmlExcel += `<tr class="fila-excel" data-cliente="${cli}" data-tipo="${tip}" data-estado="${est}"><td>${plc}</td><td>${cli}</td><td>${tip}</td><td>${mar}</td><td>${est}</td><td>${uts}</td><td>${fila[11]||'-'}</td><td>${fila[12]||'-'}</td></tr>`;
 
             html += `
-            <div class="placa-card-theme" onclick="abrirPanelDetallePlaca(event, ${index})" data-index="${index}">
-                <div class="d-flex justify-content-between align-items-start mb-3 card-header-theme">
+            <div class="card-premium" onclick="abrirPanelDetallePlaca(event, ${index})" data-index="${index}">
+                <div class="d-flex justify-content-between align-items-start card-header-theme">
                     <div class="d-flex align-items-center">
-                        <span class="card-chk-wrapper"><input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>
+                        <span class="chk-bulk-wrapper"><input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>
                         <div>
-                            <div class="placa-card-title">${plc}</div>
-                            <div class="placa-card-subtitle mt-1 text-truncate" style="max-width:140px;" title="${cli}">${cli}</div>
+                            <div class="card-title-prem">${plc}</div>
+                            <div class="card-sub-prem text-truncate" style="max-width:140px;" title="${cli}">${cli}</div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge-theme ${badgeCls}">${iconBadge}${est}</span>
+                        <span class="badge-premium ${badgeCls}">${iconBadge}${est}</span>
                         ${menuAcciones}
                     </div>
                 </div>
-                <div class="card-body-theme mt-3 pt-3 border-top-theme">
-                    <div class="placa-card-data"><span>TIPO</span> <span>${tip}</span></div>
-                    <div class="placa-card-data"><span>MARCA</span> <span>${mar} ${mod !== '-' ? mod : ''}</span></div>
-                    <div class="placa-card-data"><span>U.T.S</span> <span>${uts}</span></div>
+
+                <div class="card-body-wrap border-top-theme mt-3 pt-3">
+                    <div class="card-data-row"><span>TIPO</span> <span>${tip}</span></div>
+                    <div class="card-data-row"><span>MARCA</span> <span>${mar} ${mod !== '-' ? mod : ''}</span></div>
+                    <div class="card-data-row"><span>U.T.S</span> <span>${uts}</span></div>
                 </div>
             </div>`;
         });
@@ -1164,23 +1143,26 @@ function mostrarPlacas(datos) {
             ul.innerHTML = `<li><button class="dropdown-item text-danger fw-bold py-1" style="font-size:0.75rem;" onclick="document.querySelectorAll('#${id} input').forEach(c=>c.checked=false); filtrarPlacasAvanzado(true)"><i class="bi bi-x-circle"></i> Limpiar</button></li><li><hr class="dropdown-divider"></li>`;
             Array.from(set).sort().forEach(v => {
                 const sid = 'chk-' + id + '-' + normalizarClase(v);
-                ul.innerHTML += `<li><div class="form-check px-3 py-1"><input class="form-check-input ms-0 me-2" type="checkbox" value="${v}" id="${sid}" onchange="filtrarPlacasAvanzado(true)"><label class="form-check-label small" for="${sid}">${v}</label></div></li>`;
+                ul.innerHTML += `<li><div class="form-check px-3 py-1"><input class="form-check-input ms-0 me-2" type="checkbox" value="${v}" id="${sid}" onchange="filtrarPlacasAvanzado(true)"><label class="form-check-label small theme-text" for="${sid}">${v}</label></div></li>`;
             });
         };
         fillList('filtroCliente', setClientes);
         fillList('filtroTipo', setTipos);
         fillList('filtroEstado', setEstados);
-        for (let dl in dlLists) rellenarDatalist(dl, dlLists[dl]);
     }
 
-    document.getElementById('contenedorPlacasDinamico').innerHTML = html || '<div class="w-100 text-center py-5 text-muted">No hay resultados.</div>';
-    const tph = document.getElementById('tablaPlacasHidden'); if(tph) tph.innerHTML = htmlExcel;
+    document.getElementById('contenedorPlacasDinamico').innerHTML = html;
+    document.getElementById('tablaPlacasHidden').innerHTML = htmlExcel;
 
     const safe = v => document.getElementById(v);
     if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
     if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
     if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
     if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
+
+    if(window.modoSeleccion && window.modoSeleccion['placas']) {
+        document.getElementById('contenedorPlacasDinamico').classList.add('modo-seleccion');
+    }
 }
 
 window.filtrarPlacasAvanzado = function() {
@@ -1189,24 +1171,97 @@ window.filtrarPlacasAvanzado = function() {
     const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
     const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
 
-    document.querySelectorAll('.placa-card-theme').forEach(card => {
-        const fila = dataGlobalPlacas[card.getAttribute('data-index')];
+    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
+
+    document.querySelectorAll('.card-premium').forEach(card => {
+        const index = card.getAttribute('data-index');
+        const fila = dataGlobalPlacas[index];
         if(!fila) return;
-        const cli = (fila[1]||'').trim(), tip = (fila[2]||'').trim(), est = (fila[8]||'').trim();
-        const ok = (!txt || fila.join(' ').toLowerCase().includes(txt))
-            && (chkCli.length === 0 || chkCli.includes(cli))
-            && (chkTip.length === 0 || chkTip.includes(tip))
-            && (chkEst.length === 0 || chkEst.includes(est));
-        card.style.display = ok ? '' : 'none';
+
+        const cli = fila[1] ? fila[1].trim() : '';
+        const tip = fila[2] ? fila[2].trim() : '';
+        const est = fila[8] ? fila[8].trim() : '';
+        const textoFull = fila.join(' ').toLowerCase();
+
+        const matchTxt = !txt || textoFull.includes(txt);
+        const matchCli = chkCli.length === 0 || chkCli.includes(cli);
+        const matchTip = chkTip.length === 0 || chkTip.includes(tip);
+        const matchEst = chkEst.length === 0 || chkEst.includes(est);
+
+        if(matchTxt && matchCli && matchTip && matchEst) {
+            card.style.display = '';
+            const t = tip.toLowerCase();
+            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
+            else if (t.includes('carreta')) kpiCarreta++;
+            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
+            else if (t.includes('tracto')) kpiTracto++;
+        } else {
+            card.style.display = 'none';
+        }
     });
 
-    document.querySelectorAll('.fila-excel').forEach(row => {
-        const ok = (!txt || row.innerText.toLowerCase().includes(txt))
-            && (chkCli.length === 0 || chkCli.includes(row.dataset.cliente))
-            && (chkTip.length === 0 || chkTip.includes(row.dataset.tipo))
-            && (chkEst.length === 0 || chkEst.includes(row.dataset.estado));
-        row.style.display = ok ? '' : 'none';
-    });
+    const safe = v => document.getElementById(v);
+    if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
+    if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
+    if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
+    if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
+};
+
+window.abrirPanelDetallePlaca = function(event, index) {
+    if (window.modoSeleccion && window.modoSeleccion['placas']) {
+        const tag = event.target.tagName.toLowerCase();
+        if (tag !== 'input' && tag !== 'button' && tag !== 'i') {
+            const chk = event.currentTarget.querySelector('.chk-bulk-placas');
+            if(chk) { chk.checked = !chk.checked; toggleBulkBtn('placas'); }
+        }
+        return;
+    }
+    if (event.target.closest('.dropdown')) return;
+
+    const p = dataGlobalPlacas[index];
+    if (!p) return;
+
+    document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    const setSafe = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || '-'; };
+    setSafe('det-placa-header', p[0]);
+    setSafe('det-marca-header', p[4]);
+    setSafe('det-modelo-header', p[3]);
+
+    const est = (p[8]||'').trim();
+    const badge = document.getElementById('det-estado-badge');
+    if(badge) {
+        badge.className = `badge-theme ${est==='Activa' ? 'badge-theme-green' : 'badge-theme-red'}`;
+        badge.innerHTML = est==='Activa' ? '<i class="bi bi-check-circle-fill me-1"></i>Activa' : '<i class="bi bi-x-circle-fill me-1"></i>Inactiva';
+    }
+
+    setSafe('det-cliente', p[1]);
+    setSafe('det-ruc', p[5]);
+    setSafe('det-uts', p[10]);
+    setSafe('det-operativo', p[9]);
+    setSafe('det-enuso', p[13]);
+    setSafe('det-tipo', p[2]);
+    setSafe('det-motora', p[11]);
+    setSafe('det-conf', p[6]);
+    setSafe('det-comb', p[7]);
+    setSafe('det-llantas', p[12]);
+
+    let perm = permisosUsuario || {};
+    let isAdm = perm.admin === true || (localStorage.getItem('crm_correo')||'').toLowerCase() === 'admin@azkell.com';
+    const btnE = document.getElementById('btnEditPanePlaca');
+    const btnD = document.getElementById('btnDeletePanePlaca');
+    if(btnE) { btnE.style.display = (isAdm || perm.placas?.e) ? '' : 'none'; btnE.onclick = () => abrirModalEditarPlaca(index); }
+    if(btnD) { btnD.style.display = (isAdm || perm.placas?.d) ? '' : 'none'; btnD.onclick = () => eliminarRegistro(p[0], 'Placas'); }
+
+    const pane = document.getElementById('paneDetallePlaca');
+    if(pane) pane.classList.remove('d-none');
+};
+
+window.cerrarPanelDetallePlaca = function() {
+    const pane = document.getElementById('paneDetallePlaca');
+    if(pane) pane.classList.add('d-none');
+    document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('active'));
 };
 
 function abrirDetallePlaca(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalPlacas[index]; if (!p) return; ['det-placa','det-cliente','det-tipo','det-modelo','det-marca','det-ruc','det-conf','det-comb','det-estado','det-operativo','det-uts','det-motora','det-llantas','det-enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.innerText = p[i] || '-'; }); new bootstrap.Modal(document.getElementById('modalDetallePlaca')).show(); }
@@ -2348,6 +2403,10 @@ window.seleccionarPorcentaje = function(uid, pct, btn) {
 // 📱 LÓGICA UX MÓVIL: BOTÓN ACCIONES (FAB)
 // ==========================================
 
+// ==========================================
+// 📱 LÓGICA UX MÓVIL: BOTÓN ACCIONES (FAB) CORREGIDO
+// ==========================================
+
 function toggleFabMenu() {
     if (window.innerWidth > 768) return;
     const wrapper = document.getElementById('fabActionListWrapper');
@@ -2368,22 +2427,25 @@ function generarListaAccionesFab() {
     listContent.innerHTML = '';
 
     let moduloActual = null;
-    document.querySelectorAll('[id^="modulo"]').forEach(mod => {
-        const display = window.getComputedStyle(mod).display;
-        if (display === 'block' || display === 'flex') {
+    document.querySelectorAll('.modulo-wrapper').forEach(mod => {
+        // Detectar de forma segura cuál es el módulo activo en la pantalla
+        if (window.getComputedStyle(mod).display === 'block' || window.getComputedStyle(mod).display === 'flex') {
             moduloActual = mod;
         }
     });
 
     if (!moduloActual) return;
 
-    const divBotonesAll = moduloActual.querySelectorAll('.controls-row .d-flex.align-items-center.gap-2');
-    const divBotones = divBotonesAll[divBotonesAll.length - 1];
+    // 🔥 LA SOLUCIÓN: Buscamos los botones en el diseño antiguo (.controls-row) o en el nuevo diseño SaaS (.top-controls-buttons)
+    const contenedorBotones = moduloActual.querySelector('.controls-row .gap-2:last-child, .top-controls-buttons');
 
-    if (!divBotones) return;
+    if (!contenedorBotones) {
+        listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
+        return;
+    }
 
-    // 🔥 MAGIA: Ahora buscamos botones normales Y TAMBIÉN las opciones dentro de los menús desplegables (.dropdown-item)
-    const buttons = divBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item, .cache-badge');
+    // Buscamos botones sueltos o items dentro de dropdowns (como Importar/Exportar)
+    const buttons = contenedorBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item');
 
     if (buttons.length === 0) {
         listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
@@ -2391,12 +2453,11 @@ function generarListaAccionesFab() {
     }
 
     buttons.forEach(btn => {
-        if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
+        // Si el botón está oculto (ej. Botón de Ocultar Masivo cuando no hay nada seleccionado), lo ignoramos
+        if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none' || btn.classList.contains('d-none')) return;
 
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
-
-        // Convertimos el diseño al estándar del botón flotante
         clonedBtn.className = 'fab-action-item text-decoration-none';
 
         const originalClasses = btn.className;
@@ -2410,12 +2471,8 @@ function generarListaAccionesFab() {
             else if (originalClasses.includes('primary')) icon.classList.add('text-primary');
         }
 
-        if(clonedBtn.tagName.toLowerCase() === 'span') {
-            clonedBtn.style.cursor = 'default';
-        } else {
-            clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); });
-        }
-
+        // Asignamos la acción original y cerramos el menú flotante
+        clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); });
         listContent.appendChild(clonedBtn);
     });
 }

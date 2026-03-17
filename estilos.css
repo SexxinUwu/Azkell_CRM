@@ -1576,11 +1576,52 @@ body.dark .right-panel-theme { box-shadow: -5px 0 20px rgba(0,0,0,0.5); }
 .card-chk-wrapper { margin-right: 10px; display: none; }
 .modo-seleccion-activo .card-chk-wrapper { display: inline-block; }
 
-/* Responsive movil */
+/* ============================================================
+   📱 ADAPTACIÓN MOBILE TIPO FIGMA (APP NATIVA)
+   ============================================================ */
 @media (max-width: 768px) {
-    .right-panel-theme { position: fixed; top: 0; right: 0; bottom: 0; z-index: 1050; transform: translateX(100%); }
-    .right-panel-theme:not(.d-none) { transform: translateX(0); }
-    .placas-list-view .placa-card-theme { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .placas-list-view .card-body-theme { flex-wrap: wrap; gap: 15px; }
-    .search-theme-wrapper { width: 100%; }
+    /* 1. Ajustes Barra Superior */
+    .top-controls-glass { padding: 10px !important; flex-direction: column; align-items: stretch !important; gap: 10px;}
+    .title-mobile-fix { font-size: 1.2rem; margin-bottom: 5px !important;}
+    .search-mobile-fix { width: 100% !important; max-width: 100%; margin: 0 !important; }
+    .search-theme-input { height: 40px; border-radius: 12px; }
+
+    /* 2. Ajustes Contenedor Principal (Tarjetas Placas) */
+    .split-pane-container { height: calc(100vh - 110px) !important; position: relative;}
+    .main-cards-area { padding: 10px !important; }
+
+    /* Grid a List para celular */
+    .placas-grid-view {
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .placa-card-theme {
+        padding: 12px 15px; border-radius: 14px;
+    }
+
+    /* Layout interno de la tarjeta en móvil */
+    .card-header-theme { align-items: center !important; margin-bottom: 0 !important; }
+    .placa-card-title { font-size: 1.1rem; }
+    .placa-card-subtitle { font-size: 0.75rem; }
+    /* Escondemos el body de la tarjeta (tipo, marca, uts) para que se vea limpio como en la imagen */
+    .card-body-theme { display: none !important; }
+
+    /* 3. Panel Detalle: Ocupa Pantalla Completa como App Nativa */
+    .detail-mobile-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100% !important; min-width: 100% !important;
+        z-index: 100; /* Encima de las tarjetas */
+        transform: translateX(100%);
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        background-color: var(--theme-main-bg);
+    }
+    .detail-mobile-overlay:not(.d-none) {
+        transform: translateX(0);
+    }
+
+    /* 4. KPIs en móvil (Scroll horizontal sin scrollbar) */
+    .kpi-scroll-mobile { padding-bottom: 5px; scrollbar-width: none;}
+    .kpi-scroll-mobile::-webkit-scrollbar { display: none; }
+    .kpi-theme-card { min-width: 110px; padding: 10px; border-radius: 10px; }
+    .kpi-theme-card h4 { font-size: 1.3rem; }
 }
