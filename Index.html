@@ -18,20 +18,42 @@
 <body>
 
     <div id="pantalla-login">
-        <div class="login-card">
-            <div class="brand fw-bold" style="font-size: 2rem; margin-bottom: 5px;">AZKELL <span style="color: var(--crm-accent);">CRM</span></div>
-            <h6 style="color: var(--subtext) !important; margin-bottom: 24px;">Acceso Restringido al Personal</h6>
+        <div class="login-glass-card">
+
+            <div class="avatar-logo">
+                <i class="bi bi-truck"></i>
+            </div>
+
+            <div class="brand fw-bold mb-4 text-white" style="font-size: 1.8rem; letter-spacing: 1px;">
+                AZKELL <span style="color: #60a5fa;">CRM</span>
+            </div>
+
             <form onsubmit="iniciarSesion(event, this)">
-                <div class="mb-3 text-start"><label class="form-label fw-bold">Correo Electrónico</label><input type="email" name="correo" class="form-control form-control-lg" required></div>
-                <div class="mb-4 text-start">
-                    <label class="form-label fw-bold">Contraseña</label>
-                    <div class="input-group">
-                        <input type="password" name="password" id="login-password" class="form-control form-control-lg border-end-0" required>
-                        <button class="btn border-start-0" type="button" onclick="togglePassword('login-password', this)"><i class="bi bi-eye-fill fs-5"></i></button>
-                    </div>
+
+                <div class="field-glass">
+                    <span class="field-icon"><i class="bi bi-envelope-fill"></i></span>
+                    <input type="email" name="correo" placeholder="Correo electrónico" autocomplete="email" required />
                 </div>
-                <div id="mensaje-login" class="text-danger mb-3 fw-bold" style="display:none; font-size: 1rem;"></div>
-                <button type="submit" id="btn-login" class="btn btn-primary btn-lg w-100 fw-bold">Ingresar al Sistema</button>
+
+                <div class="field-glass">
+                    <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
+                    <input id="login-password" name="password" type="password" placeholder="Contraseña" autocomplete="current-password" required />
+                    <button type="button" class="btn-toggle-pwd" onclick="togglePassword('login-password', this)" aria-label="Mostrar contraseña">
+                        <i class="bi bi-eye-fill"></i>
+                    </button>
+                </div>
+
+                <div class="meta-row">
+                    <label class="remember">
+                        <input type="checkbox" checked />
+                        Recordarme
+                    </label>
+                    <a class="forgot" href="#">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <div id="mensaje-login" class="text-danger mb-3 fw-bold text-center" style="display:none; font-size: 0.9rem; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 8px;"></div>
+
+                <button type="submit" id="btn-login" class="btn-login-glass">Ingresar al Sistema</button>
             </form>
         </div>
     </div>
@@ -39,14 +61,13 @@
     <div id="app-crm" style="display: none;">
         <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
         <div class="sidebar" id="sidebarMenu">
-            <div class="brand-container">
-                <div class="brand-text d-flex align-items-center gap-2">
-                    <div class="brand-logo-icon"><i class="bi bi-truck"></i></div>
-                    <span class="fw-bolder fs-5 brand-title-text">AZKELL CRM</span>
+            <div class="brand-container" id="sidebar-brand-btn" style="cursor: pointer;" onclick="toggleSidebar()" title="Expandir/Colapsar Menú">
+                <div class="brand-text d-flex align-items-center gap-2 w-100">
+                    <div class="brand-logo-icon flex-shrink-0"><i class="bi bi-truck"></i></div>
+                    <span class="fw-bolder fs-5 brand-title-text text-truncate">AZKELL CRM</span>
                 </div>
-                <button class="btn-toggle-sidebar" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
             </div>
-            
+
             <div id="wrap-mantenimiento">
                 <a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down chevron-icon"></i></a>
                 <div class="collapse" id="menuMantenimiento">
@@ -68,237 +89,242 @@
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
             <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
+            <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
+                <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                    <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
+                </a>
+            </div>
         </div>
-        
+
         <div class="content">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn-hamburger-mobile" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-                    <h4 class="m-0 fw-bold" id="tituloTopBar" style="font-size: 1.3rem;">Cargando...</h4>
-                    <button id="btn-wialon-status" class="btn btn-sm btn-outline-secondary ms-3 rounded-pill px-3 shadow-sm" onclick="recargarWialon(true)" title="Actualizar GPS en tiempo real">
-                        <i class="bi bi-geo-alt-fill"></i> <span id="wialon-text" class="fw-bold">GPS Off</span>
+                    <button class="btn-hamburger-mobile d-md-none" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+                    <h4 class="m-0 fw-bold d-none d-md-block" id="tituloTopBar" style="font-size: 1.3rem;">Cargando...</h4>
+                    <button id="btn-wialon-status" class="btn btn-sm btn-outline-secondary ms-2 ms-md-3 rounded-pill px-3 shadow-sm" onclick="recargarWialon(true)" title="Actualizar GPS en tiempo real">
+                        <i class="bi bi-geo-alt-fill"></i> <span id="wialon-text" class="fw-bold d-none d-sm-inline">GPS Off</span>
                     </button>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="fake-search-bar" onclick="abrirSpotlight()">
+
+                <div class="d-flex flex-grow-1 justify-content-center px-3">
+                    <div class="fake-search-bar" onclick="abrirSpotlight()" style="width: 100%; max-width: 400px; cursor: pointer;">
                         <i class="bi bi-search"></i>
-                        <span class="search-text d-none d-md-inline">Buscar (Ctrl+K)</span>
+                        <span class="search-text text-muted">Buscar... (Ctrl+K)</span>
                     </div>
-                    <label class="apple-switch mb-0" title="Modo Oscuro">
-                        <input type="checkbox" id="theme-toggle">
-                        <span class="apple-slider"></span>
-                    </label>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-link text-muted p-0 fs-5" id="btn-theme-toggle" onclick="document.getElementById('theme-toggle').click();" title="Modo Oscuro">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                    <input type="checkbox" id="theme-toggle" class="d-none">
+
                     <div class="dropdown d-inline-block">
-                        <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        <div class="d-flex align-items-center p-1 px-2 rounded user-profile-btn" data-bs-toggle="dropdown" style="cursor: pointer;">
                             <i class="bi bi-person-circle fs-4 text-primary"></i>
-                            <span id="nombre-usuario-top" class="fw-bold ms-2 d-none d-md-inline-block">Usuario</span>
+                            <span id="nombre-usuario-top" class="fw-bold ms-2 d-none d-md-inline-block" style="font-size: 0.85rem;">Usuario</span>
                         </div>
-                        <div class="dropdown-menu dropdown-menu-end shadow-lg p-0" style="width: 250px; border-radius: 12px; overflow: hidden;">
-                            <div class="text-center p-4 bg-light">
-                                <h5 class="fw-bold mb-0" id="perfil-nombre">Usuario</h5>
-                                <p class="mb-2 text-muted small" id="perfil-correo">correo@azkell.com</p>
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg p-0 profile-dropdown-theme" style="width: 250px; border-radius: 12px; overflow: hidden;">
+                            <div class="text-center p-4 profile-header-theme">
+                                <h6 class="fw-bold mb-1 theme-text" id="perfil-nombre">Usuario</h6>
+                                <p class="mb-2 small text-muted" id="perfil-correo">correo@azkell.com</p>
                                 <span class="badge bg-primary" id="perfil-rol-badge">Rol</span>
                             </div>
-                            <div class="p-2">
+                            <div class="p-2 profile-body-theme bg-theme-surface">
                                 <button class="btn btn-danger btn-sm w-100 fw-bold" onclick="cerrarSesion()"><i class="bi bi-box-arrow-left"></i> Cerrar Sesión</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="main-area">
 
                 <div id="moduloPlacas" class="modulo-wrapper" style="display: none; height: 100%; overflow: hidden;">
-                    <div class="top-controls-glass d-flex justify-content-between align-items-center p-3 border-bottom-theme bg-surface-premium flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 w-100 w-md-auto justify-content-between">
-                            <h5 class="m-0 fw-bold theme-text title-mobile-fix"><i class="bi bi-truck text-primary me-2"></i> Base Vehículos</h5>
-                            
-                            <div class="d-flex d-md-none align-items-center gap-2">
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold" data-bs-toggle="dropdown"><i class="bi bi-funnel"></i></button>
-                                    <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme dropdown-menu-end" style="width: 250px;">
-                                        <h6 class="dropdown-header text-primary">Cliente</h6><ul class="list-unstyled mb-2" id="filtroCliente-mobile"></ul>
-                                        <h6 class="dropdown-header text-primary">Estado</h6><ul class="list-unstyled mb-0" id="filtroEstado-mobile"></ul>
-                                    </div>
-                                </div>
-                                <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme">
-                                    <button class="btn btn-sm btn-view-toggle active" onclick="cambiarVistaPlacas('grid')"><i class="bi bi-grid-fill"></i></button>
-                                    <button class="btn btn-sm btn-view-toggle" onclick="cambiarVistaPlacas('list')"><i class="bi bi-list-ul"></i></button>
-                                </div>
-                            </div>
+                    <div class="top-controls-glass d-flex flex-column flex-md-row justify-content-between align-items-md-center p-2 px-md-3 border-bottom-theme bg-surface-premium gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="m-0 fw-bold theme-text title-mobile-fix"><i class="bi bi-truck text-primary me-2"></i> Base de Vehículos</h5>
                         </div>
-                        
-                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-md-end top-controls-buttons w-100 w-md-auto mt-2 mt-md-0">
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap w-100 w-md-auto top-controls-buttons">
                             <div class="search-theme-wrapper flex-grow-1 flex-md-grow-0 search-mobile-fix">
                                 <i class="bi bi-search text-muted"></i>
-                                <input type="text" id="buscadorPlacas" class="search-theme-input" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa, cliente...">
+                                <input type="text" id="buscadorPlacas" class="search-theme-input" onkeyup="filtrarPlacasAvanzado()" placeholder="Placa o cliente...">
                             </div>
 
-                            <div class="d-none d-md-flex align-items-center gap-2">
-                                <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme me-2">
-                                    <button class="btn btn-sm btn-view-toggle active" onclick="cambiarVistaPlacas('grid')"><i class="bi bi-grid-fill"></i></button>
-                                    <button class="btn btn-sm btn-view-toggle" onclick="cambiarVistaPlacas('list')"><i class="bi bi-list-ul"></i></button>
-                                </div>
-                                <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="recargarModulo('placas')"><i class="bi bi-arrow-clockwise"></i></button>
-                                
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
-                                    <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme" style="width: 250px;">
-                                        <h6 class="dropdown-header text-primary">Cliente</h6><ul class="list-unstyled mb-2" id="filtroCliente"></ul>
-                                        <h6 class="dropdown-header text-primary">Estado</h6><ul class="list-unstyled mb-0" id="filtroEstado"></ul>
-                                    </div>
-                                </div>
+                            <select class="form-select form-select-sm fw-bold border-theme theme-text bg-theme-surface mx-1 d-none d-md-block" style="width: auto; cursor:pointer;" onchange="cambiarColumnasPlacas(this.value)">
+                                <option value="3">3 Columnas</option>
+                                <option value="4" selected>4 Columnas</option>
+                                <option value="5">5 Columnas</option>
+                            </select>
 
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-primary fw-bold btn-sm" onclick="document.getElementById('formPlaca').reset()" data-bs-toggle="modal" data-bs-target="#modalPlaca" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
+                            <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme me-1">
+                                <button class="btn btn-sm btn-view-toggle active" id="btnViewGrid" onclick="cambiarVistaPlacas('grid')"><i class="bi bi-grid-fill"></i></button>
+                                <button class="btn btn-sm btn-view-toggle" id="btnViewList" onclick="cambiarVistaPlacas('list')"><i class="bi bi-list-ul"></i></button>
                             </div>
+
+                            <button class="btn btn-outline-secondary btn-sm fw-bold d-none d-md-inline-flex align-items-center gap-1" id="btnPapelera" onclick="toggleVistaPapelera()"><i class="bi bi-trash3"></i> Papelera</button>
+                            <button class="btn btn-outline-secondary btn-sm fw-bold d-none d-md-inline-flex align-items-center gap-1" id="btnSeleccionar" onclick="toggleModoSeleccion()"><i class="bi bi-check2-square"></i> Seleccionar</button>
+                            <button class="btn btn-danger btn-sm fw-bold d-none align-items-center gap-1" id="btnEliminarMasivo" onclick="eliminarMasivo()"><i class="bi bi-trash-fill"></i> Eliminar (<span id="countSeleccionados">0</span>)</button>
+
+                            <div class="dropdown flex-grow-1 flex-md-grow-0">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold w-100" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
+                                <div class="dropdown-menu shadow-lg p-0 dropdown-menu-theme" style="width: 280px; max-height: 400px; overflow-y: auto;">
+                                    <div class="p-2 bg-light border-bottom text-center fw-bold text-primary small">Filtrar por Cliente</div>
+                                    <ul class="list-unstyled mb-0" id="filtroCliente"></ul>
+                                    <div class="p-2 bg-light border-bottom border-top text-center fw-bold text-primary small">Filtrar por Tipo</div>
+                                    <ul class="list-unstyled mb-0" id="filtroTipo"></ul>
+                                    <div class="p-2 bg-light border-bottom border-top text-center fw-bold text-primary small">Filtrar por Estado</div>
+                                    <ul class="list-unstyled mb-0" id="filtroEstado"></ul>
+                                </div>
+                            </div>
+
+                            <div class="dropdown d-none d-md-block">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold" data-bs-toggle="dropdown"><i class="bi bi-cloud-download me-1"></i></button>
+                                <ul class="dropdown-menu shadow dropdown-menu-theme">
+                                    <li><a class="dropdown-item fw-bold" href="#" onclick="descargarPlantillaPlacas()"><i class="bi bi-file-earmark-excel text-success me-2"></i>Descargar Plantilla</a></li>
+                                    <li><a class="dropdown-item fw-bold" href="#" onclick="document.getElementById('inputFilePlacas').click()"><i class="bi bi-upload text-primary me-2"></i>Importar Excel</a></li>
+                                </ul>
+                            </div>
+                            <input type="file" id="inputFilePlacas" accept=".xlsx,.xls" style="display:none" onchange="importarExcelPlacas(this)">
+
+                            <button class="btn btn-primary fw-bold btn-sm flex-grow-1 flex-md-grow-0" onclick="document.getElementById('formPlaca').reset()" data-bs-toggle="modal" data-bs-target="#modalPlaca" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
                         </div>
                     </div>
 
-                    <div class="d-flex w-100 bg-bg-premium split-pane-container">
-                        <div class="flex-grow-1 p-3 p-md-4 overflow-auto custom-scrollbar position-relative main-cards-area">
-                            <div class="d-flex gap-2 gap-md-3 mb-3 mb-md-4 overflow-auto pb-2 kpi-scroll-mobile">
-                                <div class="kpi-theme-card"><span class="text-muted small fw-bold">CAMIONES</span><h4 class="m-0 fw-bold theme-text" id="kpi-camion">0</h4></div>
-                                <div class="kpi-theme-card"><span class="text-muted small fw-bold">CARRETAS</span><h4 class="m-0 fw-bold theme-text" id="kpi-carreta">0</h4></div>
-                                <div class="kpi-theme-card"><span class="text-muted small fw-bold">SEMIS</span><h4 class="m-0 fw-bold theme-text" id="kpi-semi">0</h4></div>
-                                <div class="kpi-theme-card"><span class="text-muted small fw-bold">TRACTOS</span><h4 class="m-0 fw-bold theme-text" id="kpi-tracto">0</h4></div>
+                    <div class="placas-split-wrapper h-100">
+                        <div class="placas-main-pane bg-theme-main p-3 d-flex flex-column">
+                            <div class="d-flex gap-2 mb-3 overflow-auto pb-1 kpi-scroll-mobile flex-shrink-0">
+                                <div class="kpi-theme-card flex-grow-1 text-center py-2"><span class="text-muted small fw-bold">CAMIONES</span><h5 class="m-0 fw-bold theme-text" id="kpi-camion">0</h5></div>
+                                <div class="kpi-theme-card flex-grow-1 text-center py-2"><span class="text-muted small fw-bold">CARRETAS</span><h5 class="m-0 fw-bold theme-text" id="kpi-carreta">0</h5></div>
+                                <div class="kpi-theme-card flex-grow-1 text-center py-2"><span class="text-muted small fw-bold">SEMIS</span><h5 class="m-0 fw-bold theme-text" id="kpi-semi">0</h5></div>
+                                <div class="kpi-theme-card flex-grow-1 text-center py-2"><span class="text-muted small fw-bold">TRACTOS</span><h5 class="m-0 fw-bold theme-text" id="kpi-tracto">0</h5></div>
                             </div>
-                            
-                            <div id="contenedorPlacasDinamico" class="placas-grid-view pb-5">
-                                <div class="w-100 text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando vehículos...</div>
+
+                            <div class="card p-0 shadow-sm border-theme flex-grow-1 d-flex flex-column overflow-hidden bg-theme-surface">
+                                <div class="flex-grow-1 overflow-auto custom-scrollbar p-3" id="contenedorPlacasDinamico">
+                                    <div class="w-100 text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando vehículos...</div>
+                                </div>
+                                <div class="pagination-row p-2 border-top-theme d-flex justify-content-between align-items-center mt-auto flex-shrink-0">
+                                    <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas">Mostrando 0 de 0</span>
+                                    <div class="d-flex gap-1" id="controles-paginacion-placas"></div>
+                                </div>
                             </div>
                             <table id="tablaPlacasHidden" style="display:none;"></table>
                         </div>
 
-                        <div class="right-panel-theme d-none d-flex flex-column detail-mobile-overlay" id="paneDetallePlaca">
-                            <div class="p-3 p-md-4 border-bottom-theme bg-theme-surface d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <button class="btn btn-sm btn-link text-muted p-0 me-2 d-md-none" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-chevron-left fs-4"></i></button>
-                                        <h3 class="m-0 fw-bolder theme-text" id="det-placa-header">PLACA</h3>
-                                        <span class="badge-premium" id="det-estado-badge">ESTADO</span>
-                                    </div>
-                                    <p class="m-0 text-muted small ms-md-0 ms-4"><span id="det-marca-header">MARCA</span> • <span id="det-modelo-header">MODELO</span></p>
+                        <div class="placas-details-pane d-none" id="paneDetallePlaca">
+                            <div class="p-3 border-bottom-theme bg-theme-surface d-flex justify-content-between align-items-center shadow-sm z-index-10">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-link text-muted p-0 me-2 d-md-none" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-chevron-left fs-4"></i></button>
+                                    <h4 class="m-0 fw-bolder theme-text" id="det-placa-header">PLACA</h4>
                                 </div>
-                                <button class="btn btn-close-theme d-none d-md-block" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-x-lg"></i></button>
-                            </div>
-                            <div class="px-3 px-md-4 pt-2 border-bottom-theme bg-theme-surface">
-                                <ul class="nav nav-tabs tabs-theme" role="tablist">
-                                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-gen-placa" type="button">General</button></li>
-                                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tec-placa" type="button">Técnico</button></li>
-                                </ul>
-                            </div>
-                            <div class="tab-content flex-grow-1 overflow-auto custom-scrollbar p-3 p-md-4 bg-theme-main">
-                                <div class="tab-pane fade show active" id="tab-gen-placa">
-                                    <div class="data-group-theme mb-3"><label>CLIENTE ASIGNADO</label><div class="data-value-theme"><i class="bi bi-building text-primary me-2"></i><span id="det-cliente"></span></div></div>
-                                    <div class="row g-2 mb-3"><div class="col-6"><div class="data-group-theme"><label>RUC / DNI</label><div class="data-value-theme theme-text" id="det-ruc"></div></div></div><div class="col-6"><div class="data-group-theme"><label>ZONA U.T.S.</label><div class="data-value-theme theme-text" id="det-uts"></div></div></div></div>
-                                    <div class="row g-2"><div class="col-6"><div class="data-group-theme"><label>OPERATIVO</label><div class="data-value-theme theme-text" id="det-operativo"></div></div></div><div class="col-6"><div class="data-group-theme"><label>EN USO</label><div class="data-value-theme theme-text fw-bold text-primary" id="det-enuso"></div></div></div></div>
-                                </div>
-                                <div class="tab-pane fade" id="tab-tec-placa">
-                                    <div class="row g-2 mb-3"><div class="col-6"><div class="data-group-theme"><label>TIPO</label><div class="data-value-theme theme-text" id="det-tipo"></div></div></div><div class="col-6"><div class="data-group-theme"><label>UNIDAD</label><div class="data-value-theme theme-text" id="det-motora"></div></div></div></div>
-                                    <div class="row g-2 mb-3"><div class="col-6"><div class="data-group-theme"><label>CONFIGURACIÓN</label><div class="data-value-theme theme-text" id="det-conf"></div></div></div><div class="col-6"><div class="data-group-theme"><label>COMBUSTIBLE</label><div class="data-value-theme theme-text" id="det-comb"></div></div></div></div>
-                                    <div class="data-group-theme"><label>LLANTAS</label><div class="data-value-theme theme-text"><i class="bi bi-vinyl text-primary me-2"></i> <span id="det-llantas"></span></div></div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge-premium" id="det-estado-badge">ESTADO</span>
+                                    <button class="btn btn-close-theme d-none d-md-block ms-2" onclick="cerrarPanelDetallePlaca()"><i class="bi bi-x-lg"></i></button>
                                 </div>
                             </div>
-                            <div class="p-3 border-top-theme bg-theme-surface d-flex gap-2">
+
+                            <div class="flex-grow-1 overflow-auto custom-scrollbar p-4 bg-theme-main details-content">
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">Datos Generales</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-12"><label class="text-muted small fw-bold">CLIENTE</label><span class="data-value-theme theme-text d-block text-truncate" id="det-cliente"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">RUC / DNI</label><span class="data-value-theme theme-text d-block" id="det-ruc"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">ZONA UTS</label><span class="data-value-theme theme-text d-block" id="det-uts"></span></div>
+                                </div>
+
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2 mt-4">Detalles Técnicos</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6"><label class="text-muted small fw-bold">MARCA</label><span class="data-value-theme theme-text d-block" id="det-marca-header"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">MODELO</label><span class="data-value-theme theme-text d-block" id="det-modelo-header"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">TIPO</label><span class="data-value-theme theme-text d-block" id="det-tipo"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">UNIDAD</label><span class="data-value-theme theme-text d-block" id="det-motora"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">CONFIG.</label><span class="data-value-theme theme-text d-block" id="det-conf"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">COMBUST.</label><span class="data-value-theme theme-text d-block" id="det-comb"></span></div>
+                                </div>
+
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2 mt-4">Operatividad</h6>
+                                <div class="row g-2">
+                                    <div class="col-4"><label class="text-muted small fw-bold">EN USO</label><span class="data-value-theme text-primary fw-bold d-block" id="det-enuso"></span></div>
+                                    <div class="col-4"><label class="text-muted small fw-bold">OPERATIVO</label><span class="data-value-theme theme-text d-block" id="det-operativo"></span></div>
+                                    <div class="col-4"><label class="text-muted small fw-bold">LLANTAS</label><span class="data-value-theme theme-text d-block" id="det-llantas"></span></div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 border-top-theme bg-theme-surface d-flex gap-2 shadow-sm mt-auto">
                                 <button class="btn btn-outline-secondary flex-grow-1 fw-bold" id="btnEditPanePlaca"><i class="bi bi-pencil me-1"></i> Editar</button>
                                 <button class="btn btn-outline-danger flex-grow-1 fw-bold" id="btnDeletePanePlaca"><i class="bi bi-trash me-1"></i> Eliminar</button>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                <!-- MÓDULO ANÁLISIS DE INSPECCIONES -->
                 <div id="moduloStatus" class="modulo-wrapper" style="display: none; height: 100%; overflow: hidden;">
-                    <div class="top-controls-glass d-flex justify-content-between align-items-center p-3 border-bottom-theme bg-surface-premium flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 w-100 w-md-auto justify-content-between">
-                            <h5 class="m-0 fw-bold theme-text title-mobile-fix text-truncate"><i class="bi bi-activity text-primary me-2"></i> Análisis Insp.</h5>
-                            
-                            <div class="d-flex d-md-none align-items-center gap-2">
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold" data-bs-toggle="dropdown"><i class="bi bi-funnel"></i></button>
-                                    <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme dropdown-menu-end" style="width: 250px;">
-                                        <h6 class="dropdown-header text-primary">Estado</h6><ul class="list-unstyled mb-2" id="filtroStatusEstado-mobile"></ul>
-                                        <h6 class="dropdown-header text-primary">Cliente</h6><ul class="list-unstyled mb-0" id="filtroStatusCliente-mobile"></ul>
-                                    </div>
-                                </div>
-                                <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme">
-                                    <button class="btn btn-sm btn-view-toggle active" onclick="cambiarVistaInsp('grid')"><i class="bi bi-grid-fill"></i></button>
-                                    <button class="btn btn-sm btn-view-toggle" onclick="cambiarVistaInsp('list')"><i class="bi bi-list-ul"></i></button>
-                                </div>
-                            </div>
+                    <div class="top-controls-glass d-flex flex-column flex-md-row justify-content-between align-items-md-center p-2 px-md-3 border-bottom-theme bg-surface-premium gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="m-0 fw-bold theme-text title-mobile-fix"><i class="bi bi-shield-check text-success me-2"></i> Análisis de Inspecciones</h5>
                         </div>
-
-                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-md-end top-controls-buttons w-100 w-md-auto mt-2 mt-md-0">
-                            <div class="search-theme-wrapper flex-grow-1 flex-md-grow-0 me-md-2 search-mobile-fix">
+                        <div class="d-flex align-items-center gap-2 flex-wrap w-100 w-md-auto top-controls-buttons">
+                            <div class="search-theme-wrapper flex-grow-1 flex-md-grow-0 search-mobile-fix">
                                 <i class="bi bi-search text-muted"></i>
-                                <input type="text" id="buscadorStatus" class="search-theme-input" onkeyup="filtrarStatusAvanzado()" placeholder="Buscar placa, técnico...">
+                                <input type="text" id="buscadorStatus" class="search-theme-input" onkeyup="filtrarStatusAvanzado()" placeholder="Placa o técnico...">
                             </div>
-
-                            <div class="d-none d-md-flex align-items-center gap-2">
-                                <div class="view-toggles bg-theme-surface p-1 rounded-pill border-theme me-2">
-                                    <button class="btn btn-sm btn-view-toggle active" onclick="cambiarVistaInsp('grid')"><i class="bi bi-grid-fill"></i></button>
-                                    <button class="btn btn-sm btn-view-toggle" onclick="cambiarVistaInsp('list')"><i class="bi bi-list-ul"></i></button>
+                            <div class="dropdown flex-grow-1 flex-md-grow-0">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold w-100" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
+                                <div class="dropdown-menu shadow-lg p-0 dropdown-menu-theme" style="width: 260px; max-height: 400px; overflow-y: auto;">
+                                    <div class="p-2 bg-light border-bottom text-center fw-bold text-primary small">Filtrar por Cliente</div>
+                                    <ul class="list-unstyled mb-0" id="filtroStatusCliente"></ul>
+                                    <div class="p-2 bg-light border-bottom border-top text-center fw-bold text-primary small">Filtrar por Estado</div>
+                                    <ul class="list-unstyled mb-0" id="filtroStatusEstado"></ul>
                                 </div>
-                                <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="recargarModulo('statusMant')"><i class="bi bi-arrow-clockwise"></i></button>
-                                <button class="btn btn-outline-info fw-bold btn-sm" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
-                                
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle fw-bold" data-bs-toggle="dropdown"><i class="bi bi-funnel me-1"></i> Filtros</button>
-                                    <div class="dropdown-menu shadow-lg p-3 dropdown-menu-theme" style="width: 250px;">
-                                        <h6 class="dropdown-header text-primary">Estado</h6><ul class="list-unstyled mb-2" id="filtroStatusEstado"></ul>
-                                        <h6 class="dropdown-header text-primary">Cliente</h6><ul class="list-unstyled mb-0" id="filtroStatusCliente"></ul>
-                                    </div>
-                                </div>
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusHidden', 'Analisis_Inspecciones')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-primary fw-bold btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
                             </div>
+                            <button class="btn btn-outline-primary btn-sm fw-bold" onclick="isHistorialStatus=!isHistorialStatus; CACHE['statusMant']=null; cambiarModulo('statusMant','btnMenuStatusMant');"><i class="bi bi-clock-history me-1"></i> Historial</button>
                         </div>
                     </div>
-
-                    <div class="d-flex w-100 bg-bg-premium split-pane-container">
-                        <div class="flex-grow-1 p-3 p-md-4 overflow-auto custom-scrollbar position-relative main-cards-area">
-                            <div class="row mb-3 d-none d-md-flex" id="panelGraficosStatus">
-                                <div class="col-4"><div class="card p-3 h-100 shadow-sm"><h6 class="fw-bold theme-text text-center mb-2">Flota Total</h6><div class="chart-container-status" style="height:140px;"><canvas id="chartTotal"></canvas></div></div></div>
-                                <div class="col-4"><div class="card p-3 h-100 shadow-sm"><h6 class="fw-bold theme-text text-center mb-2">Motoras</h6><div class="chart-container-status" style="height:140px;"><canvas id="chartMotoras"></canvas></div></div></div>
-                                <div class="col-4"><div class="card p-3 h-100 shadow-sm"><h6 class="fw-bold theme-text text-center mb-2">No Motoras</h6><div class="chart-container-status" style="height:140px;"><canvas id="chartNoMotoras"></canvas></div></div></div>
+                    <div class="placas-split-wrapper h-100">
+                        <div class="placas-main-pane bg-theme-main p-3 d-flex flex-column">
+                            <div class="d-flex gap-2 mb-3 flex-wrap flex-shrink-0">
+                                <div class="flex-grow-1"><canvas id="chartTotalInst" height="120"></canvas></div>
+                                <div class="flex-grow-1"><canvas id="chartMotorasInst" height="120"></canvas></div>
+                                <div class="flex-grow-1"><canvas id="chartNoMotorasInst" height="120"></canvas></div>
                             </div>
-                            <div id="contenedorStatusDinamico" class="placas-grid-view pb-5"></div>
-                            <table id="tablaStatusHidden" style="display:none;"></table>
+                            <div class="card p-0 shadow-sm border-theme flex-grow-1 d-flex flex-column overflow-hidden bg-theme-surface">
+                                <div class="flex-grow-1 overflow-auto custom-scrollbar p-3 status-grid-view" id="contenedorStatusDinamico">
+                                    <div class="w-100 text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando inspecciones...</div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="right-panel-theme d-none d-flex flex-column detail-mobile-overlay" id="paneDetalleStatus">
-                            <div class="p-3 p-md-4 border-bottom-theme bg-theme-surface d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <button class="btn btn-sm btn-link text-muted p-0 me-2 d-md-none" onclick="cerrarPanelDetalleStatus()"><i class="bi bi-chevron-left fs-4"></i></button>
-                                        <h3 class="m-0 fw-bolder theme-text" id="det-insp-placa">PLACA</h3>
-                                        <span class="badge-premium" id="det-insp-estado">ESTADO</span>
-                                    </div>
-                                    <p class="m-0 text-muted small ms-md-0 ms-4"><i class="bi bi-calendar-event me-1"></i> <span id="det-insp-fecha">FECHA</span> • <i class="bi bi-person me-1"></i> <span id="det-insp-tec">TECNICO</span></p>
+                        <div class="placas-details-pane d-none" id="paneDetalleStatus">
+                            <div class="p-3 border-bottom-theme bg-theme-surface d-flex justify-content-between align-items-center shadow-sm">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-link text-muted p-0 me-2 d-md-none" onclick="document.getElementById('paneDetalleStatus').classList.add('d-none')"><i class="bi bi-chevron-left fs-4"></i></button>
+                                    <h4 class="m-0 fw-bolder theme-text" id="det-insp-placa">PLACA</h4>
                                 </div>
-                                <button class="btn btn-close-theme d-none d-md-block" onclick="cerrarPanelDetalleStatus()"><i class="bi bi-x-lg"></i></button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge-premium" id="det-insp-estado">ESTADO</span>
+                                    <button class="btn btn-close-theme d-none d-md-block ms-2" onclick="document.getElementById('paneDetalleStatus').classList.add('d-none')"><i class="bi bi-x-lg"></i></button>
+                                </div>
                             </div>
-                            
-                            <div class="tab-content flex-grow-1 overflow-auto custom-scrollbar p-3 p-md-4 bg-theme-main">
+                            <div class="flex-grow-1 overflow-auto custom-scrollbar p-4 bg-theme-main">
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">Datos de Inspección</h6>
                                 <div class="row g-2 mb-3">
-                                    <div class="col-6"><div class="data-group-theme"><label>KILOMETRAJE</label><div class="data-value-theme theme-text" id="det-insp-km"></div></div></div>
-                                    <div class="col-6"><div class="data-group-theme"><label>PRÓXIMO VENCIMIENTO</label><div class="data-value-theme theme-text" id="det-insp-prox"></div></div></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">FECHA INGRESO</label><span class="data-value-theme theme-text d-block" id="det-insp-fecha"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">TÉCNICO</label><span class="data-value-theme theme-text d-block" id="det-insp-tec"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">KILOMETRAJE</label><span class="data-value-theme theme-text d-block" id="det-insp-km"></span></div>
+                                    <div class="col-6"><label class="text-muted small fw-bold">PRÓXIMA</label><span class="data-value-theme theme-text d-block" id="det-insp-prox"></span></div>
                                 </div>
-                                <div class="data-group-theme mb-3"><label>UBICACIÓN WIALON GPS</label><div class="data-value-theme theme-text" id="det-insp-wialon"></div></div>
-                                
-                                <h6 class="theme-text fw-bold mb-2 mt-4 border-bottom-theme pb-2"><i class="bi bi-exclamation-triangle text-danger me-1"></i> Hallazgos de Inspección</h6>
-                                <div id="det-insp-fallas-container" style="font-size: 0.85rem;"></div>
-                            </div>
-                            
-                            <div class="p-3 border-top-theme bg-theme-surface d-flex gap-2">
-                                <button class="btn btn-outline-danger flex-grow-1 fw-bold" id="btnPdfPaneStatus"><i class="bi bi-file-pdf me-1"></i> Ver PDF</button>
-                                <button class="btn btn-primary flex-grow-1 fw-bold" id="btnEditPaneStatus"><i class="bi bi-pencil me-1"></i> Editar</button>
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2 mt-3">GPS / Wialon</h6>
+                                <div id="det-insp-wialon" class="mb-3"><span class="text-muted small">Sin conexión GPS</span></div>
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2 mt-3">Fallas Detectadas</h6>
+                                <div id="det-insp-fallas-container"><span class="text-muted small">Sin fallas registradas</span></div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn btn-sm btn-outline-primary fw-bold" id="btnPdfPaneStatus" style="display:none;"><i class="bi bi-file-earmark-pdf me-1"></i>Ver PDF</button>
+                                    <button class="btn btn-sm btn-outline-warning fw-bold" id="btnEditPaneStatus" style="display:none;"><i class="bi bi-pencil me-1"></i>Editar</button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
                 <div id="moduloFleetrun" class="modulo-wrapper" style="display: none;">
                     <div class="top-controls-glass d-flex justify-content-between align-items-center p-3 border-bottom-theme bg-surface-premium flex-wrap gap-2">
                         <h5 class="m-0 fw-bold theme-text"><i class="bi bi-speedometer2 text-warning me-2"></i> Fleetrun Mantenimiento</h5>
@@ -525,8 +551,50 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalPlaca" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-theme-surface border-bottom-theme"><h5 class="modal-title fw-bold theme-text"><i class="bi bi-truck text-primary me-2"></i>Registrar Placa</h5><button type="button" class="btn-close theme-text" data-bs-dismiss="modal"></button></div><form id="formPlaca" onsubmit="enviarPlaca(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body bg-theme-main"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Placa</label><input type="text" class="form-control text-uppercase" name="p_placa" required></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Cliente</label><input type="text" class="form-control" name="p_cliente" id="p_cliente" list="dl-clientes" required></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">Tipo</label><input type="text" class="form-control" name="p_tipo" list="dl-tipos"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Marca</label><input type="text" class="form-control" name="p_marca" list="dl-marcas"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Modelo UTS</label><input type="text" class="form-control" name="p_modelo" list="dl-modelos"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">RUC / DNI</label><input type="text" class="form-control" name="p_ruc" id="p_ruc"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><input type="text" class="form-control" name="p_conf" list="dl-confs"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Combustible</label><input type="text" class="form-control" name="p_comb" list="dl-combs"></div></div><div class="row"><div class="col-md-3 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="p_estado"><option>Activa</option><option>Inactiva</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Operativo?</label><select class="form-select" name="p_operativo"><option>Activa</option><option>Inactiva</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">En Uso?</label><select class="form-select" name="p_enuso"><option>Si</option><option>No</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Llantas</label><input type="number" class="form-control" name="p_llantas"></div></div><div class="row"><div class="col-md-6 mb-3"><label class="form-label fw-bold">UTS</label><input type="text" class="form-control" name="p_uts" list="dl-uts"></div><div class="col-md-6 mb-3"><label class="form-label fw-bold">Motora/No</label><select class="form-select" name="p_motora"><option>Unidad Motora</option><option>Unidad No Motora</option></select></div></div></div><div class="modal-footer border-top-theme bg-theme-surface"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarPlaca">Guardar</button></div></form></div></div></div>
-    <div class="modal fade" id="modalEditarPlaca" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-theme-surface border-bottom-theme"><h5 class="modal-title fw-bold theme-text">Editar Placa</h5><button type="button" class="btn-close theme-text" data-bs-dismiss="modal"></button></div><form id="formEditarPlaca" onsubmit="enviarEdicionPlaca(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body bg-theme-main"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">Placa</label><input type="text" class="form-control text-uppercase" name="editP_placa" id="e_placa" readonly></div><div class="col-md-8 mb-3"><label class="form-label fw-bold">Cliente</label><input type="text" class="form-control" name="editP_cliente" id="e_cliente" list="dl-clientes" required></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">Tipo</label><input type="text" class="form-control" name="editP_tipo" id="e_tipo" list="dl-tipos"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Marca</label><input type="text" class="form-control" name="editP_marca" id="e_marca" list="dl-marcas"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Modelo UTS</label><input type="text" class="form-control" name="editP_modelo" id="e_modelo" list="dl-modelos"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">RUC / DNI</label><input type="text" class="form-control" name="editP_ruc" id="e_ruc"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><input type="text" class="form-control" name="editP_conf" id="e_conf" list="dl-confs"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Combustible</label><input type="text" class="form-control" name="editP_comb" id="e_comb" list="dl-combs"></div></div><div class="row"><div class="col-md-3 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="editP_estado" id="e_estado"><option>Activa</option><option>Inactiva</option><option>Eliminada</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Operativo?</label><select class="form-select" name="editP_operativo" id="e_operativo"><option>Activa</option><option>Inactiva</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">En Uso?</label><select class="form-select" name="editP_enuso" id="e_enuso"><option>Si</option><option>No</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Llantas</label><input type="number" class="form-control" name="editP_llantas" id="e_llantas"></div></div><div class="row"><div class="col-md-6 mb-3"><label class="form-label fw-bold">UTS</label><input type="text" class="form-control" name="editP_uts" id="e_uts" list="dl-uts"></div><div class="col-md-6 mb-3"><label class="form-label fw-bold">Motora/No</label><select class="form-select" name="editP_motora" id="e_motora"><option>Unidad Motora</option><option>Unidad No Motora</option></select></div></div></div><div class="modal-footer border-top-theme bg-theme-surface"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarPlaca">Actualizar</button></div></form></div></div></div>
+    <div class="modal fade" id="modalPlaca" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-truck text-primary me-2"></i>Registrar Placa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formPlaca" onsubmit="enviarPlaca(event, this)">
+                    <input type="hidden" name="usuarioAutor">
+                    <div class="modal-body bg-theme-main">
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Placa</label><input type="text" class="form-control text-uppercase" name="p_placa" placeholder="Ej: ABC-123" required></div>
+                            <div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Cliente</label><input type="text" class="form-control" name="p_cliente" id="p_cliente" list="dl-clientes" oninput="autocompletarRuc(this.value, 'p_ruc')" placeholder="Ej: ROSYMAR PERU SAC" required></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Tipo</label><input type="text" class="form-control" name="p_tipo" list="dl-tipos" placeholder="Ej: CAMIÓN"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Marca</label><input type="text" class="form-control" name="p_marca" list="dl-marcas" placeholder="Ej: VOLVO"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Modelo UTS</label><input type="text" class="form-control" name="p_modelo" list="dl-modelos" placeholder="Ej: FH 460"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">RUC / DNI</label><input type="text" class="form-control bg-light" name="p_ruc" id="p_ruc" placeholder="Automático..." readonly></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><input type="text" class="form-control" name="p_conf" list="dl-confs" placeholder="Ej: 6x4"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Combustible</label><input type="text" class="form-control" name="p_comb" list="dl-combs" placeholder="Ej: DIESEL"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="p_estado"><option>Activa</option><option>Inactiva</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Operativo?</label><select class="form-select" name="p_operativo"><option>Activa</option><option>Inactiva</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">En Uso?</label><select class="form-select" name="p_enuso"><option>Si</option><option>No</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Llantas</label><input type="number" class="form-control" name="p_llantas" placeholder="Ej: 10"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="form-label fw-bold">UTS</label><input type="text" class="form-control" name="p_uts" list="dl-uts" placeholder="Ej: NACIONAL"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Unidad</label><select class="form-select" name="p_motora"><option>Unidad Motora</option><option>Unidad No Motora</option></select></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-theme-surface border-top-theme">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarPlaca">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalEditarPlaca" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-theme-surface border-bottom-theme"><h5 class="modal-title fw-bold theme-text">Editar Placa</h5><button type="button" class="btn-close theme-text" data-bs-dismiss="modal"></button></div><form id="formEditarPlaca" onsubmit="enviarEdicionPlaca(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body bg-theme-main"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">Placa</label><input type="text" class="form-control text-uppercase" name="editP_placa" id="e_placa" readonly></div><div class="col-md-8 mb-3"><label class="form-label fw-bold">Cliente</label><input type="text" class="form-control" name="editP_cliente" id="e_cliente" list="dl-clientes" required></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">Tipo</label><input type="text" class="form-control" name="editP_tipo" id="e_tipo" list="dl-tipos"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Marca</label><input type="text" class="form-control" name="editP_marca" id="e_marca" list="dl-marcas"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Modelo UTS</label><input type="text" class="form-control" name="editP_modelo" id="e_modelo" list="dl-modelos"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold">RUC / DNI</label><input type="text" class="form-control" name="editP_ruc" id="e_ruc"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><input type="text" class="form-control" name="editP_conf" id="e_conf" list="dl-confs"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold">Combustible</label><input type="text" class="form-control" name="editP_comb" id="e_comb" list="dl-combs"></div></div><div class="row"><div class="col-md-3 mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" name="editP_estado" id="e_estado"><option>Activa</option><option>Inactiva</option><option>Eliminada</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Operativo?</label><select class="form-select" name="editP_operativo" id="e_operativo"><option>Activa</option><option>Inactiva</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">En Uso?</label><select class="form-select" name="editP_enuso" id="e_enuso"><option>Si</option><option>No</option></select></div><div class="col-md-3 mb-3"><label class="form-label fw-bold">Llantas</label><input type="number" class="form-control" name="editP_llantas" id="e_llantas"></div></div><div class="row"><div class="col-md-6 mb-3"><label class="form-label fw-bold">UTS</label><input type="text" class="form-control" name="editP_uts" id="e_uts" list="dl-uts"></div><div class="col-md-6 mb-3"><label class="form-label fw-bold">Unidad</label><select class="form-select" name="editP_motora" id="e_motora"><option>Unidad Motora</option><option>Unidad No Motora</option></select></div></div></div><div class="modal-footer border-top-theme bg-theme-surface"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarPlaca">Actualizar</button></div></form></div></div></div>
     
     <div class="modal fade" id="modalFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-theme-surface"><h5 class="modal-title fw-bold theme-text"><i class="bi bi-speedometer2 text-primary me-2"></i>Nuevo Fleetrun</h5><button type="button" class="btn-close theme-text" data-bs-dismiss="modal"></button></div><form id="formFleetrun" onsubmit="enviarFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="f_id" id="f_id"><input type="hidden" name="f_mes" id="f_mes"><input type="hidden" name="f_anio" id="f_anio"><div class="modal-body bg-theme-main"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Fecha</label><input type="date" class="form-control" name="f_fecha" id="f_fecha" onchange="autocompletarFecha('f')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Placa</label><input type="text" class="form-control text-uppercase" name="f_placa" id="f_placa" list="dl-placas" oninput="autocompletarFleetrun('f')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Tipo MP</label><input type="text" class="form-control text-uppercase" name="f_tipomp" id="f_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('f')" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><input type="text" class="form-control" name="f_marca" id="f_marca"></div><div class="col-md-4 mb-3"><input type="text" class="form-control" name="f_dueno" id="f_dueno"></div><div class="col-md-4 mb-3"><input type="text" class="form-control" name="f_uts" id="f_uts"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Actual</label><input type="number" class="form-control" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-warning">Frecuencia</label><input type="number" class="form-control" name="f_freckm" id="f_freckm" oninput="calcularProximo('f')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger">KM Próximo</label><input type="number" class="form-control" name="f_kmprox" id="f_kmprox" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Wialon</label><input type="number" class="form-control" name="f_kmgps" id="f_kmgps" readonly></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Técnico</label><input type="text" class="form-control text-uppercase" name="f_tec" required></div></div><div class="mb-3"><label class="form-label fw-bold">Observación</label><textarea class="form-control" name="f_obs" rows="2"></textarea></div></div><div class="modal-footer bg-theme-surface"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarFleetrun">Guardar</button></div></form></div></div></div>
     <div class="modal fade" id="modalEditarFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-theme-surface"><h5 class="modal-title fw-bold theme-text">Editar Fleetrun</h5><button type="button" class="btn-close theme-text" data-bs-dismiss="modal"></button></div><form id="formEditarFleetrun" onsubmit="enviarEdicionFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="editF_id" id="eF_id"><input type="hidden" name="editF_mes" id="eF_mes"><input type="hidden" name="editF_anio" id="eF_anio"><div class="modal-body bg-theme-main"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Fecha</label><input type="date" class="form-control" name="editF_fecha" id="eF_fecha" onchange="autocompletarFecha('eF')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Placa</label><input type="text" class="form-control text-uppercase" name="editF_placa" id="eF_placa" list="dl-placas" oninput="autocompletarFleetrun('eF')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Tipo MP</label><input type="text" class="form-control text-uppercase" name="editF_tipomp" id="eF_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('eF')" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><input type="text" class="form-control" name="editF_marca" id="eF_marca"></div><div class="col-md-4 mb-3"><input type="text" class="form-control" name="editF_dueno" id="eF_dueno"></div><div class="col-md-4 mb-3"><input type="text" class="form-control" name="editF_uts" id="eF_uts"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Actual</label><input type="number" class="form-control" name="editF_kmact" id="eF_kmact" oninput="calcularProximo('eF')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-warning">Frecuencia</label><input type="number" class="form-control" name="editF_freckm" id="eF_freckm" oninput="calcularProximo('eF')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger">KM Próximo</label><input type="number" class="form-control" name="editF_kmprox" id="eF_kmprox" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Wialon</label><input type="number" class="form-control" name="editF_kmgps" id="eF_kmgps"></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Técnico</label><input type="text" class="form-control text-uppercase" name="editF_tec" id="eF_tec" required></div></div><div class="mb-3"><label class="form-label fw-bold">Observación</label><textarea class="form-control" name="editF_obs" id="eF_obs" rows="2"></textarea></div></div><div class="modal-footer bg-theme-surface"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarFleetrun">Actualizar</button></div></form></div></div></div>
