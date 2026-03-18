@@ -536,12 +536,12 @@ function cargarModulo(nombre, fnRender, fnBackend) {
 function recargarModulo(nombre) {
   CACHE[nombre] = null; CACHE_TIME[nombre] = null;
   const acciones = {
-    placas: () => cargarModulo('placas', window.mostrarPlacas || mostrarPlacas, 'obtenerDatosPlacas'),
+    placas: () => cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'),
     fleetrun: () => cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'),
     usuarios: () => cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'),
     seguridad: () => cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'),
     auditoria: () => cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'),
-    statusMant: () => cargarModulo('statusMant', window.mostrarStatusInspecciones || mostrarStatusInspecciones, 'obtenerDatosInspecciones'),
+    statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'),
     conductores: () => cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'),
     statusFlota: () => cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota')
   };
@@ -578,9 +578,9 @@ function cambiarModulo(modulo, idBoton) {
     if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
-    else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', window.mostrarPlacas || mostrarPlacas, 'obtenerDatosPlacas'); }
+    else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
     else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
-    else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', window.mostrarStatusInspecciones || mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
+    else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
     else if (modulo === 'statusFlota') { let el=document.getElementById('moduloStatusFlota'); if(el) el.style.display = 'flex'; titulo.innerText = 'Status de Flota'; cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota'); }
     else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
     else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
@@ -631,6 +631,7 @@ function mostrarStatusInspecciones(inspecciones) {
   dataGlobalInspecciones = inspecciones; let hoy = new Date(); hoy.setHours(0,0,0,0);
   let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
   let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
+  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada'); // Filtro Papelera
   let dataFinal = [];
 
   let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
@@ -649,7 +650,7 @@ function mostrarStatusInspecciones(inspecciones) {
   });
 
   let html = '';
-  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; }
+  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; } 
   else {
       mapTipos.forEach((registros, tipoDisplay) => {
           let classTipo = normalizarClase(tipoDisplay);
@@ -657,7 +658,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
           html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
               <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
-                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
+                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i> 
                   <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
                   <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
               </td></tr>`;
@@ -670,14 +671,19 @@ function mostrarStatusInspecciones(inspecciones) {
 
               if(insp && insp.fecha_ingreso) {
                   fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso); tecnico = insp.tecnico;
+                  // 1. Convertimos la fecha robustamente (soporta "YYYY-MM-DD" o "DD/MM/YYYY")
                   let fIngreso;
                   if (insp.fecha_ingreso.includes('/')) {
-                      let pt = insp.fecha_ingreso.split('/'); fIngreso = new Date(pt[2], pt[1]-1, pt[0]);
+                      let p = insp.fecha_ingreso.split('/'); fIngreso = new Date(p[2], p[1]-1, p[0]);
                   } else {
                       fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
                   }
+
+                  // 2. Sumamos los días propuestos
                   let dProp = parseInt(insp.dias_propuestos) || 30;
                   let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
+
+                  // 3. Calculamos la diferencia
                   diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
               }
 
@@ -697,7 +703,8 @@ function mostrarStatusInspecciones(inspecciones) {
               let badgeProx = diasRestantes === -9999 ? `<span class="badge bg-danger shadow-sm">Sin Registro</span>` : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`;
               let badgeEst = `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
               let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
-
+              
+              // 🔥 WIALON GPS INYECCIÓN EN TABLA INSPECCIONES 🔥
               let ubicacionHtml = '<span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-geo-alt-fill"></i> N/A</span>';
               let wialonData = buscarWialonPorPlaca(placa);
               if (wialonData && wialonData.lat !== 0) {
@@ -715,11 +722,12 @@ function mostrarStatusInspecciones(inspecciones) {
                   items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
                   items += `<li><hr class="dropdown-divider"></li>`;
                   items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
+                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
               html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
-              <td class="fw-bold text-primary" data-value="${placa}">${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
+              <td class="fw-bold text-primary" data-value="${placa}">${(insp && insp.id) ? `<input type="checkbox" class="form-check-input me-2 chk-bulk-statusMant" value="${insp.id}" onclick="event.stopPropagation(); toggleBulkBtn('statusMant')">` : ''}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
               <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
               <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
@@ -728,7 +736,7 @@ function mostrarStatusInspecciones(inspecciones) {
       rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
   }
   document.getElementById('cuerpoTablaStatus').innerHTML = html;
-  filtrarStatusAvanzado();
+  filtrarStatusAvanzado(); 
 }
 
 function filtrarStatusAvanzado() {
@@ -747,22 +755,22 @@ function filtrarStatusAvanzado() {
     let classTipo = matchIcon[1];
     let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
     let visibleCount = 0;
-
+    
     childRows.forEach(row => {
-        let cli = row.getAttribute('data-cliente'); let mar = row.getAttribute('data-marca');
+        let cli = row.getAttribute('data-cliente'); let mar = row.getAttribute('data-marca'); 
         let est = row.getAttribute('data-estado-v2'); let mot = row.getAttribute('data-motor');
-        let dias = parseInt(row.getAttribute('data-dias')); let textoFila = row.textContent.toLowerCase();
-
-        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchMar = (!chkMar.length || chkMar.includes(mar));
+        let dias = parseInt(row.getAttribute('data-dias')); let textoFila = row.textContent.toLowerCase(); 
+        
+        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchMar = (!chkMar.length || chkMar.includes(mar)); 
         let matchEst = (!chkEst.length || chkEst.includes(est)); let matchTxt = (!txt || textoFila.includes(txt));
-
+        
         if(matchCli && matchMar && matchEst && matchTxt) {
             visibleCount++;
             let isVigenteChart = dias >= 0;
-            if(isVigenteChart) { cntTotalVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotVig++; else cntNoMotVig++; }
+            if(isVigenteChart) { cntTotalVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotVig++; else cntNoMotVig++; } 
             else { cntTotalNoVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotNoVig++; else cntNoMotNoVig++; }
-
-            row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
+            
+            row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none'; 
         } else {
             row.style.display = 'none';
         }
@@ -773,8 +781,8 @@ function filtrarStatusAvanzado() {
         header.style.display = '';
         if(spanConteo) spanConteo.innerText = visibleCount + " Unidades";
         if(icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
-    } else {
-        header.style.display = 'none';
+    } else { 
+        header.style.display = 'none'; 
     }
   });
 
@@ -1028,178 +1036,11 @@ function generarPDFInspeccion() {
 }
 
 function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('cuerpoTablaPlacas').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
-// ============================================================
-// LOGICA DE RENDERIZADO "SAAS ADAPTATIVO" (PLACAS)
-// ============================================================
-// 🌌 LÓGICA DE RENDERIZADO "SAAS ADAPTATIVO" (PLACAS)
-// ============================================================
-window.vistaActualPlacas = 'grid';
-
-// ============================================================
-// LÓGICA DE RENDERIZADO ORIGINAL (PLACAS)
-// ============================================================
-
-function mostrarPlacas(datos) {
-    if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return;
-
-    datos.sort((a, b) => {
-        const cliA = (a[1]||'').trim().toUpperCase();
-        const cliB = (b[1]||'').trim().toUpperCase();
-        const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3;
-        const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3;
-        if (wA !== wB) return wA - wB;
-        if (cliA !== cliB) return cliA.localeCompare(cliB);
-        const estA = (a[8]||'').trim();
-        const estB = (b[8]||'').trim();
-        if (estA !== estB) return estA.localeCompare(estB);
-        return (a[0]||'').localeCompare(b[0]||'');
-    });
-
-    dataGlobalPlacas = datos;
-    let p = permisosUsuario || {};
-    let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
-    const canEditP = isAdmP || p.placas?.e === true;
-    const canDeleteP = isAdmP || p.placas?.d === true;
-    let html = '';
-    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
-
-    if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>';
-    } else {
-        const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set();
-        let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set();
-        let clienteActual = null;
-
-        datos.forEach((fila, index) => {
-            if ((fila[0]||'').toUpperCase() === 'PLACA') return;
-
-            const plc = fila[0] ? fila[0].trim() : '';
-            const cli = fila[1] ? fila[1].trim() : '';
-            const tip = fila[2] ? fila[2].trim() : '';
-            const mod = fila[3] ? fila[3].trim() : '';
-            const mar = fila[4] ? fila[4].trim() : '';
-            const ruc = fila[5] ? fila[5].trim() : '';
-            const cnf = fila[6] ? fila[6].trim() : '';
-            const cmb = fila[7] ? fila[7].trim() : '';
-            const est = fila[8] ? fila[8].trim() : '';
-            const uts = fila[10] ? fila[10].trim() : '';
-
-            if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli);
-            if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip);
-            if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar);
-            if (est === 'Activa' || est === 'Inactiva') setEstados.add(est);
-            if(plc && plc!=="-") setFormPlacas.add(plc);
-            if(cli && cli!=="-") setFormClientes.add(cli);
-            if(tip && tip!=="-") setFormTipos.add(tip);
-            if(mod && mod!=="-") setFormModelos.add(mod);
-            if(mar && mar!=="-") setFormMarcas.add(mar);
-            if(cnf && cnf!=="-") setFormConfs.add(cnf);
-            if(cmb && cmb!=="-") setFormCombs.add(cmb);
-            if(uts && uts!=="-") setFormUts.add(uts);
-
-            if (window.verPapelera && window.verPapelera['placas']) {
-                if (est !== 'Eliminada') return;
-            } else {
-                if (est === 'Eliminada') return;
-            }
-
-            if (cli !== clienteActual) {
-                clienteActual = cli;
-                const displayCli = cli || 'Sin Asignar';
-                html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`;
-            }
-
-            const t = tip.toLowerCase();
-            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
-            else if (t.includes('carreta')) kpiCarreta++;
-            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
-            else if (t.includes('tracto')) kpiTracto++;
-
-            const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`;
-
-            let menuAcciones = '';
-            if (canEditP || canDeleteP) {
-                let items = '';
-                if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`;
-                if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
-                if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
-                menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
-            } else {
-                menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
-            }
-
-            html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}">
-                <td class="fw-bold" data-value="${fila[0]}">
-                    <span class="chk-bulk-container-placas" style="display: ${window.modoSeleccion && window.modoSeleccion['placas'] ? 'inline-block' : 'none'};">
-                        <input type="checkbox" class="form-check-input me-2 chk-bulk-placas" value="${fila[0]}" onclick="event.stopPropagation(); toggleBulkBtn('placas')">
-                    </span>
-                    ${fila[0]}
-                </td>
-                <td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td>
-            </tr>`;
-        });
-        rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
-    }
-    document.getElementById('cuerpoTablaPlacas').innerHTML = html;
-    const safe = v => document.getElementById(v);
-    if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
-    if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
-    if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
-    if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
-    filtrarPlacasAvanzado();
-}
-
-function filtrarPlacasAvanzado() {
-    const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
-    const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value);
-    const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
-    const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value);
-    const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
-
-    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
-    const conteoClientes = {};
-    const filas = document.querySelectorAll('#cuerpoTablaPlacas tr.data-row');
-
-    filas.forEach(row => {
-        const cli = row.getAttribute('data-cliente');
-        const tip = row.getAttribute('data-tipo');
-        const mar = row.getAttribute('data-marca');
-        const est = row.getAttribute('data-estado');
-        const textoFila = row.innerText.toLowerCase();
-
-        const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est)));
-
-        if (ok) {
-            row.style.display = '';
-            conteoClientes[cli] = (conteoClientes[cli] || 0) + 1;
-            const t = tip.toLowerCase();
-            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
-            else if (t.includes('carreta')) kpiCarreta++;
-            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
-            else if (t.includes('tracto')) kpiTracto++;
-        } else {
-            row.style.display = 'none';
-        }
-    });
-
-    document.querySelectorAll('#cuerpoTablaPlacas tr.group-header').forEach(header => {
-        const cli = header.getAttribute('data-group-cliente');
-        if (conteoClientes[cli] > 0) {
-            header.style.display = '';
-            const badge = header.querySelector('.group-count');
-            if (badge) badge.innerText = conteoClientes[cli];
-        } else {
-            header.style.display = 'none';
-        }
-    });
-
-    const safe = v => document.getElementById(v);
-    if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
-    if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
-    if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
-    if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
-}
-
+function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (window.verPapelera && window.verPapelera['placas']) { if (est !== 'Eliminada') return; } else { if (est === 'Eliminada') return; } if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}"><span class="chk-bulk-container-placas" style="display: ${window.modoSeleccion && window.modoSeleccion['placas'] ? 'inline-block' : 'none'};"><input type="checkbox" class="form-check-input me-2 chk-bulk-placas" value="${fila[0]}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
+function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
+function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[5] && p[5].trim() !== "" && p[5].trim() !== "-"); if (match) { rucInput.value = match[5].trim(); } }
+function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
+function filtrarPlacasAvanzado() { const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || ''; const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value); const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value); const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value); const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value); let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0; const conteoClientes = {}; const filas = document.querySelectorAll('#cuerpoTablaPlacas tr.data-row'); filas.forEach(row => { const cli = row.getAttribute('data-cliente'); const tip = row.getAttribute('data-tipo'); const mar = row.getAttribute('data-marca'); const est = row.getAttribute('data-estado'); const textoFila = row.innerText.toLowerCase(); const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est))); if (ok) { row.style.display = ''; conteoClientes[cli] = (conteoClientes[cli] || 0) + 1; const t = (tip||'').toLowerCase(); if (t.includes('cami') || t.includes('camion')) kpiCamion++; else if (t.includes('carreta')) kpiCarreta++; else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++; else if (t.includes('tracto')) kpiTracto++; } else { row.style.display = 'none'; } }); document.querySelectorAll('#cuerpoTablaPlacas tr.group-header').forEach(g => { const cli = g.getAttribute('data-group-cliente'); const total = conteoClientes[cli] || 0; g.style.display = total > 0 ? '' : 'none'; const badge = g.querySelector('.group-count'); if (badge) badge.innerText = total; }); const safe = v => document.getElementById(v); if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion; if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta; if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi; if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto; }
 function abrirDetallePlaca(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalPlacas[index]; if (!p) return; ['det-placa','det-cliente','det-tipo','det-modelo','det-marca','det-ruc','det-conf','det-comb','det-estado','det-operativo','det-uts','det-motora','det-llantas','det-enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.innerText = p[i] || '-'; }); new bootstrap.Modal(document.getElementById('modalDetallePlaca')).show(); }
 function abrirModalEditarPlaca(index) { const p = dataGlobalPlacas[index]; if (!p) return; document.getElementById('formEditarPlaca')?.reset(); ['e_placa','e_cliente','e_tipo','e_modelo','e_marca','e_ruc','e_conf','e_comb','e_estado','e_operativo','e_uts','e_motora','e_llantas','e_enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.value = p[i] || ''; }); const btn = document.getElementById('btnActualizarPlaca'); if(btn){ btn.disabled = false; btn.innerHTML = 'Actualizar Placa';} new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show(); }
 function enviarPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
@@ -2339,10 +2180,6 @@ window.seleccionarPorcentaje = function(uid, pct, btn) {
 // 📱 LÓGICA UX MÓVIL: BOTÓN ACCIONES (FAB)
 // ==========================================
 
-// ==========================================
-// 📱 LÓGICA UX MÓVIL: BOTÓN ACCIONES (FAB) CORREGIDO
-// ==========================================
-
 function toggleFabMenu() {
     if (window.innerWidth > 768) return;
     const wrapper = document.getElementById('fabActionListWrapper');
@@ -2363,25 +2200,22 @@ function generarListaAccionesFab() {
     listContent.innerHTML = '';
 
     let moduloActual = null;
-    document.querySelectorAll('.modulo-wrapper').forEach(mod => {
-        // Detectar de forma segura cuál es el módulo activo en la pantalla
-        if (window.getComputedStyle(mod).display === 'block' || window.getComputedStyle(mod).display === 'flex') {
+    document.querySelectorAll('[id^="modulo"]').forEach(mod => {
+        const display = window.getComputedStyle(mod).display;
+        if (display === 'block' || display === 'flex') {
             moduloActual = mod;
         }
     });
 
     if (!moduloActual) return;
 
-    // 🔥 LA SOLUCIÓN: Buscamos los botones en el diseño antiguo (.controls-row) o en el nuevo diseño SaaS (.top-controls-buttons)
-    const contenedorBotones = moduloActual.querySelector('.controls-row .gap-2:last-child, .top-controls-buttons');
+    const divBotonesAll = moduloActual.querySelectorAll('.controls-row .d-flex.align-items-center.gap-2');
+    const divBotones = divBotonesAll[divBotonesAll.length - 1];
 
-    if (!contenedorBotones) {
-        listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
-        return;
-    }
+    if (!divBotones) return;
 
-    // Buscamos botones sueltos o items dentro de dropdowns (como Importar/Exportar)
-    const buttons = contenedorBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item');
+    // 🔥 MAGIA: Ahora buscamos botones normales Y TAMBIÉN las opciones dentro de los menús desplegables (.dropdown-item)
+    const buttons = divBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item, .cache-badge');
 
     if (buttons.length === 0) {
         listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
@@ -2389,11 +2223,12 @@ function generarListaAccionesFab() {
     }
 
     buttons.forEach(btn => {
-        // Si el botón está oculto (ej. Botón de Ocultar Masivo cuando no hay nada seleccionado), lo ignoramos
-        if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none' || btn.classList.contains('d-none')) return;
+        if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
 
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
+
+        // Convertimos el diseño al estándar del botón flotante
         clonedBtn.className = 'fab-action-item text-decoration-none';
 
         const originalClasses = btn.className;
@@ -2407,8 +2242,12 @@ function generarListaAccionesFab() {
             else if (originalClasses.includes('primary')) icon.classList.add('text-primary');
         }
 
-        // Asignamos la acción original y cerramos el menú flotante
-        clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); });
+        if(clonedBtn.tagName.toLowerCase() === 'span') {
+            clonedBtn.style.cursor = 'default';
+        } else {
+            clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); });
+        }
+
         listContent.appendChild(clonedBtn);
     });
 }
@@ -3073,9 +2912,6 @@ window.toggleModoSeleccion = function(modulo) {
     document.querySelectorAll(`.chk-bulk-container-${modulo}`).forEach(c => {
         c.style.display = window.modoSeleccion[modulo] ? 'inline-block' : 'none';
     });
-
-    const _cpc = document.getElementById('contenedorPlacasDinamico');
-    if(_cpc) _cpc.classList.toggle('modo-seleccion-activo', !!window.modoSeleccion[modulo]);
 };
 
 window.toggleVistaPapelera = function(modulo) {
@@ -3142,677 +2978,4 @@ window.eliminarMasivo = function(coleccion, modulo) {
         document.body.style.cursor = 'default';
         alert('Error de red: ' + e.message);
     });
-};
-
-// ============================================================
-// 🆕 OVERRIDES v8: Módulo Placas SaaS, Papelera, Import/Export
-// ============================================================
-// _overrides.js — Appended to logica_completo_ad30184.js (3165 lines)
-// Overrides and additions for Azkell CRM v8 SaaS — Placas paginado + Status cards
-
-// ── Funciones auxiliares de filtros y datalists ──────────────
-function rellenarFiltroCheck(idUl, setDatos, funcionFiltrar) {
-    let ul = document.getElementById(idUl);
-    if (!ul) return;
-    ul.innerHTML = `<li><button class="dropdown-item text-danger py-1 fw-bold" onclick="document.querySelectorAll('#${idUl} input').forEach(c=>c.checked=false); ${funcionFiltrar}(); event.stopPropagation();"><i class="bi bi-x-circle"></i> Limpiar Filtro</button></li><li><hr class="dropdown-divider"></li>`;
-    Array.from(setDatos).sort().forEach(val => {
-        let sid = 'chk_' + idUl + '_' + normalizarClase(val);
-        ul.innerHTML += `<li><div class="form-check px-3 py-1"><input class="form-check-input ms-0 me-2" type="checkbox" value="${val}" id="${sid}" onchange="${funcionFiltrar}(); event.stopPropagation();"><label class="form-check-label small theme-text" for="${sid}">${val}</label></div></li>`;
-    });
-}
-function rellenarDatalist(id, setDatos) {
-    let dl = document.getElementById(id);
-    if (!dl) return;
-    dl.innerHTML = '';
-    Array.from(setDatos).sort().forEach(val => { dl.innerHTML += `<option value="${val}">`; });
-}
-function fillList(id, setDatos) {
-    return rellenarFiltroCheck(id, setDatos, 'filtrarStatusFlotaAvanzado');
-}
-// Spotlight functions (abrirSpotlight/cerrarSpotlight/buscarSpotlight) already exist
-// in ad30184 (lines 2735-2821) — SKIPPED here.
-// updateGraficosEnVivo already exists in ad30184 (line 799) — SKIPPED here.
-
-// ── VARIABLE DECLARATIONS (var to avoid duplicate let errors) ─────────────────
-var paginaActualPlacas = 1;
-var colActualesPlacas = 4;
-var ITEMS_POR_PAGINA = 12;
-var datosFiltradosPlacas = [];
-var papeleraActiva = false;
-
-// ── MÓDULO PLACAS: GRID/LISTA PAGINADO ────────────────────────────────────────
-
-window.cambiarColumnasPlacas = function(cols) {
-    colActualesPlacas = parseInt(cols);
-    ITEMS_POR_PAGINA = colActualesPlacas * 3;
-    paginaActualPlacas = 1;
-    const contenedor = document.getElementById('contenedorPlacasDinamico');
-    if (contenedor && window.vistaActualPlacas === 'grid') {
-        contenedor.className = 'placas-grid-view grid-cols-' + colActualesPlacas + ' pb-2';
-    }
-    renderizarPaginaPlacas();
-};
-
-window.cambiarVistaPlacas = function(vista) {
-    window.vistaActualPlacas = vista;
-    document.querySelectorAll('.btn-view-toggle').forEach(function(b) { b.classList.remove('active'); });
-    var btnTarget = document.getElementById(vista === 'grid' ? 'btnViewGrid' : 'btnViewList');
-    if (btnTarget) btnTarget.classList.add('active');
-    const contenedor = document.getElementById('contenedorPlacasDinamico');
-    if (contenedor) {
-        contenedor.className = vista === 'grid'
-            ? 'placas-grid-view grid-cols-' + colActualesPlacas + ' pb-2'
-            : 'placas-list-view pb-2';
-    }
-};
-
-window.mostrarPlacas = function(datos) {
-    if (!Array.isArray(datos)) return;
-    dataGlobalPlacas = datos;
-    datosFiltradosPlacas = datos.slice();
-    paginaActualPlacas = 1;
-
-    // KPIs
-    var contar = function(keys) {
-        return datos.filter(function(d) {
-            return keys.some(function(k) { return (d[2] || '').toUpperCase().includes(k); });
-        }).length;
-    };
-    var kpiSet = function(id, n) { var el = document.getElementById(id); if (el) el.innerText = n; };
-    kpiSet('kpi-camion',  contar(['CAMIÓN', 'CAMION']));
-    kpiSet('kpi-carreta', contar(['CARRETA']));
-    kpiSet('kpi-semi',    contar(['SEMI', 'SEMIRREMOLQUE', 'SEMIREMOLQUE']));
-    kpiSet('kpi-tracto',  contar(['TRACTO']));
-
-    // Filtros dropdown
-    var clientes = [...new Set(datos.map(function(d) { return d[1]; }).filter(Boolean))].sort();
-    var tipos    = [...new Set(datos.map(function(d) { return d[2]; }).filter(Boolean))].sort();
-    var estados  = [...new Set(datos.map(function(d) { return d[8]; }).filter(Boolean))].sort();
-
-    var mkItem = function(val, listId) {
-        var safeId = 'f_' + listId + '_' + val.replace(/[^a-zA-Z0-9]/g, '_');
-        return '<li class="px-3 py-1"><div class="form-check"><input class="form-check-input" type="checkbox" id="' + safeId + '" onchange="filtrarPlacasAvanzado()"><label class="form-check-label small" for="' + safeId + '">' + val + '</label></div></li>';
-    };
-
-    var fcEl = document.getElementById('filtroCliente');
-    var ftEl = document.getElementById('filtroTipo');
-    var feEl = document.getElementById('filtroEstado');
-    if (fcEl) fcEl.innerHTML = clientes.map(function(v) { return mkItem(v, 'cli'); }).join('');
-    if (ftEl) ftEl.innerHTML = tipos.map(function(v) { return mkItem(v, 'tip'); }).join('');
-    if (feEl) feEl.innerHTML = estados.map(function(v) { return mkItem(v, 'est'); }).join('');
-
-    // Datalists para autocompletar
-    var fill = function(dlId, vals) {
-        var dl = document.getElementById(dlId);
-        if (dl) dl.innerHTML = vals.map(function(v) { return '<option value="' + v + '">'; }).join('');
-    };
-    fill('dl-placas',   datos.map(function(d) { return d[0]; }).filter(Boolean));
-    fill('dl-clientes', clientes);
-    fill('dl-tipos',    tipos);
-    fill('dl-marcas',   [...new Set(datos.map(function(d) { return d[4]; }).filter(Boolean))].sort());
-    fill('dl-modelos',  [...new Set(datos.map(function(d) { return d[3]; }).filter(Boolean))].sort());
-    fill('dl-uts',      [...new Set(datos.map(function(d) { return d[10]; }).filter(Boolean))].sort());
-
-    renderizarPaginaPlacas();
-};
-
-window.filtrarPlacasAvanzado = function() {
-    var q = (document.getElementById('buscadorPlacas') ? document.getElementById('buscadorPlacas').value : '').trim().toLowerCase();
-
-    // Si nada está marcado en una categoría → no filtra por esa categoría
-    var getChecked = function(listId) {
-        var items = Array.from(document.querySelectorAll('#' + listId + ' input[type=checkbox]'));
-        if (items.length === 0) return null;
-        var checked = items.filter(function(i) { return i.checked; }).map(function(i) {
-            return i.labels && i.labels[0] ? (i.labels[0].innerText || '').trim() : '';
-        });
-        return checked.length > 0 ? checked : null;
-    };
-
-    var cliFilter = getChecked('filtroCliente');
-    var tipFilter = getChecked('filtroTipo');
-    var estFilter = getChecked('filtroEstado');
-
-    datosFiltradosPlacas = dataGlobalPlacas.filter(function(fila) {
-        if (q && !(
-            (fila[0] || '').toLowerCase().includes(q) ||
-            (fila[1] || '').toLowerCase().includes(q) ||
-            (fila[2] || '').toLowerCase().includes(q)
-        )) return false;
-        if (cliFilter && !cliFilter.includes(fila[1])) return false;
-        if (tipFilter && !tipFilter.includes(fila[2])) return false;
-        if (estFilter && !estFilter.includes(fila[8])) return false;
-        return true;
-    });
-
-    paginaActualPlacas = 1;
-    renderizarPaginaPlacas();
-};
-
-window.renderizarPaginaPlacas = function() {
-    var contenedor = document.getElementById('contenedorPlacasDinamico');
-    var infoPag    = document.getElementById('info-paginacion-placas');
-    var ctrlPag    = document.getElementById('controles-paginacion-placas');
-
-    if (datosFiltradosPlacas.length === 0) {
-        if (contenedor) contenedor.innerHTML = '<div class="w-100 text-center py-5 text-muted"><i class="bi bi-search fs-1"></i><br>No hay vehículos que coincidan.</div>';
-        if (infoPag) infoPag.innerText = '0 resultados';
-        if (ctrlPag) ctrlPag.innerHTML = '';
-        return;
-    }
-
-    var p = permisosUsuario || {};
-    var isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
-    var canEditP = isAdmP || (p.placas && p.placas.e === true);
-
-    var totalPaginas = Math.ceil(datosFiltradosPlacas.length / ITEMS_POR_PAGINA);
-    if (paginaActualPlacas > totalPaginas) paginaActualPlacas = totalPaginas;
-
-    var inicio      = (paginaActualPlacas - 1) * ITEMS_POR_PAGINA;
-    var fin         = inicio + ITEMS_POR_PAGINA;
-    var datosPagina = datosFiltradosPlacas.slice(inicio, fin);
-
-    var html = '';
-
-    // modoSeleccion in ad30184 is window.modoSeleccion = { placas: false, ... }
-    var chkVisible = (window.modoSeleccion && window.modoSeleccion['placas']) ? 'inline-block' : 'none';
-
-    datosPagina.forEach(function(fila) {
-        var plc = fila[0].trim();
-        var cli = fila[1] ? fila[1].trim() : 'Sin Asignar';
-        var tip = fila[2] ? fila[2].trim() : '-';
-        var mar = fila[4] ? fila[4].trim() : '-';
-        var uts = fila[10] ? fila[10].trim() : '-';
-        var est = fila[8] ? fila[8].trim() : '';
-        var badgeCls = est === 'Activa' ? 'badge-green' : 'badge-red';
-        var indexGlobal = dataGlobalPlacas.findIndex(function(x) { return x[0] === plc; });
-
-        var menuAcciones = '';
-        if (canEditP) {
-            menuAcciones =
-                '<div class="dropdown ms-1" onclick="event.stopPropagation()">' +
-                '<button class="btn-dots" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>' +
-                '<ul class="dropdown-menu shadow"><li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(' + indexGlobal + ')"><i class="bi bi-pencil text-primary"></i> Editar Vehículo</a></li></ul>' +
-                '</div>';
-        }
-
-        html +=
-            '<div class="card-premium" data-index="' + indexGlobal + '" onclick="abrirPanelDetallePlaca(event, ' + indexGlobal + ')">' +
-            '<div class="card-header-theme">' +
-            '<div class="d-flex align-items-center gap-2">' +
-            '<input type="checkbox" class="form-check-input chk-seleccion" style="display:' + chkVisible + ';" onclick="event.stopPropagation(); toggleBulkBtn(\'placas\');">' +
-            '<div class="card-title-prem">' + plc + '</div>' +
-            '</div>' +
-            '<div class="d-flex align-items-center">' +
-            '<span class="badge-premium ' + badgeCls + '">' + est + '</span>' +
-            menuAcciones +
-            '</div>' +
-            '</div>' +
-            '<div class="card-sub-prem text-truncate mb-2" title="' + cli + '"><i class="bi bi-building me-1"></i>' + cli + '</div>' +
-            '<div class="card-body-wrap">' +
-            '<div class="card-data-row"><span>TIPO</span> <span class="theme-text">' + tip + '</span></div>' +
-            '<div class="card-data-row"><span>MARCA</span> <span class="theme-text">' + mar + '</span></div>' +
-            '<div class="card-data-row"><span>U.T.S</span> <span class="theme-text">' + uts + '</span></div>' +
-            '</div>' +
-            '</div>';
-    });
-
-    if (contenedor) contenedor.innerHTML = html;
-
-    if (infoPag) infoPag.innerText = 'Página ' + paginaActualPlacas + ' de ' + totalPaginas + ' (' + datosFiltradosPlacas.length + ' Placas)';
-
-    var btnHtml =
-        '<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(-1)"' + (paginaActualPlacas === 1 ? ' disabled' : '') + '><i class="bi bi-chevron-left"></i></button>' +
-        '<span class="px-3 fw-bold text-primary" style="font-size:0.9rem;">' + paginaActualPlacas + '</span>' +
-        '<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(1)"' + (paginaActualPlacas === totalPaginas ? ' disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
-    if (ctrlPag) ctrlPag.innerHTML = btnHtml;
-
-    if (contenedor) {
-        contenedor.className = window.vistaActualPlacas === 'grid'
-            ? 'placas-grid-view grid-cols-' + colActualesPlacas + ' pb-2'
-            : 'placas-list-view pb-2';
-    }
-};
-
-window.cambiarPaginaPlacas = function(direccion) {
-    paginaActualPlacas += direccion;
-    renderizarPaginaPlacas();
-};
-
-// ── PANEL DETALLE PLACA ────────────────────────────────────────────────────────
-
-window.abrirPanelDetallePlaca = function(event, index) {
-    if (event.target.closest('.dropdown') || event.target.closest('.btn-dots')) return;
-
-    var p = dataGlobalPlacas[index];
-    if (!p) return;
-
-    document.querySelectorAll('.card-premium').forEach(function(c) { c.classList.remove('active'); });
-    event.currentTarget.classList.add('active');
-
-    var setSafe = function(id, val) { var el = document.getElementById(id); if (el) el.innerText = val || '-'; };
-    setSafe('det-placa-header',  p[0]);
-    setSafe('det-marca-header',  p[4]);
-    setSafe('det-modelo-header', p[3]);
-
-    var est = (p[8] || '').trim();
-    var badge = document.getElementById('det-estado-badge');
-    if (badge) {
-        badge.className = 'badge-premium ' + (est === 'Activa' ? 'badge-green' : 'badge-red');
-        badge.innerHTML = est === 'Activa'
-            ? '<i class="bi bi-check-circle-fill me-1"></i>Activa'
-            : '<i class="bi bi-x-circle-fill me-1"></i>Inactiva';
-    }
-
-    setSafe('det-cliente',   p[1]);
-    setSafe('det-ruc',       p[5]);
-    setSafe('det-uts',       p[10]);
-    setSafe('det-operativo', p[9]);
-    setSafe('det-enuso',     p[13]);
-    setSafe('det-tipo',      p[2]);
-    setSafe('det-motora',    p[11]);
-    setSafe('det-conf',      p[6]);
-    setSafe('det-comb',      p[7]);
-    setSafe('det-llantas',   p[12]);
-
-    var perm  = permisosUsuario || {};
-    var isAdm = perm.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
-    var btnE  = document.getElementById('btnEditPanePlaca');
-    var btnD  = document.getElementById('btnDeletePanePlaca');
-    if (btnE) {
-        btnE.style.display = (isAdm || (perm.placas && perm.placas.e)) ? '' : 'none';
-        btnE.onclick = function() { abrirModalEditarPlaca(index); };
-    }
-    if (btnD) {
-        btnD.style.display = (isAdm || (perm.placas && perm.placas.d)) ? '' : 'none';
-        btnD.onclick = function() { eliminarRegistro(p[0], 'Placas'); };
-    }
-
-    var pane = document.getElementById('paneDetallePlaca');
-    if (pane) pane.classList.remove('d-none');
-};
-
-window.cerrarPanelDetallePlaca = function() {
-    var pane = document.getElementById('paneDetallePlaca');
-    if (pane) pane.classList.add('d-none');
-    document.querySelectorAll('.card-premium').forEach(function(c) { c.classList.remove('active'); });
-};
-
-// ── PAPELERA Y SELECCIÓN MASIVA (PLACAS) ──────────────────────────────────────
-
-window.toggleVistaPapelera = function() {
-    window.papeleraActiva = !window.papeleraActiva;
-    var btn = document.getElementById('btnPapelera');
-    if (btn) {
-        btn.classList.toggle('btn-outline-secondary', !window.papeleraActiva);
-        btn.classList.toggle('btn-danger', window.papeleraActiva);
-        btn.innerHTML = window.papeleraActiva
-            ? '<i class="bi bi-arrow-counterclockwise"></i> Volver'
-            : '<i class="bi bi-trash3"></i> Papelera';
-    }
-    if (window.papeleraActiva) {
-        datosFiltradosPlacas = dataGlobalPlacas.filter(function(d) {
-            return (d[8] || '').trim() === 'Eliminada';
-        });
-    } else {
-        datosFiltradosPlacas = dataGlobalPlacas.slice();
-    }
-    paginaActualPlacas = 1;
-    renderizarPaginaPlacas();
-};
-
-window.toggleModoSeleccion = function() {
-    modoSeleccion = !modoSeleccion;
-    var btn        = document.getElementById('btnSeleccionar');
-    var btnEliminar = document.getElementById('btnEliminarMasivo');
-    if (btn) {
-        btn.classList.toggle('btn-outline-secondary', !modoSeleccion);
-        btn.classList.toggle('btn-warning', modoSeleccion);
-        btn.innerHTML = modoSeleccion
-            ? '<i class="bi bi-x-lg"></i> Cancelar'
-            : '<i class="bi bi-check2-square"></i> Seleccionar';
-    }
-    document.querySelectorAll('.card-premium .chk-seleccion').forEach(function(chk) {
-        chk.style.display = modoSeleccion ? 'inline-block' : 'none';
-        chk.checked = false;
-    });
-    if (btnEliminar) btnEliminar.classList.toggle('d-none', !modoSeleccion);
-    toggleBulkBtn();
-};
-
-window.toggleBulkBtn = function() {
-    var count = document.querySelectorAll('.card-premium .chk-seleccion:checked').length;
-    var span  = document.getElementById('countSeleccionados');
-    var btn   = document.getElementById('btnEliminarMasivo');
-    if (span) span.innerText = count;
-    if (btn)  btn.disabled   = count === 0;
-};
-
-window.eliminarMasivo = function() {
-    var checks = document.querySelectorAll('.card-premium .chk-seleccion:checked');
-    if (checks.length === 0) return;
-    if (!confirm('¿Eliminar ' + checks.length + ' placa(s) seleccionada(s)?')) return;
-    var placas = [];
-    checks.forEach(function(chk) {
-        var card = chk.closest('.card-premium');
-        var idx  = parseInt(card ? card.dataset.index : NaN);
-        if (!isNaN(idx) && dataGlobalPlacas[idx]) placas.push(dataGlobalPlacas[idx][0]);
-    });
-    var promesas = placas.map(function(plc) {
-        return fetch('/api/script/eliminarDocumento', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ id: plc, hoja: 'Placas' })
-        });
-    });
-    Promise.all(promesas).then(function() {
-        alert(placas.length + ' placa(s) eliminada(s).');
-        modoSeleccion = false;
-        toggleModoSeleccion();
-        CACHE['placas'] = null;
-        cambiarModulo('placas', 'btnMenuPlacasMant');
-    }).catch(function(e) { alert('Error al eliminar: ' + e.message); });
-};
-
-// ── IMPORT / EXPORT EXCEL (PLACAS) ────────────────────────────────────────────
-
-window.descargarPlantillaPlacas = function() {
-    var headers = ['Placa','Cliente','Tipo','Modelo','Marca','RUC','Configuracion','Combustible','Estado','Operativo','UTS','Motora','Llantas','EnUso'];
-    var wb = XLSX.utils.book_new();
-    var ws = XLSX.utils.aoa_to_sheet([headers]);
-    XLSX.utils.book_append_sheet(wb, ws, 'Placas');
-    XLSX.writeFile(wb, 'Plantilla_Placas.xlsx');
-};
-
-window.importarExcelPlacas = function(input) {
-    var file = input.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var data = new Uint8Array(e.target.result);
-        var wb   = XLSX.read(data, { type: 'array' });
-        var ws   = wb.Sheets[wb.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        if (rows.length <= 1) { alert('El archivo está vacío o solo tiene encabezados.'); input.value = ''; return; }
-        var dataRows = rows.slice(1).filter(function(r) { return r[0]; });
-        if (dataRows.length === 0) { alert('No se encontraron filas con datos.'); input.value = ''; return; }
-        if (!confirm('Se importarán ' + dataRows.length + ' placa(s). ¿Continuar?')) { input.value = ''; return; }
-        procesarImportacionBD(dataRows);
-        input.value = '';
-    };
-    reader.readAsArrayBuffer(file);
-};
-
-window.procesarImportacionBD = function(rows) {
-    var completadas = 0;
-    var errores     = 0;
-    rows.forEach(function(row) {
-        var formData = new FormData();
-        var campos   = ['p_placa','p_cliente','p_tipo','p_modelo','p_marca','p_ruc','p_conf','p_comb','p_estado','p_operativo','p_uts','p_motora','p_llantas','p_enuso'];
-        campos.forEach(function(campo, i) { formData.append(campo, row[i] || ''); });
-        formData.append('usuarioAutor', usuarioLogueado || '');
-        fetch('/api/script/guardarPlaca', { method: 'POST', body: formData })
-            .then(function(r) { return r.json(); })
-            .then(function() {
-                completadas++;
-                if (completadas + errores === rows.length) {
-                    alert('Importación completa: ' + completadas + ' exitosas, ' + errores + ' errores.');
-                    CACHE['placas'] = null;
-                    cambiarModulo('placas', 'btnMenuPlacasMant');
-                }
-            })
-            .catch(function() {
-                errores++;
-                if (completadas + errores === rows.length) {
-                    alert('Importación completa: ' + completadas + ' exitosas, ' + errores + ' errores.');
-                    CACHE['placas'] = null;
-                    cambiarModulo('placas', 'btnMenuPlacasMant');
-                }
-            });
-    });
-};
-
-// ── MÓDULO STATUS INSPECCIONES (CARDS) ────────────────────────────────────────
-
-window.mostrarStatusInspecciones = function(inspecciones) {
-    if (!Array.isArray(inspecciones)) return;
-    dataGlobalInspecciones = inspecciones;
-    var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-
-    var numId = function(id) { return parseInt((id || '').split('-')[1]) || 0; };
-    var inspeccionesOrdenadas = inspecciones.slice().sort(function(a, b) { return numId(b.id) - numId(a.id); });
-    inspeccionesOrdenadas = inspeccionesOrdenadas.filter(function(i) { return i.estado !== 'Eliminada'; });
-
-    var dataFinal = [];
-
-    var placasActivasEnUso = dataGlobalPlacas.filter(function(p) {
-        var estado = p[8] ? p[8].toString().trim().toUpperCase() : '';
-        var enUso  = p[13] ? p[13].toString().trim().toUpperCase() : '';
-        return estado === 'ACTIVA' && enUso === 'SI';
-    });
-
-    if (!isHistorialStatus) {
-        placasActivasEnUso.forEach(function(p) {
-            var placaStr = normalizeStr(p[0]);
-            var insp = inspeccionesOrdenadas.find(function(i) { return normalizeStr(i.placa) === placaStr; });
-            dataFinal.push({ infoPlaca: p, insp: insp });
-        });
-    } else {
-        inspeccionesOrdenadas.forEach(function(insp) {
-            var placaStr = normalizeStr(insp.placa);
-            var p = dataGlobalPlacas.find(function(pl) { return normalizeStr(pl[0]) === placaStr; });
-            if (!p) p = [insp.placa, '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'];
-            dataFinal.push({ infoPlaca: p, insp: insp });
-        });
-    }
-
-    var html = '';
-    var setClis = new Set(), setEstadosStatus = new Set();
-    var cntTotalVig = 0, cntTotalNoVig = 0, cntMotVig = 0, cntMotNoVig = 0, cntNoMotVig = 0, cntNoMotNoVig = 0;
-
-    if (dataFinal.length === 0) {
-        html = '<div class="w-100 text-center py-5 text-muted">No hay inspecciones para las placas Activas y en Uso.</div>';
-    } else {
-        dataFinal.forEach(function(item, index) {
-            var p      = item.infoPlaca;
-            var insp   = item.insp;
-            var placa  = p[0];
-            var cli    = p[1] || '-';
-            var motora = p[11] || '-';
-            if (cli !== '-') setClis.add(cli);
-
-            var fIngresoBonita = '-';
-            var diasRestantes  = -9999;
-            var tecnico        = 'Sin asignar';
-            var txtEstado      = '';
-            var textoBadgeProx = '';
-
-            if (insp && insp.fecha_ingreso) {
-                fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso);
-                tecnico = insp.tecnico || tecnico;
-                var fIngreso;
-                if (insp.fecha_ingreso.includes('/')) {
-                    var pts = insp.fecha_ingreso.split('/');
-                    fIngreso = new Date(pts[2], pts[1] - 1, pts[0]);
-                } else {
-                    fIngreso = new Date(insp.fecha_ingreso + 'T00:00:00');
-                }
-                var dProp = parseInt(insp.dias_propuestos) || 30;
-                var fProx = new Date(fIngreso.getTime());
-                fProx.setDate(fProx.getDate() + dProp);
-                diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
-            }
-
-            if (diasRestantes === -9999) {
-                txtEstado = 'SIN REGISTRO'; textoBadgeProx = 'No Aplica';
-            } else if (diasRestantes < 0) {
-                txtEstado = 'VENCIDO'; textoBadgeProx = 'Hace ' + Math.abs(diasRestantes) + ' d';
-                cntTotalNoVig++;
-                if (normalizeStr(motora).includes('MOTORA')) cntMotNoVig++; else cntNoMotNoVig++;
-            } else if (diasRestantes <= 7) {
-                txtEstado = 'POR VENCER'; textoBadgeProx = 'Faltan ' + diasRestantes + ' d';
-                cntTotalVig++;
-                if (normalizeStr(motora).includes('MOTORA')) cntMotVig++; else cntNoMotVig++;
-            } else {
-                txtEstado = 'VIGENTE'; textoBadgeProx = 'Faltan ' + diasRestantes + ' d';
-                cntTotalVig++;
-                if (normalizeStr(motora).includes('MOTORA')) cntMotVig++; else cntNoMotVig++;
-            }
-
-            if (txtEstado !== 'SIN REGISTRO') setEstadosStatus.add(txtEstado);
-
-            var badgeCls = txtEstado === 'VIGENTE'     ? 'badge-green'
-                         : txtEstado === 'VENCIDO'     ? 'badge-red'
-                         : txtEstado === 'POR VENCER'  ? 'badge-yellow'
-                         : 'badge-secondary';
-
-            window['inspDataTemp_' + index] = {
-                placa:         placa,
-                cliente:       cli,
-                tecnico:       tecnico,
-                fecha_ingreso: fIngresoBonita,
-                estado:        txtEstado,
-                fallas:        insp ? (insp.detalles_json || null) : null,
-                id:            insp ? (insp.id || null) : null,
-                badgeCls:      badgeCls,
-                textoBadgeProx: textoBadgeProx
-            };
-
-            html +=
-                '<div class="status-card" onclick="abrirPanelDetalleStatus(event, ' + index + ')"' +
-                ' data-index="' + index + '" data-cliente="' + cli + '" data-estado="' + txtEstado + '" data-txt="' + placa + ' ' + tecnico + '">' +
-                '<div class="status-card-header">' +
-                '<div>' +
-                '<div class="status-card-title">' + placa + '</div>' +
-                '<div class="status-card-subtitle text-truncate" style="max-width:140px;"><i class="bi bi-person me-1"></i>' + tecnico + '</div>' +
-                '</div>' +
-                '<div class="d-flex flex-column align-items-end gap-1">' +
-                '<span class="status-card-badge badge-premium ' + badgeCls + '">' + txtEstado + '</span>' +
-                '<span style="font-size:0.7rem; color:var(--prem-muted); font-weight:bold;">' + textoBadgeProx + '</span>' +
-                '</div>' +
-                '</div>' +
-                '<div class="status-card-body">' +
-                '<div class="status-card-field"><div class="status-card-field-label">FECHA</div><div class="status-card-field-value theme-text">' + fIngresoBonita + '</div></div>' +
-                '<div class="status-card-field"><div class="status-card-field-label">CLIENTE</div><div class="status-card-field-value theme-text text-truncate" style="max-width:100px;">' + cli + '</div></div>' +
-                '</div>' +
-                '</div>';
-        });
-
-        var fillList = function(id, set, isMobile) {
-            var suffix = isMobile ? '-mobile' : '';
-            var ul = document.getElementById(id + suffix);
-            if (!ul) return;
-            ul.innerHTML = '<li><button class="dropdown-item text-danger py-1" onclick="document.querySelectorAll(\'#' + id + suffix + ' input\').forEach(c=>c.checked=false); filtrarStatusAvanzado()"><i class="bi bi-x-circle"></i> Limpiar</button></li><li><hr class="dropdown-divider"></li>';
-            Array.from(set).sort().forEach(function(v) {
-                var sid = 'chk-' + id + suffix + '-' + normalizarClase(v);
-                ul.innerHTML += '<li><div class="form-check px-3 py-1"><input class="form-check-input ms-0 me-2" type="checkbox" value="' + v + '" id="' + sid + '" onchange="filtrarStatusAvanzado()"><label class="form-check-label small theme-text" for="' + sid + '">' + v + '</label></div></li>';
-            });
-        };
-        fillList('filtroStatusCliente', setClis,         false);
-        fillList('filtroStatusEstado',  setEstadosStatus, false);
-        fillList('filtroStatusCliente', setClis,         true);
-        fillList('filtroStatusEstado',  setEstadosStatus, true);
-    }
-
-    var contenedorStatus = document.getElementById('contenedorStatusDinamico');
-    if (contenedorStatus) contenedorStatus.innerHTML = html;
-    updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig);
-};
-
-window.filtrarStatusAvanzado = function() {
-    var txt    = document.getElementById('buscadorStatus') ? document.getElementById('buscadorStatus').value.toLowerCase() : '';
-    var chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked, #filtroStatusCliente-mobile input:checked')).map(function(e) { return e.value; });
-    var chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked,  #filtroStatusEstado-mobile input:checked')).map(function(e) { return e.value; });
-    document.querySelectorAll('#contenedorStatusDinamico .status-card').forEach(function(card) {
-        var cli    = card.getAttribute('data-cliente');
-        var est    = card.getAttribute('data-estado');
-        var texto  = (card.getAttribute('data-txt') || '').toLowerCase();
-        var okTxt  = !txt    || texto.includes(txt);
-        var okCli  = chkCli.length === 0 || chkCli.includes(cli);
-        var okEst  = chkEst.length === 0 || chkEst.includes(est);
-        card.style.display = (okTxt && okCli && okEst) ? '' : 'none';
-    });
-};
-
-// ── PANEL DETALLE STATUS INSPECCIÓN ───────────────────────────────────────────
-
-window.abrirPanelDetalleStatus = function(event, index) {
-    var obj = window['inspDataTemp_' + index];
-    if (!obj) return;
-
-    document.querySelectorAll('#contenedorStatusDinamico .status-card').forEach(function(c) { c.classList.remove('active'); });
-    event.currentTarget.classList.add('active');
-
-    var elPlaca = document.getElementById('det-insp-placa');
-    if (elPlaca) elPlaca.innerText = obj.placa;
-
-    var badge = document.getElementById('det-insp-estado');
-    if (badge) { badge.className = 'badge-premium ' + obj.badgeCls; badge.innerHTML = obj.estado; }
-
-    var elFecha = document.getElementById('det-insp-fecha');  if (elFecha) elFecha.innerText = obj.fecha_ingreso;
-    var elTec   = document.getElementById('det-insp-tec');    if (elTec)   elTec.innerText   = obj.tecnico;
-    var elKm    = document.getElementById('det-insp-km');     if (elKm)    elKm.innerText    = obj.km ? obj.km.toLocaleString() + ' km' : '-';
-    var elProx  = document.getElementById('det-insp-prox');   if (elProx)  elProx.innerText  = obj.textoBadgeProx;
-
-    var ubicacionHtml = '<span class="text-muted small">Sin conexión GPS</span>';
-    var wialonData    = buscarWialonPorPlaca(obj.placa);
-    if (wialonData && wialonData.lat !== 0) {
-        ubicacionHtml =
-            '<div class="d-flex gap-2">' +
-            '<button class="btn btn-sm btn-primary fw-bold text-white py-0 px-2" onclick="abrirMapaFlotante(\'' + obj.placa + '\', ' + wialonData.lat + ', ' + wialonData.lng + ')"><i class="bi bi-map"></i> Mapa</button>' +
-            '<span class="badge bg-secondary d-flex align-items-center"><i class="bi bi-speedometer me-1"></i> ' + wialonData.km.toLocaleString() + ' km</span>' +
-            '</div>';
-    }
-    var elWialon = document.getElementById('det-insp-wialon');
-    if (elWialon) elWialon.innerHTML = ubicacionHtml;
-
-    var htmlFallas = '';
-    if (obj.fallas) {
-        try {
-            var detallesArray = typeof obj.fallas === 'string' ? JSON.parse(obj.fallas) : obj.fallas;
-            detallesArray.forEach(function(d) {
-                if (d.estado === 'SIN DATOS' || d.estado === '') return;
-                var colorTxt = 'var(--prem-text)';
-                var icon     = 'ℹ️';
-                if (d.estado === 'FALLA') { colorTxt = 'var(--prem-red-txt)';   icon = '❌'; }
-                else if (d.estado === 'OK') { colorTxt = 'var(--prem-green-txt)'; icon = '✅'; }
-                var fotoBtn = '';
-                if (d.foto && d.foto.length > 100) {
-                    var nombreSeguro = d.item.replace(/'/g, "\\'");
-                    fotoBtn = '<button class="btn btn-sm btn-outline-secondary py-0 px-2 ms-2" onclick="verFotoEvidencia(\'' + d.foto + '\', \'Evidencia: ' + nombreSeguro + '\')"><i class="bi bi-camera"></i> Foto</button>';
-                }
-                htmlFallas +=
-                    '<div class="p-2 border-bottom-theme mb-1">' +
-                    '<strong class="d-block text-muted small">' + d.categoria.replace(/^\d+\.\s*/, '') + '</strong>' +
-                    '<span class="theme-text">' + d.item + ':</span> ' +
-                    '<span style="color:' + colorTxt + '; font-weight:bold;">' + icon + ' ' + d.estado + '</span> ' +
-                    fotoBtn +
-                    (d.observacion ? '<div class="text-danger small mt-1 fst-italic">Obs: ' + d.observacion + '</div>' : '') +
-                    '</div>';
-            });
-        } catch (e) { /* ignore parse errors */ }
-    }
-    if (htmlFallas === '') htmlFallas = '<div class="text-muted p-2">Sin hallazgos registrados.</div>';
-
-    var elFallas = document.getElementById('det-insp-fallas-container');
-    if (elFallas) elFallas.innerHTML = htmlFallas;
-
-    var btnPdf  = document.getElementById('btnPdfPaneStatus');
-    var btnEdit = document.getElementById('btnEditPaneStatus');
-    if (obj.id) {
-        if (btnPdf)  { btnPdf.style.display  = 'block'; btnPdf.onclick  = function() { verDetalleInspeccion(obj.id, false); }; }
-        if (btnEdit) { btnEdit.style.display = 'block'; btnEdit.onclick = function() { abrirModalEditarInspeccion(obj.id); }; }
-    } else {
-        if (btnPdf)  btnPdf.style.display  = 'none';
-        if (btnEdit) btnEdit.style.display = 'none';
-    }
-
-    var pane = document.getElementById('paneDetalleStatus');
-    if (pane) pane.classList.remove('d-none');
-};
-
-window.cerrarPanelDetalleStatus = function() {
-    var pane = document.getElementById('paneDetalleStatus');
-    if (pane) pane.classList.add('d-none');
-    document.querySelectorAll('#contenedorStatusDinamico .status-card').forEach(function(c) { c.classList.remove('active'); });
 };
