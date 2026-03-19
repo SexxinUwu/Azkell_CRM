@@ -95,24 +95,41 @@ app.post('/api/script/:metodo', async (req, res) => {
     console.log(`📡 El sistema solicitó: ${metodo}`);
 
     if (metodo === 'obtenerDatosPlacas') {
-        db.query('SELECT * FROM placas', (err, results) => {
+        const sql = `
+            SELECT
+                placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
+                nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
+                combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
+            FROM placas
+        `;
+        db.query(sql, (err, results) => {
             if (err) { console.error("Error leyendo placas:", err); return res.json({ data: [] }); }
             console.log(`✅ Se encontraron ${results.length} placas en MySQL`);
+
             const data = results.map(r => [
-                r.placa || r.PLACA || r.Placa || '',
-                r.cliente || r.CLIENTE || r.Cliente || '',
-                r.tipo || r.TIPO || r.Tipo || '',
-                r.modelo_uts || r.MODELO_UTS || r['Modelo UTS'] || '',
-                r.marca || r.MARCA || r.Marca || '',
-                r.ruc_dni || r.RUC_DNI || r['RUC / DNI'] || '',
-                r.configuracion || r.CONFIGURACION || r.Configuracion || '',
-                r.combustible || r.COMBUSTIBLE || r.Combustible || '',
-                r.estado || r.ESTADO || r.Estado || '',
-                r.operativo || r.OPERATIVO || r.Operativo || '',
-                r.uts || r.UTS || r.Uts || '',
-                r.motora || r.MOTORA || r.Motora || '',
-                r.llantas || r.LLANTAS || r.Llantas || '',
-                r.en_uso || r.EN_USO || r['En Uso'] || ''
+                r.placa || '',           // 0: Placa
+                r.cliente || '',         // 1: Cliente
+                r.ruc_dni || '',         // 2: Ruc/ Dni
+                r.marca || '',           // 3: Marca
+                r.modelo_uts || '',      // 4: Modelo
+                r.tipo || '',            // 5: Tipo
+                r.sub_tipo || '',        // 6: Sub tipo
+                r.color || '',           // 7: Color
+                r.nro_motor || '',       // 8: Nº Motor
+                r.nro_caja || '',        // 9: Nº Caja
+                r.nro_corona || '',      // 10: Nº Corona
+                r.nro_vin || '',         // 11: Nº VIN
+                r.configuracion || '',   // 12: Configuracion
+                r.anio || '',            // 13: Año
+                r.combustible || '',     // 14: Combustible
+                r.carga_util || '',      // 15: Carga Util
+                r.peso_neto || '',       // 16: Peso Neto
+                r.peso_bruto || '',      // 17: Peso Bruto
+                r.estado || 'Inactiva',  // 18: Estado
+                r.uts || '',             // 19: Uts
+                r.motora || '',          // 20: Motora O No Motora
+                r.llantas || '',         // 21: Llantas
+                r.en_uso || ''           // 22: En Uso?
             ]);
             return res.json({ data });
         });
@@ -241,18 +258,15 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     if (metodo === 'eliminarDocumento') {
-        // 🔥 AGREGAMOS "restaurar" PARA LA PAPELERA
-        const { id, ids, coleccion, restaurar } = req.body;
+        const { id, ids, coleccion } = req.body;
 
         const listaIds = ids && ids.length > 0 ? ids : (id ? [id] : []);
         if (listaIds.length === 0) return res.json({ data: "No hay registros para procesar" });
 
         let sql = '';
-        let nuevoEstado = restaurar ? "Activa" : "Eliminada"; // ♻️ Lógica inteligente
 
-        if (coleccion === 'Placas') sql = `UPDATE placas SET estado = "${nuevoEstado}" WHERE placa IN (?)`;
-        else if (coleccion === 'Inspecciones') sql = `UPDATE inspecciones SET estado = "${nuevoEstado}" WHERE id IN (?)`;
-
+        if (coleccion === 'Placas') sql = 'DELETE FROM placas WHERE placa IN (?)';
+        else if (coleccion === 'Inspecciones') sql = 'DELETE FROM inspecciones WHERE id IN (?)';
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
@@ -262,7 +276,7 @@ app.post('/api/script/:metodo', async (req, res) => {
 
         db.query(sql, [listaIds], (err) => {
             if (err) { console.error("❌ Error en BD:", err); return res.json({ data: "Error al procesar registro" }); }
-            console.log(`✅ Procesados ${listaIds.length} registros de ${coleccion} (Restaurar: ${restaurar})`);
+            console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -324,29 +338,44 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'guardarPlaca' || metodo === 'actualizarPlaca') {
         const form = req.body.args[0];
         const isEdit = metodo === 'actualizarPlaca';
+
+        // Extracción de las 23 variables del formulario HTML
         const placa = (isEdit ? form.editP_placa : form.p_placa).toUpperCase();
         const cliente = isEdit ? form.editP_cliente : form.p_cliente;
-        const tipo = isEdit ? form.editP_tipo : form.p_tipo;
-        const modelo = isEdit ? form.editP_modelo : form.p_modelo;
-        const marca = isEdit ? form.editP_marca : form.p_marca;
         const ruc = isEdit ? form.editP_ruc : form.p_ruc;
+        const marca = isEdit ? form.editP_marca : form.p_marca;
+        const modelo = isEdit ? form.editP_modelo : form.p_modelo;
+        const tipo = isEdit ? form.editP_tipo : form.p_tipo;
+        const sub_tipo = isEdit ? form.editP_sub_tipo : form.p_sub_tipo;
+        const color = isEdit ? form.editP_color : form.p_color;
+        const nro_motor = isEdit ? form.editP_nro_motor : form.p_nro_motor;
+        const nro_caja = isEdit ? form.editP_nro_caja : form.p_nro_caja;
+        const nro_corona = isEdit ? form.editP_nro_corona : form.p_nro_corona;
+        const nro_vin = isEdit ? form.editP_nro_vin : form.p_nro_vin;
         const conf = isEdit ? form.editP_conf : form.p_conf;
+        const anio = isEdit ? form.editP_anio : form.p_anio;
         const comb = isEdit ? form.editP_comb : form.p_comb;
+        const carga_util = isEdit ? form.editP_carga_util : form.p_carga_util;
+        const peso_neto = isEdit ? form.editP_peso_neto : form.p_peso_neto;
+        const peso_bruto = isEdit ? form.editP_peso_bruto : form.p_peso_bruto;
         const estado = isEdit ? form.editP_estado : form.p_estado;
-        const operativo = isEdit ? form.editP_operativo : form.p_operativo;
         const uts = isEdit ? form.editP_uts : form.p_uts;
         const motora = isEdit ? form.editP_motora : form.p_motora;
         const llantas = isEdit ? form.editP_llantas : form.p_llantas;
         const enuso = isEdit ? form.editP_enuso : form.p_enuso;
 
         const query = `
-            INSERT INTO placas (placa, cliente, tipo, modelo_uts, marca, ruc_dni, configuracion, combustible, estado, operativo, uts, motora, llantas, en_uso)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO placas (placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio, combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            cliente=?, tipo=?, modelo_uts=?, marca=?, ruc_dni=?, configuracion=?, combustible=?, estado=?, operativo=?, uts=?, motora=?, llantas=?, en_uso=?
+            cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?, nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?, anio=?, combustible=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?
         `;
-        db.query(query, [placa, cliente, tipo, modelo, marca, ruc, conf, comb, estado, operativo, uts, motora, llantas, enuso,
-                         cliente, tipo, modelo, marca, ruc, conf, comb, estado, operativo, uts, motora, llantas, enuso], (err) => {
+
+        // 23 valores para INSERT, luego 22 (sin placa) para ON DUPLICATE KEY UPDATE
+        const valores = [placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, conf, anio, comb, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso];
+        const valoresUpdate = valores.slice(1);
+
+        db.query(query, [...valores, ...valoresUpdate], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             return res.json({ data: "Éxito" });
         });
@@ -520,7 +549,7 @@ app.post('/api/script/:metodo', async (req, res) => {
     res.json({ data: [] });
 });
 
-// ── IMPORTACIÓN MASIVA DE PLACAS ─────────────────────────────────────────────
+// ── IMPORTACIÓN MASIVA DE PLACAS (23 CAMPOS) ─────────────────────────────────
 app.post('/api/importarPlacasMasivo', async (req, res) => {
     const { registros } = req.body;
     if (!Array.isArray(registros) || !registros.length) {
@@ -528,21 +557,53 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
     }
 
     const query = `
-        INSERT INTO placas (placa, cliente, tipo, modelo_uts, marca, estado)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO placas (
+            placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
+            nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
+            combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-        cliente = IF(VALUES(cliente) != '', VALUES(cliente), cliente),
-        tipo    = IF(VALUES(tipo)    != '', VALUES(tipo),    tipo),
-        modelo_uts = IF(VALUES(modelo_uts) != '', VALUES(modelo_uts), modelo_uts),
-        marca   = IF(VALUES(marca)   != '', VALUES(marca),   marca),
-        estado  = IF(VALUES(estado)  != '', VALUES(estado),  estado)
+            cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
+            modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
+            color=VALUES(color), nro_motor=VALUES(nro_motor), nro_caja=VALUES(nro_caja),
+            nro_corona=VALUES(nro_corona), nro_vin=VALUES(nro_vin), configuracion=VALUES(configuracion),
+            anio=VALUES(anio), combustible=VALUES(combustible), carga_util=VALUES(carga_util),
+            peso_neto=VALUES(peso_neto), peso_bruto=VALUES(peso_bruto), estado=VALUES(estado),
+            uts=VALUES(uts), motora=VALUES(motora), llantas=VALUES(llantas), en_uso=VALUES(en_uso)
     `;
 
     let ok = 0, errores = 0;
     const promesas = registros.map(r => new Promise(resolve => {
-        const placa = (r.placa || '').toUpperCase();
+        const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
         if (!placa) { errores++; return resolve(); }
-        db.query(query, [placa, r.propietario||'', r.tipo_vehiculo||'', r.modelo||'', r.marca||'', r.estado||'ACTIVO'], err => {
+
+        const vals = [
+            placa,
+            r.cliente || r.CLIENTE || '',
+            r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
+            r.marca || r.MARCA || '',
+            r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
+            r.tipo || r.TIPO || '',
+            r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
+            r.color || r.COLOR || '',
+            r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
+            r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
+            r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
+            r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
+            r.configuracion || r.CONFIGURACION || '',
+            r.anio || r.AÑO || r.ANIO || '',
+            (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
+            r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
+            r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
+            r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
+            r.estado || r.ESTADO || 'Activa',
+            r.uts || r.UTS || '',
+            r.motora || r.MOTORA || '',
+            r.llantas || r.LLANTAS || '',
+            r.en_uso || r['EN USO?'] || r.EN_USO || ''
+        ];
+
+        db.query(query, vals, err => {
             if (err) { errores++; console.error('Import error:', placa, err.message); }
             else ok++;
             resolve();

@@ -78,6 +78,7 @@ const CACHE = { placas: null, fleetrun: null, usuarios: null, seguridad: null, a
 const CACHE_TIME = {};
 
 let dataGlobalPlacas  = []; let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
+let paginaActualPlacas = 1; let colActualesPlacas = 4; let ITEMS_POR_PAGINA = 16; let datosFiltradosPlacas = [];
 let dataGlobalSeguridad = []; let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false; let expandAllSFState = false; 
 
@@ -88,20 +89,37 @@ Chart.register(ChartDataLabels);
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
 
 document.addEventListener('DOMContentLoaded', function() {
-  const toggle = document.getElementById('theme-toggle'); const body = document.body; const saved = localStorage.getItem('theme');
+  const toggle = document.getElementById('theme-toggle');
+  const body = document.body;
+  const saved = localStorage.getItem('theme');
+  const btnTheme = document.getElementById('btn-theme-toggle');
+
   if (saved === 'dark') applyDark(true, false);
-  if (toggle) toggle.addEventListener('change', () => applyDark(toggle.checked, true));
+
+  if (toggle) {
+    toggle.addEventListener('change', () => applyDark(toggle.checked, true));
+  }
+
   function applyDark(isDark, save) {
-    if (toggle) toggle.checked = isDark; body.classList.toggle('dark', isDark); document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+    if (toggle) toggle.checked = isDark;
+    body.classList.toggle('dark', isDark);
+    document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
     if (save) localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    initTooltips();
+    if (btnTheme) {
+        btnTheme.innerHTML = isDark
+          ? '<i class="bi bi-sun-fill text-warning"></i>'
+          : '<i class="bi bi-moon-stars-fill"></i>';
+    }
     actualizarColoresGraficos();
   }
+
   verificarSesionGuardada();
-  document.body.addEventListener('mousemove', registrarActividad); document.body.addEventListener('keypress', registrarActividad); document.body.addEventListener('click', registrarActividad);
+  document.body.addEventListener('mousemove', registrarActividad);
+  document.body.addEventListener('keypress', registrarActividad);
+  document.body.addEventListener('click', registrarActividad);
   setInterval(verificarInactividad, 60000);
-  
-  generarWizardFase3(); 
+
+  generarWizardFase3();
 });
 
 function normalizarClase(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, ''); }
@@ -1035,14 +1053,279 @@ function generarPDFInspeccion() {
     });
 }
 
-function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('cuerpoTablaPlacas').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
-function mostrarPlacas(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaPlacas')) return; datos.sort((a, b) => { const cliA = (a[1]||'').trim().toUpperCase(); const cliB = (b[1]||'').trim().toUpperCase(); const wA = cliA.includes('ROSYMAR') ? 1 : cliA.includes('YOGUI') ? 2 : 3; const wB = cliB.includes('ROSYMAR') ? 1 : cliB.includes('YOGUI') ? 2 : 3; if (wA !== wB) return wA - wB; if (cliA !== cliB) return cliA.localeCompare(cliB); const estA = (a[8]||'').trim(); const estB = (b[8]||'').trim(); if (estA !== estB) return estA.localeCompare(estB); return (a[0]||'').localeCompare(b[0]||''); }); dataGlobalPlacas = datos; let p = permisosUsuario || {}; let isAdmP = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditP = isAdmP || p.placas?.e === true; const canDeleteP = isAdmP || p.placas?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="9" class="text-center py-4" style="color:var(--subtext)!important">No hay placas registradas.</td></tr>'; } else { const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set(); let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set(); let clienteActual = null; datos.forEach((fila, index) => { if ((fila[0]||'').toUpperCase() === 'PLACA') return; const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[2] ? fila[2].trim() : ''; const mod = fila[3] ? fila[3].trim() : ''; const mar = fila[4] ? fila[4].trim() : ''; const ruc = fila[5] ? fila[5].trim() : ''; const cnf = fila[6] ? fila[6].trim() : ''; const cmb = fila[7] ? fila[7].trim() : ''; const est = fila[8] ? fila[8].trim() : ''; const uts = fila[10] ? fila[10].trim() : ''; if (window.verPapelera && window.verPapelera['placas']) { if (est !== 'Eliminada') return; } else { if (est === 'Eliminada') return; } if (cli && cli !== '-' && cli.toUpperCase() !== 'CLIENTE') setClientes.add(cli); if (tip && tip !== '-' && tip.toUpperCase() !== 'TIPO') setTipos.add(tip); if (mar && mar !== '-' && mar.toUpperCase() !== 'MARCA') setMarcas.add(mar); if (est === 'Activa' || est === 'Inactiva') setEstados.add(est); if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts); if (cli !== clienteActual) { clienteActual = cli; const displayCli = cli || 'Sin Asignar'; html += `<tr class="group-header" data-group-cliente="${cli}"><td colspan="9"><i class="bi bi-building me-2 text-warning"></i>${displayCli} <span class="group-count">0</span></td></tr>`; } const bEst = est === 'Activa' ? '<span class="badge bg-success">Activa</span>' : est === 'Inactiva' ? '<span class="badge bg-danger">Inactiva</span>' : `<span class="badge bg-secondary">${est}</span>`; let menuAcciones = ''; if (canEditP || canDeleteP) { let items = ''; if (canEditP) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarPlaca(${index})"><i class="bi bi-pencil text-primary"></i> Editar Placa</a></li>`; if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`; if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Placas')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; } html += `<tr class="clickable-row data-row" onclick="abrirDetallePlaca(event,${index})" data-cliente="${cli}" data-tipo="${tip}" data-marca="${mar}" data-estado="${est}"><td class="fw-bold" data-value="${fila[0]}"><span class="chk-bulk-container-placas" style="display: ${window.modoSeleccion && window.modoSeleccion['placas'] ? 'inline-block' : 'none'};"><input type="checkbox" class="form-check-input me-2 chk-bulk-placas" value="${fila[0]}" onclick="event.stopPropagation(); toggleBulkBtn('placas')"></span>${fila[0]}</td><td>${cli||'-'}</td><td>${tip||'-'}</td><td>${mar||'-'}</td><td>${bEst}</td><td>${fila[10]||'-'}</td><td>${fila[11]||'-'}</td><td>${fila[13]||'-'}</td><td>${menuAcciones}</td></tr>`; }); rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado'); rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado'); rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts); } document.getElementById('cuerpoTablaPlacas').innerHTML = html; filtrarPlacasAvanzado(); }
+function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('contenedorPlacasDinamico').innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
+window.cambiarColumnasPlacas = function(cols) {
+    colActualesPlacas = parseInt(cols);
+    ITEMS_POR_PAGINA = colActualesPlacas * 4;
+    paginaActualPlacas = 1;
+    const contenedor = document.getElementById('contenedorPlacasDinamico');
+    if (contenedor) contenedor.className = `flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-${colActualesPlacas}`;
+    renderizarPaginaPlacas();
+};
+
+function mostrarPlacas(datos) {
+    if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
+    dataGlobalPlacas = datos;
+    poblarSelectsFormularios(datos);
+    let datosUtiles = datos.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
+    datosUtiles.sort((a, b) => {
+        const cliA = (a[1]||'').trim().toUpperCase();
+        const cliB = (b[1]||'').trim().toUpperCase();
+        if (cliA !== cliB) return cliA.localeCompare(cliB);
+        return (a[0]||'').localeCompare(b[0]||'');
+    });
+    datosFiltradosPlacas = datosUtiles;
+    const setClientes = new Set(), setTipos = new Set(), setMarcas = new Set(), setEstados = new Set();
+    let setFormPlacas=new Set(), setFormClientes=new Set(), setFormTipos=new Set(), setFormMarcas=new Set(), setFormModelos=new Set(), setFormConfs=new Set(), setFormCombs=new Set(), setFormUts=new Set();
+    datosUtiles.forEach((fila) => {
+        const plc = fila[0] ? fila[0].trim() : ''; const cli = fila[1] ? fila[1].trim() : ''; const tip = fila[5] ? fila[5].trim() : ''; const mar = fila[3] ? fila[3].trim() : ''; const mod = fila[4] ? fila[4].trim() : ''; const ruc = fila[2] ? fila[2].trim() : ''; const cnf = fila[12] ? fila[12].trim() : ''; const cmb = fila[14] ? fila[14].trim() : ''; const est = fila[18] ? fila[18].trim() : ''; const uts = fila[19] ? fila[19].trim() : '';
+        if (cli && cli !== '-') setClientes.add(cli);
+        if (tip && tip !== '-') setTipos.add(tip);
+        if (mar && mar !== '-') setMarcas.add(mar);
+        if (est === 'Activa' || est === 'Inactiva') setEstados.add(est);
+        if(plc && plc!=="-") setFormPlacas.add(plc); if(cli && cli!=="-") setFormClientes.add(cli); if(tip && tip!=="-") setFormTipos.add(tip); if(mod && mod!=="-") setFormModelos.add(mod); if(mar && mar!=="-") setFormMarcas.add(mar); if(cnf && cnf!=="-") setFormConfs.add(cnf); if(cmb && cmb!=="-") setFormCombs.add(cmb); if(uts && uts!=="-") setFormUts.add(uts);
+    });
+    rellenarFiltroCheck('filtroCliente', setClientes, 'filtrarPlacasAvanzado');
+    rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado');
+    rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado');
+    rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado');
+    rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
+    paginaActualPlacas = 1;
+    cambiarColumnasPlacas(colActualesPlacas);
+}
 function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
-function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[5] && p[5].trim() !== "" && p[5].trim() !== "-"); if (match) { rucInput.value = match[5].trim(); } }
+function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[2] && p[2].trim() !== "" && p[2].trim() !== "-"); if (match) { rucInput.value = match[2].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
-function filtrarPlacasAvanzado() { const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || ''; const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value); const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value); const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value); const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value); let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0; const conteoClientes = {}; const filas = document.querySelectorAll('#cuerpoTablaPlacas tr.data-row'); filas.forEach(row => { const cli = row.getAttribute('data-cliente'); const tip = row.getAttribute('data-tipo'); const mar = row.getAttribute('data-marca'); const est = row.getAttribute('data-estado'); const textoFila = row.innerText.toLowerCase(); const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est))); if (ok) { row.style.display = ''; conteoClientes[cli] = (conteoClientes[cli] || 0) + 1; const t = (tip||'').toLowerCase(); if (t.includes('cami') || t.includes('camion')) kpiCamion++; else if (t.includes('carreta')) kpiCarreta++; else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++; else if (t.includes('tracto')) kpiTracto++; } else { row.style.display = 'none'; } }); document.querySelectorAll('#cuerpoTablaPlacas tr.group-header').forEach(g => { const cli = g.getAttribute('data-group-cliente'); const total = conteoClientes[cli] || 0; g.style.display = total > 0 ? '' : 'none'; const badge = g.querySelector('.group-count'); if (badge) badge.innerText = total; }); const safe = v => document.getElementById(v); if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion; if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta; if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi; if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto; }
-function abrirDetallePlaca(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalPlacas[index]; if (!p) return; ['det-placa','det-cliente','det-tipo','det-modelo','det-marca','det-ruc','det-conf','det-comb','det-estado','det-operativo','det-uts','det-motora','det-llantas','det-enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.innerText = p[i] || '-'; }); new bootstrap.Modal(document.getElementById('modalDetallePlaca')).show(); }
-function abrirModalEditarPlaca(index) { const p = dataGlobalPlacas[index]; if (!p) return; document.getElementById('formEditarPlaca')?.reset(); ['e_placa','e_cliente','e_tipo','e_modelo','e_marca','e_ruc','e_conf','e_comb','e_estado','e_operativo','e_uts','e_motora','e_llantas','e_enuso'].forEach((id, i) => { const el = document.getElementById(id); if(el) el.value = p[i] || ''; }); const btn = document.getElementById('btnActualizarPlaca'); if(btn){ btn.disabled = false; btn.innerHTML = 'Actualizar Placa';} new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show(); }
+window.filtrarPlacasAvanzado = function() {
+    const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
+    const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value);
+    const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
+    const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
+    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
+    let datosUtiles = dataGlobalPlacas.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
+    datosFiltradosPlacas = datosUtiles.filter(row => {
+        const plc = (row[0]||'').toLowerCase();
+        const cli = row[1] ? row[1].trim() : '';
+        const tip = row[5] ? row[5].trim() : '';
+        const mar = row[3] ? row[3].trim() : '';
+        const est = row[18] ? row[18].trim() : '';
+        const textoFila = plc + ' ' + mar.toLowerCase();
+        const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est)));
+        if (ok) {
+            const t = tip.toLowerCase();
+            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
+            else if (t.includes('carreta')) kpiCarreta++;
+            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
+            else if (t.includes('tracto')) kpiTracto++;
+        }
+        return ok;
+    });
+    const safe = v => document.getElementById(v);
+    if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
+    if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
+    if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
+    if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
+    paginaActualPlacas = 1;
+    renderizarPaginaPlacas();
+};
+
+function actualizarIndicadoresPlacas(datos) {
+    let camiones = 0, carretas = 0, semirremolques = 0, tractos = 0;
+
+    datos.forEach(fila => {
+        if ((fila[0] || '').toUpperCase() === 'PLACA') return;
+        const tipo = (fila[5] || '').toString().trim().toUpperCase();
+        if (tipo === 'CAMION' || tipo === 'CAMIÓN') camiones++;
+        else if (tipo === 'CARRETA') carretas++;
+        else if (tipo === 'SEMIRREMOLQUE') semirremolques++;
+        else if (tipo === 'TRACTO') tractos++;
+    });
+
+    const elCamiones = document.getElementById('ind-camiones');
+    const elCarretas = document.getElementById('ind-carretas');
+    const elSemis = document.getElementById('ind-semis');
+    const elTractos = document.getElementById('ind-tractos');
+
+    if (elCamiones) elCamiones.innerText = camiones;
+    if (elCarretas) elCarretas.innerText = carretas;
+    if (elSemis) elSemis.innerText = semirremolques;
+    if (elTractos) elTractos.innerText = tractos;
+}
+
+function renderizarPaginaPlacas() {
+    const contenedor = document.getElementById('contenedorPlacasDinamico');
+    const infoPag = document.getElementById('info-paginacion-placas');
+    const ctrlPag = document.getElementById('controles-paginacion-placas');
+    const tablaExport = document.getElementById('tablaPlacasHidden');
+    if (!contenedor) return;
+
+    // Tabla oculta para exportar (todos los filtrados)
+    let htmlExport = '<tr><th>PLACA</th><th>CLIENTE</th><th>RUC_DNI</th><th>MARCA</th><th>MODELO</th><th>TIPO</th><th>SUB TIPO</th><th>COLOR</th><th>NRO MOTOR</th><th>NRO CAJA</th><th>NRO CORONA</th><th>NRO VIN</th><th>CONFIGURACION</th><th>ANIO</th><th>COMBUSTIBLE</th><th>CARGA UTIL</th><th>PESO NETO</th><th>PESO BRUTO</th><th>ESTADO</th><th>UTS</th><th>MOTORA</th><th>LLANTAS</th><th>EN_USO</th></tr>';
+    datosFiltradosPlacas.forEach(f => { htmlExport += `<tr>${f.map(celda => `<td>${celda || ''}</td>`).join('')}</tr>`; });
+    if(tablaExport) tablaExport.innerHTML = htmlExport;
+
+    // KPIs actualizados con los datos filtrados actuales
+    actualizarIndicadoresPlacas(datosFiltradosPlacas);
+
+    if (datosFiltradosPlacas.length === 0) {
+        contenedor.innerHTML = '<div class="w-100 text-center py-5 text-muted" style="grid-column: 1 / -1;"><i class="bi bi-search fs-1"></i><br>No hay vehículos que coincidan.</div>';
+        if(infoPag) infoPag.innerText = '0 resultados'; if(ctrlPag) ctrlPag.innerHTML = ''; return;
+    }
+
+    let perms = permisosUsuario || {};
+    let isAdmP = perms.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+    const canEditP = isAdmP || perms.placas?.e === true;
+    const canDeleteP = isAdmP || perms.placas?.d === true;
+
+    const totalPaginas = Math.ceil(datosFiltradosPlacas.length / ITEMS_POR_PAGINA);
+    if(paginaActualPlacas > totalPaginas) paginaActualPlacas = totalPaginas;
+    const inicio = (paginaActualPlacas - 1) * ITEMS_POR_PAGINA;
+    const datosPagina = datosFiltradosPlacas.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
+    let html = '';
+    let clienteActual = null;
+    datosPagina.forEach((fila) => {
+        const plc = (fila[0]||'').trim();
+        const cli = fila[1] ? fila[1].trim() : 'Sin Asignar';
+        const mar = fila[3] ? fila[3].trim() : '-';
+        const est = fila[18] ? fila[18].trim() : '';
+        const badgeCls = est === 'Activa' ? 'badge-green' : (est === 'Inactiva' ? 'badge-red' : '');
+        const indexGlobal = dataGlobalPlacas.findIndex(x => x[0] === plc);
+
+        if (cli !== clienteActual) {
+            clienteActual = cli;
+            html += `<div class="group-header-left"><i class="bi bi-building me-2 text-primary"></i> ${cli}</div>`;
+        }
+
+        let menuAcciones = '';
+        if (canEditP || canDeleteP) {
+            let items = '';
+            if (canEditP) items += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`;
+            if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
+            if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="event.stopPropagation(); if(confirm('¿Eliminar ${plc} definitivamente?')) { fetch('/api/script/eliminarDocumento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:['${plc}'],coleccion:'Placas',usuario:usuarioLogueado})}).then(r=>r.json()).then(r=>{ if(r.data==='Éxito') cargarTablaPlacas(true); else alert(r.data); }); }"><i class="bi bi-trash"></i> Eliminar</a></li>`;
+            menuAcciones = `<div class="dropdown ms-1" onclick="event.stopPropagation()"><button class="btn-dots" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
+        }
+
+        // stopPropagation en el checkbox para que no active el panel de detalle
+        // pointer-events:none para que el clic pase directo a la tarjeta
+        let checkHtml = window.modoSeleccion && window.modoSeleccion['placas'] ? `<input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" style="pointer-events: none;">` : '';
+
+        html += `<div class="card-premium" onclick="abrirDetallePlaca(event, ${indexGlobal})">
+            <div class="card-header-theme">
+                <div class="d-flex align-items-center gap-2">${checkHtml}<div class="card-title-prem">${plc}</div></div>
+                ${menuAcciones}
+            </div>
+            <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
+            <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
+        </div>`;
+    });
+
+    contenedor.innerHTML = html;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, datosFiltradosPlacas.length);
+    if(infoPag) infoPag.innerText = `Mostrando ${inicio + 1}–${fin} de ${datosFiltradosPlacas.length} placas`;
+    let btnHtml = `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(-1)" ${paginaActualPlacas === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
+    btnHtml += `<span class="px-3 fw-bold text-primary" style="font-size:0.9rem;">Pág. ${paginaActualPlacas} / ${totalPaginas}</span>`;
+    btnHtml += `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(1)" ${paginaActualPlacas >= totalPaginas ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
+    if(ctrlPag) ctrlPag.innerHTML = btnHtml;
+}
+
+window.cambiarPaginaPlacas = function(direccion) {
+    paginaActualPlacas += direccion;
+    renderizarPaginaPlacas();
+};
+window.abrirDetallePlaca = function(event, index) {
+    // 1. MODO SELECCIÓN: pinta tarjeta y bloquea el panel
+    if (window.modoSeleccion && window.modoSeleccion['placas']) {
+        if (event.target.closest('.btn-dots') || event.target.closest('.dropdown-menu')) return;
+
+        const tarjeta = event.target.closest('.card-premium');
+        if (!tarjeta) return;
+
+        const checkbox = tarjeta.querySelector('.chk-bulk-placas');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) tarjeta.classList.add('card-selected');
+            else tarjeta.classList.remove('card-selected');
+            if (typeof toggleBulkBtn === 'function') toggleBulkBtn('placas');
+        }
+        return;
+    }
+
+    // 2. MODO LECTURA NORMAL
+    if (event.target.closest('.dropdown') || event.target.closest('.chk-bulk-placas') || event.target.closest('.btn-dots')) return;
+    const p = dataGlobalPlacas[index];
+    if (!p) return;
+
+    document.getElementById('det-placa-titulo').innerText = p[0] || 'SIN PLACA';
+
+    const ids = ['det-cliente','det-ruc','det-marca','det-modelo','det-tipo','det-sub_tipo','det-color','det-nro_motor','det-nro_caja','det-nro_corona','det-nro_vin','det-conf','det-anio','det-comb','det-carga_util','det-peso_neto','det-peso_bruto','det-estado','det-uts','det-motora','det-llantas','det-enuso'];
+    ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerText = p[i + 1] ? p[i + 1] : '-';
+            if (id === 'det-estado') {
+                el.className = 'badge-premium ' + (p[i + 1] === 'Activa' ? 'badge-green' : 'badge-red');
+            }
+        }
+    });
+
+    const btnEditar = document.getElementById('btn-editar-offcanvas');
+    if (btnEditar) {
+        btnEditar.onclick = function() {
+            bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasDetallePlaca')).hide();
+            abrirModalEditarPlaca(index);
+        };
+    }
+
+    new bootstrap.Offcanvas(document.getElementById('offcanvasDetallePlaca')).show();
+}
+window.abrirModalEditarPlaca = function(index) {
+    const p = dataGlobalPlacas[index];
+    if (!p) return;
+
+    const form = document.getElementById('formEditarPlaca');
+    if (form) form.reset();
+
+    poblarSelectsFormularios(dataGlobalPlacas);
+
+    const ids = [
+        'e_placa', 'e_cliente', 'e_ruc', 'e_marca', 'e_modelo', 'e_tipo', 'e_sub_tipo',
+        'e_color', 'e_nro_motor', 'e_nro_caja', 'e_nro_corona', 'e_nro_vin', 'e_conf',
+        'e_anio', 'e_comb', 'e_carga_util', 'e_peso_neto', 'e_peso_bruto', 'e_estado',
+        'e_uts', 'e_motora', 'e_llantas', 'e_enuso'
+    ];
+
+    ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) {
+            const valorLimpio = p[i] ? p[i].toString().trim() : '';
+            if (el.tagName === 'SELECT' && valorLimpio !== '') {
+                let options = Array.from(el.options);
+                let match = options.find(opt => opt.value.toUpperCase() === valorLimpio.toUpperCase());
+                if (match) {
+                    el.value = match.value;
+                } else if (el.classList.contains('sel-inteligente')) {
+                    const nuevaOpcion = new Option(valorLimpio.toUpperCase(), valorLimpio.toUpperCase());
+                    el.insertBefore(nuevaOpcion, el.lastElementChild);
+                    el.value = valorLimpio.toUpperCase();
+                } else {
+                    el.value = valorLimpio;
+                }
+            } else {
+                el.value = valorLimpio;
+            }
+        }
+    });
+
+    const btn = document.getElementById('btnActualizarPlaca');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-pencil-square"></i> Actualizar Ficha';
+    }
+
+    new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show();
+};
 function enviarPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
 function enviarEdicionPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).actualizarPlaca(formObj); }
 
@@ -2796,52 +3079,59 @@ window.abrirMapaFlotante = function(placa, lat, lng) {
 // ============================================================
 
 window.descargarPlantillaPlacas = function() {
-    let data = [
-        ['PLACA', 'CLIENTE', 'TIPO', 'MARCA', 'ESTADO', 'UTS', 'MOTORA', 'EN_USO'],
-        ['ABC-123', 'EJEMPLO EMPRESA SAC', 'CAMIÓN', 'VOLVO', 'Activa', 'NACIONAL', 'Unidad Motora', 'Si'],
-        ['XYZ-999', 'OTRA EMPRESA SAC', 'CARRETA', 'SCANIA', 'Activa', 'LOCAL', 'Unidad No Motora', 'No']
+    const ws_data = [
+        ['PLACA', 'CLIENTE', 'RUC / DNI', 'MARCA', 'MODELO UTS', 'TIPO', 'SUB TIPO', 'COLOR', 'Nº MOTOR', 'Nº CAJA', 'Nº CORONA', 'Nº VIN', 'CONFIGURACION', 'AÑO', 'COMBUSTIBLE', 'CARGA UTIL', 'PESO NETO', 'PESO BRUTO', 'ESTADO', 'UTS', 'MOTORA', 'LLANTAS', 'EN USO?'],
+        ['ABC-123', 'EMPRESA EJEMPLO SAC', '20123456789', 'VOLVO', 'FH 460', 'CAMION', 'FURGON', 'BLANCO', 'MOT-999', 'CAJ-888', 'COR-777', 'VIN-555', '6X4', '2024', 'DIESEL', '30.5', '8.2', '38.7', 'Activa', 'NACIONAL', 'Motora', '10', 'Si']
     ];
-    let ws = XLSX.utils.aoa_to_sheet(data);
-    let wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Placas");
     XLSX.writeFile(wb, "Plantilla_Importacion_Placas.xlsx");
 };
 
 // ── IMPORTACIÓN MASIVA DE PLACAS DESDE EXCEL ─────────────────────────────────
-window.importarExcelPlacas = async function(event) {
+window.importarExcelPlacas = function(event) {
     const file = event.target.files[0];
-    event.target.value = ''; // reset input para permitir reimportar el mismo archivo
     if (!file) return;
 
-    const leer = () => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
 
-    try {
-        const buffer = await leer();
-        const wb = XLSX.read(buffer, { type: 'arraybuffer' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const filas = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-        if (!filas.length) { alert('⚠️ El archivo está vacío o no tiene filas de datos.'); return; }
+        if (rawJson.length === 0) {
+            alert("El archivo Excel está vacío o no tiene datos válidos.");
+            return;
+        }
 
-        // Normalizar cabeceras: quitar espacios y pasar a minúsculas para mapeo
-        const campos = Object.keys(filas[0]);
-        console.log('Columnas detectadas:', campos);
+        const confirmar = confirm(`Se importarán ${rawJson.length} registros.\n¿Continuar?`);
+        if (!confirmar) { event.target.value = ''; return; }
 
-        const confirmar = confirm(`Se importarán ${filas.length} registros.\n¿Continuar?`);
-        if (!confirmar) return;
+        document.body.style.cursor = 'wait';
 
-        const resultado = await procesarImportacionBD(filas);
-        alert(`✅ Importación completada.\n• Insertados/Actualizados: ${resultado.ok}\n• Errores: ${resultado.errores}`);
-        recargarModulo('placas');
-    } catch (err) {
-        console.error('Error importando Excel:', err);
-        alert('❌ No se pudo leer el archivo. Asegúrate de que sea .xlsx o .xls válido.');
-    }
+        fetch('/api/importarPlacasMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros: rawJson })
+        })
+        .then(res => res.json())
+        .then(r => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
+            recargarModulo('placas');
+        })
+        .catch(err => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert("❌ Error subiendo archivo: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
 };
 
 async function procesarImportacionBD(filas) {
@@ -2914,23 +3204,8 @@ window.toggleModoSeleccion = function(modulo) {
     });
 };
 
-window.toggleVistaPapelera = function(modulo) {
-    window.verPapelera[modulo] = !window.verPapelera[modulo];
-    let btn = document.getElementById(`btn-papelera-${modulo}`);
-    if(btn) {
-        if(window.verPapelera[modulo]) {
-            btn.classList.replace('btn-outline-secondary', 'btn-danger');
-            btn.classList.add('text-white');
-            btn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Salir de Papelera';
-        } else {
-            btn.classList.replace('btn-danger', 'btn-outline-secondary');
-            btn.classList.remove('text-white');
-            btn.innerHTML = '<i class="bi bi-trash"></i> Papelera';
-        }
-    }
-    if(window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
-    recargarModulo(modulo);
-};
+
+
 
 window.toggleBulkBtn = function(modulo) {
     let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
@@ -2952,30 +3227,213 @@ window.toggleBulkBtn = function(modulo) {
 };
 
 window.eliminarMasivo = function(coleccion, modulo) {
-    let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
-    let ids = Array.from(chks).map(c => c.value);
-    if(ids.length === 0) return;
+    let ids = [];
 
-    let isRestaurando = window.verPapelera[modulo] === true;
-    let accionTxt = isRestaurando ? "RESTAURAR" : "ENVIAR A LA PAPELERA";
+    // Si estamos en placas y hay selección global activa, la usamos
+    if (modulo === 'placas' && window.placasSeleccionadasGlobalmente && window.placasSeleccionadasGlobalmente.length > 0) {
+        ids = window.placasSeleccionadasGlobalmente;
+    } else {
+        // Comportamiento normal: solo checkboxes visibles
+        let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
+        ids = Array.from(chks).map(c => c.value);
+    }
 
-    if(!confirm(`¿Estás seguro de ${accionTxt} ${ids.length} registros?`)) return;
+    if (ids.length === 0) return;
+
+    if (!confirm(`⚠️ ¿Estás seguro de ELIMINAR DEFINITIVAMENTE ${ids.length} registros?\n\nEsta acción no se puede deshacer.`)) return;
 
     document.body.style.cursor = 'wait';
     fetch('/api/script/eliminarDocumento', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: ids, coleccion: coleccion, usuario: usuarioLogueado, restaurar: isRestaurando })
+        body: JSON.stringify({ ids: ids, coleccion: coleccion })
     })
     .then(res => res.json())
     .then(r => {
         document.body.style.cursor = 'default';
         if (r.data === 'Éxito') {
-            document.getElementById(`btn-bulk-${modulo}`).classList.add('d-none');
-            if(window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
+            if (modulo === 'placas') {
+                window.placasSeleccionadasGlobalmente = [];
+                if (window.modoSeleccion['placas']) activarModoSeleccionPlacas();
+            } else {
+                document.getElementById(`btn-bulk-${modulo}`).classList.add('d-none');
+                if (window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
+            }
             recargarModulo(modulo);
         } else { alert('Error: ' + r.data); }
     }).catch(e => {
         document.body.style.cursor = 'default';
         alert('Error de red: ' + e.message);
     });
+};
+
+// ============================================================
+// LÓGICA DE FORMULARIOS INTELIGENTES (SELECTS DINÁMICOS)
+// ============================================================
+
+// 1. Extraer datos únicos de MySQL e inyectarlos en los <select>
+function poblarSelectsFormularios(datos) {
+    const listas = {
+        clientes: new Set(), marcas: new Set(), tipos: new Set(),
+        subTipos: new Set(), colores: new Set(), confs: new Set()
+    };
+
+    // Índices: Cliente[1], Marca[3], Tipo[5], Sub_Tipo[6], Color[7], Conf[12]
+    datos.forEach(fila => {
+        if ((fila[0]||'').toUpperCase() === 'PLACA') return;
+        if (fila[1]) listas.clientes.add(fila[1].trim().toUpperCase());
+        if (fila[3]) listas.marcas.add(fila[3].trim().toUpperCase());
+        if (fila[5]) listas.tipos.add(fila[5].trim().toUpperCase());
+        if (fila[6]) listas.subTipos.add(fila[6].trim().toUpperCase());
+        if (fila[7]) listas.colores.add(fila[7].trim().toUpperCase());
+        if (fila[12]) listas.confs.add(fila[12].trim().toUpperCase());
+    });
+
+    const inyectar = (ids, setDatos) => {
+        const opciones = Array.from(setDatos).filter(x => x !== '-' && x !== '').sort();
+        let html = '<option value="">Seleccione...</option>';
+        opciones.forEach(op => html += `<option value="${op}">${op}</option>`);
+        html += '<option value="__NUEVO__" class="fw-bold text-primary bg-light">➕ Agregar Nuevo...</option>';
+        ids.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+    };
+
+    inyectar(['p_cliente', 'e_cliente'], listas.clientes);
+    inyectar(['p_marca', 'e_marca'], listas.marcas);
+    inyectar(['p_tipo', 'e_tipo'], listas.tipos);
+    inyectar(['p_sub_tipo', 'e_sub_tipo'], listas.subTipos);
+    inyectar(['p_color', 'e_color'], listas.colores);
+    inyectar(['p_conf', 'e_conf'], listas.confs);
+}
+
+// 2. Gestionar la opción "➕ Agregar Nuevo..." en cualquier select
+window.gestionarNuevoSelect = function(selectElement) {
+    if (selectElement.value === '__NUEVO__') {
+        const nuevoValor = prompt('Ingrese el nuevo valor:');
+        if (nuevoValor && nuevoValor.trim() !== '') {
+            const valorLimpio = nuevoValor.trim().toUpperCase();
+            let existe = Array.from(selectElement.options).some(op => op.value === valorLimpio);
+            if (!existe) {
+                const opt = new Option(valorLimpio, valorLimpio);
+                selectElement.insertBefore(opt, selectElement.lastElementChild);
+            }
+            selectElement.value = valorLimpio;
+        } else {
+            selectElement.value = '';
+        }
+    }
+};
+
+// 3. Autocompletar RUC al elegir Cliente en un select
+window.autocompletarRucSelect = function(cliente, rucInputId) {
+    const inputRuc = document.getElementById(rucInputId);
+    if (!inputRuc) return;
+    if (cliente === '__NUEVO__') {
+        inputRuc.value = '';
+        abrirModalNuevoCliente(rucInputId === 'p_ruc' ? 'p_cliente' : 'e_cliente', rucInputId);
+        return;
+    }
+    if (!cliente) { inputRuc.value = ''; return; }
+    const match = dataGlobalPlacas.find(f => (f[1]||'').trim().toUpperCase() === cliente);
+    inputRuc.value = match && match[2] ? match[2].trim() : '';
+};
+
+// 4. Mini-Modal: abrir y guardar nuevo cliente
+window.abrirModalNuevoCliente = function(selectTargetId, rucTargetId) {
+    document.getElementById('nc_nombre').value = '';
+    document.getElementById('nc_ruc').value = '';
+    document.getElementById('nc_target_select').value = selectTargetId;
+    document.getElementById('nc_target_ruc').value = rucTargetId;
+    new bootstrap.Modal(document.getElementById('modalNuevoCliente')).show();
+};
+
+window.guardarNuevoCliente = function() {
+    const nombre = document.getElementById('nc_nombre').value.trim().toUpperCase();
+    const ruc = document.getElementById('nc_ruc').value.trim();
+    const targetSelId = document.getElementById('nc_target_select').value;
+    const targetRucId = document.getElementById('nc_target_ruc').value;
+
+    if (!nombre || !ruc) { alert('Razón Social y RUC son obligatorios.'); return; }
+
+    const selectEl = document.getElementById(targetSelId);
+    if (selectEl) {
+        let existe = Array.from(selectEl.options).some(op => op.value === nombre);
+        if (!existe) {
+            const opt = new Option(nombre, nombre);
+            selectEl.insertBefore(opt, selectEl.lastElementChild);
+        }
+        selectEl.value = nombre;
+    }
+    const rucEl = document.getElementById(targetRucId);
+    if (rucEl) rucEl.value = ruc;
+
+    bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
+};
+
+// ============================================================
+// LÓGICA DE SELECCIÓN MASIVA Y "SELECCIONAR TODO"
+// ============================================================
+
+window.activarModoSeleccionPlacas = function() {
+    window.modoSeleccion = window.modoSeleccion || {};
+    window.modoSeleccion['placas'] = !window.modoSeleccion['placas'];
+
+    const btnAll = document.getElementById('btn-select-all-placas');
+    const btnBulk = document.getElementById('btn-bulk-placas');
+
+    if (window.modoSeleccion['placas']) {
+        btnAll.classList.remove('d-none');
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    } else {
+        btnAll.classList.add('d-none');
+        btnBulk.classList.add('d-none');
+        document.querySelectorAll('.chk-bulk-placas').forEach(c => c.checked = false);
+        document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('card-selected'));
+    }
+
+    renderizarPaginaPlacas();
+};
+
+window.seleccionarTodasLasPlacas = function() {
+    const btnAll = document.getElementById('btn-select-all-placas');
+    const checkboxes = document.querySelectorAll('.chk-bulk-placas');
+
+    const accionEsMarcar = btnAll.innerText.includes('Seleccionar Todo');
+
+    // 1. DOM visible (tarjetas de la página actual)
+    checkboxes.forEach(chk => {
+        chk.checked = accionEsMarcar;
+        const tarjeta = chk.closest('.card-premium');
+        if (tarjeta) {
+            if (accionEsMarcar) tarjeta.classList.add('card-selected');
+            else tarjeta.classList.remove('card-selected');
+        }
+    });
+
+    // 2. Array global en memoria (todas las páginas)
+    if (accionEsMarcar) {
+        window.placasSeleccionadasGlobalmente = dataGlobalPlacas
+            .filter(f => (f[0] || '').toUpperCase() !== 'PLACA')
+            .map(f => f[0]);
+    } else {
+        window.placasSeleccionadasGlobalmente = [];
+    }
+
+    // 3. Estilo del botón
+    if (accionEsMarcar) {
+        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
+        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
+    } else {
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    }
+
+    // 4. Botón rojo con contador
+    const btnEliminar = document.getElementById('btn-bulk-placas');
+    const countSpan = document.getElementById('cnt-bulk-placas');
+    if (btnEliminar && countSpan) {
+        const cantidad = window.placasSeleccionadasGlobalmente ? window.placasSeleccionadasGlobalmente.length : 0;
+        countSpan.innerText = cantidad;
+        if (cantidad > 0) btnEliminar.classList.remove('d-none');
+        else btnEliminar.classList.add('d-none');
+    }
 };
