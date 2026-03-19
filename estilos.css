@@ -48,7 +48,6 @@
     h1, h2, h3, h4, h5, h6, p, label, span { color: var(--text) !important; }
     .modal-content, .offcanvas { background-color: var(--surface) !important; border: 1px solid var(--border) !important; box-shadow: 0 8px 32px var(--shadow) !important; } .modal-header, .modal-footer { border-color: var(--border) !important; }
     input.form-control, select.form-select, textarea.form-control, .input-group-text { background-color: var(--bg) !important; color: var(--text) !important; border: 1px solid var(--border) !important; } input.form-control::placeholder, textarea.form-control::placeholder { color: var(--subtext) !important; }
-    #pantalla-login { position: fixed; inset: 0; background-color: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 9999; } .login-card { background-color: var(--surface) !important; border: 1px solid var(--border) !important; padding: 40px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 8px 32px var(--shadow) !important; }
     .switch { position: relative; width: 56px; height: 30px; cursor: pointer; display: inline-block; margin: 0; } .switch input { display: none; } .slider { position: absolute; inset: 0; background: var(--toggle-bg); border-radius: 34px; transition: background 0.4s ease; } .slider::before { content: ''; position: absolute; width: 22px; height: 22px; left: 4px; top: 4px; background: var(--thumb); border-radius: 50%; transition: transform 0.3s; } .switch input:checked + .slider::before { transform: translateX(26px); }
 
     /* MOBILE */
@@ -391,7 +390,7 @@ button, .btn, .nav-link, .clickable-row, .dropdown-item, .fab-action-item {
 }
 
 /* 3. Cards Flotantes con sombras de luz ambiental */
-.card, .insp-detail-card, .login-card, .modulo-wrapper .card {
+.card, .insp-detail-card, .modulo-wrapper .card {
     border-radius: var(--apple-radius) !important;
     border: 1px solid rgba(0,0,0,0.03) !important;
     box-shadow: var(--apple-shadow) !important;
@@ -949,7 +948,7 @@ body {
 }
 
 /* 4. TARJETAS Y CONTENEDORES */
-.card, .login-card, .modal-content, .kpi-card {
+.card, .modal-content, .kpi-card {
     background-color: var(--surface) !important;
     border: 1px solid var(--border) !important;
     box-shadow: var(--shadow-md) !important;
@@ -1343,3 +1342,140 @@ body.dark .wizard-tab h5.text-primary {
     color: #60a5fa !important;
     border-bottom-color: #334155 !important;
 }
+
+/* ============================================================
+   REDISEÑO DE PANTALLA DE LOGIN (GLASSMORPHISM)
+   ============================================================ */
+#pantalla-login {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+    background:
+        radial-gradient(ellipse at 15% 20%, #1a4a8a 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 75%, #0c2f6e 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, #0a1f5c 0%, transparent 70%),
+        linear-gradient(135deg, #020b1f 0%, #071430 40%, #0c1e4a 100%);
+}
+
+/* Tarjeta glassmorphism */
+.login-glass-card {
+    width: 320px;
+    padding: 40px 32px 32px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Avatar / Logo */
+.avatar-logo {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+    box-shadow: 0 0 35px rgba(30, 100, 220, 0.45);
+}
+
+.login-glass-card form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Campo con línea inferior */
+.field-glass {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 10px 4px;
+    margin-bottom: 22px;
+}
+
+.field-icon {
+    font-size: 15px;
+    opacity: 0.7;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.field-glass input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.field-glass input::placeholder {
+    color: rgba(200, 215, 255, 0.65);
+}
+
+/* Botón del ojito (Password) */
+.btn-toggle-pwd {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(200, 215, 255, 0.65);
+    font-size: 15px;
+    padding: 0;
+    transition: color 0.2s;
+}
+.btn-toggle-pwd:hover { color: #fff; }
+
+/* Fila recordar / olvidé */
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 26px;
+    font-size: 12px;
+    color: rgba(200, 215, 255, 0.75);
+}
+
+.remember { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.remember input { width: 13px; height: 13px; accent-color: #4d8eff; }
+
+.forgot { color: rgba(180, 205, 255, 0.7); font-style: italic; text-decoration: none; }
+.forgot:hover { color: #fff; }
+
+/* Botón Ingresar */
+.btn-login-glass {
+    width: 100%;
+    padding: 13px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(135deg, #0d3a9e, #1a5fd4);
+    box-shadow:
+        0 8px 24px rgba(10, 30, 120, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.btn-login-glass:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-login-glass:active { transform: translateY(0); }

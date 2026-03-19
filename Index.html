@@ -25,20 +25,42 @@
 <body>
 
     <div id="pantalla-login">
-        <div class="login-card">
-            <div class="brand fw-bold" style="font-size: 2rem; margin-bottom: 5px;">AZKELL <span style="color: var(--crm-accent);">CRM</span></div>
-            <h6 style="color: var(--subtext) !important; margin-bottom: 24px;">Acceso Restringido al Personal</h6>
+        <div class="login-glass-card">
+
+            <div class="avatar-logo">
+                <img src="./icon-192.png" alt="Azkell Logo" style="width: 60px; height: 60px; object-fit: contain; border-radius: 12px;">
+            </div>
+
+            <div class="brand fw-bold mb-4 text-white" style="font-size: 1.8rem; letter-spacing: 1px;">
+                AZKELL <span style="color: #60a5fa;">CRM</span>
+            </div>
+
             <form onsubmit="iniciarSesion(event, this)">
-                <div class="mb-3 text-start"><label class="form-label fw-bold">Correo Electrónico</label><input type="email" name="correo" class="form-control form-control-lg" required></div>
-                <div class="mb-4 text-start">
-                    <label class="form-label fw-bold">Contraseña</label>
-                    <div class="input-group">
-                        <input type="password" name="password" id="login-password" class="form-control form-control-lg border-end-0" required>
-                        <button class="btn border-start-0" type="button" onclick="togglePassword('login-password', this)"><i class="bi bi-eye-fill fs-5"></i></button>
-                    </div>
+
+                <div class="field-glass">
+                    <span class="field-icon"><i class="bi bi-envelope-fill"></i></span>
+                    <input type="email" name="correo" placeholder="Correo electrónico" autocomplete="email" required />
                 </div>
-                <div id="mensaje-login" class="text-danger mb-3 fw-bold" style="display:none; font-size: 1rem;"></div>
-                <button type="submit" id="btn-login" class="btn btn-warning btn-lg w-100 fw-bold text-dark">Ingresar al Sistema</button>
+
+                <div class="field-glass">
+                    <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
+                    <input id="login-password" name="password" type="password" placeholder="Contraseña" autocomplete="current-password" required />
+                    <button type="button" class="btn-toggle-pwd" onclick="togglePassword('login-password', this)" aria-label="Mostrar contraseña">
+                        <i class="bi bi-eye-fill"></i>
+                    </button>
+                </div>
+
+                <div class="meta-row">
+                    <label class="remember">
+                        <input type="checkbox" checked />
+                        Recordarme
+                    </label>
+                    <a class="forgot" href="#">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <div id="mensaje-login" class="text-danger mb-3 fw-bold text-center" style="display:none; font-size: 0.9rem; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 8px;"></div>
+
+                <button type="submit" id="btn-login" class="btn-login-glass">Ingresar</button>
             </form>
         </div>
     </div>
