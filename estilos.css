@@ -1,10 +1,63 @@
 
-    :root { --bg:#f0f2f5; --surface:#ffffff; --text:#1a1a2e; --subtext:#555577; --border:#d0d4dd; --toggle-bg:#cbd0d8; --thumb:#ffffff; --shadow:rgba(0,0,0,0.10); --crm-sidebar:#1e293b; --crm-accent:#facc15; --sidebar-width:230px; --sidebar-collapsed-width:65px; }
-    body.dark { --bg:#0f172a; --surface:#1e293b; --text:#f8fafc; --subtext:#94a3b8; --border:#334155; --toggle-bg:#3b82f6; --thumb:#ffffff; --shadow:rgba(0,0,0,0.5); --crm-sidebar:#0b1120; }
-    html { height: 100%; overflow: hidden; font-size: 14px; } *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: var(--bg) !important; color: var(--text) !important; font-family: 'Oswald', sans-serif !important; }
-    .content, .sidebar, .topbar, .kpi-card, .modal-content { transition: background-color 0.3s ease, border-color 0.3s ease; }
-    #app-crm { width: 100%; height: 100%; display: flex; overflow: hidden; }
+/* ============================================================
+   VARIABLES DE COLOR & TIPOGRAFÍA (Estilo iOS Premium)
+   ============================================================ */
+
+/* --- PALETA MODO CLARO (iOS Light) --- */
+:root {
+    --bg: #f2f2f7;           /* Fondo gris muy claro iOS */
+    --surface: #ffffff;      /* Tarjetas/Cuadros blancos puros */
+    --text: #000000;         /* Texto negro puro */
+    --subtext: #8e8e93;      /* Texto secundario gris iOS */
+    --border: #e5e5ea;       /* Bordes muy suaves */
+    --accent: #007aff;       /* Azul clásico iOS */
+    --shadow: 0 4px 12px rgba(0,0,0,0.05);
+
+    --crm-sidebar: var(--surface);
+    --crm-accent: var(--accent);
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 70px;
+
+    /* Colores para Badges */
+    --prem-red-txt: #ff3b30;    /* Rojo iOS */
+    --prem-green-txt: #34c759;  /* Verde iOS */
+}
+
+/* --- PALETA MODO OSCURO (iOS Dark / WhatsApp iPhone) --- */
+body.dark {
+    --bg: #000000;           /* Fondo NEGRO PURO OLED */
+    --surface: #1c1c1e;      /* Gris Carbón profundo para tarjetas/cuadros */
+    --text: #ffffff;         /* Texto blanco puro */
+    --subtext: #98989d;      /* Texto secundario gris oscuro iOS */
+    --border: #38383a;       /* Bordes oscuros sutiles */
+    --accent: #0a84ff;       /* Azul vibrante iOS Dark */
+    --shadow: 0 10px 25px rgba(0,0,0,0.5);
+
+    --crm-sidebar: var(--bg); /* Sidebar negra pura */
+    --crm-accent: var(--accent);
+    --prem-red-txt: #ff453a;  /* Rojo iOS Dark */
+    --prem-green-txt: #30d158; /* Verde iOS Dark */
+}
+
+/* ============================================================
+   ESTILOS GLOBALES & TIPOGRAFÍA (San Francisco - Apple)
+   ============================================================ */
+html { height: 100%; overflow: hidden; font-size: 13px; }
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.content, .sidebar, .topbar, .kpi-card, .modal-content, .card-premium {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+#app-crm { width: 100%; height: 100%; display: flex; overflow: hidden; }
     .sidebar { width: var(--sidebar-width); background-color: var(--crm-sidebar); display: flex; flex-direction: column; overflow-x: hidden; white-space: nowrap; z-index: 1050; flex-shrink: 0; }
     .sidebar.collapsed { width: var(--sidebar-collapsed-width); } .sidebar .brand-container { padding: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); height: 60px; flex-shrink: 0; }
     .sidebar .brand-text { font-size: 1.3rem; font-weight: 600; color: var(--crm-accent) !important; transition: opacity 0.3s; } .sidebar.collapsed .brand-text { opacity: 0; display: none;}
@@ -788,34 +841,6 @@ body.dark .table-custom th {
 }
 body.dark .fake-search-bar { background-color: #0f172a; border-color: #334155; }
 
-/* 4. Switch Modo Oscuro (Estilo Apple iOS) */
-.apple-switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 28px;
-}
-.apple-switch input { opacity: 0; width: 0; height: 0; }
-.apple-slider {
-    position: absolute; cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #cbd5e1;
-    transition: .4s; border-radius: 34px;
-}
-.apple-slider:before {
-    position: absolute; content: "";
-    height: 22px; width: 22px;
-    left: 3px; bottom: 3px;
-    background-color: white;
-    transition: .3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-.apple-switch input:checked + .apple-slider { background-color: #3b82f6; }
-.apple-switch input:checked + .apple-slider:before { transform: translateX(22px); }
-body.dark .apple-slider { background-color: #1e293b; border: 1px solid #334155; }
-body.dark .apple-switch input:checked + .apple-slider { background-color: #2563eb; }
-
 /* 5. Ajustes de espaciado en el menú (Figma Layout) */
 #sidebarMenu a { padding: 0 20px !important; margin: 4px 12px !important; }
 .sidebar .collapse a { padding-left: 3.5rem !important; }
@@ -1479,3 +1504,135 @@ body.dark .wizard-tab h5.text-primary {
 
 .btn-login-glass:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .btn-login-glass:active { transform: translateY(0); }
+
+/* ============================================================
+   BOTÓN DE TEMA (Sol/Luna) - Estilo iOS
+   ============================================================ */
+#btn-theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.4rem;
+}
+#btn-theme-toggle:hover {
+    background-color: var(--border);
+    transform: scale(1.05);
+}
+
+/* Color Amarillo Vibrante iOS para el Sol en Modo Oscuro */
+.text-warning {
+    color: #ffd60a !important;
+}
+
+/* ============================================================
+   REDISEÑO GRID DE PLACAS (Tarjetas Modernas)
+   ============================================================ */
+
+/* Clases de Cuadrícula Dinámica */
+.placas-grid-view { display: grid; gap: 15px; align-content: start; }
+.grid-cols-3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.grid-cols-4 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.grid-cols-5 { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+
+/* Tarjetas (Cards) Compactas */
+.card-premium {
+    background-color: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s ease;
+    box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column;
+}
+.card-premium:hover { border-color: var(--crm-accent); transform: translateY(-2px); }
+
+/* Encabezado: Placa y Opciones */
+.card-header-theme { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.card-title-prem { font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: 0.5px; }
+
+/* Grid interno de datos */
+.card-data-row {
+    display: grid; grid-template-columns: 60px 1fr; gap: 8px;
+    font-size: 0.85rem; margin-bottom: 6px; align-items: center;
+}
+.card-data-row span:first-child { color: var(--subtext); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; }
+.card-data-row span:last-child { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+
+/* Botón 3 puntos */
+.btn-dots { background: transparent; border: none; color: var(--subtext); padding: 4px 8px; border-radius: 6px; font-size: 1.2rem; }
+.btn-dots:hover { background-color: var(--border); color: var(--text); }
+
+/* Badges de Estado */
+.badge-premium { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; border: none !important; white-space: nowrap; }
+.badge-green { background-color: rgba(22, 163, 74, 0.15) !important; color: var(--prem-green-txt) !important; }
+.badge-red { background-color: rgba(220, 38, 38, 0.15) !important; color: var(--prem-red-txt) !important; }
+
+/* Agrupador de Cliente alineado a la izquierda */
+.group-header-left {
+    grid-column: 1 / -1;
+    font-size: 1.1rem; font-weight: 700; color: var(--text);
+    padding: 15px 0 5px 5px; border-bottom: 2px solid var(--border);
+    margin-bottom: 5px; display: flex; align-items: center;
+}
+
+/* Paginación fija al fondo */
+.pagination-row { border-top: 1px solid var(--border); background-color: var(--bg); }
+.btn-pag-nav { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 4px 14px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+.btn-pag-nav:hover:not(:disabled) { background-color: var(--border); }
+.btn-pag-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============================================================
+   PANEL LATERAL OFFCANVAS (Detalles)
+   ============================================================ */
+.offcanvas { background-color: var(--surface) !important; color: var(--text) !important; }
+.offcanvas-header { border-bottom-color: var(--border) !important; }
+.offcanvas-body { background-color: var(--bg) !important; }
+.offcanvas-footer { border-top-color: var(--border) !important; }
+
+.detalle-lateral-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 10px;
+}
+.det-lat-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin-bottom: 4px;
+}
+.det-lat-item span {
+    font-size: 0.75rem;
+    color: var(--subtext);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+.det-lat-item strong {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* MODO SELECCIÓN: SOMBREADO TIPO GMAIL */
+.card-selected {
+    background-color: rgba(22, 163, 74, 0.08) !important;
+    border-color: var(--crm-accent) !important;
+    box-shadow: 0 0 0 1px var(--crm-accent) !important;
+    transform: scale(0.99);
+}
+.chk-bulk-placas {
+    transform: scale(1.2);
+    margin-right: 5px;
+}
+
+/* Botón flotante IA — sube para no tapar la barra de paginación */
+.btn-ia-float {
+    bottom: 80px !important;
+}
