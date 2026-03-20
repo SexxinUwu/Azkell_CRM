@@ -87,6 +87,9 @@ let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null;
 // 🔥 NUEVAS VARIABLES PARA EL DASHBOARD
 let mapDashboardInst = null;
 let chartDashboardInst = null;
+let chartDashFleetrunInst = null;
+let chartGeneralInspeccionesInst = null;
+let chartTiposInspeccionInst = null;
 Chart.register(ChartDataLabels); 
 
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
@@ -871,7 +874,15 @@ function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVi
 
 // FUNCIÓN PARA CAMBIAR COLOR DINÁMICO DE GRÁFICOS (MODO OSCURO/CLARO)
 function actualizarColoresGraficos() {
-    const charts = [chartTotalInst, chartMotorasInst, chartNoMotorasInst, chartDashboardInst];
+    const charts = [
+        typeof chartTotalInst !== 'undefined' ? chartTotalInst : null,
+        typeof chartMotorasInst !== 'undefined' ? chartMotorasInst : null,
+        typeof chartNoMotorasInst !== 'undefined' ? chartNoMotorasInst : null,
+        typeof chartDashFleetrunInst !== 'undefined' ? chartDashFleetrunInst : null,
+        typeof chartFleetrunInst !== 'undefined' ? chartFleetrunInst : null,
+        typeof chartGeneralInspeccionesInst !== 'undefined' ? chartGeneralInspeccionesInst : null
+    ];
+
     const isDark = document.body.classList.contains('dark');
     const textColor = isDark ? '#f8fafc' : '#1a1a2e';
     const borderColor = isDark ? '#1e293b' : '#ffffff';
@@ -882,7 +893,6 @@ function actualizarColoresGraficos() {
             chart.options.plugins.legend.labels.color = textColor;
             if(chart.options.plugins.datalabels) {
                 chart.options.plugins.datalabels.color = labelColor;
-                chart.options.plugins.datalabels.font = { weight: 'bold', size: 12, family: 'Inter' };
             }
             chart.data.datasets[0].borderColor = borderColor;
             chart.update();
@@ -1405,6 +1415,7 @@ function cargarTablaFleetrun(forzarRefresh = false) { if(!forzarRefresh && dataG
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
 function toggleGroupRow(className, trElement) { let rows = document.querySelectorAll('.' + className); let icon = trElement.querySelector('i'); let isHidden = false; if(rows.length > 0) isHidden = rows[0].style.display === 'none'; rows.forEach(row => { row.style.display = isHidden ? '' : 'none'; }); if(icon) { icon.className = isHidden ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } }
 function toggleAllFleetrunGroups() { expandAllState = !expandAllState; const rows = document.querySelectorAll('.child-row-fleetrun'); const icons = document.querySelectorAll('#cuerpoTablaFleetrun .group-header i'); rows.forEach(row => { let header = row.previousElementSibling; while(header && !header.classList.contains('group-header')) { header = header.previousElementSibling; } if(header && header.style.display !== 'none') { row.style.display = expandAllState ? '' : 'none'; } }); icons.forEach(i => { if(i.classList.contains('text-warning')) { i.className = expandAllState ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } }); }
+
 function mostrarFleetrun(datos) {
   if (procesadorErroresCuota(datos, 'cuerpoTablaFleetrun')) return;
   dataGlobalFleetrun = datos;
@@ -1418,7 +1429,7 @@ function mostrarFleetrun(datos) {
   };
 
   // 2. Ordenamos obligatoriamente del MÁS NUEVO al MÁS VIEJO
-  let datosOrdenados = [...datos].sort((a,b) => parseFecha(b[1]) - parseFecha(a[1]));
+  let datosOrdenados = [...datos].sort((a,b) => parseFecha(b[3]) - parseFecha(a[3]));
 
   let datosAMostrar = [];
   if (isHistorialFleetrun) {
@@ -1433,7 +1444,7 @@ function mostrarFleetrun(datos) {
           let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
 
           // Al estar ordenado, el primer registro que entra al Map es el último que se hizo
-          if (infoPlaca && infoPlaca[8] === 'Activa' && !mapa.has(key)) {
+          if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
               mapa.set(key, row);
           }
       });
@@ -1441,18 +1452,19 @@ function mostrarFleetrun(datos) {
   }
 
   let html = '';
-  if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="10" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; } 
+  let cntVig = 0, cntPV = 0, cntVenc = 0;
+  if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="10" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; }
   else {
       let p = permisosUsuario || {}; let isAdmF = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; let canEditF = isAdmF || p.fleet?.e === true; let canDeleteF = isAdmF || p.fleet?.d === true; let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map(); 
       datosAMostrar.forEach((fila) => { let placaRaw = fila[4] || "-"; if(!mapPlacas.has(placaRaw)) mapPlacas.set(placaRaw, []); mapPlacas.get(placaRaw).push(fila); });
       mapPlacas.forEach((mantenimientos, placaRaw) => {
-          let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = infoP ? infoP[10] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
-          let isActive = infoP && infoP[8] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
+          let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
+          let isActive = infoP && infoP[18] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
           html += `<tr class="group-header data-row-fleetrun" style="cursor:pointer;" onclick="toggleGroupRow('child-${classPlaca}', this)" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}">
               <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span><span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
-              let id = fila[0]; let fechaStr = fila[1]; let tipo_mp = fila[8]; let obs = fila[12]; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
+              let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[14] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
               
               // 🔥 WIALON GPS INYECCIÓN EN FLEETRUN 🔥
               let km_gps = parseFloat(fila[14]) || 0;
@@ -1463,41 +1475,100 @@ function mostrarFleetrun(datos) {
                   isLive = true;
               }
               
-              let falta_km = km_prox - km_gps; let colorFalta = ""; let iconFalta = "";
-              if (falta_km <= 0) { colorFalta = "#dc2626"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) { colorFalta = "#eab308"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; } else { colorFalta = "#16a34a"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; }
+              let falta_km = km_prox - km_gps; let colorFalta = ""; let iconFalta = ""; let estadoKpi = "";
+              if (falta_km <= 0) { colorFalta = "#dc2626"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO"; cntVenc++;
+              } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) { colorFalta = "#eab308"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "POR_VENCER"; cntPV++;
+              } else { colorFalta = "#16a34a"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; cntVig++; }
               let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`; let fmtFrec = `<span style="color: orange; font-weight: bold;">${frecuencia.toLocaleString()}</span>`; 
               
               let fmtKmGps = isLive ? `<span class="badge bg-primary shadow-sm px-2"><i class="bi bi-broadcast"></i> ${km_gps.toLocaleString()}</span>` : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}</span>`; 
               let fmtFalta = `<span style="color: ${colorFalta}; font-weight: bold;">${iconFalta} ${falta_km.toLocaleString()}</span>`;
               
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
-              let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id); 
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="abrirDetalleFleetrun(event, ${originalIndex})" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}"><input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
+              let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
+              let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else{abrirDetalleFleetrun(event,${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}">${chkHtml}∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
           });
       });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
   }
   document.getElementById('cuerpoTablaFleetrun').innerHTML = html;
+  let kpiV = document.getElementById('kpi-fleet-vigentes'); if(kpiV) kpiV.textContent = cntVig;
+  let kpiP = document.getElementById('kpi-fleet-porvencer'); if(kpiP) kpiP.textContent = cntPV;
+  let kpiVe = document.getElementById('kpi-fleet-vencidos'); if(kpiVe) kpiVe.textContent = cntVenc;
+  if (!isHistorialFleetrun) { updateGraficoFleetrun(cntVig, cntPV, cntVenc); }
 }
-function filtrarFleetrunAvanzado() { const txt = document.getElementById('buscadorFleetrun')?.value.toLowerCase() || ''; const dateF = document.getElementById('buscadorFechaFleetrun')?.value || ''; let dateCompare = ''; if(dateF) { let p = dateF.split('-'); dateCompare = `${p[2]}/${p[1]}/${p[0]}`; } const chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(e=>e.value); const chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(e=>e.value); let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0; const headers = document.querySelectorAll('#cuerpoTablaFleetrun tr.group-header'); headers.forEach(header => { const placaRaw = header.getAttribute('data-placa'); const classPlaca = normalizarClase(placaRaw); const cli = header.getAttribute('data-cliente'); const uts = header.getAttribute('data-uts'); let childRows = document.querySelectorAll(`.child-${classPlaca}`); let hasVisibleChild = false; let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchUts = (!chkUts.length || chkUts.includes(uts)); if(matchCli && matchUts) { childRows.forEach(row => { let textoRow = row.innerText.toLowerCase() + " " + placaRaw.toLowerCase(); let rowFecha = row.getAttribute('data-fecha'); let matchTxt = (!txt || textoRow.includes(txt)); let matchDate = (!dateCompare || rowFecha === dateCompare); if(matchTxt && matchDate) { row.style.display = isFiltering ? '' : (expandAllState ? '' : 'none'); hasVisibleChild = true; } else { row.style.display = 'none'; } }); let icon = header.querySelector('i'); if(icon) { if (isFiltering && hasVisibleChild) icon.className = "bi bi-chevron-down ms-1 me-2 text-warning"; else icon.className = expandAllState ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } } else { childRows.forEach(row => row.style.display = 'none'); } header.style.display = hasVisibleChild ? '' : 'none'; }); }
+window.filtrarFleetrunAvanzado = function() {
+    const txt = document.getElementById('buscadorFleetrun')?.value.toLowerCase() || '';
+    const dateF = document.getElementById('buscadorFechaFleetrun')?.value || '';
+    let dateCompare = ''; if(dateF) { let p = dateF.split('-'); dateCompare = `${p[2]}/${p[1]}/${p[0]}`; }
+    const chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(e=>e.value);
+    const chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(e=>e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(e=>e.value);
+
+    let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || chkEst.length > 0;
+    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
+
+    const headers = document.querySelectorAll('#cuerpoTablaFleetrun tr.group-header');
+    headers.forEach(header => {
+        const placaRaw = header.getAttribute('data-placa'); const classPlaca = normalizarClase(placaRaw);
+        const cli = header.getAttribute('data-cliente'); const uts = header.getAttribute('data-uts');
+        let childRows = document.querySelectorAll(`.child-${classPlaca}`);
+        let hasVisibleChild = false;
+        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchUts = (!chkUts.length || chkUts.includes(uts));
+        if(matchCli && matchUts) {
+            childRows.forEach(row => {
+                let textoRow = row.innerText.toLowerCase() + " " + placaRaw.toLowerCase();
+                let rowFecha = row.getAttribute('data-fecha');
+                let kpiFila = row.getAttribute('data-estado-kpi');
+                let matchTxt = (!txt || textoRow.includes(txt));
+                let matchDate = (!dateCompare || rowFecha === dateCompare);
+                let matchKpi = (!chkEst.length || chkEst.includes(kpiFila));
+                if(matchTxt && matchDate && matchKpi) {
+                    row.style.display = isFiltering ? '' : (expandAllState ? '' : 'none');
+                    hasVisibleChild = true;
+                    if (kpiFila === 'VIGENTE') cntTotalVig++;
+                    else if (kpiFila === 'POR_VENCER') cntTotalPV++;
+                    else if (kpiFila === 'VENCIDO') cntTotalVenc++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            let icon = header.querySelector('i');
+            if(icon) {
+                if (isFiltering && hasVisibleChild) icon.className = "bi bi-chevron-down ms-1 me-2 text-warning";
+                else icon.className = expandAllState ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning";
+            }
+        } else {
+            childRows.forEach(row => row.style.display = 'none');
+        }
+        header.style.display = hasVisibleChild ? '' : 'none';
+    });
+    updateGraficoFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+};
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
 function autocompletarFecha(prefix) { let dateInput = document.getElementById(prefix + '_fecha').value; if(dateInput) { let d = new Date(dateInput + "T00:00:00"); const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; document.getElementById(prefix + '_mes').value = meses[d.getMonth()]; document.getElementById(prefix + '_anio').value = d.getFullYear(); } }
 
-function autocompletarFleetrun(prefix) { 
-    let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value); 
-    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput); 
-    if(match) { 
-        document.getElementById(prefix + '_marca').value = match[4] || ""; 
-        document.getElementById(prefix + '_dueno').value = match[1] || ""; 
-        document.getElementById(prefix + '_uts').value = match[10] || ""; 
-        calcularFrecuencia(prefix); 
+window.autocompletarFleetrun = function(prefix) {
+    let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
+    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
+
+    if(match) {
+        document.getElementById(prefix + '_marca').value = match[3] || "";
+        document.getElementById(prefix + '_dueno').value = match[1] || "";
+        document.getElementById(prefix + '_uts').value = match[19] || "";
+        calcularFrecuencia(prefix);
+    } else {
+        document.getElementById(prefix + '_marca').value = "";
+        document.getElementById(prefix + '_dueno').value = "";
+        document.getElementById(prefix + '_uts').value = "";
     }
-    
+
     let wialonData = buscarWialonPorPlaca(placaInput);
     if(wialonData) {
         document.getElementById(prefix + '_kmgps').value = wialonData.km;
     } else { document.getElementById(prefix + '_kmgps').value = ''; }
-}
+};
 
 function calcularFrecuencia(prefix) {
     let marca = normalizeStr(document.getElementById(prefix + '_marca').value);
@@ -3071,6 +3142,7 @@ window.abrirModalEditarInspeccion = function(idBusqueda) {
     document.getElementById('formNuevaInspeccion').reset();
     document.getElementById('i_id_inspeccion').value = insp.id;
 
+    // Limpiar visualmente todo antes de llenar
     document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.pct-btn').forEach(btn => {
         btn.classList.remove('btn-primary', 'text-white');
@@ -3079,13 +3151,15 @@ window.abrirModalEditarInspeccion = function(idBusqueda) {
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
 
+    // Formatear la fecha
     let fIngreso;
     if (insp.fecha_ingreso && insp.fecha_ingreso.includes('/')) {
-        let p = insp.fecha_ingreso.split('/'); fIngreso = `${p[2]}-${p[1]}-${p[0]}`;
+        let p = insp.fecha_ingreso.split('/'); fIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
     } else if (insp.fecha_ingreso) {
         fIngreso = insp.fecha_ingreso.split('T')[0];
     } else { fIngreso = ""; }
 
+    // Llenar datos base
     document.getElementById('i_fecha').value = fIngreso;
     document.getElementById('i_placa').value = insp.placa || "";
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
@@ -3093,31 +3167,59 @@ window.abrirModalEditarInspeccion = function(idBusqueda) {
     document.getElementById('i_tecnico').value = insp.tecnico || "";
     document.getElementById('i_dias').value = insp.dias_propuestos || "30";
 
-    if(insp.detalles_json && insp.detalles_json.includes("[")) {
-        try {
-            let arr = JSON.parse(insp.detalles_json);
-            WIZARD_SCHEMA.forEach((sec, i) => {
-                if(sec.items) {
-                    sec.items.forEach((item, j) => {
-                        let lbl = typeof item === 'string' ? item : item.label;
-                        let t = typeof item === 'string' ? 'okfalla' : item.type;
-                        let uid = `p_${i}_${j}`;
-                        let res = arr.find(x => x.item === lbl && x.categoria === sec.tab);
-                        if(res && res.estado !== "SIN DATOS" && res.estado !== "") {
-                            if(t === 'okfalla') {
-                                if(res.estado === 'OK') { document.getElementById(`${uid}_ok`).checked = true; document.getElementById(`${uid}_ok`).dataset.chk = '1'; }
-                                else if (res.estado === 'FALLA') { document.getElementById(`${uid}_fa`).checked = true; document.getElementById(`${uid}_fa`).dataset.chk = '1'; toggleFalla(`f_${uid}`, true); if(res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion; }
-                            } else if (t === 'percent') {
-                                let val = res.estado.replace('%',''); document.getElementById(`val_${uid}`).value = val;
-                                document.querySelectorAll(`.pct-${uid}`).forEach(b => { if(b.innerText === res.estado) { b.classList.remove('btn-outline-primary'); b.classList.add('btn-primary', 'text-white'); } });
-                            } else if (t === 'text') {
-                                if(res.observacion) document.getElementById(`txt_${uid}`).value = res.observacion;
+    // Auto-completar el Tipo y el Wialon actual
+    autocompletarInfoInsp();
+
+    // SOLUCIÓN: Cargar el JSON a prueba de balas
+    let arr = [];
+    try {
+        arr = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : insp.detalles_json;
+    } catch(e) {}
+
+    if (Array.isArray(arr)) {
+        WIZARD_SCHEMA.forEach((sec, i) => {
+            if(sec.items) {
+                sec.items.forEach((item, j) => {
+                    let lbl = typeof item === 'string' ? item : item.label;
+                    let t = typeof item === 'string' ? 'okfalla' : item.type;
+                    let uid = `p_${i}_${j}`;
+
+                    let res = arr.find(x => x.item === lbl && x.categoria === sec.tab);
+
+                    if(res && res.estado && res.estado !== "SIN DATOS" && res.estado !== "") {
+                        if(t === 'okfalla') {
+                            if(res.estado === 'OK') {
+                                let rOk = document.getElementById(`${uid}_ok`);
+                                if(rOk) { rOk.checked = true; rOk.dataset.chk = '1'; }
+                            }
+                            else if (res.estado === 'FALLA') {
+                                let rFa = document.getElementById(`${uid}_fa`);
+                                if(rFa) {
+                                    rFa.checked = true; rFa.dataset.chk = '1';
+                                    toggleFalla(`f_${uid}`, true);
+                                    if(res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion;
+                                }
+                            }
+                        } else if (t === 'percent') {
+                            let val = res.estado.replace('%','');
+                            let inpVal = document.getElementById(`val_${uid}`);
+                            if(inpVal) inpVal.value = val;
+                            document.querySelectorAll(`.pct-${uid}`).forEach(b => {
+                                if(b.innerText === res.estado || b.innerText === val + '%') {
+                                    b.classList.remove('btn-outline-primary');
+                                    b.classList.add('btn-primary', 'text-white');
+                                }
+                            });
+                        } else if (t === 'text') {
+                            let txt = document.getElementById(`txt_${uid}`);
+                            if(txt) {
+                                txt.value = res.observacion || (res.estado !== 'REGISTRADO' ? res.estado : "");
                             }
                         }
-                    });
-                }
-            });
-        } catch(e) {}
+                    }
+                });
+            }
+        });
     }
 
     window.cambiarPestana(0);
@@ -3513,12 +3615,19 @@ window.recargarDashboard = function() {
     let btn = document.querySelector('#moduloDashboard .btn-outline-primary');
     if(btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...';
 
+    // Pedimos las 4 bases de datos obligatorias para que los cruces no den "0"
     Promise.all([
         new Promise(resolve => {
             if (dataGlobalInspecciones.length > 0) resolve();
-            else {
-                google.script.run.withSuccessHandler(d => { dataGlobalInspecciones = d; resolve(); }).obtenerDatosInspecciones();
-            }
+            else google.script.run.withSuccessHandler(d => { dataGlobalInspecciones = d; resolve(); }).obtenerDatosInspecciones();
+        }),
+        new Promise(resolve => {
+            if (dataGlobalFleetrun.length > 0) resolve();
+            else google.script.run.withSuccessHandler(d => { dataGlobalFleetrun = d; resolve(); }).obtenerDatosFleetrun();
+        }),
+        new Promise(resolve => {
+            if (dataGlobalPlacas.length > 0) resolve();
+            else google.script.run.withSuccessHandler(d => { dataGlobalPlacas = d; resolve(); }).obtenerDatosPlacas();
         }),
         new Promise(resolve => {
             google.script.run.withSuccessHandler(d => {
@@ -3529,9 +3638,11 @@ window.recargarDashboard = function() {
     ]).then(() => {
         if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
         renderizarDashboard();
+        procesarFleetrunParaDashboard();
     }).catch(() => {
         if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
         renderizarDashboard();
+        procesarFleetrunParaDashboard();
     });
 };
 
@@ -3570,16 +3681,16 @@ window.renderizarDashboard = function() {
         else vencidas++;
     });
 
-    let ctxChart = document.getElementById('chartDashboardTotal');
+    let ctxChart = document.getElementById('chartGeneralInspecciones');
     if (ctxChart) {
-        if(chartDashboardInst) chartDashboardInst.destroy();
+        if(chartGeneralInspeccionesInst) chartGeneralInspeccionesInst.destroy();
 
         const isDark = document.body.classList.contains('dark');
         const textColor = isDark ? '#f8fafc' : '#1e293b';
         const borderColor = isDark ? '#1e293b' : '#ffffff';
         const labelColor = isDark ? '#ffffff' : '#000000';
 
-        chartDashboardInst = new Chart(ctxChart.getContext('2d'), {
+        chartGeneralInspeccionesInst = new Chart(ctxChart.getContext('2d'), {
             type: 'doughnut',
             data: {
                 labels: ['Vigentes', 'Vencidas / Sin Datos'],
@@ -3609,7 +3720,12 @@ window.renderizarDashboard = function() {
     }
 
     // ---------------------------------------------------------
-    // 2. MAPA GLOBAL GPS (LEAFLET)
+    // 2. FLEETRUN EN DASHBOARD
+    // ---------------------------------------------------------
+    procesarFleetrunParaDashboard();
+
+    // ---------------------------------------------------------
+    // 3. MAPA GLOBAL GPS (LEAFLET)
     // ---------------------------------------------------------
     if (!mapDashboardInst) {
         mapDashboardInst = L.map('mapaDashboard').setView([-12.0464, -76.9629], 10);
@@ -3905,4 +4021,337 @@ window.importarExcelInspecciones = function(event) {
         });
     };
     reader.readAsArrayBuffer(file);
+};
+
+// ============================================================
+// 🛠️ LÓGICA DE SELECCIÓN Y EXCEL PARA FLEETRUN
+// ============================================================
+
+window.activarModoSeleccionFleetrun = function() {
+    window.modoSeleccion = window.modoSeleccion || {};
+    window.modoSeleccion['fleetrun'] = !window.modoSeleccion['fleetrun'];
+
+    const btnAll = document.getElementById('btn-select-all-fleetrun');
+    const btnBulk = document.getElementById('btn-bulk-fleetrun');
+
+    if (window.modoSeleccion['fleetrun']) {
+        btnAll.classList.remove('d-none');
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    } else {
+        btnAll.classList.add('d-none');
+        btnBulk.classList.add('d-none');
+        document.querySelectorAll('.chk-bulk-fleetrun').forEach(c => c.checked = false);
+        document.querySelectorAll('.child-row-fleetrun').forEach(c => c.classList.remove('row-selected'));
+    }
+    mostrarFleetrun(dataGlobalFleetrun);
+};
+
+window.seleccionarFilaFleetrun = function(event, trElement) {
+    if (window.modoSeleccion && window.modoSeleccion['fleetrun']) {
+        if (event.target.closest('.btn-icon-dropdown') || event.target.closest('.dropdown-menu')) return;
+        const checkbox = trElement.querySelector('.chk-bulk-fleetrun');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) trElement.classList.add('row-selected');
+            else trElement.classList.remove('row-selected');
+            toggleBulkBtn('fleetrun');
+        }
+    }
+};
+
+window.seleccionarTodasLasFleetrun = function() {
+    const btnAll = document.getElementById('btn-select-all-fleetrun');
+    const checkboxes = document.querySelectorAll('.chk-bulk-fleetrun');
+    const accionEsMarcar = btnAll.innerText.includes('Seleccionar Todo');
+
+    checkboxes.forEach(chk => {
+        chk.checked = accionEsMarcar;
+        const row = chk.closest('.child-row-fleetrun');
+        if (row) {
+            if (accionEsMarcar) row.classList.add('row-selected');
+            else row.classList.remove('row-selected');
+        }
+    });
+
+    if (accionEsMarcar) {
+        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
+        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
+    } else {
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    }
+    toggleBulkBtn('fleetrun');
+};
+
+window.descargarPlantillaFleetrun = function() {
+    const ws_data = [
+        ['FECHA INGRESO', 'PLACA', 'TIPO MP', 'KM ACTUAL', 'FRECUENCIA', 'TECNICO', 'OBSERVACION'],
+        ['2024-05-20', 'ABC-123', 'MP1', '150000', '15000', 'JUAN PEREZ', 'Mantenimiento preventivo general']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Fleetrun");
+    XLSX.writeFile(wb, "Plantilla_Importacion_Fleetrun.xlsx");
+};
+
+window.exportarExcelFleetrun = function() {
+    if (!dataGlobalFleetrun || dataGlobalFleetrun.length === 0) {
+        alert("No hay mantenimientos cargados para exportar."); return;
+    }
+    const ws_data = [['ID', 'FECHA INGRESO', 'PLACA', 'TIPO MP', 'KM ACTUAL', 'FRECUENCIA', 'KM PROXIMO', 'TECNICO', 'OBSERVACION']];
+    dataGlobalFleetrun.forEach(f => {
+        if (f.estado === 'Eliminada') return;
+        ws_data.push([f[0]||'', f[3]||'', f[4]||'', f[8]||'', f[9]||'', f[10]||'', f[11]||'', f[13]||'', f[14]||'']);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Base_Fleetrun");
+    XLSX.writeFile(wb, "Reporte_Fleetrun_Completo.xlsx");
+};
+
+window.importarExcelFleetrun = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
+
+        if (rawJson.length === 0) { alert("Archivo vacío o inválido."); return; }
+        if (!confirm(`Se importarán o actualizarán ${rawJson.length} registros en Fleetrun.\n¿Continuar?`)) {
+            event.target.value = ''; return;
+        }
+
+        document.body.style.cursor = 'wait';
+
+        let registrosProcesados = rawJson.map(r => {
+            let fechaIngreso = r['FECHA INGRESO'] || '';
+            if (fechaIngreso.includes('/')) {
+                let p = fechaIngreso.split('/');
+                if (p[2] && p[2].length === 4) fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            }
+            let kmact = parseFloat(r['KM ACTUAL'] || 0);
+            let frec = parseFloat(r['FRECUENCIA'] || 0);
+            return {
+                id: r['ID'] || `FLT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                fecha: fechaIngreso,
+                placa: r['PLACA'] || '',
+                tipomp: r['TIPO MP'] || '',
+                kmact: kmact.toString(),
+                freckm: frec.toString(),
+                kmprox: (kmact + frec).toString(),
+                tec: r['TECNICO'] || '',
+                obs: r['OBSERVACION'] || '',
+                mes: fechaIngreso ? fechaIngreso.split('-')[1] : '',
+                anio: fechaIngreso ? fechaIngreso.split('-')[0] : ''
+            };
+        });
+
+        fetch('/api/importarFleetrunMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros: registrosProcesados })
+        }).then(res => res.json()).then(r => {
+            document.body.style.cursor = 'default'; event.target.value = '';
+            alert(`✅ Importación completada.\nProcesados: ${r.ok}\nErrores: ${r.errores}`);
+            recargarModulo('fleetrun');
+        }).catch(err => {
+            document.body.style.cursor = 'default'; event.target.value = '';
+            alert("❌ Error: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+// ============================================================
+// 📊 GRÁFICOS Y DASHBOARD INTERNO DE FLEETRUN
+// ============================================================
+let chartFleetrunInst = null;
+
+window.toggleGraficosFleetrun = function() {
+    let panel = document.getElementById('panelGraficosFleetrun');
+    let btn = document.getElementById('btnToggleGraficosFleetrun');
+    if(panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        btn.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Ocultar Gráficos';
+    } else {
+        panel.style.display = 'none';
+        btn.innerHTML = '<i class="bi bi-eye-fill"></i> Mostrar Gráficos';
+    }
+};
+
+window.initGraficoFleetrun = function() {
+    let ctx = document.getElementById('chartFleetrunStatus');
+    if(!ctx) return null;
+
+    return new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
+            datasets: [{ data: [1, 0, 0], backgroundColor: ['#16a34a', '#eab308', '#dc2626'], borderWidth: 2, hoverOffset: 4 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Inter', weight: 'bold' } } },
+                datalabels: {
+                    color: document.body.classList.contains('dark') ? '#ffffff' : '#000000',
+                    font: { weight: 'bold', size: 12, family: 'Inter' },
+                    formatter: (value, context) => {
+                        let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        if (total === 0 || value === 0 || context.chart.data.labels[0] === 'Sin Datos') return "";
+                        return Math.round((value / total) * 100) + "%";
+                    }
+                }
+            },
+            onClick: (e, elements, chart) => {
+                if (elements.length > 0 && chart.data.labels[0] !== 'Sin Datos') {
+                    const index = elements[0].index;
+                    let estadoVal = ['VIGENTE', 'POR_VENCER', 'VENCIDO'][index] || '';
+                    document.querySelectorAll('#filtroFleetEstado input:checked').forEach(c => c.checked = false);
+                    let checkbox = document.querySelector(`#filtroFleetEstado input[value="${estadoVal}"]`);
+                    if(checkbox) checkbox.checked = true;
+                    filtrarFleetrunAvanzado();
+                }
+            }
+        }
+    });
+};
+
+window.updateGraficoFleetrun = function(vigentes, porVencer, vencidos) {
+    if(!chartFleetrunInst) chartFleetrunInst = initGraficoFleetrun();
+    if(!chartFleetrunInst) return;
+    let isDark = document.body.classList.contains('dark');
+    chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    chartFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    if(vigentes + porVencer + vencidos === 0) {
+        chartFleetrunInst.data.labels = ['Sin Datos'];
+        chartFleetrunInst.data.datasets[0].data = [1];
+        chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
+    } else {
+        chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
+        chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
+        chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+    }
+    chartFleetrunInst.update();
+};
+
+// ============================================================
+// 📊 DASHBOARD — GRÁFICO FLEETRUN
+// ============================================================
+
+window.procesarFleetrunParaDashboard = function() {
+    if (!dataGlobalFleetrun || dataGlobalFleetrun.length === 0 || !dataGlobalPlacas || dataGlobalPlacas.length === 0) {
+        setTimeout(procesarFleetrunParaDashboard, 500);
+        return;
+    }
+
+    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
+    let parseFecha = (str) => {
+        if(!str) return 0;
+        if(str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
+        return new Date(str).getTime() || 0;
+    };
+
+    let mapa = new Map();
+    [...dataGlobalFleetrun].sort((a,b) => parseFecha(b[3]) - parseFecha(a[3])).forEach(row => {
+        let placa = normalizeStr(row[4]);
+        let tipo = normalizeStr(row[8]);
+        let key = placa + "_" + tipo;
+
+        let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
+        if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
+            // Guardamos tanto la fila como la info de la placa
+            mapa.set(key, { row: row, infoPlaca: infoPlaca });
+        }
+    });
+
+    let datosActuales = Array.from(mapa.values());
+
+    datosActuales.forEach((item) => {
+        let fila = item.row;
+        let infoPlaca = item.infoPlaca;
+
+        let placaRaw = fila[4];
+        let km_prox = parseFloat(fila[11]) || 0;
+
+        // 🔥 REGLA DE ORO: Si Placas (19) está vacío, usa el respaldo de Fleetrun (7)
+        let utsRaw = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (fila[7] || "-");
+
+        let km_gps = 0;
+        let wialonData = buscarWialonPorPlaca(placaRaw);
+        if (wialonData) { km_gps = wialonData.km; }
+
+        let falta_km = km_prox - km_gps;
+
+        if (falta_km <= 0) {
+            cntTotalVenc++;
+        } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) {
+            cntTotalPV++;
+        } else {
+            cntTotalVig++;
+        }
+    });
+
+    updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+};
+
+window.initGraficoDashFleetrun = function() {
+    let ctx = document.getElementById('chartDashFleetrunStatus');
+    if (!ctx) return null;
+    Chart.defaults.font.family = 'Inter';
+
+    return new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
+            datasets: [{
+                data: [1, 0, 0],
+                backgroundColor: ['#16a34a', '#eab308', '#dc2626'],
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { weight: 'bold' } } },
+                datalabels: {
+                    color: document.body.classList.contains('dark') ? '#ffffff' : '#000000',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: (value, context) => {
+                        let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        if (total === 0 || value === 0 || context.chart.data.labels[0] === 'Sin Datos') return "";
+                        return Math.round((value / total) * 100) + "%";
+                    }
+                }
+            }
+        }
+    });
+};
+
+window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
+    if(!chartDashFleetrunInst) chartDashFleetrunInst = initGraficoDashFleetrun();
+    if(!chartDashFleetrunInst) return;
+    let isDark = document.body.classList.contains('dark');
+    chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    chartDashFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    if(vigentes + porVencer + vencidos === 0) {
+        chartDashFleetrunInst.data.labels = ['Sin Datos'];
+        chartDashFleetrunInst.data.datasets[0].data = [1];
+        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
+    } else {
+        chartDashFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
+        chartDashFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
+        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+    }
+    chartDashFleetrunInst.update();
 };
