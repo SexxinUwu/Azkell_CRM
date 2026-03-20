@@ -1136,16 +1136,16 @@ function actualizarIndicadoresPlacas(datos) {
     datos.forEach(fila => {
         if ((fila[0] || '').toUpperCase() === 'PLACA') return;
         const tipo = (fila[5] || '').toString().trim().toUpperCase();
-        if (tipo === 'CAMION' || tipo === 'CAMIÓN') camiones++;
-        else if (tipo === 'CARRETA') carretas++;
-        else if (tipo === 'SEMIRREMOLQUE') semirremolques++;
-        else if (tipo === 'TRACTO') tractos++;
+        if (tipo.includes('CAMI')) camiones++;
+        else if (tipo.includes('CARRETA')) carretas++;
+        else if (tipo.includes('SEMI')) semirremolques++;
+        else if (tipo.includes('TRACTO')) tractos++;
     });
 
-    const elCamiones = document.getElementById('ind-camiones');
-    const elCarretas = document.getElementById('ind-carretas');
-    const elSemis = document.getElementById('ind-semis');
-    const elTractos = document.getElementById('ind-tractos');
+    const elCamiones = document.getElementById('kpi-camion');
+    const elCarretas = document.getElementById('kpi-carreta');
+    const elSemis = document.getElementById('kpi-semi');
+    const elTractos = document.getElementById('kpi-tracto');
 
     if (elCamiones) elCamiones.innerText = camiones;
     if (elCarretas) elCarretas.innerText = carretas;
