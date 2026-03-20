@@ -665,6 +665,38 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     res.json({ ok: okCount, errores: errCount });
 });
 
+// ============================================================
+// 🔥 IMPORTACIÓN MASIVA DE FLEETRUN (DESDE EXCEL)
+// ============================================================
+app.post('/api/importarFleetrunMasivo', async (req, res) => {
+    const registros = req.body.registros;
+    if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
+
+    let okCount = 0; let errCount = 0;
+    const promesaQuery = (sql, params) => new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => { if (err) reject(err); else resolve(results); });
+    });
+
+    for (let r of registros) {
+        try {
+            if (!r.placa || r.placa === "") { errCount++; continue; }
+
+            const sql = `
+                INSERT INTO fleetrun
+                (id, mes, anio, fecha, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, kmgps, tec, obs)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                fecha=VALUES(fecha), placa=VALUES(placa), tipomp=VALUES(tipomp), kmact=VALUES(kmact),
+                freckm=VALUES(freckm), kmprox=VALUES(kmprox), tec=VALUES(tec), obs=VALUES(obs),
+                mes=VALUES(mes), anio=VALUES(anio)
+            `;
+            await promesaQuery(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs]);
+            okCount++;
+        } catch (e) { console.error("Error importando fleetrun:", e); errCount++; }
+    }
+    res.json({ ok: okCount, errores: errCount });
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');

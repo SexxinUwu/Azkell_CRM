@@ -1710,3 +1710,45 @@ body.dark .leaflet-control-zoom a:hover {
     border-bottom: 1px solid var(--crm-accent) !important;
     border-top: 1px solid var(--crm-accent) !important;
 }
+
+/* Filtros KPI Interactivos en Fleetrun */
+.kpi-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.kpi-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+.kpi-card.active-filter {
+    border: 2px solid var(--crm-accent);
+    background-color: rgba(0, 122, 255, 0.05);
+}
+body.dark .kpi-card.active-filter {
+    background-color: rgba(0, 122, 255, 0.15);
+}
+
+/* Tabla Fleetrun compacta */
+#cuerpoTablaFleetrun td {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    vertical-align: middle;
+    font-size: 0.85rem;
+}
+#cuerpoTablaFleetrun tr.group-header td {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+/* Dashboard Charts */
+.chart-card-dashboard {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    height: 100%;
+}
+.chart-container-dashboard {
+    position: relative;
+    height: 180px;
+}
