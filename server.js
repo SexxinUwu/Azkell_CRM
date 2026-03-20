@@ -614,6 +614,57 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
     res.json({ ok, errores });
 });
 
+// ============================================================
+// 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
+// ============================================================
+app.post('/api/importarInspeccionesMasivo', async (req, res) => {
+    const registros = req.body.registros;
+    if (!registros || !Array.isArray(registros)) {
+        return res.status(400).json({ error: "Datos inválidos" });
+    }
+
+    let okCount = 0;
+    let errCount = 0;
+
+    const promesaQuery = (sql, params) => new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => {
+            if (err) reject(err); else resolve(results);
+        });
+    });
+
+    for (let r of registros) {
+        try {
+            const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+            const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
+            const placa = r.PLACA || r.placa || '';
+            const km = r['KM TABLERO'] || r.KM || r.km_tablero || '';
+            const cliente = r.CLIENTE || r.cliente || '';
+            const tec = r.TECNICO || r.tecnico || '';
+            const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
+            const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
+
+            if (!placa || placa === "") { errCount++; continue; }
+
+            const sql = `
+                INSERT INTO inspecciones
+                (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
+                cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
+            `;
+
+            await promesaQuery(sql, [id, fecha, placa, km, cliente, tec, dias, detalles]);
+            okCount++;
+        } catch (e) {
+            console.error("Error importando inspección:", e);
+            errCount++;
+        }
+    }
+
+    res.json({ ok: okCount, errores: errCount });
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');

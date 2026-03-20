@@ -176,7 +176,11 @@ function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : 
 // 🛡️ NÚCLEO DE SEGURIDAD Y ENRUTAMIENTO RBAC
 // =======================================================
 
-function verificarSesionGuardada() {
+// =======================================================
+// 🛡️ NÚCLEO DE SEGURIDAD Y ENRUTAMIENTO (BLINDADO)
+// =======================================================
+
+window.verificarSesionGuardada = function() {
     const guardadoUser = localStorage.getItem('crm_user');
     const guardadoTime = localStorage.getItem('crm_ultimo_acceso');
     const guardadoCorreo = localStorage.getItem('crm_correo');
@@ -200,7 +204,7 @@ function verificarSesionGuardada() {
         let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
 
         let p = permisosUsuario || {};
-        let isAdm = p.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+        let isAdm = p?.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
 
         let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
                     : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
@@ -209,59 +213,51 @@ function verificarSesionGuardada() {
         let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = rolHtml;
         let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerHTML = rolHtml;
 
-        // 🧹 Ocultar Menús Base
         const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
         const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
         [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
         [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
 
-        // 🧠 APERTURA INTELIGENTE: Muestra el módulo pero lo mantiene CERRADO
-        let showMant = isAdm || p.mod_mant || p.insp?.l || p.placas?.l || p.fleet?.l;
-        let showAlm = isAdm || p.mod_alm || p.placas?.l;
-        let showFlota = isAdm || p.mod_flota || p.gps?.l || p.status?.l || p.seg?.l || p.cond?.l;
+        let showMant = isAdm || p?.mod_mant || p?.insp?.l || p?.placas?.l || p?.fleet?.l;
+        let showAlm = isAdm || p?.mod_alm || p?.placas?.l;
+        let showFlota = isAdm || p?.mod_flota || p?.gps?.l || p?.status?.l || p?.seg?.l || p?.cond?.l;
 
-        // 👁️ Renderizar Sidebar según Matriz
         const mStatus = document.getElementById('btnMenuStatusMant'); const mPlacas = document.getElementById('btnMenuPlacasMant'); const mFleet = document.getElementById('btnMenuFleetrun');
         const aPlacas = document.getElementById('btnMenuPlacasAlmacen');
         const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fSeg = document.getElementById('btnMenuSeguridad'); const fCond = document.getElementById('btnMenuConductores');
 
         if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
-        if (mStatus) mStatus.style.display = (isAdm || p.insp?.l) ? 'block' : 'none';
-        if (mPlacas) mPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
-        if (mFleet) mFleet.style.display = (isAdm || p.fleet?.l) ? 'block' : 'none';
+        if (mStatus) mStatus.style.display = (isAdm || p?.insp?.l) ? 'block' : 'none';
+        if (mPlacas) mPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
+        if (mFleet) mFleet.style.display = (isAdm || p?.fleet?.l) ? 'block' : 'none';
 
         if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) cAlm.style.removeProperty('display'); }
-        if (aPlacas) aPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
+        if (aPlacas) aPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
 
         if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) cFlo.style.removeProperty('display'); }
-        if (fGps) fGps.style.display = (isAdm || p.gps?.l) ? 'block' : 'none';
-        if (fStatus) fStatus.style.display = (isAdm || p.status?.l) ? 'block' : 'none';
-        if (fSeg) fSeg.style.display = (isAdm || p.seg?.l) ? 'block' : 'none';
-        if (fCond) fCond.style.display = (isAdm || p.cond?.l) ? 'block' : 'none';
+        if (fGps) fGps.style.display = (isAdm || p?.gps?.l) ? 'block' : 'none';
+        if (fStatus) fStatus.style.display = (isAdm || p?.status?.l) ? 'block' : 'none';
+        if (fSeg) fSeg.style.display = (isAdm || p?.seg?.l) ? 'block' : 'none';
+        if (fCond) fCond.style.display = (isAdm || p?.cond?.l) ? 'block' : 'none';
 
         if (isAdm) { if(nUsu) nUsu.style.display = 'block'; }
-        if (isAdm || p.mod_auditoria) { if(nAud) nAud.style.display = 'block'; }
+        if (isAdm || p?.mod_auditoria) { if(nAud) nAud.style.display = 'block'; }
 
         document.getElementById('pantalla-login').style.display = 'none';
         document.getElementById('app-crm').style.display = 'flex';
 
-        // 🚀 Redirección Automática al Nuevo Dashboard
         cambiarModulo('dashboard', 'nav-dashboard');
 
         google.script.run.withSuccessHandler(d => {
             dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
             let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
-            rellenarDatalist('dl-placas', placasSet); recargarWialon();
+            rellenarDatalist('dl-placas', placasSet);
+            poblarSelectsFormularios(d);
+            recargarWialon();
         }).obtenerDatosPlacas();
 
-        google.script.run.withSuccessHandler(d => {
-            dataTiposMant = d;
-        }).obtenerTiposMantenimiento();
-
-        google.script.run.withSuccessHandler(tipos => {
-            let tpMpSet = new Set(tipos);
-            rellenarDatalist('dl-tpmp', tpMpSet);
-        }).obtenerTPMP();
+        google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
+        google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
 
         return;
     }
@@ -367,25 +363,24 @@ function cerrarSesion() {
     document.getElementById('app-crm').style.display = 'none'; document.getElementById('pantalla-login').style.display = 'flex';
 }
 
-function aplicarPermisosBotonesUI() {
+window.aplicarPermisosBotonesUI = function() {
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
-    let isAdm = p.admin === true || correoActual === 'admin@azkell.com';
+    let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
 
     const check = (selector, permiso) => {
-        // Aplicamos a TODOS los botones que coincidan (para asegurar que se borre bien)
         document.querySelectorAll(selector).forEach(btn => {
             btn.style.display = (isAdm || permiso === true) ? 'inline-block' : 'none';
         });
     };
 
-    check('button[onclick="abrirModalNuevaInspeccion()"]', p.insp?.c);
-    check('#btnNuevaPlaca', p.placas?.c);
-    check('#btnNuevoFleetrun', p.fleet?.c);
-    check('button[onclick="abrirModalNuevoStatusFlota()"]', p.status?.c);
-    check('#btnNuevoReporteSeguridad', p.seg?.c);
-    check('button[onclick="abrirModalConductor()"]', p.cond?.c);
-    check('button[onclick="abrirModalGestorUsuario()"]', false); // Oculto directo, se abre desde tabla
+    check('button[onclick="abrirModalNuevaInspeccion()"]', p?.insp?.c);
+    check('#btnNuevaPlaca', p?.placas?.c);
+    check('#btnNuevoFleetrun', p?.fleet?.c);
+    check('button[onclick="abrirModalNuevoStatusFlota()"]', p?.status?.c);
+    check('#btnNuevoReporteSeguridad', p?.seg?.c);
+    check('button[onclick="abrirModalConductor()"]', p?.cond?.c);
+    check('button[onclick="abrirModalGestorUsuario()"]', false);
 }
 
 // ============================================================
@@ -556,22 +551,21 @@ function recargarModulo(nombre) {
 
 const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'seguridad': ['Administrador', 'Inspector', 'Flota'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
 
-function cambiarModulo(modulo, idBoton) {
+window.cambiarModulo = function(modulo, idBoton) {
     let bloqueado = false;
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
-    let isAdm = p.admin === true || correoActual === 'admin@azkell.com';
+    let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
 
-    // Muro de Contención Estricto
-    if (modulo === 'statusMant' && !isAdm && !p.insp?.l) bloqueado = true;
-    if ((modulo === 'placas' || modulo === 'almacenPlacas') && !isAdm && !p.placas?.l) bloqueado = true;
-    if (modulo === 'fleetrun' && !isAdm && !p.fleet?.l) bloqueado = true;
-    if (modulo === 'ubicacion' && !isAdm && !p.gps?.l) bloqueado = true;
-    if (modulo === 'statusFlota' && !isAdm && !p.status?.l) bloqueado = true;
-    if (modulo === 'seguridad' && !isAdm && !p.seg?.l) bloqueado = true;
-    if (modulo === 'conductores' && !isAdm && !p.cond?.l) bloqueado = true;
+    if (modulo === 'statusMant' && !isAdm && !p?.insp?.l) bloqueado = true;
+    if ((modulo === 'placas' || modulo === 'almacenPlacas') && !isAdm && !p?.placas?.l) bloqueado = true;
+    if (modulo === 'fleetrun' && !isAdm && !p?.fleet?.l) bloqueado = true;
+    if (modulo === 'ubicacion' && !isAdm && !p?.gps?.l) bloqueado = true;
+    if (modulo === 'statusFlota' && !isAdm && !p?.status?.l) bloqueado = true;
+    if (modulo === 'seguridad' && !isAdm && !p?.seg?.l) bloqueado = true;
+    if (modulo === 'conductores' && !isAdm && !p?.cond?.l) bloqueado = true;
     if (modulo === 'usuarios' && !isAdm) bloqueado = true;
-    if (modulo === 'auditoria' && !isAdm && !p.mod_auditoria) bloqueado = true;
+    if (modulo === 'auditoria' && !isAdm && !p?.mod_auditoria) bloqueado = true;
 
     if (bloqueado) return;
 
@@ -580,13 +574,7 @@ function cambiarModulo(modulo, idBoton) {
     if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
     const titulo = document.getElementById('tituloTopBar');
 
-    // 🔥 NUEVA RUTA DEL DASHBOARD
-    if (modulo === 'dashboard') {
-        let el = document.getElementById('moduloDashboard');
-        if(el) el.style.display = 'flex';
-        titulo.innerText = 'Centro de Comando';
-        recargarDashboard();
-    }
+    if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
     else if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
@@ -640,29 +628,44 @@ function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState;
 
 function mostrarStatusInspecciones(inspecciones) {
   if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
-  dataGlobalInspecciones = inspecciones; let hoy = new Date(); hoy.setHours(0,0,0,0);
+  dataGlobalInspecciones = inspecciones;
+  let hoy = new Date(); hoy.setHours(0,0,0,0);
   let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
   let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
-  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada'); // Filtro Papelera
+  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
   let dataFinal = [];
 
-  let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
+  let placasActivasEnUso = dataGlobalPlacas.filter(p => {
+      if((p[0]||'').toUpperCase() === 'PLACA') return false;
+      let estado = normalizeStr(p[18] || p[8] || '');
+      let enUso = normalizeStr(p[22] || p[13] || '');
+      return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
+  });
 
   if (!isHistorialStatus) {
-      placasActivasEnUso.forEach(p => { let placaStr = normalizeStr(p[0]); let insp = inspeccionesOrdenadas.find(i => normalizeStr(i.placa) === placaStr); dataFinal.push({ infoPlaca: p, insp: insp }); });
+      placasActivasEnUso.forEach(p => {
+          let placaStr = normalizeStr(p[0]);
+          let insp = inspeccionesOrdenadas.find(i => normalizeStr(i.placa) === placaStr);
+          dataFinal.push({ infoPlaca: p, insp: insp });
+      });
   } else {
-      inspeccionesOrdenadas.forEach(insp => { let placaStr = normalizeStr(insp.placa); let p = dataGlobalPlacas.find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-"]; dataFinal.push({ infoPlaca: p, insp: insp }); });
+      inspeccionesOrdenadas.forEach(insp => {
+          let placaStr = normalizeStr(insp.placa);
+          let p = dataGlobalPlacas.find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"];
+          dataFinal.push({ infoPlaca: p, insp: insp });
+      });
   }
 
   let mapTipos = new Map(); let setClis = new Set(), setMarcas = new Set(), setEstadosStatus = new Set();
   dataFinal.forEach(item => {
-      let tipoRaw = item.infoPlaca[2] ? item.infoPlaca[2].trim().toUpperCase() : "SIN TIPO";
-      let tipoDisplay = tipoRaw === "SIN TIPO" ? "SIN TIPO" : tipoRaw.charAt(0).toUpperCase() + tipoRaw.slice(1).toLowerCase();
-      if(!mapTipos.has(tipoDisplay)) mapTipos.set(tipoDisplay, []); mapTipos.get(tipoDisplay).push(item);
+      let tipoRaw = item.infoPlaca[5] ? item.infoPlaca[5].toString().trim().toUpperCase() : "SIN TIPO";
+      let tipoDisplay = tipoRaw === "SIN TIPO" || tipoRaw === "" ? "SIN TIPO" : tipoRaw.charAt(0).toUpperCase() + tipoRaw.slice(1).toLowerCase();
+      if(!mapTipos.has(tipoDisplay)) mapTipos.set(tipoDisplay, []);
+      mapTipos.get(tipoDisplay).push(item);
   });
 
   let html = '';
-  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; } 
+  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; }
   else {
       mapTipos.forEach((registros, tipoDisplay) => {
           let classTipo = normalizarClase(tipoDisplay);
@@ -670,53 +673,61 @@ function mostrarStatusInspecciones(inspecciones) {
 
           html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
               <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
-                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i> 
+                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
                   <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
                   <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
               </td></tr>`;
 
           registros.forEach((item) => {
-              let p = item.infoPlaca; let insp = item.insp; let placa = p[0]; let cli = p[1] || "-"; let mod = p[3] || "-"; let mar = p[4] || "-"; let motora = p[11] || "-";
+              let p = item.infoPlaca; let insp = item.insp;
+              let placa = p[0];
+              let cli = p[1] || "-";
+              let mar = p[3] || "-";
+              let mod = p[5] || "-"; // Índice 5 es TIPO
+              let motora = p[20] || p[11] || "-";
+
               if(cli !== "-") setClis.add(cli); if(mar !== "-") setMarcas.add(mar);
 
               let fIngresoBonita = "-"; let diasRestantes = -9999; let tecnico = "-"; let colorFalta = ""; let txtEstado = ""; let estadoVigente2 = "";
 
               if(insp && insp.fecha_ingreso) {
                   fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso); tecnico = insp.tecnico;
-                  // 1. Convertimos la fecha robustamente (soporta "YYYY-MM-DD" o "DD/MM/YYYY")
                   let fIngreso;
                   if (insp.fecha_ingreso.includes('/')) {
-                      let p = insp.fecha_ingreso.split('/'); fIngreso = new Date(p[2], p[1]-1, p[0]);
+                      let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1]-1, px[0]);
                   } else {
                       fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
                   }
 
-                  // 2. Sumamos los días propuestos
                   let dProp = parseInt(insp.dias_propuestos) || 30;
                   let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
-
-                  // 3. Calculamos la diferencia
                   diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
               }
 
               let textoBadgeProx = "";
-              if (diasRestantes < 0) {
+              if (diasRestantes < 0 && diasRestantes !== -9999) {
                   colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
                   textoBadgeProx = `Vencido hace ${Math.abs(diasRestantes)} días`;
               } else if (diasRestantes >= 0 && diasRestantes <= 7) {
                   colorFalta = "#eab308"; txtEstado = "PRÓXIMO A VENCER"; estadoVigente2 = "PRÓXIMO A VENCER";
                   textoBadgeProx = `Faltan ${diasRestantes} días`;
-              } else {
+              } else if (diasRestantes > 7) {
                   colorFalta = "#16a34a"; txtEstado = "VIGENTE"; estadoVigente2 = "VIGENTE";
                   textoBadgeProx = `Faltan ${diasRestantes} días`;
+              } else {
+                  colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
               }
+
               if(estadoVigente2 !== "") setEstadosStatus.add(estadoVigente2);
 
               let badgeProx = diasRestantes === -9999 ? `<span class="badge bg-danger shadow-sm">Sin Registro</span>` : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`;
               let badgeEst = `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
               let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
-              
-              // 🔥 WIALON GPS INYECCIÓN EN TABLA INSPECCIONES 🔥
+
+              let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
+                  ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant" value="${insp.id}" style="pointer-events: none; transform: scale(1.2); margin-right: 8px;">`
+                  : '';
+
               let ubicacionHtml = '<span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-geo-alt-fill"></i> N/A</span>';
               let wialonData = buscarWialonPorPlaca(placa);
               if (wialonData && wialonData.lat !== 0) {
@@ -738,8 +749,8 @@ function mostrarStatusInspecciones(inspecciones) {
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
-              html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}">
-              <td class="fw-bold text-primary" data-value="${placa}">${(insp && insp.id) ? `<input type="checkbox" class="form-check-input me-2 chk-bulk-statusMant" value="${insp.id}" onclick="event.stopPropagation(); toggleBulkBtn('statusMant')">` : ''}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
+              html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
+              <td class="fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
               <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
               <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
@@ -748,70 +759,97 @@ function mostrarStatusInspecciones(inspecciones) {
       rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
   }
   document.getElementById('cuerpoTablaStatus').innerHTML = html;
-  filtrarStatusAvanzado(); 
+  filtrarStatusAvanzado();
 }
 
 function filtrarStatusAvanzado() {
-  const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
-  const chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked')).map(e=>e.value);
-  const chkMar = Array.from(document.querySelectorAll('#filtroStatusMarca input:checked')).map(e=>e.value);
-  const chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked')).map(e=>e.value);
-  let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0;
+    const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
+    const chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked')).map(e=>e.value);
+    const chkMar = Array.from(document.querySelectorAll('#filtroStatusMarca input:checked')).map(e=>e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked')).map(e=>e.value);
+    let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0;
 
-  let cntTotalVig = 0, cntTotalNoVig = 0; let cntMotVig = 0, cntMotNoVig = 0; let cntNoMotVig = 0, cntNoMotNoVig = 0;
+    // Contadores para los gráficos interactivos
+    let cntTotalVig = 0, cntTotalNoVig = 0;
+    let cntMotVig = 0, cntMotNoVig = 0;
+    let cntNoMotVig = 0, cntNoMotNoVig = 0;
 
-  const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
-  headers.forEach(header => {
-    let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/);
-    if(!matchIcon) return;
-    let classTipo = matchIcon[1];
-    let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
-    let visibleCount = 0;
-    
-    childRows.forEach(row => {
-        let cli = row.getAttribute('data-cliente'); let mar = row.getAttribute('data-marca'); 
-        let est = row.getAttribute('data-estado-v2'); let mot = row.getAttribute('data-motor');
-        let dias = parseInt(row.getAttribute('data-dias')); let textoFila = row.textContent.toLowerCase(); 
-        
-        let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchMar = (!chkMar.length || chkMar.includes(mar)); 
-        let matchEst = (!chkEst.length || chkEst.includes(est)); let matchTxt = (!txt || textoFila.includes(txt));
-        
-        if(matchCli && matchMar && matchEst && matchTxt) {
-            visibleCount++;
-            let isVigenteChart = dias >= 0;
-            if(isVigenteChart) { cntTotalVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotVig++; else cntNoMotVig++; } 
-            else { cntTotalNoVig++; if(normalizeStr(mot).includes("UNIDAD MOTORA")) cntMotNoVig++; else cntNoMotNoVig++; }
-            
-            row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none'; 
+    const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
+    headers.forEach(header => {
+        let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/);
+        if(!matchIcon) return;
+        let classTipo = matchIcon[1];
+        let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
+        let visibleCount = 0;
+
+        childRows.forEach(row => {
+            let cli = row.getAttribute('data-cliente');
+            let mar = row.getAttribute('data-marca');
+            let est = row.getAttribute('data-estado-v2');
+            let textoFila = row.textContent.toLowerCase();
+
+            let matchCli = (!chkCli.length || chkCli.includes(cli));
+            let matchMar = (!chkMar.length || chkMar.includes(mar));
+            let matchEst = (!chkEst.length || chkEst.includes(est));
+            let matchTxt = (!txt || textoFila.includes(txt));
+
+            if(matchCli && matchMar && matchEst && matchTxt) {
+                visibleCount++;
+                row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
+
+                // Sumamos a los gráficos SOLO lo que sobrevive a los filtros
+                if(!isHistorialStatus) {
+                    let dias = parseInt(row.getAttribute('data-dias'));
+                    let mot = row.getAttribute('data-motor') || '';
+                    let esMotora = mot.toUpperCase().trim() === 'MOTORA';
+
+                    if (dias >= 0) {
+                        cntTotalVig++;
+                        if (esMotora) cntMotVig++; else cntNoMotVig++;
+                    } else {
+                        cntTotalNoVig++;
+                        if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
+                    }
+                }
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        let icon = header.querySelector('i'); let spanConteo = header.querySelector(`.span-conteo-${classTipo}`);
+        if(visibleCount > 0) {
+            header.style.display = '';
+            if(spanConteo) spanConteo.innerText = visibleCount + " Unidades";
+            if(icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
         } else {
-            row.style.display = 'none';
+            header.style.display = 'none';
         }
     });
 
-    let icon = header.querySelector('i'); let spanConteo = header.querySelector(`.span-conteo-${classTipo}`);
-    if(visibleCount > 0) {
-        header.style.display = '';
-        if(spanConteo) spanConteo.innerText = visibleCount + " Unidades";
-        if(icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
-    } else { 
-        header.style.display = 'none'; 
+    if(!isHistorialStatus) {
+        updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig);
     }
-  });
-
-  if(!isHistorialStatus) { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); }
 }
 
 function initGrafico(canvasId) {
     let ctx = document.getElementById(canvasId); if(!ctx) return null;
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
-        data: { labels: ['Vigente', 'No Vigente'], datasets: [{ data: [1], backgroundColor: ['#475569'], borderWidth: 2, hoverOffset: 4 }] },
+        data: { labels: ['Vigentes', 'Vencidas'], datasets: [{ data: [1], backgroundColor: ['#475569'], borderWidth: 2, hoverOffset: 4 }] },
         options: {
-            responsive: true, maintainAspectRatio: false, cutout: '55%',
-            layout: { padding: { left: 30, right: 30, top: 10, bottom: 10 } },
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } },
             plugins: {
-                legend: { position: 'bottom', labels: { font: {family: 'Oswald'} } },
-                datalabels: { anchor: 'end', align: 'end', offset: 5, font: { weight: 'bold', size: 13, family: 'Oswald' }, formatter: (value, context) => { let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); if (total === 0 || value === 0 || context.chart.data.labels[0]==='Sin Datos') return ""; return Math.round((value / total) * 100) + "%"; } }
+                legend: { position: 'bottom', labels: { font: {family: 'Inter', weight: 'bold'} } },
+                datalabels: {
+                    color: '#000000',
+                    font: { weight: 'bold', size: 12, family: 'Inter' },
+                    formatter: (value, context) => {
+                        let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        if (total === 0 || value === 0 || context.chart.data.labels[0]==='Sin Datos') return "";
+                        return Math.round((value / total) * 100) + "%";
+                    }
+                }
             }
         }
     });
@@ -824,7 +862,7 @@ function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVi
     function refrescarDatos(chart, v, nv) {
         if(!chart) return;
         if(v + nv === 0) { chart.data.labels = ['Sin Datos']; chart.data.datasets[0].data = [1]; chart.data.datasets[0].backgroundColor = ['#475569']; }
-        else { chart.data.labels = ['Vigente', 'No Vigente']; chart.data.datasets[0].data = [v, nv]; chart.data.datasets[0].backgroundColor = ['#16a34a', '#dc2626']; }
+        else { chart.data.labels = ['Vigentes', 'Vencidas']; chart.data.datasets[0].data = [v, nv]; chart.data.datasets[0].backgroundColor = ['#10b981', '#ef4444']; }
         chart.update();
     }
     refrescarDatos(chartTotalInst, vigTot, noVigTot); refrescarDatos(chartMotorasInst, vigMot, noVigMot); refrescarDatos(chartNoMotorasInst, vigNoMot, noVigNoMot);
@@ -833,16 +871,19 @@ function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVi
 
 // FUNCIÓN PARA CAMBIAR COLOR DINÁMICO DE GRÁFICOS (MODO OSCURO/CLARO)
 function actualizarColoresGraficos() {
-    // 🔥 AÑADIMOS chartDashboardInst al arreglo
     const charts = [chartTotalInst, chartMotorasInst, chartNoMotorasInst, chartDashboardInst];
     const isDark = document.body.classList.contains('dark');
     const textColor = isDark ? '#f8fafc' : '#1a1a2e';
     const borderColor = isDark ? '#1e293b' : '#ffffff';
+    const labelColor = isDark ? '#ffffff' : '#000000';
 
     charts.forEach(chart => {
         if (chart) {
             chart.options.plugins.legend.labels.color = textColor;
-            chart.options.plugins.datalabels.color = '#ffffff'; // Siempre blanco por el fondo rojo/verde
+            if(chart.options.plugins.datalabels) {
+                chart.options.plugins.datalabels.color = labelColor;
+                chart.options.plugins.datalabels.font = { weight: 'bold', size: 12, family: 'Inter' };
+            }
             chart.data.datasets[0].borderColor = borderColor;
             chart.update();
         }
@@ -879,7 +920,37 @@ function generarWizardFase3() {
         htmlTabs += `<h5 class="fw-bold mb-3 border-bottom pb-2 text-primary">${sec.tab.substring(sec.tab.indexOf(' ')+1)}</h5>`;
 
         if(sec.type === "registro") {
-            htmlTabs += `<div class="row"><div class="col-md-4 mb-3"><label class="fw-bold">Fecha de Ingreso</label><input type="date" class="form-control fw-bold text-primary" id="i_fecha" required></div><div class="col-md-4 mb-3"><label class="fw-bold">Placa</label><input type="text" class="form-control text-uppercase" id="i_placa" list="dl-placas" oninput="autocompletarInfoInsp()" required></div><div class="col-md-4 mb-3"><label class="fw-bold">KM Tablero (Opcional)</label><input type="number" class="form-control text-danger fw-bold border-danger" id="i_kmtablero" placeholder="Ej: 150000"></div></div><div class="row"><div class="col-md-4 mb-3"><label class="fw-bold text-secondary">Dueño (Cliente)</label><input type="text" class="form-control bg-light" id="i_cliente" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Modelo UTS</label><input type="text" class="form-control bg-light" id="i_modelo" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> Kilometraje Wialon GPS</label><input type="number" class="form-control text-primary bg-light fw-bold" id="i_kmgps" readonly placeholder="Calculando..."></div></div>`;
+            htmlTabs += `<div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="fw-bold">Fecha de Ingreso</label>
+                    <input type="date" class="form-control fw-bold text-primary border-primary shadow-sm" id="i_fecha" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="fw-bold text-primary d-flex justify-content-between">
+                        <span><i class="bi bi-truck"></i> Placa *</span>
+                        <a href="#" class="text-success small fw-bold text-decoration-none" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle-fill"></i> Nueva Placa</a>
+                    </label>
+                    <input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="i_placa" list="dl-placas" onchange="autocompletarInfoInsp()" oninput="autocompletarInfoInsp()" placeholder="Escribe para buscar..." autocomplete="off" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="fw-bold">KM Tablero (Opcional)</label>
+                    <input type="number" class="form-control text-danger fw-bold border-danger shadow-sm" id="i_kmtablero" placeholder="Ej: 150000">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="fw-bold text-secondary">Dueño (Cliente)</label>
+                    <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold text-secondary">Tipo</label>
+                    <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> KM GPS (Wialon)</label>
+                    <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando...">
+                </div>
+            </div>`;
         }
         else if (sec.type === "firma") {
             htmlTabs += `<div class="row"><div class="col-md-8 mb-3"><label class="fw-bold text-primary">Técnico Inspector</label><input type="text" class="form-control fw-bold text-uppercase" id="i_tecnico" list="dl-tecnicos" placeholder="Selecciona o escribe uno nuevo" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary">Días Propuestos</label><input type="number" class="form-control fw-bold" id="i_dias" value="30"></div></div><div class="mb-3"><label class="fw-bold text-primary mb-2"><i class="bi bi-pen"></i> Firma del Técnico</label><canvas id="canvasFirma" class="firma-pad shadow-sm"></canvas><button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirma()"><i class="bi bi-eraser"></i> Borrar Firma</button></div>`;
@@ -1080,11 +1151,21 @@ function mostrarPlacas(datos) {
     rellenarFiltroCheck('filtroTipo', setTipos, 'filtrarPlacasAvanzado');
     rellenarFiltroCheck('filtroMarca', setMarcas, 'filtrarPlacasAvanzado');
     rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado');
-    rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
+    rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('i_placa', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
     paginaActualPlacas = 1;
     cambiarColumnasPlacas(colActualesPlacas);
 }
-function rellenarDatalist(id, setObj) { const dl = document.getElementById(id); if (!dl) return; dl.innerHTML = ''; Array.from(setObj).sort().forEach(v => { dl.innerHTML += `<option value="${v}">`; }); }
+function rellenarDatalist(id, setObj) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') {
+        el.innerHTML = '<option value="">Seleccione...</option>';
+        Array.from(setObj).sort().forEach(v => { el.innerHTML += `<option value="${v}">${v}</option>`; });
+    } else {
+        el.innerHTML = '';
+        Array.from(setObj).sort().forEach(v => { el.innerHTML += `<option value="${v}">`; });
+    }
+}
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[2] && p[2].trim() !== "" && p[2].trim() !== "-"); if (match) { rucInput.value = match[2].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
 window.filtrarPlacasAvanzado = function() {
@@ -2394,7 +2475,7 @@ window.autocompletarInfoInsp = function() {
 
     if(match) {
         document.getElementById('i_cliente').value = match[1] || "";
-        document.getElementById('i_modelo').value = match[3] || "";
+        document.getElementById('i_modelo').value = match[5] || ""; // El índice 5 es el TIPO en la BD
     } else {
         document.getElementById('i_cliente').value = "";
         document.getElementById('i_modelo').value = "";
@@ -3204,13 +3285,8 @@ window.toggleBulkBtn = function(modulo) {
     if(btn) {
         if(chks.length > 0) {
             btn.classList.remove('d-none');
-            if (window.verPapelera[modulo]) {
-                btn.classList.replace('btn-danger', 'btn-success');
-                btn.innerHTML = `<i class="bi bi-arrow-counterclockwise"></i> Restaurar (<span id="cnt-bulk-${modulo}">${chks.length}</span>)`;
-            } else {
-                btn.classList.replace('btn-success', 'btn-danger');
-                btn.innerHTML = `<i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-${modulo}">${chks.length}</span>)`;
-            }
+            btn.classList.replace('btn-success', 'btn-danger');
+            btn.innerHTML = `<i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-${modulo}">${chks.length}</span>)`;
         } else {
             btn.classList.add('d-none');
         }
@@ -3466,7 +3542,12 @@ window.renderizarDashboard = function() {
     let hoy = new Date(); hoy.setHours(0,0,0,0);
     let vigentes = 0, vencidas = 0;
 
-    let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
+    let placasActivasEnUso = dataGlobalPlacas.filter(p => {
+        if((p[0]||'').toUpperCase() === 'PLACA') return false;
+        let estado = normalizeStr(p[18] || p[8] || '');
+        let enUso = normalizeStr(p[22] || p[13] || '');
+        return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
+    });
 
     placasActivasEnUso.forEach(p => {
         let placaStr = normalizeStr(p[0]);
@@ -3496,6 +3577,7 @@ window.renderizarDashboard = function() {
         const isDark = document.body.classList.contains('dark');
         const textColor = isDark ? '#f8fafc' : '#1e293b';
         const borderColor = isDark ? '#1e293b' : '#ffffff';
+        const labelColor = isDark ? '#ffffff' : '#000000';
 
         chartDashboardInst = new Chart(ctxChart.getContext('2d'), {
             type: 'doughnut',
@@ -3514,8 +3596,8 @@ window.renderizarDashboard = function() {
                 plugins: {
                     legend: { position: 'bottom', labels: { color: textColor, font: { weight: 'bold', family: 'Inter' } } },
                     datalabels: {
-                        color: '#ffffff',
-                        font: { weight: 'bold', size: 14, family: 'Inter' },
+                        color: labelColor,
+                        font: { weight: 'bold', size: 12, family: 'Inter' },
                         formatter: (value, ctx) => {
                             let sum = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
                             return sum > 0 && value > 0 ? Math.round((value*100)/sum)+"%" : "";
@@ -3577,4 +3659,226 @@ window.renderizarDashboard = function() {
     }
 
     setTimeout(() => { mapDashboardInst.invalidateSize(); }, 400);
+};
+
+// ============================================================
+// 🖱️ LÓGICA DE SELECCIÓN MASIVA PARA INSPECCIONES
+// ============================================================
+
+window.activarModoSeleccionStatusMant = function() {
+    window.modoSeleccion = window.modoSeleccion || {};
+    window.modoSeleccion['statusMant'] = !window.modoSeleccion['statusMant'];
+
+    const btnAll = document.getElementById('btn-select-all-statusMant');
+    const btnBulk = document.getElementById('btn-bulk-statusMant');
+
+    if (window.modoSeleccion['statusMant']) {
+        btnAll.classList.remove('d-none');
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    } else {
+        btnAll.classList.add('d-none');
+        btnBulk.classList.add('d-none');
+        document.querySelectorAll('.chk-bulk-statusMant').forEach(c => c.checked = false);
+        document.querySelectorAll('.child-row-status').forEach(c => c.classList.remove('row-selected'));
+    }
+
+    mostrarStatusInspecciones(dataGlobalInspecciones);
+};
+
+window.seleccionarFilaInspeccion = function(event, trElement) {
+    if (window.modoSeleccion && window.modoSeleccion['statusMant']) {
+        if (event.target.closest('.btn-icon-dropdown') || event.target.closest('.dropdown-menu') || event.target.closest('.badge')) return;
+
+        const checkbox = trElement.querySelector('.chk-bulk-statusMant');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) trElement.classList.add('row-selected');
+            else trElement.classList.remove('row-selected');
+            toggleBulkBtn('statusMant');
+        }
+    }
+};
+
+window.seleccionarTodasLasStatusMant = function() {
+    const btnAll = document.getElementById('btn-select-all-statusMant');
+    const checkboxes = document.querySelectorAll('.chk-bulk-statusMant');
+
+    const accionEsMarcar = btnAll.innerText.includes('Seleccionar Todo');
+
+    checkboxes.forEach(chk => {
+        chk.checked = accionEsMarcar;
+        const row = chk.closest('.child-row-status');
+        if (row) {
+            if (accionEsMarcar) row.classList.add('row-selected');
+            else row.classList.remove('row-selected');
+        }
+    });
+
+    if (accionEsMarcar) {
+        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
+        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
+    } else {
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    }
+
+    toggleBulkBtn('statusMant');
+};
+
+// ============================================================
+// 📥 IMPORTACIÓN / EXPORTACIÓN MASIVA DE INSPECCIONES (Avanzado)
+// ============================================================
+
+// Obtener dinámicamente las cabeceras según el Wizard
+function obtenerCabecerasDinamicas() {
+    let headers = [];
+    WIZARD_SCHEMA.forEach(sec => {
+        if(sec.items) {
+            sec.items.forEach(item => {
+                headers.push(typeof item === 'string' ? item : item.label);
+            });
+        }
+    });
+    return headers;
+}
+
+window.descargarPlantillaInspecciones = function() {
+    const baseHeaders = ['ID', 'FECHA INGRESO', 'PLACA', 'KM TABLERO', 'CLIENTE', 'TECNICO', 'DIAS PROPUESTOS'];
+    const dynamicHeaders = obtenerCabecerasDinamicas();
+    const allHeaders = [...baseHeaders, ...dynamicHeaders];
+
+    let filaEjemplo = ['(Dejar vacío para nuevo)', '2024-05-20', 'ABC-123', '150000', 'EMPRESA SAC', 'JUAN PEREZ', '30'];
+    dynamicHeaders.forEach(h => {
+        filaEjemplo.push(h.includes('Porcentaje') || h.includes('%') ? '50%' : 'OK');
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([allHeaders, filaEjemplo]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Inspecciones");
+    XLSX.writeFile(wb, "Plantilla_Importacion_Inspecciones.xlsx");
+};
+
+window.exportarExcelInspecciones = function() {
+    if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
+        alert("No hay inspecciones cargadas para exportar.");
+        return;
+    }
+
+    const baseHeaders = ['ID', 'FECHA INGRESO', 'PLACA', 'KM TABLERO', 'CLIENTE', 'TECNICO', 'DIAS PROPUESTOS'];
+    const dynamicHeaders = obtenerCabecerasDinamicas();
+    const ws_data = [[...baseHeaders, ...dynamicHeaders]];
+
+    dataGlobalInspecciones.forEach(i => {
+        if (i.estado === 'Eliminada') return;
+
+        let row = [i.id || '', i.fecha_ingreso || '', i.placa || '', i.km_tablero || '', i.cliente || '', i.tecnico || '', i.dias_propuestos || ''];
+
+        let detMap = {};
+        try {
+            let dArr = typeof i.detalles_json === 'string' ? JSON.parse(i.detalles_json) : i.detalles_json;
+            if(Array.isArray(dArr)) dArr.forEach(d => detMap[d.item] = d);
+        } catch(e) {}
+
+        dynamicHeaders.forEach(h => {
+            let d = detMap[h];
+            if(d && d.estado && d.estado !== 'SIN DATOS') {
+                row.push(d.observacion ? `${d.estado} | ${d.observacion}` : d.estado);
+            } else {
+                row.push('');
+            }
+        });
+
+        ws_data.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Base_Inspecciones");
+    XLSX.writeFile(wb, "Reporte_Inspecciones_Completas.xlsx");
+};
+
+window.importarExcelInspecciones = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        if (rawJson.length === 0) {
+            alert("El archivo Excel está vacío o no tiene datos válidos.");
+            return;
+        }
+
+        if (!confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`)) {
+            event.target.value = ''; return;
+        }
+
+        document.body.style.cursor = 'wait';
+
+        // Empaquetar columnas sueltas del Excel de vuelta a JSON
+        let registrosProcesados = rawJson.map(r => {
+            let detalles = [];
+
+            WIZARD_SCHEMA.forEach(sec => {
+                if(sec.items) {
+                    sec.items.forEach(item => {
+                        let lbl = typeof item === 'string' ? item : item.label;
+                        let strVal = String(r[lbl] || '').trim();
+                        if (!strVal) return;
+
+                        let estadoF = 'REGISTRADO', obsF = '';
+                        if (strVal.toUpperCase().startsWith('OK')) {
+                            estadoF = 'OK';
+                            obsF = strVal.substring(2).replace(/^[\s|:-]+/, '');
+                        } else if (strVal.toUpperCase().startsWith('FALLA')) {
+                            estadoF = 'FALLA';
+                            obsF = strVal.substring(5).replace(/^[\s|:-]+/, '');
+                        } else if (strVal.includes('%')) {
+                            estadoF = strVal;
+                        } else {
+                            obsF = strVal;
+                        }
+
+                        detalles.push({ categoria: sec.tab, item: lbl, estado: estadoF, observacion: obsF, foto: "" });
+                    });
+                }
+            });
+
+            let idRaw = String(r['ID'] || '').trim();
+            return {
+                id: idRaw && idRaw !== '(Dejar vacío para nuevo)' ? idRaw : `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                fecha_ingreso: r['FECHA INGRESO'] || '',
+                placa: r['PLACA'] || '',
+                km_tablero: r['KM TABLERO'] || '',
+                cliente: r['CLIENTE'] || '',
+                tecnico: r['TECNICO'] || '',
+                dias_propuestos: r['DIAS PROPUESTOS'] || '30',
+                detalles_json: JSON.stringify(detalles)
+            };
+        });
+
+        fetch('/api/importarInspeccionesMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros: registrosProcesados })
+        })
+        .then(res => res.json())
+        .then(r => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
+            recargarModulo('statusMant');
+        })
+        .catch(err => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert("❌ Error subiendo archivo: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
 };

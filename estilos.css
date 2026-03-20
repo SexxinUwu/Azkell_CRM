@@ -1650,18 +1650,35 @@ body.dark .wizard-tab h5.text-primary {
 }
 .pulse-icon { animation: pulseMap 1.5s infinite; display: inline-block; }
 
-/* Filtro oscuro automático para los mosaicos del mapa */
+/* Cartel Flotante Dinámico (Claro/Oscuro) */
+.dash-gps-overlay {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+}
+
+/* 🪄 FILTRO MÁGICO: Mapa Oscuro Automático */
+/* Solo invertimos el mosaico del mapa y la marca de agua */
 body.dark #mapaDashboard .leaflet-layer,
-body.dark #mapaDashboard .leaflet-control-zoom-in,
-body.dark #mapaDashboard .leaflet-control-zoom-out,
 body.dark #mapaDashboard .leaflet-control-attribution {
     filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
-/* Los marcadores y popups no se invierten */
+/* Evitamos que los pines y popups se inviertan */
 body.dark #mapaDashboard .leaflet-marker-pane,
 body.dark #mapaDashboard .leaflet-popup {
     filter: none !important;
+}
+
+/* 🔧 ARREGLO BOTONES ZOOM (+ y -) EN MODO OSCURO */
+body.dark .leaflet-control-zoom a {
+    background-color: var(--surface) !important;
+    color: #ffffff !important;
+    border-color: var(--border) !important;
+}
+body.dark .leaflet-control-zoom a:hover {
+    background-color: var(--border) !important;
+    color: var(--crm-accent) !important;
 }
 
 /* Popup premium adaptado al tema */
@@ -1685,4 +1702,11 @@ body.dark #mapaDashboard .leaflet-popup {
     color: var(--subtext) !important;
     top: 8px !important;
     right: 8px !important;
+}
+
+/* Selección Masiva en Tablas (Inspecciones) */
+.row-selected td {
+    background-color: rgba(22, 163, 74, 0.08) !important;
+    border-bottom: 1px solid var(--crm-accent) !important;
+    border-top: 1px solid var(--crm-accent) !important;
 }

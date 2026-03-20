@@ -176,7 +176,7 @@
 
                         <div class="col-12 col-xl-8 d-flex flex-column">
                             <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 400px; position: relative;">
-                                <div class="bg-dark text-white p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
+                                <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
                                     <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> GPS Global Wialon</span>
                                     <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
                                 </div>
@@ -222,14 +222,29 @@
                                 <button class="btn btn-outline-warning fw-bold btn-sm text-dark" id="btnToggleGraficos" onclick="toggleGraficosStatus()"><i class="bi bi-eye-slash-fill"></i> Gráficos</button>
                                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatus', 'Analisis_Inspecciones')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Ocultar (<span id="cnt-bulk-statusMant">0</span>)</button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-statusMant" onclick="activarModoSeleccionStatusMant()"><i class="bi bi-ui-checks"></i> Seleccionar</button>
+                                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-statusMant" onclick="seleccionarTodasLasStatusMant()"><i class="bi bi-check-square"></i> Seleccionar Todo</button>
+                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-statusMant">0</span>)</button>
+
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-upload"></i> Importar
+                                    </button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaInspecciones()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileInspecciones').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
+                                    </ul>
+                                </div>
+                                <input type="file" id="inputFileInspecciones" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelInspecciones(event)">
+
+                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportarExcelInspecciones()"><i class="bi bi-download"></i> Exportar</button>
                                 <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
                             </div>
                         </div>
                     </div>
                     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
-                        <thead><tr><th onclick="sortTable('tablaStatus', 0)">Placa / Cliente <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)">Modelo UTS <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)">Técnico <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)">Fecha de Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)">Prox Insp <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)">Semáforo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> Ubicación GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <thead><tr><th onclick="sortTable('tablaStatus', 0)">Placa / Cliente <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)">Tipo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)">Técnico <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)">Fecha de Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)">Prox Insp <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)">Semáforo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> Ubicación GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
                         <tbody id="cuerpoTablaStatus"><tr><td colspan="10" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
                     </table></div></div>
                 </div>
