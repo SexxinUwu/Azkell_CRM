@@ -3806,21 +3806,23 @@ window.importarExcelInspecciones = function(event) {
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // raw: false -> Lee 30% como "30%" y no como 0.3
+        // dateNF -> Fuerza fechas numéricas a YYYY-MM-DD
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
 
         if (rawJson.length === 0) {
             alert("El archivo Excel está vacío o no tiene datos válidos.");
             return;
         }
 
-        if (!confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`)) {
-            event.target.value = ''; return;
-        }
+        const confirmar = confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`);
+        if (!confirmar) { event.target.value = ''; return; }
 
         document.body.style.cursor = 'wait';
 
-        // Empaquetar columnas sueltas del Excel de vuelta a JSON
         let registrosProcesados = rawJson.map(r => {
             let detalles = [];
 
@@ -3828,31 +3830,53 @@ window.importarExcelInspecciones = function(event) {
                 if(sec.items) {
                     sec.items.forEach(item => {
                         let lbl = typeof item === 'string' ? item : item.label;
-                        let strVal = String(r[lbl] || '').trim();
-                        if (!strVal) return;
+                        let cellVal = r[lbl];
 
-                        let estadoF = 'REGISTRADO', obsF = '';
-                        if (strVal.toUpperCase().startsWith('OK')) {
-                            estadoF = 'OK';
-                            obsF = strVal.substring(2).replace(/^[\s|:-]+/, '');
-                        } else if (strVal.toUpperCase().startsWith('FALLA')) {
-                            estadoF = 'FALLA';
-                            obsF = strVal.substring(5).replace(/^[\s|:-]+/, '');
-                        } else if (strVal.includes('%')) {
-                            estadoF = strVal;
-                        } else {
-                            obsF = strVal;
+                        if(cellVal && String(cellVal).trim() !== '') {
+                            let strVal = String(cellVal).trim();
+                            let upperVal = strVal.toUpperCase();
+                            let estadoF = "REGISTRADO", obsF = "";
+
+                            // Detector a prueba de balas (ignora espacios iniciales)
+                            if (upperVal.includes('OK')) {
+                                estadoF = 'OK';
+                                let idx = upperVal.indexOf('OK');
+                                obsF = strVal.substring(idx + 2).replace(/^[\s|:-]+/, '').trim();
+                            } else if (upperVal.includes('FALLA')) {
+                                estadoF = 'FALLA';
+                                let idx = upperVal.indexOf('FALLA');
+                                obsF = strVal.substring(idx + 5).replace(/^[\s|:-]+/, '').trim();
+                            } else if (strVal.includes('%')) {
+                                estadoF = strVal;
+                            } else {
+                                estadoF = "REGISTRADO";
+                                obsF = strVal;
+                            }
+
+                            detalles.push({
+                                categoria: sec.tab,
+                                item: lbl,
+                                estado: estadoF,
+                                observacion: obsF,
+                                foto: ""
+                            });
                         }
-
-                        detalles.push({ categoria: sec.tab, item: lbl, estado: estadoF, observacion: obsF, foto: "" });
                     });
                 }
             });
 
-            let idRaw = String(r['ID'] || '').trim();
+            // Respaldo para fechas en formato DD/MM/YYYY → YYYY-MM-DD
+            let fechaIngreso = r['FECHA INGRESO'] || '';
+            if (fechaIngreso.includes('/')) {
+                let p = fechaIngreso.split('/');
+                if (p[2] && p[2].length === 4) {
+                    fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+                }
+            }
+
             return {
-                id: idRaw && idRaw !== '(Dejar vacío para nuevo)' ? idRaw : `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                fecha_ingreso: r['FECHA INGRESO'] || '',
+                id: r['ID'] && String(r['ID']).trim() !== '(Dejar vacío para nuevo)' ? String(r['ID']).trim() : `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                fecha_ingreso: fechaIngreso,
                 placa: r['PLACA'] || '',
                 km_tablero: r['KM TABLERO'] || '',
                 cliente: r['CLIENTE'] || '',
