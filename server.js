@@ -697,6 +697,60 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
     res.json({ ok: okCount, errores: errCount });
 });
 
+// ============================================================
+// 🔥 ELIMINACIÓN MASIVA SEGURA (CON DESBLOQUEO DE LLAVES FORÁNEAS)
+// ============================================================
+app.post('/api/eliminarMasivo', (req, res) => {
+    const { ids, coleccion } = req.body;
+    if (!ids || !ids.length || !coleccion) return res.status(400).json({ error: "Datos incompletos" });
+
+    let tabla = '';
+
+    // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota, Seguridad)
+    let campoId = 'idRegistro';
+
+    if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
+    else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
+    else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; }
+    else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
+    else if (coleccion === 'Seguridad') { tabla = 'seguridad'; }
+    else return res.status(400).json({ error: "Colección no válida" });
+
+    const sql = `DELETE FROM ${tabla} WHERE ${campoId} IN (?)`;
+
+    // Obtenemos una conexión exclusiva para apagar los seguros
+    db.getConnection((err, connection) => {
+        if (err) {
+            console.error("Error obteniendo conexión:", err);
+            return res.status(500).json({ error: "Error interno de servidor" });
+        }
+
+        // 1. Apagamos las llaves foráneas para que no bloquee el borrado
+        connection.query('SET FOREIGN_KEY_CHECKS=0;', (err) => {
+            if (err) {
+                connection.release();
+                return res.status(500).json({ error: "No se pudo apagar el seguro de MySQL" });
+            }
+
+            // 2. Eliminamos los registros
+            connection.query(sql, [ids], (errDelete, result) => {
+
+                // 3. Volvemos a prender las llaves foráneas (MUY IMPORTANTE)
+                connection.query('SET FOREIGN_KEY_CHECKS=1;', () => {
+                    connection.release();
+
+                    if (errDelete) {
+                        console.error("Error MySQL en eliminación masiva:", errDelete);
+                        return res.status(500).json({ error: "MySQL dice: " + errDelete.message });
+                    }
+
+                    res.json({ data: 'Éxito', afectados: result.affectedRows });
+                });
+            });
+        });
+    });
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');

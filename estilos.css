@@ -1752,3 +1752,19 @@ body.dark .kpi-card.active-filter {
     position: relative;
     height: 180px;
 }
+
+/* Compactación de la Tabla de Status de Flota */
+#cuerpoTablaStatusFlota td {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    vertical-align: middle;
+    font-size: 0.85rem;
+}
+#cuerpoTablaStatusFlota tr.group-header td {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+#cuerpoTablaStatusFlota .badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.5em;
+}

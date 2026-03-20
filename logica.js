@@ -1475,14 +1475,14 @@ function mostrarFleetrun(datos) {
                   isLive = true;
               }
               
-              let falta_km = km_prox - km_gps; let colorFalta = ""; let iconFalta = ""; let estadoKpi = "";
-              if (falta_km <= 0) { colorFalta = "#dc2626"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO"; cntVenc++;
-              } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) { colorFalta = "#eab308"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "POR_VENCER"; cntPV++;
-              } else { colorFalta = "#16a34a"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; cntVig++; }
-              let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`; let fmtFrec = `<span style="color: orange; font-weight: bold;">${frecuencia.toLocaleString()}</span>`; 
-              
-              let fmtKmGps = isLive ? `<span class="badge bg-primary shadow-sm px-2"><i class="bi bi-broadcast"></i> ${km_gps.toLocaleString()}</span>` : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}</span>`; 
-              let fmtFalta = `<span style="color: ${colorFalta}; font-weight: bold;">${iconFalta} ${falta_km.toLocaleString()}</span>`;
+              let falta_km = km_prox - km_gps; let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
+              if (falta_km <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO"; cntVenc++;
+              } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) { badgeClass = "bg-warning text-dark"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "POR_VENCER"; cntPV++;
+              } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; cntVig++; }
+              let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`; let fmtFrec = `<span style="color: orange; font-weight: bold;">${frecuencia.toLocaleString()}</span>`;
+
+              let fmtKmGps = isLive ? `<span class="badge bg-primary shadow-sm px-2"><i class="bi bi-broadcast"></i> ${km_gps.toLocaleString()}</span>` : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}</span>`;
+              let fmtFalta = `<span class="badge ${badgeClass} shadow-sm" style="font-size: 0.8rem; padding: 0.4em 0.6em;">${iconFalta} ${falta_km.toLocaleString()}</span>`;
               
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
@@ -2047,7 +2047,7 @@ function toggleGroupRowSF(claseZ) {
 }
 
 // Lector de Mentes: Busca el tipo de ambas placas y las junta
-function obtenerTipoCompuesto(motora, nomotora) {
+window.obtenerTipoCompuesto = function(motora, nomotora) {
     // Limpiador automático de tildes rotas (UTF-8)
     const limpiarTexto = (txt) => {
         if (!txt) return "";
@@ -2062,18 +2062,18 @@ function obtenerTipoCompuesto(motora, nomotora) {
 
     if (motora && motora !== "-") {
         let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(motora));
-        if (p && p[2] && p[2] !== "-") tMot = limpiarTexto(p[2]);
+        if (p && p[5] && p[5] !== "-") tMot = limpiarTexto(p[5]); // Índice 5 es TIPO
     }
     if (nomotora && nomotora !== "-") {
         let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(nomotora));
-        if (p && p[2] && p[2] !== "-") tNoMot = limpiarTexto(p[2]);
+        if (p && p[5] && p[5] !== "-") tNoMot = limpiarTexto(p[5]); // Índice 5 es TIPO
     }
 
     if (tMot && tNoMot) return `${tMot} - ${tNoMot}`;
     if (tMot) return tMot;
     if (tNoMot) return tNoMot;
     return "SIN TIPO REGISTRADO";
-}
+};
 
 function mostrarStatusFlota(datos) {
     if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
@@ -2237,7 +2237,7 @@ function filtrarStatusFlotaAvanzado() {
     });
 }
 
-function autocompletarStatus(tipo) {
+window.autocompletarStatus = function(tipo) {
     let placaInput = normalizeStr(document.getElementById('sf_' + tipo).value);
     let fieldCli = document.getElementById('sf_cliente_' + tipo);
 
@@ -2246,10 +2246,10 @@ function autocompletarStatus(tipo) {
         return;
     }
 
-    // Extraer cliente desde placas globales
+    // Extraer cliente desde placas globales (Índice 1 es CLIENTE)
     let matchPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
     fieldCli.value = matchPlaca ? (matchPlaca[1] || 'Sin Cliente') : 'No Registrada';
-}
+};
 
 function enviarStatusFlota(event, formObj) {
     event.preventDefault();
@@ -3398,22 +3398,23 @@ window.toggleBulkBtn = function(modulo) {
 window.eliminarMasivo = function(coleccion, modulo) {
     let ids = [];
 
-    // Si estamos en placas y hay selección global activa, la usamos
+    // Lógica para placas (selección global)
     if (modulo === 'placas' && window.placasSeleccionadasGlobalmente && window.placasSeleccionadasGlobalmente.length > 0) {
         ids = window.placasSeleccionadasGlobalmente;
     } else {
-        // Comportamiento normal: solo checkboxes visibles
+        // Lógica para Fleetrun y Análisis de Inspecciones
         let chks = document.querySelectorAll(`.chk-bulk-${modulo}:checked`);
         ids = Array.from(chks).map(c => c.value);
     }
 
     if (ids.length === 0) return;
-
     if (!confirm(`⚠️ ¿Estás seguro de ELIMINAR DEFINITIVAMENTE ${ids.length} registros?\n\nEsta acción no se puede deshacer.`)) return;
 
     document.body.style.cursor = 'wait';
-    fetch('/api/script/eliminarDocumento', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+    fetch('/api/eliminarMasivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: ids, coleccion: coleccion })
     })
     .then(res => res.json())
@@ -3422,13 +3423,20 @@ window.eliminarMasivo = function(coleccion, modulo) {
         if (r.data === 'Éxito') {
             if (modulo === 'placas') {
                 window.placasSeleccionadasGlobalmente = [];
-                if (window.modoSeleccion['placas']) activarModoSeleccionPlacas();
+                if (window.modoSeleccion['placas']) window.activarModoSeleccionPlacas();
+            } else if (modulo === 'fleetrun') {
+                if (window.modoSeleccion['fleetrun']) window.activarModoSeleccionFleetrun();
+            } else if (modulo === 'statusMant') {
+                if (window.modoSeleccion['statusMant']) window.activarModoSeleccionStatusMant();
             } else {
-                document.getElementById(`btn-bulk-${modulo}`).classList.add('d-none');
-                if (window.modoSeleccion[modulo]) toggleModoSeleccion(modulo);
+                let btnBulk = document.getElementById(`btn-bulk-${modulo}`);
+                if (btnBulk) btnBulk.classList.add('d-none');
+                if (window.modoSeleccion && window.modoSeleccion[modulo]) window.toggleModoSeleccion(modulo);
             }
             recargarModulo(modulo);
-        } else { alert('Error: ' + r.data); }
+        } else {
+            alert('Error: ' + (r.error || r.data));
+        }
     }).catch(e => {
         document.body.style.cursor = 'default';
         alert('Error de red: ' + e.message);
@@ -4033,14 +4041,32 @@ window.activarModoSeleccionFleetrun = function() {
 
     const btnAll = document.getElementById('btn-select-all-fleetrun');
     const btnBulk = document.getElementById('btn-bulk-fleetrun');
+    const btnActivar = document.getElementById('btn-activar-sel-fleetrun');
 
     if (window.modoSeleccion['fleetrun']) {
         btnAll.classList.remove('d-none');
         btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
         btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+
+        if(btnActivar) {
+            btnActivar.classList.replace('btn-outline-secondary', 'btn-secondary');
+            btnActivar.classList.add('text-white');
+            btnActivar.innerHTML = '<i class="bi bi-x-circle"></i> Cancelar Selección';
+        }
     } else {
         btnAll.classList.add('d-none');
         btnBulk.classList.add('d-none');
+
+        // Limpieza visual forzada (evita el efecto fantasma)
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+
+        if(btnActivar) {
+            btnActivar.classList.replace('btn-secondary', 'btn-outline-secondary');
+            btnActivar.classList.remove('text-white');
+            btnActivar.innerHTML = '<i class="bi bi-ui-checks"></i> Seleccionar';
+        }
+
         document.querySelectorAll('.chk-bulk-fleetrun').forEach(c => c.checked = false);
         document.querySelectorAll('.child-row-fleetrun').forEach(c => c.classList.remove('row-selected'));
     }
