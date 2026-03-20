@@ -1636,3 +1636,53 @@ body.dark .wizard-tab h5.text-primary {
 .btn-ia-float {
     bottom: 80px !important;
 }
+
+/* ============================================================
+   MÓDULO: DASHBOARD Y MAPA (LEAFLET)
+   ============================================================ */
+
+.text-dark-theme { color: var(--text) !important; }
+
+@keyframes pulseMap {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.pulse-icon { animation: pulseMap 1.5s infinite; display: inline-block; }
+
+/* Filtro oscuro automático para los mosaicos del mapa */
+body.dark #mapaDashboard .leaflet-layer,
+body.dark #mapaDashboard .leaflet-control-zoom-in,
+body.dark #mapaDashboard .leaflet-control-zoom-out,
+body.dark #mapaDashboard .leaflet-control-attribution {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Los marcadores y popups no se invierten */
+body.dark #mapaDashboard .leaflet-marker-pane,
+body.dark #mapaDashboard .leaflet-popup {
+    filter: none !important;
+}
+
+/* Popup premium adaptado al tema */
+.leaflet-popup-content-wrapper {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
+    border: 1px solid var(--border);
+}
+.leaflet-popup-tip {
+    background-color: var(--surface) !important;
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+}
+.leaflet-popup-content {
+    margin: 12px 16px !important;
+    font-family: 'Inter', sans-serif;
+}
+.leaflet-container a.leaflet-popup-close-button {
+    color: var(--subtext) !important;
+    top: 8px !important;
+    right: 8px !important;
+}
