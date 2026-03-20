@@ -83,7 +83,10 @@ let dataGlobalSeguridad = []; let dataGlobalUsuarios = []; let dataGlobalAuditor
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false; let expandAllSFState = false; 
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = false; let expandSFMap = {};
-let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null; 
+let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null;
+// 🔥 NUEVAS VARIABLES PARA EL DASHBOARD
+let mapDashboardInst = null;
+let chartDashboardInst = null;
 Chart.register(ChartDataLabels); 
 
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
@@ -188,7 +191,7 @@ function verificarSesionGuardada() {
         try {
             let parsed = JSON.parse(guardadoPermisos || '{}');
             if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-            permisosUsuario = parsed;
+            permisosUsuario = parsed || {};
         } catch(e) { permisosUsuario = {}; }
 
         document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
@@ -197,7 +200,6 @@ function verificarSesionGuardada() {
         let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
 
         let p = permisosUsuario || {};
-        // 👑 ESCUDO DEFINITIVO: Si eres admin@azkell.com, eres Dios, sin importar la memoria
         let isAdm = p.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
 
         let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
@@ -223,7 +225,6 @@ function verificarSesionGuardada() {
         const aPlacas = document.getElementById('btnMenuPlacasAlmacen');
         const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fSeg = document.getElementById('btnMenuSeguridad'); const fCond = document.getElementById('btnMenuConductores');
 
-        // 👉 EL CAMBIO: Ya no le inyectamos la clase "show" para que arranquen cerrados
         if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
         if (mStatus) mStatus.style.display = (isAdm || p.insp?.l) ? 'block' : 'none';
         if (mPlacas) mPlacas.style.display = (isAdm || p.placas?.l) ? 'block' : 'none';
@@ -244,22 +245,8 @@ function verificarSesionGuardada() {
         document.getElementById('pantalla-login').style.display = 'none';
         document.getElementById('app-crm').style.display = 'flex';
 
-        // 🚀 Redirección Automática
-        if (isAdm || p.insp?.l) cambiarModulo('statusMant', 'btnMenuStatusMant');
-        else if (p.status?.l) cambiarModulo('statusFlota', 'btnMenuStatusFlota');
-        else if (p.placas?.l) cambiarModulo('placas', 'btnMenuPlacasMant');
-        else if (p.fleet?.l) cambiarModulo('fleetrun', 'btnMenuFleetrun');
-        else if (p.gps?.l) cambiarModulo('ubicacion', 'btnMenuUbicacion');
-        else {
-            document.getElementById('tituloTopBar').innerText = "Acceso Restringido";
-            document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
-            let modStatus = document.getElementById('moduloStatus');
-            if(modStatus) {
-                modStatus.style.display = 'flex';
-                document.getElementById('cuerpoTablaStatus').innerHTML = '<tr><td colspan="10" class="text-center py-5"><i class="bi bi-shield-lock-fill text-warning" style="font-size:4rem;"></i><br><h4 class="mt-3 text-dark fw-bold">Cuenta Restringida</h4><p class="text-muted">No tienes módulos asignados. Contacta al administrador.</p></td></tr>';
-                let pGraficos = document.getElementById('panelGraficosStatus'); if(pGraficos) pGraficos.style.display = 'none';
-            }
-        }
+        // 🚀 Redirección Automática al Nuevo Dashboard
+        cambiarModulo('dashboard', 'nav-dashboard');
 
         google.script.run.withSuccessHandler(d => {
             dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
@@ -593,7 +580,14 @@ function cambiarModulo(modulo, idBoton) {
     if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
     const titulo = document.getElementById('tituloTopBar');
 
-    if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
+    // 🔥 NUEVA RUTA DEL DASHBOARD
+    if (modulo === 'dashboard') {
+        let el = document.getElementById('moduloDashboard');
+        if(el) el.style.display = 'flex';
+        titulo.innerText = 'Centro de Comando';
+        recargarDashboard();
+    }
+    else if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
     else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
@@ -839,20 +833,17 @@ function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVi
 
 // FUNCIÓN PARA CAMBIAR COLOR DINÁMICO DE GRÁFICOS (MODO OSCURO/CLARO)
 function actualizarColoresGraficos() {
-    const charts = [chartTotalInst, chartMotorasInst, chartNoMotorasInst];
+    // 🔥 AÑADIMOS chartDashboardInst al arreglo
+    const charts = [chartTotalInst, chartMotorasInst, chartNoMotorasInst, chartDashboardInst];
     const isDark = document.body.classList.contains('dark');
-    const textColor = isDark ? '#f8fafc' : '#1a1a2e'; // Blanco en oscuro, oscuro en claro
-    const borderColor = isDark ? '#1e293b' : '#ffffff'; // Color superficie del tema
+    const textColor = isDark ? '#f8fafc' : '#1a1a2e';
+    const borderColor = isDark ? '#1e293b' : '#ffffff';
 
     charts.forEach(chart => {
         if (chart) {
-            // Actualizar leyenda
             chart.options.plugins.legend.labels.color = textColor;
-            // Actualizar etiquetas de datos (%)
-            chart.options.plugins.datalabels.color = textColor;
-            // Actualizar borde de datasets (evitar líneas oscuras en círculos)
+            chart.options.plugins.datalabels.color = '#ffffff'; // Siempre blanco por el fondo rojo/verde
             chart.data.datasets[0].borderColor = borderColor;
-            // Repintar con nueva config
             chart.update();
         }
     });
@@ -3436,4 +3427,154 @@ window.seleccionarTodasLasPlacas = function() {
         if (cantidad > 0) btnEliminar.classList.remove('d-none');
         else btnEliminar.classList.add('d-none');
     }
+};
+
+// ============================================================
+// 📊 MÓDULO: DASHBOARD / CENTRO DE COMANDO (LEAFLET + CHART.JS)
+// ============================================================
+
+window.recargarDashboard = function() {
+    let btn = document.querySelector('#moduloDashboard .btn-outline-primary');
+    if(btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...';
+
+    Promise.all([
+        new Promise(resolve => {
+            if (dataGlobalInspecciones.length > 0) resolve();
+            else {
+                google.script.run.withSuccessHandler(d => { dataGlobalInspecciones = d; resolve(); }).obtenerDatosInspecciones();
+            }
+        }),
+        new Promise(resolve => {
+            google.script.run.withSuccessHandler(d => {
+                if(d && !d.error) CACHE['wialon'] = d;
+                resolve();
+            }).obtenerDatosWialon();
+        })
+    ]).then(() => {
+        if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
+        renderizarDashboard();
+    }).catch(() => {
+        if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
+        renderizarDashboard();
+    });
+};
+
+window.renderizarDashboard = function() {
+    // ---------------------------------------------------------
+    // 1. GRÁFICO DE INSPECCIONES (Vigentes vs Vencidas)
+    // ---------------------------------------------------------
+    let hoy = new Date(); hoy.setHours(0,0,0,0);
+    let vigentes = 0, vencidas = 0;
+
+    let placasActivasEnUso = dataGlobalPlacas.filter(p => normalizeStr(p[8]) === "ACTIVA" && normalizeStr(p[13]) === "SI");
+
+    placasActivasEnUso.forEach(p => {
+        let placaStr = normalizeStr(p[0]);
+        let insp = dataGlobalInspecciones.find(i => normalizeStr(i.placa) === placaStr);
+        let dias = -9999;
+
+        if(insp && insp.fecha_ingreso) {
+            let fIngreso;
+            if (insp.fecha_ingreso.includes('/')) {
+                let pDate = insp.fecha_ingreso.split('/'); fIngreso = new Date(pDate[2], pDate[1]-1, pDate[0]);
+            } else {
+                fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
+            }
+            let dProp = parseInt(insp.dias_propuestos) || 30;
+            let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
+            dias = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+        }
+
+        if (dias >= 0) vigentes++;
+        else vencidas++;
+    });
+
+    let ctxChart = document.getElementById('chartDashboardTotal');
+    if (ctxChart) {
+        if(chartDashboardInst) chartDashboardInst.destroy();
+
+        const isDark = document.body.classList.contains('dark');
+        const textColor = isDark ? '#f8fafc' : '#1e293b';
+        const borderColor = isDark ? '#1e293b' : '#ffffff';
+
+        chartDashboardInst = new Chart(ctxChart.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Vigentes', 'Vencidas / Sin Datos'],
+                datasets: [{
+                    data: [vigentes, vencidas],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderColor: borderColor,
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: textColor, font: { weight: 'bold', family: 'Inter' } } },
+                    datalabels: {
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 14, family: 'Inter' },
+                        formatter: (value, ctx) => {
+                            let sum = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                            return sum > 0 && value > 0 ? Math.round((value*100)/sum)+"%" : "";
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ---------------------------------------------------------
+    // 2. MAPA GLOBAL GPS (LEAFLET)
+    // ---------------------------------------------------------
+    if (!mapDashboardInst) {
+        mapDashboardInst = L.map('mapaDashboard').setView([-12.0464, -76.9629], 10);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(mapDashboardInst);
+    }
+
+    mapDashboardInst.eachLayer(layer => {
+        if (layer instanceof L.Marker) mapDashboardInst.removeLayer(layer);
+    });
+
+    let wData = CACHE['wialon'] || [];
+    let countConectados = 0;
+    let bounds = [];
+
+    let iconAzkell = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background-color: var(--crm-accent); width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); animation: pulseMap 2s infinite;"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+    });
+
+    wData.forEach(w => {
+        if (w.lat !== 0 && w.lng !== 0) {
+            countConectados++;
+            bounds.push([w.lat, w.lng]);
+
+            let popupHtml = `
+                <div class="text-center" style="min-width: 120px;">
+                    <h6 class="fw-bold mb-1 text-primary"><i class="bi bi-truck"></i> ${w.placa || w.nombre_wialon}</h6>
+                    <span class="badge bg-secondary mb-2"><i class="bi bi-speedometer2"></i> ${w.km.toLocaleString()} km</span><br>
+                    <button class="btn btn-sm btn-primary w-100 shadow-sm text-white" onclick="cambiarModulo('ubicacion');"><i class="bi bi-geo-alt"></i> Ver GPS</button>
+                </div>
+            `;
+            L.marker([w.lat, w.lng], { icon: iconAzkell }).addTo(mapDashboardInst).bindPopup(popupHtml);
+        }
+    });
+
+    document.getElementById('dash-gps-count').innerText = countConectados + ' Unidades';
+
+    if (bounds.length > 0) {
+        mapDashboardInst.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+    }
+
+    setTimeout(() => { mapDashboardInst.invalidateSize(); }, 400);
 };

@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="./estilos.css">
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#1e293b">
@@ -76,6 +78,11 @@
                     <span class="fw-bolder fs-5 brand-title-text" style="color: var(--text); letter-spacing: -0.5px;">AZKELL CRM</span>
                 </div>
                 <button class="btn-toggle-sidebar" onclick="toggleSidebar()"><i class="bi bi-list" style="color: var(--text);"></i></button>
+            </div>
+            <div id="wrap-dashboard">
+                <a id="nav-dashboard" onclick="cambiarModulo('dashboard', this.id)" class="active">
+                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text">Dashboard</span>
+                </a>
             </div>
             <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
                 <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cambiarModulo('statusMant', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cambiarModulo('placas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cambiarModulo('fleetrun', this.id)"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a></div>
@@ -143,6 +150,41 @@
             </div>
             
             <div class="main-area">
+
+                <div id="moduloDashboard" class="modulo-wrapper" style="display: flex;">
+                    <div class="controls-row d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
+                            <h5 class="m-0 fw-bold text-dark-theme">Centro de Comando</h5>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> Sistema Activo</span>
+                            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarDashboard()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 flex-grow-1" style="min-height: 0;">
+                        <div class="col-12 col-xl-4 d-flex flex-column">
+                            <div class="card p-3 shadow-sm flex-grow-1 d-flex flex-column">
+                                <h6 class="fw-bold text-center mb-1 text-primary"><i class="bi bi-pie-chart-fill"></i> Status de Inspecciones</h6>
+                                <p class="text-center text-muted small mb-2">Flota Total Vigente vs Vencida</p>
+                                <div class="chart-container-status d-flex align-items-center justify-content-center flex-grow-1" style="min-height: 250px;">
+                                    <canvas id="chartDashboardTotal"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-8 d-flex flex-column">
+                            <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 400px; position: relative;">
+                                <div class="bg-dark text-white p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
+                                    <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> GPS Global Wialon</span>
+                                    <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
+                                </div>
+                                <div id="mapaDashboard" style="width: 100%; height: 100%; min-height: 400px; z-index: 1;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="moduloUbicacion" class="modulo-wrapper" style="display: none;">
                     <div class="controls-row d-flex justify-content-between flex-wrap gap-2">
