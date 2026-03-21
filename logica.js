@@ -74,12 +74,12 @@ let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
-const CACHE = { placas: null, fleetrun: null, usuarios: null, seguridad: null, auditoria: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
+const CACHE = { placas: null, fleetrun: null, usuarios: null, auditoria: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
 const CACHE_TIME = {};
 
 let dataGlobalPlacas  = []; let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
 let paginaActualPlacas = 1; let colActualesPlacas = 4; let ITEMS_POR_PAGINA = 16; let datosFiltradosPlacas = [];
-let dataGlobalSeguridad = []; let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = [];
+let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false; let expandAllSFState = false; 
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = false; let expandSFMap = {};
@@ -223,11 +223,11 @@ window.verificarSesionGuardada = function() {
 
         let showMant = isAdm || p?.mod_mant || p?.insp?.l || p?.placas?.l || p?.fleet?.l;
         let showAlm = isAdm || p?.mod_alm || p?.placas?.l;
-        let showFlota = isAdm || p?.mod_flota || p?.gps?.l || p?.status?.l || p?.seg?.l || p?.cond?.l;
+        let showFlota = isAdm || p?.mod_flota || p?.gps?.l || p?.status?.l || p?.cond?.l;
 
         const mStatus = document.getElementById('btnMenuStatusMant'); const mPlacas = document.getElementById('btnMenuPlacasMant'); const mFleet = document.getElementById('btnMenuFleetrun');
         const aPlacas = document.getElementById('btnMenuPlacasAlmacen');
-        const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fSeg = document.getElementById('btnMenuSeguridad'); const fCond = document.getElementById('btnMenuConductores');
+        const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fCond = document.getElementById('btnMenuConductores');
 
         if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
         if (mStatus) mStatus.style.display = (isAdm || p?.insp?.l) ? 'block' : 'none';
@@ -240,7 +240,6 @@ window.verificarSesionGuardada = function() {
         if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) cFlo.style.removeProperty('display'); }
         if (fGps) fGps.style.display = (isAdm || p?.gps?.l) ? 'block' : 'none';
         if (fStatus) fStatus.style.display = (isAdm || p?.status?.l) ? 'block' : 'none';
-        if (fSeg) fSeg.style.display = (isAdm || p?.seg?.l) ? 'block' : 'none';
         if (fCond) fCond.style.display = (isAdm || p?.cond?.l) ? 'block' : 'none';
 
         if (isAdm) { if(nUsu) nUsu.style.display = 'block'; }
@@ -381,7 +380,6 @@ window.aplicarPermisosBotonesUI = function() {
     check('#btnNuevaPlaca', p?.placas?.c);
     check('#btnNuevoFleetrun', p?.fleet?.c);
     check('button[onclick="abrirModalNuevoStatusFlota()"]', p?.status?.c);
-    check('#btnNuevoReporteSeguridad', p?.seg?.c);
     check('button[onclick="abrirModalConductor()"]', p?.cond?.c);
     check('button[onclick="abrirModalGestorUsuario()"]', false);
 }
@@ -513,7 +511,6 @@ function cargarModulo(nombre, fnRender, fnBackend) {
       placas:      { id: 'cuerpoTablaPlacas', cols: 9 },
       fleetrun:    { id: 'cuerpoTablaFleetrun', cols: 10 },
       usuarios:    { id: 'cuerpoTablaUsuarios', cols: 7 },
-      seguridad:   { id: 'cuerpoTabla', cols: 6 },
       auditoria:   { id: 'cuerpoTablaAuditoria', cols: 4 },
       statusMant:  { id: 'cuerpoTablaStatus', cols: 10 },
       conductores: { id: 'cuerpoTablaConductores', cols: 7 },
@@ -542,7 +539,6 @@ function recargarModulo(nombre) {
     placas: () => cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'),
     fleetrun: () => cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'),
     usuarios: () => cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'),
-    seguridad: () => cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'),
     auditoria: () => cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'),
     statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'),
     conductores: () => cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'),
@@ -552,7 +548,7 @@ function recargarModulo(nombre) {
 }
 
 
-const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'seguridad': ['Administrador', 'Inspector', 'Flota'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
+const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
 
 window.cambiarModulo = function(modulo, idBoton) {
     let bloqueado = false;
@@ -565,7 +561,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     if (modulo === 'fleetrun' && !isAdm && !p?.fleet?.l) bloqueado = true;
     if (modulo === 'ubicacion' && !isAdm && !p?.gps?.l) bloqueado = true;
     if (modulo === 'statusFlota' && !isAdm && !p?.status?.l) bloqueado = true;
-    if (modulo === 'seguridad' && !isAdm && !p?.seg?.l) bloqueado = true;
     if (modulo === 'conductores' && !isAdm && !p?.cond?.l) bloqueado = true;
     if (modulo === 'usuarios' && !isAdm) bloqueado = true;
     if (modulo === 'auditoria' && !isAdm && !p?.mod_auditoria) bloqueado = true;
@@ -578,7 +573,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     const titulo = document.getElementById('tituloTopBar');
 
     if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
-    else if (modulo === 'seguridad') { let el=document.getElementById('moduloSeguridad'); if(el) el.style.display = 'flex'; titulo.innerText = 'Seguridad - Flota'; cargarModulo('seguridad', mostrarDatosSeguridad, 'obtenerDatosSeguridad'); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
     else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
@@ -1487,7 +1481,7 @@ function mostrarFleetrun(datos) {
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else{abrirDetalleFleetrun(event,${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}">${chkHtml}∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}">${chkHtml}∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
           });
       });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
@@ -1629,7 +1623,99 @@ function calcularProximo(prefix) {
         document.getElementById(prefix + '_kmprox').value = '';
     }
 }
-function abrirDetalleFleetrun(event, index) { if (event.target.closest('.dropdown') || event.target.closest('.btn-icon-dropdown')) return; const p = dataGlobalFleetrun[index]; if (!p) return; ['detF-id','detF-fecha','detF-mes','detF-anio','detF-placa','detF-marca','detF-dueno','detF-uts','detF-tipomp','detF-kmact','detF-freckm','detF-kmprox','detF-kmgps','detF-tec','detF-obs'].forEach((id, i) => { let val = p[i] || '-'; if(id === 'detF-fecha') val = parseDateToDDMMYYYY(val); const el = document.getElementById(id); if(el) el.innerText = val; }); new bootstrap.Modal(document.getElementById('modalDetalleFleetrun')).show(); }
+window.mostrarDetalleFleetrun = function(index) {
+    if (!dataGlobalFleetrun || !dataGlobalFleetrun[index]) return;
+    let fila = dataGlobalFleetrun[index];
+
+    let idStr = fila[0] || "-";
+    let fecha = fila[3] || "-";
+    let placa = normalizeStr(fila[4]) || "-";
+
+    let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
+    let marca = infoPlaca ? (infoPlaca[2] || fila[5] || "-") : (fila[5] || "-");
+    let dueno = infoPlaca ? (infoPlaca[3] || fila[6] || "-") : (fila[6] || "-");
+    let utsRaw = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (fila[7] || "-");
+
+    let tipo_mp = fila[8] || "-";
+    let km_actual = parseFloat(fila[9]) || 0;
+    let frecuencia = parseFloat(fila[10]) || 0;
+    let km_prox = parseFloat(fila[11]) || 0;
+    let tecnico = fila[12] || "-";
+    let obs = fila[13] || "";
+
+    let isLive = false;
+    let km_gps = 0;
+    let wialonData = buscarWialonPorPlaca(placa);
+    if (wialonData) { km_gps = wialonData.km; isLive = true; }
+
+    let falta_km = km_prox - km_gps;
+    let badgeClass = "", estadoText = "";
+    if (falta_km <= 0) {
+        badgeClass = "bg-danger text-white"; estadoText = "VENCIDO";
+    } else if ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100)) {
+        badgeClass = "bg-warning text-dark"; estadoText = "POR VENCER";
+    } else {
+        badgeClass = "bg-success text-white"; estadoText = "VIGENTE";
+    }
+
+    let html = `
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary mb-1">${fila[4] || '-'}</h3>
+            <div class="text-muted small mb-2">${marca} • ${dueno}</div>
+            <span class="badge bg-primary text-white shadow-sm me-1">${tipo_mp}</span>
+            <span class="badge shadow-sm px-2 py-1" style="background-color: var(--text) !important; color: var(--surface) !important; border: 1px solid var(--border); font-weight: bold;">${utsRaw}</span>
+        </div>
+        <ul class="list-group list-group-flush shadow-sm rounded border" style="font-size: 0.9rem;">
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-hash"></i> ID Mantenimiento</span>
+                <span class="fw-bold">${idStr}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-calendar3"></i> Fecha Registro</span>
+                <span>${fecha}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-speedometer"></i> KM de Registro</span>
+                <span>${km_actual.toLocaleString()} km</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-arrow-repeat"></i> Frecuencia</span>
+                <span class="text-warning fw-bold">${frecuencia.toLocaleString()} km</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-flag"></i> KM Próximo</span>
+                <span class="fw-bold">${km_prox.toLocaleString()} km</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-broadcast"></i> KM GPS Actual</span>
+                ${isLive ? `<span class="badge bg-primary px-2 py-1"><i class="bi bi-broadcast"></i> ${km_gps.toLocaleString()} km</span>` : `<span class="text-secondary fw-bold">${km_gps.toLocaleString()} km</span>`}
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-heart-pulse"></i> Estado</span>
+                <span class="badge ${badgeClass} shadow-sm px-2 py-1" style="font-size: 0.8rem;">${estadoText} (Faltan ${falta_km.toLocaleString()} km)</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
+                <span class="fw-bold text-muted small"><i class="bi bi-person-badge"></i> Técnico</span>
+                <span class="text-end" style="max-width: 55%;">${tecnico}</span>
+            </li>
+        </ul>
+    `;
+
+    if (obs && obs.trim() !== "" && obs.trim() !== "-") {
+        html += `
+            <div class="mt-4 p-3 rounded shadow-sm border" style="background-color: var(--surface);">
+                <h6 class="fw-bold text-danger mb-2" style="font-size: 0.8rem;"><i class="bi bi-card-text"></i> OBSERVACIONES</h6>
+                <p class="mb-0" style="color: var(--text); font-size: 0.85rem; line-height: 1.4;">${obs}</p>
+            </div>
+        `;
+    }
+
+    document.getElementById('detalleFleetrunContenido').innerHTML = html;
+    let offcanvasElement = document.getElementById('offcanvasFleetrun');
+    let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
+    bsOffcanvas.show();
+};
 function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = p[3]; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
 function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).actualizarFleetrun(formObj); }
@@ -1648,10 +1734,6 @@ window.obtenerDireccion = async function(lat, lng, btn) {
     }
 };
 
-function cargarTablaSeguridad(forzarRefresh = false) { if(!forzarRefresh && dataGlobalSeguridad.length > 0) { mostrarDatosSeguridad(dataGlobalSeguridad); return; } document.getElementById('cuerpoTabla').innerHTML = '<tr><td colspan="6" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</td></tr>'; google.script.run.withSuccessHandler(mostrarDatosSeguridad).obtenerDatosSeguridad(); }
-function mostrarDatosSeguridad(datos) { if(procesadorErroresCuota(datos, 'cuerpoTabla')) return; dataGlobalSeguridad = datos; let pS = permisosUsuario || {}; let isAdmS = pS.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; const canEditS = isAdmS || pS.seg?.e === true; const canDeleteS = isAdmS || pS.seg?.d === true; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="6" class="text-center py-4" style="color:var(--subtext)!important">No hay registros aún.</td></tr>'; } else { datos.forEach(fila => { const estadoPuro = fila[6]; const badgeEstado = estadoPuro === 'Pendiente' ? '<span class="badge bg-danger">Pendiente</span>' : '<span class="badge bg-success">Revisado</span>'; const inspectorSeguro = (fila[2]||'').replace(/'/g, "\'"); const linkFoto = fila[5]; const itemFoto = linkFoto && linkFoto !== '' ? `<li><a class="dropdown-item" href="${linkFoto}" target="_blank"><i class="bi bi-image text-primary"></i> Ver Fotografía</a></li>` : `<li><a class="dropdown-item disabled" href="#"><i class="bi bi-image-alt"></i> Sin fotografía</a></li>`; const itemPdf = `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="generarPDF(event,'${fila[0]}','${fila[1]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}','${linkFoto||''}')"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`; let itemsAdmin = ''; if (canEditS) itemsAdmin += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditar('${fila[0]}','${inspectorSeguro}','${fila[3]}','${estadoPuro}')"><i class="bi bi-pencil text-warning"></i> Editar Reporte</a></li>`; if (canEditS && canDeleteS) itemsAdmin += `<li><hr class="dropdown-divider"></li>`; if (canDeleteS) itemsAdmin += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Seguridad')"><i class="bi bi-trash"></i> Eliminar Registro</a></li>`; const separador = itemsAdmin !== '' ? '<li><hr class="dropdown-divider"></li>' : ''; const menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemFoto}${itemPdf}${separador}${itemsAdmin}</ul></div>`; html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td data-estado="${estadoPuro}">${badgeEstado}</td><td>${menuAcciones}</td></tr>`; }); } document.getElementById('cuerpoTabla').innerHTML = html; }
-function generarPDF(event, id, fecha, inspector, tipo, estado, urlImagen) { event.preventDefault(); const btnElement = event.currentTarget; const textoOriginal = btnElement.innerHTML; btnElement.innerHTML = '<i class="bi bi-hourglass-split"></i> Creando...'; btnElement.classList.add('disabled'); document.getElementById('pdf-id').innerText = id; document.getElementById('pdf-fecha').innerText = fecha; document.getElementById('pdf-inspector').innerText = inspector; document.getElementById('pdf-tipo').innerText = tipo; document.getElementById('pdf-estado').innerText = estado; const imgElement = document.getElementById('pdf-imagen'); const pSinImagen = document.getElementById('pdf-sin-imagen'); function dispararPDF() { const elemento = document.getElementById('reporte-imprimir'); document.getElementById('contenedor-pdf').style.display = 'block'; html2pdf().set({ margin:10, filename:`Reporte_${id}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(elemento).save().then(() => { document.getElementById('contenedor-pdf').style.display = 'none'; btnElement.innerHTML = textoOriginal; btnElement.classList.remove('disabled'); }); } if (urlImagen && urlImagen.includes('drive.google.com')) { google.script.run.withSuccessHandler(base64 => { if (base64) { imgElement.src = base64; imgElement.style.display='block'; pSinImagen.style.display='none'; imgElement.onload = () => dispararPDF(); } else { imgElement.style.display='none'; pSinImagen.style.display='block'; pSinImagen.innerText='Error al cargar foto'; dispararPDF(); } }).obtenerImagenBase64(urlImagen); } else { imgElement.style.display = 'none'; pSinImagen.style.display = 'block'; pSinImagen.innerText = 'No se adjuntó evidencia fotográfica'; dispararPDF(); } }
-function filtrarTablaAvanzado() { const filtroTexto = document.getElementById('buscador')?.value.toLowerCase() || ''; const filtroFechaRaw = document.getElementById('buscadorFecha')?.value || ''; let fechaComparar = ''; if (filtroFechaRaw) { const p = filtroFechaRaw.split('-'); fechaComparar = p[2]+'/'+p[1]+'/'+p[0]; } const filas = document.getElementById('tablaSeguridad').getElementsByTagName('tr'); for (let i = 1; i < filas.length; i++) { const celdas = filas[i].getElementsByTagName('td'); if (celdas.length < 1) continue; const textoFila = filas[i].textContent || filas[i].innerText; const textoFecha = celdas[1] ? (celdas[1].textContent || celdas[1].innerText) : ''; const coincideTexto = textoFila.toLowerCase().indexOf(filtroTexto) > -1; const coincideFecha = !filtroFechaRaw || textoFecha.includes(fechaComparar); filas[i].style.display = (coincideTexto && coincideFecha) ? '' : 'none'; } }
 function filtrarTabla(idTabla, idBuscador) { const filtro = document.getElementById(idBuscador || 'buscadorAuditoria')?.value.toLowerCase() || ''; const filas = document.getElementById(idTabla).getElementsByTagName('tr'); for (let i = 1; i < filas.length; i++) { const textoFila = filas[i].textContent || filas[i].innerText; filas[i].style.display = textoFila.toLowerCase().indexOf(filtro) > -1 ? '' : 'none'; } }
 function eliminarRegistro(id, coleccion) { itemAEliminarID = id; itemAEliminarCol = coleccion; document.getElementById('delete-record-id').innerText = id; const input = document.getElementById('input-confirmar-eliminar'); input.value = ''; document.getElementById('msg-error-eliminar').style.display = 'none'; const label = document.getElementById('label-confirmar'); const hint = document.getElementById('hint-azkell'); if (coleccion === 'Usuarios') { label.innerHTML = 'Ingresa la <span class="text-danger fw-bold border-bottom border-danger pb-1">Clave Maestra</span> para confirmar'; input.placeholder = ''; input.type = 'password'; if (hint) hint.style.display = 'block'; } else { label.innerHTML = 'Escribe la palabra <span class="text-danger fw-bold border-bottom border-danger pb-1">Si</span> para confirmar'; input.placeholder = 'Si'; input.type = 'text'; if (hint) hint.style.display = 'none'; } new bootstrap.Modal(document.getElementById('modalConfirmarEliminar')).show(); }
 
@@ -1687,8 +1769,7 @@ function procesarEliminacion() {
         .then(r => {
             if (r.data === 'Éxito') {
                 bootstrap.Modal.getInstance(document.getElementById('modalConfirmarEliminar')).hide();
-                if (itemAEliminarCol === 'Seguridad') cargarTablaSeguridad(true);
-                else if (itemAEliminarCol === 'Placas') cargarTablaPlacas(true);
+                if (itemAEliminarCol === 'Placas') cargarTablaPlacas(true);
                 else if (itemAEliminarCol === 'Fleetrun') cargarTablaFleetrun(true);
                 else if (itemAEliminarCol === 'StatusFlota') recargarModulo('statusFlota');
                 else if (itemAEliminarCol === 'Inspecciones') { dataGlobalInspecciones = []; recargarModulo('statusMant'); }
@@ -1806,11 +1887,6 @@ function generarMatrizUI() {
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="seg"><td class="text-start ps-3 fw-semibold text-secondary small">Seguridad</td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="seg" style="width:18px;height:18px;cursor:pointer;"></td></tr>
         <tr data-k="cond"><td class="text-start ps-3 fw-semibold text-secondary small">Conductores</td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
@@ -1959,9 +2035,6 @@ function procesarGuardadoUsuario(event, formObj) {
         btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
     });
 }
-function enviarDatos(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalSeguridad')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; }).guardarReporte(formObj); }
-function abrirModalEditar(id, inspector, tipo, estado) { document.getElementById('formEditar').reset(); document.getElementById('edit-id').value = id; document.getElementById('edit-inspector').value = inspector; document.getElementById('edit-tipo').value = tipo; document.getElementById('edit-estado').value = estado; const btn = document.getElementById('btnActualizar'); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; new bootstrap.Modal(document.getElementById('modalEditar')).show(); }
-function enviarEdicion(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizar'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide(); dataGlobalSeguridad = []; cargarTablaSeguridad(); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).withFailureHandler(e => { alert('Error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar Cambios'; }).actualizarReporte(formObj); }
 function enviarPreguntaIA() {
     const input = document.getElementById('inputPregunta');
     const pregunta = input.value.trim();
@@ -2387,11 +2460,15 @@ function abrirModalEditarStatusFlota(id) {
 }
 
 
-function generarPDFStatusFlota() {
-    const btn = event.currentTarget;
-    const txtOriginal = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
-    btn.classList.add('disabled');
+window.generarPDFStatusFlota = function(event) {
+    // El seguro: busca el botón de forma inteligente aunque no se pase el evento
+    let btn = (event && event.currentTarget) ? event.currentTarget : document.querySelector('button[onclick*="generarPDFStatusFlota"]');
+    let txtOriginal = '';
+    if (btn) {
+        txtOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
+        btn.classList.add('disabled');
+    }
 
     // Extraer Filtros Actuales para el Título
     let corteSeleccionado = document.getElementById('filtroStatusCorte')?.value;
@@ -2407,28 +2484,27 @@ function generarPDFStatusFlota() {
             if (row.classList.contains('group-header')) {
                 let txtTipo = row.querySelector('span.text-uppercase');
                 if (txtTipo) {
-                    htmlCuerpo += `<tr><td colspan="6" style="background-color: #cbd5e1; font-weight: bold; padding: 10px 15px; color:#1e293b; text-align:left; font-size: 14px;">${txtTipo.innerText}</td></tr>`;
+                    htmlCuerpo += `<tr><td colspan="6" style="background-color: #cbd5e1; font-weight: bold; padding: 4px 8px; color:#1e293b; text-align:left; font-size: 11px;">${txtTipo.innerText}</td></tr>`;
                 }
             } else if (row.classList.contains('child-row-sf')) {
                 let celdas = row.querySelectorAll('td');
                 htmlCuerpo += `<tr>
-                    <td style="padding: 8px 15px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2563eb;">${celdas[0]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b;">${celdas[2]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[4]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${celdas[5]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${celdas[6]?.innerText || ''}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${celdas[7]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2563eb; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[0]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[2]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 22%;">${celdas[4]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[5]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[6]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 9px; line-height: 1.1; width: 30%; word-break: break-word;">${celdas[7]?.innerText || ''}</td>
                 </tr>`;
             }
         }
     });
 
-    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="6" class="text-center py-4">No hay datos en la pantalla para exportar.</td></tr>';
+    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="6" class="text-center py-4" style="font-size: 10px;">No hay datos en la pantalla para exportar.</td></tr>';
 
     document.getElementById('pdf-sf-body').innerHTML = htmlCuerpo;
 
-    // Inyectar el título con Fecha y Corte
-    document.querySelector('#pdf-status-flota p').innerHTML = `Reporte de Status de Flota <br> <b>Fecha:</b> ${fechaBonita} | <b>Turno:</b> ${textoCorte}`;
+    document.querySelector('#pdf-status-flota p').innerHTML = `<span style="font-size: 14px;">Reporte de Status de Flota</span> <br> <span style="font-size: 11px;"><b>Fecha:</b> ${fechaBonita} | <b>Turno:</b> ${textoCorte}</span>`;
     document.getElementById('pdf-sf-fecha-gen').innerText = new Date().toLocaleDateString('es-PE');
 
     const elemento = document.getElementById('pdf-status-flota');
@@ -2437,13 +2513,19 @@ function generarPDFStatusFlota() {
     let nombreArchivo = `Status_Flota_${textoCorte.replace(/ /g, '_')}_${fechaRaw}.pdf`;
 
     html2pdf().set({
-        margin: 10, filename: nombreArchivo, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [8, 10, 8, 10],
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(elemento).save().then(() => {
         document.getElementById('contenedor-pdf-status-flota').style.display = 'none';
-        btn.innerHTML = txtOriginal;
-        btn.classList.remove('disabled');
+        if (btn) {
+            btn.innerHTML = txtOriginal;
+            btn.classList.remove('disabled');
+        }
     });
-}
+};
 
 // ==========================================
 // 🔥 GUARDADO DEL WIZARD DE INSPECCIONES 🔥

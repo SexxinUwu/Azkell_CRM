@@ -94,7 +94,6 @@
                 <div class="collapse" id="menuFlota">
                     <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
                     <a id="btnMenuStatusFlota" onclick="cambiarModulo('statusFlota', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
-                    <a id="btnMenuSeguridad" onclick="cambiarModulo('seguridad', this.id)"><i class="bi bi-shield-check"></i> <span class="link-text">Seguridad</span></a>
                     <a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a>
                 </div>
             </div>
@@ -389,25 +388,6 @@
                     </table></div></div>
                 </div>
 
-                <div id="moduloSeguridad" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 600px;">
-                            <div class="input-group input-group-sm"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscador" onkeyup="filtrarTablaAvanzado()" placeholder="Buscar por Inspector, ID..."></div>
-                            <input type="date" class="form-control form-control-sm" id="buscadorFecha" onchange="filtrarTablaAvanzado()" style="max-width: 140px;">
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span id="cache-badge-seguridad" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-seguridad">Sin cargar</span></span>
-                            <button class="btn-reload-cache" id="btn-reload-seguridad" onclick="recargarModulo('seguridad')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaSeguridad', 'Reportes_Seguridad')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-warning fw-bold text-dark btn-sm" id="btnNuevoReporteSeguridad" data-bs-toggle="modal" data-bs-target="#modalSeguridad" onclick="document.getElementById('formSeg').reset()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Nuevo Reporte</button>
-                        </div>
-                    </div>
-                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaSeguridad" data-sort-dir="asc">
-                        <thead><tr><th onclick="sortTable('tablaSeguridad', 0)">ID <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaSeguridad', 1)">Fecha <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaSeguridad', 2)">Inspector <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaSeguridad', 3)">Tipo Incidente <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaSeguridad', 4)">Estado <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                        <tbody id="cuerpoTabla"><tr><td colspan="6" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
-                    </table></div></div>
-                </div>
-
                 <div id="moduloStatusFlota" class="modulo-wrapper" style="display: none;">
                     <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
                         <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
@@ -658,7 +638,17 @@
             <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-editar-offcanvas"><i class="bi bi-pencil-square"></i> Editar</button>
         </div>
     </div>
-    <div class="modal fade" id="modalDetalleFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Detalles de Fleetrun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="detalle-grid"><div class="detalle-item"><span>ID</span><strong id="detF-id"></strong></div><div class="detalle-item"><span>Fecha</span><strong id="detF-fecha"></strong></div><div class="detalle-item"><span>Placa</span><strong id="detF-placa"></strong></div><div class="detalle-item"><span>Marca</span><strong id="detF-marca"></strong></div><div class="detalle-item"><span>Dueño</span><strong id="detF-dueno"></strong></div><div class="detalle-item"><span>UTS</span><strong id="detF-uts"></strong></div><div class="detalle-item"><span>Tipo MP</span><strong id="detF-tipomp"></strong></div><div class="detalle-item"><span>KM Actual</span><strong id="detF-kmact"></strong></div><div class="detalle-item"><span>Frecuencia</span><strong id="detF-freckm"></strong></div><div class="detalle-item"><span>KM Próximo</span><strong id="detF-kmprox"></strong></div><div class="detalle-item"><span>KM GPS Wialon</span><strong id="detF-kmgps" class="text-primary"></strong></div><div class="detalle-item"><span>Técnico</span><strong id="detF-tec"></strong></div><div class="detalle-item" style="grid-column: span 2;"><span>Observación</span><strong id="detF-obs"></strong></div></div></div></div></div></div>
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: 450px; border-left: 1px solid var(--border);">
+        <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
+            <h5 class="offcanvas-title fw-bold text-primary" id="offcanvasFleetrunLabel">
+                <i class="bi bi-tools"></i> Historial de Mantenimiento
+            </h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-4" style="background-color: var(--bg);">
+            <div id="detalleFleetrunContenido"></div>
+        </div>
+    </div>
     <div class="modal fade" id="modalPlaca" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -896,8 +886,6 @@
         </div>
     </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF">Guardar Registro</button></div></form></div></div></div>
 
-    <div class="modal fade" id="modalSeguridad" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Registrar Incidente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formSeg" onsubmit="enviarDatos(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><div class="mb-3"><label class="form-label fw-bold">Inspector</label><input type="text" class="form-control" name="inspector" id="input-inspector-nuevo" required readonly></div><div class="mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select" name="tipoIncidente" required><option value="Condición Insegura">Condición Insegura</option><option value="Acto Inseguro">Acto Inseguro</option><option value="EPP Faltante">EPP Faltante</option><option value="Incidente Vehicular">Incidente Vehicular</option></select></div><div class="mb-3"><label class="form-label fw-bold">Detalle</label><textarea class="form-control" name="detalle" rows="3" required></textarea></div><div class="mb-3"><label class="form-label fw-bold">Evidencia</label><input type="file" class="form-control" name="fotoIncidente" accept="image/*"></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button></div></form></div></div></div>
-    <div class="modal fade" id="modalEditar" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Editar Reporte</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formEditar" onsubmit="enviarEdicion(event, this)"><input type="hidden" name="usuarioAutor"><div class="modal-body"><input type="hidden" id="edit-id" name="idReporte"><div class="mb-3"><label class="form-label fw-bold">Inspector</label><input type="text" class="form-control" id="edit-inspector" name="inspectorEdit" required readonly></div><div class="mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select" id="edit-tipo" name="tipoIncidenteEdit" required><option value="Condición Insegura">Condición</option><option value="Acto Inseguro">Acto</option><option value="EPP Faltante">EPP</option><option value="Incidente Vehicular">Incidente</option></select></div><div class="mb-3"><label class="form-label fw-bold">Estado</label><select class="form-select" id="edit-estado" name="estadoEdit" required><option value="Pendiente">Pendiente</option><option value="Revisado">Revisado</option></select></div><div class="mb-3"><label class="form-label fw-bold text-danger">Gestión de Foto</label><input type="file" class="form-control mb-2" name="fotoEdit" accept="image/*"><div class="form-check"><input class="form-check-input" type="checkbox" value="si" id="checkEliminar" name="eliminarFoto"><label class="form-check-label text-danger" for="checkEliminar">Eliminar foto actual</label></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizar">Actualizar</button></div></form></div></div></div>
     <div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -984,7 +972,6 @@
                 <h2 style="margin: 0; color: #d32f2f; font-size: 28px; font-weight: bold;">AZKELL CRM</h2>
                 <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Reporte de Status de Flota</p>
             </div>
-
             <div style="margin-bottom: 25px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
                     <thead style="background-color: #1e293b; color: white;">
@@ -993,13 +980,13 @@
                     <tbody id="pdf-sf-body"></tbody>
                 </table>
             </div>
-
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; font-size: 9px; color: #666;">
                 <p style="margin: 0;">Documento generado automáticamente por AZKELL CRM</p>
                 <p style="margin: 0;">Fecha: <span id="pdf-sf-fecha-gen"></span></p>
             </div>
         </div>
     </div>
+
     <div class="modal fade" id="modalConductor" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold" id="tituloModalConductor"><i class="bi bi-person-badge"></i> Ficha de Conductor</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <form id="formConductor" onsubmit="guardarConductor(event, this)">
         <input type="hidden" name="idConductor" id="c_id">
