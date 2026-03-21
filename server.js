@@ -270,7 +270,6 @@ app.post('/api/script/:metodo', async (req, res) => {
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
-        else if (coleccion === 'Seguridad') sql = 'DELETE FROM seguridad WHERE id IN (?)';
 
         if (!sql) return res.json({ data: "Colección no válida" });
 
@@ -406,30 +405,6 @@ app.post('/api/script/:metodo', async (req, res) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             return res.json({ data: "Éxito" });
         });
-        return;
-    }
-
-    if (metodo === 'guardarReporte' || metodo === 'actualizarReporte') {
-        const form = req.body.args[0];
-        const isEdit = metodo === 'actualizarReporte';
-        const id = isEdit ? form.idReporte : `SEG-${Date.now()}`;
-        const inspector = isEdit ? form.inspectorEdit : form.inspector;
-        const tipo = isEdit ? form.tipoIncidenteEdit : form.tipoIncidente;
-        const estado = isEdit ? form.estadoEdit : "Pendiente";
-        const fecha = new Date().toLocaleDateString('es-PE');
-
-        if (isEdit) {
-            db.query('UPDATE seguridad SET inspector=?, tipo=?, estado=? WHERE idReporte=?', [inspector, tipo, estado, id], (err) => {
-                if (err) return res.json({ data: "Error BD: " + err.message });
-                return res.json({ data: "Éxito" });
-            });
-        } else {
-            db.query('INSERT INTO seguridad (idReporte, fecha, inspector, tipo, detalle, estado) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, fecha, inspector, tipo, form.detalle || "", estado], (err) => {
-                if (err) return res.json({ data: "Error BD: " + err.message });
-                return res.json({ data: "Éxito" });
-            });
-        }
         return;
     }
 
@@ -706,14 +681,13 @@ app.post('/api/eliminarMasivo', (req, res) => {
 
     let tabla = '';
 
-    // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota, Seguridad)
+    // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota)
     let campoId = 'idRegistro';
 
     if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
     else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
     else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; }
     else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
-    else if (coleccion === 'Seguridad') { tabla = 'seguridad'; }
     else return res.status(400).json({ error: "Colección no válida" });
 
     const sql = `DELETE FROM ${tabla} WHERE ${campoId} IN (?)`;
