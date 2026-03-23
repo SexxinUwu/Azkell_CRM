@@ -69,7 +69,7 @@
 
     <div id="app-crm" style="display: none;">
         <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
-        <div class="sidebar" id="sidebarMenu">
+        <div class="sidebar" id="sidebarMenu" style="z-index: 1050;">
             <div class="brand-container">
                 <div class="brand-text d-flex align-items-center gap-2">
                     <div class="brand-logo-icon">
@@ -85,7 +85,7 @@
                 </a>
             </div>
             <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cambiarModulo('statusMant', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cambiarModulo('placas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cambiarModulo('fleetrun', this.id)"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a></div>
+                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cambiarModulo('statusMant', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cambiarModulo('placas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cambiarModulo('fleetrun', this.id)"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a><a id="btnMenuStatus" onclick="cambiarModulo('status', this.id)"><i class="bi bi-car-front"></i> <span class="link-text">Status Taller</span></a><a id="btnMenuOrdenes" onclick="cambiarModulo('ordenes', this.id)"><i class="bi bi-tools"></i> <span class="link-text">Órdenes de Trabajo</span></a></div>
             </div>
             <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
                 <div class="collapse" id="menuAlmacen"><a id="btnMenuPlacasAlmacen" onclick="cambiarModulo('almacenPlacas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a></div>
@@ -94,8 +94,10 @@
                 <div class="collapse" id="menuFlota">
                     <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
                     <a id="btnMenuStatusFlota" onclick="cambiarModulo('statusFlota', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
-                    <a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a>
                 </div>
+            </div>
+            <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
             <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
@@ -185,11 +187,38 @@
 
                     </div>
 
+                    <!-- Widget Ocupación de Rampas -->
+                    <div class="card shadow-sm border-0 mb-4 mt-4">
+                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                            <span><i class="bi bi-geo-alt"></i> Ocupación de Rampas (Taller)</span>
+                            <button class="btn btn-sm btn-outline-light py-0" onclick="cargarDashRampas()"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                    <thead class="table-light text-muted">
+                                        <tr>
+                                            <th>Rampa</th>
+                                            <th>Placa</th>
+                                            <th>Situación</th>
+                                            <th>Ingreso</th>
+                                            <th>Salida Estimada</th>
+                                            <th>Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbDashRampas">
+                                        <tr><td colspan="6" class="text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Cargando rampas...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Mapa GPS -->
                     <div class="row g-3 flex-grow-1" style="min-height: 0;">
                         <div class="col-12 d-flex flex-column">
                             <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 350px; position: relative;">
-                                <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
+                                <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
                                     <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> GPS Global Wialon</span>
                                     <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
                                 </div>
@@ -470,6 +499,69 @@
                         <tbody id="cuerpoTablaAuditoria"><tr><td colspan="4" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
                     </table></div></div>
                 </div>
+
+                <div id="moduloStatusTaller" class="modulo-wrapper" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h2 class="h4 fw-bold mb-0" style="color: var(--text);"><i class="bi bi-car-front text-danger"></i> Unidades en Taller (Status)</h2>
+                            <p class="text-muted small mb-0">Vista general de vehículos activos en mecánica</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success shadow-sm" onclick="exportarStatusExcel()" title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Exportar</span>
+                            </button>
+                            <button class="btn btn-danger shadow-sm d-none d-md-inline-block" onclick="abrirIngresoUnidad()">
+                                <i class="bi bi-plus-lg"></i> Registrar Ingreso
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 d-flex gap-2 align-items-center p-3 rounded shadow-sm border" style="background-color: var(--surface);">
+                        <div class="input-group input-group-sm w-50">
+                            <span class="input-group-text border-0 bg-transparent text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-0 bg-transparent shadow-none" id="busquedaTaller" placeholder="Buscar por placa o ID..." oninput="filtrarTableroStatus()">
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap" id="box-filtros-status"></div>
+                    </div>
+
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3" id="tableroStatusTaller"></div>
+                </div>
+
+                <div id="moduloOrdenes" class="modulo-wrapper" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h2 class="h4 fw-bold mb-0" style="color: var(--text);"><i class="bi bi-tools text-danger"></i> Tablero de Trabajos (OT)</h2>
+                            <p class="text-muted small mb-0">Flujo operativo de reparaciones y cotizaciones</p>
+                        </div>
+                        <button class="btn btn-outline-danger shadow-sm" onclick="alert('Las OTs nacerán desde el Expediente del Status')"><i class="bi bi-plus-lg"></i> Nueva OT</button>
+                    </div>
+                    <div class="kanban-board d-flex gap-3 overflow-auto pb-3" style="min-height: 75vh; align-items: flex-start;">
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-clipboard-check"></i> 1. RECEPCIÓN</div>
+                            <div class="p-2 kanban-cards" id="kanban-recepcion" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-search"></i> 2. DIAGNÓSTICO</div>
+                            <div class="p-2 kanban-cards" id="kanban-diagnostico" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-calculator"></i> 3. PRESUPUESTO</div>
+                            <div class="p-2 kanban-cards" id="kanban-presupuesto" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-tools"></i> 4. REPARACIÓN</div>
+                            <div class="p-2 kanban-cards" id="kanban-reparacion" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-shield-check"></i> 5. CONTROL CALIDAD</div>
+                            <div class="p-2 kanban-cards" id="kanban-control" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-check-circle"></i> 6. ENTREGADO</div>
+                            <div class="p-2 kanban-cards" id="kanban-entregado" style="min-height: 100px;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div> 
@@ -647,6 +739,16 @@
         </div>
         <div class="offcanvas-body p-4" style="background-color: var(--bg);">
             <div id="detalleFleetrunContenido"></div>
+        </div>
+    </div>
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasOT" aria-labelledby="offcanvasOTLabel" style="width: 480px; border-left: 1px solid var(--border);">
+        <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
+            <h5 class="offcanvas-title fw-bold text-danger" id="offcanvasOTLabel">
+                <i class="bi bi-tools"></i> Detalle de Orden
+            </h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-4" style="background-color: var(--bg);" id="detalleOTContenido">
         </div>
     </div>
     <div class="modal fade" id="modalPlaca" tabindex="-1">
@@ -935,14 +1037,16 @@
     <datalist id="dl-tecnicos"><option value="Juan Cardenas"><option value="Glen"></datalist>
 
     <!-- FAB: Floating Action Button para Móviles -->
-    <div class="fab-container">
-        <button id="btnFabMain" class="btn-fab-main" onclick="toggleFabMenu()" title="Acciones rápidas">
+    <div class="fab-container d-md-none" style="position: fixed; bottom: 150px; right: 25px; z-index: 1030;">
+        <button id="btnFabMain" onclick="toggleFabMenu()" title="Acciones rápidas"
+            style="width: 56px; height: 56px; border-radius: 50% !important; background-color: var(--crm-accent); color: var(--crm-sidebar); border: none; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
             <i class="bi bi-plus-lg"></i>
         </button>
         <div id="fabActionListWrapper" class="fab-action-list-wrapper">
             <div id="fabActionListContent"></div>
         </div>
     </div>
+
 
     <button class="btn-ia-float shadow-lg" data-bs-toggle="offcanvas" data-bs-target="#offcanvasIA" title="Asistente IA Azkell">
         <i class="bi bi-robot"></i>

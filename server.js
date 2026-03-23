@@ -725,6 +725,244 @@ app.post('/api/eliminarMasivo', (req, res) => {
     });
 });
 
+// ============================================================
+// 🔥 MÓDULO TALLER V2 (CATÁLOGOS E IDs INTELIGENTES)
+// ============================================================
+
+// A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
+app.get('/api/catalogos_taller', (req, res) => {
+    const sqlRampas = "SELECT * FROM cat_rampas ORDER BY id ASC";
+    const sqlSituaciones = "SELECT * FROM cat_situaciones ORDER BY id ASC";
+    db.query(sqlRampas, (err1, rampas) => {
+        if (err1) return res.status(500).json({ error: err1.message });
+        db.query(sqlSituaciones, (err2, situaciones) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ rampas, situaciones });
+        });
+    });
+});
+
+app.get('/api/ordenes', (req, res) => {
+    db.query("SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC", (err, results) => {
+        if (err) return res.status(500).json({ error: "Error MySQL: " + err.message });
+        res.json({ data: results });
+    });
+});
+
+// B. Crear nueva Visita/OT con ID Inteligente (OT-0001-2026)
+app.post('/api/ordenes', (req, res) => {
+    // 1. Recibimos las nuevas fechas estimadas
+    const { placa, fecha, hora, fecha_est, hora_est, km, combustible, motivo, id_rampa, id_situacion, usuario } = req.body;
+    if (!placa) return res.status(400).json({ error: "Falta placa" });
+
+    const ticket_entrada = 'TKT-' + Date.now();
+    const currentYear = new Date().getFullYear();
+
+    db.query("SELECT ultimo_valor, anio FROM secuencias WHERE tipo = 'OT'", (errSeq, rows) => {
+        if (errSeq) return res.status(500).json({ error: "Error secuencias: " + errSeq.message });
+
+        let ultimo = rows.length > 0 ? rows[0].ultimo_valor : 0;
+        let dbYear = rows.length > 0 ? rows[0].anio : currentYear;
+        if (dbYear !== currentYear) ultimo = 0;
+        ultimo += 1;
+
+        const nuevoIdOT = "OT-" + String(ultimo).padStart(4, '0') + "-" + currentYear;
+
+        db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
+            if (errUpd) return res.status(500).json({ error: "Error update seq: " + errUpd.message });
+
+            const detalles = {
+                km_ingreso: km, combustible: combustible, motivo: motivo,
+                historial: [{ fase: 'Recepción', fecha: new Date().toISOString(), usuario: usuario || 'Admin' }]
+            };
+
+            // 2. Ensamblamos las fechas para SQL
+            const fechaHoraSQL = (fecha && hora) ? `${fecha} ${hora}:00` : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaHoraEstSQL = (fecha_est && hora_est) ? `${fecha_est} ${hora_est}:00` : null;
+
+            // 3. Insertamos usando la columna correcta: fecha_hora_salida
+            const sql = `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, id_situacion, id_rampa, detalles_json, creado_por, fecha_ingreso, fecha_hora_salida) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(sql, [ticket_entrada, nuevoIdOT, placa, 'Recepción', id_situacion || null, id_rampa || null, JSON.stringify(detalles), usuario || 'Admin', fechaHoraSQL, fechaHoraEstSQL], (errInsert) => {
+                if (errInsert) return res.status(500).json({ error: "Error guardando OT: " + errInsert.message });
+                res.json({ data: 'Éxito', id_ot: nuevoIdOT });
+            });
+        });
+    });
+});
+
+// 3. Actualizar y Avanzar de Fase la Orden (PUT)
+// 3. Actualizar y Avanzar de Fase la Orden V2 (PUT)
+app.put('/api/ordenes/:ticket_entrada', (req, res) => {
+    const { ticket_entrada } = req.params;
+    const { estado, nuevosDetalles, tecnico_asignado, usuario } = req.body;
+
+    db.query("SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?", [ticket_entrada], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ error: "OT no encontrada" });
+
+        let detalles = {};
+        try { detalles = JSON.parse(results[0].detalles_json || '{}'); } catch(e) {}
+
+        detalles = { ...detalles, ...nuevosDetalles };
+
+        if (!detalles.historial) detalles.historial = [];
+        detalles.historial.push({ fase: estado, fecha: new Date().toISOString(), usuario: usuario || 'Admin' });
+
+        let sql = "UPDATE ordenes_trabajo SET estado = ?, detalles_json = ?";
+        let params = [estado, JSON.stringify(detalles)];
+
+        if (tecnico_asignado) {
+            sql += ", tecnico_asignado = ?";
+            params.push(tecnico_asignado);
+        }
+
+        sql += " WHERE ticket_entrada = ?";
+        params.push(ticket_entrada);
+
+        db.query(sql, params, (errUpdate) => {
+            if (errUpdate) return res.status(500).json({ error: errUpdate.message });
+            res.json({ data: 'Éxito' });
+        });
+    });
+});
+
+// ============================================================
+// MÓDULO BACKLOG MAESTRO (MANTENIMIENTOS PENDIENTES)
+// ============================================================
+
+// C. Guardar un nuevo pendiente en el Backlog
+app.post('/api/backlog', (req, res) => {
+    const { placa, trabajo_pendiente, fuente, usuario } = req.body;
+    const sql = "INSERT INTO backlog_mantenimiento (placa, trabajo_pendiente, fuente, creado_por) VALUES (?, ?, ?, ?)";
+    db.query(sql, [placa, trabajo_pendiente, fuente || 'Taller (OT)', usuario || 'Admin'], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: 'Guardado con éxito' });
+    });
+});
+
+// D. Leer el historial de pendientes por Placa
+app.get('/api/backlog/:placa', (req, res) => {
+    const sql = "SELECT * FROM backlog_mantenimiento WHERE placa = ? ORDER BY fecha_deteccion DESC";
+    db.query(sql, [req.params.placa], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+// E. Actualizar Rampa y Situación (Status General del Vehículo)
+app.put('/api/ordenes/:ticket_entrada/ubicacion', (req, res) => {
+    const { id_rampa, id_situacion } = req.body;
+    const sql = "UPDATE ordenes_trabajo SET id_rampa = ?, id_situacion = ? WHERE ticket_entrada = ?";
+    db.query(sql, [id_rampa || null, id_situacion || null, req.params.ticket_entrada], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: 'Ubicación y Situación actualizadas' });
+    });
+});
+
+// ============================================================
+// VISTA MASTER: STATUS GENERAL DEL TALLER
+// ============================================================
+
+// F. Obtener la Vista Master de Unidades en Taller
+app.get('/api/taller/status', (req, res) => {
+    const sql = `
+        SELECT
+            ot.id_ot, ot.ticket_entrada, ot.placa, ot.fecha_ingreso, ot.fecha_hora_salida, ot.estado AS fase_ot,
+            ot.detalles_json, ot.creado_por,
+            ot.id_rampa,
+            rampa.nombre AS txtRampa,
+            situacion.nombre AS txtSituacion, situacion.id AS idSituacion
+        FROM ordenes_trabajo ot
+        LEFT JOIN cat_rampas rampa ON ot.id_rampa = rampa.id
+        LEFT JOIN cat_situaciones situacion ON ot.id_situacion = situacion.id
+        WHERE ot.estado != 'Entregado'
+        ORDER BY ot.fecha_ingreso DESC
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: "Error MySQL: " + err.message });
+        res.json({ data: results });
+    });
+});
+
+// H. Eliminar una Visita / Status (y sus OTs hijas)
+app.delete('/api/taller/status/:ticket_entrada', (req, res) => {
+    db.query("DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?", [req.params.ticket_entrada], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query("DELETE FROM trabajos_ot WHERE ticket_visita = ?", [req.params.ticket_entrada], () => {
+            res.json({ data: 'Registro eliminado correctamente' });
+        });
+    });
+});
+
+// ============================================================
+// GENERADOR DE ÓRDENES DE TRABAJO (HIJAS DE UNA VISITA)
+// ============================================================
+app.post('/api/taller/generar_ot', (req, res) => {
+    const { ticket_visita, tipo_ot, sub_tipo, usuario } = req.body;
+    if (!ticket_visita) return res.status(400).json({ error: "Falta el ID de la Visita" });
+
+    const currentYear = new Date().getFullYear();
+
+    db.query("SELECT ultimo_valor, anio FROM secuencias WHERE tipo = 'OT'", (errSeq, rows) => {
+        if (errSeq) return res.status(500).json({ error: "Error en secuencias: " + errSeq.message });
+
+        let ultimo = rows.length > 0 ? rows[0].ultimo_valor : 0;
+        let dbYear = rows.length > 0 ? rows[0].anio : currentYear;
+
+        if (dbYear !== currentYear) ultimo = 0;
+        ultimo += 1;
+
+        const nuevoIdOT = "OT-" + String(ultimo).padStart(4, '0') + "-" + currentYear;
+
+        db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
+            if (errUpd) return res.status(500).json({ error: "Error actualizando secuencia: " + errUpd.message });
+
+            const detalles = {
+                historial: [{ fase: 'Recepción', fecha: new Date().toISOString(), usuario: usuario || 'Admin' }]
+            };
+
+            const sql = `INSERT INTO trabajos_ot (id_ot, ticket_visita, tipo_ot, sub_tipo, estado, detalles_json, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(sql, [nuevoIdOT, ticket_visita, tipo_ot || 'Correctivo', sub_tipo || 'Falla', 'Recepción', JSON.stringify(detalles), usuario || 'Admin'], (errInsert) => {
+                if (errInsert) return res.status(500).json({ error: "Error guardando OT hija: " + errInsert.message });
+                res.json({ data: 'Éxito', id_ot: nuevoIdOT });
+            });
+        });
+    });
+});
+
+// G. Obtener solo las OTs Hijas para el Tablero Kanban
+app.get('/api/taller/kanban', (req, res) => {
+    const sql = `
+        SELECT t.*, o.placa, o.id_rampa, r.nombre AS txtRampa
+        FROM trabajos_ot t
+        JOIN ordenes_trabajo o ON t.ticket_visita = o.ticket_entrada
+        LEFT JOIN cat_rampas r ON o.id_rampa = r.id
+        WHERE t.estado != 'Entregado'
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+// I. Obtener las OTs Hijas de un Ticket de Visita
+app.get('/api/taller/trabajos/:ticket', (req, res) => {
+    db.query("SELECT * FROM trabajos_ot WHERE ticket_visita = ? ORDER BY fecha_creacion DESC", [req.params.ticket], (err, results) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: results});
+    });
+});
+
+// J. Eliminar una OT Hija específica (Desde el Expediente)
+app.delete('/api/taller/trabajos/:id_ot', (req, res) => {
+    db.query("DELETE FROM trabajos_ot WHERE id_ot = ?", [req.params.id_ot], (err) => {
+        if(err) return res.status(500).json({error: err.message});
+        res.json({data: 'OT eliminada correctamente'});
+    });
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');
