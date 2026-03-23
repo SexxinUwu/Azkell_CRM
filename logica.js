@@ -79,7 +79,7 @@ const CACHE_TIME = {};
 
 let dataGlobalPlacas  = []; let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
 let paginaActualPlacas = 1; let colActualesPlacas = 4; let ITEMS_POR_PAGINA = 16; let datosFiltradosPlacas = [];
-let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = [];
+let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = []; let dataGlobalOrdenes = [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false; let expandAllSFState = false; 
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = false; let expandSFMap = {};
@@ -545,12 +545,21 @@ function recargarModulo(nombre) {
     statusFlota: () => cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota')
   };
   if (acciones[nombre]) acciones[nombre]();
+  if (nombre === 'status' || nombre === 'todos') {
+    if (window.cargarCatalogosTaller) window.cargarCatalogosTaller();
+    if (window.cargarTableroStatus) window.cargarTableroStatus();
+  }
+  if (nombre === 'ordenes' || nombre === 'todos') {
+    if (window.cargarCatalogosTaller) window.cargarCatalogosTaller();
+    if (window.cargarOrdenesTablero) window.cargarOrdenesTablero();
+  }
 }
 
 
 const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
 
 window.cambiarModulo = function(modulo, idBoton) {
+    localStorage.setItem('ultimoModuloCRM', modulo);
     let bloqueado = false;
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
@@ -575,6 +584,30 @@ window.cambiarModulo = function(modulo, idBoton) {
     if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
     else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
+    else if (modulo === 'status') {
+        let el = document.getElementById('moduloStatusTaller');
+        if(el) el.style.display = 'block';
+        titulo.innerText = 'Status del Taller';
+        window.moduloActualTallerMaster = 'status'; // 🔥 flag para toggleFabMenu
+        if(window.cargarCatalogosTaller) window.cargarCatalogosTaller();
+        if(window.cargarTableroStatus) window.cargarTableroStatus();
+
+        // 🔥 INYECTAR OPCIÓN EN EL BOTÓN FLOTANTE "MÁS" GLOBAL (+)
+        let fabContent = document.getElementById('fabActionListContent');
+        let btnFab = document.getElementById('btnFabMain');
+        if (fabContent && btnFab) {
+            fabContent.innerHTML = `
+                <div class="d-flex align-items-center justify-content-end gap-2 mb-2" onclick="abrirIngresoUnidad(); if(window.toggleFabMenu) toggleFabMenu();" style="cursor: pointer;">
+                    <span class="badge bg-danger shadow-sm px-3 py-2" style="font-size: 0.9rem;">Registrar Ingreso</span>
+                    <button class="btn btn-danger rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-car-front-fill"></i>
+                    </button>
+                </div>
+            `;
+            btnFab.style.display = 'flex';
+        }
+    }
+    else if (modulo === 'ordenes') { let el=document.getElementById('moduloOrdenes'); if(el) el.style.display = 'block'; titulo.innerText = 'Órdenes de Trabajo'; if(window.cargarCatalogosTaller) window.cargarCatalogosTaller(); if(window.cargarOrdenesTablero) window.cargarOrdenesTablero(); }
     else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
     else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
     else if (modulo === 'statusMant') { let el=document.getElementById('moduloStatus'); if(el) el.style.display = 'flex'; titulo.innerText = 'Análisis de Inspecciones'; cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'); }
@@ -2690,6 +2723,22 @@ window.seleccionarPorcentaje = function(uid, pct, btn) {
 
 function toggleFabMenu() {
     if (window.innerWidth > 768) return;
+
+    // 🔥 INYECTAR CONTENIDO si estamos en Status Taller
+    if (window.moduloActualTallerMaster === 'status') {
+        let fabContent = document.getElementById('fabActionListContent');
+        if (fabContent) {
+            fabContent.innerHTML = `
+                <div class="d-flex align-items-center justify-content-end gap-2 mb-2" onclick="abrirIngresoUnidad(); if(window.toggleFabMenu) toggleFabMenu();" style="cursor: pointer;">
+                    <span class="badge bg-danger shadow-sm px-3 py-2 text-white" style="font-size: 0.9rem;">Registrar Ingreso</span>
+                    <button class="btn btn-danger rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-car-front-fill"></i>
+                    </button>
+                </div>
+            `;
+        }
+    }
+
     const wrapper = document.getElementById('fabActionListWrapper');
     const btnMain = document.getElementById('btnFabMain');
 
@@ -3729,10 +3778,12 @@ window.recargarDashboard = function() {
         if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
         renderizarDashboard();
         procesarFleetrunParaDashboard();
+        if (window.cargarDashRampas) cargarDashRampas();
     }).catch(() => {
         if(btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Actualizar';
         renderizarDashboard();
         procesarFleetrunParaDashboard();
+        if (window.cargarDashRampas) cargarDashRampas();
     });
 };
 
@@ -4462,4 +4513,822 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
         chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
     }
     chartDashFleetrunInst.update();
+};
+
+// ============================================================
+// 🔥 MÓDULO ÓRDENES DE TRABAJO (OT)
+// ============================================================
+
+let catalogosTaller = { rampas: [], situaciones: [] };
+
+window.cargarCatalogosTaller = function() {
+    fetch('/api/catalogos_taller')
+    .then(res => res.json())
+    .then(data => { if (!data.error) catalogosTaller = data; })
+    .catch(e => console.error("Error cargando catálogos:", e));
+};
+
+window.cargarOrdenesTablero = function() {
+    fetch('/api/taller/kanban')
+    .then(res => res.json())
+    .then(r => {
+        if (r.error) return console.error(r.error);
+        dataGlobalOrdenes = r.data || [];
+        renderizarKanban();
+    })
+    .catch(e => console.error("Error cargando OTs Kanban:", e));
+};
+
+window.cargarTableroStatus = function() {
+    fetch('/api/taller/status')
+    .then(res => res.json())
+    .then(r => {
+        if(r.error) return console.error(r.error);
+        window.dataGlobalTallerMaster = r.data || [];
+
+        renderizarFiltrosStatus();
+        aplicarMultiFiltroStatus(); // 🔥 SE FILTRA AUTOMÁTICAMENTE AL CARGAR
+    })
+    .catch(e => console.error("Error cargando status:", e));
+};
+
+// 🔥 DIBUJANTE DEL MULTI-FILTRO (Dropdown con Checkboxes)
+window.renderizarFiltrosStatus = function() {
+    const contenedor = document.getElementById('box-filtros-status');
+    if(!contenedor) return;
+
+    let html = `
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                <i class="bi bi-funnel"></i> Filtrar Situaciones
+            </button>
+            <ul class="dropdown-menu shadow-sm p-2 border-0" style="width: 260px; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">
+                <li>
+                    <div class="form-check border-bottom pb-2 mb-2">
+                        <input class="form-check-input" type="checkbox" id="filtroTodasSit" onchange="toggleTodasSituaciones(this)">
+                        <label class="form-check-label fw-bold" for="filtroTodasSit">Seleccionar Todas</label>
+                    </div>
+                </li>
+    `;
+
+    // Generar checkboxes: Por defecto, todas chequeadas MENOS "Finalizado"
+    catalogosTaller.situaciones.forEach(s => {
+        let esFinalizado = s.nombre.toLowerCase().includes('finalizado');
+        let checkeado = esFinalizado ? '' : 'checked';
+
+        html += `
+                <li>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input chk-situacion" type="checkbox" value="${s.id}" id="chkSit_${s.id}" ${checkeado} onchange="aplicarMultiFiltroStatus()">
+                        <label class="form-check-label text-truncate w-100" for="chkSit_${s.id}">${s.nombre}</label>
+                    </div>
+                </li>
+        `;
+    });
+
+    html += `</ul></div>`;
+    contenedor.innerHTML = html;
+};
+
+// 🔥 MOTOR 1: MARCAR/DESMARCAR TODAS
+window.toggleTodasSituaciones = function(cajaMaestra) {
+    let checkboxes = document.querySelectorAll('.chk-situacion');
+    checkboxes.forEach(chk => chk.checked = cajaMaestra.checked);
+    aplicarMultiFiltroStatus();
+};
+
+// 🔥 MOTOR 2: APLICAR LOS FILTROS SELECCIONADOS
+window.aplicarMultiFiltroStatus = function() {
+    // 1. Obtener todos los IDs que están con el "check" puesto
+    let checkboxes = document.querySelectorAll('.chk-situacion:checked');
+    let idsActivos = Array.from(checkboxes).map(chk => parseInt(chk.value));
+
+    // 2. Controlar la caja maestra "Seleccionar Todas"
+    let todasBox = document.getElementById('filtroTodasSit');
+    if(todasBox) {
+        todasBox.checked = (checkboxes.length === document.querySelectorAll('.chk-situacion').length);
+    }
+
+    // 3. Filtrar los datos en memoria y redibujar las tarjetas
+    let dataFiltrada = window.dataGlobalTallerMaster.filter(u => idsActivos.includes(u.idSituacion));
+    renderizarTableroStatusTaller(dataFiltrada);
+
+    // Limpiamos la barra de búsqueda de texto si se usa el filtro de casillas
+    document.getElementById('busquedaTaller').value = '';
+};
+
+window.renderizarTableroStatusTaller = function(data) {
+    const contenedor = document.getElementById('tableroStatusTaller');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+    if (data.length === 0) {
+        contenedor.innerHTML = '<div class="text-center py-5 w-100 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i> No hay unidades activas en Taller</div>';
+        return;
+    }
+    data.forEach(unidad => {
+        contenedor.innerHTML += `
+            <div class="col card-unidad" data-search="${unidad.placa} ${unidad.id_ot || ''}">
+                <div class="card h-100 shadow-sm border-0" style="background-color: var(--surface); color: var(--text); border-radius: 10px;">
+                    <div class="card-header border-0 bg-transparent p-3 pb-1 d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fs-5 fw-bold text-danger text-uppercase lh-sm d-block">${unidad.placa}</span>
+                            <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-geo-alt"></i> ${unidad.txtRampa || 'Sin Ubicación'}</small>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light border-0 py-0 px-2 text-muted shadow-none bg-transparent" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu shadow-sm border-0" style="font-size: 0.85rem;">
+                                <li><a class="dropdown-item text-danger" href="#" onclick="eliminarStatusTaller('${unidad.ticket_entrada}', '${unidad.placa}')"><i class="bi bi-trash"></i> Eliminar Registro</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body p-3 pt-1">
+                        <div class="fw-bold mb-1" style="font-size: 0.8rem;">OT Master: ${unidad.id_ot || '-'}</div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                            <span class="badge bg-secondary shadow-sm" style="font-size: 0.65rem;">${unidad.txtSituacion || '-'}</span>
+                            <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-arrow-right-circle text-danger"></i> ${unidad.fase_ot}</small>
+                        </div>
+                    </div>
+                    <div class="card-footer border-0 bg-transparent p-0 overflow-hidden" style="border-radius: 0 0 10px 10px;">
+                        <button class="btn btn-danger w-100 btn-sm rounded-0 fw-bold shadow-none" onclick="abrirExpedienteOTMaster('${unidad.ticket_entrada}')">
+                            <i class="bi bi-folder2-open"></i> Ver Expediente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+};
+
+window.filtrarTableroStatus = function() {
+    let texto = document.getElementById('busquedaTaller').value.toLowerCase();
+    let tarjetas = document.querySelectorAll('.card-unidad');
+    tarjetas.forEach(card => {
+        let contenido = card.getAttribute('data-search').toLowerCase();
+        card.style.display = contenido.includes(texto) ? 'block' : 'none';
+    });
+};
+
+window.filtrarStatusPorSituacion = function(idSituacion, btnTarget) {
+    let botones = document.getElementById('box-filtros-status').querySelectorAll('button');
+    botones.forEach(b => {
+        b.classList.remove('btn-dark', 'text-white');
+        b.classList.add('btn-outline-secondary');
+    });
+    btnTarget.classList.remove('btn-outline-secondary');
+    btnTarget.classList.add('btn-dark', 'text-white');
+    let dataFiltrada = idSituacion === 0
+        ? window.dataGlobalTallerMaster
+        : window.dataGlobalTallerMaster.filter(u => u.idSituacion == idSituacion);
+    renderizarTableroStatusTaller(dataFiltrada);
+    document.getElementById('busquedaTaller').value = '';
+};
+
+window.abrirExpedienteOTMaster = function(ticket_entrada) {
+    dataGlobalOrdenes = window.dataGlobalTallerMaster || [];
+    let index = dataGlobalOrdenes.findIndex(ot => ot.ticket_entrada === ticket_entrada);
+    if (index !== -1) {
+        verDetalleOT(index);
+    } else {
+        alert("No se pudo cargar el expediente de esta unidad.");
+    }
+};
+
+window.abrirIngresoUnidad = async function() {
+    if (!catalogosTaller || catalogosTaller.rampas.length === 0) {
+        try {
+            let res = await fetch('/api/catalogos_taller');
+            let data = await res.json();
+            if (!data.error) catalogosTaller = data;
+        } catch(e) { console.error("Error forzando catálogos:", e); }
+    }
+    let optRampas = catalogosTaller.rampas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
+    let optSituaciones = catalogosTaller.situaciones.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+    let optPlacas = dataGlobalPlacas ? dataGlobalPlacas.map(p => `<option value="${p[0]}">${p[2]} - ${p[3]}</option>`).join('') : '';
+
+    let html = `
+        <div class="alert alert-danger shadow-sm border-0 mb-4" style="background-color: rgba(220, 38, 38, 0.1); color: #dc2626;">
+            <i class="bi bi-clipboard-check fw-bold"></i> <strong>RECEPCIÓN DE UNIDAD</strong><br>
+            <small>Registra el ingreso a Taller y asigna su ubicación.</small>
+        </div>
+        <form id="formNuevaOT" onsubmit="guardarNuevaOT(event)">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted"><i class="bi bi-search"></i> Buscar Placa (Ref)</label>
+                <input list="listaPlacasOT" class="form-control text-uppercase shadow-sm" id="otPlaca" placeholder="Escribe para buscar..." autocomplete="off" required>
+                <datalist id="listaPlacasOT">${optPlacas}</datalist>
+                <small class="text-primary mt-1 d-block" style="cursor: pointer;" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle"></i> + Nueva Placa</small>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar3"></i> Fecha de Ingreso</label>
+                    <input type="date" class="form-control shadow-sm" id="otFecha" value="${new Date().toISOString().split('T')[0]}" required style="-webkit-appearance: none; -moz-appearance: none;">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-clock"></i> Hora</label>
+                    <input type="time" class="form-control shadow-sm" id="otHora" value="${new Date().toTimeString().slice(0,5)}" required style="-webkit-appearance: none; -moz-appearance: none;">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar-x text-danger"></i> Salida Estimada</label>
+                    <input type="date" class="form-control shadow-sm border-danger" id="otFechaEst">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-clock-history text-danger"></i> Hora Est.</label>
+                    <input type="time" class="form-control shadow-sm border-danger" id="otHoraEst">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-geo-alt"></i> Ubicación / Rampa</label>
+                    <select class="form-select shadow-sm" id="otRampa" required>
+                        <option value="">Seleccione...</option>
+                        ${optRampas}
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-tag"></i> Situación</label>
+                    <select class="form-select shadow-sm" id="otSituacion" required>
+                        <option value="">Seleccione...</option>
+                        ${optSituaciones}
+                    </select>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-speedometer"></i> Kilometraje (Opcional)</label>
+                    <input type="number" class="form-control shadow-sm" id="otKm">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted"><i class="bi bi-fuel-pump"></i> Combustible</label>
+                    <select class="form-select shadow-sm" id="otCombustible">
+                        <option value="Reserva">Reserva</option>
+                        <option value="1/4">1/4 Tanque</option>
+                        <option value="1/2">1/2 Tanque</option>
+                        <option value="3/4">3/4 Tanque</option>
+                        <option value="Lleno">Lleno</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-muted"><i class="bi bi-chat-left-text"></i> Motivo de Ingreso</label>
+                <textarea class="form-control shadow-sm" id="otMotivo" rows="3" placeholder="Ej: Mantenimiento preventivo, falla en frenos..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger w-100 fw-bold shadow-lg py-2">
+                <i class="bi bi-play-circle"></i> Generar Ticket de Visita
+            </button>
+        </form>
+    `;
+    document.getElementById('detalleOTContenido').innerHTML = html;
+    document.getElementById('offcanvasOTLabel').innerHTML = '<i class="bi bi-car-front"></i> Nuevo Ingreso';
+    let bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT'));
+    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasOT'));
+    bsOffcanvas.show();
+};
+
+window.guardarNuevaOT = function(e) {
+    e.preventDefault();
+    const placa = document.getElementById('otPlaca').value.toUpperCase().trim();
+    const fecha = document.getElementById('otFecha').value;
+    const hora = document.getElementById('otHora').value;
+    const fecha_est = document.getElementById('otFechaEst').value;
+    const hora_est = document.getElementById('otHoraEst').value;
+    const km = document.getElementById('otKm').value;
+    const combustible = document.getElementById('otCombustible').value;
+    const motivo = document.getElementById('otMotivo').value;
+    const id_rampa = document.getElementById('otRampa').value;
+    const id_situacion = document.getElementById('otSituacion').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const txtOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando...';
+    btn.disabled = true;
+    fetch('/api/ordenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placa, fecha, hora, fecha_est, hora_est, km, combustible, motivo, id_rampa, id_situacion, usuario: usuarioLogueado || 'Admin' })
+    })
+    .then(res => res.json())
+    .then(r => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        if (r.error) { alert('Error: ' + r.error); return; }
+        let bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT'));
+        if (bsOffcanvas) bsOffcanvas.hide();
+        cargarTableroStatus();
+    })
+    .catch(err => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        alert('Error de red: ' + err.message);
+    });
+};
+
+// 🔥 EL DIBUJANTE DEL TABLERO V2 (Con Rampas y Situaciones)
+window.renderizarKanban = async function() {
+    if (!catalogosTaller || catalogosTaller.rampas.length === 0) {
+        try {
+            let resCat = await fetch('/api/catalogos_taller');
+            let dataCat = await resCat.json();
+            if (!dataCat.error) catalogosTaller = dataCat;
+        } catch(e) { console.error("Error forzando catálogos en Kanban:", e); }
+    }
+    const columnas = {
+        'Recepción':          document.getElementById('kanban-recepcion'),
+        'Diagnóstico':        document.getElementById('kanban-diagnostico'),
+        'Presupuesto':        document.getElementById('kanban-presupuesto'),
+        'Reparación':         document.getElementById('kanban-reparacion'),
+        'Control de Calidad': document.getElementById('kanban-control'),
+        'Entregado':          document.getElementById('kanban-entregado')
+    };
+    Object.values(columnas).forEach(col => { if (col) col.innerHTML = ''; });
+    dataGlobalOrdenes.forEach((ot, index) => {
+        let detalles = {};
+        try { detalles = JSON.parse(ot.detalles_json || '{}'); } catch(e) {}
+        const col = columnas[ot.estado] || columnas['Recepción'];
+        const txtRampa = catalogosTaller.rampas.find(r => r.id == ot.id_rampa)?.nombre || 'Sin Rampa';
+        const txtSituacion = catalogosTaller.situaciones.find(s => s.id == ot.id_situacion)?.nombre || 'Sin Situación';
+        const idMostrar = ot.id_ot || ot.ticket_entrada;
+        const htmlCard = `
+            <div class="card shadow-sm mb-2 border-0 kpi-clickable" style="background-color: var(--surface); color: var(--text); border-left: 4px solid var(--crm-accent) !important; border-radius: 6px;" onclick="verDetalleOT(${index})">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-primary text-white shadow-sm" style="font-size: 0.75rem;">${ot.placa}</span>
+                        <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-geo-alt"></i> ${txtRampa}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <div class="fw-bold text-danger" style="font-size: 0.85rem;">${idMostrar}</div>
+                        <span class="badge bg-secondary" style="font-size: 0.65rem;">${txtSituacion}</span>
+                    </div>
+                    <div class="text-truncate text-muted mt-2" style="font-size: 0.75rem;" title="${detalles.motivo || ''}">
+                        <i class="bi bi-chat-left-text"></i> ${detalles.motivo || 'Sin detalle'}
+                    </div>
+                </div>
+            </div>
+        `;
+        if (col) col.innerHTML += htmlCard;
+    });
+};
+
+// 🔥 LA MUTACIÓN DEL PANEL LATERAL (FLUJO COMPLETO)
+// LA MUTACIÓN DEL PANEL LATERAL (EXPEDIENTE MAESTRO CON TABS)
+// 🔥 EXPEDIENTE MAESTRO V3 (Sin pestañas, Vista Continua)
+window.verDetalleOT = function(index) {
+    let ot = dataGlobalOrdenes[index];
+    let detalles = {};
+    try { detalles = JSON.parse(ot.detalles_json || '{}'); } catch(e) {}
+
+    let txtRampa = ot.txtRampa || 'Sin Rampa';
+    let txtSituacion = ot.txtSituacion || 'Sin Situación';
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <h5 class="fw-bold mb-0 text-danger"><i class="bi bi-car-front"></i> ${ot.placa}</h5>
+            <span class="badge bg-dark text-white shadow-sm">${txtSituacion}</span>
+        </div>
+
+        <div class="p-3 rounded shadow-sm border mb-3" style="background-color: var(--surface); color: var(--text); font-size: 0.85rem;">
+            <div class="row mb-2">
+                <div class="col-6"><strong><i class="bi bi-speedometer"></i> KM:</strong> ${detalles.km_ingreso || '-'}</div>
+                <div class="col-6"><strong><i class="bi bi-geo-alt"></i> Rampa:</strong> ${txtRampa}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-6"><strong><i class="bi bi-fuel-pump"></i> Combust:</strong> ${detalles.combustible || '-'}</div>
+                <div class="col-6"><strong><i class="bi bi-calendar3"></i> Ingreso:</strong> ${new Date(ot.fecha_ingreso).toLocaleDateString('es-PE')}</div>
+            </div>
+            <div class="mt-2 text-muted"><strong>Motivo Cliente:</strong> ${detalles.motivo || '-'}</div>
+        </div>
+
+        <div id="box-ubicacion-${ot.ticket_entrada}">
+            <button class="btn btn-outline-secondary w-100 btn-sm shadow-sm mt-2" onclick="abrirEdicionUbicacion('${ot.ticket_entrada}', ${ot.id_rampa || 'null'}, ${ot.idSituacion || 'null'})">
+                <i class="bi bi-arrow-left-right"></i> Cambiar Rampa / Situación
+            </button>
+        </div>
+
+        <hr class="my-4" style="border-top: 2px dashed var(--border);">
+
+        <h6 class="fw-bold text-danger mb-3"><i class="bi bi-tools"></i> ÓRDENES DE TRABAJO (OT)</h6>
+
+        <form onsubmit="guardarNuevaOTHija(event, '${ot.ticket_entrada}')" class="p-3 mb-4 border rounded shadow-sm" style="background-color: var(--bg);">
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <select class="form-select form-select-sm shadow-sm" id="tipoOtHija_${ot.ticket_entrada}" required>
+                        <option value="">Tipo de OT...</option>
+                        <option value="Correctivo">Correctivo</option>
+                        <option value="Preventivo">Preventivo</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <select class="form-select form-select-sm shadow-sm" id="subTipoOtHija_${ot.ticket_entrada}" required>
+                        <option value="">Sub Tipo...</option>
+                        <option value="Falla">Falla</option>
+                        <option value="Rutina">Rutina</option>
+                        <option value="Inspección">Inspección</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm"><i class="bi bi-plus-circle"></i> Generar Nueva OT</button>
+        </form>
+
+        <div id="listaOTHijas_${ot.ticket_entrada}">
+            <div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+        </div>
+    `;
+
+    document.getElementById('detalleOTContenido').innerHTML = html;
+    document.getElementById('offcanvasOTLabel').innerHTML = `Expediente de Unidad`;
+
+    let bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT'));
+    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasOT'));
+    bsOffcanvas.show();
+
+    // Disparamos la carga de OTs Hijas automáticamente
+    cargarOTHijas(ot.ticket_entrada);
+};
+
+window.guardarBacklogLocal = function(e, placa) {
+    e.preventDefault();
+    const input = document.getElementById('txtNuevoBacklog');
+    const trabajo = input.value.trim();
+    const btn = e.target.querySelector('button');
+    const txtOriginal = btn.innerHTML;
+
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+    btn.disabled = true;
+
+    fetch('/api/backlog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placa: placa, trabajo_pendiente: trabajo, fuente: 'Taller (Inspección Visual)', usuario: window.usuarioLogueado || 'Admin' })
+    })
+    .then(res => res.json())
+    .then(r => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        if (r.error) return alert('Error: ' + r.error);
+        input.value = '';
+        cargarBacklogPlaca(placa);
+    })
+    .catch(err => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        alert("Error de red: " + err.message);
+    });
+};
+
+window.cargarBacklogPlaca = function(placa) {
+    const contenedor = document.getElementById('listaBacklogLocal');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = '<div class="spinner-border spinner-border-sm text-warning mb-2"></div><br><small>Cargando historial...</small>';
+
+    fetch(`/api/backlog/${placa}`)
+    .then(res => res.json())
+    .then(r => {
+        if (r.error) throw new Error(r.error);
+
+        if (r.data.length === 0) {
+            contenedor.innerHTML = '<i class="bi bi-inbox fs-3 d-block mb-1"></i> No hay mantenimientos pendientes para esta unidad.';
+            return;
+        }
+
+        contenedor.innerHTML = r.data.map(b => `
+            <div class="border-bottom text-start pb-2 mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="badge ${b.estado === 'Pendiente' ? 'bg-danger' : 'bg-success'} shadow-sm">${b.estado}</span>
+                    <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-calendar3"></i> ${new Date(b.fecha_deteccion).toLocaleDateString('es-PE')}</small>
+                </div>
+                <div class="small fw-bold text-dark lh-sm">${b.trabajo_pendiente}</div>
+                <div class="text-muted mt-1" style="font-size: 0.65rem;">
+                    <i class="bi bi-person-fill"></i> ${b.creado_por || 'Admin'} &nbsp;|&nbsp; <i class="bi bi-diagram-2-fill"></i> ${b.fuente}
+                </div>
+            </div>
+        `).join('');
+    })
+    .catch(e => {
+        contenedor.innerHTML = '<span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> Error cargando backlog</span>';
+    });
+};
+
+// EDITOR EN LÍNEA DE RAMPA Y SITUACIÓN
+window.abrirEdicionUbicacion = function(ticket, rampaAct, sitAct) {
+    let optRampas = catalogosTaller.rampas.map(r => `<option value="${r.id}" ${r.id == rampaAct ? 'selected' : ''}>${r.nombre}</option>`).join('');
+    let optSituaciones = catalogosTaller.situaciones.map(s => `<option value="${s.id}" ${s.id == sitAct ? 'selected' : ''}>${s.nombre}</option>`).join('');
+
+    let html = `
+        <div class="p-3 mt-2 border rounded shadow-sm" style="background-color: var(--bg);">
+            <div class="mb-2">
+                <label class="small text-muted fw-bold"><i class="bi bi-geo-alt"></i> Mover a Rampa</label>
+                <select class="form-select form-select-sm shadow-sm" id="editRampa_${ticket}">
+                    <option value="">Seleccione...</option>
+                    ${optRampas}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="small text-muted fw-bold"><i class="bi bi-tag"></i> Cambiar Situación</label>
+                <select class="form-select form-select-sm shadow-sm" id="editSit_${ticket}">
+                    <option value="">Seleccione...</option>
+                    ${optSituaciones}
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-success w-100 shadow-sm fw-bold" onclick="guardarUbicacion('${ticket}')">
+                    <i class="bi bi-check-lg"></i> Guardar Cambios
+                </button>
+                <button class="btn btn-sm btn-light w-100 shadow-sm border text-muted" onclick="cargarTableroStatus(); bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT')).hide();">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    document.getElementById(`box-ubicacion-${ticket}`).innerHTML = html;
+};
+
+window.guardarUbicacion = function(ticket) {
+    let id_rampa = document.getElementById(`editRampa_${ticket}`).value;
+    let id_situacion = document.getElementById(`editSit_${ticket}`).value;
+
+    let btn = event.target.closest('button');
+    let txtOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>...';
+    btn.disabled = true;
+
+    fetch(`/api/ordenes/${ticket}/ubicacion`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_rampa, id_situacion })
+    })
+    .then(res => res.json())
+    .then(r => {
+        if (r.error) throw new Error(r.error);
+        bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT')).hide();
+        cargarTableroStatus();
+    })
+    .catch(e => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        alert("Error: " + e.message);
+    });
+};
+
+// 🔥 CALCULADORA DE RENTABILIDAD (Regla de Oro TuulApp: precio = costo / (1 - margen))
+window.calcularTotalOT = function() {
+    let costo = parseFloat(document.getElementById('otCostoRepuestos').value) || 0;
+    let margen = Math.min(parseFloat(document.getElementById('otMargen').value) || 0, 99);
+    let manoObra = parseFloat(document.getElementById('otManoObra').value) || 0;
+    let total = (costo / (1 - (margen / 100))) + manoObra;
+    document.getElementById('otTotalCalculado').innerText = "$ " + total.toFixed(2);
+};
+
+// 🔥 EL MOTOR DE AVANCE KANBAN
+window.avanzarEstadoOT = function(e, idRegistro, nuevoEstado) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const txtOriginal = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+    btn.disabled = true;
+
+    let nuevosDetalles = {};
+    let tecnicoAsignado = null;
+
+    if (nuevoEstado === 'Diagnóstico') {
+        tecnicoAsignado = document.getElementById('otTecnicoIn').value.trim();
+        nuevosDetalles.tecnico = tecnicoAsignado;
+    } else if (nuevoEstado === 'Presupuesto') {
+        nuevosDetalles.hallazgos = document.getElementById('otHallazgosIn').value.trim();
+        nuevosDetalles.repuestos_solicitados = document.getElementById('otRepuestosIn').value.trim();
+    } else if (nuevoEstado === 'Reparación') {
+        const costo = parseFloat(document.getElementById('otCostoRepuestos').value) || 0;
+        const margen = Math.min(parseFloat(document.getElementById('otMargen').value) || 0, 99);
+        const manoObra = parseFloat(document.getElementById('otManoObra').value) || 0;
+        nuevosDetalles.costo_repuestos = costo;
+        nuevosDetalles.margen = margen;
+        nuevosDetalles.mano_obra = manoObra;
+        nuevosDetalles.total_cotizado = (costo / (1 - (margen / 100))) + manoObra;
+    } else if (nuevoEstado === 'Control de Calidad') {
+        nuevosDetalles.trabajo_realizado = document.getElementById('otTrabajoRealizado').value.trim();
+    } else if (nuevoEstado === 'Entregado') {
+        nuevosDetalles.fecha_entrega = new Date().toISOString();
+    }
+
+    fetch(`/api/ordenes/${idRegistro}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: nuevoEstado, nuevosDetalles, tecnico_asignado: tecnicoAsignado, usuario: usuarioLogueado || 'Admin' })
+    })
+    .then(res => res.json())
+    .then(r => {
+        if (r.error) throw new Error(r.error);
+        bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT')).hide();
+        cargarTableroStatus();
+    })
+    .catch(err => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        alert('Error: ' + err.message);
+    });
+};
+
+// 🔥 NOTIFICADOR INTELIGENTE POR WHATSAPP
+window.enviarWhatsAppOT = function(index) {
+    let ot = dataGlobalOrdenes[index];
+    let detalles = {};
+    try { detalles = JSON.parse(ot.detalles_json || '{}'); } catch(e) {}
+
+    let texto = "";
+    if (ot.estado === 'Presupuesto') {
+        texto = `Hola, somos el Taller Azkell. 🛠️\n\nTe enviamos el reporte de diagnóstico y cotización de la unidad *${ot.placa}*:\n\n*Motivo de Ingreso:* ${detalles.motivo || '-'}\n*Hallazgos del Mecánico:* ${detalles.hallazgos || '-'}\n*Repuestos Requeridos:* ${detalles.repuestos_solicitados || 'Ninguno'}\n\n💰 *PRECIO TOTAL:* $ ${parseFloat(detalles.total_cotizado || 0).toFixed(2)}\n\nPor favor, responde este mensaje con un "Sí apruebo" para iniciar la reparación de inmediato.`;
+    } else if (ot.estado === 'Entregado') {
+        texto = `¡Hola! Tu unidad *${ot.placa}* ya está lista y fue entregada. ✅\n\n*Trabajo realizado:* ${detalles.trabajo_realizado || 'Mantenimiento completado'}\n*Total Facturado:* $ ${parseFloat(detalles.total_cotizado || 0).toFixed(2)}\n\nGracias por confiar en nuestro servicio técnico. 🚗💨`;
+    }
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+};
+
+// WIDGET DE RAMPAS EN VIVO (DASHBOARD)
+// 🔥 WIDGET DEL DASHBOARD (BLINDADO)
+window.cargarDashRampas = async function() {
+    let tbody = document.getElementById('tbDashRampas');
+    if(!tbody) return;
+
+    try {
+        // Aseguramos que los catálogos existan
+        if (!catalogosTaller || !catalogosTaller.rampas || catalogosTaller.rampas.length === 0) {
+            let resCat = await fetch('/api/catalogos_taller');
+            let dataCat = await resCat.json();
+            if (!dataCat.error) catalogosTaller = dataCat;
+        }
+
+        let res = await fetch('/api/taller/status');
+        let r = await res.json();
+
+        if(r.error) throw new Error(r.error);
+
+        let html = '';
+        catalogosTaller.rampas.forEach(rampa => {
+            let unidad = r.data.find(u => u.id_rampa == rampa.id && u.txtSituacion.toLowerCase() !== 'finalizado');
+            if(unidad) {
+                let detalles = {};
+                try { detalles = JSON.parse(unidad.detalles_json || '{}'); } catch(e){}
+
+                // Leemos la columna correcta
+                let salidaStr = unidad.fecha_hora_salida ? new Date(unidad.fecha_hora_salida).toLocaleString('es-PE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '-';
+
+                html += `
+                    <tr>
+                        <td class="fw-bold text-danger border-end">${rampa.nombre}</td>
+                        <td><span class="badge bg-primary fs-6 shadow-sm">${unidad.placa}</span></td>
+                        <td><span class="badge bg-secondary">${unidad.txtSituacion || '-'}</span></td>
+                        <td class="text-muted"><i class="bi bi-clock"></i> ${new Date(unidad.fecha_ingreso).toLocaleString('es-PE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
+                        <td class="text-danger fw-bold" style="font-size: 0.8rem;"><i class="bi bi-calendar-x"></i> ${salidaStr}</td>
+                        <td class="text-truncate" style="max-width: 150px;" title="${detalles.motivo || ''}">${detalles.motivo || '-'}</td>
+                    </tr>`;
+            } else {
+                html += `
+                    <tr>
+                        <td class="fw-bold text-muted border-end">${rampa.nombre}</td>
+                        <td colspan="5" class="text-muted fst-italic bg-light">Libre</td>
+                    </tr>`;
+            }
+        });
+        tbody.innerHTML = html;
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-danger">Error cargando rampas: ${error.message}</td></tr>`;
+    }
+};
+
+// ============================================================
+// GESTOR DE PERSISTENCIA (ANTI-RECARGA INFALIBLE)
+// ============================================================
+setTimeout(() => {
+    const moduloGuardado = localStorage.getItem('ultimoModuloCRM');
+    if (moduloGuardado && moduloGuardado !== 'dash' && moduloGuardado !== 'dashboard') {
+        let btnMenu = document.querySelector(`[onclick*="cambiarModulo('${moduloGuardado}'"]`);
+        if (btnMenu) {
+            cambiarModulo(moduloGuardado, btnMenu);
+        } else {
+            document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+            let mod = document.getElementById(moduloGuardado === 'ordenes' ? 'moduloOrdenes' : moduloGuardado === 'status' ? 'moduloStatusTaller' : 'modulo' + moduloGuardado.charAt(0).toUpperCase() + moduloGuardado.slice(1));
+            if (mod) mod.style.display = 'block';
+        }
+    }
+}, 300);
+
+window.eliminarStatusTaller = function(ticket, placa) {
+    if (!confirm(`¿Estás seguro de ELIMINAR el ingreso de la unidad ${placa}?\nSe borrarán también todas las Órdenes de Trabajo atadas a esta visita.\n\nEsta acción no se puede deshacer.`)) return;
+
+    fetch(`/api/taller/status/${ticket}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(r => {
+        if (r.error) throw new Error(r.error);
+        cargarTableroStatus();
+        if (window.cargarDashRampas) cargarDashRampas();
+    })
+    .catch(e => alert("Error eliminando: " + e.message));
+};
+
+// 🔥 GUARDAR UNA NUEVA OT HIJA
+window.guardarNuevaOTHija = function(e, ticket) {
+    e.preventDefault();
+    const tipo_ot = document.getElementById(`tipoOtHija_${ticket}`).value;
+    const sub_tipo = document.getElementById(`subTipoOtHija_${ticket}`).value;
+
+    const btn = e.target.querySelector('button');
+    const txtOriginal = btn.innerHTML;
+    btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Generando...';
+    btn.disabled = true;
+
+    fetch('/api/taller/generar_ot', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ticket_visita: ticket, tipo_ot, sub_tipo, usuario: window.usuarioActual || 'Admin' })
+    })
+    .then(res => res.json())
+    .then(r => {
+        btn.innerHTML = txtOriginal;
+        btn.disabled = false;
+        if(r.error) return alert("Error: " + r.error);
+        cargarOTHijas(ticket);
+        if(window.cargarOrdenesTablero) window.cargarOrdenesTablero();
+    })
+    .catch(err => {
+        btn.innerHTML = txtOriginal; btn.disabled = false; alert(err.message);
+    });
+};
+
+// 🔥 CARGAR LA LISTA DE OTs HIJAS EN EL EXPEDIENTE
+window.cargarOTHijas = function(ticket) {
+    fetch(`/api/taller/trabajos/${ticket}`)
+    .then(res => res.json())
+    .then(r => {
+        let cont = document.getElementById(`listaOTHijas_${ticket}`);
+        if(!cont) return;
+
+        if(r.error || r.data.length === 0) {
+            cont.innerHTML = '<div class="text-center text-muted small py-3 bg-light rounded border"><i class="bi bi-inbox fs-4 d-block mb-1"></i> Aún no has generado Órdenes de Trabajo.</div>';
+            return;
+        }
+
+        let html = r.data.map(ot => `
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 border rounded shadow-sm" style="background-color: var(--surface);">
+                <div>
+                    <div class="fw-bold text-danger mb-1" style="font-size: 0.85rem;">${ot.id_ot}</div>
+                    <span class="badge bg-primary" style="font-size: 0.65rem;">${ot.tipo_ot} - ${ot.sub_tipo}</span>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-dark text-white shadow-sm mb-1 d-block" style="font-size: 0.65rem;">${ot.estado}</span>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-2 mt-1" onclick="eliminarOTHija('${ot.id_ot}', '${ticket}')" title="Eliminar OT">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        cont.innerHTML = html;
+    });
+};
+
+// 🔥 MOTOR PARA ELIMINAR OT HIJA
+window.eliminarOTHija = function(id_ot, ticket) {
+    if(!confirm(`¿Seguro que deseas ELIMINAR la orden ${id_ot}? Desaparecerá del Kanban de los mecánicos.`)) return;
+
+    fetch(`/api/taller/trabajos/${id_ot}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(r => {
+        if(r.error) throw new Error(r.error);
+        cargarOTHijas(ticket);
+        if(window.cargarOrdenesTablero) window.cargarOrdenesTablero();
+    })
+    .catch(e => alert("Error eliminando OT: " + e.message));
+};
+
+// 🔥 EXPORTAR STATUS A EXCEL (CSV)
+window.exportarStatusExcel = function() {
+    if (!window.dataGlobalTallerMaster || window.dataGlobalTallerMaster.length === 0) {
+        return alert("No hay datos en el Status para exportar.");
+    }
+
+    let csv = "Ticket Visita,Placa,Rampa,Situación,Ingreso,Salida Estimada,OT Generadas,Creado Por\n";
+
+    window.dataGlobalTallerMaster.forEach(u => {
+        let fechaIngreso = new Date(u.fecha_ingreso).toLocaleString('es-PE');
+        let fechaSalida = u.fecha_hora_salida ? new Date(u.fecha_hora_salida).toLocaleString('es-PE') : 'No definida';
+
+        let rampa     = (u.txtRampa     || 'Sin Rampa').replace(/,/g, '');
+        let situacion = (u.txtSituacion || 'Sin Situación').replace(/,/g, '');
+        let otMaster  = (u.id_ot        || 'Ninguna');
+
+        csv += `${u.ticket_entrada},${u.placa},${rampa},${situacion},${fechaIngreso},${fechaSalida},${otMaster},${u.creado_por}\n`;
+    });
+
+    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+
+    let fechaHoy = new Date().toLocaleDateString('es-PE').replace(/\//g, '-');
+    link.download = `Status_Taller_${fechaHoy}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
