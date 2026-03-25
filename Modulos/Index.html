@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Azkell CRM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="./estilos.css">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker Registrado', reg))
+            .catch(err => console.error('Error en Service Worker', err));
+        }
+    </script>
+</head>
+<body>
+
+    <div id="app-crm" style="display: none;">
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+        <div class="sidebar" id="sidebarMenu" style="z-index: 1050;">
+            <div class="brand-container">
+                <div class="brand-text d-flex align-items-center gap-2">
+                    <div class="brand-logo-icon">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <span class="fw-bolder fs-5 brand-title-text" style="color: var(--text); letter-spacing: -0.5px;">AZKELL CRM</span>
+                </div>
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()"><i class="bi bi-list" style="color: var(--text);"></i></button>
+            </div>
+            <div id="wrap-dashboard">
+                <a id="nav-dashboard" onclick="cambiarModulo('dashboard', this.id)" class="active">
+                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text">Dashboard</span>
+                </a>
+            </div>
+            <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cambiarModulo('statusMant', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cambiarModulo('fleetrun', this.id)"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a><a id="btnMenuStatus" onclick="cambiarModulo('status', this.id)"><i class="bi bi-car-front"></i> <span class="link-text">Status Taller</span></a><a id="btnMenuOrdenes" onclick="cambiarModulo('ordenes', this.id)"><i class="bi bi-tools"></i> <span class="link-text">Órdenes de Trabajo</span></a></div>
+            </div>
+            <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuAlmacen"><a id="btnMenuPlacasAlmacen" onclick="cambiarModulo('almacenPlacas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a></div>
+            </div>
+            <div id="wrap-flota"><a data-bs-toggle="collapse" href="#menuFlota" role="button" aria-expanded="false" id="nav-flota"><i class="bi bi-truck-front"></i> <span class="link-text">Flota</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuFlota">
+                    <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
+                    <a id="btnMenuStatusFlota" onclick="cambiarModulo('statusFlota', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
+                </div>
+            </div>
+            <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
+            </div>
+            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
+            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
+            <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
+    <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+        <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
+    </a>
+</div>
+        </div>
+        
+        <div class="content">
+            <div class="topbar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn-hamburger-mobile" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+                    <h4 class="m-0 fw-bold" id="tituloTopBar" style="font-size: 1.3rem;">Cargando...</h4>
+                    <button id="btn-wialon-status" class="btn btn-sm btn-outline-secondary ms-3 rounded-pill px-3 shadow-sm" onclick="recargarWialon(true)" title="Actualizar GPS en tiempo real" style="font-size: 0.8rem;">
+                        <i class="bi bi-geo-alt-fill"></i> <span id="wialon-text" class="fw-bold">GPS Off</span>
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2 gap-md-3">
+                    <div class="fake-search-bar" onclick="abrirSpotlight()">
+                        <i class="bi bi-search"></i>
+                        <span class="search-text d-none d-md-inline">Buscar placa, cliente... (Ctrl+K)</span>
+                    </div>
+                    <button class="btn btn-link text-muted p-0 fs-5" id="btn-theme-toggle" onclick="document.getElementById('theme-toggle').click();" title="Modo Oscuro">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                    <input type="checkbox" id="theme-toggle" class="d-none">
+                    <div class="dropdown d-inline-block">
+    <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; transition: 0.2s;">
+        <i class="bi bi-person-circle fs-4" style="color: var(--crm-accent) !important;"></i>
+        <span id="nombre-usuario-top" class="fw-bold ms-2 text-truncate" style="max-width: 150px;">Usuario</span>
+        <span id="badge-rol-top" class="ms-2 d-none d-md-inline-block"></span>
+        <i class="bi bi-chevron-down ms-2" style="font-size: 0.8rem; color: var(--subtext);"></i>
+    </div>
+
+    <div class="dropdown-menu dropdown-menu-end shadow-lg p-0" style="width: 280px; border-radius: 15px; overflow: hidden; border: 1px solid var(--border); background-color: var(--surface);">
+        <div class="text-center p-4" style="background-color: var(--crm-sidebar);">
+            <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--crm-accent);"></i>
+            <h5 class="fw-bold mt-2 mb-0" id="perfil-nombre" style="color: #ffffff !important;">Usuario</h5>
+            <span class="badge bg-secondary mt-2 mb-2" id="perfil-rol-badge">Rol</span>
+            <p class="mb-0" id="perfil-correo" style="color: #cbd5e1 !important; font-size: 0.85rem;">correo@azkell.com</p>
+        </div>
+        <div class="p-3 text-center" style="background-color: var(--bg);">
+            <button class="btn btn-danger fw-bold w-100 shadow-sm" onclick="cerrarSesion()" style="border-radius: 8px;">
+                <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+            </button>
+        </div>
+    </div>
+</div></div>
+            </div>
+            
+            <div class="main-area">
+
+                <div id="moduloDashboard" class="modulo-wrapper" style="display: flex;">
+                    <div class="controls-row d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
+                            <h5 class="m-0 fw-bold text-dark-theme">Centro de Comando</h5>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> Sistema Activo</span>
+                            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarDashboard()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                        </div>
+                    </div>
+
+                    <!-- Fila de 2 gráficos -->
+                    <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+
+                        <div class="col">
+                            <div class="kpi-card h-100 p-3 chart-card-dashboard">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> Salud de Mantenimientos (Preventivos)</h6>
+                                <div class="chart-container-dashboard">
+                                    <canvas id="chartDashFleetrunStatus"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col">
+                            <div class="kpi-card h-100 p-3 chart-card-dashboard">
+                                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> Estado General Inspecciones (Mes)</h6>
+                                <div class="chart-container-dashboard">
+                                    <canvas id="chartGeneralInspecciones"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Widget Ocupación de Rampas -->
+                    <div class="card shadow-sm border-0 mb-4 mt-4">
+                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                            <span><i class="bi bi-geo-alt"></i> Ocupación de Rampas (Taller)</span>
+                            <button class="btn btn-sm btn-outline-light py-0" onclick="cargarDashRampas()"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                    <thead class="table-light text-muted">
+                                        <tr>
+                                            <th>Rampa</th>
+                                            <th>Placa</th>
+                                            <th>Situación</th>
+                                            <th>Ingreso</th>
+                                            <th>Salida Estimada</th>
+                                            <th>Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbDashRampas">
+                                        <tr><td colspan="6" class="text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Cargando rampas...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa GPS -->
+                    <div class="row g-3 flex-grow-1" style="min-height: 0;">
+                        <div class="col-12 d-flex flex-column">
+                            <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 350px; position: relative;">
+                                <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
+                                    <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> GPS Global Wialon</span>
+                                    <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
+                                </div>
+                                <div id="mapaDashboard" style="width: 100%; height: 100%; min-height: 350px; z-index: 1;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="root-dinamico" class="container-fluid py-3" style="display: none;"></div>
+
+                <div id="moduloUbicacion" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 400px;">
+                            <div class="input-group input-group-sm"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorUbicacion" onkeyup="filtrarTabla('cuerpoTablaUbicacion', 'buscadorUbicacion')" placeholder="Buscar placa en GPS..."></div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarWialon(true)"><i class="bi bi-arrow-clockwise"></i> Actualizar GPS</button>
+                        </div>
+                    </div>
+                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUbicacion" data-sort-dir="asc">
+                        <thead><tr><th onclick="sortTable('tablaUbicacion', 0)">Unidad (Wialon) <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 1)">Placa Detectada <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 2)">Kilometraje <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 3)">Horas Motor <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-geo-alt-fill text-primary"></i> Ubicación en Mapa</th></tr></thead>
+                        <tbody id="cuerpoTablaUbicacion"><tr><td colspan="5" class="text-center py-5">Sincronizando con satélites Wialon...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloStatus" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row">
+                        <div class="row mb-3" id="panelGraficosStatus">
+                            <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2">Flota Total</h6><div class="chart-container-status"><canvas id="chartTotal"></canvas></div></div></div>
+                            <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2">Unidades Motoras</h6><div class="chart-container-status"><canvas id="chartMotoras"></canvas></div></div></div>
+                            <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2">U. No Motoras</h6><div class="chart-container-status"><canvas id="chartNoMotoras"></canvas></div></div></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                                <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatus" onkeyup="filtrarStatusAvanzado()" placeholder="Buscar placa, técnico..."></div>
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroStatusCliente"></ul></div>
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Marca</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroStatusMarca"></ul></div>
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroStatusEstado"></ul></div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="cache-badge-statusMant" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusMant">Sin cargar</span></span>
+                                <button class="btn-reload-cache" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                                <button class="btn btn-outline-warning fw-bold btn-sm text-dark" id="btnToggleGraficos" onclick="toggleGraficosStatus()"><i class="bi bi-eye-slash-fill"></i> Gráficos</button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                                <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-statusMant" onclick="activarModoSeleccionStatusMant()"><i class="bi bi-ui-checks"></i> Seleccionar</button>
+                                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-statusMant" onclick="seleccionarTodasLasStatusMant()"><i class="bi bi-check-square"></i> Seleccionar Todo</button>
+                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-statusMant" onclick="eliminarMasivo('Inspecciones', 'statusMant')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-statusMant">0</span>)</button>
+
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-upload"></i> Importar
+                                    </button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaInspecciones()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileInspecciones').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
+                                    </ul>
+                                </div>
+                                <input type="file" id="inputFileInspecciones" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelInspecciones(event)">
+
+                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportarExcelInspecciones()"><i class="bi bi-download"></i> Exportar</button>
+                                <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevaInspeccion()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar Insp.</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
+                        <thead><tr><th onclick="sortTable('tablaStatus', 0)">Placa / Cliente <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)">Tipo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)">Técnico <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)">Fecha de Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)">Prox Insp <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)">Semáforo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> Ubicación GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaStatus"><tr><td colspan="10" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloFleetrun" class="modulo-wrapper" style="display: none;">
+                    <div id="panelGraficosFleetrun" class="row mb-4" style="display: none;">
+                        <div class="col-md-6 mx-auto">
+                            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> Salud de Mantenimientos</h6>
+                                <div style="position: relative; height: 220px; width: 100%;">
+                                    <canvas id="chartFleetrunStatus"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <div class="d-flex justify-content-end mb-2">
+                            <button class="btn btn-sm btn-outline-primary fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()"><i class="bi bi-eye-fill"></i> Mostrar Gráficos</button>
+                        </div>
+
+                        <div class="kpi-wrapper mb-3">
+                            <div class="kpi-card" id="kpi-fleet-card-vigente">
+                                <div class="kpi-title">Mantenimientos Vigentes</div><div class="kpi-value text-success" id="kpi-fleet-vigentes">0</div>
+                            </div>
+                            <div class="kpi-card" id="kpi-fleet-card-porvencer">
+                                <div class="kpi-title">Por Vencer (&lt; 1000 KM)</div><div class="kpi-value text-warning" id="kpi-fleet-porvencer">0</div>
+                            </div>
+                            <div class="kpi-card" id="kpi-fleet-card-vencido">
+                                <div class="kpi-title">Vencidos</div><div class="kpi-value text-danger" id="kpi-fleet-vencidos">0</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                                <div class="input-group input-group-sm" style="max-width: 250px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico..."></div>
+                                <input type="date" class="form-control form-control-sm text-primary fw-bold" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()" style="max-width: 140px;">
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetCliente"></ul></div>
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">UTS</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetUts"></ul></div>
+                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetEstado">
+                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> Vigente</label></li>
+                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> Por Vencer</label></li>
+                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> Vencido</label></li>
+                                </ul></div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun">Sin cargar</span></span>
+                                <button class="btn btn-outline-secondary btn-sm rounded-circle px-2" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Sincronizar Datos"><i class="bi bi-arrow-clockwise"></i></button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                                <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun">Historial</span></button>
+                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-fleetrun" onclick="activarModoSeleccionFleetrun()"><i class="bi bi-ui-checks"></i> Seleccionar</button>
+                                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-fleetrun" onclick="seleccionarTodasLasFleetrun()"><i class="bi bi-check-square"></i> Seleccionar Todo</button>
+                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-fleetrun" onclick="eliminarMasivo('Mantenimientos', 'fleetrun')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-fleetrun">0</span>)</button>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-upload"></i> Importar</button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaFleetrun()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileFleetrun').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
+                                    </ul>
+                                </div>
+                                <input type="file" id="inputFileFleetrun" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelFleetrun(event)">
+                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportarExcelFleetrun()"><i class="bi bi-download"></i> Exportar</button>
+                                <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoFleetrun" onclick="abrirModalNuevoFleetrun()"><i class="bi bi-plus-lg"></i> Registrar MP</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaFleetrun">
+                        <thead><tr><th>Placa / Registro</th><th>Fecha</th><th>Tipo MP</th><th>KM de Cambio</th><th>Falta</th><th>Próximo Cambio</th><th>Observación</th><th>Frecuencia</th><th>KM GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaFleetrun"><tr><td colspan="10" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloStatusFlota" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                            <input type="date" class="form-control form-control-sm border-primary text-primary fw-bold" id="filtroStatusFecha" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 140px;">
+                            <select class="form-select form-select-sm fw-bold" id="filtroStatusCorte" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 100px; color: var(--text);"><option value="">Todos los Cortes</option><option value="1">Corte 1</option><option value="2">Corte 2</option><option value="3">Corte 3</option></select>
+                            <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatusFlota" onkeyup="filtrarStatusFlotaAvanzado()" placeholder="Buscar Placa, Conductor..."></div>
+                            <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota">Sin cargar</span></span>
+                            <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="resetearYRecargarStatusFlota()"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                            <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Agregar</button>
+                        </div>
+                    </div>
+                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
+                        <thead><tr><th>Tracto / Camión</th><th>Prox Insp. T/C</th><th>Carreta / Remolque</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Zona</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5">Cargando Status Flota...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloConductores" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
+                        <div class="input-group input-group-sm" style="max-width: 300px;">
+                            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores" onkeyup="filtrarTabla('cuerpoTablaConductores', 'buscadorConductores')" placeholder="Buscar por Nombre, DNI...">
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
+                            <button class="btn-reload-cache" onclick="recargarModulo('conductores')"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
+                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()" data-perm-crear="flota"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
+                        </div>
+                    </div>
+                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaConductores">
+                        <thead>
+                            <tr>
+                                <th>Nombre del Conductor</th>
+                                <th class="d-none">Empresa</th>
+                                <th>DNI</th>
+                                <th class="d-none">Licencia</th>
+                                <th>Contacto (Tel / WSP)</th>
+                                <th class="d-none">Estado</th>
+                                <th><i class="bi bi-three-dots-vertical"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaConductores"><tr><td colspan="7" class="text-center py-5">Cargando Conductores...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloUsuarios" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between">
+                        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-person-lines-fill"></i> Directorio del Personal</h5>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span id="cache-badge-usuarios" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-usuarios">Sin cargar</span></span>
+                            <button class="btn-reload-cache" id="btn-reload-usuarios" onclick="recargarModulo('usuarios')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalGestorUsuario()" data-perm-crear="usuarios"><i class="bi bi-person-plus"></i> Nuevo Usuario</button>
+                        </div>
+                    </div>
+                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUsuarios" data-sort-dir="asc">
+                        <thead><tr><th onclick="sortTable('tablaUsuarios', 0)">ID <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 1)">Nombre Completo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 2)">Cargo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 3)">Correo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 4)">Rol <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 5)">Estado <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaUsuarios"><tr><td colspan="7" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloAuditoria" class="modulo-wrapper" style="display: none;">
+                    <div class="controls-row d-flex justify-content-between">
+                        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-journal-code"></i> Registro de Actividad</h5>
+                        <div class="d-flex gap-2 align-items-center w-50 justify-content-end">
+                            <span id="cache-badge-auditoria" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-auditoria">Sin cargar</span></span>
+                            <button class="btn-reload-cache" id="btn-reload-auditoria" onclick="recargarModulo('auditoria')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                            <input type="text" class="form-control form-control-sm w-50" id="buscadorAuditoria" onkeyup="filtrarTabla('cuerpoTablaAuditoria', 'buscadorAuditoria')" placeholder="Buscar en historial...">
+                        </div>
+                    </div>
+                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0 table-sm" id="tablaAuditoria" data-sort-dir="desc">
+                        <thead><tr><th onclick="sortTable('tablaAuditoria', 0)">Fecha y Hora <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 1)">Usuario Autor <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 2)">Acción <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 3)">Detalle Operación <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th></tr></thead>
+                        <tbody id="cuerpoTablaAuditoria"><tr><td colspan="4" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
+                    </table></div></div>
+                </div>
+
+                <div id="moduloStatusTaller" class="modulo-wrapper" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h2 class="h4 fw-bold mb-0" style="color: var(--text);"><i class="bi bi-car-front text-danger"></i> Unidades en Taller (Status)</h2>
+                            <p class="text-muted small mb-0">Vista general de vehículos activos en mecánica</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success shadow-sm" onclick="exportarStatusExcel()" title="Exportar a Excel">
+                                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Exportar</span>
+                            </button>
+                            <button class="btn btn-danger shadow-sm d-none d-md-inline-block" onclick="abrirIngresoUnidad()">
+                                <i class="bi bi-plus-lg"></i> Registrar Ingreso
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 d-flex gap-2 align-items-center p-3 rounded shadow-sm border" style="background-color: var(--surface);">
+                        <div class="input-group input-group-sm w-50">
+                            <span class="input-group-text border-0 bg-transparent text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-0 bg-transparent shadow-none" id="busquedaTaller" placeholder="Buscar por placa o ID..." oninput="filtrarTableroStatus()">
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap" id="box-filtros-status"></div>
+                    </div>
+
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3" id="tableroStatusTaller"></div>
+                </div>
+
+                <div id="moduloOrdenes" class="modulo-wrapper" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h2 class="h4 fw-bold mb-0" style="color: var(--text);"><i class="bi bi-tools text-danger"></i> Tablero de Trabajos (OT)</h2>
+                            <p class="text-muted small mb-0">Flujo operativo de reparaciones y cotizaciones</p>
+                        </div>
+                        <button class="btn btn-outline-danger shadow-sm" onclick="alert('Las OTs nacerán desde el Expediente del Status')"><i class="bi bi-plus-lg"></i> Nueva OT</button>
+                    </div>
+                    <div class="kanban-board d-flex gap-3 overflow-auto pb-3" style="min-height: 75vh; align-items: flex-start;">
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-clipboard-check"></i> 1. RECEPCIÓN</div>
+                            <div class="p-2 kanban-cards" id="kanban-recepcion" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-search"></i> 2. DIAGNÓSTICO</div>
+                            <div class="p-2 kanban-cards" id="kanban-diagnostico" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-calculator"></i> 3. PRESUPUESTO</div>
+                            <div class="p-2 kanban-cards" id="kanban-presupuesto" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-tools"></i> 4. REPARACIÓN</div>
+                            <div class="p-2 kanban-cards" id="kanban-reparacion" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-shield-check"></i> 5. CONTROL CALIDAD</div>
+                            <div class="p-2 kanban-cards" id="kanban-control" style="min-height: 100px;"></div>
+                        </div>
+                        <div class="rounded shadow-sm" style="min-width: 280px; max-width: 280px; background-color: var(--bg); border: 1px solid var(--border);">
+                            <div class="p-2 border-bottom fw-bold text-center" style="background-color: var(--surface); color: var(--text); border-radius: 6px 6px 0 0;"><i class="bi bi-check-circle"></i> 6. ENTREGADO</div>
+                            <div class="p-2 kanban-cards" id="kanban-entregado" style="min-height: 100px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="offcanvasIA" style="width: 350px;"><div class="offcanvas-header bg-dark text-white"><h5 class="offcanvas-title text-white !important"><i class="bi bi-stars text-warning"></i> Azkell IA Analyst</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button></div><div class="offcanvas-body d-flex flex-column"><div id="chat-historial" class="flex-grow-1 overflow-auto mb-3 p-2 border rounded shadow-sm" style="background-color: var(--surface);"><div class="mb-3 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--bg);"><em>🤖 ¡Hola! Estoy conectado a tu base de datos. Pregúntame resúmenes o detalles.</em></span></div></div><div class="input-group shadow-sm"><input type="text" id="inputPregunta" class="form-control border-warning" placeholder="Escribe aquí..." onkeypress="if(event.key === 'Enter') enviarPreguntaIA()"><button class="btn btn-warning fw-bold text-dark" onclick="enviarPreguntaIA()" id="btnEnviarIA"><i class="bi bi-send-fill"></i></button></div></div></div>
+
+    <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg" style="background-color: var(--bg) !important;">
+                <div class="modal-header shadow-sm" style="background-color: #1e293b; z-index: 10;">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-clipboard2-data text-primary"></i> Resumen de Inspección Mecánica</h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="generarPDFInspeccion()">
+                            <i class="bi bi-file-pdf"></i> Exportar PDF
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4 overflow-auto">
+                    <div id="contenedor-resumen-insp" class="row g-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="contenedor-pdf-inspeccion" style="display: none;">
+        <div id="pdf-inspeccion" style="width: 100%; padding: 10px 15px; background: white; font-family: Arial, sans-serif;">
+            <style>
+                #pdf-inspeccion, #pdf-inspeccion * { color: #000000 !important; background-color: transparent !important; box-sizing: border-box; line-height: 1.2; }
+                #pdf-inspeccion .insp-section-title { color: #ffffff !important; background-color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 8px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 12px;}
+                #pdf-inspeccion .text-danger-pdf { color: #dc2626 !important; font-weight: bold; }
+                #pdf-inspeccion .text-success-pdf { color: #16a34a !important; font-weight: bold; }
+                #pdf-inspeccion .text-info-pdf { color: #0ea5e9 !important; font-weight: bold; }
+                .pdf-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+                .pdf-header-table td { border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: middle; }
+                .pdf-header-table .lbl { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; width: 15%; color: #000000 !important; }
+                .pdf-falla-item { border-bottom: 1px solid #e2e8f0; padding: 4px 0; font-size: 11px; }
+                .pdf-falla-obs { color: #334155 !important; font-size: 12px; font-weight: bold; font-style: italic; display: block; margin-top: 2px; }
+                .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+                .pdf-evidencia-card { border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px; text-align: center; page-break-inside: avoid; }
+                .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; }
+                .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; color: #000 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; font-weight: bold; }
+                .pdf-evidencia-card p { margin: 4px 0 0 0; font-size: 11px; color: #dc2626 !important; font-style: italic; font-weight: bold; }
+            </style>
+
+            <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 5px; margin-bottom: 8px;">
+                <h2 style="margin: 0; font-size: 16px; font-weight: bold; color: #000000 !important;">REPORTE TÉCNICO DE INSPECCIÓN MECÁNICA</h2>
+            </div>
+
+            <table class="pdf-header-table">
+                <tr>
+                    <td class="lbl">Placa:</td>
+                    <td id="pdf-insp-placa" style="font-weight: bold; font-size: 13px;"></td>
+                    <td class="lbl">Fecha:</td>
+                    <td id="pdf-insp-fecha"></td>
+                </tr>
+                <tr>
+                    <td class="lbl">Cliente:</td>
+                    <td id="pdf-insp-cliente"></td>
+                    <td class="lbl">Kilometraje:</td>
+                    <td id="pdf-insp-km"></td>
+                </tr>
+            </table>
+
+            <div class="insp-section-title">DIAGNÓSTICO</div>
+            <div id="pdf-insp-detalle-fallas" style="min-height: 20px;"></div>
+
+            <div id="pdf-insp-evidencias-container" style="display: none;">
+                <div class="insp-section-title" style="background-color: #dc2626 !important; margin-top: 15px;">EVIDENCIA FOTOGRÁFICA</div>
+                <div id="pdf-insp-evidencias" class="pdf-evidencias-grid"></div>
+            </div>
+
+            <div style="margin-top: 25px; text-align: center; page-break-inside: avoid;">
+                <img id="pdf-insp-firma" src="" alt="Firma" style="max-height: 50px; max-width: 150px; margin-bottom: 2px; display:none;">
+                <div style="border-top: 1px solid #000; width: 220px; margin: 0 auto; padding-top: 3px; font-weight: bold; font-size: 11px;">
+                    Inspector Técnico<br>
+                    <span id="pdf-insp-tecnico-firma" style="font-weight: normal; text-transform: uppercase;"></span>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; text-align: center; font-size: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                Documento generado por AZKELL CRM
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalInspeccion" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+            <div class="modal-content" style="height: 90vh;">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-clipboard2-check text-warning"></i> Formulario de Inspecciones</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 d-flex flex-column">
+                    <div class="wizard-header" id="wizardHeaders"></div>
+                    <div class="p-3 flex-grow-1 overflow-auto" style="background-color: var(--bg);">
+                        <form id="formNuevaInspeccion">
+                            <div id="wizard-dynamic-tabs"></div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between" style="background: var(--surface);">
+                    <button type="button" class="btn btn-secondary fw-bold px-4" id="btnWizAnterior" onclick="moverWizard(-1)" disabled>Anterior</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" id="btnWizSiguiente" onclick="moverWizard(1)">Siguiente</button>
+                    <button type="button" class="btn btn-success fw-bold px-4" id="btnWizGuardar" style="display:none;" onclick="procesarGuardadoInspeccion()">Guardar Registro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: 450px; border-left: 1px solid var(--border);">
+        <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
+            <h5 class="offcanvas-title fw-bold text-primary" id="offcanvasFleetrunLabel">
+                <i class="bi bi-tools"></i> Historial de Mantenimiento
+            </h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-4" style="background-color: var(--bg);">
+            <div id="detalleFleetrunContenido"></div>
+        </div>
+    </div>
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasOT" aria-labelledby="offcanvasOTLabel" style="width: 480px; border-left: 1px solid var(--border);">
+        <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
+            <h5 class="offcanvas-title fw-bold text-danger" id="offcanvasOTLabel">
+                <i class="bi bi-tools"></i> Detalle de Orden
+            </h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-4" style="background-color: var(--bg);" id="detalleOTContenido">
+        </div>
+    </div>
+    <div class="modal fade" id="modalFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-speedometer2 text-warning me-2"></i>Registrar Mantenimiento Fleetrun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formFleetrun" onsubmit="enviarFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="f_id" id="f_id"><input type="hidden" name="f_mes" id="f_mes"><input type="hidden" name="f_anio" id="f_anio"><div class="modal-body"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-calendar-event"></i> Fecha</label><input type="date" class="form-control fw-bold border-primary shadow-sm" name="f_fecha" id="f_fecha" onchange="autocompletarFecha('f')" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary"><i class="bi bi-truck"></i> Placa *</label><input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="f_placa" name="f_placa" list="dl-placas" onchange="autocompletarFleetrun('f')" oninput="autocompletarFleetrun('f')" placeholder="Escribe para buscar..." autocomplete="off" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-tools"></i> Tipo MP</label><input type="text" class="form-control text-uppercase border-primary shadow-sm" name="f_tipomp" id="f_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('f')" placeholder="Ej: MP1" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Marca</label><input type="text" class="form-control bg-light" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Dueño</label><input type="text" class="form-control bg-light" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">UTS</label><input type="text" class="form-control bg-light" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-speedometer"></i> KM Actual</label><input type="number" class="form-control fw-bold border-primary shadow-sm" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" placeholder="Ej: 150000" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold" style="color:orange;">Frecuencia</label><input type="number" class="form-control fw-bold shadow-sm" name="f_freckm" id="f_freckm" placeholder="Calculando..." oninput="calcularProximo('f')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger"><i class="bi bi-flag-fill"></i> KM Próximo</label><input type="number" class="form-control bg-light fw-bold" name="f_kmprox" id="f_kmprox" placeholder="Calculando..." readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt-fill"></i> KM Wialon</label><input type="number" class="form-control text-primary fw-bold bg-light" name="f_kmgps" id="f_kmgps" placeholder="Autocompletado..." readonly></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-person-badge"></i> Técnico Encargado</label><input type="text" class="form-control text-uppercase border-primary shadow-sm" name="f_tec" placeholder="Ej: Juan Perez" required></div></div><div class="mb-3"><label class="form-label fw-bold"><i class="bi bi-card-text"></i> Observación</label><textarea class="form-control shadow-sm" name="f_obs" rows="2" placeholder="Detalles adicionales del mantenimiento..."></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarFleetrun"><i class="bi bi-save"></i> Guardar Registro</button></div></form></div></div></div>
+    <div class="modal fade" id="modalEditarFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Editar Fleetrun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formEditarFleetrun" onsubmit="enviarEdicionFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="editF_id" id="eF_id"><input type="hidden" name="editF_mes" id="eF_mes"><input type="hidden" name="editF_anio" id="eF_anio"><div class="modal-body"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Fecha</label><input type="date" class="form-control fw-bold" name="editF_fecha" id="eF_fecha" onchange="autocompletarFecha('eF')" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary"><i class="bi bi-truck"></i> Placa *</label><input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="eF_placa" name="eF_placa" list="dl-placas" onchange="autocompletarFleetrun('eF')" oninput="autocompletarFleetrun('eF')" placeholder="Escribe para buscar..." autocomplete="off" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Tipo MP</label><input type="text" class="form-control text-uppercase" name="editF_tipomp" id="eF_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('eF')" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Marca</label><input type="text" class="form-control bg-light" name="editF_marca" id="eF_marca" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Dueño</label><input type="text" class="form-control bg-light" name="editF_dueno" id="eF_dueno" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">UTS</label><input type="text" class="form-control bg-light" name="editF_uts" id="eF_uts" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Actual</label><input type="number" class="form-control fw-bold" name="editF_kmact" id="eF_kmact" oninput="calcularProximo('eF')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold" style="color:orange;">Frecuencia</label><input type="number" class="form-control fw-bold shadow-sm" name="editF_freckm" id="eF_freckm" oninput="calcularProximo('eF')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger">KM Próximo</label><input type="number" class="form-control bg-light fw-bold" name="editF_kmprox" id="eF_kmprox" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt-fill"></i> KM Wialon</label><input type="number" class="form-control text-primary fw-bold" name="editF_kmgps" id="eF_kmgps"></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Técnico</label><input type="text" class="form-control text-uppercase" name="editF_tec" id="eF_tec" required></div></div><div class="mb-3"><label class="form-label fw-bold text-primary">Observación</label><textarea class="form-control" name="editF_obs" id="eF_obs" rows="2"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarFleetrun">Actualizar</button></div></form></div></div></div>
+
+    <div class="modal fade" id="modalStatusFlota" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-truck-front text-primary"></i> Agregar Status Flota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="sf_id" id="sf_id"><div class="modal-body">
+        <div class="row">
+            <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Fecha de Corte</label><input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required></div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Corte (Turno)</label><div class="d-flex gap-3 mt-1"><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div></div></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> Motora *</label>
+                <input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" name="sf_motora" id="sf_motora" list="dl-placas" onchange="autocompletarStatus('motora')" oninput="autocompletarStatus('motora')" placeholder="Buscar placa..." autocomplete="off">
+                <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_motora" id="sf_cliente_motora" placeholder="Cliente Auto-completado..." readonly>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> No Motora</label>
+                <input type="text" class="form-control text-uppercase border-info fw-bold shadow-sm" name="sf_nomotora" id="sf_nomotora" list="dl-placas" onchange="autocompletarStatus('nomotora')" oninput="autocompletarStatus('nomotora')" placeholder="Buscar placa..." autocomplete="off">
+                <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_nomotora" id="sf_cliente_nomotora" placeholder="Cliente Auto-completado..." readonly>
+            </div>
+        </div>
+        <div class="mb-3">
+                <label class="form-label fw-bold">Zona</label>
+                <input type="text" class="form-control" name="sf_zona" id="sf_zona" list="dl-zonas" placeholder="Elige o escribe nueva...">
+                <datalist id="dl-zonas"><option value="Lavado"><option value="Mantenimiento"></datalist>
+            </div>
+        <div class="mb-3">
+                <label for="input-conductor-nuevo" class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> Conductor</label>
+                <input type="text" class="form-control" id="input-conductor-nuevo" name="sf_conductor" placeholder="Buscar conductor..." list="dl-conductores-status">
+            </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Estado</label>
+                <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado" list="dl-estados" placeholder="Elige o escribe nuevo...">
+                <datalist id="dl-estados"><option value="Vacío"><option value="Cargado"><option value="Con Devolución"></datalist>
+            </div>
+            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Observaciones</label><textarea class="form-control" name="sf_obs" id="sf_obs" rows="1"></textarea></div>
+        </div>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF">Guardar Registro</button></div></form></div></div></div>
+
+    <div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold" id="tituloModalUser"><i class="bi bi-shield-lock-fill text-warning"></i> Gestor de Accesos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formGestorUsuario" onsubmit="procesarGuardadoUsuario(event, this)">
+                    <input type="hidden" name="idUsuarioEdit" id="gu_id">
+                    <input type="hidden" name="permisos_json" id="gu_permisos">
+                    <div class="modal-body bg-light">
+                        <div class="card p-3 shadow-sm mb-3 border-0">
+                            <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill"></i> Datos del Personal</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3"><label class="fw-bold">Nombre Completo</label><input type="text" class="form-control fw-bold" name="nombreUsuarioEdit" id="gu_nombre" required></div>
+                                <div class="col-md-6 mb-3"><label class="fw-bold">Cargo</label><input type="text" class="form-control" name="cargoUsuarioEdit" id="gu_cargo" required></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5 mb-3"><label class="fw-bold">Correo (Usuario)</label><input type="email" class="form-control" name="correoUsuarioEdit" id="gu_correo" required></div>
+                                <div class="col-md-4 mb-3"><label class="fw-bold">Contraseña</label><input type="text" class="form-control" name="passwordUsuarioEdit" id="gu_password" required></div>
+                                <div class="col-md-3 mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="estadoUsuarioEdit" id="gu_estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
+                            </div>
+                        </div>
+                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                            <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-grid-3x3-gap-fill"></i> Matriz de Permisos (Checkboxes)</div>
+                            <div class="table-responsive m-0">
+                                <table class="table table-hover table-bordered text-center align-middle mb-0 bg-white" style="font-size: 0.9rem;" id="tablaMatrizPermisos">
+                                    <thead class="table-dark" style="background-color: #0f172a;">
+                                        <tr><th class="text-start text-white">Módulo de Sistema</th><th class="text-white"><i class="bi bi-eye text-info"></i> Leer</th><th class="text-white"><i class="bi bi-plus-circle text-success"></i> Crear</th><th class="text-white"><i class="bi bi-pencil text-warning"></i> Editar</th><th class="text-white"><i class="bi bi-trash text-danger"></i> Eliminar</th></tr>
+                                    </thead>
+                                    <tbody id="bodyMatrizPermisos"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4" id="btnGuardarUser"><i class="bi bi-save"></i> Guardar Accesos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-danger border-2"><div class="modal-header bg-danger"><h5 class="modal-title fw-bold text-white">Confirmación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4"><p class="fs-5 mb-1">Eliminar: <strong id="delete-record-id" class="text-danger"></strong></p><div class="mt-4 text-start"><label class="form-label" id="label-confirmar">Escribe Si:</label><input type="text" id="input-confirmar-eliminar" class="form-control text-center fw-bold" autocomplete="off"><div id="msg-error-eliminar" class="text-danger mt-2 fw-bold text-center" style="display: none;">Error.</div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="btn-procesar-eliminar" onclick="procesarEliminacion()">Eliminar</button></div></div></div></div>
+
+    <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist><datalist id="dl-wialon"></datalist><datalist id="dl-conductores-status"></datalist>
+    <datalist id="dl-tecnicos"><option value="Juan Cardenas"><option value="Glen"></datalist>
+
+    <!-- FAB: Floating Action Button para Móviles -->
+    <div class="fab-container d-md-none" style="position: fixed; bottom: 150px; right: 25px; z-index: 1030;">
+        <button id="btnFabMain" onclick="toggleFabMenu()" title="Acciones rápidas"
+            style="width: 56px; height: 56px; border-radius: 50% !important; background-color: var(--crm-accent); color: var(--crm-sidebar); border: none; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+        <div id="fabActionListWrapper" class="fab-action-list-wrapper">
+            <div id="fabActionListContent"></div>
+        </div>
+    </div>
+
+
+    <button class="btn-ia-float shadow-lg" data-bs-toggle="offcanvas" data-bs-target="#offcanvasIA" title="Asistente IA Azkell">
+        <i class="bi bi-robot"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./logica.js"></script>
+
+<div class="modal fade" id="modalMapaGPS" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="margin: 0.5rem auto;">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header text-white d-flex align-items-center justify-content-between" style="background-color: #1e293b; padding: 12px 15px;">
+                    <h6 class="modal-title fw-bold m-0 text-truncate" id="mapa-placa-titulo" style="max-width: 85%; font-size: 0.95rem;">Ubicación GPS en Vivo</h6>
+                    <button type="button" class="btn-close btn-close-white m-0" data-bs-dismiss="modal" style="width: auto; height: auto; padding: 4px;"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 65vh; max-height: 500px; background: #0f172a; position: relative;">
+                    <iframe id="iframeMapaGPS" width="100%" height="100%" style="border:0; position: absolute; top:0; left:0;" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="contenedor-pdf-status-flota" style="display: none;">
+        <div id="pdf-status-flota" style="background: white; padding: 30px; font-family: Arial, sans-serif; color: #000;">
+            <div style="text-align: center; border-bottom: 3px solid #d32f2f; padding-bottom: 20px; margin-bottom: 30px;">
+                <h2 style="margin: 0; color: #d32f2f; font-size: 28px; font-weight: bold;">AZKELL CRM</h2>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Reporte de Status de Flota</p>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
+                    <thead style="background-color: #1e293b; color: white;">
+                        <tr><th style="padding: 10px;">TRACTO/CAMIÓN</th><th style="padding: 10px;">CARRETA/REMOLQUE</th><th style="padding: 10px;">CONDUCTOR</th><th style="padding: 10px;">ESTADO</th><th style="padding: 10px;">ZONA</th><th style="padding: 10px;">OBSERVACIONES</th></tr>
+                    </thead>
+                    <tbody id="pdf-sf-body"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; font-size: 9px; color: #666;">
+                <p style="margin: 0;">Documento generado automáticamente por AZKELL CRM</p>
+                <p style="margin: 0;">Fecha: <span id="pdf-sf-fecha-gen"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConductor" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold" id="tituloModalConductor"><i class="bi bi-person-badge"></i> Ficha de Conductor</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <form id="formConductor" onsubmit="guardarConductor(event, this)">
+        <input type="hidden" name="idConductor" id="c_id">
+        <input type="hidden" name="c_foto_base64" id="c_foto_base64">
+        <div class="modal-body">
+            <div class="text-center mb-3">
+                <img id="c_foto_preview" src="https://via.placeholder.com/120" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 3px solid #cbd5e1; cursor: pointer;" onclick="document.getElementById('c_foto_input').click()" title="Toca para cambiar foto">
+                <input type="file" id="c_foto_input" accept="image/*" style="display: none;" onchange="previsualizarFotoConductor(this)">
+                <div class="small text-muted mt-1">Toca la imagen para subir foto</div>
+            </div>
+            <div class="mb-3"><label class="fw-bold text-primary">Nombre Completo</label><input type="text" class="form-control fw-bold" name="c_nombre" id="c_nombre" required></div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label class="fw-bold">Empresa</label><input type="text" class="form-control text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC"></div>
+                <div class="col-md-6 mb-3"><label class="fw-bold">Teléfono</label><input type="text" class="form-control" name="c_telefono" id="c_telefono"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label class="fw-bold">DNI</label><input type="text" class="form-control" name="c_dni" id="c_dni"></div>
+                <div class="col-md-6 mb-3"><label class="fw-bold">Licencia</label><input type="text" class="form-control text-uppercase" name="c_licencia" id="c_licencia"></div>
+            </div>
+            <div class="mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="c_estado" id="c_estado"><option value="Activo">Activo</option><option value="Cesado">Cesado</option><option value="Bloqueado">Bloqueado</option></select></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="button" class="btn btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()"><i class="bi bi-pencil-square"></i> Editar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardarConductor"><i class="bi bi-save"></i> Guardar Conductor</button>
+        </div>
+    </form></div></div></div>
+
+    <div id="spotlight-overlay" class="spotlight-overlay" style="display: none;" onclick="if(event.target===this) cerrarSpotlight()">
+        <div class="spotlight-container">
+            <div class="spotlight-header">
+                <i class="bi bi-search spotlight-icon"></i>
+                <input type="text" id="spotlight-input" oninput="buscarSpotlight(this.value)" placeholder="Buscar placa, cliente o conductor... (Ctrl+K)" autocomplete="off">
+                <div class="badge bg-secondary ms-2 d-none d-md-block">ESC para salir</div>
+            </div>
+            <div id="spotlight-results" class="spotlight-results">
+                <div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size: 3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar mágicamente en todo el CRM.</small></div>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="dl-conductores"></datalist>
+
+</body>
+</html>
