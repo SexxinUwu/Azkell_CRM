@@ -1,0 +1,60 @@
+<div id="pdf-ot-container" style="width: 210mm; min-height: 297mm; padding: 15mm; background: white; color: black; font-family: Arial, sans-serif; box-sizing: border-box;">
+    
+    <div style="text-align: center; border-bottom: 3px solid #dc2626; padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #dc2626; font-size: 24px; font-weight: bold; text-transform: uppercase;">ORDEN DE TRABAJO MECÁNICO</h2>
+        <h4 style="margin: 5px 0 0 0; color: #1e293b; font-size: 16px;">N° {{id_ot}}</h4>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
+        <tr>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 20%;">Placa:</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; width: 30%; font-weight: bold; font-size: 14px;">{{placa}}</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 20%;">Fecha Ingreso:</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; width: 30%;">{{fecha_ingreso}}</td>
+        </tr>
+        <tr>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold;">Tipo de Trabajo:</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1;">{{tipo_ot}}</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold;">Técnico Asignado:</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1;">{{tecnico}}</td>
+        </tr>
+    </table>
+
+    <div style="background: #1e293b; color: white; padding: 6px 10px; font-weight: bold; font-size: 12px; margin-bottom: 0;">TRABAJO REALIZADO</div>
+    <div style="border: 1px solid #1e293b; border-top: none; padding: 12px; font-size: 12px; min-height: 80px; margin-bottom: 20px; white-space: pre-wrap;">{{trabajo_realizado}}</div>
+
+    <div style="background: #16a34a; color: white; padding: 6px 10px; font-weight: bold; font-size: 12px; margin-bottom: 0;">REPUESTOS Y SERVICIOS UTILIZADOS</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px; border: 1px solid #16a34a;">
+        <thead style="background: #f0fdf4; border-bottom: 1px solid #16a34a;">
+            <tr>
+                <th style="padding: 8px; text-align: left; border-right: 1px solid #cbd5e1;">Descripción del Ítem</th>
+                <th style="padding: 8px; text-align: center; width: 10%; border-right: 1px solid #cbd5e1;">Cant.</th>
+                <th style="padding: 8px; text-align: right; width: 18%; border-right: 1px solid #cbd5e1;">P. Unit. (S/)</th>
+                <th style="padding: 8px; text-align: right; width: 18%;">Total (S/)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{filas_repuestos}}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f8fafc;">
+                <td colspan="3" style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: bold; font-size: 13px;">COSTO TOTAL DE LA ORDEN:</td>
+                <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: bold; color: #16a34a; font-size: 14px;">S/ {{total_ot}}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div style="margin-top: 80px; text-align: center;">
+        <div style="display: inline-block; width: 35%; border-top: 1px solid #000; padding-top: 5px; font-size: 12px; font-weight: bold;">
+            Firma y Sello del Técnico
+        </div>
+        <div style="display: inline-block; width: 20%;"></div>
+        <div style="display: inline-block; width: 35%; border-top: 1px solid #000; padding-top: 5px; font-size: 12px; font-weight: bold;">
+            Firma y Sello Jefatura / VB
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center; font-size: 9px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+        Documento técnico generado automáticamente por Azkell CRM
+    </div>
+</div>
