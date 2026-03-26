@@ -78,10 +78,10 @@ const CACHE = { placas: null, fleetrun: null, usuarios: null, auditoria: null, s
 const CACHE_TIME = {};
 
 let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
-let dataGlobalUsuarios = []; let dataGlobalAuditoria = []; let dataGlobalStatusFlota = []; let dataGlobalOrdenes = [];
-let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false; let expandAllSFState = false; 
+let dataGlobalAuditoria = []; let dataGlobalOrdenes = [];
+let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false;
 
-let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = false; let expandSFMap = {};
+let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = {};
 let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null;
 // 🔥 NUEVAS VARIABLES PARA EL DASHBOARD
 let mapDashboardInst = null;
@@ -92,6 +92,111 @@ let chartTiposInspeccionInst = null;
 Chart.register(ChartDataLabels); 
 
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
+
+// ================================================================
+// FUNCIONES DE SESIÓN — extraídas de Modulos/login/logica.js
+// ================================================================
+
+window.verificarSesionGuardada = function() {
+    const guardadoUser = localStorage.getItem('crm_user');
+    const guardadoTime = localStorage.getItem('crm_ultimo_acceso');
+    const guardadoCorreo = localStorage.getItem('crm_correo');
+    const guardadoPermisos = localStorage.getItem('crm_permisos');
+    const guardadoRol = localStorage.getItem('crm_rol');
+
+    if (guardadoUser && guardadoTime && Date.now() - parseInt(guardadoTime) < TIEMPO_INACTIVIDAD) {
+        usuarioLogueado = guardadoUser;
+        rolLogueado = guardadoRol && guardadoRol !== 'null' ? guardadoRol : 'Personalizado';
+        registrarActividad();
+
+        try {
+            let parsed = JSON.parse(guardadoPermisos || '{}');
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            permisosUsuario = parsed || {};
+        } catch(e) { permisosUsuario = {}; }
+
+        document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
+        document.getElementById('perfil-nombre').innerText = usuarioLogueado;
+        if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
+        let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
+
+        let p = permisosUsuario || {};
+        let isAdm = p?.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+
+        let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+                    : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
+                    : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`);
+
+        let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = rolHtml;
+        let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerHTML = rolHtml;
+
+        const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
+        const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
+        [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
+        [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
+
+        let showMant = isAdm || p?.mod_mant || p?.insp?.l || p?.placas?.l || p?.fleet?.l;
+        let showAlm = isAdm || p?.mod_alm || p?.placas?.l;
+        let showFlota = isAdm || p?.mod_flota || p?.gps?.l || p?.status?.l || p?.cond?.l;
+
+        const mStatus = document.getElementById('btnMenuStatusMant'); const mPlacas = document.getElementById('btnMenuPlacasMant'); const mFleet = document.getElementById('btnMenuFleetrun');
+        const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fCond = document.getElementById('btnMenuConductores');
+
+        if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
+        if (mStatus) mStatus.style.display = (isAdm || p?.insp?.l) ? 'block' : 'none';
+        if (mPlacas) mPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
+        if (mFleet) mFleet.style.display = (isAdm || p?.fleet?.l) ? 'block' : 'none';
+
+        if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) cAlm.style.removeProperty('display'); }
+        if (aPlacas) aPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
+
+        if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) cFlo.style.removeProperty('display'); }
+        if (fGps) fGps.style.display = (isAdm || p?.gps?.l) ? 'block' : 'none';
+        if (fStatus) fStatus.style.display = (isAdm || p?.status?.l) ? 'block' : 'none';
+        if (fCond) fCond.style.display = (isAdm || p?.cond?.l) ? 'block' : 'none';
+
+        if (isAdm) { if(nUsu) nUsu.style.display = 'block'; }
+        if (isAdm || p?.mod_auditoria) { if(nAud) nAud.style.display = 'block'; }
+
+        document.getElementById('root-dinamico').style.display = 'none';
+        document.getElementById('app-crm').style.display = 'flex';
+
+        cambiarModulo('dashboard', 'nav-dashboard');
+
+        google.script.run.withSuccessHandler(d => {
+            dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
+            let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
+            rellenarDatalist('dl-placas', placasSet);
+            poblarSelectsFormularios(d);
+            recargarWialon();
+        }).obtenerDatosPlacas();
+
+        google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
+        google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
+
+        return;
+    }
+    document.getElementById('app-crm').style.display = 'none';
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('crm_user'); localStorage.removeItem('crm_rol'); localStorage.removeItem('crm_correo'); localStorage.removeItem('crm_ultimo_acceso'); localStorage.removeItem('crm_permisos');
+    usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
+
+    // 🧹 Limpieza Total de Pantalla
+    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.classList.remove('show'); el.style.display = 'none'; const inst = bootstrap.Collapse.getInstance(el); if (inst) inst.dispose(); });
+    document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
+
+    document.getElementById('app-crm').style.display = 'none';
+    cargarModuloAislado('login');
+}
+
+window.restaurarCascaronApp = function() {
+    const sb = document.getElementById('sidebarMenu');
+    const tb = document.querySelector('.topbar');
+    if(sb) sb.style.display = '';
+    if(tb) tb.style.display = '';
+};
 
 document.addEventListener('DOMContentLoaded', function() {
   const toggle = document.getElementById('theme-toggle');
@@ -407,11 +512,8 @@ function recargarModulo(nombre) {
   const acciones = {
     placas: () => cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'),
     fleetrun: () => cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'),
-    usuarios: () => cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'),
     auditoria: () => cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'),
-    statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones'),
-    conductores: () => cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'),
-    statusFlota: () => cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota')
+    statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones')
   };
   if (acciones[nombre]) acciones[nombre]();
   if (nombre === 'status' || nombre === 'todos') {
@@ -425,7 +527,7 @@ function recargarModulo(nombre) {
 }
 
 
-const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'usuarios': ['Administrador', 'Inspector'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'], 'conductores': ['Administrador', 'Inspector', 'Flota'] };
+const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'] };
 
 window.cambiarModulo = function(modulo, idBoton) {
     localStorage.setItem('ultimoModuloCRM', modulo);
@@ -439,8 +541,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     if (modulo === 'fleetrun' && !isAdm && !p?.fleet?.l) bloqueado = true;
     if (modulo === 'ubicacion' && !isAdm && !p?.gps?.l) bloqueado = true;
     if (modulo === 'statusFlota' && !isAdm && !p?.status?.l) bloqueado = true;
-    if (modulo === 'conductores' && !isAdm && !p?.cond?.l) bloqueado = true;
-    if (modulo === 'usuarios' && !isAdm) bloqueado = true;
     if (modulo === 'auditoria' && !isAdm && !p?.mod_auditoria) bloqueado = true;
 
     if (bloqueado) return;
@@ -451,7 +551,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     const titulo = document.getElementById('tituloTopBar');
 
     if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
-    else if (modulo === 'usuarios') { let el=document.getElementById('moduloUsuarios'); if(el) el.style.display = 'flex'; titulo.innerText = 'Gestión de Usuarios'; cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios'); }
     else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
     else if (modulo === 'status') {
         let el = document.getElementById('moduloStatusTaller');
@@ -480,9 +579,7 @@ window.cambiarModulo = function(modulo, idBoton) {
     else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
     else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
     else if (modulo === 'statusMant') { cargarModuloAislado('mantenimiento/inspecciones'); }
-    else if (modulo === 'statusFlota') { let el=document.getElementById('moduloStatusFlota'); if(el) el.style.display = 'flex'; titulo.innerText = 'Status de Flota'; cargarModulo('statusFlota', mostrarStatusFlota, 'obtenerDatosStatusFlota'); }
     else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
-    else if (modulo === 'conductores') { let el=document.getElementById('moduloConductores'); if(el) el.style.display = 'flex'; titulo.innerText = 'Directorio de Conductores'; cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores'); }
 
     if (window.innerWidth <= 768) closeSidebar();
     aplicarPermisosBotonesUI();
@@ -1415,476 +1512,6 @@ function enviarPreguntaIA() {
         btn.disabled = false;
     }).consultarGemini(pregunta, resumenContexto);
 }
-
-// ==========================================
-// 🚛 MODULE STATUS FLOTA (AGRUPADO POR TIPO DINÁMICO)
-// ==========================================
-
-function resetearYRecargarStatusFlota() {
-    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    let hoyISO = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-    document.getElementById('filtroStatusFecha').value = hoyISO;
-    document.getElementById('filtroStatusCorte').value = "";
-    recargarModulo('statusFlota');
-}
-
-function abrirModalNuevoStatusFlota() {
-    document.getElementById('formStatusFlota').reset();
-    document.getElementById('sf_id').value = '';
-    document.getElementById('sf_cliente_motora').value = '';
-    document.getElementById('sf_cliente_nomotora').value = '';
-    document.getElementById('sf_zona').value = '';
-
-    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    document.getElementById('sf_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-
-    let hora = new Date().getHours();
-    if (hora >= 4 && hora < 12) document.getElementById('corte1').checked = true;
-    else if (hora >= 12 && hora < 16) document.getElementById('corte2').checked = true;
-    else document.getElementById('corte3').checked = true;
-
-    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
-
-    // 🧠 MAGIA: Jalar los conductores automáticamente al abrir la ventana desde Node.js (Aiven)
-    const dlConductores = document.getElementById('dl-conductores-status');
-    if (dlConductores) {
-        fetch('/api/script/obtenerDatosConductores', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: [] }) // Aquí estaba el truco, nuestro emulador espera 'args'
-        })
-        .then(res => res.json())
-        .then(r => {
-            let htmlOptions = '';
-            // Si viene envuelto en r.data.data lo desencapsulamos
-            let dataArray = r.data && Array.isArray(r.data) ? r.data : (r.data && r.data.data ? r.data.data : []);
-            if (Array.isArray(dataArray)) {
-                dataArray.forEach(fila => {
-                    let nombre = fila.nombre || fila[1];
-                    if (nombre) htmlOptions += `<option value="${nombre}">`;
-                });
-            }
-            dlConductores.innerHTML = htmlOptions;
-        })
-        .catch(e => console.error("Error cargando lista de conductores:", e));
-    }
-}
-
-function toggleGroupRowSF(claseZ) {
-    expandSFMap[claseZ] = !expandSFMap[claseZ];
-    filtrarStatusFlotaAvanzado();
-}
-
-// Lector de Mentes: Busca el tipo de ambas placas y las junta
-window.obtenerTipoCompuesto = function(motora, nomotora) {
-    // Limpiador automático de tildes rotas (UTF-8)
-    const limpiarTexto = (txt) => {
-        if (!txt) return "";
-        return txt.toUpperCase()
-            .replace(/Ã³/g, 'Ó')
-            .replace(/Ã"/g, 'Ó')
-            .replace(/CAMIÃ³N/g, 'CAMIÓN')
-            .replace(/CAMIÃ"N/g, 'CAMIÓN');
-    };
-
-    let tMot = "", tNoMot = "";
-
-    if (motora && motora !== "-") {
-        let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(motora));
-        if (p && p[5] && p[5] !== "-") tMot = limpiarTexto(p[5]); // Índice 5 es TIPO
-    }
-    if (nomotora && nomotora !== "-") {
-        let p = dataGlobalPlacas.find(x => normalizeStr(x[0]) === normalizeStr(nomotora));
-        if (p && p[5] && p[5] !== "-") tNoMot = limpiarTexto(p[5]); // Índice 5 es TIPO
-    }
-
-    if (tMot && tNoMot) return `${tMot} - ${tNoMot}`;
-    if (tMot) return tMot;
-    if (tNoMot) return tNoMot;
-    return "SIN TIPO REGISTRADO";
-};
-
-function mostrarStatusFlota(datos) {
-    if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
-        document.getElementById('cuerpoTablaStatusFlota').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
-        google.script.run.withSuccessHandler(insp => {
-            dataGlobalInspecciones = insp;
-            mostrarStatusFlota(datos);
-        }).obtenerDatosInspecciones();
-        return;
-    }
-
-    // Configurar Fecha de Hoy por defecto si no hay nada escrito
-    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    let hoyISO = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-    if (!document.getElementById('filtroStatusFecha').value) {
-        document.getElementById('filtroStatusFecha').value = hoyISO;
-    }
-
-    dataGlobalStatusFlota = datos;
-    let html = '';
-    if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="9" class="text-center py-4 text-muted">No hay registros de Status Flota.</td></tr>';
-    } else {
-        let mapTipos = new Map();
-        let setClis = new Set();
-
-        datos.forEach(fila => {
-            let motora = fila[3];
-            let nomotora = fila[4];
-            let tipoDinamico = obtenerTipoCompuesto(motora, nomotora);
-
-            if (!mapTipos.has(tipoDinamico)) mapTipos.set(tipoDinamico, []);
-            mapTipos.get(tipoDinamico).push(fila);
-            setClis.add(fila[5]); setClis.add(fila[6]);
-        });
-
-        mapTipos.forEach((registros, tipoName) => {
-            let claseZ = normalizarClase(tipoName);
-            let isExpandido = expandSFMap[claseZ] !== false;
-            let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
-
-            html += `<tr class="group-header data-row-sf" style="cursor:pointer;" onclick="toggleGroupRowSF('${claseZ}')" data-group-clase="${claseZ}">
-                <td colspan="9" class="text-start" style="padding-left: 20px;">
-                    <i class="bi ${iconClass} ms-1 me-2 text-warning"></i>
-                    <i class="bi bi-truck text-primary me-2"></i><span class="text-uppercase fw-bold">${tipoName}</span>
-                    <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
-                </td>
-            </tr>`;
-
-            registros.forEach(fila => {
-                let id = fila[0]; let fecha = fila[1]; let corte = fila[2];
-                let motora = fila[3]; let nomotora = fila[4];
-                let cliMot = fila[5]; let cliNoMot = fila[6];
-                let zona = fila[7] || '';
-                let conductor = fila[8]; let estado = fila[9]; let obs = fila[10] || 'Sin observaciones';
-
-                let getDias = (placa) => {
-                    if (!placa || placa === "-") return "-";
-                    let inspList = dataGlobalInspecciones.filter(i => normalizeStr(i.placa) === normalizeStr(placa));
-                    if (inspList.length === 0) return `<span class="badge bg-secondary">S/I</span>`;
-
-                    let parseD = (str) => {
-                        if (!str) return 0;
-                        if (str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1] - 1, p[0]).getTime(); }
-                        return new Date(str + "T00:00:00").getTime() || 0;
-                    };
-
-                    inspList.sort((a, b) => parseD(b.fecha_ingreso || b[1]) - parseD(a.fecha_ingreso || a[1]));
-                    let insp = inspList[0];
-                    let fIngreso = insp.fecha_ingreso || insp[1];
-                    let dProp = parseInt(insp.dias_propuestos || insp[6]) || 30;
-
-                    let fIng = fIngreso.includes('/') ? new Date(fIngreso.split('/')[2], fIngreso.split('/')[1] - 1, fIngreso.split('/')[0]) : new Date(fIngreso + "T00:00:00");
-                    fIng.setDate(fIng.getDate() + dProp);
-
-                    let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-                    let dias = Math.ceil((fIng - hoy) / (1000 * 60 * 60 * 24));
-
-                    if (dias < 0) return `<span class="badge bg-danger text-white shadow-sm">Vencido ${Math.abs(dias)}d</span>`;
-                    else if (dias <= 7) return `<span class="badge bg-warning text-dark shadow-sm">Faltan ${dias}d</span>`;
-                    else return `<span class="badge bg-success text-white shadow-sm">Faltan ${dias}d</span>`;
-                };
-
-                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
-                let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
-
-                let pSF = permisosUsuario || {};
-                let isAdmSF = pSF.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
-                let canEditSF = isAdmSF || pSF.status?.e === true;
-                let canDeleteSF = isAdmSF || pSF.status?.d === true;
-                let itemsSF = '';
-                if(canEditSF) itemsSF += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarStatusFlota('${id}')"><i class="bi bi-pencil text-warning"></i> Editar</a></li>`;
-                if(canEditSF && canDeleteSF) itemsSF += `<li><hr class="dropdown-divider"></li>`;
-                if(canDeleteSF) itemsSF += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}','StatusFlota')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
-                let menuAcciones = itemsSF ? `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemsSF}</ul></div>` : `<span class="text-muted"><i class="bi bi-dash"></i></span>`;
-
-                html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${tipoName}" data-fecha="${fecha}" data-corte="${corte}">
-                    <td class="fw-bold text-secondary">${motora || '-'}</td>
-                    <td>${getDias(motora)}</td>
-                    <td class="fw-bold text-secondary">${nomotora || '-'}</td>
-                    <td>${getDias(nomotora)}</td>
-                    <td class="text-uppercase">${conductor || '-'}</td>
-                    <td>${bEst}</td>
-                    <td>${bZona}</td>
-                    <td class="text-wrap" style="max-width: 150px;">${obs}</td>
-                    <td>${menuAcciones}</td>
-                </tr>`;
-            });
-        });
-
-        rellenarFiltroCheck('filtroSFCliente', setClis, 'filtrarStatusFlotaAvanzado');
-    }
-
-    document.getElementById('cuerpoTablaStatusFlota').innerHTML = html;
-    filtrarStatusFlotaAvanzado();
-}
-
-function filtrarStatusFlotaAvanzado() {
-    const txt = document.getElementById('buscadorStatusFlota')?.value.toLowerCase() || '';
-    const dateF = document.getElementById('filtroStatusFecha')?.value || '';
-    const corte = document.getElementById('filtroStatusCorte')?.value || '';
-    const chkCli = Array.from(document.querySelectorAll('#filtroSFCliente input:checked')).map(e => e.value);
-
-    const headers = document.querySelectorAll('#cuerpoTablaStatusFlota tr.group-header');
-    headers.forEach(header => {
-        const claseZ = header.getAttribute('data-group-clase');
-        const childRows = document.querySelectorAll(`.child-row-sf[data-zona="${header.querySelector('.text-uppercase')?.innerText || ''}"]`);
-        let hasVisibleChild = false;
-        let isExpanded = expandSFMap[claseZ] !== false;
-
-        childRows.forEach(row => {
-            const rCliMot = row.getAttribute('data-climot'); const rCliNoMot = row.getAttribute('data-clinomot');
-            const rCorte = row.getAttribute('data-corte'); const rFecha = row.getAttribute('data-fecha');
-            const textoFila = row.innerText.toLowerCase();
-
-            const matchTxt = !txt || textoFila.includes(txt);
-            const matchCli = !chkCli.length || chkCli.includes(rCliMot) || chkCli.includes(rCliNoMot);
-            const matchCorte = !corte || corte === rCorte;
-
-            let matchFecha = true;
-            if (dateF) {
-                let dbFecha = rFecha;
-                if (dbFecha && dbFecha.includes('T')) dbFecha = dbFecha.split('T')[0];
-                if (dbFecha && dbFecha.includes('/')) dbFecha = dbFecha.split('/').reverse().join('-');
-                matchFecha = (dbFecha === dateF);
-            }
-
-            const pasaFiltro = matchTxt && matchCli && matchCorte && matchFecha;
-
-            if (pasaFiltro) {
-                row.style.display = isExpanded ? '' : 'none';
-                hasVisibleChild = true;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        header.style.display = hasVisibleChild ? '' : 'none';
-        let icon = header.querySelector('i:first-child');
-        if (icon) icon.className = isExpanded ? 'bi bi-chevron-down ms-1 me-2 text-warning' : 'bi bi-chevron-right ms-1 me-2 text-warning';
-    });
-}
-
-window.autocompletarStatus = function(tipo) {
-    let placaInput = normalizeStr(document.getElementById('sf_' + tipo).value);
-    let fieldCli = document.getElementById('sf_cliente_' + tipo);
-
-    if (!placaInput) {
-        fieldCli.value = '';
-        return;
-    }
-
-    // Extraer cliente desde placas globales (Índice 1 es CLIENTE)
-    let matchPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
-    fieldCli.value = matchPlaca ? (matchPlaca[1] || 'Sin Cliente') : 'No Registrada';
-};
-
-function enviarStatusFlota(event, formObj) {
-    event.preventDefault();
-    const btn = document.getElementById('btnGuardarSF');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-
-    if (!formObj.sf_id.value) {
-        formObj.sf_id.value = "SF-" + Date.now();
-    }
-    formObj.usuarioAutor.value = usuarioLogueado;
-
-    // Guardar en memoria la fecha y turno actual para no borrarlos
-    let fechaGuardada = formObj.sf_fecha.value;
-    let corteGuardado = formObj.querySelector('input[name="sf_corte"]:checked').value;
-
-    // Convertir formulario a objeto para enviar
-    const formData = new FormData(formObj);
-    const formDataObj = {
-        form: {
-            sf_id: formData.get('sf_id'),
-            sf_fecha: formData.get('sf_fecha'),
-            sf_corte: formData.get('sf_corte'),
-            sf_motora: formData.get('sf_motora'),
-            sf_nomotora: formData.get('sf_nomotora'),
-            sf_cliente_motora: formData.get('sf_cliente_motora'),
-            sf_cliente_nomotora: formData.get('sf_cliente_nomotora'),
-            sf_zona: formData.get('sf_zona'),
-            sf_conductor: formData.get('sf_conductor'),
-            sf_estado: formData.get('sf_estado'),
-            sf_obs: formData.get('sf_obs'),
-            usuarioAutor: usuarioLogueado
-        }
-    };
-
-    fetch('/api/script/guardarStatusFlota', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formDataObj)
-    })
-    .then(res => res.json())
-    .then(r => {
-        if (r.data === 'Éxito') {
-            formObj.reset();
-
-            // 1. Restaurar valores fijos
-            formObj.sf_fecha.value = fechaGuardada;
-            document.getElementById('corte' + corteGuardado).checked = true;
-            document.getElementById('sf_id').value = '';
-
-            // 2. Limpiar campos de cliente
-            document.querySelectorAll('[id^="sf_cliente_"]').forEach(el => el.value = '');
-
-            // 3. Efecto visual de éxito SIN CERRAR la ventana
-            btn.innerHTML = '<i class="bi bi-check-circle"></i> ¡Guardado!';
-            btn.classList.replace('btn-primary', 'btn-success');
-            btn.classList.replace('btn-warning', 'btn-success');
-
-            setTimeout(() => {
-                btn.innerHTML = 'Guardar Registro';
-                btn.classList.replace('btn-success', 'btn-primary');
-                btn.classList.remove('text-dark');
-                btn.disabled = false;
-                document.getElementById('sf_motora').focus(); // Pone el cursor listo para la siguiente placa
-            }, 1000);
-
-            recargarModulo('statusFlota');
-        } else {
-            alert(r.data);
-            btn.disabled = false;
-            btn.innerHTML = 'Guardar Registro';
-        }
-    })
-    .catch(e => {
-        alert('Error de red: ' + e.message);
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Registro';
-    });
-}
-
-function toggleAllSFGroups() {
-    expandAllSFState = !expandAllSFState;
-
-    // Actualizar expandSFMap para TODAS las zonas
-    const headers = document.querySelectorAll('#cuerpoTablaStatusFlota tr.group-header');
-    headers.forEach(header => {
-        const claseZ = header.getAttribute('data-group-clase');
-        expandSFMap[claseZ] = expandAllSFState;
-    });
-
-    // Llamar a filtrarStatusFlotaAvanzado para respetar filtros
-    filtrarStatusFlotaAvanzado();
-}
-
-function abrirModalEditarStatusFlota(id) {
-    if (event) event.preventDefault();
-
-    let fila = dataGlobalStatusFlota.find(f => f[0] === id);
-    if (!fila) {
-        alert("No se encontró el registro para editar.");
-        return;
-    }
-
-    document.getElementById('formStatusFlota').reset();
-    document.getElementById('sf_id').value = fila[0];
-
-    let dDate = new Date(fila[1] + "T00:00:00");
-    let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0];
-    document.getElementById('sf_fecha').value = fechaFormat || fila[1];
-
-    let corte = fila[2];
-    if (corte) {
-        let radio = document.getElementById('corte' + corte);
-        if (radio) radio.checked = true;
-    }
-
-    document.getElementById('sf_motora').value = fila[3] || '';
-    document.getElementById('sf_nomotora').value = fila[4] || '';
-    document.getElementById('sf_cliente_motora').value = fila[5] || '';
-    document.getElementById('sf_cliente_nomotora').value = fila[6] || '';
-    document.getElementById('sf_zona').value = fila[7] || '';
-    document.getElementById('sf_conductor').value = fila[8] || '';
-    document.getElementById('sf_estado').value = fila[9] || '';
-    document.getElementById('sf_obs').value = fila[10] || '';
-
-    autocompletarStatus('motora');
-    autocompletarStatus('nomotora');
-
-    const btn = document.getElementById('btnGuardarSF');
-    btn.innerHTML = '<i class="bi bi-pencil-square"></i> Actualizar';
-    btn.classList.remove('btn-primary');
-    btn.classList.add('btn-warning', 'text-dark');
-
-    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
-}
-
-
-window.generarPDFStatusFlota = function(event) {
-    // El seguro: busca el botón de forma inteligente aunque no se pase el evento
-    let btn = (event && event.currentTarget) ? event.currentTarget : document.querySelector('button[onclick*="generarPDFStatusFlota"]');
-    let txtOriginal = '';
-    if (btn) {
-        txtOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
-        btn.classList.add('disabled');
-    }
-
-    // Extraer Filtros Actuales para el Título
-    let corteSeleccionado = document.getElementById('filtroStatusCorte')?.value;
-    let textoCorte = corteSeleccionado ? `Corte ${corteSeleccionado}` : "Todos los cortes";
-    let fechaRaw = document.getElementById('filtroStatusFecha')?.value || new Date().toISOString().split('T')[0];
-    let fechaBonita = fechaRaw.split('-').reverse().join('/');
-
-    let htmlCuerpo = '';
-    const filas = document.querySelectorAll('#cuerpoTablaStatusFlota tr');
-
-    filas.forEach(row => {
-        if (row.style.display !== 'none') {
-            if (row.classList.contains('group-header')) {
-                let txtTipo = row.querySelector('span.text-uppercase');
-                if (txtTipo) {
-                    htmlCuerpo += `<tr><td colspan="6" style="background-color: #cbd5e1; font-weight: bold; padding: 4px 8px; color:#1e293b; text-align:left; font-size: 11px;">${txtTipo.innerText}</td></tr>`;
-                }
-            } else if (row.classList.contains('child-row-sf')) {
-                let celdas = row.querySelectorAll('td');
-                htmlCuerpo += `<tr>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2563eb; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[0]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[2]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 22%;">${celdas[4]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[5]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[6]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 9px; line-height: 1.1; width: 30%; word-break: break-word;">${celdas[7]?.innerText || ''}</td>
-                </tr>`;
-            }
-        }
-    });
-
-    if (!htmlCuerpo) htmlCuerpo = '<tr><td colspan="6" class="text-center py-4" style="font-size: 10px;">No hay datos en la pantalla para exportar.</td></tr>';
-
-    document.getElementById('pdf-sf-body').innerHTML = htmlCuerpo;
-
-    document.querySelector('#pdf-status-flota p').innerHTML = `<span style="font-size: 14px;">Reporte de Status de Flota</span> <br> <span style="font-size: 11px;"><b>Fecha:</b> ${fechaBonita} | <b>Turno:</b> ${textoCorte}</span>`;
-    document.getElementById('pdf-sf-fecha-gen').innerText = new Date().toLocaleDateString('es-PE');
-
-    const elemento = document.getElementById('pdf-status-flota');
-    document.getElementById('contenedor-pdf-status-flota').style.display = 'block';
-
-    let nombreArchivo = `Status_Flota_${textoCorte.replace(/ /g, '_')}_${fechaRaw}.pdf`;
-
-    html2pdf().set({
-        margin: [8, 10, 8, 10],
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(elemento).save().then(() => {
-        document.getElementById('contenedor-pdf-status-flota').style.display = 'none';
-        if (btn) {
-            btn.innerHTML = txtOriginal;
-            btn.classList.remove('disabled');
-        }
-    });
-};
-
-
-// ============================================================
 // 🚀 RESTAURADO: LÓGICA DE BOTONES OK / FALLA Y PORCENTAJES
 // ============================================================
 
@@ -2064,221 +1691,6 @@ window.addEventListener('appinstalled', () => {
     console.log('Azkell CRM fue instalado como App nativa');
 });
 
-// ==========================================
-// 🧑‍✈️ MÓDULO DE CONDUCTORES
-// ==========================================
-let dataGlobalConductores = [];
-let expandCondMap = {};
-let expandAllCondState = true;
-
-function toTitleCase(str) {
-    if (!str) return "";
-    return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
-}
-
-function toggleGroupRowCond(claseEst) {
-    expandCondMap[claseEst] = !expandCondMap[claseEst];
-    mostrarConductores(dataGlobalConductores);
-}
-
-function toggleAllCondGroups() {
-    expandAllCondState = !expandAllCondState;
-    for (let key in expandCondMap) expandCondMap[key] = expandAllCondState;
-    mostrarConductores(dataGlobalConductores);
-}
-
-function mostrarConductores(datos) {
-    dataGlobalConductores = datos;
-    let html = '';
-    let listOpciones = new Set();
-
-    const limpiarN = (txt) => {
-        if (!txt) return "";
-        return txt.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ');
-    };
-
-    if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="7" class="text-center py-4">No hay conductores registrados.</td></tr>';
-    } else {
-        let mapEstados = new Map();
-
-        datos.forEach(fila => {
-            let estado = fila.estado || "Desconocido";
-            if (!mapEstados.has(estado)) mapEstados.set(estado, []);
-            mapEstados.get(estado).push(fila);
-
-            if(estado.toLowerCase() === 'activo' && fila.nombre) {
-                listOpciones.add(toTitleCase(limpiarN(fila.nombre.toString())));
-            }
-        });
-
-        mapEstados.forEach((registros, estado) => {
-            let claseE = normalizarClase(estado.toString());
-            if (expandCondMap[claseE] === undefined) expandCondMap[claseE] = expandAllCondState;
-            let isExpandido = expandCondMap[claseE];
-            let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
-            let colorEstado = estado === 'Activo' ? 'text-success' : (estado === 'Cesado' ? 'text-secondary' : 'text-danger');
-
-            html += `<tr class="group-header" style="cursor:pointer;" onclick="toggleGroupRowCond('${claseE}')">
-                <td colspan="7" class="text-start" style="padding-left: 20px;">
-                    <i class="bi ${iconClass} ms-1 me-2 ${colorEstado}"></i>
-                    <i class="bi bi-people-fill ${colorEstado} me-2"></i><span class="text-uppercase fw-bold">${estado}</span>
-                    <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
-                </td>
-            </tr>`;
-
-            if (isExpandido) {
-                registros.forEach(f => {
-                    let nombreLimpio = limpiarN(f.nombre || "-");
-                    let nombre = toTitleCase(nombreLimpio);
-                    let empresa = f.empresa ? f.empresa.toString().replace(/TERCERO/gi, '3ro') : "-";
-                    let telf = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : "";
-                    let dni = f.dni ? f.dni.toString() : "-";
-                    let licencia = f.licencia ? f.licencia.toString() : "-";
-
-                    let linkTelf = "-";
-                    if (telf.length >= 9) {
-                        let wspLink = `https://wa.me/51${telf}`;
-                        linkTelf = `
-                            <div class="d-flex gap-1">
-                                <a href="tel:${telf}" class="btn btn-sm btn-outline-primary p-1 px-2 shadow-sm" title="Llamar" onclick="event.stopPropagation();"><i class="bi bi-telephone-fill"></i></a>
-                                <a href="${wspLink}" target="_blank" class="btn btn-sm btn-success p-1 px-2 shadow-sm" title="WhatsApp" onclick="event.stopPropagation();"><i class="bi bi-whatsapp"></i></a>
-                                <span class="align-self-center ms-1 fw-bold" style="font-size:0.85rem;">${telf}</span>
-                            </div>
-                        `;
-                    } else if (telf) {
-                        linkTelf = `<span class="text-muted">${telf}</span>`;
-                    }
-
-                    let bEst = estado === 'Activo' ? '<span class="badge bg-success">Activo</span>' : (estado === 'Cesado' ? '<span class="badge bg-secondary">Cesado</span>' : '<span class="badge bg-danger">Bloqueado</span>');
-                    let jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
-
-                    html += `<tr class="clickable-row" onclick='abrirModalConductor(${jsonSeguro})'>
-                        <td class="fw-bold" style="color: #1e293b;" data-value="${nombre}"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
-                        <td class="d-none" data-value="${empresa}">${empresa}</td>
-                        <td data-value="${dni}">${dni}</td>
-                        <td class="d-none" data-value="${licencia}">${licencia}</td>
-                        <td data-value="${telf}">${linkTelf}</td>
-                        <td class="d-none" data-value="${estado}">${estado}</td>
-                        <td></td>
-                    </tr>`;
-                });
-            }
-        });
-    }
-
-    document.getElementById('cuerpoTablaConductores').innerHTML = html;
-    rellenarDatalist('dl-conductores', listOpciones);
-}
-
-function abrirModalConductor(f = null) {
-    document.getElementById('formConductor').reset();
-    document.getElementById('c_foto_base64').value = "";
-    document.getElementById('c_foto_preview').src = "https://via.placeholder.com/120";
-
-    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
-    const camposSelect = ['c_estado'];
-
-    if (f) {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Conductor';
-
-        const limpiar = t => t ? t.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
-
-        document.getElementById('c_id').value = f.idConductor;
-        document.getElementById('c_nombre').value = toTitleCase(limpiar(f.nombre));
-        document.getElementById('c_empresa').value = f.empresa || "";
-        document.getElementById('c_telefono').value = f.telefono || "";
-        document.getElementById('c_dni').value = f.dni || "";
-        document.getElementById('c_licencia').value = f.licencia || "";
-        document.getElementById('c_estado').value = f.estado || "Activo";
-        if (f.foto) {
-            document.getElementById('c_foto_preview').src = f.foto;
-            document.getElementById('c_foto_base64').value = f.foto;
-        }
-
-        camposText.forEach(id => document.getElementById(id).readOnly = true);
-        camposSelect.forEach(id => document.getElementById(id).disabled = true);
-        document.getElementById('c_foto_preview').style.pointerEvents = 'none';
-
-        document.getElementById('btnEditarConductor').style.display = 'inline-block';
-        document.getElementById('btnGuardarConductor').style.display = 'none';
-
-    } else {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Conductor';
-        document.getElementById('c_id').value = "";
-
-        camposText.forEach(id => document.getElementById(id).readOnly = false);
-        camposSelect.forEach(id => document.getElementById(id).disabled = false);
-        document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
-
-        document.getElementById('btnEditarConductor').style.display = 'none';
-        document.getElementById('btnGuardarConductor').style.display = 'inline-block';
-    }
-
-    new bootstrap.Modal(document.getElementById('modalConductor')).show();
-}
-
-function activarEdicionConductor() {
-    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
-    const camposSelect = ['c_estado'];
-
-    camposText.forEach(id => document.getElementById(id).readOnly = false);
-    camposSelect.forEach(id => document.getElementById(id).disabled = false);
-    document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
-
-    document.getElementById('btnEditarConductor').style.display = 'none';
-    document.getElementById('btnGuardarConductor').style.display = 'inline-block';
-}
-
-function previsualizarFotoConductor(input) {
-    if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('c_foto_preview').src = e.target.result;
-            document.getElementById('c_foto_base64').value = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-function guardarConductor(event, formObj) {
-    event.preventDefault();
-    const btn = document.getElementById('btnGuardarConductor');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-
-    let datos = {
-        idConductor: document.getElementById('c_id').value,
-        c_nombre: document.getElementById('c_nombre').value,
-        c_empresa: document.getElementById('c_empresa').value,
-        c_telefono: document.getElementById('c_telefono').value,
-        c_dni: document.getElementById('c_dni').value,
-        c_licencia: document.getElementById('c_licencia').value,
-        c_estado: document.getElementById('c_estado').value,
-        c_foto_base64: document.getElementById('c_foto_base64').value
-    };
-
-    fetch('/api/script/guardarConductor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ args: [datos] })
-    })
-    .then(res => res.json())
-    .then(r => {
-        if (r.data === 'Éxito') {
-            bootstrap.Modal.getInstance(document.getElementById('modalConductor')).hide();
-            recargarModulo('conductores');
-        } else {
-            alert("Error: " + r.data);
-        }
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Conductor';
-    }).catch(e => {
-        alert("Error: " + e.message);
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Conductor';
-    });
-}
 
 // ==========================================
 // 🛡️ FUNCIONES DE COMPARTIR UBICACIÓN Y CONDUCTORES
@@ -2354,7 +1766,7 @@ window.buscarSpotlight = function(query) {
     let count = 0;
 
     let placas = CACHE.placas || dataGlobalPlacas || [];
-    let conductores = CACHE.conductores || dataGlobalConductores || [];
+    let conductores = CACHE.conductores || (window.dataGlobalConductores) || [];
 
     // 1. Buscar Vehículos/Placas
     if (placas.length > 0) {
@@ -2403,7 +1815,7 @@ window.buscarSpotlight = function(query) {
                 let telLink = telefono ? `<i class="bi bi-whatsapp text-success"></i> ${telefono}` : '';
                 html += `
                 <div class="spotlight-card d-flex justify-content-between align-items-center"
-                     onclick="cerrarSpotlight(); cambiarModulo('conductores'); setTimeout(() => { document.getElementById('buscadorConductores').value='${dni || nombre}'; filtrarTabla('cuerpoTablaConductores', 'buscadorConductores'); }, 300);">
+                     onclick="cerrarSpotlight(); cargarModuloAislado('directorio/conductores'); setTimeout(() => { document.getElementById('buscadorConductores').value='${dni || nombre}'; filtrarTabla('cuerpoTablaConductores', 'buscadorConductores'); }, 300);">
                     <div>
                         <div class="fw-bold fs-6" style="color: #0ea5e9;"><i class="bi bi-person-vcard me-2"></i>${toTitleCase(nombre)}</div>
                         <div class="text-muted small mt-1">DNI: ${dni || '-'} • ${empresa || '-'}</div>

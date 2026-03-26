@@ -44,21 +44,21 @@
                 </a>
             </div>
             <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cargarModuloAislado('mantenimiento/inspecciones')"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cambiarModulo('fleetrun', this.id)"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a><a id="btnMenuStatus" onclick="cambiarModulo('status', this.id)"><i class="bi bi-car-front"></i> <span class="link-text">Status Taller</span></a><a id="btnMenuOrdenes" onclick="cambiarModulo('ordenes', this.id)"><i class="bi bi-tools"></i> <span class="link-text">Órdenes de Trabajo</span></a></div>
+                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cargarModuloAislado('mantenimiento/inspecciones')"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cargarModuloAislado('mantenimiento/fleetrun')"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a><a id="btnMenuStatus" onclick="cambiarModulo('status', this.id)"><i class="bi bi-car-front"></i> <span class="link-text">Status Taller</span></a><a id="btnMenuOrdenes" onclick="cambiarModulo('ordenes', this.id)"><i class="bi bi-tools"></i> <span class="link-text">Órdenes de Trabajo</span></a></div>
             </div>
             <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuAlmacen"><a id="btnMenuPlacasAlmacen" onclick="cambiarModulo('almacenPlacas', this.id)"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a></div>
+                <div class="collapse" id="menuAlmacen"><a id="btnMenuInventario" onclick="cargarModuloAislado('almacen/inventario')"><i class="bi bi-box-fill"></i> <span class="link-text">Inventario</span></a></div>
             </div>
             <div id="wrap-flota"><a data-bs-toggle="collapse" href="#menuFlota" role="button" aria-expanded="false" id="nav-flota"><i class="bi bi-truck-front"></i> <span class="link-text">Flota</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
                 <div class="collapse" id="menuFlota">
                     <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
-                    <a id="btnMenuStatusFlota" onclick="cambiarModulo('statusFlota', this.id)"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
+                    <a id="btnMenuStatusFlota" onclick="cargarModuloAislado('flota/status')"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
                 </div>
             </div>
             <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cambiarModulo('conductores', this.id)"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
+                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cargarModuloAislado('directorio/conductores')"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
             </div>
-            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cambiarModulo('usuarios', this.id)"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
+            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
             <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
             <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
     <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
@@ -204,142 +204,7 @@
                     </table></div></div>
                 </div>
 
-                <div id="moduloFleetrun" class="modulo-wrapper" style="display: none;">
-                    <div id="panelGraficosFleetrun" class="row mb-4" style="display: none;">
-                        <div class="col-md-6 mx-auto">
-                            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> Salud de Mantenimientos</h6>
-                                <div style="position: relative; height: 220px; width: 100%;">
-                                    <canvas id="chartFleetrunStatus"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="controls-row">
-                        <div class="d-flex justify-content-end mb-2">
-                            <button class="btn btn-sm btn-outline-primary fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()"><i class="bi bi-eye-fill"></i> Mostrar Gráficos</button>
-                        </div>
-
-                        <div class="kpi-wrapper mb-3">
-                            <div class="kpi-card" id="kpi-fleet-card-vigente">
-                                <div class="kpi-title">Mantenimientos Vigentes</div><div class="kpi-value text-success" id="kpi-fleet-vigentes">0</div>
-                            </div>
-                            <div class="kpi-card" id="kpi-fleet-card-porvencer">
-                                <div class="kpi-title">Por Vencer (&lt; 1000 KM)</div><div class="kpi-value text-warning" id="kpi-fleet-porvencer">0</div>
-                            </div>
-                            <div class="kpi-card" id="kpi-fleet-card-vencido">
-                                <div class="kpi-title">Vencidos</div><div class="kpi-value text-danger" id="kpi-fleet-vencidos">0</div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                                <div class="input-group input-group-sm" style="max-width: 250px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico..."></div>
-                                <input type="date" class="form-control form-control-sm text-primary fw-bold" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()" style="max-width: 140px;">
-                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetCliente"></ul></div>
-                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">UTS</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetUts"></ul></div>
-                                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetEstado">
-                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> Vigente</label></li>
-                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> Por Vencer</label></li>
-                                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> Vencido</label></li>
-                                </ul></div>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun">Sin cargar</span></span>
-                                <button class="btn btn-outline-secondary btn-sm rounded-circle px-2" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Sincronizar Datos"><i class="bi bi-arrow-clockwise"></i></button>
-                                <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
-                                <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun">Historial</span></button>
-                                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-fleetrun" onclick="activarModoSeleccionFleetrun()"><i class="bi bi-ui-checks"></i> Seleccionar</button>
-                                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-fleetrun" onclick="seleccionarTodasLasFleetrun()"><i class="bi bi-check-square"></i> Seleccionar Todo</button>
-                                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-fleetrun" onclick="eliminarMasivo('Mantenimientos', 'fleetrun')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-fleetrun">0</span>)</button>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-upload"></i> Importar</button>
-                                    <ul class="dropdown-menu shadow">
-                                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaFleetrun()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileFleetrun').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
-                                    </ul>
-                                </div>
-                                <input type="file" id="inputFileFleetrun" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelFleetrun(event)">
-                                <button class="btn btn-outline-success fw-bold btn-sm" onclick="exportarExcelFleetrun()"><i class="bi bi-download"></i> Exportar</button>
-                                <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevoFleetrun" onclick="abrirModalNuevoFleetrun()"><i class="bi bi-plus-lg"></i> Registrar MP</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaFleetrun">
-                        <thead><tr><th>Placa / Registro</th><th>Fecha</th><th>Tipo MP</th><th>KM de Cambio</th><th>Falta</th><th>Próximo Cambio</th><th>Observación</th><th>Frecuencia</th><th>KM GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                        <tbody id="cuerpoTablaFleetrun"><tr><td colspan="10" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
-                    </table></div></div>
-                </div>
-
-                <div id="moduloStatusFlota" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
-                        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                            <input type="date" class="form-control form-control-sm border-primary text-primary fw-bold" id="filtroStatusFecha" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 140px;">
-                            <select class="form-select form-select-sm fw-bold" id="filtroStatusCorte" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 100px; color: var(--text);"><option value="">Todos los Cortes</option><option value="1">Corte 1</option><option value="2">Corte 2</option><option value="3">Corte 3</option></select>
-                            <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatusFlota" onkeyup="filtrarStatusFlotaAvanzado()" placeholder="Buscar Placa, Conductor..."></div>
-                            <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota">Sin cargar</span></span>
-                            <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="resetearYRecargarStatusFlota()"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
-                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Agregar</button>
-                        </div>
-                    </div>
-                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
-                        <thead><tr><th>Tracto / Camión</th><th>Prox Insp. T/C</th><th>Carreta / Remolque</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Zona</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5">Cargando Status Flota...</td></tr></tbody>
-                    </table></div></div>
-                </div>
-
-                <div id="moduloConductores" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
-                        <div class="input-group input-group-sm" style="max-width: 300px;">
-                            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores" onkeyup="filtrarTabla('cuerpoTablaConductores', 'buscadorConductores')" placeholder="Buscar por Nombre, DNI...">
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores">Sin cargar</span></span>
-                            <button class="btn-reload-cache" onclick="recargarModulo('conductores')"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
-                            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
-                            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()" data-perm-crear="flota"><i class="bi bi-person-plus-fill"></i> Nuevo Conductor</button>
-                        </div>
-                    </div>
-                    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaConductores">
-                        <thead>
-                            <tr>
-                                <th>Nombre del Conductor</th>
-                                <th class="d-none">Empresa</th>
-                                <th>DNI</th>
-                                <th class="d-none">Licencia</th>
-                                <th>Contacto (Tel / WSP)</th>
-                                <th class="d-none">Estado</th>
-                                <th><i class="bi bi-three-dots-vertical"></i></th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpoTablaConductores"><tr><td colspan="7" class="text-center py-5">Cargando Conductores...</td></tr></tbody>
-                    </table></div></div>
-                </div>
-
-                <div id="moduloUsuarios" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between">
-                        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-person-lines-fill"></i> Directorio del Personal</h5>
-                        <div class="d-flex gap-2 align-items-center">
-                            <span id="cache-badge-usuarios" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-usuarios">Sin cargar</span></span>
-                            <button class="btn-reload-cache" id="btn-reload-usuarios" onclick="recargarModulo('usuarios')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalGestorUsuario()" data-perm-crear="usuarios"><i class="bi bi-person-plus"></i> Nuevo Usuario</button>
-                        </div>
-                    </div>
-                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUsuarios" data-sort-dir="asc">
-                        <thead><tr><th onclick="sortTable('tablaUsuarios', 0)">ID <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 1)">Nombre Completo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 2)">Cargo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 3)">Correo <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 4)">Rol <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 5)">Estado <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                        <tbody id="cuerpoTablaUsuarios"><tr><td colspan="7" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
-                    </table></div></div>
-                </div>
 
                 <div id="moduloAuditoria" class="modulo-wrapper" style="display: none;">
                     <div class="controls-row d-flex justify-content-between">
@@ -423,17 +288,6 @@
     </div> 
 
     <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="offcanvasIA" style="width: 350px;"><div class="offcanvas-header bg-dark text-white"><h5 class="offcanvas-title text-white !important"><i class="bi bi-stars text-warning"></i> Azkell IA Analyst</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button></div><div class="offcanvas-body d-flex flex-column"><div id="chat-historial" class="flex-grow-1 overflow-auto mb-3 p-2 border rounded shadow-sm" style="background-color: var(--surface);"><div class="mb-3 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--bg);"><em>🤖 ¡Hola! Estoy conectado a tu base de datos. Pregúntame resúmenes o detalles.</em></span></div></div><div class="input-group shadow-sm"><input type="text" id="inputPregunta" class="form-control border-warning" placeholder="Escribe aquí..." onkeypress="if(event.key === 'Enter') enviarPreguntaIA()"><button class="btn btn-warning fw-bold text-dark" onclick="enviarPreguntaIA()" id="btnEnviarIA"><i class="bi bi-send-fill"></i></button></div></div></div>
-    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: 450px; border-left: 1px solid var(--border);">
-        <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
-            <h5 class="offcanvas-title fw-bold text-primary" id="offcanvasFleetrunLabel">
-                <i class="bi bi-tools"></i> Historial de Mantenimiento
-            </h5>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body p-4" style="background-color: var(--bg);">
-            <div id="detalleFleetrunContenido"></div>
-        </div>
-    </div>
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasOT" aria-labelledby="offcanvasOTLabel" style="width: 480px; border-left: 1px solid var(--border);">
         <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
             <h5 class="offcanvas-title fw-bold text-danger" id="offcanvasOTLabel">
@@ -444,88 +298,8 @@
         <div class="offcanvas-body p-4" style="background-color: var(--bg);" id="detalleOTContenido">
         </div>
     </div>
-    <div class="modal fade" id="modalFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-speedometer2 text-warning me-2"></i>Registrar Mantenimiento Fleetrun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formFleetrun" onsubmit="enviarFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="f_id" id="f_id"><input type="hidden" name="f_mes" id="f_mes"><input type="hidden" name="f_anio" id="f_anio"><div class="modal-body"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-calendar-event"></i> Fecha</label><input type="date" class="form-control fw-bold border-primary shadow-sm" name="f_fecha" id="f_fecha" onchange="autocompletarFecha('f')" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary"><i class="bi bi-truck"></i> Placa *</label><input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="f_placa" name="f_placa" list="dl-placas" onchange="autocompletarFleetrun('f')" oninput="autocompletarFleetrun('f')" placeholder="Escribe para buscar..." autocomplete="off" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-tools"></i> Tipo MP</label><input type="text" class="form-control text-uppercase border-primary shadow-sm" name="f_tipomp" id="f_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('f')" placeholder="Ej: MP1" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Marca</label><input type="text" class="form-control bg-light" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Dueño</label><input type="text" class="form-control bg-light" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">UTS</label><input type="text" class="form-control bg-light" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-speedometer"></i> KM Actual</label><input type="number" class="form-control fw-bold border-primary shadow-sm" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" placeholder="Ej: 150000" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold" style="color:orange;">Frecuencia</label><input type="number" class="form-control fw-bold shadow-sm" name="f_freckm" id="f_freckm" placeholder="Calculando..." oninput="calcularProximo('f')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger"><i class="bi bi-flag-fill"></i> KM Próximo</label><input type="number" class="form-control bg-light fw-bold" name="f_kmprox" id="f_kmprox" placeholder="Calculando..." readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt-fill"></i> KM Wialon</label><input type="number" class="form-control text-primary fw-bold bg-light" name="f_kmgps" id="f_kmgps" placeholder="Autocompletado..." readonly></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-person-badge"></i> Técnico Encargado</label><input type="text" class="form-control text-uppercase border-primary shadow-sm" name="f_tec" placeholder="Ej: Juan Perez" required></div></div><div class="mb-3"><label class="form-label fw-bold"><i class="bi bi-card-text"></i> Observación</label><textarea class="form-control shadow-sm" name="f_obs" rows="2" placeholder="Detalles adicionales del mantenimiento..."></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarFleetrun"><i class="bi bi-save"></i> Guardar Registro</button></div></form></div></div></div>
-    <div class="modal fade" id="modalEditarFleetrun" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold">Editar Fleetrun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formEditarFleetrun" onsubmit="enviarEdicionFleetrun(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="editF_id" id="eF_id"><input type="hidden" name="editF_mes" id="eF_mes"><input type="hidden" name="editF_anio" id="eF_anio"><div class="modal-body"><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Fecha</label><input type="date" class="form-control fw-bold" name="editF_fecha" id="eF_fecha" onchange="autocompletarFecha('eF')" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary"><i class="bi bi-truck"></i> Placa *</label><input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="eF_placa" name="eF_placa" list="dl-placas" onchange="autocompletarFleetrun('eF')" oninput="autocompletarFleetrun('eF')" placeholder="Escribe para buscar..." autocomplete="off" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">Tipo MP</label><input type="text" class="form-control text-uppercase" name="editF_tipomp" id="eF_tipomp" list="dl-tpmp" oninput="calcularFrecuencia('eF')" required></div></div><div class="row d-none"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Marca</label><input type="text" class="form-control bg-light" name="editF_marca" id="eF_marca" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Dueño</label><input type="text" class="form-control bg-light" name="editF_dueno" id="eF_dueno" readonly></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">UTS</label><input type="text" class="form-control bg-light" name="editF_uts" id="eF_uts" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary">KM Actual</label><input type="number" class="form-control fw-bold" name="editF_kmact" id="eF_kmact" oninput="calcularProximo('eF')" required></div><div class="col-md-4 mb-3"><label class="form-label fw-bold" style="color:orange;">Frecuencia</label><input type="number" class="form-control fw-bold shadow-sm" name="editF_freckm" id="eF_freckm" oninput="calcularProximo('eF')"></div><div class="col-md-4 mb-3"><label class="form-label fw-bold text-danger">KM Próximo</label><input type="number" class="form-control bg-light fw-bold" name="editF_kmprox" id="eF_kmprox" readonly></div></div><div class="row"><div class="col-md-4 mb-3"><label class="form-label fw-bold text-primary"><i class="bi bi-geo-alt-fill"></i> KM Wialon</label><input type="number" class="form-control text-primary fw-bold" name="editF_kmgps" id="eF_kmgps"></div><div class="col-md-8 mb-3"><label class="form-label fw-bold text-primary">Técnico</label><input type="text" class="form-control text-uppercase" name="editF_tec" id="eF_tec" required></div></div><div class="mb-3"><label class="form-label fw-bold text-primary">Observación</label><textarea class="form-control" name="editF_obs" id="eF_obs" rows="2"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnActualizarFleetrun">Actualizar</button></div></form></div></div></div>
 
-    <div class="modal fade" id="modalStatusFlota" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-truck-front text-primary"></i> Agregar Status Flota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="sf_id" id="sf_id"><div class="modal-body">
-        <div class="row">
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Fecha de Corte</label><input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required></div>
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Corte (Turno)</label><div class="d-flex gap-3 mt-1"><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div></div></div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> Motora *</label>
-                <input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" name="sf_motora" id="sf_motora" list="dl-placas" onchange="autocompletarStatus('motora')" oninput="autocompletarStatus('motora')" placeholder="Buscar placa..." autocomplete="off">
-                <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_motora" id="sf_cliente_motora" placeholder="Cliente Auto-completado..." readonly>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> No Motora</label>
-                <input type="text" class="form-control text-uppercase border-info fw-bold shadow-sm" name="sf_nomotora" id="sf_nomotora" list="dl-placas" onchange="autocompletarStatus('nomotora')" oninput="autocompletarStatus('nomotora')" placeholder="Buscar placa..." autocomplete="off">
-                <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_nomotora" id="sf_cliente_nomotora" placeholder="Cliente Auto-completado..." readonly>
-            </div>
-        </div>
-        <div class="mb-3">
-                <label class="form-label fw-bold">Zona</label>
-                <input type="text" class="form-control" name="sf_zona" id="sf_zona" list="dl-zonas" placeholder="Elige o escribe nueva...">
-                <datalist id="dl-zonas"><option value="Lavado"><option value="Mantenimiento"></datalist>
-            </div>
-        <div class="mb-3">
-                <label for="input-conductor-nuevo" class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> Conductor</label>
-                <input type="text" class="form-control" id="input-conductor-nuevo" name="sf_conductor" placeholder="Buscar conductor..." list="dl-conductores-status">
-            </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Estado</label>
-                <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado" list="dl-estados" placeholder="Elige o escribe nuevo...">
-                <datalist id="dl-estados"><option value="Vacío"><option value="Cargado"><option value="Con Devolución"></datalist>
-            </div>
-            <div class="col-md-6 mb-3"><label class="form-label fw-bold">Observaciones</label><textarea class="form-control" name="sf_obs" id="sf_obs" rows="1"></textarea></div>
-        </div>
-    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF">Guardar Registro</button></div></form></div></div></div>
 
-    <div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold" id="tituloModalUser"><i class="bi bi-shield-lock-fill text-warning"></i> Gestor de Accesos</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="formGestorUsuario" onsubmit="procesarGuardadoUsuario(event, this)">
-                    <input type="hidden" name="idUsuarioEdit" id="gu_id">
-                    <input type="hidden" name="permisos_json" id="gu_permisos">
-                    <div class="modal-body bg-light">
-                        <div class="card p-3 shadow-sm mb-3 border-0">
-                            <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill"></i> Datos del Personal</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3"><label class="fw-bold">Nombre Completo</label><input type="text" class="form-control fw-bold" name="nombreUsuarioEdit" id="gu_nombre" required></div>
-                                <div class="col-md-6 mb-3"><label class="fw-bold">Cargo</label><input type="text" class="form-control" name="cargoUsuarioEdit" id="gu_cargo" required></div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-5 mb-3"><label class="fw-bold">Correo (Usuario)</label><input type="email" class="form-control" name="correoUsuarioEdit" id="gu_correo" required></div>
-                                <div class="col-md-4 mb-3"><label class="fw-bold">Contraseña</label><input type="text" class="form-control" name="passwordUsuarioEdit" id="gu_password" required></div>
-                                <div class="col-md-3 mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="estadoUsuarioEdit" id="gu_estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
-                            </div>
-                        </div>
-                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
-                            <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-grid-3x3-gap-fill"></i> Matriz de Permisos (Checkboxes)</div>
-                            <div class="table-responsive m-0">
-                                <table class="table table-hover table-bordered text-center align-middle mb-0 bg-white" style="font-size: 0.9rem;" id="tablaMatrizPermisos">
-                                    <thead class="table-dark" style="background-color: #0f172a;">
-                                        <tr><th class="text-start text-white">Módulo de Sistema</th><th class="text-white"><i class="bi bi-eye text-info"></i> Leer</th><th class="text-white"><i class="bi bi-plus-circle text-success"></i> Crear</th><th class="text-white"><i class="bi bi-pencil text-warning"></i> Editar</th><th class="text-white"><i class="bi bi-trash text-danger"></i> Eliminar</th></tr>
-                                    </thead>
-                                    <tbody id="bodyMatrizPermisos"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-white">
-                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary fw-bold px-4" id="btnGuardarUser"><i class="bi bi-save"></i> Guardar Accesos</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
     <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-danger border-2"><div class="modal-header bg-danger"><h5 class="modal-title fw-bold text-white">Confirmación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4"><p class="fs-5 mb-1">Eliminar: <strong id="delete-record-id" class="text-danger"></strong></p><div class="mt-4 text-start"><label class="form-label" id="label-confirmar">Escribe Si:</label><input type="text" id="input-confirmar-eliminar" class="form-control text-center fw-bold" autocomplete="off"><div id="msg-error-eliminar" class="text-danger mt-2 fw-bold text-center" style="display: none;">Error.</div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="btn-procesar-eliminar" onclick="procesarEliminacion()">Eliminar</button></div></div></div></div>
 
     <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist><datalist id="dl-wialon"></datalist><datalist id="dl-conductores-status"></datalist>
@@ -565,12 +339,6 @@
     </div>
 
 
-    <div id="contenedor-pdf-status-flota" style="display: none;">
-        <div id="pdf-status-flota" style="background: white; padding: 30px; font-family: Arial, sans-serif; color: #000;">
-            <div style="text-align: center; border-bottom: 3px solid #d32f2f; padding-bottom: 20px; margin-bottom: 30px;">
-                <h2 style="margin: 0; color: #d32f2f; font-size: 28px; font-weight: bold;">AZKELL CRM</h2>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Reporte de Status de Flota</p>
-            </div>
             <div style="margin-bottom: 25px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
                     <thead style="background-color: #1e293b; color: white;">
@@ -585,34 +353,6 @@
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="modalConductor" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold" id="tituloModalConductor"><i class="bi bi-person-badge"></i> Ficha de Conductor</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-    <form id="formConductor" onsubmit="guardarConductor(event, this)">
-        <input type="hidden" name="idConductor" id="c_id">
-        <input type="hidden" name="c_foto_base64" id="c_foto_base64">
-        <div class="modal-body">
-            <div class="text-center mb-3">
-                <img id="c_foto_preview" src="https://via.placeholder.com/120" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 3px solid #cbd5e1; cursor: pointer;" onclick="document.getElementById('c_foto_input').click()" title="Toca para cambiar foto">
-                <input type="file" id="c_foto_input" accept="image/*" style="display: none;" onchange="previsualizarFotoConductor(this)">
-                <div class="small text-muted mt-1">Toca la imagen para subir foto</div>
-            </div>
-            <div class="mb-3"><label class="fw-bold text-primary">Nombre Completo</label><input type="text" class="form-control fw-bold" name="c_nombre" id="c_nombre" required></div>
-            <div class="row">
-                <div class="col-md-6 mb-3"><label class="fw-bold">Empresa</label><input type="text" class="form-control text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC"></div>
-                <div class="col-md-6 mb-3"><label class="fw-bold">Teléfono</label><input type="text" class="form-control" name="c_telefono" id="c_telefono"></div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3"><label class="fw-bold">DNI</label><input type="text" class="form-control" name="c_dni" id="c_dni"></div>
-                <div class="col-md-6 mb-3"><label class="fw-bold">Licencia</label><input type="text" class="form-control text-uppercase" name="c_licencia" id="c_licencia"></div>
-            </div>
-            <div class="mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="c_estado" id="c_estado"><option value="Activo">Activo</option><option value="Cesado">Cesado</option><option value="Bloqueado">Bloqueado</option></select></div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            <button type="button" class="btn btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()"><i class="bi bi-pencil-square"></i> Editar</button>
-            <button type="submit" class="btn btn-primary" id="btnGuardarConductor"><i class="bi bi-save"></i> Guardar Conductor</button>
-        </div>
-    </form></div></div></div>
 
     <div id="spotlight-overlay" class="spotlight-overlay" style="display: none;" onclick="if(event.target===this) cerrarSpotlight()">
         <div class="spotlight-container">
