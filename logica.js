@@ -74,11 +74,11 @@ let usuarioLogueado   = ''; let rolLogueado       = ''; let permisosUsuario = {}
 let itemAEliminarID   = ''; let itemAEliminarCol  = ''; let tooltipList       = []; 
 
 // 🔥 SISTEMA DE CACHÉ EN MEMORIA
-const CACHE = { placas: null, fleetrun: null, usuarios: null, auditoria: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
+const CACHE = { placas: null, fleetrun: null, usuarios: null, statusMant: null, statusFlota: null, wialon: null, conductores: null };
 const CACHE_TIME = {};
 
 let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
-let dataGlobalAuditoria = []; let dataGlobalOrdenes = [];
+let dataGlobalOrdenes = [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false;
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = {};
@@ -98,85 +98,99 @@ let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
 // ================================================================
 
 window.verificarSesionGuardada = function() {
-    const guardadoUser = localStorage.getItem('crm_user');
-    const guardadoTime = localStorage.getItem('crm_ultimo_acceso');
-    const guardadoCorreo = localStorage.getItem('crm_correo');
+    const guardadoUser     = localStorage.getItem('crm_user');
+    const guardadoTime     = localStorage.getItem('crm_ultimo_acceso');
+    const guardadoCorreo   = localStorage.getItem('crm_correo');
     const guardadoPermisos = localStorage.getItem('crm_permisos');
-    const guardadoRol = localStorage.getItem('crm_rol');
+    const guardadoRol      = localStorage.getItem('crm_rol');
 
-    if (guardadoUser && guardadoTime && Date.now() - parseInt(guardadoTime) < TIEMPO_INACTIVIDAD) {
-        usuarioLogueado = guardadoUser;
-        rolLogueado = guardadoRol && guardadoRol !== 'null' ? guardadoRol : 'Personalizado';
-        registrarActividad();
-
-        try {
-            let parsed = JSON.parse(guardadoPermisos || '{}');
-            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-            permisosUsuario = parsed || {};
-        } catch(e) { permisosUsuario = {}; }
-
-        document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
-        document.getElementById('perfil-nombre').innerText = usuarioLogueado;
-        if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
-        let inputInsp = document.getElementById('input-inspector-nuevo'); if(inputInsp) inputInsp.value = usuarioLogueado;
-
-        let p = permisosUsuario || {};
-        let isAdm = p?.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
-
-        let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
-                    : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
-                    : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`);
-
-        let topBadge = document.getElementById('badge-rol-top'); if(topBadge) topBadge.innerHTML = rolHtml;
-        let perfilBadge = document.getElementById('perfil-rol-badge'); if(perfilBadge) perfilBadge.innerHTML = rolHtml;
-
-        const nMant = document.getElementById('wrap-mantenimiento'); const nAlm = document.getElementById('wrap-almacen'); const nFlo = document.getElementById('wrap-flota'); const nUsu = document.getElementById('wrap-usuarios'); const nAud = document.getElementById('wrap-auditoria');
-        const cMant = document.getElementById('menuMantenimiento'); const cAlm = document.getElementById('menuAlmacen'); const cFlo = document.getElementById('menuFlota');
-        [nMant, nAlm, nFlo, nUsu, nAud].forEach(el => { if (el) el.style.display = 'none'; });
-        [cMant, cAlm, cFlo].forEach(el => { if (!el) return; el.classList.remove('show'); el.style.display = 'none'; });
-
-        let showMant = isAdm || p?.mod_mant || p?.insp?.l || p?.placas?.l || p?.fleet?.l;
-        let showAlm = isAdm || p?.mod_alm || p?.placas?.l;
-        let showFlota = isAdm || p?.mod_flota || p?.gps?.l || p?.status?.l || p?.cond?.l;
-
-        const mStatus = document.getElementById('btnMenuStatusMant'); const mPlacas = document.getElementById('btnMenuPlacasMant'); const mFleet = document.getElementById('btnMenuFleetrun');
-        const fGps = document.getElementById('btnMenuUbicacion'); const fStatus = document.getElementById('btnMenuStatusFlota'); const fCond = document.getElementById('btnMenuConductores');
-
-        if (showMant) { if(nMant) nMant.style.display = 'block'; if(cMant) cMant.style.removeProperty('display'); }
-        if (mStatus) mStatus.style.display = (isAdm || p?.insp?.l) ? 'block' : 'none';
-        if (mPlacas) mPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
-        if (mFleet) mFleet.style.display = (isAdm || p?.fleet?.l) ? 'block' : 'none';
-
-        if (showAlm) { if(nAlm) nAlm.style.display = 'block'; if(cAlm) cAlm.style.removeProperty('display'); }
-        if (aPlacas) aPlacas.style.display = (isAdm || p?.placas?.l) ? 'block' : 'none';
-
-        if (showFlota) { if(nFlo) nFlo.style.display = 'block'; if(cFlo) cFlo.style.removeProperty('display'); }
-        if (fGps) fGps.style.display = (isAdm || p?.gps?.l) ? 'block' : 'none';
-        if (fStatus) fStatus.style.display = (isAdm || p?.status?.l) ? 'block' : 'none';
-        if (fCond) fCond.style.display = (isAdm || p?.cond?.l) ? 'block' : 'none';
-
-        if (isAdm) { if(nUsu) nUsu.style.display = 'block'; }
-        if (isAdm || p?.mod_auditoria) { if(nAud) nAud.style.display = 'block'; }
-
-        document.getElementById('root-dinamico').style.display = 'none';
-        document.getElementById('app-crm').style.display = 'flex';
-
-        cambiarModulo('dashboard', 'nav-dashboard');
-
-        google.script.run.withSuccessHandler(d => {
-            dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
-            let placasSet = new Set(); d.forEach(r => { if(r[0] && r[0]!=="Placa" && r[0]!=="PLACA") placasSet.add(r[0]) });
-            rellenarDatalist('dl-placas', placasSet);
-            poblarSelectsFormularios(d);
-            recargarWialon();
-        }).obtenerDatosPlacas();
-
-        google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
-        google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
-
+    if (!guardadoUser || !guardadoTime || Date.now() - parseInt(guardadoTime) >= TIEMPO_INACTIVIDAD) {
+        cargarModuloAislado('login');
         return;
     }
-    document.getElementById('app-crm').style.display = 'none';
+
+    usuarioLogueado = guardadoUser;
+    rolLogueado = guardadoRol && guardadoRol !== 'null' ? guardadoRol : 'Personalizado';
+    registrarActividad();
+
+    try {
+        let parsed = JSON.parse(guardadoPermisos || '{}');
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        permisosUsuario = parsed || {};
+    } catch(e) { permisosUsuario = {}; }
+
+    // --- Topbar ---
+    document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
+    document.getElementById('perfil-nombre').innerText = usuarioLogueado;
+    if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
+    let inputInsp = document.getElementById('input-inspector-nuevo'); if (inputInsp) inputInsp.value = usuarioLogueado;
+
+    let p = permisosUsuario || {};
+    let isAdm = p?.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+
+    let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com')
+        ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
+        : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
+        : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`);
+
+    let topBadge = document.getElementById('badge-rol-top'); if (topBadge) topBadge.innerHTML = rolHtml;
+    let perfilBadge = document.getElementById('perfil-rol-badge'); if (perfilBadge) perfilBadge.innerHTML = rolHtml;
+
+    // --- Helpers de visibilidad ---
+    const safe = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    const sec = (wrapId, collapseId, show) => {
+        const w = document.getElementById(wrapId);
+        const c = collapseId ? document.getElementById(collapseId) : null;
+        if (w) w.style.display = show ? '' : 'none';
+        if (c) { if (show) c.style.removeProperty('display'); else { c.classList.remove('show'); c.style.display = 'none'; } }
+    };
+
+    // --- Ocultar todo primero ---
+    ['wrap-mantenimiento', 'wrap-almacen', 'wrap-flota', 'wrap-directorio', 'wrap-usuarios', 'wrap-auditoria']
+        .forEach(id => safe(id, false));
+    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('show'); el.style.display = 'none'; }
+    });
+
+    // --- Visibilidad por permisos ---
+    const showMant  = isAdm || p?.insp?.l  || p?.placas?.l || p?.fleet?.l;
+    const showAlm   = isAdm || p?.placas?.l;
+    const showFlota = isAdm || p?.gps?.l   || p?.status?.l || p?.cond?.l;
+    const showDir   = isAdm || p?.cond?.l;
+
+    sec('wrap-mantenimiento', 'menuMantenimiento', showMant);
+    safe('btnMenuStatusMant', isAdm || p?.insp?.l);
+    safe('btnMenuPlacasMant', isAdm || p?.placas?.l);
+    safe('btnMenuFleetrun',   isAdm || p?.fleet?.l);
+
+    sec('wrap-almacen', 'menuAlmacen', showAlm);
+    safe('btnMenuInventario', isAdm || p?.placas?.l);
+
+    sec('wrap-flota', 'menuFlota', showFlota);
+    safe('btnMenuUbicacion',   isAdm || p?.gps?.l);
+    safe('btnMenuStatusFlota', isAdm || p?.status?.l);
+    safe('btnMenuConductores', isAdm || p?.cond?.l);
+
+    sec('wrap-directorio', null, showDir);
+    safe('wrap-usuarios',  isAdm);
+    safe('wrap-auditoria', isAdm || p?.mod_auditoria);
+
+    // --- Mostrar app y dashboard ---
+    document.getElementById('root-dinamico').style.display = 'none';
+    document.getElementById('app-crm').style.display = 'flex';
+    cambiarModulo('dashboard', 'nav-dashboard');
+
+    // --- Precarga de datos ---
+    google.script.run.withSuccessHandler(d => {
+        dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
+        let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
+        rellenarDatalist('dl-placas', placasSet);
+        poblarSelectsFormularios(d);
+        recargarWialon();
+    }).obtenerDatosPlacas();
+    google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
+    google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
 }
 
 function cerrarSesion() {
@@ -485,7 +499,6 @@ function cargarModulo(nombre, fnRender, fnBackend) {
       placas:      { id: 'cuerpoTablaPlacas', cols: 9 },
       fleetrun:    { id: 'cuerpoTablaFleetrun', cols: 10 },
       usuarios:    { id: 'cuerpoTablaUsuarios', cols: 7 },
-      auditoria:   { id: 'cuerpoTablaAuditoria', cols: 4 },
       statusMant:  { id: 'cuerpoTablaStatus', cols: 10 },
       conductores: { id: 'cuerpoTablaConductores', cols: 7 },
       statusFlota: { id: 'cuerpoTablaStatusFlota', cols: 9 }
@@ -512,7 +525,6 @@ function recargarModulo(nombre) {
   const acciones = {
     placas: () => cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'),
     fleetrun: () => cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'),
-    auditoria: () => cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'),
     statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones')
   };
   if (acciones[nombre]) acciones[nombre]();
@@ -541,7 +553,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     if (modulo === 'fleetrun' && !isAdm && !p?.fleet?.l) bloqueado = true;
     if (modulo === 'ubicacion' && !isAdm && !p?.gps?.l) bloqueado = true;
     if (modulo === 'statusFlota' && !isAdm && !p?.status?.l) bloqueado = true;
-    if (modulo === 'auditoria' && !isAdm && !p?.mod_auditoria) bloqueado = true;
 
     if (bloqueado) return;
 
@@ -551,7 +562,6 @@ window.cambiarModulo = function(modulo, idBoton) {
     const titulo = document.getElementById('tituloTopBar');
 
     if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
-    else if (modulo === 'auditoria') { let el=document.getElementById('moduloAuditoria'); if(el) el.style.display = 'flex'; titulo.innerText = 'Control y Auditoría'; cargarModulo('auditoria', mostrarAuditoria, 'obtenerDatosAuditoria'); }
     else if (modulo === 'status') {
         let el = document.getElementById('moduloStatusTaller');
         if(el) el.style.display = 'block';
@@ -1244,8 +1254,6 @@ function procesarEliminacion() {
     }
 }
 
-function cargarTablaAuditoria(forzarRefresh = false) { if(!forzarRefresh && dataGlobalAuditoria.length > 0) { mostrarAuditoria(dataGlobalAuditoria); return; } document.getElementById('cuerpoTablaAuditoria').innerHTML = '<tr><td colspan="4" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando bitácora...</td></tr>'; google.script.run.withSuccessHandler(mostrarAuditoria).obtenerDatosAuditoria(); }
-function mostrarAuditoria(datos) { if(procesadorErroresCuota(datos, 'cuerpoTablaAuditoria')) return; dataGlobalAuditoria = datos; let html = ''; if (!datos || datos.length === 0) { html = '<tr><td colspan="4" class="text-center py-4" style="color:var(--subtext)!important">Aún no hay registros de actividad.</td></tr>'; } else { datos.forEach(fila => { const badge = fila[2] === 'CREÓ' ? '<span class="badge bg-success">CREÓ</span>' : fila[2] === 'MODIFICÓ' ? '<span class="badge bg-warning text-dark">MODIFICÓ</span>' : '<span class="badge bg-danger">ELIMINÓ</span>'; html += `<tr><td style="color:var(--subtext)!important"><i class="bi bi-clock"></i> ${fila[0]}</td><td class="fw-bold">${fila[1]}</td><td>${badge}</td><td class="text-wrap">${fila[3]}</td></tr>`; }); } document.getElementById('cuerpoTablaAuditoria').innerHTML = html; }
 
 // ==========================================
 // 🛡️ SÚPER GESTOR DE USUARIOS Y PERMISOS

@@ -1,0 +1,21 @@
+<div id="moduloAuditoria" class="modulo-wrapper">
+    <div class="controls-row d-flex justify-content-between">
+        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-journal-code"></i> Registro de Actividad</h5>
+        <div class="d-flex gap-2 align-items-center w-50 justify-content-end">
+            <span id="cache-badge-auditoria" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-auditoria">Sin cargar</span></span>
+            <button class="btn-reload-cache" id="btn-reload-auditoria" onclick="cargarTablaAuditoria(true)"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+            <input type="text" class="form-control form-control-sm w-50" id="buscadorAuditoria" onkeyup="filtrarTabla('cuerpoTablaAuditoria', 'buscadorAuditoria')" placeholder="Buscar en historial...">
+        </div>
+    </div>
+    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0 table-sm" id="tablaAuditoria" data-sort-dir="desc">
+        <thead><tr>
+            <th onclick="sortTable('tablaAuditoria', 0)">Fecha y Hora <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 1)">Usuario Autor <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 2)">Acción <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 3)">Detalle Operación <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+        </tr></thead>
+        <tbody id="cuerpoTablaAuditoria">
+            <tr><td colspan="4" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr>
+        </tbody>
+    </table></div></div>
+</div>
