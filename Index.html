@@ -59,7 +59,7 @@
                 <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cargarModuloAislado('directorio/conductores')"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
-            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cambiarModulo('auditoria', this.id)"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
+            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cargarModuloAislado('sistema/auditoria')"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
             <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
     <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
         <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
@@ -206,20 +206,6 @@
 
 
 
-                <div id="moduloAuditoria" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between">
-                        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-journal-code"></i> Registro de Actividad</h5>
-                        <div class="d-flex gap-2 align-items-center w-50 justify-content-end">
-                            <span id="cache-badge-auditoria" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-auditoria">Sin cargar</span></span>
-                            <button class="btn-reload-cache" id="btn-reload-auditoria" onclick="recargarModulo('auditoria')"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
-                            <input type="text" class="form-control form-control-sm w-50" id="buscadorAuditoria" onkeyup="filtrarTabla('cuerpoTablaAuditoria', 'buscadorAuditoria')" placeholder="Buscar en historial...">
-                        </div>
-                    </div>
-                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0 table-sm" id="tablaAuditoria" data-sort-dir="desc">
-                        <thead><tr><th onclick="sortTable('tablaAuditoria', 0)">Fecha y Hora <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 1)">Usuario Autor <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 2)">Acción <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaAuditoria', 3)">Detalle Operación <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th></tr></thead>
-                        <tbody id="cuerpoTablaAuditoria"><tr><td colspan="4" class="text-center py-5">Selecciona este módulo para cargar datos...</td></tr></tbody>
-                    </table></div></div>
-                </div>
 
                 <div id="moduloStatusTaller" class="modulo-wrapper" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
