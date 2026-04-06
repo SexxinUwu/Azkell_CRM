@@ -21,11 +21,11 @@ async function iniciarSesion(event, formObj) {
         const respuesta = await response.json();
 
         if (respuesta.exito) {
-            localStorage.setItem('crm_user', respuesta.nombre);
-            localStorage.setItem('crm_rol', respuesta.rol);
-            localStorage.setItem('crm_correo', formObj.correo.value);
-            localStorage.setItem('crm_permisos', respuesta.permisos || '{}');
-            localStorage.setItem('crm_ultimo_acceso', Date.now());
+            localStorage.setItem('fleet_user', respuesta.nombre);
+            localStorage.setItem('fleet_rol', respuesta.rol);
+            localStorage.setItem('fleet_correo', formObj.correo.value);
+            localStorage.setItem('fleet_permisos', respuesta.permisos || '{}');
+            localStorage.setItem('fleet_ultimo_acceso', Date.now());
             formObj.reset();
             btn.disabled = false;
             btn.innerHTML = 'Ingresar al Sistema';
