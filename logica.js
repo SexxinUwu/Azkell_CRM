@@ -199,9 +199,24 @@ window.verificarSesionGuardada = function() {
             poblarSelectsFormularios(d);
         }
         recargarWialon();
+        // Si el usuario llegó a Fleetrun antes que las placas cargaran, re-renderizar ahora con el filtro correcto
+        if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
+            && typeof mostrarFleetrun === 'function'
+            && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
+            mostrarFleetrun(dataGlobalFleetrun);
+        }
     }).obtenerDatosPlacas();
     google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
     google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
+
+    // Precarga Fleetrun: llenar window.dataGlobalFleetrun y disparar re-render si el usuario ya está en ese módulo
+    google.script.run.withSuccessHandler(d => {
+        window.dataGlobalFleetrun = d;
+        dataGlobalFleetrun = d;
+        if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun') {
+            if (typeof window.init_fleetrun === 'function') window.init_fleetrun();
+        }
+    }).obtenerDatosFleetrun();
 }
 
 function cerrarSesion() {
@@ -556,7 +571,6 @@ function recargarModulo(nombre) {
 const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'] };
 
 window.cambiarModulo = function(modulo, idBoton) {
-    localStorage.setItem('ultimoModuloCRM', modulo);
     let bloqueado = false;
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
@@ -2619,22 +2633,7 @@ window.enviarWhatsAppOT = function(index) {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
 };
 
-// ============================================================
-// GESTOR DE PERSISTENCIA (ANTI-RECARGA INFALIBLE)
-// ============================================================
-setTimeout(() => {
-    const moduloGuardado = localStorage.getItem('ultimoModuloCRM');
-    if (moduloGuardado && moduloGuardado !== 'dash' && moduloGuardado !== 'dashboard') {
-        let btnMenu = document.querySelector(`[onclick*="cambiarModulo('${moduloGuardado}'"]`);
-        if (btnMenu) {
-            cambiarModulo(moduloGuardado, btnMenu);
-        } else {
-            document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
-            let mod = document.getElementById(moduloGuardado === 'ordenes' ? 'moduloOrdenes' : moduloGuardado === 'status' ? 'moduloStatusTaller' : 'modulo' + moduloGuardado.charAt(0).toUpperCase() + moduloGuardado.slice(1));
-            if (mod) mod.style.display = 'block';
-        }
-    }
-}, 300);
+// [ELIMINADO] Gestor de persistencia legacy (ultimoModuloCRM) — reemplazado por fleet_rutaActual en cargarModuloAislado
 
 
 // 🔥 GUARDAR UNA NUEVA OT HIJA
