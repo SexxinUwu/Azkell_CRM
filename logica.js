@@ -586,8 +586,68 @@ window.cambiarModulo = function(modulo, idBoton) {
 }
 
 // =====================================================================
-// 🚀 ROUTER EMPRESARIAL: Carga módulos desde subcarpetas físicamente
+// 🗺️ ROUTER UX: Títulos, Menú Activo y Persistencia de Ruta
 // =====================================================================
+
+const TITULOS_MODULOS = {
+    'dashboard':                   'Centro de Comando',
+    'mantenimiento/inspecciones':  'Análisis de Inspecciones',
+    'mantenimiento/placas':        'Gestión de Placas',
+    'mantenimiento/fleetrun':      'Sistema Fleetrun',
+    'almacen/inventario':          'Inventario',
+    'flota/status':                'Status de Flota',
+    'directorio/conductores':      'Directorio de Conductores',
+    'sistema/usuarios':            'Gestión de Usuarios',
+    'sistema/auditoria':           'Bitácora de Auditoría',
+};
+
+const MENU_IDS = {
+    'dashboard':                  'nav-dashboard',
+    'mantenimiento/inspecciones': 'btnMenuStatusMant',
+    'mantenimiento/placas':       'btnMenuPlacasMant',
+    'mantenimiento/fleetrun':     'btnMenuFleetrun',
+    'almacen/inventario':         'btnMenuInventario',
+    'flota/status':               'btnMenuStatusFlota',
+    'directorio/conductores':     'btnMenuConductores',
+    'sistema/usuarios':           'nav-usuarios',
+    'sistema/auditoria':          'nav-auditoria',
+};
+
+const SUBMENU_PADRE = {
+    'mantenimiento': 'menuMantenimiento',
+    'almacen':       'menuAlmacen',
+    'flota':         'menuFlota',
+    'directorio':    'menuDirectorio',
+};
+
+function actualizarTituloHeader(ruta) {
+    const titulo = document.getElementById('tituloTopBar');
+    if (titulo) titulo.innerText = TITULOS_MODULOS[ruta] || 'Azkell Fleet';
+}
+
+function marcarMenuActivo(ruta) {
+    // 1. Quitar clase active de todos los links del sidebar
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+
+    // 2. Marcar el link correspondiente
+    const idActivo = MENU_IDS[ruta];
+    if (idActivo) {
+        const el = document.getElementById(idActivo);
+        if (el) el.classList.add('active');
+    }
+
+    // 3. Expandir el grupo de submenú que lo contiene (si aplica)
+    const grupoPadre = ruta.split('/')[0];
+    const idSubMenu = SUBMENU_PADRE[grupoPadre];
+    if (idSubMenu) {
+        const subMenu = document.getElementById(idSubMenu);
+        if (subMenu && !subMenu.classList.contains('show')) {
+            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(subMenu, { toggle: false });
+            bsCollapse.show();
+        }
+    }
+}
+
 window.cargarModuloAislado = async function(rutaModulo) {
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
     if (rutaModulo !== 'login') localStorage.setItem('fleet_rutaActual', rutaModulo);
@@ -616,6 +676,10 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const respHTML = await fetch(`/modulos/${rutaModulo}/vista.html`);
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en /modulos/${rutaModulo}`);
         root.innerHTML = await respHTML.text();
+
+        // UX: actualizar título del header y resaltar enlace activo en el sidebar
+        actualizarTituloHeader(rutaModulo);
+        marcarMenuActivo(rutaModulo);
 
         // 4. Crear un ID único para el script (ej: script-mantenimiento-placas)
         const scriptId = `script-${rutaModulo.replace('/', '-')}`;

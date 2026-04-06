@@ -3,11 +3,11 @@
 // Aislado en SPA: Modulos/Mantenimiento/fleetrun/
 // ================================================================
 
-// 🔥 VARIABLES GLOBALES FLEETRUN
-let dataGlobalFleetrun = [];
-let isHistorialFleetrun = false;
-let expandAllState = false;
-let chartDashFleetrunInst = null;
+// 🔥 VARIABLES GLOBALES FLEETRUN (patrón seguro para SPA: evita redeclaración en re-visita)
+window.dataGlobalFleetrun   = window.dataGlobalFleetrun   || [];
+window.isHistorialFleetrun  = window.isHistorialFleetrun  || false;
+window.expandAllState       = window.expandAllState       || false;
+window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 
 function cargarTablaFleetrun(forzarRefresh = false) { if(!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; } document.getElementById('cuerpoTablaFleetrun').innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun(); }
 

@@ -2,7 +2,7 @@
 <!-- MÓDULO: INSPECCIONES (vista aislada — sin <html>, <head> ni <body>) -->
 <!-- ================================================================ -->
 
-<div id="moduloStatus" class="modulo-wrapper" style="display: block;">
+<div id="moduloStatus" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: block;">
     <div class="controls-row">
         <div class="row mb-3" id="panelGraficosStatus">
             <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2">Flota Total</h6><div class="chart-container-status"><canvas id="chartTotal"></canvas></div></div></div>
@@ -19,7 +19,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span id="cache-badge-statusMant" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusMant">Sin cargar</span></span>
-                <button class="btn-reload-cache" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Forzar recarga desde Firebase"><i class="bi bi-arrow-clockwise"></i> Actualizar BD</button>
+                <button class="btn-reload-cache" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
                 <button class="btn btn-outline-warning fw-bold btn-sm text-dark" id="btnToggleGraficos" onclick="toggleGraficosStatus()"><i class="bi bi-eye-slash-fill"></i> Gráficos</button>
                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllStatusGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorialStatus" onclick="toggleVistaStatus()"><i class="bi bi-clock-history"></i> Historial</button>
