@@ -78,17 +78,10 @@ const CACHE = { placas: null, fleetrun: null, usuarios: null, statusMant: null, 
 const CACHE_TIME = {};
 
 let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
-let dataGlobalOrdenes = [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false;
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = {};
 let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null;
-// 🔥 NUEVAS VARIABLES PARA EL DASHBOARD
-let mapDashboardInst = null;
-let chartDashboardInst = null;
-let chartDashFleetrunInst = null;
-let chartGeneralInspeccionesInst = null;
-let chartTiposInspeccionInst = null;
 Chart.register(ChartDataLabels); 
 
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
@@ -120,9 +113,16 @@ window.verificarSesionGuardada = function() {
     } catch(e) { permisosUsuario = {}; }
 
     // --- Topbar ---
-    document.getElementById('nombre-usuario-top').innerText = usuarioLogueado;
-    document.getElementById('perfil-nombre').innerText = usuarioLogueado;
-    if (guardadoCorreo) document.getElementById('perfil-correo').innerText = guardadoCorreo;
+    let nombreUsuarioTopEl = document.getElementById('nombre-usuario-top');
+    if (nombreUsuarioTopEl) nombreUsuarioTopEl.innerText = usuarioLogueado;
+
+    let perfilNombreEl = document.getElementById('perfil-nombre');
+    if (perfilNombreEl) perfilNombreEl.innerText = usuarioLogueado;
+
+    if (guardadoCorreo) {
+        let perfilCorreoEl = document.getElementById('perfil-correo');
+        if (perfilCorreoEl) perfilCorreoEl.innerText = guardadoCorreo;
+    }
     let inputInsp = document.getElementById('input-inspector-nuevo'); if (inputInsp) inputInsp.value = usuarioLogueado;
 
     let p = permisosUsuario || {};
@@ -176,17 +176,28 @@ window.verificarSesionGuardada = function() {
     safe('wrap-usuarios',  isAdm);
     safe('wrap-auditoria', isAdm || p?.mod_auditoria);
 
-    // --- Mostrar app y dashboard ---
-    document.getElementById('root-dinamico').style.display = 'none';
-    document.getElementById('app-crm').style.display = 'flex';
-    cambiarModulo('dashboard', 'nav-dashboard');
+    // --- Mostrar app y cargar módulo guardado o por defecto ---
+    let rootDinamico = document.getElementById('root-dinamico');
+    if (rootDinamico) rootDinamico.style.display = 'none';
+
+    let appCrmEl = document.getElementById('app-crm');
+    if (appCrmEl) appCrmEl.style.display = 'flex';
+
+    let rutaGuardada = localStorage.getItem('crm_rutaActual');
+    if (rutaGuardada) {
+        cargarModuloAislado(rutaGuardada);
+    } else {
+        cargarModuloAislado('dashboard');
+    }
 
     // --- Precarga de datos ---
     google.script.run.withSuccessHandler(d => {
         dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
         let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
         rellenarDatalist('dl-placas', placasSet);
-        poblarSelectsFormularios(d);
+        if (typeof poblarSelectsFormularios === 'function') {
+            poblarSelectsFormularios(d);
+        }
         recargarWialon();
     }).obtenerDatosPlacas();
     google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
@@ -201,7 +212,8 @@ function cerrarSesion() {
     ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => { const el = document.getElementById(id); if (!el) return; el.classList.remove('show'); el.style.display = 'none'; const inst = bootstrap.Collapse.getInstance(el); if (inst) inst.dispose(); });
     document.querySelectorAll('.modulo-wrapper').forEach(m => m.style.display = 'none');
 
-    document.getElementById('app-crm').style.display = 'none';
+    let appCrmEl2 = document.getElementById('app-crm');
+    if (appCrmEl2) appCrmEl2.style.display = 'none';
     cargarModuloAislado('login');
 }
 
@@ -341,15 +353,18 @@ function inicializarMenu() {
     } else {
         // Si no tiene acceso a NADA (Usuario nuevo sin permisos)
         console.warn("El usuario no tiene permisos para ningún módulo.");
-        document.getElementById('contenedorPrincipal').innerHTML = `
-            <div class="container text-center mt-5">
-                <div class="card shadow-lg p-5 bg-light border-warning">
-                    <i class="bi bi-shield-lock-fill text-warning" style="font-size: 4rem;"></i>
-                    <h2 class="mt-3 text-dark">Acceso Restringido</h2>
-                    <p class="lead text-muted">Su cuenta está activa, pero aún no tiene módulos asignados.<br>Por favor, contacte al administrador para configurar sus accesos.</p>
+        let contenedorPrincipalEl = document.getElementById('contenedorPrincipal');
+        if (contenedorPrincipalEl) {
+            contenedorPrincipalEl.innerHTML = `
+                <div class="container text-center mt-5">
+                    <div class="card shadow-lg p-5 bg-light border-warning">
+                        <i class="bi bi-shield-lock-fill text-warning" style="font-size: 4rem;"></i>
+                        <h2 class="mt-3 text-dark">Acceso Restringido</h2>
+                        <p class="lead text-muted">Su cuenta está activa, pero aún no tiene módulos asignados.<br>Por favor, contacte al administrador para configurar sus accesos.</p>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 }
 
@@ -387,7 +402,8 @@ function recargarWialon(forzarVista = false) {
             
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
             if (document.getElementById('moduloStatus')?.style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
-            if (document.getElementById('moduloFleetrun').style.display === 'flex') mostrarFleetrun(dataGlobalFleetrun);
+            let modFleetrunEl = document.getElementById('moduloFleetrun');
+            if (modFleetrunEl && modFleetrunEl.style.display === 'flex') mostrarFleetrun(dataGlobalFleetrun);
             if (document.getElementById('moduloUbicacion').style.display === 'flex' || forzarVista) mostrarUbicaciones(d);
         } else {
             if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
@@ -408,10 +424,14 @@ function buscarWialonPorPlaca(placa) {
 }
 
 function abrirMapaFlotante(placa, lat, lng) {
-    document.getElementById('mapa-placa-titulo').innerText = placa;
-    // Usamos el Iframe gratuito de Google Maps
-    document.getElementById('iframeMapaGPS').src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
-    new bootstrap.Modal(document.getElementById('modalMapaGPS')).show();
+    let mapaTituloEl = document.getElementById('mapa-placa-titulo');
+    if (mapaTituloEl) mapaTituloEl.innerText = placa;
+
+    let iframeMapaEl = document.getElementById('iframeMapaGPS');
+    if (iframeMapaEl) iframeMapaEl.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+
+    let modalMapaEl = document.getElementById('modalMapaGPS');
+    if (modalMapaEl) new bootstrap.Modal(modalMapaEl).show();
 }
 
 function mostrarUbicaciones(datosWialon) {
@@ -442,7 +462,8 @@ function mostrarUbicaciones(datosWialon) {
             </tr>`;
         });
     }
-    document.getElementById('cuerpoTablaUbicacion').innerHTML = html;
+    let cuerpoTablaUbicacionEl = document.getElementById('cuerpoTablaUbicacion');
+    if (cuerpoTablaUbicacionEl) cuerpoTablaUbicacionEl.innerHTML = html;
 }
 
 function tiempoDesde(ts) {
@@ -528,15 +549,8 @@ function recargarModulo(nombre) {
     statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones')
   };
   if (acciones[nombre]) acciones[nombre]();
-  if (nombre === 'status' || nombre === 'todos') {
-    if (window.cargarCatalogosTaller) window.cargarCatalogosTaller();
-    if (window.cargarTableroStatus) window.cargarTableroStatus();
-  }
-  if (nombre === 'ordenes' || nombre === 'todos') {
-    if (window.cargarCatalogosTaller) window.cargarCatalogosTaller();
-    if (window.cargarOrdenesTablero) window.cargarOrdenesTablero();
-  }
 }
+
 
 
 const PERMISOS_MODULO = { 'placas': ['Administrador', 'Inspector', 'Mantenimiento'], 'almacenPlacas': ['Administrador', 'Inspector', 'Almacén', 'Almacen'], 'statusMant': ['Administrador', 'Inspector', 'Mantenimiento'], 'statusFlota': ['Administrador', 'Inspector', 'Flota'], 'fleetrun': ['Administrador', 'Inspector', 'Mantenimiento'], 'auditoria': ['Administrador'], 'ubicacion': ['Administrador', 'Flota', 'Inspector', 'Mantenimiento'] };
@@ -561,35 +575,11 @@ window.cambiarModulo = function(modulo, idBoton) {
     if (idBoton) { const btnActivo = document.getElementById(idBoton); if (btnActivo) btnActivo.classList.add('active'); }
     const titulo = document.getElementById('tituloTopBar');
 
-    if (modulo === 'dashboard') { let el=document.getElementById('moduloDashboard'); if(el) el.style.display = 'flex'; titulo.innerText = 'Centro de Comando'; recargarDashboard(); }
-    else if (modulo === 'status') {
-        let el = document.getElementById('moduloStatusTaller');
-        if(el) el.style.display = 'block';
-        titulo.innerText = 'Status del Taller';
-        window.moduloActualTallerMaster = 'status'; // 🔥 flag para toggleFabMenu
-        if(window.cargarCatalogosTaller) window.cargarCatalogosTaller();
-        if(window.cargarTableroStatus) window.cargarTableroStatus();
-
-        // 🔥 INYECTAR OPCIÓN EN EL BOTÓN FLOTANTE "MÁS" GLOBAL (+)
-        let fabContent = document.getElementById('fabActionListContent');
-        let btnFab = document.getElementById('btnFabMain');
-        if (fabContent && btnFab) {
-            fabContent.innerHTML = `
-                <div class="d-flex align-items-center justify-content-end gap-2 mb-2" onclick="abrirIngresoUnidad(); if(window.toggleFabMenu) toggleFabMenu();" style="cursor: pointer;">
-                    <span class="badge bg-danger shadow-sm px-3 py-2" style="font-size: 0.9rem;">Registrar Ingreso</span>
-                    <button class="btn btn-danger rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;">
-                        <i class="bi bi-car-front-fill"></i>
-                    </button>
-                </div>
-            `;
-            btnFab.style.display = 'flex';
-        }
-    }
-    else if (modulo === 'ordenes') { let el=document.getElementById('moduloOrdenes'); if(el) el.style.display = 'block'; titulo.innerText = 'Órdenes de Trabajo'; if(window.cargarCatalogosTaller) window.cargarCatalogosTaller(); if(window.cargarOrdenesTablero) window.cargarOrdenesTablero(); }
-    else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
-    else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
+    if (modulo === 'dashboard') { cargarModuloAislado('dashboard'); }
+    else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
+    else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
     else if (modulo === 'statusMant') { cargarModuloAislado('mantenimiento/inspecciones'); }
-    else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
+    else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
 
     if (window.innerWidth <= 768) closeSidebar();
     aplicarPermisosBotonesUI();
@@ -599,6 +589,9 @@ window.cambiarModulo = function(modulo, idBoton) {
 // 🚀 ROUTER EMPRESARIAL: Carga módulos desde subcarpetas físicamente
 // =====================================================================
 window.cargarModuloAislado = async function(rutaModulo) {
+    // 🔒 GUARDAR RUTA ACTUAL PARA PERSISTENCIA
+    localStorage.setItem('crm_rutaActual', rutaModulo);
+
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
         if(el.id && el.id.startsWith('modulo')) el.style.display = 'none';
@@ -610,8 +603,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
 
     // 3. Mostrar nuestro escenario dinámico y poner un spinner
     const root = document.getElementById('root-dinamico');
-    root.style.display = 'block';
-    root.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted fw-bold">Cargando módulo...</p></div>';
+    if (root) {
+        root.style.display = 'block';
+        root.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted fw-bold">Cargando módulo...</p></div>';
+    } else {
+        console.error('Elemento root-dinamico no encontrado');
+        return;
+    }
 
     try {
         // 3. Traer el diseño (HTML) desde la carpeta específica
@@ -644,16 +642,18 @@ window.cargarModuloAislado = async function(rutaModulo) {
             }
         }
     } catch(e) {
-        root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
+        if (root) root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
     }
 };
 
 function procesadorErroresCuota(datos, containerId) {
-    if (typeof datos === 'string' && datos.includes('ERROR_BACKEND')) { 
+    if (typeof datos === 'string' && datos.includes('ERROR_BACKEND')) {
         let msg = datos;
         if(datos.includes('Quota exceeded') || datos.includes('Límite')) msg = "🚨 <b>Límite de Lecturas de Firebase Alcanzado (50,000 al día)</b>.<br>El sistema se ha pausado por hoy para no generar cobros. Usa tu caché local o se reactivará solo a medianoche.";
-        document.getElementById(containerId).innerHTML = `<tr><td colspan="15" class="text-center py-5 text-danger fs-6">${msg}</td></tr>`; 
-        return true; 
+
+        let containerEl = document.getElementById(containerId);
+        if (containerEl) containerEl.innerHTML = `<tr><td colspan="15" class="text-center py-5 text-danger fs-6">${msg}</td></tr>`;
+        return true;
     }
     return false;
 }
@@ -723,9 +723,7 @@ function actualizarColoresGraficos() {
         typeof chartTotalInst !== 'undefined' ? chartTotalInst : null,
         typeof chartMotorasInst !== 'undefined' ? chartMotorasInst : null,
         typeof chartNoMotorasInst !== 'undefined' ? chartNoMotorasInst : null,
-        typeof chartDashFleetrunInst !== 'undefined' ? chartDashFleetrunInst : null,
-        typeof chartFleetrunInst !== 'undefined' ? chartFleetrunInst : null,
-        typeof chartGeneralInspeccionesInst !== 'undefined' ? chartGeneralInspeccionesInst : null
+        typeof chartFleetrunInst !== 'undefined' ? chartFleetrunInst : null
     ];
 
     const isDark = document.body.classList.contains('dark');
@@ -867,8 +865,25 @@ function rellenarDatalist(id, setObj) {
     }
 }
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[2] && p[2].trim() !== "" && p[2].trim() !== "-"); if (match) { rucInput.value = match[2].trim(); } }
-function rellenarFiltroCheck(idLista, setObj, fnName) { const ul = document.getElementById(idLista); if (!ul) return; ul.innerHTML = ''; Array.from(setObj).sort().forEach(v => { if (v.trim() && v.trim() !== '-') { ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`; } }); }
-function cargarTablaFleetrun(forzarRefresh = false) { if(!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; } document.getElementById('cuerpoTablaFleetrun').innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun(); }
+function rellenarFiltroCheck(idLista, setObj, fnName) {
+    const ul = document.getElementById(idLista);
+    if (!ul) return;
+    ul.innerHTML = '';
+    Array.from(setObj).sort().forEach(v => {
+        if (v.trim() && v.trim() !== '-') {
+            ul.innerHTML += `<li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="${v}" onchange="${fnName}()"> ${v}</label></li>`;
+        }
+    });
+}
+function cargarTablaFleetrun(forzarRefresh = false) {
+    if(!forzarRefresh && dataGlobalFleetrun.length > 0) {
+        mostrarFleetrun(dataGlobalFleetrun);
+        return;
+    }
+    let cuerpoTablaFleetrunEl = document.getElementById('cuerpoTablaFleetrun');
+    if (cuerpoTablaFleetrunEl) cuerpoTablaFleetrunEl.innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
+    google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun();
+}
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
 function toggleGroupRow(className, trElement) { let rows = document.querySelectorAll('.' + className); let icon = trElement.querySelector('i'); let isHidden = false; if(rows.length > 0) isHidden = rows[0].style.display === 'none'; rows.forEach(row => { row.style.display = isHidden ? '' : 'none'; }); if(icon) { icon.className = isHidden ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } }
 function toggleAllFleetrunGroups() { expandAllState = !expandAllState; const rows = document.querySelectorAll('.child-row-fleetrun'); const icons = document.querySelectorAll('#cuerpoTablaFleetrun .group-header i'); rows.forEach(row => { let header = row.previousElementSibling; while(header && !header.classList.contains('group-header')) { header = header.previousElementSibling; } if(header && header.style.display !== 'none') { row.style.display = expandAllState ? '' : 'none'; } }); icons.forEach(i => { if(i.classList.contains('text-warning')) { i.className = expandAllState ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } }); }
@@ -949,7 +964,8 @@ function mostrarFleetrun(datos) {
       });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
   }
-  document.getElementById('cuerpoTablaFleetrun').innerHTML = html;
+  let cuerpoTablaFleetrunEl2 = document.getElementById('cuerpoTablaFleetrun');
+  if (cuerpoTablaFleetrunEl2) cuerpoTablaFleetrunEl2.innerHTML = html;
   let kpiV = document.getElementById('kpi-fleet-vigentes'); if(kpiV) kpiV.textContent = cntVig;
   let kpiP = document.getElementById('kpi-fleet-porvencer'); if(kpiP) kpiP.textContent = cntPV;
   let kpiVe = document.getElementById('kpi-fleet-vencidos'); if(kpiVe) kpiVe.textContent = cntVenc;
@@ -1173,11 +1189,15 @@ window.mostrarDetalleFleetrun = function(index) {
         `;
     }
 
-    document.getElementById('detalleFleetrunContenido').innerHTML = html;
+    let detalleFleetrunEl = document.getElementById('detalleFleetrunContenido');
+    if (detalleFleetrunEl) detalleFleetrunEl.innerHTML = html;
+
     let offcanvasElement = document.getElementById('offcanvasFleetrun');
-    let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
-    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
-    bsOffcanvas.show();
+    if (offcanvasElement) {
+        let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+        if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
+        bsOffcanvas.show();
+    }
 };
 function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = p[3]; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
@@ -1197,8 +1217,51 @@ window.obtenerDireccion = async function(lat, lng, btn) {
     }
 };
 
-function filtrarTabla(idTabla, idBuscador) { const filtro = document.getElementById(idBuscador || 'buscadorAuditoria')?.value.toLowerCase() || ''; const filas = document.getElementById(idTabla).getElementsByTagName('tr'); for (let i = 1; i < filas.length; i++) { const textoFila = filas[i].textContent || filas[i].innerText; filas[i].style.display = textoFila.toLowerCase().indexOf(filtro) > -1 ? '' : 'none'; } }
-function eliminarRegistro(id, coleccion) { itemAEliminarID = id; itemAEliminarCol = coleccion; document.getElementById('delete-record-id').innerText = id; const input = document.getElementById('input-confirmar-eliminar'); input.value = ''; document.getElementById('msg-error-eliminar').style.display = 'none'; const label = document.getElementById('label-confirmar'); const hint = document.getElementById('hint-azkell'); if (coleccion === 'Usuarios') { label.innerHTML = 'Ingresa la <span class="text-danger fw-bold border-bottom border-danger pb-1">Clave Maestra</span> para confirmar'; input.placeholder = ''; input.type = 'password'; if (hint) hint.style.display = 'block'; } else { label.innerHTML = 'Escribe la palabra <span class="text-danger fw-bold border-bottom border-danger pb-1">Si</span> para confirmar'; input.placeholder = 'Si'; input.type = 'text'; if (hint) hint.style.display = 'none'; } new bootstrap.Modal(document.getElementById('modalConfirmarEliminar')).show(); }
+function filtrarTabla(idTabla, idBuscador) {
+    const filtro = document.getElementById(idBuscador || 'buscadorAuditoria')?.value.toLowerCase() || '';
+    const tablaEl = document.getElementById(idTabla);
+    if (!tablaEl) return;
+    const filas = tablaEl.getElementsByTagName('tr');
+    for (let i = 1; i < filas.length; i++) {
+        const textoFila = filas[i].textContent || filas[i].innerText;
+        if (filas[i]) filas[i].style.display = textoFila.toLowerCase().indexOf(filtro) > -1 ? '' : 'none';
+    }
+}
+function eliminarRegistro(id, coleccion) {
+    itemAEliminarID = id;
+    itemAEliminarCol = coleccion;
+
+    let deleteRecordIdEl = document.getElementById('delete-record-id');
+    if (deleteRecordIdEl) deleteRecordIdEl.innerText = id;
+
+    const input = document.getElementById('input-confirmar-eliminar');
+    if (input) input.value = '';
+
+    let msgErrorEl = document.getElementById('msg-error-eliminar');
+    if (msgErrorEl) msgErrorEl.style.display = 'none';
+
+    const label = document.getElementById('label-confirmar');
+    const hint = document.getElementById('hint-azkell');
+
+    if (coleccion === 'Usuarios') {
+        if (label) label.innerHTML = 'Ingresa la <span class="text-danger fw-bold border-bottom border-danger pb-1">Clave Maestra</span> para confirmar';
+        if (input) {
+            input.placeholder = '';
+            input.type = 'password';
+        }
+        if (hint) hint.style.display = 'block';
+    } else {
+        if (label) label.innerHTML = 'Escribe la palabra <span class="text-danger fw-bold border-bottom border-danger pb-1">Si</span> para confirmar';
+        if (input) {
+            input.placeholder = 'Si';
+            input.type = 'text';
+        }
+        if (hint) hint.style.display = 'none';
+    }
+
+    let modalEl = document.getElementById('modalConfirmarEliminar');
+    if (modalEl) new bootstrap.Modal(modalEl).show();
+}
 
 function procesarEliminacion() {
     const inputVal = document.getElementById('input-confirmar-eliminar').value.trim();
@@ -1318,7 +1381,8 @@ function mostrarUsuarios(datos) {
             html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td class="fw-bold" style="color:#1e293b;">${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td>${rolBadge}</td><td>${estadoBadge}</td><td>${menuAcciones}</td></tr>`;
         });
     }
-    document.getElementById('cuerpoTablaUsuarios').innerHTML = html;
+    let cuerpoTablaUsuariosEl = document.getElementById('cuerpoTablaUsuarios');
+    if (cuerpoTablaUsuariosEl) cuerpoTablaUsuariosEl.innerHTML = html;
 }
 
 function generarMatrizUI() {
@@ -1391,18 +1455,20 @@ function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
     let filaData = idBusqueda ? dataGlobalUsuarios.find(u => u[0] === idBusqueda) : null;
 
     if (!filaData) {
-        document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-person-plus-fill text-success"></i> Crear Nuevo Personal';
+        let tituloModalUserEl = document.getElementById('tituloModalUser');
+        if (tituloModalUserEl) tituloModalUserEl.innerHTML = '<i class="bi bi-person-plus-fill text-success"></i> Crear Nuevo Personal';
         document.getElementById('gu_id').value = '';
     } else {
+        let tituloModalUserEl = document.getElementById('tituloModalUser');
         if (esClon) {
-            document.getElementById('tituloModalUser').innerHTML = `<i class="bi bi-copy text-success"></i> Clonando permisos de: ${filaData[1]}`;
+            if (tituloModalUserEl) tituloModalUserEl.innerHTML = `<i class="bi bi-copy text-success"></i> Clonando permisos de: ${filaData[1]}`;
             document.getElementById('gu_id').value = '';
             document.getElementById('gu_nombre').value = '';
             document.getElementById('gu_correo').value = '';
             document.getElementById('gu_password').value = '';
             document.getElementById('gu_cargo').value = filaData[2];
         } else {
-            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-pencil-square text-warning"></i> Editar Accesos de Personal';
+            if (tituloModalUserEl) tituloModalUserEl.innerHTML = '<i class="bi bi-pencil-square text-warning"></i> Editar Accesos de Personal';
             document.getElementById('gu_id').value = filaData[0];
             document.getElementById('gu_nombre').value = filaData[1];
             document.getElementById('gu_cargo').value = filaData[2];
@@ -1437,7 +1503,7 @@ function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
         if (modAud) modAud.checked = !!pObj.mod_auditoria;
 
         if ((filaData[3] || '').trim().toLowerCase() === 'admin@azkell.com' && !esClon) {
-            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-shield-lock-fill text-warning"></i> Cuenta Fundador (Intocable)';
+            if (tituloModalUserEl) tituloModalUserEl.innerHTML = '<i class="bi bi-shield-lock-fill text-warning"></i> Cuenta Fundador (Intocable)';
             if (adminSwitch) { adminSwitch.checked = true; adminSwitch.disabled = true; }
             toggleAdminUI(true);
             document.getElementById('gu_estado').value = 'Activo';
@@ -1445,7 +1511,8 @@ function abrirModalGestorUsuario(idBusqueda = null, esClon = false) {
             document.getElementById('gu_correo').readOnly = true;
         }
     }
-    new bootstrap.Modal(document.getElementById('modalGestorUsuario')).show();
+    let modalGestorEl = document.getElementById('modalGestorUsuario');
+    if (modalGestorEl) new bootstrap.Modal(modalGestorEl).show();
 }
 
 function procesarGuardadoUsuario(event, formObj) {
@@ -1689,13 +1756,15 @@ document.getElementById('btn-install-sidebar')?.addEventListener('click', async 
         }
 
         deferredPrompt = null;
-        document.getElementById('contenedor-instalar').style.display = 'none';
+        let contenedorInstallEl1 = document.getElementById('contenedor-instalar');
+        if (contenedorInstallEl1) contenedorInstallEl1.style.display = 'none';
     }
 });
 
 // 3. Ocultar si ya se instaló
 window.addEventListener('appinstalled', () => {
-    document.getElementById('contenedor-instalar').style.display = 'none';
+    let contenedorInstallEl2 = document.getElementById('contenedor-instalar');
+    if (contenedorInstallEl2) contenedorInstallEl2.style.display = 'none';
     console.log('Azkell CRM fue instalado como App nativa');
 });
 
@@ -1738,22 +1807,34 @@ function inicializarConductoresDatalist(inputID, datalistID) {
 // ============================================================
 
 function abrirSpotlight() {
-    document.getElementById('spotlight-overlay').style.display = 'flex';
-    setTimeout(() => document.getElementById('spotlight-input').focus(), 100);
+    let spotlightOverlayEl = document.getElementById('spotlight-overlay');
+    if (spotlightOverlayEl) spotlightOverlayEl.style.display = 'flex';
+
+    setTimeout(() => {
+        let spotlightInputEl = document.getElementById('spotlight-input');
+        if (spotlightInputEl) spotlightInputEl.focus();
+    }, 100);
 }
 
 function cerrarSpotlight() {
-    document.getElementById('spotlight-overlay').style.display = 'none';
-    document.getElementById('spotlight-input').value = '';
-    document.getElementById('spotlight-results').innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size: 3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar mágicamente en todo el CRM.</small></div>';
+    let spotlightOverlayEl2 = document.getElementById('spotlight-overlay');
+    if (spotlightOverlayEl2) spotlightOverlayEl2.style.display = 'none';
+
+    let spotlightInputEl2 = document.getElementById('spotlight-input');
+    if (spotlightInputEl2) spotlightInputEl2.value = '';
+
+    let spotlightResultsEl = document.getElementById('spotlight-results');
+    if (spotlightResultsEl) spotlightResultsEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size: 3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar mágicamente en todo el CRM.</small></div>';
 }
 
 // Atajos de teclado Pro (Ctrl+K o Cmd+K para abrir, ESC para cerrar)
 document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault(); abrirSpotlight();
+        e.preventDefault();
+        abrirSpotlight();
     }
-    if (e.key === 'Escape' && document.getElementById('spotlight-overlay').style.display === 'flex') {
+    let spotlightOverlayEl3 = document.getElementById('spotlight-overlay');
+    if (e.key === 'Escape' && spotlightOverlayEl3 && spotlightOverlayEl3.style.display === 'flex') {
         cerrarSpotlight();
     }
 });
@@ -2085,120 +2166,6 @@ window.updateGraficoFleetrun = function(vigentes, porVencer, vencidos) {
 };
 
 // ============================================================
-// 📊 DASHBOARD — GRÁFICO FLEETRUN
-// ============================================================
-
-window.procesarFleetrunParaDashboard = function() {
-    if (!dataGlobalFleetrun || dataGlobalFleetrun.length === 0 || !dataGlobalPlacas || dataGlobalPlacas.length === 0) {
-        setTimeout(procesarFleetrunParaDashboard, 500);
-        return;
-    }
-
-    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
-    let parseFecha = (str) => {
-        if(!str) return 0;
-        if(str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
-        return new Date(str).getTime() || 0;
-    };
-
-    let mapa = new Map();
-    [...dataGlobalFleetrun].sort((a,b) => parseFecha(b[3]) - parseFecha(a[3])).forEach(row => {
-        let placa = normalizeStr(row[4]);
-        let tipo = normalizeStr(row[8]);
-        let key = placa + "_" + tipo;
-
-        let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
-        if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
-            // Guardamos tanto la fila como la info de la placa
-            mapa.set(key, { row: row, infoPlaca: infoPlaca });
-        }
-    });
-
-    let datosActuales = Array.from(mapa.values());
-
-    datosActuales.forEach((item) => {
-        let fila = item.row;
-        let infoPlaca = item.infoPlaca;
-
-        let placaRaw = fila[4];
-        let km_prox = parseFloat(fila[11]) || 0;
-
-        // 🔥 REGLA DE ORO: Si Placas (19) está vacío, usa el respaldo de Fleetrun (7)
-        let utsRaw = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (fila[7] || "-");
-
-        let km_gps = 0;
-        let wialonData = buscarWialonPorPlaca(placaRaw);
-        if (wialonData) { km_gps = wialonData.km; }
-
-        let falta_km = km_prox - km_gps;
-
-        if (falta_km <= 0) {
-            cntTotalVenc++;
-        } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) {
-            cntTotalPV++;
-        } else {
-            cntTotalVig++;
-        }
-    });
-
-    updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
-};
-
-window.initGraficoDashFleetrun = function() {
-    let ctx = document.getElementById('chartDashFleetrunStatus');
-    if (!ctx) return null;
-    Chart.defaults.font.family = 'Inter';
-
-    return new Chart(ctx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
-            datasets: [{
-                data: [1, 0, 0],
-                backgroundColor: ['#16a34a', '#eab308', '#dc2626'],
-                borderWidth: 2,
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '65%',
-            layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } },
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { weight: 'bold' } } },
-                datalabels: {
-                    color: document.body.classList.contains('dark') ? '#ffffff' : '#000000',
-                    font: { weight: 'bold', size: 12 },
-                    formatter: (value, context) => {
-                        let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                        if (total === 0 || value === 0 || context.chart.data.labels[0] === 'Sin Datos') return "";
-                        return Math.round((value / total) * 100) + "%";
-                    }
-                }
-            }
-        }
-    });
-};
-
-window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
-    if(!chartDashFleetrunInst) chartDashFleetrunInst = initGraficoDashFleetrun();
-    if(!chartDashFleetrunInst) return;
-    let isDark = document.body.classList.contains('dark');
-    chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    chartDashFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
-    if(vigentes + porVencer + vencidos === 0) {
-        chartDashFleetrunInst.data.labels = ['Sin Datos'];
-        chartDashFleetrunInst.data.datasets[0].data = [1];
-        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
-    } else {
-        chartDashFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
-        chartDashFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
-        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
-    }
-    chartDashFleetrunInst.update();
-};
-
-// ============================================================
 // 🔥 MÓDULO ÓRDENES DE TRABAJO (OT)
 // ============================================================
 
@@ -2211,264 +2178,15 @@ window.cargarCatalogosTaller = function() {
     .catch(e => console.error("Error cargando catálogos:", e));
 };
 
-window.cargarOrdenesTablero = function() {
-    fetch('/api/taller/kanban')
-    .then(res => res.json())
-    .then(r => {
-        if (r.error) return console.error(r.error);
-        dataGlobalOrdenes = r.data || [];
-        renderizarKanban();
-    })
-    .catch(e => console.error("Error cargando OTs Kanban:", e));
-};
 
-window.cargarTableroStatus = function() {
-    fetch('/api/taller/status')
-    .then(res => res.json())
-    .then(r => {
-        if(r.error) return console.error(r.error);
-        window.dataGlobalTallerMaster = r.data || [];
 
-        renderizarFiltrosStatus();
-        aplicarMultiFiltroStatus(); // 🔥 SE FILTRA AUTOMÁTICAMENTE AL CARGAR
-    })
-    .catch(e => console.error("Error cargando status:", e));
-};
 
-// 🔥 DIBUJANTE DEL MULTI-FILTRO (Dropdown con Checkboxes)
-window.renderizarFiltrosStatus = function() {
-    const contenedor = document.getElementById('box-filtros-status');
-    if(!contenedor) return;
 
-    let html = `
-        <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                <i class="bi bi-funnel"></i> Filtrar Situaciones
-            </button>
-            <ul class="dropdown-menu shadow-sm p-2 border-0" style="width: 260px; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">
-                <li>
-                    <div class="form-check border-bottom pb-2 mb-2">
-                        <input class="form-check-input" type="checkbox" id="filtroTodasSit" onchange="toggleTodasSituaciones(this)">
-                        <label class="form-check-label fw-bold" for="filtroTodasSit">Seleccionar Todas</label>
-                    </div>
-                </li>
-    `;
 
-    // Generar checkboxes: Por defecto, todas chequeadas MENOS "Finalizado"
-    catalogosTaller.situaciones.forEach(s => {
-        let esFinalizado = s.nombre.toLowerCase().includes('finalizado');
-        let checkeado = esFinalizado ? '' : 'checked';
 
-        html += `
-                <li>
-                    <div class="form-check mb-1">
-                        <input class="form-check-input chk-situacion" type="checkbox" value="${s.id}" id="chkSit_${s.id}" ${checkeado} onchange="aplicarMultiFiltroStatus()">
-                        <label class="form-check-label text-truncate w-100" for="chkSit_${s.id}">${s.nombre}</label>
-                    </div>
-                </li>
-        `;
-    });
 
-    html += `</ul></div>`;
-    contenedor.innerHTML = html;
-};
 
-// 🔥 MOTOR 1: MARCAR/DESMARCAR TODAS
-window.toggleTodasSituaciones = function(cajaMaestra) {
-    let checkboxes = document.querySelectorAll('.chk-situacion');
-    checkboxes.forEach(chk => chk.checked = cajaMaestra.checked);
-    aplicarMultiFiltroStatus();
-};
 
-// 🔥 MOTOR 2: APLICAR LOS FILTROS SELECCIONADOS
-window.aplicarMultiFiltroStatus = function() {
-    // 1. Obtener todos los IDs que están con el "check" puesto
-    let checkboxes = document.querySelectorAll('.chk-situacion:checked');
-    let idsActivos = Array.from(checkboxes).map(chk => parseInt(chk.value));
-
-    // 2. Controlar la caja maestra "Seleccionar Todas"
-    let todasBox = document.getElementById('filtroTodasSit');
-    if(todasBox) {
-        todasBox.checked = (checkboxes.length === document.querySelectorAll('.chk-situacion').length);
-    }
-
-    // 3. Filtrar los datos en memoria y redibujar las tarjetas
-    let dataFiltrada = window.dataGlobalTallerMaster.filter(u => idsActivos.includes(u.idSituacion));
-    renderizarTableroStatusTaller(dataFiltrada);
-
-    // Limpiamos la barra de búsqueda de texto si se usa el filtro de casillas
-    document.getElementById('busquedaTaller').value = '';
-};
-
-window.renderizarTableroStatusTaller = function(data) {
-    const contenedor = document.getElementById('tableroStatusTaller');
-    if (!contenedor) return;
-    contenedor.innerHTML = '';
-    if (data.length === 0) {
-        contenedor.innerHTML = '<div class="text-center py-5 w-100 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i> No hay unidades activas en Taller</div>';
-        return;
-    }
-    data.forEach(unidad => {
-        contenedor.innerHTML += `
-            <div class="col card-unidad" data-search="${unidad.placa} ${unidad.id_ot || ''}">
-                <div class="card h-100 shadow-sm border-0" style="background-color: var(--surface); color: var(--text); border-radius: 10px;">
-                    <div class="card-header border-0 bg-transparent p-3 pb-1 d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="fs-5 fw-bold text-danger text-uppercase lh-sm d-block">${unidad.placa}</span>
-                            <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-geo-alt"></i> ${unidad.txtRampa || 'Sin Ubicación'}</small>
-                        </div>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-light border-0 py-0 px-2 text-muted shadow-none bg-transparent" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu shadow-sm border-0" style="font-size: 0.85rem;">
-                                <li><a class="dropdown-item text-danger" href="#" onclick="eliminarStatusTaller('${unidad.ticket_entrada}', '${unidad.placa}')"><i class="bi bi-trash"></i> Eliminar Registro</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="card-body p-3 pt-1">
-                        <div class="fw-bold mb-1" style="font-size: 0.8rem;">OT Master: ${unidad.id_ot || '-'}</div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                            <span class="badge bg-secondary shadow-sm" style="font-size: 0.65rem;">${unidad.txtSituacion || '-'}</span>
-                            <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="bi bi-arrow-right-circle text-danger"></i> ${unidad.fase_ot}</small>
-                        </div>
-                    </div>
-                    <div class="card-footer border-0 bg-transparent p-0 overflow-hidden" style="border-radius: 0 0 10px 10px;">
-                        <button class="btn btn-danger w-100 btn-sm rounded-0 fw-bold shadow-none" onclick="abrirExpedienteOTMaster('${unidad.ticket_entrada}')">
-                            <i class="bi bi-folder2-open"></i> Ver Expediente
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-};
-
-window.filtrarTableroStatus = function() {
-    let texto = document.getElementById('busquedaTaller').value.toLowerCase();
-    let tarjetas = document.querySelectorAll('.card-unidad');
-    tarjetas.forEach(card => {
-        let contenido = card.getAttribute('data-search').toLowerCase();
-        card.style.display = contenido.includes(texto) ? 'block' : 'none';
-    });
-};
-
-window.filtrarStatusPorSituacion = function(idSituacion, btnTarget) {
-    let botones = document.getElementById('box-filtros-status').querySelectorAll('button');
-    botones.forEach(b => {
-        b.classList.remove('btn-dark', 'text-white');
-        b.classList.add('btn-outline-secondary');
-    });
-    btnTarget.classList.remove('btn-outline-secondary');
-    btnTarget.classList.add('btn-dark', 'text-white');
-    let dataFiltrada = idSituacion === 0
-        ? window.dataGlobalTallerMaster
-        : window.dataGlobalTallerMaster.filter(u => u.idSituacion == idSituacion);
-    renderizarTableroStatusTaller(dataFiltrada);
-    document.getElementById('busquedaTaller').value = '';
-};
-
-window.abrirExpedienteOTMaster = function(ticket_entrada) {
-    dataGlobalOrdenes = window.dataGlobalTallerMaster || [];
-    let index = dataGlobalOrdenes.findIndex(ot => ot.ticket_entrada === ticket_entrada);
-    if (index !== -1) {
-        verDetalleOT(index);
-    } else {
-        alert("No se pudo cargar el expediente de esta unidad.");
-    }
-};
-
-window.abrirIngresoUnidad = async function() {
-    if (!catalogosTaller || catalogosTaller.rampas.length === 0) {
-        try {
-            let res = await fetch('/api/catalogos_taller');
-            let data = await res.json();
-            if (!data.error) catalogosTaller = data;
-        } catch(e) { console.error("Error forzando catálogos:", e); }
-    }
-    let optRampas = catalogosTaller.rampas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
-    let optSituaciones = catalogosTaller.situaciones.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
-    let optPlacas = dataGlobalPlacas ? dataGlobalPlacas.map(p => `<option value="${p[0]}">${p[2]} - ${p[3]}</option>`).join('') : '';
-
-    let html = `
-        <div class="alert alert-danger shadow-sm border-0 mb-4" style="background-color: rgba(220, 38, 38, 0.1); color: #dc2626;">
-            <i class="bi bi-clipboard-check fw-bold"></i> <strong>RECEPCIÓN DE UNIDAD</strong><br>
-            <small>Registra el ingreso a Taller y asigna su ubicación.</small>
-        </div>
-        <form id="formNuevaOT" onsubmit="guardarNuevaOT(event)">
-            <div class="mb-3">
-                <label class="form-label small fw-bold text-muted"><i class="bi bi-search"></i> Buscar Placa (Ref)</label>
-                <input list="listaPlacasOT" class="form-control text-uppercase shadow-sm" id="otPlaca" placeholder="Escribe para buscar..." autocomplete="off" required>
-                <datalist id="listaPlacasOT">${optPlacas}</datalist>
-                <small class="text-primary mt-1 d-block" style="cursor: pointer;" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle"></i> + Nueva Placa</small>
-            </div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar3"></i> Fecha de Ingreso</label>
-                    <input type="date" class="form-control shadow-sm" id="otFecha" value="${new Date().toISOString().split('T')[0]}" required style="-webkit-appearance: none; -moz-appearance: none;">
-                </div>
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-clock"></i> Hora</label>
-                    <input type="time" class="form-control shadow-sm" id="otHora" value="${new Date().toTimeString().slice(0,5)}" required style="-webkit-appearance: none; -moz-appearance: none;">
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-calendar-x text-danger"></i> Salida Estimada</label>
-                    <input type="date" class="form-control shadow-sm border-danger" id="otFechaEst">
-                </div>
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-clock-history text-danger"></i> Hora Est.</label>
-                    <input type="time" class="form-control shadow-sm border-danger" id="otHoraEst">
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-geo-alt"></i> Ubicación / Rampa</label>
-                    <select class="form-select shadow-sm" id="otRampa" required>
-                        <option value="">Seleccione...</option>
-                        ${optRampas}
-                    </select>
-                </div>
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-tag"></i> Situación</label>
-                    <select class="form-select shadow-sm" id="otSituacion" required>
-                        <option value="">Seleccione...</option>
-                        ${optSituaciones}
-                    </select>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-speedometer"></i> Kilometraje (Opcional)</label>
-                    <input type="number" class="form-control shadow-sm" id="otKm">
-                </div>
-                <div class="col-6">
-                    <label class="form-label small fw-bold text-muted"><i class="bi bi-fuel-pump"></i> Combustible</label>
-                    <select class="form-select shadow-sm" id="otCombustible">
-                        <option value="Reserva">Reserva</option>
-                        <option value="1/4">1/4 Tanque</option>
-                        <option value="1/2">1/2 Tanque</option>
-                        <option value="3/4">3/4 Tanque</option>
-                        <option value="Lleno">Lleno</option>
-                    </select>
-                </div>
-            </div>
-            <div class="mb-4">
-                <label class="form-label small fw-bold text-muted"><i class="bi bi-chat-left-text"></i> Motivo de Ingreso</label>
-                <textarea class="form-control shadow-sm" id="otMotivo" rows="3" placeholder="Ej: Mantenimiento preventivo, falla en frenos..." required></textarea>
-            </div>
-            <button type="submit" class="btn btn-danger w-100 fw-bold shadow-lg py-2">
-                <i class="bi bi-play-circle"></i> Generar Ticket de Visita
-            </button>
-        </form>
-    `;
-    document.getElementById('detalleOTContenido').innerHTML = html;
-    document.getElementById('offcanvasOTLabel').innerHTML = '<i class="bi bi-car-front"></i> Nuevo Ingreso';
-    let bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT'));
-    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasOT'));
-    bsOffcanvas.show();
-};
 
 window.guardarNuevaOT = function(e) {
     e.preventDefault();
@@ -2618,12 +2336,18 @@ window.verDetalleOT = function(index) {
         </div>
     `;
 
-    document.getElementById('detalleOTContenido').innerHTML = html;
-    document.getElementById('offcanvasOTLabel').innerHTML = `Expediente de Unidad`;
+    let detalleOTContenidoEl = document.getElementById('detalleOTContenido');
+    if (detalleOTContenidoEl) detalleOTContenidoEl.innerHTML = html;
 
-    let bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasOT'));
-    if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasOT'));
-    bsOffcanvas.show();
+    let offcanvasOTLabelEl = document.getElementById('offcanvasOTLabel');
+    if (offcanvasOTLabelEl) offcanvasOTLabelEl.innerHTML = `Expediente de Unidad`;
+
+    let offcanvasOTEl = document.getElementById('offcanvasOT');
+    if (offcanvasOTEl) {
+        let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasOTEl);
+        if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasOTEl);
+        bsOffcanvas.show();
+    }
 
     // Disparamos la carga de OTs Hijas automáticamente
     cargarOTHijas(ot.ticket_entrada);
@@ -2724,7 +2448,8 @@ window.abrirEdicionUbicacion = function(ticket, rampaAct, sitAct) {
             </div>
         </div>
     `;
-    document.getElementById(`box-ubicacion-${ticket}`).innerHTML = html;
+    let boxUbicacionEl = document.getElementById(`box-ubicacion-${ticket}`);
+    if (boxUbicacionEl) boxUbicacionEl.innerHTML = html;
 };
 
 window.guardarUbicacion = function(ticket) {
@@ -2760,7 +2485,9 @@ window.calcularTotalOT = function() {
     let margen = Math.min(parseFloat(document.getElementById('otMargen').value) || 0, 99);
     let manoObra = parseFloat(document.getElementById('otManoObra').value) || 0;
     let total = (costo / (1 - (margen / 100))) + manoObra;
-    document.getElementById('otTotalCalculado').innerText = "$ " + total.toFixed(2);
+
+    let otTotalCalculadoEl = document.getElementById('otTotalCalculado');
+    if (otTotalCalculadoEl) otTotalCalculadoEl.innerText = "$ " + total.toFixed(2);
 };
 
 // 🔥 EL MOTOR DE AVANCE KANBAN
@@ -2828,58 +2555,6 @@ window.enviarWhatsAppOT = function(index) {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
 };
 
-// WIDGET DE RAMPAS EN VIVO (DASHBOARD)
-// 🔥 WIDGET DEL DASHBOARD (BLINDADO)
-window.cargarDashRampas = async function() {
-    let tbody = document.getElementById('tbDashRampas');
-    if(!tbody) return;
-
-    try {
-        // Aseguramos que los catálogos existan
-        if (!catalogosTaller || !catalogosTaller.rampas || catalogosTaller.rampas.length === 0) {
-            let resCat = await fetch('/api/catalogos_taller');
-            let dataCat = await resCat.json();
-            if (!dataCat.error) catalogosTaller = dataCat;
-        }
-
-        let res = await fetch('/api/taller/status');
-        let r = await res.json();
-
-        if(r.error) throw new Error(r.error);
-
-        let html = '';
-        catalogosTaller.rampas.forEach(rampa => {
-            let unidad = r.data.find(u => u.id_rampa == rampa.id && u.txtSituacion.toLowerCase() !== 'finalizado');
-            if(unidad) {
-                let detalles = {};
-                try { detalles = JSON.parse(unidad.detalles_json || '{}'); } catch(e){}
-
-                // Leemos la columna correcta
-                let salidaStr = unidad.fecha_hora_salida ? new Date(unidad.fecha_hora_salida).toLocaleString('es-PE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '-';
-
-                html += `
-                    <tr>
-                        <td class="fw-bold text-danger border-end">${rampa.nombre}</td>
-                        <td><span class="badge bg-primary fs-6 shadow-sm">${unidad.placa}</span></td>
-                        <td><span class="badge bg-secondary">${unidad.txtSituacion || '-'}</span></td>
-                        <td class="text-muted"><i class="bi bi-clock"></i> ${new Date(unidad.fecha_ingreso).toLocaleString('es-PE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
-                        <td class="text-danger fw-bold" style="font-size: 0.8rem;"><i class="bi bi-calendar-x"></i> ${salidaStr}</td>
-                        <td class="text-truncate" style="max-width: 150px;" title="${detalles.motivo || ''}">${detalles.motivo || '-'}</td>
-                    </tr>`;
-            } else {
-                html += `
-                    <tr>
-                        <td class="fw-bold text-muted border-end">${rampa.nombre}</td>
-                        <td colspan="5" class="text-muted fst-italic bg-light">Libre</td>
-                    </tr>`;
-            }
-        });
-        tbody.innerHTML = html;
-    } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-danger">Error cargando rampas: ${error.message}</td></tr>`;
-    }
-};
-
 // ============================================================
 // GESTOR DE PERSISTENCIA (ANTI-RECARGA INFALIBLE)
 // ============================================================
@@ -2897,18 +2572,6 @@ setTimeout(() => {
     }
 }, 300);
 
-window.eliminarStatusTaller = function(ticket, placa) {
-    if (!confirm(`¿Estás seguro de ELIMINAR el ingreso de la unidad ${placa}?\nSe borrarán también todas las Órdenes de Trabajo atadas a esta visita.\n\nEsta acción no se puede deshacer.`)) return;
-
-    fetch(`/api/taller/status/${ticket}`, { method: 'DELETE' })
-    .then(res => res.json())
-    .then(r => {
-        if (r.error) throw new Error(r.error);
-        cargarTableroStatus();
-        if (window.cargarDashRampas) cargarDashRampas();
-    })
-    .catch(e => alert("Error eliminando: " + e.message));
-};
 
 // 🔥 GUARDAR UNA NUEVA OT HIJA
 window.guardarNuevaOTHija = function(e, ticket) {
