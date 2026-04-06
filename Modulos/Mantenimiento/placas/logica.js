@@ -25,7 +25,7 @@ window.cambiarColumnasPlacas = function(cols) {
 function mostrarPlacas(datos) {
     if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
     dataGlobalPlacas = datos;
-    poblarSelectsFormularios(datos);
+    if (typeof poblarSelectsFormularios === 'function') poblarSelectsFormularios(datos);
     let datosUtiles = datos.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
     datosUtiles.sort((a, b) => {
         const cliA = (a[1]||'').trim().toUpperCase();

@@ -92,7 +92,6 @@ function mostrarConductores(datos) {
                     html += `<tr class="clickable-row" onclick='abrirModalConductor(${jsonSeguro})'>
                         <td class="fw-bold" style="color: #1e293b;" data-value="${nombre}"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
                         <td class="d-none" data-value="${empresa}">${empresa}</td>
-                        <td data-value="${dni}">${dni}</td>
                         <td class="d-none" data-value="${licencia}">${licencia}</td>
                         <td data-value="${telf}">${linkTelf}</td>
                         <td class="d-none" data-value="${estado}">${estado}</td>
