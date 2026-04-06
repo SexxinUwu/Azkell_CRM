@@ -91,11 +91,11 @@ let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
 // ================================================================
 
 window.verificarSesionGuardada = function() {
-    const guardadoUser     = localStorage.getItem('crm_user');
-    const guardadoTime     = localStorage.getItem('crm_ultimo_acceso');
-    const guardadoCorreo   = localStorage.getItem('crm_correo');
-    const guardadoPermisos = localStorage.getItem('crm_permisos');
-    const guardadoRol      = localStorage.getItem('crm_rol');
+    const guardadoUser     = localStorage.getItem('fleet_user');
+    const guardadoTime     = localStorage.getItem('fleet_ultimo_acceso');
+    const guardadoCorreo   = localStorage.getItem('fleet_correo');
+    const guardadoPermisos = localStorage.getItem('fleet_permisos');
+    const guardadoRol      = localStorage.getItem('fleet_rol');
 
     if (!guardadoUser || !guardadoTime || Date.now() - parseInt(guardadoTime) >= TIEMPO_INACTIVIDAD) {
         cargarModuloAislado('login');
@@ -183,8 +183,8 @@ window.verificarSesionGuardada = function() {
     let appCrmEl = document.getElementById('app-crm');
     if (appCrmEl) appCrmEl.style.display = 'flex';
 
-    let rutaGuardada = localStorage.getItem('crm_rutaActual');
-    if (rutaGuardada) {
+    let rutaGuardada = localStorage.getItem('fleet_rutaActual');
+    if (rutaGuardada && rutaGuardada !== 'login') {
         cargarModuloAislado(rutaGuardada);
     } else {
         cargarModuloAislado('dashboard');
@@ -205,7 +205,7 @@ window.verificarSesionGuardada = function() {
 }
 
 function cerrarSesion() {
-    localStorage.removeItem('crm_user'); localStorage.removeItem('crm_rol'); localStorage.removeItem('crm_correo'); localStorage.removeItem('crm_ultimo_acceso'); localStorage.removeItem('crm_permisos');
+    localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 
     // 🧹 Limpieza Total de Pantalla
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarColoresGraficos();
   }
 
-  let usuarioGuardado = localStorage.getItem('crm_user');
+  let usuarioGuardado = localStorage.getItem('fleet_user');
   if (!usuarioGuardado) {
     cargarModuloAislado('login');
   } else {
@@ -292,8 +292,8 @@ function initTooltips() {
 function toggleSidebar() { const sidebar = document.getElementById('sidebarMenu'); const backdrop = document.getElementById('sidebarBackdrop'); if (window.innerWidth <= 768) { const isOpen = sidebar.classList.contains('mobile-open'); sidebar.classList.toggle('mobile-open', !isOpen); backdrop.classList.toggle('active', !isOpen); } else { sidebar.classList.toggle('collapsed'); setTimeout(initTooltips, 300); } }
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
-function registrarActividad() { if (usuarioLogueado) localStorage.setItem('crm_ultimo_acceso', Date.now()); }
-function verificarInactividad() { if (usuarioLogueado) { const ultimo = localStorage.getItem('crm_ultimo_acceso'); if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) cerrarSesion(); } }
+function registrarActividad() { if (usuarioLogueado) localStorage.setItem('fleet_ultimo_acceso', Date.now()); }
+function verificarInactividad() { if (usuarioLogueado) { const ultimo = localStorage.getItem('fleet_ultimo_acceso'); if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) cerrarSesion(); } }
 function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspector':'role-inspector', 'Mantenimiento':'role-mant','Almacén':'role-alm','Almacen':'role-alm','Flota':'role-flota' }; return `<span class="role-badge ${clases[rol]||''}">${rol}</span>`; }
 function parseDateToDDMMYYYY(dateStr) {
     if(!dateStr) return "-";
@@ -370,7 +370,7 @@ function inicializarMenu() {
 
 window.aplicarPermisosBotonesUI = function() {
     let p = permisosUsuario || {};
-    let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+    let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
     let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
 
     const check = (selector, permiso) => {
@@ -559,7 +559,7 @@ window.cambiarModulo = function(modulo, idBoton) {
     localStorage.setItem('ultimoModuloCRM', modulo);
     let bloqueado = false;
     let p = permisosUsuario || {};
-    let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+    let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
     let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
 
     if (modulo === 'statusMant' && !isAdm && !p?.insp?.l) bloqueado = true;
@@ -589,8 +589,8 @@ window.cambiarModulo = function(modulo, idBoton) {
 // 🚀 ROUTER EMPRESARIAL: Carga módulos desde subcarpetas físicamente
 // =====================================================================
 window.cargarModuloAislado = async function(rutaModulo) {
-    // 🔒 GUARDAR RUTA ACTUAL PARA PERSISTENCIA
-    localStorage.setItem('crm_rutaActual', rutaModulo);
+    // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
+    if (rutaModulo !== 'login') localStorage.setItem('fleet_rutaActual', rutaModulo);
 
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
@@ -927,7 +927,7 @@ function mostrarFleetrun(datos) {
   let cntVig = 0, cntPV = 0, cntVenc = 0;
   if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="10" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; }
   else {
-      let p = permisosUsuario || {}; let isAdmF = p.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com'; let canEditF = isAdmF || p.fleet?.e === true; let canDeleteF = isAdmF || p.fleet?.d === true; let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map(); 
+      let p = permisosUsuario || {}; let isAdmF = p.admin === true || (localStorage.getItem('fleet_correo') || '').toLowerCase() === 'admin@azkell.com'; let canEditF = isAdmF || p.fleet?.e === true; let canDeleteF = isAdmF || p.fleet?.d === true; let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map(); 
       datosAMostrar.forEach((fila) => { let placaRaw = fila[4] || "-"; if(!mapPlacas.has(placaRaw)) mapPlacas.set(placaRaw, []); mapPlacas.get(placaRaw).push(fila); });
       mapPlacas.forEach((mantenimientos, placaRaw) => {
           let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
@@ -1366,7 +1366,7 @@ function mostrarUsuarios(datos) {
             let menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
 
             // 👑 Solo los Administradores y el Fundador ven los 3 puntitos
-            let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
+            let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
             if (permisosUsuario.admin === true || correoActual === 'admin@azkell.com') {
                 menuAcciones = `<div class="dropstart text-center">
                     <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
