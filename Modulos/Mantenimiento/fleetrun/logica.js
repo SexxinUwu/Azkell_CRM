@@ -18,6 +18,7 @@ function toggleAllFleetrunGroups() { expandAllState = !expandAllState; const row
 function mostrarFleetrun(datos) {
   if (procesadorErroresCuota(datos, 'cuerpoTablaFleetrun')) return;
   dataGlobalFleetrun = datos;
+  window.dataGlobalFleetrun = datos; // sincronizar para acceso cross-módulo
 
   let parseFecha = (str) => {
       if(!str) return 0;
@@ -38,9 +39,12 @@ function mostrarFleetrun(datos) {
           let tipo = normalizeStr(row[8]);
           let key = placa + "_" + tipo;
 
-          let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
-
-          if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
+          let infoPlaca = (dataGlobalPlacas && dataGlobalPlacas.length > 0)
+              ? dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa)
+              : null;
+          // Race condition F5: si placas no cargaron aún, mostrar todo; root re-renderizará cuando lleguen
+          const placasListas = dataGlobalPlacas && dataGlobalPlacas.length > 0;
+          if (!mapa.has(key) && (!placasListas || (infoPlaca && infoPlaca[18] === 'Activa'))) {
               mapa.set(key, row);
           }
       });
@@ -423,7 +427,7 @@ window.importarExcelFleetrun = function(event) {
     reader.readAsArrayBuffer(file);
 };
 
-let chartFleetrunInst = null;
+window.chartFleetrunInst = window.chartFleetrunInst || null;
 
 window.toggleGraficosFleetrun = function() {
     let panel = document.getElementById('panelGraficosFleetrun');
@@ -477,22 +481,22 @@ window.initGraficoFleetrun = function() {
 };
 
 window.updateGraficoFleetrun = function(vigentes, porVencer, vencidos) {
-    if(!chartFleetrunInst) chartFleetrunInst = initGraficoFleetrun();
-    if(!chartFleetrunInst) return;
+    if(!window.chartFleetrunInst) window.chartFleetrunInst = initGraficoFleetrun();
+    if(!window.chartFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
-    chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    chartFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    window.chartFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
     if(vigentes + porVencer + vencidos === 0) {
-        chartFleetrunInst.data.labels = ['Sin Datos'];
-        chartFleetrunInst.data.datasets[0].data = [1];
-        chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
+        window.chartFleetrunInst.data.labels = ['Sin Datos'];
+        window.chartFleetrunInst.data.datasets[0].data = [1];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
-        chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
-        chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+        window.chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
+        window.chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
     }
-    chartFleetrunInst.update();
+    window.chartFleetrunInst.update();
 };
 
 window.procesarFleetrunParaDashboard = function() {
@@ -607,7 +611,20 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
 // ================================================================
 window.init_fleetrun = function() {
-    if(typeof cargarTablaFleetrun === 'function') {
+    // El router re-inyecta el HTML → el canvas es nuevo → destruir instancia anterior del gráfico
+    if (window.chartFleetrunInst) {
+        window.chartFleetrunInst.destroy();
+        window.chartFleetrunInst = null;
+    }
+
+    // Usar datos ya en memoria si existen (evita re-fetch innecesario y la race condition con placas)
+    const datosEnMemoria = (window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0)
+        ? window.dataGlobalFleetrun
+        : dataGlobalFleetrun;
+
+    if (datosEnMemoria.length > 0) {
+        mostrarFleetrun(datosEnMemoria);
+    } else {
         cargarTablaFleetrun();
     }
 };
