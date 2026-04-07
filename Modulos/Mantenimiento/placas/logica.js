@@ -10,6 +10,58 @@ let paginaActualPlacas  = 1;
 let colActualesPlacas   = 4;
 let ITEMS_POR_PAGINA    = 16;
 
+// ── Poblar selects dinámicos desde dataGlobalPlacas ──────────────
+window.poblarSelectsFormularios = function(datos) {
+    if (!datos || datos.length === 0) return;
+    const filas = datos.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
+
+    function unicos(idx) {
+        const set = new Set();
+        filas.forEach(f => { const v = (f[idx]||'').toString().trim().toUpperCase(); if (v) set.add(v); });
+        return [...set].sort();
+    }
+
+    function poblar(id, valores) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const valorActual = sel.value;
+        sel.innerHTML = '<option value="">Seleccione...</option>';
+        valores.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+        if (valorActual) sel.value = valorActual;
+    }
+
+    function poblarClientes(id) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const valorActual = sel.value;
+        const mapaClientes = new Map();
+        filas.forEach(f => { const n = (f[1]||'').toString().trim(); if (n && !mapaClientes.has(n)) mapaClientes.set(n, (f[2]||'').toString().trim()); });
+        sel.innerHTML = '<option value="">Seleccione Cliente...</option>';
+        [...mapaClientes.keys()].sort().forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+        if (valorActual) sel.value = valorActual;
+    }
+
+    const marcas   = unicos(3);
+    const tipos    = unicos(5);
+    const subTipos = unicos(6);
+    const colores  = unicos(7);
+    const confs    = unicos(12);
+
+    poblarClientes('p_cliente');
+    poblar('p_marca',    marcas);
+    poblar('p_tipo',     tipos);
+    poblar('p_sub_tipo', subTipos);
+    poblar('p_color',    colores);
+    poblar('p_conf',     confs);
+
+    poblarClientes('e_cliente');
+    poblar('e_marca',    marcas);
+    poblar('e_tipo',     tipos);
+    poblar('e_sub_tipo', subTipos);
+    poblar('e_color',    colores);
+    poblar('e_conf',     confs);
+};
+
 // ── Carga principal ──────────────────────────────────────────────
 function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('contenedorPlacasDinamico').innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
 
