@@ -74,6 +74,55 @@ window.cambiarColumnasPlacas = function(cols) {
     renderizarPaginaPlacas();
 };
 
+// ── Autocompleta RUC al seleccionar cliente ──────────────────────────────────
+window.autocompletarRucSelect = function(clienteNombre, rucFieldId) {
+    if (!clienteNombre || !dataGlobalPlacas) return;
+    const match = dataGlobalPlacas.find(f => (f[1]||'').toString().trim() === clienteNombre);
+    const rucEl = document.getElementById(rucFieldId);
+    if (rucEl) rucEl.value = match ? (match[2] || '') : '';
+};
+
+// ── Abre modal para agregar nuevo cliente ────────────────────────────────────
+window.abrirModalNuevoCliente = function(targetSelectId, targetRucId) {
+    const nc_nombre = document.getElementById('nc_nombre');
+    const nc_ruc    = document.getElementById('nc_ruc');
+    const nc_ts     = document.getElementById('nc_target_select');
+    const nc_tr     = document.getElementById('nc_target_ruc');
+    if (nc_nombre) nc_nombre.value = '';
+    if (nc_ruc)    nc_ruc.value    = '';
+    if (nc_ts)     nc_ts.value     = targetSelectId || '';
+    if (nc_tr)     nc_tr.value     = targetRucId    || '';
+    const modalEl = document.getElementById('modalNuevoCliente');
+    if (modalEl) new bootstrap.Modal(modalEl).show();
+};
+
+// ── Guarda el nuevo cliente desde el modal y lo inyecta en el select ─────────
+window.guardarNuevoCliente = function() {
+    const nombre = (document.getElementById('nc_nombre')?.value || '').trim().toUpperCase();
+    const ruc    = (document.getElementById('nc_ruc')?.value    || '').trim();
+    if (!nombre) { alert('Ingresa la Razón Social del cliente.'); return; }
+
+    const targetSelectId = document.getElementById('nc_target_select')?.value || '';
+    const targetRucId    = document.getElementById('nc_target_ruc')?.value    || '';
+
+    // Añadir opción al select destino si no existe ya
+    const sel = document.getElementById(targetSelectId);
+    if (sel) {
+        const existe = [...sel.options].some(o => o.value === nombre);
+        if (!existe) {
+            const opt = document.createElement('option');
+            opt.value = nombre; opt.textContent = nombre;
+            sel.appendChild(opt);
+        }
+        sel.value = nombre;
+    }
+    // Rellenar RUC
+    const rucEl = document.getElementById(targetRucId);
+    if (rucEl) rucEl.value = ruc;
+
+    bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente'))?.hide();
+};
+
 function mostrarPlacas(datos) {
     if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
     dataGlobalPlacas = datos;
@@ -287,7 +336,7 @@ window.abrirDetallePlaca = function(event, index) {
         };
     }
 
-    // ── Datos GPS (TAREA 4) ─────────────────────────────────────
+    // ── Datos GPS (pestaña GPS del offcanvas) ─────────────────────────────
     const placaActual = (p[0] || '').toString().trim().toUpperCase();
     const elGpsUbic  = document.getElementById('detalleGpsUbicacion');
     const elGpsKm    = document.getElementById('detalleGpsKm');
@@ -298,18 +347,63 @@ window.abrirDetallePlaca = function(event, index) {
     if (elGpsKm)   elGpsKm.innerHTML   = sinGps;
     if (elGpsHoras) elGpsHoras.innerHTML = sinGps;
 
-    if (window.dataGlobalStatusFlota && window.dataGlobalStatusFlota.length > 0) {
-        const dataGps = window.dataGlobalStatusFlota.find(v => {
-            const vPlaca = (v.placa || v[0] || '').toString().trim().toUpperCase();
-            return vPlaca === placaActual;
-        });
-        if (dataGps) {
-            const ubicacion = dataGps.ubicacion || dataGps.location || dataGps[1] || null;
-            const km        = dataGps.km || dataGps.kilometraje || dataGps[2] || null;
-            const horas     = dataGps.horas || dataGps.horasMotor || dataGps[3] || null;
-            if (elGpsUbic && ubicacion)  elGpsUbic.innerHTML  = `<span class="fw-bold">${ubicacion}</span>`;
-            if (elGpsKm   && km)         elGpsKm.innerHTML    = `<span class="fw-bold">${km} km</span>`;
-            if (elGpsHoras && horas)     elGpsHoras.innerHTML = `<span class="fw-bold">${horas} h</span>`;
+    const wialonData = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placaActual) : null;
+    if (wialonData) {
+        const tienePos = wialonData.lat && wialonData.lat !== 0;
+        const kmTxt    = wialonData.km > 0 ? `${Number(wialonData.km).toLocaleString()} km` : null;
+        const horasTxt = wialonData.horas > 0 ? `${Number(wialonData.horas).toLocaleString()} h` : null;
+
+        if (elGpsKm && kmTxt)       elGpsKm.innerHTML    = `<span class="fw-bold">${kmTxt}</span>`;
+        if (elGpsHoras && horasTxt) elGpsHoras.innerHTML = `<span class="fw-bold">${horasTxt}</span>`;
+
+        if (tienePos && elGpsUbic) {
+            // Spinner mientras carga la dirección textual
+            elGpsUbic.innerHTML = `<span class="spinner-border spinner-border-sm text-primary me-1"></span><small class="text-muted">Obteniendo dirección...</small>`;
+
+            (async () => {
+                let dirTxt = `${wialonData.lat.toFixed(5)}, ${wialonData.lng.toFixed(5)}`; // fallback coords
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${wialonData.lat}&lon=${wialonData.lng}`);
+                    const data = await res.json();
+                    const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || 'Sin nombre';
+                    const ciudad = data.address?.city || data.address?.town || data.address?.county || '';
+                    dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+                } catch(e) { /* usa las coordenadas de fallback */ }
+
+                if (!elGpsUbic || !document.contains(elGpsUbic)) return;
+
+                const urlMaps = `https://www.google.com/maps?q=${wialonData.lat},${wialonData.lng}`;
+                const msgWsp  = encodeURIComponent(`📍 Ubicación de *${placaActual}*:\n${dirTxt}\n${urlMaps}`);
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'fw-bold flex-grow-1';
+                textSpan.textContent = dirTxt;
+
+                const btnCopy = document.createElement('button');
+                btnCopy.className = 'btn btn-sm p-0 ms-2 text-secondary';
+                btnCopy.title = 'Copiar dirección';
+                btnCopy.innerHTML = '<i class="bi bi-clipboard"></i>';
+                btnCopy.onclick = () => {
+                    navigator.clipboard.writeText(dirTxt);
+                    btnCopy.innerHTML = '<i class="bi bi-clipboard-check text-success"></i>';
+                    setTimeout(() => { btnCopy.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
+                };
+
+                const btnWsp = document.createElement('button');
+                btnWsp.className = 'btn btn-sm p-0 ms-1 text-success';
+                btnWsp.title = 'Compartir por WhatsApp';
+                btnWsp.innerHTML = '<i class="bi bi-whatsapp"></i>';
+                btnWsp.onclick = () => window.open(`https://api.whatsapp.com/send?text=${msgWsp}`, '_blank');
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'd-flex align-items-center gap-1';
+                wrapper.appendChild(textSpan);
+                wrapper.appendChild(btnCopy);
+                wrapper.appendChild(btnWsp);
+
+                elGpsUbic.innerHTML = '';
+                elGpsUbic.appendChild(wrapper);
+            })();
         }
     }
 

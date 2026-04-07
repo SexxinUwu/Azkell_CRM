@@ -41,30 +41,30 @@
             </div>
             <div id="wrap-dashboard">
                 <a id="nav-dashboard" onclick="cargarModuloAislado('dashboard')" class="active">
-                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text">Dashboard</span>
+                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text" data-i18n="nav.dashboard">Dashboard</span>
                 </a>
             </div>
-            <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cargarModuloAislado('mantenimiento/inspecciones')"><i class="bi bi-activity"></i> <span class="link-text">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text">Placas</span></a><a id="btnMenuFleetrun" onclick="cargarModuloAislado('mantenimiento/fleetrun')"><i class="bi bi-speedometer2"></i> <span class="link-text">Fleetrun</span></a></div>
+            <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cargarModuloAislado('mantenimiento/inspecciones')"><i class="bi bi-activity"></i> <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text" data-i18n="nav.placas">Placas</span></a><a id="btnMenuFleetrun" onclick="cargarModuloAislado('mantenimiento/fleetrun')"><i class="bi bi-speedometer2"></i> <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span></a></div>
             </div>
-            <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuAlmacen"><a id="btnMenuInventario" onclick="cargarModuloAislado('almacen/inventario')"><i class="bi bi-box-fill"></i> <span class="link-text">Inventario</span></a></div>
+            <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text" data-i18n="nav.almacen">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuAlmacen"><a id="btnMenuInventario" onclick="cargarModuloAislado('almacen/inventario')"><i class="bi bi-box-fill"></i> <span class="link-text" data-i18n="nav.inventario">Inventario</span></a></div>
             </div>
-            <div id="wrap-flota"><a data-bs-toggle="collapse" href="#menuFlota" role="button" aria-expanded="false" id="nav-flota"><i class="bi bi-truck-front"></i> <span class="link-text">Flota</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+            <div id="wrap-flota"><a data-bs-toggle="collapse" href="#menuFlota" role="button" aria-expanded="false" id="nav-flota"><i class="bi bi-truck-front"></i> <span class="link-text" data-i18n="nav.flota">Flota</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
                 <div class="collapse" id="menuFlota">
-                    <a id="btnMenuUbicacion" onclick="cambiarModulo('ubicacion', this.id)"><i class="bi bi-geo-alt"></i> <span class="link-text">GPS Flota</span></a>
-                    <a id="btnMenuStatusFlota" onclick="cargarModuloAislado('flota/status')"><i class="bi bi-activity"></i> <span class="link-text">Status Flota</span></a>
+                    <a id="btnMenuUbicacion" onclick="cargarModuloAislado('flota/ubicacion')"><i class="bi bi-geo-alt"></i> <span class="link-text" data-i18n="nav.gps">GPS Flota</span></a>
+                    <a id="btnMenuStatusFlota" onclick="cargarModuloAislado('flota/status')"><i class="bi bi-activity"></i> <span class="link-text" data-i18n="nav.status">Status Flota</span></a>
                 </div>
             </div>
-            <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cargarModuloAislado('directorio/conductores')"><i class="bi bi-person-vcard"></i> <span class="link-text">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text">Talleres</span></a></div>
+            <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text" data-i18n="nav.directorio">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
+                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cargarModuloAislado('directorio/conductores')"><i class="bi bi-person-vcard"></i> <span class="link-text" data-i18n="nav.conductores">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text" data-i18n="nav.talleres">Talleres</span></a></div>
             </div>
-            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
-            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cargarModuloAislado('sistema/auditoria')"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
-            <div id="wrap-configuracion"><a id="nav-configuracion" onclick="cargarModuloAislado('sistema/configuracion')"><i class="bi bi-gear"></i> <span class="link-text">Configuración</span></a></div>
+            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text" data-i18n="nav.usuarios">Usuarios</span></a></div>
+            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cargarModuloAislado('sistema/auditoria')"><i class="bi bi-journal-code"></i> <span class="link-text" data-i18n="nav.auditoria">Auditoría</span></a></div>
+            <div id="wrap-configuracion"><a id="nav-configuracion" onclick="cargarModuloAislado('sistema/configuracion')"><i class="bi bi-gear"></i> <span class="link-text" data-i18n="nav.configuracion">Configuración</span></a></div>
             <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
     <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-        <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
+        <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text" data-i18n="nav.instalar">Instalar App</span>
     </a>
 </div>
         </div>
@@ -117,22 +117,8 @@
             <div class="main-area">
 
 
-            <div id="root-dinamico" class="container-fluid py-3" style="display: none;"></div>
+            <div id="root-dinamico" style="display: none; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 15px 25px;"></div>
 
-                <div id="moduloUbicacion" class="modulo-wrapper" style="display: none;">
-                    <div class="controls-row d-flex justify-content-between flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 400px;">
-                            <div class="input-group input-group-sm"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorUbicacion" onkeyup="filtrarTabla('cuerpoTablaUbicacion', 'buscadorUbicacion')" placeholder="Buscar placa en GPS..."></div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarWialon(true)"><i class="bi bi-arrow-clockwise"></i> Actualizar GPS</button>
-                        </div>
-                    </div>
-                    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUbicacion" data-sort-dir="asc">
-                        <thead><tr><th onclick="sortTable('tablaUbicacion', 0)">Unidad (Wialon) <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 1)">Placa Detectada <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 2)">Kilometraje <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUbicacion', 3)">Horas Motor <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-geo-alt-fill text-primary"></i> Ubicación en Mapa</th></tr></thead>
-                        <tbody id="cuerpoTablaUbicacion"><tr><td colspan="5" class="text-center py-5">Sincronizando con satélites Wialon...</td></tr></tbody>
-                    </table></div></div>
-                </div>
 
 
 
@@ -176,6 +162,7 @@
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/Modulos/sistema/configuracion/i18n.js"></script>
     <script src="./logica.js"></script>
 
 <div class="modal fade" id="modalMapaGPS" tabindex="-1">

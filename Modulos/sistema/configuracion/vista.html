@@ -6,13 +6,16 @@
         <p class="text-uppercase fw-bold mb-3" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--subtext);">Configuración</p>
         <div class="d-flex flex-column gap-1">
             <button onclick="window.showConfig('perfil')" id="cfg-btn-perfil" class="config-nav-btn active d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: var(--crm-accent); color: #fff; font-size: 0.875rem;">
-                <i class="bi bi-person-circle"></i> Mi Perfil
+                <i class="bi bi-person-circle"></i> <span data-i18n="cfg.nav.profile">Mi Perfil</span>
             </button>
             <button onclick="window.showConfig('apariencia')" id="cfg-btn-apariencia" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
-                <i class="bi bi-palette"></i> Apariencia
+                <i class="bi bi-palette"></i> <span data-i18n="cfg.nav.appearance">Apariencia</span>
             </button>
             <button onclick="window.showConfig('accesibilidad')" id="cfg-btn-accesibilidad" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
-                <i class="bi bi-universal-access"></i> Accesibilidad
+                <i class="bi bi-universal-access"></i> <span data-i18n="cfg.nav.accessibility">Accesibilidad</span>
+            </button>
+            <button onclick="window.showConfig('idioma')" id="cfg-btn-idioma" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
+                <i class="bi bi-translate"></i> <span data-i18n="cfg.nav.language">Idioma</span>
             </button>
         </div>
     </div>
@@ -22,8 +25,8 @@
 
         <!-- Panel: Mi Perfil -->
         <div id="cfg-panel-perfil" class="config-panel">
-            <h5 class="fw-bold mb-1" style="color: var(--text);">Mi Perfil</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;">Información de tu cuenta en Azkell Fleet.</p>
+            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.profile.title">Mi Perfil</h5>
+            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.profile.subtitle">Información de tu cuenta en Azkell Fleet.</p>
 
             <div class="card p-0 border-0 shadow-sm mb-4" style="background-color: var(--surface); border-radius: 12px; overflow: hidden; max-width: 480px;">
                 <div class="d-flex align-items-center gap-4 p-4" style="background: linear-gradient(135deg, var(--crm-sidebar), #1e3a5f);">
@@ -52,8 +55,8 @@
 
         <!-- Panel: Apariencia -->
         <div id="cfg-panel-apariencia" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);">Apariencia</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;">Personaliza colores, tipografía y modo de visualización.</p>
+            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.appearance.title">Apariencia</h5>
+            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.appearance.subtitle">Personaliza colores, tipografía y modo de visualización.</p>
 
             <!-- Modo Oscuro/Claro -->
             <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
@@ -113,8 +116,8 @@
 
         <!-- Panel: Accesibilidad -->
         <div id="cfg-panel-accesibilidad" class="config-panel d-none">
-            <h5 class="fw-bold mb-1" style="color: var(--text);">Accesibilidad</h5>
-            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;">Ajustes para mejorar tu experiencia de usuario.</p>
+            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.access.title">Accesibilidad</h5>
+            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.access.subtitle">Ajustes para mejorar tu experiencia de usuario.</p>
 
             <div class="card border-0 shadow-sm p-0 mb-4" style="background-color: var(--surface); border-radius: 12px; overflow: hidden; max-width: 520px;">
 
@@ -142,8 +145,63 @@
             </div>
         </div>
 
+        <!-- Panel: Idioma -->
+        <div id="cfg-panel-idioma" class="config-panel d-none">
+            <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.lang.title">Idioma y Región</h5>
+            <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.lang.subtitle">Elige el idioma de la interfaz de la aplicación.</p>
+
+            <div class="d-flex flex-column gap-3" style="max-width: 520px;">
+
+                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="es" onclick="window.setLanguage('es')">
+                    <div class="lang-flag-circle">🇵🇪</div>
+                    <div class="flex-grow-1">
+                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Español</p>
+                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Español (Perú)</p>
+                    </div>
+                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+
+                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="en" onclick="window.setLanguage('en')">
+                    <div class="lang-flag-circle">🇺🇸</div>
+                    <div class="flex-grow-1">
+                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">English</p>
+                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">English (US)</p>
+                    </div>
+                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+
+                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="pt" onclick="window.setLanguage('pt')">
+                    <div class="lang-flag-circle">🇧🇷</div>
+                    <div class="flex-grow-1">
+                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Português</p>
+                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Português (Brasil)</p>
+                    </div>
+                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+
+                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="zh" onclick="window.setLanguage('zh')">
+                    <div class="lang-flag-circle">🇨🇳</div>
+                    <div class="flex-grow-1">
+                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">中文</p>
+                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">普通话 (Mandarín)</p>
+                    </div>
+                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+
+                <div class="lang-card d-flex align-items-center gap-4 p-3" data-lang="fr" onclick="window.setLanguage('fr')">
+                    <div class="lang-flag-circle">🇫🇷</div>
+                    <div class="flex-grow-1">
+                        <p class="fw-bold mb-0" style="color: var(--text); font-size: 0.95rem;">Français</p>
+                        <p class="mb-0" style="color: var(--subtext); font-size: 0.78rem;">Français (France)</p>
+                    </div>
+                    <div class="lang-check-icon"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 </div>
 
 <!-- Toast de confirmación -->
-<div id="cfg-toast"><i class="bi bi-check-circle-fill" style="color: #10b981;"></i> Preferencias guardadas</div>
+<div id="cfg-toast"><i class="bi bi-check-circle-fill" style="color: #10b981;"></i><span data-i18n="cfg.saved"> Preferencias guardadas</span></div>
