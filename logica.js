@@ -666,6 +666,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
     if (rutaModulo !== 'login') localStorage.setItem('fleet_rutaActual', rutaModulo);
 
+    // 🧹 LIMPIEZA BOOTSTRAP — elimina backdrops huérfanos y clases del body
+    // Evita el error 'Blocked aria-hidden' y el solapamiento de módulos
+    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open', 'offcanvas-open');
+    document.body.style.paddingRight = '';
+    document.body.style.overflow = '';
+
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
         if(el.id && el.id.startsWith('modulo')) el.style.display = 'none';
@@ -689,6 +696,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
         // 3. Traer el diseño (HTML) desde la carpeta específica
         const respHTML = await fetch(`/modulos/${rutaModulo}/vista.html`);
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en /modulos/${rutaModulo}`);
+        root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         root.innerHTML = await respHTML.text();
 
         // UX: actualizar título del header y resaltar enlace activo en el sidebar
@@ -781,6 +789,10 @@ function initGrafico(canvasId) {
     });
 }
 function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVigNoMot) {
+    // Si el canvas fue reemplazado por el SPA router, destruir la instancia obsoleta
+    if (chartTotalInst    && !document.contains(chartTotalInst.canvas))    { chartTotalInst.destroy();    chartTotalInst    = null; }
+    if (chartMotorasInst  && !document.contains(chartMotorasInst.canvas))  { chartMotorasInst.destroy();  chartMotorasInst  = null; }
+    if (chartNoMotorasInst && !document.contains(chartNoMotorasInst.canvas)) { chartNoMotorasInst.destroy(); chartNoMotorasInst = null; }
     if(!chartTotalInst) chartTotalInst = initGrafico('chartTotal');
     if(!chartMotorasInst) chartMotorasInst = initGrafico('chartMotoras');
     if(!chartNoMotorasInst) chartNoMotorasInst = initGrafico('chartNoMotoras');
