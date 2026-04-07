@@ -61,6 +61,7 @@
             </div>
             <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text">Usuarios</span></a></div>
             <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cargarModuloAislado('sistema/auditoria')"><i class="bi bi-journal-code"></i> <span class="link-text">Auditoría</span></a></div>
+            <div id="wrap-configuracion"><a id="nav-configuracion" onclick="cargarModuloAislado('sistema/configuracion')"><i class="bi bi-gear"></i> <span class="link-text">Configuración</span></a></div>
             <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
     <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
         <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text">Instalar App</span>
@@ -82,10 +83,13 @@
                         <i class="bi bi-search"></i>
                         <span class="search-text d-none d-md-inline">Buscar placa, cliente... (Ctrl+K)</span>
                     </div>
-                    <button class="btn btn-link text-muted p-0 fs-5" id="btn-theme-toggle" onclick="document.getElementById('theme-toggle').click();" title="Modo Oscuro">
+                    <button class="btn btn-link text-muted p-0 fs-5" id="btn-theme-toggle" onclick="document.getElementById('theme-toggle').click();" title="Modo Oscuro" style="display:none;">
                         <i class="bi bi-moon-stars-fill"></i>
                     </button>
                     <input type="checkbox" id="theme-toggle" class="d-none">
+                    <button class="btn btn-link p-0 fs-5" onclick="cargarModuloAislado('sistema/configuracion')" title="Configuración" style="color: var(--subtext);">
+                        <i class="bi bi-gear-fill"></i>
+                    </button>
                     <div class="dropdown d-inline-block">
     <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; transition: 0.2s;">
         <i class="bi bi-person-circle fs-4" style="color: var(--crm-accent) !important;"></i>
