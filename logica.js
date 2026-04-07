@@ -451,7 +451,7 @@ function recargarWialon(forzarVista = false) {
             if (document.getElementById('moduloStatus')?.style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
             let modFleetrunEl = document.getElementById('moduloFleetrun');
             if (modFleetrunEl && modFleetrunEl.style.display === 'flex') mostrarFleetrun(dataGlobalFleetrun);
-            if (document.getElementById('moduloUbicacion').style.display === 'flex' || forzarVista) mostrarUbicaciones(d);
+            if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(d);
         } else {
             if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
             console.error("Error Wialon:", d.error);
@@ -625,7 +625,7 @@ window.cambiarModulo = function(modulo, idBoton) {
     else if (modulo === 'placas' || modulo === 'almacenPlacas') { let el=document.getElementById('moduloPlacas'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = (modulo === 'placas') ? 'Gestión de Placas' : 'Inventario de Placas'; cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'); }
     else if (modulo === 'fleetrun') { let el=document.getElementById('moduloFleetrun'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = 'Sistema Fleetrun'; cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'); }
     else if (modulo === 'statusMant') { cargarModuloAislado('mantenimiento/inspecciones'); }
-    else if (modulo === 'ubicacion') { let el=document.getElementById('moduloUbicacion'); if(el) el.style.display = 'flex'; if(titulo) titulo.innerText = 'Ubicación GPS Flota'; recargarWialon(true); }
+    else if (modulo === 'ubicacion') { cargarModuloAislado('flota/ubicacion'); }
 
     if (window.innerWidth <= 768) closeSidebar();
     aplicarPermisosBotonesUI();
@@ -642,6 +642,7 @@ const TITULOS_MODULOS = {
     'mantenimiento/fleetrun':      'Sistema Fleetrun',
     'almacen/inventario':          'Inventario',
     'flota/status':                'Status de Flota',
+    'flota/ubicacion':             'Ubicación GPS Flota',
     'directorio/conductores':      'Directorio de Conductores',
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
@@ -654,6 +655,7 @@ const MENU_IDS = {
     'mantenimiento/fleetrun':     'btnMenuFleetrun',
     'almacen/inventario':         'btnMenuInventario',
     'flota/status':               'btnMenuStatusFlota',
+    'flota/ubicacion':            'btnMenuUbicacion',
     'directorio/conductores':     'btnMenuConductores',
     'sistema/usuarios':           'nav-usuarios',
     'sistema/auditoria':          'nav-auditoria',
@@ -717,7 +719,8 @@ window.cargarModuloAislado = async function(rutaModulo) {
     // 3. Mostrar nuestro escenario dinámico y poner un spinner
     const root = document.getElementById('root-dinamico');
     if (root) {
-        root.style.display = 'block';
+        root.style.display = 'flex';
+        root.style.flexDirection = 'column';
         root.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted fw-bold">Cargando módulo...</p></div>';
     } else {
         console.error('Elemento root-dinamico no encontrado');
@@ -730,6 +733,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en /modulos/${rutaModulo}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         root.innerHTML = await respHTML.text();
+        if (typeof window.applyI18n === 'function') window.applyI18n();
 
         // UX: actualizar título del header y resaltar enlace activo en el sidebar
         actualizarTituloHeader(rutaModulo);

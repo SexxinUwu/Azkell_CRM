@@ -71,7 +71,7 @@ body {
     .content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background-color: var(--bg) !important; }
     .topbar { background-color: var(--surface) !important; padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border) !important; z-index: 90; height: 60px; flex-shrink: 0;}
     .main-area { flex: 1 1 0; min-height: 0; padding: 15px 25px; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; position: relative; }
-    .modulo-wrapper { display: flex; flex-direction: column; min-height: min-content; width: 100%; flex-grow: 1; } .controls-row { flex-shrink: 0; margin-bottom: 10px; } .chart-container-status { position: relative; height: 230px; width: 100%; }
+    .modulo-wrapper { display: flex; flex-direction: column; min-height: 0; width: 100%; flex-grow: 1; } .controls-row { flex-shrink: 0; margin-bottom: 10px; } .chart-container-status { position: relative; height: 230px; width: 100%; }
     body.dark .controls-row .btn-outline-secondary, body.dark .controls-row .dropdown-toggle { color: #f8fafc !important; border-color: #64748b !important; } body.dark .controls-row .btn-outline-secondary:hover, body.dark .controls-row .dropdown-toggle:hover { background-color: #334155 !important; }
     body.dark .controls-row .btn-outline-info { color: #38bdf8 !important; border-color: #38bdf8 !important; } body.dark .controls-row .btn-outline-info:hover { background-color: #0284c7 !important; color: #ffffff !important; }
     .role-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; } .role-admin { background: #facc15; color: #1e293b; } .role-inspector { background: #3b82f6; color: #ffffff; } .role-mant { background: #10b981; color: #ffffff; }
@@ -731,22 +731,8 @@ body.dark #buscadorPlacas, body.dark #buscadorFleetrun, body.dark #buscadorCondu
    🛠️ PARCHE DE CONTRASTE: CABECERAS, TABLAS Y PERFIL
    ============================================================ */
 
-/* 1. Cabeceras de Formularios (Modales) - Color Distintivo Oscuro */
-.modal-header {
-    background-color: #0f172a !important;
-    border-bottom: none !important;
-}
-.modal-header .modal-title,
-.modal-header h5,
-#tituloModalUser,
-.modal-header i {
-    color: #ffffff !important;
-    font-weight: 600 !important;
-}
-.modal-header .btn-close {
-    filter: invert(1) brightness(200%) !important;
-    opacity: 0.8;
-}
+/* 1. Cabeceras de Formularios (Modales) — respetan el tema activo */
+/* (reglas base en "5. MODALES LIMPIOS" más abajo) */
 .modal-header .btn-close:hover { opacity: 1; }
 
 /* 2. Cabecera del Perfil de Usuario (Dropdown) */
@@ -1218,21 +1204,8 @@ body.dark #btn-wialon-status.btn-primary {
 body.dark #btn-wialon-status.btn-primary i { color: #60a5fa !important; }
 
 /* ============================================================
-   🎯 ALTO CONTRASTE PARA MODALES (UX)
+   🎯 ALTO CONTRASTE PARA MODALES — ver reglas en "5. MODALES LIMPIOS"
    ============================================================ */
-.modal-header {
-    background-color: #0f172a !important;
-    border-bottom: none !important;
-}
-.modal-header .modal-title, .modal-header h5, .modal-header i {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-}
-.modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%) !important;
-    opacity: 0.8;
-}
-.modal-header .btn-close:hover { opacity: 1; }
 
 /* ============================================================
    CORRECCIÓN: BARRA COLAPSADA Y TOOLTIPS (UX)
@@ -1840,4 +1813,73 @@ body.dark #cfg-toast {
     background: #1e293b;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
+
+/* ============================================================
+   📍 GPS FLOTA — Cards de unidades
+   ============================================================ */
+.gps-unit-card {
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 5px;
+}
+.gps-unit-card:hover  { border-color: var(--crm-accent); }
+.gps-unit-card.active { border-color: var(--crm-accent); background: rgba(59,130,246,0.07); }
+body.dark .gps-unit-card.active { background: rgba(59,130,246,0.12); }
+.btn-gps-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--subtext);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.btn-gps-copy:hover { color: var(--crm-accent); border-color: var(--crm-accent); }
+
+/* ── Tarjetas de Idioma (Módulo Configuración) ────────────────── */
+.lang-card {
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background-color: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.lang-card:hover {
+    border-color: var(--crm-accent);
+    background-color: rgba(59, 130, 246, 0.04);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+.lang-card-active {
+    border-color: var(--crm-accent) !important;
+    background-color: rgba(59, 130, 246, 0.08) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+.lang-flag-circle {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.lang-check-icon {
+    font-size: 1.2rem;
+    color: var(--border);
+    transition: color 0.2s;
+}
+.lang-card-active .lang-check-icon {
+    color: var(--crm-accent);
+}
+.lang-card:not(.lang-card-active) .lang-check-icon {
+    opacity: 0.25;
+}
+
 

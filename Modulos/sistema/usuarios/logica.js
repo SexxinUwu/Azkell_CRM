@@ -65,41 +65,41 @@ function generarMatrizUI() {
     const target = document.getElementById('bodyMatrizPermisos');
     if (!target) return;
     target.innerHTML = `
-        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-tools text-warning me-2"></i>MANTENIMIENTO</th></tr>
-        <tr data-k="insp"><td class="text-start ps-3 fw-semibold text-secondary small">Inspecciones</td>
+        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-tools text-warning me-2"></i>MANTENIMIENTO</th></tr>
+        <tr data-k="insp"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Inspecciones</span><br><small class="text-muted">Registro y análisis de inspecciones</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="fleet"><td class="text-start ps-3 fw-semibold text-secondary small">Fleetrun</td>
+        <tr data-k="fleet"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Fleetrun</span><br><small class="text-muted">Datos operativos de la flota</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-box-seam text-info me-2"></i>ALMACÉN</th></tr>
-        <tr data-k="placas"><td class="text-start ps-3 fw-semibold text-secondary small">Placas <small class="text-muted">(Mant+Alm)</small></td>
+        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-box-seam text-info me-2"></i>ALMACÉN</th></tr>
+        <tr data-k="placas"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Placas <small class="text-muted">(Mant+Alm)</small></span><br><small class="text-muted">Fichas técnicas de vehículos</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'l')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'c')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'e')"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'d')"></td></tr>
-        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-truck-front text-success me-2"></i>FLOTA</th></tr>
-        <tr data-k="status"><td class="text-start ps-3 fw-semibold text-secondary small">Status Flota</td>
+        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-truck-front text-success me-2"></i>FLOTA</th></tr>
+        <tr data-k="status"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Status Flota</span><br><small class="text-muted">Estado y agrupación de unidades</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="cond"><td class="text-start ps-3 fw-semibold text-secondary small">Conductores</td>
+        <tr data-k="cond"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Conductores</span><br><small class="text-muted">Directorio de personal operativo</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="gps"><td class="text-start ps-3 fw-semibold text-secondary small">GPS / Ubicación</td>
+        <tr data-k="gps"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">GPS / Ubicación</span><br><small class="text-muted">Visualización en tiempo real</small></td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="gps" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td></tr>
-        <tr><th colspan="5" style="background-color: #1e293b; color: #fff;" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-shield-fill-check text-primary me-2"></i>MÓDULOS EXTRA</th></tr>
-        <tr><td class="text-start ps-3 fw-semibold text-secondary small">Auditoría</td>
+        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-shield-fill-check text-primary me-2"></i>MÓDULOS EXTRA</th></tr>
+        <tr><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Auditoría</span><br><small class="text-muted">Bitácora de actividad del sistema</small></td>
             <td><input type="checkbox" class="form-check-input p-mod" data-k="mod_auditoria" style="width:18px;height:18px;cursor:pointer;"></td>
             <td colspan="3" class="text-muted small text-center">Solo lectura</td></tr>
     `;

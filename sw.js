@@ -1,4 +1,4 @@
-const CACHE_NAME = 'azkell-fleet-v3';
+const CACHE_NAME = 'azkell-fleet-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/Index.html',
@@ -33,8 +33,13 @@ self.addEventListener('activate', event => {
 
 // Interceptar peticiones para que cargue rápido
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // Ignorar peticiones cross-origin (CDNs, imágenes externas, etc.)
+  if (url.origin !== self.location.origin) return;
+
   // Las llamadas a la base de datos (/api/) SIEMPRE deben ir a la red
-  if (event.request.url.includes('/api/')) {
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() =>
         new Response(JSON.stringify({ error: 'Sin conexión a internet' }), {
@@ -48,6 +53,10 @@ self.addEventListener('fetch', event => {
 
   // Para el diseño (CSS, JS, HTML), busca primero en la red, si falla usa el caché guardado
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request).catch(() =>
+      caches.match(event.request).then(cached =>
+        cached || new Response('Offline', { status: 503, statusText: 'Sin conexión' })
+      )
+    )
   );
 });

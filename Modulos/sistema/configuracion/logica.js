@@ -67,11 +67,17 @@ window.init_configuracion = function() {
     const swCompact   = document.getElementById('cfg-switch-compact');
     if (swAnims)   swAnims.checked   = reduceAnims;
     if (swCompact) swCompact.checked = compact;
+
+    // Sincronizar idioma activo en las lang-cards
+    const langActual = localStorage.getItem('fleet_idioma') || 'es';
+    document.querySelectorAll('.lang-card').forEach(c => {
+        c.classList.toggle('lang-card-active', c.dataset.lang === langActual);
+    });
 };
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels  = ['perfil', 'apariencia', 'accesibilidad'];
+    const panels  = ['perfil', 'apariencia', 'accesibilidad', 'idioma'];
     const buttons = document.querySelectorAll('.config-nav-btn');
 
     panels.forEach(p => {

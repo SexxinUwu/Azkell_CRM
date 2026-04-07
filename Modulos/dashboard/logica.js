@@ -127,10 +127,10 @@ window.initGraficoInspDash = function() {
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: ['Vigentes', 'Por Vencer', 'Sin Registro', 'Vencidos'],
+            labels: ['Vigentes', 'Vencidas'],
             datasets: [{
-                data: [1, 0, 0, 0],
-                backgroundColor: ['#16a34a', '#eab308', '#64748b', '#dc2626'],
+                data: [1, 0],
+                backgroundColor: ['#16a34a', '#dc2626'],
                 borderWidth: 2,
                 hoverOffset: 4
             }]
@@ -145,7 +145,7 @@ window.initGraficoInspDash = function() {
                     font: { weight: 'bold', size: 12 },
                     formatter: (value, context) => {
                         let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                        if (total === 0 || value === 0) return "";
+                        if (total === 0 || value === 0 || context.chart.data.labels[0] === 'Sin Datos') return "";
                         return Math.round((value / total) * 100) + "%";
                     }
                 }
@@ -154,20 +154,41 @@ window.initGraficoInspDash = function() {
     });
 };
 
-window.procesarInspeccionesParaDashboard = function() {
-    if (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0 ||
-        !window.dataGlobalPlacas        || window.dataGlobalPlacas.length === 0) {
+window.procesarInspeccionesParaDashboard = async function() {
+    // Si no hay datos de placas, reintentar
+    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
         setTimeout(procesarInspeccionesParaDashboard, 600);
         return;
     }
-    let hoy = new Date(); hoy.setHours(0,0,0,0);
-    let vigentes = 0, porVencer = 0, sinRegistro = 0, vencidos = 0;
-    let inspecciones = window.dataGlobalInspecciones.filter(i => i.estado !== 'Eliminada');
 
+    // Si no hay datos de inspecciones en caché, fetchear del API directamente
+    let inspData = window.dataGlobalInspecciones;
+    if (!inspData || inspData.length === 0) {
+        try {
+            const res = await fetch('/api/script/obtenerDatosInspecciones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            inspData = json.data || [];
+            window.dataGlobalInspecciones = inspData; // guardar para otros módulos
+        } catch(e) {
+            console.warn('Dashboard: no se pudo cargar inspecciones:', e);
+            return;
+        }
+    }
+
+    let hoy = new Date(); hoy.setHours(0,0,0,0);
+    let vigentes = 0, vencidas = 0;
+    let inspecciones = inspData.filter(i => i.estado !== 'Eliminada');
+
+    // Mismo filtro que el módulo de inspecciones (Activa + en uso)
     let placasActivas = window.dataGlobalPlacas.filter(p => {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
-        let estado = normalizeStr(p[18] || '');
-        let enUso  = normalizeStr(p[22] || '');
+        let estado = normalizeStr(p[18] || p[8] || '');
+        let enUso  = normalizeStr(p[22] || p[13] || '');
         return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
     });
 
@@ -181,7 +202,8 @@ window.procesarInspeccionesParaDashboard = function() {
             })
             .find(i => normalizeStr(i.placa) === placaStr);
 
-        if (!insp || !insp.fecha_ingreso) { sinRegistro++; return; }
+        // Sin registro → vencida (igual que el módulo real: data-dias=-9999 < 0)
+        if (!insp || !insp.fecha_ingreso) { vencidas++; return; }
 
         let fIngreso;
         try {
@@ -191,27 +213,35 @@ window.procesarInspeccionesParaDashboard = function() {
             } else {
                 fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
             }
-        } catch(e) { sinRegistro++; return; }
+        } catch(e) { vencidas++; return; }
 
         let dProp = parseInt(insp.dias_propuestos) || 30;
         let fProx = new Date(fIngreso.getTime());
         fProx.setDate(fProx.getDate() + dProp);
         let diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
 
-        if      (diasRestantes < 0)              vencidos++;
-        else if (diasRestantes >= 0 && diasRestantes <= 7) porVencer++;
-        else                                     vigentes++;
+        // dias >= 0 → vigente (incluye por vencer), dias < 0 → vencida
+        if (diasRestantes >= 0) vigentes++;
+        else                    vencidas++;
     });
 
     if (!window.chartInspDashInst) window.chartInspDashInst = initGraficoInspDash();
     if (!window.chartInspDashInst) return;
 
     let isDark = document.body.classList.contains('dark');
-    window.chartInspDashInst.data.datasets[0].data = [vigentes, porVencer, sinRegistro, vencidos];
-    window.chartInspDashInst.options.plugins.datalabels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    window.chartInspDashInst.options.scales.x.ticks.color = isDark ? '#98989d' : '#8e8e93';
-    window.chartInspDashInst.options.scales.y.ticks.color = isDark ? '#98989d' : '#8e8e93';
-    window.chartInspDashInst.options.scales.y.grid.color  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    let total = vigentes + vencidas;
+    if (total === 0) {
+        window.chartInspDashInst.data.labels = ['Sin Datos'];
+        window.chartInspDashInst.data.datasets[0].data = [1];
+        window.chartInspDashInst.data.datasets[0].backgroundColor = ['#475569'];
+    } else {
+        window.chartInspDashInst.data.labels = ['Vigentes', 'Vencidas'];
+        window.chartInspDashInst.data.datasets[0].data = [vigentes, vencidas];
+        window.chartInspDashInst.data.datasets[0].backgroundColor = ['#16a34a', '#dc2626'];
+    }
+    window.chartInspDashInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    window.chartInspDashInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    window.chartInspDashInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
     window.chartInspDashInst.update();
 };
 
@@ -281,6 +311,8 @@ window.cargarMapaWialonDash = async function() {
             return;
         }
         initMapaDashboard(datos);
+        // Re-calcular fleetrun con km GPS real (antes podía tener km_gps=0 si Wialon no had cargado)
+        if (typeof procesarFleetrunParaDashboard === 'function') procesarFleetrunParaDashboard();
     } catch (err) {
         console.error('Error cargando Wialon para dashboard:', err);
         initMapaDashboard([]);
