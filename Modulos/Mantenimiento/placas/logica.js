@@ -287,6 +287,36 @@ window.abrirDetallePlaca = function(event, index) {
         };
     }
 
+    // ── Datos GPS (TAREA 4) ─────────────────────────────────────
+    const placaActual = (p[0] || '').toString().trim().toUpperCase();
+    const elGpsUbic  = document.getElementById('detalleGpsUbicacion');
+    const elGpsKm    = document.getElementById('detalleGpsKm');
+    const elGpsHoras = document.getElementById('detalleGpsHoras');
+    const sinGps = '<span class="text-muted fst-italic small">Sin conexión GPS activa</span>';
+
+    if (elGpsUbic) elGpsUbic.innerHTML = sinGps;
+    if (elGpsKm)   elGpsKm.innerHTML   = sinGps;
+    if (elGpsHoras) elGpsHoras.innerHTML = sinGps;
+
+    if (window.dataGlobalStatusFlota && window.dataGlobalStatusFlota.length > 0) {
+        const dataGps = window.dataGlobalStatusFlota.find(v => {
+            const vPlaca = (v.placa || v[0] || '').toString().trim().toUpperCase();
+            return vPlaca === placaActual;
+        });
+        if (dataGps) {
+            const ubicacion = dataGps.ubicacion || dataGps.location || dataGps[1] || null;
+            const km        = dataGps.km || dataGps.kilometraje || dataGps[2] || null;
+            const horas     = dataGps.horas || dataGps.horasMotor || dataGps[3] || null;
+            if (elGpsUbic && ubicacion)  elGpsUbic.innerHTML  = `<span class="fw-bold">${ubicacion}</span>`;
+            if (elGpsKm   && km)         elGpsKm.innerHTML    = `<span class="fw-bold">${km} km</span>`;
+            if (elGpsHoras && horas)     elGpsHoras.innerHTML = `<span class="fw-bold">${horas} h</span>`;
+        }
+    }
+
+    // Resetear a primera pestaña al abrir offcanvas
+    const tabGenBtn = document.getElementById('tab-general-btn');
+    if (tabGenBtn) bootstrap.Tab.getOrCreateInstance(tabGenBtn).show();
+
     new bootstrap.Offcanvas(document.getElementById('offcanvasDetallePlaca')).show();
 }
 
@@ -472,5 +502,48 @@ window.init_placas = function() {
             <li><button class="dropdown-item fw-bold text-primary" onclick="document.getElementById('btnNuevaPlaca').click()"><i class="bi bi-plus-circle"></i> Nueva Placa</button></li>
             <li><button class="dropdown-item fw-bold text-success" onclick="descargarExcelDinamico('tablaPlacasHidden','Base_Placas')"><i class="bi bi-file-earmark-excel"></i> Exportar</button></li>
         `;
+    }
+
+    // ── Toggle campos avanzados — Modal Registrar ───────────────
+    const btnTogReg = document.getElementById('btnToggleAvanzadoReg');
+    const contenedorReg = document.getElementById('contenedorCamposAvanzadosReg');
+    if (btnTogReg && contenedorReg) {
+        btnTogReg.addEventListener('click', function() {
+            const estaOculto = contenedorReg.classList.contains('d-none');
+            contenedorReg.classList.toggle('d-none');
+            btnTogReg.innerHTML = estaOculto
+                ? '<i class="bi bi-gear-fill"></i> Ocultar Configuración Avanzada'
+                : '<i class="bi bi-gear"></i> Mostrar Configuración Avanzada';
+        });
+    }
+
+    // ── Toggle campos avanzados — Modal Editar ──────────────────
+    const btnTogEdit = document.getElementById('btnToggleAvanzadoEdit');
+    const contenedorEdit = document.getElementById('contenedorCamposAvanzadosEdit');
+    if (btnTogEdit && contenedorEdit) {
+        btnTogEdit.addEventListener('click', function() {
+            const estaOculto = contenedorEdit.classList.contains('d-none');
+            contenedorEdit.classList.toggle('d-none');
+            btnTogEdit.innerHTML = estaOculto
+                ? '<i class="bi bi-gear-fill"></i> Ocultar Configuración Avanzada'
+                : '<i class="bi bi-gear"></i> Mostrar Configuración Avanzada';
+        });
+    }
+
+    // ── Resetear toggle al abrir los modales ────────────────────
+    const modalReg = document.getElementById('modalPlaca');
+    if (modalReg) {
+        modalReg.addEventListener('show.bs.modal', function() {
+            if (contenedorReg) contenedorReg.classList.add('d-none');
+            if (btnTogReg) btnTogReg.innerHTML = '<i class="bi bi-gear"></i> Mostrar Configuración Avanzada';
+        });
+    }
+
+    const modalEdit = document.getElementById('modalEditarPlaca');
+    if (modalEdit) {
+        modalEdit.addEventListener('show.bs.modal', function() {
+            if (contenedorEdit) contenedorEdit.classList.add('d-none');
+            if (btnTogEdit) btnTogEdit.innerHTML = '<i class="bi bi-gear"></i> Mostrar Configuración Avanzada';
+        });
     }
 };

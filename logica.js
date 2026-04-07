@@ -239,11 +239,38 @@ window.restaurarCascaronApp = function() {
     if(tb) tb.style.display = '';
 };
 
+// Aplica color de acento guardado (accesible desde módulo configuración)
+window.applyAccent = function(hex, save) {
+    // Seteamos en body (inline) para ganar sobre cualquier :root redefinido
+    document.body.style.setProperty('--accent', hex);
+    document.body.style.setProperty('--crm-accent', hex);
+    document.body.style.setProperty('--crm-accent-light', hex + '1a'); // 10% opacity
+    if (save) localStorage.setItem('fleet_accent', hex);
+};
+
 document.addEventListener('DOMContentLoaded', function() {
   const toggle = document.getElementById('theme-toggle');
   const body = document.body;
   const saved = localStorage.getItem('theme');
   const btnTheme = document.getElementById('btn-theme-toggle');
+
+  // Restaurar acento guardado
+  const savedAccent = localStorage.getItem('fleet_accent');
+  if (savedAccent) window.applyAccent(savedAccent, false);
+
+  // Restaurar tamaño de fuente guardado
+  const savedFont = parseInt(localStorage.getItem('fleet_fontsize'));
+  if (savedFont && savedFont >= 10 && savedFont <= 20) {
+    document.documentElement.style.fontSize = savedFont + 'px';
+  }
+
+  // Restaurar accesibilidad
+  if (localStorage.getItem('fleet_reduce_anims') === 'true') {
+    document.body.classList.add('reduce-motion');
+  }
+  if (localStorage.getItem('fleet_sidebar_compact') === 'true') {
+    document.body.classList.add('sidebar-compact');
+  }
 
   if (saved === 'dark') applyDark(true, false);
 
@@ -261,8 +288,13 @@ document.addEventListener('DOMContentLoaded', function() {
           ? '<i class="bi bi-sun-fill text-warning"></i>'
           : '<i class="bi bi-moon-stars-fill"></i>';
     }
+    // Sincronizar switch del módulo configuración si está abierto
+    const switchCfgDark = document.getElementById('cfg-switch-dark');
+    if (switchCfgDark) switchCfgDark.checked = isDark;
     actualizarColoresGraficos();
   }
+  // Exponer applyDark para que el módulo configuración lo pueda llamar
+  window.applyDark = applyDark;
 
   let usuarioGuardado = localStorage.getItem('fleet_user');
   if (!usuarioGuardado) {

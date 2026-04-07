@@ -68,8 +68,9 @@
         <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body custom-scrollbar p-0">
-        <div class="p-4 border-bottom bg-theme-main">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+        <!-- Cabecera resumen -->
+        <div class="p-3 border-bottom bg-theme-main">
+            <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="badge-premium" id="det-estado">ACTIVA</span>
                 <span class="text-muted small fw-bold" id="det-motora">MOTORA</span>
             </div>
@@ -77,39 +78,90 @@
             <div class="text-muted small"><i class="bi bi-card-heading"></i> RUC: <span id="det-ruc">20123456789</span></div>
         </div>
 
-        <div class="p-4">
-            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-gear-wide-connected me-1"></i> Especificaciones</h6>
-            <div class="detalle-lateral-grid mb-4">
-                <div class="det-lat-item"><span>Marca</span><strong id="det-marca"></strong></div>
-                <div class="det-lat-item"><span>Modelo</span><strong id="det-modelo"></strong></div>
-                <div class="det-lat-item"><span>Tipo</span><strong id="det-tipo"></strong></div>
-                <div class="det-lat-item"><span>Sub Tipo</span><strong id="det-sub_tipo"></strong></div>
-                <div class="det-lat-item"><span>Color</span><strong id="det-color"></strong></div>
-                <div class="det-lat-item"><span>Configuración</span><strong id="det-conf"></strong></div>
-                <div class="det-lat-item"><span>Año</span><strong id="det-anio"></strong></div>
-                <div class="det-lat-item"><span>Combustible</span><strong id="det-comb"></strong></div>
+        <!-- Pestañas -->
+        <ul class="nav nav-tabs nav-fill border-bottom px-3 pt-2 bg-theme-main" id="tabsDetallePlaca" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold small" id="tab-general-btn" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" role="tab">
+                    <i class="bi bi-info-circle me-1"></i> Info General
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold small" id="tab-gps-btn" data-bs-toggle="tab" data-bs-target="#tab-gps" type="button" role="tab">
+                    <i class="bi bi-broadcast me-1"></i> GPS
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- PESTAÑA 1: Información General -->
+            <div class="tab-pane fade show active p-4" id="tab-general" role="tabpanel">
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-gear-wide-connected me-1"></i> Especificaciones</h6>
+                <div class="detalle-lateral-grid mb-4">
+                    <div class="det-lat-item"><span>Marca</span><strong id="det-marca"></strong></div>
+                    <div class="det-lat-item"><span>Modelo</span><strong id="det-modelo"></strong></div>
+                    <div class="det-lat-item"><span>Tipo</span><strong id="det-tipo"></strong></div>
+                    <div class="det-lat-item"><span>Sub Tipo</span><strong id="det-sub_tipo"></strong></div>
+                    <div class="det-lat-item"><span>Color</span><strong id="det-color"></strong></div>
+                    <div class="det-lat-item"><span>Configuración</span><strong id="det-conf"></strong></div>
+                    <div class="det-lat-item"><span>Año</span><strong id="det-anio"></strong></div>
+                    <div class="det-lat-item"><span>Combustible</span><strong id="det-comb"></strong></div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-upc-scan me-1"></i> Identificación</h6>
+                <div class="detalle-lateral-grid mb-4">
+                    <div class="det-lat-item"><span>Nº Motor</span><strong id="det-nro_motor"></strong></div>
+                    <div class="det-lat-item"><span>Nº Caja</span><strong id="det-nro_caja"></strong></div>
+                    <div class="det-lat-item"><span>Nº Corona</span><strong id="det-nro_corona"></strong></div>
+                    <div class="det-lat-item"><span>Nº VIN</span><strong id="det-nro_vin" class="text-break"></strong></div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-arrows-fullscreen me-1"></i> Dimensiones</h6>
+                <div class="detalle-lateral-grid mb-4">
+                    <div class="det-lat-item"><span>Carga Útil</span><strong id="det-carga_util"></strong></div>
+                    <div class="det-lat-item"><span>Peso Neto</span><strong id="det-peso_neto"></strong></div>
+                    <div class="det-lat-item"><span>Peso Bruto</span><strong id="det-peso_bruto"></strong></div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-geo-alt me-1"></i> Operación</h6>
+                <div class="detalle-lateral-grid mb-2">
+                    <div class="det-lat-item"><span>Zona UTS</span><strong id="det-uts"></strong></div>
+                    <div class="det-lat-item"><span>En Uso?</span><strong id="det-enuso"></strong></div>
+                    <div class="det-lat-item"><span>Llantas</span><strong id="det-llantas"></strong></div>
+                </div>
             </div>
 
-            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-upc-scan me-1"></i> Identificación</h6>
-            <div class="detalle-lateral-grid mb-4">
-                <div class="det-lat-item"><span>Nº Motor</span><strong id="det-nro_motor"></strong></div>
-                <div class="det-lat-item"><span>Nº Caja</span><strong id="det-nro_caja"></strong></div>
-                <div class="det-lat-item"><span>Nº Corona</span><strong id="det-nro_corona"></strong></div>
-                <div class="det-lat-item"><span>Nº VIN</span><strong id="det-nro_vin" class="text-break"></strong></div>
-            </div>
+            <!-- PESTAÑA 2: Conexión GPS -->
+            <div class="tab-pane fade p-4" id="tab-gps" role="tabpanel">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-broadcast-pin text-primary fs-4"></i>
+                    <div>
+                        <div class="fw-bold">Telemetría en tiempo real</div>
+                        <div class="text-muted small">Datos obtenidos de Wialon GPS</div>
+                    </div>
+                </div>
 
-            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-arrows-fullscreen me-1"></i> Dimensiones</h6>
-            <div class="detalle-lateral-grid mb-4">
-                <div class="det-lat-item"><span>Carga Útil</span><strong id="det-carga_util"></strong></div>
-                <div class="det-lat-item"><span>Peso Neto</span><strong id="det-peso_neto"></strong></div>
-                <div class="det-lat-item"><span>Peso Bruto</span><strong id="det-peso_bruto"></strong></div>
-            </div>
-
-            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-geo-alt me-1"></i> Operación</h6>
-            <div class="detalle-lateral-grid mb-2">
-                <div class="det-lat-item"><span>Zona UTS</span><strong id="det-uts"></strong></div>
-                <div class="det-lat-item"><span>En Uso?</span><strong id="det-enuso"></strong></div>
-                <div class="det-lat-item"><span>Llantas</span><strong id="det-llantas"></strong></div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold small text-muted"><i class="bi bi-pin-map me-1"></i> Ubicación Actual</div>
+                                <div id="detalleGpsUbicacion" class="fw-bold mt-1">—</div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="fw-bold small text-muted"><i class="bi bi-speedometer2 me-1"></i> Kilometraje Real</div>
+                            <div id="detalleGpsKm" class="fw-bold">—</div>
+                        </div>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="fw-bold small text-muted"><i class="bi bi-clock-history me-1"></i> Horas de Motor</div>
+                            <div id="detalleGpsHoras" class="fw-bold">—</div>
+                        </div>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -159,30 +211,37 @@
                         <div class="col-md-3 mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_tipo" id="p_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
                         <div class="col-md-3 mb-3"><label class="form-label fw-bold">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_sub_tipo" id="p_sub_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="p_color" id="p_color" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="p_conf" id="p_conf" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                        <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="p_anio" placeholder="2024"></div>
-                        <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
-                            <select class="form-select text-uppercase fw-bold text-primary" name="p_comb">
-                                <option value="DIESEL" selected>DIESEL</option>
-                                <option value="GASOLINA">GASOLINA</option>
-                                <option value="GNV">GNV</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
-                    <div class="row">
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
+                    <button type="button" id="btnToggleAvanzadoReg" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
+                        <i class="bi bi-gear"></i> Mostrar Configuración Avanzada
+                    </button>
+
+                    <div id="contenedorCamposAvanzadosReg" class="d-none mt-3">
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="p_color" id="p_color" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="p_conf" id="p_conf" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="p_anio" placeholder="2024"></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
+                                <select class="form-select text-uppercase fw-bold text-primary" name="p_comb">
+                                    <option value="DIESEL" selected>DIESEL</option>
+                                    <option value="GASOLINA">GASOLINA</option>
+                                    <option value="GNV">GNV</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
+                        </div>
                     </div>
 
                     <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">4. Operatividad</h6>
@@ -245,30 +304,37 @@
                         <div class="col-md-3 mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_tipo" id="e_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
                         <div class="col-md-3 mb-3"><label class="form-label fw-bold">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_sub_tipo" id="e_sub_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="editP_color" id="e_color" onchange="gestionarNuevoSelect(this)"></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="editP_conf" id="e_conf" onchange="gestionarNuevoSelect(this)"></select></div>
-                        <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="editP_anio" id="e_anio"></div>
-                        <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
-                            <select class="form-select text-uppercase fw-bold text-primary" name="editP_comb" id="e_comb">
-                                <option value="DIESEL">DIESEL</option>
-                                <option value="GASOLINA">GASOLINA</option>
-                                <option value="GNV">GNV</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
-                    <div class="row">
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="editP_carga_util" id="e_carga_util"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_neto" id="e_peso_neto"></div>
-                        <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
+                    <button type="button" id="btnToggleAvanzadoEdit" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
+                        <i class="bi bi-gear"></i> Mostrar Configuración Avanzada
+                    </button>
+
+                    <div id="contenedorCamposAvanzadosEdit" class="d-none mt-3">
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="editP_color" id="e_color" onchange="gestionarNuevoSelect(this)"></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="editP_conf" id="e_conf" onchange="gestionarNuevoSelect(this)"></select></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="editP_anio" id="e_anio"></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
+                                <select class="form-select text-uppercase fw-bold text-primary" name="editP_comb" id="e_comb">
+                                    <option value="DIESEL">DIESEL</option>
+                                    <option value="GASOLINA">GASOLINA</option>
+                                    <option value="GNV">GNV</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="editP_carga_util" id="e_carga_util"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_neto" id="e_peso_neto"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
+                        </div>
                     </div>
 
                     <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">4. Operatividad</h6>

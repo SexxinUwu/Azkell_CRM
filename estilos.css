@@ -1768,3 +1768,76 @@ body.dark .kpi-card.active-filter {
     font-size: 0.75rem;
     padding: 0.35em 0.5em;
 }
+
+/* ============================================================
+   ⚙️ MÓDULO CONFIGURACIÓN — ACCESIBILIDAD
+   ============================================================ */
+
+/* Reducir animaciones: elimina transiciones cuando el usuario lo activa */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* Sidebar compacto: oculta textos y colapsa a solo iconos */
+body.sidebar-compact .sidebar {
+    width: 68px !important;
+}
+body.sidebar-compact .sidebar .link-text,
+body.sidebar-compact .sidebar .chevron-icon,
+body.sidebar-compact .sidebar .brand-text {
+    display: none !important;
+}
+body.sidebar-compact #sidebarMenu a {
+    justify-content: center !important;
+    padding: 8px !important;
+    margin: 2px 8px !important;
+}
+body.sidebar-compact #sidebarMenu a i.bi {
+    margin-right: 0 !important;
+    font-size: 1.2rem !important;
+}
+body.sidebar-compact .brand-container {
+    justify-content: center !important;
+    padding: 0 !important;
+}
+body.sidebar-compact .sidebar .collapse a {
+    padding: 8px !important;
+    margin: 2px 8px !important;
+    justify-content: center !important;
+}
+
+/* Toast configuración guardada */
+#cfg-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#cfg-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+body.dark #cfg-toast {
+    background: #1e293b;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
