@@ -264,6 +264,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.documentElement.style.fontSize = savedFont + 'px';
   }
 
+  // Restaurar tipo de fuente guardado
+  const _FF_MAP = {
+    inter:  "'Inter', system-ui, -apple-system, sans-serif",
+    system: "system-ui, -apple-system, sans-serif",
+    serif:  "Georgia, 'Times New Roman', serif",
+    mono:   "'Consolas', 'Courier New', monospace"
+  };
+  const savedFontFamily = localStorage.getItem('fleet_fontfamily') || 'inter';
+  document.documentElement.style.setProperty('--font-family', _FF_MAP[savedFontFamily] || _FF_MAP.inter);
+
   // Restaurar accesibilidad
   if (localStorage.getItem('fleet_reduce_anims') === 'true') {
     document.body.classList.add('reduce-motion');
@@ -727,10 +737,15 @@ window.cargarModuloAislado = async function(rutaModulo) {
         return;
     }
 
+    // Resolver ruta real en disco (carpetas con mayúsculas: Almacen, Flota, Mantenimiento)
+    const _MAPA_CAT = { almacen: 'Almacen', flota: 'Flota', mantenimiento: 'Mantenimiento' };
+    const _partes = rutaModulo.split('/'); _partes[0] = _MAPA_CAT[_partes[0]] || _partes[0];
+    const _rutaDisco = '/Modulos/' + _partes.join('/');
+
     try {
         // 3. Traer el diseño (HTML) desde la carpeta específica
-        const respHTML = await fetch(`/modulos/${rutaModulo}/vista.html`);
-        if(!respHTML.ok) throw new Error(`No se encontró vista.html en /modulos/${rutaModulo}`);
+        const respHTML = await fetch(`${_rutaDisco}/vista.html`);
+        if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         root.innerHTML = await respHTML.text();
         if (typeof window.applyI18n === 'function') window.applyI18n();
@@ -746,7 +761,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
             script.id = scriptId;
-            script.src = `/modulos/${rutaModulo}/logica.js`;
+            script.src = `${_rutaDisco}/logica.js`;
             // Llamar la función init una vez que el JS ha cargado por primera vez
             let nombreCarpeta = rutaModulo.split('/')[1] || rutaModulo.split('/')[0];
             let funcionInit = `init_${nombreCarpeta}`;

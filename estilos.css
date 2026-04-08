@@ -604,7 +604,7 @@ body.dark .skeleton-box::after {
 
 /* 1. Cambio de Fuente Global y Fondos */
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: var(--font-family, 'Inter', system-ui, -apple-system, sans-serif) !important;
     background-color: #f8fafc !important;
 }
 
@@ -934,6 +934,7 @@ body.dark #sidebarMenu a[aria-expanded="true"] i {
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* 2. MODO OSCURO "PLOMO Y NEGRO" */
@@ -1812,6 +1813,41 @@ body.sidebar-compact .sidebar .collapse a {
 body.dark #cfg-toast {
     background: #1e293b;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Botones selector de tipo de fuente */
+.cfg-font-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    min-width: 70px;
+}
+.cfg-font-btn:hover {
+    border-color: var(--crm-accent);
+    transform: translateY(-1px);
+}
+.cfg-font-btn.active {
+    border-color: var(--crm-accent);
+    background: var(--crm-accent-light);
+}
+.cfg-font-preview {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+}
+.cfg-font-name {
+    font-size: 0.7rem;
+    color: var(--subtext);
+    font-family: 'Inter', system-ui, sans-serif !important; /* siempre legible */
 }
 
 /* ============================================================

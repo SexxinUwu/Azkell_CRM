@@ -112,6 +112,30 @@
                     <span>Grande (20px)</span>
                 </div>
             </div>
+
+            <!-- Tipo de fuente -->
+            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 520px;">
+                <p class="fw-semibold mb-1" style="color: var(--text);">Tipo de fuente</p>
+                <p class="mb-3" style="color: var(--subtext); font-size: 0.8rem;">Elige la tipografía de la interfaz.</p>
+                <div class="d-flex flex-wrap gap-2" id="cfg-font-options">
+                    <button class="cfg-font-btn" data-font="inter" onclick="window.applyFontFamily('inter', true)" style="font-family: 'Inter', sans-serif;">
+                        <span class="cfg-font-preview">Aa</span>
+                        <span class="cfg-font-name">Inter</span>
+                    </button>
+                    <button class="cfg-font-btn" data-font="system" onclick="window.applyFontFamily('system', true)" style="font-family: system-ui, sans-serif;">
+                        <span class="cfg-font-preview">Aa</span>
+                        <span class="cfg-font-name">Sistema</span>
+                    </button>
+                    <button class="cfg-font-btn" data-font="serif" onclick="window.applyFontFamily('serif', true)" style="font-family: Georgia, serif;">
+                        <span class="cfg-font-preview">Aa</span>
+                        <span class="cfg-font-name">Serif</span>
+                    </button>
+                    <button class="cfg-font-btn" data-font="mono" onclick="window.applyFontFamily('mono', true)" style="font-family: 'Consolas', monospace;">
+                        <span class="cfg-font-preview">Aa</span>
+                        <span class="cfg-font-name">Mono</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Panel: Accesibilidad -->

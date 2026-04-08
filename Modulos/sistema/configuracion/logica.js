@@ -60,6 +60,10 @@ window.init_configuracion = function() {
     if (slider) slider.value = fontSaved;
     if (label)  label.textContent = fontSaved + 'px';
 
+    // Sincronizar tipo de fuente
+    const fontFamilySaved = localStorage.getItem('fleet_fontfamily') || 'inter';
+    if (window.applyFontFamily) window.applyFontFamily(fontFamilySaved, false);
+
     // Sincronizar switches accesibilidad
     const reduceAnims = localStorage.getItem('fleet_reduce_anims') === 'true';
     const compact     = localStorage.getItem('fleet_sidebar_compact') === 'true';
@@ -144,6 +148,25 @@ window.applyFontSize = function(val, save) {
     if (label) label.textContent = val + 'px';
     if (save) {
         localStorage.setItem('fleet_fontsize', val);
+        _mostrarToast();
+    }
+};
+
+// ---- Tipo de fuente ----
+window.applyFontFamily = function(key, save) {
+    const FONTS = {
+        inter:  "'Inter', system-ui, sans-serif",
+        system: "system-ui, -apple-system, sans-serif",
+        serif:  "Georgia, 'Times New Roman', serif",
+        mono:   "'Consolas', 'Courier New', monospace"
+    };
+    const family = FONTS[key] || FONTS.inter;
+    document.documentElement.style.setProperty('--font-family', family);
+    document.querySelectorAll('#cfg-font-options .cfg-font-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.font === key);
+    });
+    if (save) {
+        localStorage.setItem('fleet_fontfamily', key);
         _mostrarToast();
     }
 };
