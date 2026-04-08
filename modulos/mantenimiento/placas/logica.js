@@ -8,7 +8,8 @@ let dataGlobalPlacas    = [];
 let datosFiltradosPlacas = [];
 let paginaActualPlacas  = 1;
 let colActualesPlacas   = 4;
-let ITEMS_POR_PAGINA    = 16;
+window.filasPlacasConfig = window.filasPlacasConfig || parseInt(localStorage.getItem('fleet_placas_filas') || '4');
+let ITEMS_POR_PAGINA    = colActualesPlacas * window.filasPlacasConfig;
 
 // ── Poblar selects dinámicos desde dataGlobalPlacas ──────────────
 window.poblarSelectsFormularios = function(datos) {
@@ -63,14 +64,31 @@ window.poblarSelectsFormularios = function(datos) {
 };
 
 // ── Carga principal ──────────────────────────────────────────────
-function cargarTablaPlacas(forzarRefresh = false) { if(!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; } document.getElementById('contenedorPlacasDinamico').innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>'; google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas(); }
+function cargarTablaPlacas(forzarRefresh = false) {
+    if (!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; }
+    if (typeof window.mostrarSkeleton === 'function') {
+        window.mostrarSkeleton('contenedorPlacasDinamico', 'cards', 8);
+    } else {
+        const c = document.getElementById('contenedorPlacasDinamico');
+        if (c) c.innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>';
+    }
+    google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas();
+}
 
 window.cambiarColumnasPlacas = function(cols) {
     colActualesPlacas = parseInt(cols);
-    ITEMS_POR_PAGINA = colActualesPlacas * 4;
+    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
     paginaActualPlacas = 1;
     const contenedor = document.getElementById('contenedorPlacasDinamico');
     if (contenedor) contenedor.className = `flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-${colActualesPlacas}`;
+    renderizarPaginaPlacas();
+};
+
+window.cambiarFilasPlacas = function(filas) {
+    window.filasPlacasConfig = parseInt(filas) || 4;
+    localStorage.setItem('fleet_placas_filas', window.filasPlacasConfig);
+    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
+    paginaActualPlacas = 1;
     renderizarPaginaPlacas();
 };
 
@@ -152,6 +170,7 @@ function mostrarPlacas(datos) {
     rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('i_placa', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
     paginaActualPlacas = 1;
     cambiarColumnasPlacas(colActualesPlacas);
+    if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
 }
 
 // ── Filtro avanzado ──────────────────────────────────────────────
@@ -588,6 +607,11 @@ window.seleccionarTodasLasPlacas = function() {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router al (re)cargar
 // ================================================================
 window.init_placas = function() {
+    // Restaurar preferencia de filas/página guardada
+    const selFilas = document.getElementById('sel-filas-placas');
+    if (selFilas) selFilas.value = String(window.filasPlacasConfig);
+    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
+
     cargarTablaPlacas();
 
     const fabMenu = document.getElementById('fab-menu');

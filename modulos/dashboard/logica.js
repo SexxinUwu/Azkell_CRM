@@ -455,6 +455,9 @@ window.renderKpiMetrics = async function() {
 
     // Activity feed
     _renderDashActivityFeed(inspData);
+
+    // Actualizar badges de sidebar con los datos ya cargados
+    if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
 };
 
 function _dashTrendBadge(id, prev, curr, better) {
