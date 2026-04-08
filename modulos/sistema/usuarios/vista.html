@@ -1,0 +1,61 @@
+<!-- Módulo Usuarios y Permisos - Aislado en SPA -->
+
+<div id="moduloUsuarios" class="modulo-wrapper">
+    <div class="controls-row d-flex justify-content-between">
+        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-person-lines-fill"></i> <span data-i18n="users.title">Directorio del Personal</span></h5>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="cache-badge-usuarios" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-usuarios" data-i18n="common.sinCargar">Sin cargar</span></span>
+            <button class="btn-reload-cache" id="btn-reload-usuarios" onclick="recargarModulo('usuarios')" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalGestorUsuario()" data-perm-crear="usuarios"><i class="bi bi-person-plus"></i> <span data-i18n="users.new">Nuevo Usuario</span></button>
+        </div>
+    </div>
+    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUsuarios" data-sort-dir="asc">
+        <thead><tr><th onclick="sortTable('tablaUsuarios', 0)"><span data-i18n="users.col.id">ID</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 1)"><span data-i18n="users.col.fullname">Nombre Completo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 2)"><span data-i18n="users.col.cargo">Cargo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 3)"><span data-i18n="common.email">Correo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 4)"><span data-i18n="users.col.rol">Rol</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 5)"><span data-i18n="common.status">Estado</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+        <tbody id="cuerpoTablaUsuarios"><tr><td colspan="7" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr></tbody>
+    </table></div></div>
+</div>
+
+<!-- Modal Gestor de Usuarios y Permisos -->
+<div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="tituloModalUser"><i class="bi bi-shield-lock-fill text-warning"></i> <span data-i18n="users.modal.title">Gestor de Accesos</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formGestorUsuario" onsubmit="procesarGuardadoUsuario(event, this)">
+                <input type="hidden" name="idUsuarioEdit" id="gu_id">
+                <input type="hidden" name="permisos_json" id="gu_permisos">
+                <div class="modal-body">
+                    <div class="card p-3 shadow-sm mb-3 border-0">
+                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill"></i> <span data-i18n="users.section.data">Datos del Personal</span></h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="fw-bold" data-i18n="users.form.fullname">Nombre Completo</label><input type="text" class="form-control fw-bold" name="nombreUsuarioEdit" id="gu_nombre" required></div>
+                            <div class="col-md-6 mb-3"><label class="fw-bold" data-i18n="users.form.cargo">Cargo</label><input type="text" class="form-control" name="cargoUsuarioEdit" id="gu_cargo" required></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5 mb-3"><label class="fw-bold" data-i18n="users.form.email">Correo (Usuario)</label><input type="email" class="form-control" name="correoUsuarioEdit" id="gu_correo" required></div>
+                            <div class="col-md-4 mb-3"><label class="fw-bold" data-i18n="common.password">Contraseña</label><input type="text" class="form-control" name="passwordUsuarioEdit" id="gu_password" required></div>
+                            <div class="col-md-3 mb-3"><label class="fw-bold" data-i18n="common.status">Estado</label><select class="form-select" name="estadoUsuarioEdit" id="gu_estado"><option value="Activo" data-i18n="common.active">Activo</option><option value="Inactivo" data-i18n="common.inactive">Inactivo</option></select></div>
+                        </div>
+                    </div>
+                    <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                        <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-grid-3x3-gap-fill"></i> <span data-i18n="users.matrix.title">Matriz de Permisos (Checkboxes)</span></div>
+                        <div class="table-responsive m-0">
+                        <table class="table table-hover table-bordered text-center align-middle mb-0" style="font-size: 0.9rem;" id="tablaMatrizPermisos">
+                                <thead>
+                                    <tr><th class="text-start" data-i18n="users.matrix.module">Módulo de Sistema</th><th><i class="bi bi-eye text-info"></i> <span data-i18n="users.matrix.read">Leer</span></th><th><i class="bi bi-plus-circle text-success"></i> <span data-i18n="users.matrix.create">Crear</span></th><th><i class="bi bi-pencil text-warning"></i> <span data-i18n="users.matrix.edit">Editar</span></th><th><i class="bi bi-trash text-danger"></i> <span data-i18n="users.matrix.delete">Eliminar</span></th></tr>
+                                </thead>
+                                <tbody id="bodyMatrizPermisos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4" id="btnGuardarUser"><i class="bi bi-save"></i> <span data-i18n="users.save">Guardar Accesos</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

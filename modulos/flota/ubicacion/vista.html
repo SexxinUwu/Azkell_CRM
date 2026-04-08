@@ -1,0 +1,51 @@
+<div id="moduloUbicacionGPS" class="modulo-wrapper" style="display: flex;">
+
+    <!-- Barra de controles -->
+    <div class="controls-row d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-geo-alt-fill fs-4 text-primary"></i>
+            <h5 class="m-0 fw-bold text-dark-theme" data-i18n="gps.title">Ubicación GPS Flota</h5>
+            <span id="badge-wialon-ubicacion" class="badge bg-success ms-1" style="display:none;"><i class="bi bi-broadcast"></i> <span data-i18n="gps.active">Activo</span></span>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <span id="gps-unit-count-badge" class="badge bg-secondary">0 unidades</span>
+            <button class="btn-reload-cache" onclick="recargarWialon(true)" title="Actualizar GPS">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Cuerpo: lista izquierda + panel detalle derecha -->
+    <div class="d-flex gap-3 flex-grow-1" style="min-height: 0; overflow: hidden;">
+
+        <!-- Panel izquierdo: lista de unidades -->
+        <div style="width: 340px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0;">
+            <div class="mb-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text border-end-0 bg-transparent">
+                        <i class="bi bi-search" style="color: var(--subtext);"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0 ps-0"
+                           id="busGPSUnidad"
+                           placeholder="Buscar placa o unidad..."
+                           oninput="filtrarListaGPS(this.value)">
+                </div>
+            </div>
+            <div id="listaUnidadesGPS" style="flex-grow:1; overflow-y:auto; min-height:0;">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-satellite fs-3 opacity-50"></i>
+                    <p class="mt-2 mb-0" data-i18n="gps.syncing">Sincronizando GPS...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel derecho: detalle de unidad seleccionada -->
+        <div id="paneDetalleGPS" class="card flex-grow-1 p-3" style="min-height:0; overflow-y:auto;">
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-geo-alt fs-2 opacity-40"></i>
+                <p class="mt-3 mb-0" data-i18n="gps.selectUnit">Selecciona una unidad de la lista para ver su detalle</p>
+            </div>
+        </div>
+
+    </div>
+</div>
