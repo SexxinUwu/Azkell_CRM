@@ -3,6 +3,11 @@
 // Cargado dinámicamente por cargarModuloAislado('mantenimiento/inspecciones')
 // ================================================================
 
+// Paginación inspecciones (patrón window para SPA)
+window.dataFinalInspGlobal  = window.dataFinalInspGlobal  || [];
+window.inspPorPagina        = window.inspPorPagina        || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
+window.inspPaginaActual     = window.inspPaginaActual     || 1;
+
 // ==========================================
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
@@ -39,6 +44,14 @@ function mostrarStatusInspecciones(inspecciones) {
           let p = dataGlobalPlacas.find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"];
           dataFinal.push({ infoPlaca: p, insp: insp });
       });
+  }
+
+  // — Paginación — guardar total y cortar dataFinal
+  window.dataFinalInspGlobal = dataFinal;
+  if (window.inspPorPagina > 0) {
+      let _ini = (window.inspPaginaActual - 1) * window.inspPorPagina;
+      if (_ini >= dataFinal.length && dataFinal.length > 0) { window.inspPaginaActual = 1; _ini = 0; }
+      dataFinal = dataFinal.slice(_ini, _ini + window.inspPorPagina);
   }
 
   let mapTipos = new Map(); let setClis = new Set(), setMarcas = new Set(), setEstadosStatus = new Set();
@@ -145,7 +158,50 @@ function mostrarStatusInspecciones(inspecciones) {
   }
   document.getElementById('cuerpoTablaStatus').innerHTML = html;
   filtrarStatusAvanzado();
+  _renderInspPaginacion(window.dataFinalInspGlobal.length);
 }
+
+function _renderInspPaginacion(total) {
+    var info = document.getElementById('insp-info-paginacion');
+    var ctrls = document.getElementById('insp-controles-paginacion');
+    var sel = document.getElementById('sel-insp-ppp');
+    var row = document.getElementById('insp-paginacion-row');
+    if (!info || !ctrls) return;
+    if (sel) sel.value = String(window.inspPorPagina || 50);
+    var ppp = window.inspPorPagina;
+    var totalPag = ppp > 0 ? Math.ceil(total / ppp) : 1;
+    var pag = window.inspPaginaActual;
+    var ini = ppp > 0 ? (pag - 1) * ppp + 1 : 1;
+    var fin = ppp > 0 ? Math.min(pag * ppp, total) : total;
+    info.textContent = total === 0 ? 'Sin resultados' : 'Mostrando ' + ini + '–' + fin + ' de ' + total;
+    if (row) row.style.display = totalPag <= 1 ? 'none' : '';
+    var btns = '';
+    btns += '<button class="btn-pag-nav" onclick="cambiarPaginaInsp(-1)" ' + (pag <= 1 ? 'disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPag; i++) {
+        if (totalPag > 7 && Math.abs(i - pag) > 2 && i !== 1 && i !== totalPag) {
+            if (i === 2 || i === totalPag - 1) { btns += '<span class="btn-pag-nav" style="pointer-events:none">…</span>'; }
+            continue;
+        }
+        btns += '<button class="btn-pag-nav' + (i === pag ? ' active' : '') + '" onclick="cambiarPaginaInsp(' + i + ', true)">' + i + '</button>';
+    }
+    btns += '<button class="btn-pag-nav" onclick="cambiarPaginaInsp(1)" ' + (pag >= totalPag ? 'disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
+    ctrls.innerHTML = btns;
+}
+
+window.cambiarPaginaInsp = function(val, absoluto) {
+    var ppp = window.inspPorPagina;
+    var total = window.dataFinalInspGlobal.length;
+    var totalPag = ppp > 0 ? Math.ceil(total / ppp) : 1;
+    window.inspPaginaActual = absoluto ? val : Math.max(1, Math.min(window.inspPaginaActual + val, totalPag));
+    mostrarStatusInspecciones(dataGlobalInspecciones);
+};
+
+window.cambiarInspPorPagina = function(val) {
+    window.inspPorPagina = parseInt(val) || 0;
+    localStorage.setItem('fleet_insp_ppp', window.inspPorPagina);
+    window.inspPaginaActual = 1;
+    mostrarStatusInspecciones(dataGlobalInspecciones);
+};
 
 function filtrarStatusAvanzado() {
     const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
@@ -719,7 +775,7 @@ window.importarExcelInspecciones = function(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
@@ -732,7 +788,9 @@ window.importarExcelInspecciones = function(event) {
             return;
         }
 
-        const confirmar = confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`);
+        const confirmar = await (typeof window.confirmar === 'function'
+            ? window.confirmar({ titulo: 'Importar Inspecciones', mensaje: `Se importarán o actualizarán <strong>${rawJson.length} inspecciones</strong>. ¿Continuar?`, textoConfirmar: 'Sí, importar' })
+            : Promise.resolve(confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`)));
         if (!confirmar) { event.target.value = ''; return; }
 
         document.body.style.cursor = 'wait';

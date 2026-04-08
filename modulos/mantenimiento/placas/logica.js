@@ -78,6 +78,7 @@ function cargarTablaPlacas(forzarRefresh = false) {
 window.cambiarColumnasPlacas = function(cols) {
     colActualesPlacas = parseInt(cols);
     ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
+    localStorage.setItem('fleet_pref_placas_cols', colActualesPlacas);
     paginaActualPlacas = 1;
     const contenedor = document.getElementById('contenedorPlacasDinamico');
     if (contenedor) contenedor.className = `flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-${colActualesPlacas}`;
@@ -171,6 +172,7 @@ function mostrarPlacas(datos) {
     paginaActualPlacas = 1;
     cambiarColumnasPlacas(colActualesPlacas);
     if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
+    _restaurarFiltrosPlacas();
 }
 
 // ── Filtro avanzado ──────────────────────────────────────────────
@@ -206,9 +208,8 @@ window.filtrarPlacasAvanzado = function() {
     if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
     paginaActualPlacas = 1;
     renderizarPaginaPlacas();
+    _guardarFiltrosPlacas();
 };
-
-function actualizarIndicadoresPlacas(datos) {
     let camiones = 0, carretas = 0, semirremolques = 0, tractos = 0;
 
     datos.forEach(fila => {
@@ -282,7 +283,7 @@ function renderizarPaginaPlacas() {
             let items = '';
             if (canEditP) items += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`;
             if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
-            if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="event.stopPropagation(); if(confirm('¿Eliminar ${plc} definitivamente?')) { fetch('/api/script/eliminarDocumento',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:['${plc}'],coleccion:'Placas',usuario:usuarioLogueado})}).then(r=>r.json()).then(r=>{ if(r.data==='Éxito') cargarTablaPlacas(true); else alert(r.data); }); }"><i class="bi bi-trash"></i> Eliminar</a></li>`;
+            if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="event.stopPropagation(); eliminarPlacaDesdeTarjeta('${plc}')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
             menuAcciones = `<div class="dropdown ms-1" onclick="event.stopPropagation()"><button class="btn-dots" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
         }
 
@@ -501,7 +502,7 @@ window.importarExcelPlacas = function(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
@@ -514,7 +515,9 @@ window.importarExcelPlacas = function(event) {
             return;
         }
 
-        const confirmar = confirm(`Se importarán ${rawJson.length} registros.\n¿Continuar?`);
+        const confirmar = await (typeof window.confirmar === 'function'
+            ? window.confirmar({ titulo: 'Importar Placas', mensaje: `Se importarán <strong>${rawJson.length} registros</strong>. ¿Continuar?`, textoConfirmar: 'Sí, importar' })
+            : Promise.resolve(confirm(`Se importarán ${rawJson.length} registros.\n¿Continuar?`)));
         if (!confirmar) { event.target.value = ''; return; }
 
         document.body.style.cursor = 'wait';
@@ -603,10 +606,86 @@ window.seleccionarTodasLasPlacas = function() {
     }
 };
 
+// ── Eliminar placa desde tarjeta (confirm elegante) ─────────────────────────
+window.eliminarPlacaDesdeTarjeta = function(plc) {
+    var doDelete = function() {
+        fetch('/api/script/eliminarDocumento', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [plc], coleccion: 'Placas', usuario: usuarioLogueado })
+        }).then(function(r) { return r.json(); }).then(function(r) {
+            if (r.data === 'Éxito') cargarTablaPlacas(true);
+            else alert(r.data);
+        });
+    };
+    if (typeof window.confirmar === 'function') {
+        window.confirmar({ titulo: 'Eliminar Placa', mensaje: '¿Seguro que deseas eliminar <strong>' + plc + '</strong>? Esta acción no se puede deshacer.', textoConfirmar: 'Sí, eliminar', peligroso: true })
+            .then(function(ok) { if (ok) doDelete(); });
+    } else {
+        if (confirm('¿Eliminar ' + plc + ' definitivamente?')) doDelete();
+    }
+};
+
+// ── Filtros persistentes ─────────────────────────────────────────────────────
+function _guardarFiltrosPlacas() {
+    try {
+        var state = {
+            txt: document.getElementById('buscadorPlacas')?.value || '',
+            clientes: Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(function(e){ return e.value; }),
+            tipos:    Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(function(e){ return e.value; }),
+            marcas:   Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(function(e){ return e.value; }),
+            estados:  Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(function(e){ return e.value; })
+        };
+        localStorage.setItem('fleet_filtros_placas', JSON.stringify(state));
+        var btn = document.getElementById('btn-limpiar-filtros-placas');
+        var activo = state.txt || state.clientes.length || state.tipos.length || state.marcas.length || state.estados.length;
+        if (btn) btn.classList.toggle('d-none', !activo);
+    } catch(e) { /* ignore */ }
+}
+
+function _restaurarFiltrosPlacas() {
+    try {
+        var saved = JSON.parse(localStorage.getItem('fleet_filtros_placas') || 'null');
+        if (!saved) return;
+        var txtEl = document.getElementById('buscadorPlacas');
+        if (txtEl && saved.txt) txtEl.value = saved.txt;
+        function restoreGroup(gid, vals) {
+            if (!vals || !vals.length) return;
+            vals.forEach(function(v) {
+                var inp = document.querySelector('#' + gid + ' input[value="' + CSS.escape(v) + '"]');
+                if (inp) inp.checked = true;
+            });
+        }
+        restoreGroup('filtroCliente', saved.clientes);
+        restoreGroup('filtroTipo',    saved.tipos);
+        restoreGroup('filtroMarca',   saved.marcas);
+        restoreGroup('filtroEstado',  saved.estados);
+        var activo = saved.txt || saved.clientes.length || saved.tipos.length || saved.marcas.length || saved.estados.length;
+        if (activo) filtrarPlacasAvanzado();
+        var btn = document.getElementById('btn-limpiar-filtros-placas');
+        if (btn) btn.classList.toggle('d-none', !activo);
+    } catch(e) { /* ignore */ }
+}
+
+window.limpiarFiltrosPlacas = function() {
+    var txtEl = document.getElementById('buscadorPlacas');
+    if (txtEl) txtEl.value = '';
+    document.querySelectorAll('#filtroCliente input, #filtroTipo input, #filtroMarca input, #filtroEstado input').forEach(function(i) { i.checked = false; });
+    localStorage.removeItem('fleet_filtros_placas');
+    var btn = document.getElementById('btn-limpiar-filtros-placas');
+    if (btn) btn.classList.add('d-none');
+    filtrarPlacasAvanzado();
+};
+
 // ================================================================
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router al (re)cargar
 // ================================================================
 window.init_placas = function() {
+    // Restaurar preferencia de columnas guardada
+    const savedCols = parseInt(localStorage.getItem('fleet_pref_placas_cols') || '4');
+    colActualesPlacas = savedCols;
+    const selCols = document.querySelector('select[onchange="cambiarColumnasPlacas(this.value)"]');
+    if (selCols) selCols.value = String(colActualesPlacas);
+
     // Restaurar preferencia de filas/página guardada
     const selFilas = document.getElementById('sel-filas-placas');
     if (selFilas) selFilas.value = String(window.filasPlacasConfig);

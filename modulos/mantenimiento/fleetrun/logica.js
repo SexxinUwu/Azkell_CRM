@@ -9,7 +9,16 @@ window.isHistorialFleetrun  = window.isHistorialFleetrun  || false;
 window.expandAllState       = window.expandAllState       || false;
 window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 
-function cargarTablaFleetrun(forzarRefresh = false) { if(!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; } document.getElementById('cuerpoTablaFleetrun').innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>'; google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun(); }
+function cargarTablaFleetrun(forzarRefresh = false) {
+    if (!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; }
+    const cuerpo = document.getElementById('cuerpoTablaFleetrun');
+    if (cuerpo) {
+        cuerpo.innerHTML = typeof generarSkeletonHtml === 'function'
+            ? generarSkeletonHtml(10, 6)
+            : '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
+    }
+    google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun();
+}
 
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
 
@@ -375,16 +384,18 @@ window.importarExcelFleetrun = function(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
 
         if (rawJson.length === 0) { alert("Archivo vacío o inválido."); return; }
-        if (!confirm(`Se importarán o actualizarán ${rawJson.length} registros en Fleetrun.\n¿Continuar?`)) {
-            event.target.value = ''; return;
-        }
+
+        const ok = await (typeof window.confirmar === 'function'
+            ? window.confirmar({ titulo: 'Importar Fleetrun', mensaje: `Se importarán o actualizarán <strong>${rawJson.length} registros</strong> en Fleetrun. ¿Continuar?`, textoConfirmar: 'Sí, importar' })
+            : Promise.resolve(confirm(`Se importarán o actualizarán ${rawJson.length} registros en Fleetrun.\n¿Continuar?`)));
+        if (!ok) { event.target.value = ''; return; }
 
         document.body.style.cursor = 'wait';
 
