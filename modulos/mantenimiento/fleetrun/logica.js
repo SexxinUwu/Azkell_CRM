@@ -639,3 +639,6 @@ window.init_fleetrun = function() {
         cargarTablaFleetrun();
     }
 };
+
+// Alias global para recargarModulo (main logica.js)
+window.cargarTablaFleetrun = function(forzar) { cargarTablaFleetrun(forzar); };

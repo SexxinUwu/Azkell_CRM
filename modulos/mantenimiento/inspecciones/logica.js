@@ -888,3 +888,9 @@ window.init_inspecciones = function() {
         recargarModulo('statusMant');
     }
 };
+
+// Alias global para recargarModulo (main logica.js)
+window.recargarInspecciones = function() {
+    dataGlobalInspecciones = null;
+    google.script.run.withSuccessHandler(mostrarStatusInspecciones).obtenerDatosInspecciones();
+};
