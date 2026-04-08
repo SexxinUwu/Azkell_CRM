@@ -30,43 +30,116 @@
     <div id="app-crm" style="display: none;">
         <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
         <div class="sidebar" id="sidebarMenu" style="z-index: 1050;">
-            <div class="brand-container">
-                <div class="brand-text d-flex align-items-center gap-2">
-                    <div class="brand-logo-icon">
-                        <i class="bi bi-truck"></i>
-                    </div>
-                    <span class="fw-bolder fs-5 brand-title-text" style="color: var(--text); letter-spacing: -0.5px;">AZKELL FLEET</span>
+            <!-- Brand + Toggle -->
+            <div class="brand-container" id="brandContainer">
+                <div class="brand-left">
+                    <div class="brand-logo-icon"><i class="bi bi-truck-front-fill"></i></div>
+                    <span class="brand-title-text fw-bolder">AZKELL FLEET</span>
                 </div>
-                <button class="btn-toggle-sidebar" onclick="toggleSidebar()"><i class="bi bi-list" style="color: var(--text);"></i></button>
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()" title="Contraer menú">
+                    <i class="bi bi-layout-sidebar-reverse"></i>
+                </button>
             </div>
-            <div id="wrap-dashboard">
-                <a id="nav-dashboard" onclick="cargarModuloAislado('dashboard')" class="active">
-                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text" data-i18n="nav.dashboard">Dashboard</span>
+
+            <!-- Nav principal -->
+            <nav class="sidebar-nav">
+                <div id="wrap-dashboard">
+                    <a id="nav-dashboard" class="nav-item active" onclick="cargarModuloAislado('dashboard')">
+                        <i class="bi bi-grid-1x2-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.dashboard">Dashboard</span>
+                    </a>
+                </div>
+
+                <div id="wrap-mantenimiento">
+                    <div class="nav-section-label"><span data-i18n="nav.mantenimiento">Mantenimiento</span></div>
+                    <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
+                        <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span>
+                    </a>
+                    <a id="nav-placas" class="nav-item" onclick="cargarModuloAislado('mantenimiento/placas')">
+                        <i class="bi bi-truck nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.placas">Placas</span>
+                    </a>
+                    <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
+                        <i class="bi bi-speedometer2 nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span>
+                    </a>
+                </div>
+
+                <div id="wrap-almacen">
+                    <div class="nav-section-label"><span data-i18n="nav.almacen">Almacén</span></div>
+                    <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
+                        <i class="bi bi-box-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.inventario">Inventario</span>
+                    </a>
+                </div>
+
+                <div id="wrap-flota">
+                    <div class="nav-section-label"><span data-i18n="nav.flota">Flota</span></div>
+                    <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
+                        <i class="bi bi-geo-alt-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.gps">GPS Flota</span>
+                    </a>
+                    <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
+                        <i class="bi bi-activity nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.status">Status Flota</span>
+                    </a>
+                </div>
+
+                <div id="wrap-directorio">
+                    <div class="nav-section-label"><span data-i18n="nav.directorio">Directorio</span></div>
+                    <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
+                        <i class="bi bi-person-vcard-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.conductores">Conductores</span>
+                    </a>
+                    <a id="nav-talleres" class="nav-item" onclick="alert('Pronto: Talleres')">
+                        <i class="bi bi-shop nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.talleres">Talleres</span>
+                    </a>
+                </div>
+
+                <div class="nav-section-label">Sistema</div>
+                <div id="wrap-usuarios">
+                    <a id="nav-usuarios" class="nav-item" onclick="cargarModuloAislado('sistema/usuarios')">
+                        <i class="bi bi-people-fill nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.usuarios">Usuarios</span>
+                    </a>
+                </div>
+                <div id="wrap-auditoria">
+                    <a id="nav-auditoria" class="nav-item" onclick="cargarModuloAislado('sistema/auditoria')">
+                        <i class="bi bi-journal-code nav-icon"></i>
+                        <span class="link-text" data-i18n="nav.auditoria">Auditoría</span>
+                    </a>
+                </div>
+
+                <div id="wrap-configuracion">
+                    <div class="nav-section-label"><span data-i18n="nav.configuracion">Configuración</span></div>
+                    <a id="nav-cfg-perfil" class="nav-item" onclick="window.cargarConfigSection('perfil')">
+                        <i class="bi bi-person-circle nav-icon"></i>
+                        <span class="link-text" data-i18n="cfg.nav.profile">Mi Perfil</span>
+                    </a>
+                    <a id="nav-cfg-apariencia" class="nav-item" onclick="window.cargarConfigSection('apariencia')">
+                        <i class="bi bi-palette2 nav-icon"></i>
+                        <span class="link-text" data-i18n="cfg.nav.appearance">Apariencia</span>
+                    </a>
+                    <a id="nav-cfg-accesibilidad" class="nav-item" onclick="window.cargarConfigSection('accesibilidad')">
+                        <i class="bi bi-universal-access nav-icon"></i>
+                        <span class="link-text" data-i18n="cfg.nav.accessibility">Accesibilidad</span>
+                    </a>
+                    <a id="nav-cfg-idioma" class="nav-item" onclick="window.cargarConfigSection('idioma')">
+                        <i class="bi bi-translate nav-icon"></i>
+                        <span class="link-text" data-i18n="cfg.nav.language">Idioma</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Instalar PWA -->
+            <div class="mt-auto mb-2 px-2" id="contenedor-instalar" style="display: none;">
+                <a id="btn-install-sidebar" class="nav-item" style="color: #10b981 !important; background: rgba(16,185,129,0.1) !important;">
+                    <i class="bi bi-cloud-arrow-down-fill nav-icon"></i>
+                    <span class="link-text" data-i18n="nav.instalar">Instalar App</span>
                 </a>
             </div>
-            <div id="wrap-mantenimiento"><a data-bs-toggle="collapse" href="#menuMantenimiento" role="button" aria-expanded="false" id="nav-mantenimiento"><i class="bi bi-tools"></i> <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuMantenimiento"><a id="btnMenuStatusMant" onclick="cargarModuloAislado('mantenimiento/inspecciones')"><i class="bi bi-activity"></i> <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span></a><a id="btnMenuPlacasMant" onclick="cargarModuloAislado('mantenimiento/placas')"><i class="bi bi-truck"></i> <span class="link-text" data-i18n="nav.placas">Placas</span></a><a id="btnMenuFleetrun" onclick="cargarModuloAislado('mantenimiento/fleetrun')"><i class="bi bi-speedometer2"></i> <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span></a></div>
-            </div>
-            <div id="wrap-almacen"><a data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false" id="nav-almacen"><i class="bi bi-box-seam"></i> <span class="link-text" data-i18n="nav.almacen">Almacén</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuAlmacen"><a id="btnMenuInventario" onclick="cargarModuloAislado('almacen/inventario')"><i class="bi bi-box-fill"></i> <span class="link-text" data-i18n="nav.inventario">Inventario</span></a></div>
-            </div>
-            <div id="wrap-flota"><a data-bs-toggle="collapse" href="#menuFlota" role="button" aria-expanded="false" id="nav-flota"><i class="bi bi-truck-front"></i> <span class="link-text" data-i18n="nav.flota">Flota</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuFlota">
-                    <a id="btnMenuUbicacion" onclick="cargarModuloAislado('flota/ubicacion')"><i class="bi bi-geo-alt"></i> <span class="link-text" data-i18n="nav.gps">GPS Flota</span></a>
-                    <a id="btnMenuStatusFlota" onclick="cargarModuloAislado('flota/status')"><i class="bi bi-activity"></i> <span class="link-text" data-i18n="nav.status">Status Flota</span></a>
-                </div>
-            </div>
-            <div id="wrap-directorio"><a data-bs-toggle="collapse" href="#menuDirectorio" role="button" aria-expanded="false" id="nav-directorio"><i class="bi bi-journal-bookmark-fill text-warning"></i> <span class="link-text" data-i18n="nav.directorio">Directorio</span> <i class="bi bi-chevron-down ms-auto chevron-icon"></i></a>
-                <div class="collapse" id="menuDirectorio"><a id="btnMenuConductores" onclick="cargarModuloAislado('directorio/conductores')"><i class="bi bi-person-vcard"></i> <span class="link-text" data-i18n="nav.conductores">Conductores</span></a><a id="btnMenuTalleres" onclick="alert('Pronto conectaremos el mantenedor de Talleres')"><i class="bi bi-shop"></i> <span class="link-text" data-i18n="nav.talleres">Talleres</span></a></div>
-            </div>
-            <div id="wrap-usuarios"><a id="nav-usuarios" onclick="cargarModuloAislado('sistema/usuarios')"><i class="bi bi-people"></i> <span class="link-text" data-i18n="nav.usuarios">Usuarios</span></a></div>
-            <div id="wrap-auditoria"><a id="nav-auditoria" onclick="cargarModuloAislado('sistema/auditoria')"><i class="bi bi-journal-code"></i> <span class="link-text" data-i18n="nav.auditoria">Auditoría</span></a></div>
-            <div id="wrap-configuracion"><a id="nav-configuracion" onclick="cargarModuloAislado('sistema/configuracion')"><i class="bi bi-gear"></i> <span class="link-text" data-i18n="nav.configuracion">Configuración</span></a></div>
-            <div class="mt-auto mb-3 mx-2" id="contenedor-instalar" style="display: none;">
-    <a id="btn-install-sidebar" style="color: #10b981 !important; font-weight: bold; cursor: pointer; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-        <i class="bi bi-cloud-arrow-down-fill"></i> <span class="link-text" data-i18n="nav.instalar">Instalar App</span>
-    </a>
-</div>
         </div>
         
         <div class="content">

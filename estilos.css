@@ -1919,4 +1919,296 @@ body.dark .gps-unit-card.active { background: rgba(59,130,246,0.12); }
     opacity: 0.25;
 }
 
+/* ================================================================
+   SIDEBAR MODERNO v3 — OVERRIDE FINAL
+   Reemplaza todos los estilos anteriores del sidebar
+   ================================================================ */
+
+/* 1. Base sidebar */
+.sidebar {
+    width: var(--sidebar-width) !important;
+    background: var(--surface) !important;
+    backdrop-filter: none !important;
+    border-right: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: width 0.25s cubic-bezier(0.4,0,0.2,1) !important;
+    overflow: hidden !important;
+}
+body.dark .sidebar {
+    background: var(--surface) !important;
+    border-right-color: var(--border) !important;
+}
+
+/* 2. Brand */
+.brand-container {
+    height: 60px !important;
+    padding: 0 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid var(--border) !important;
+    flex-shrink: 0 !important;
+    background: transparent !important;
+}
+.brand-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+}
+.brand-logo-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 9px !important;
+    background: var(--crm-accent) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
+    cursor: default;
+}
+.brand-title-text {
+    color: var(--text) !important;
+    font-size: 0.87rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transition: opacity 0.2s, width 0.25s !important;
+}
+.btn-toggle-sidebar {
+    background: none !important;
+    border: none !important;
+    color: var(--subtext) !important;
+    font-size: 1.05rem !important;
+    cursor: pointer !important;
+    padding: 6px 8px !important;
+    border-radius: 7px !important;
+    transition: background 0.15s, color 0.15s !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.btn-toggle-sidebar:hover {
+    background: rgba(0,0,0,0.06) !important;
+    color: var(--text) !important;
+}
+body.dark .btn-toggle-sidebar:hover {
+    background: rgba(255,255,255,0.08) !important;
+}
+
+/* 3. Nav scroll container */
+.sidebar-nav {
+    flex: 1 1 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 8px 0 12px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--border) transparent !important;
+}
+.sidebar-nav::-webkit-scrollbar { width: 3px !important; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border) !important; border-radius: 2px !important; }
+
+/* 4. Section labels */
+.nav-section-label {
+    padding: 14px 18px 3px !important;
+    font-size: 0.645rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.09em !important;
+    color: var(--subtext) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+.nav-section-label span { color: inherit !important; font-size: inherit !important; }
+
+/* 5. Nav items — base */
+#sidebarMenu .nav-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 8px 12px !important;
+    margin: 1px 10px !important;
+    border-radius: 8px !important;
+    color: var(--subtext) !important;
+    font-size: 0.845rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    border: none !important;
+    border-left: none !important;
+    box-shadow: none !important;
+    height: auto !important;
+    min-height: 37px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    transition: background 0.15s, color 0.15s !important;
+    background: none !important;
+}
+#sidebarMenu .nav-item .nav-icon {
+    font-size: 1rem !important;
+    flex-shrink: 0 !important;
+    min-width: 18px !important;
+    text-align: center !important;
+    margin-right: 0 !important;
+    color: inherit !important;
+}
+#sidebarMenu .nav-item .link-text {
+    flex: 1 1 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: inherit !important;
+    font-size: 0.845rem !important;
+    font-weight: 500 !important;
+}
+#sidebarMenu .nav-item:hover {
+    background: rgba(0,0,0,0.05) !important;
+    color: var(--text) !important;
+}
+body.dark #sidebarMenu .nav-item:hover {
+    background: rgba(255,255,255,0.06) !important;
+    color: var(--text) !important;
+}
+#sidebarMenu .nav-item.active {
+    background: var(--crm-accent) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.22) !important;
+}
+#sidebarMenu .nav-item.active .nav-icon,
+#sidebarMenu .nav-item.active .link-text {
+    color: #ffffff !important;
+}
+body.dark #sidebarMenu .nav-item.active {
+    background: var(--crm-accent, #3b82f6) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(59,130,246,0.3) !important;
+}
+
+/* 6. Collapsed — desktop */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width, 68px) !important;
+}
+.sidebar.collapsed .brand-title-text {
+    opacity: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+.sidebar.collapsed .btn-toggle-sidebar {
+    display: none !important;
+}
+.sidebar.collapsed .brand-container {
+    justify-content: center !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+}
+.sidebar.collapsed .brand-left {
+    justify-content: center !important;
+    cursor: pointer !important;
+}
+.sidebar.collapsed .brand-logo-icon {
+    cursor: pointer !important;
+}
+.sidebar.collapsed .nav-section-label {
+    display: none !important;
+}
+.sidebar.collapsed #sidebarMenu .nav-item,
+.sidebar.collapsed .nav-item {
+    justify-content: center !important;
+    padding: 10px 8px !important;
+    margin: 2px 8px !important;
+    gap: 0 !important;
+}
+.sidebar.collapsed #sidebarMenu .nav-item .link-text,
+.sidebar.collapsed .nav-item .link-text {
+    display: none !important;
+}
+.sidebar.collapsed #sidebarMenu .nav-item .nav-icon,
+.sidebar.collapsed .nav-item .nav-icon {
+    font-size: 1.15rem !important;
+    min-width: auto !important;
+}
+.sidebar.collapsed #contenedor-instalar .link-text { display: none !important; }
+.sidebar.collapsed #contenedor-instalar a {
+    justify-content: center !important;
+    padding: 10px 8px !important;
+}
+
+/* 7. body.sidebar-compact = collapsed alias */
+body.sidebar-compact .sidebar {
+    width: var(--sidebar-collapsed-width, 68px) !important;
+}
+body.sidebar-compact .sidebar .brand-title-text {
+    opacity: 0 !important; width: 0 !important; overflow: hidden !important;
+}
+body.sidebar-compact .sidebar .btn-toggle-sidebar { display: none !important; }
+body.sidebar-compact .sidebar .brand-container { justify-content: center !important; padding: 0 !important; cursor: pointer !important; }
+body.sidebar-compact .nav-section-label { display: none !important; }
+body.sidebar-compact #sidebarMenu .nav-item { justify-content: center !important; padding: 10px 8px !important; margin: 2px 8px !important; gap: 0 !important; }
+body.sidebar-compact #sidebarMenu .nav-item .link-text { display: none !important; }
+body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !important; min-width: auto !important; }
+
+/* 8. Mobile overrides */
+@media (max-width: 768px) {
+    .sidebar.collapsed,
+    body.sidebar-compact .sidebar {
+        width: 260px !important;
+    }
+    .sidebar.collapsed .brand-container,
+    body.sidebar-compact .sidebar .brand-container {
+        padding: 0 14px !important;
+        justify-content: space-between !important;
+        cursor: default !important;
+    }
+    .sidebar.collapsed .brand-title-text,
+    body.sidebar-compact .sidebar .brand-title-text {
+        opacity: 1 !important;
+        width: auto !important;
+    }
+    .sidebar.collapsed .btn-toggle-sidebar,
+    body.sidebar-compact .sidebar .btn-toggle-sidebar {
+        display: flex !important;
+    }
+    .sidebar.collapsed .nav-section-label,
+    body.sidebar-compact .nav-section-label { display: block !important; }
+    .sidebar.collapsed .nav-item,
+    .sidebar.collapsed #sidebarMenu .nav-item,
+    body.sidebar-compact #sidebarMenu .nav-item {
+        justify-content: flex-start !important;
+        padding: 8px 12px !important;
+        margin: 1px 10px !important;
+        gap: 10px !important;
+    }
+    .sidebar.collapsed .nav-item .link-text,
+    .sidebar.collapsed #sidebarMenu .nav-item .link-text,
+    body.sidebar-compact #sidebarMenu .nav-item .link-text {
+        display: inline !important;
+    }
+    .sidebar.collapsed .nav-item .nav-icon,
+    .sidebar.collapsed #sidebarMenu .nav-item .nav-icon,
+    body.sidebar-compact #sidebarMenu .nav-item .nav-icon {
+        font-size: 1rem !important;
+        min-width: 18px !important;
+    }
+    .sidebar.collapsed #contenedor-instalar .link-text { display: inline !important; }
+    .sidebar.collapsed #contenedor-instalar a {
+        justify-content: flex-start !important;
+        padding: 8px 12px !important;
+        gap: 10px !important;
+    }
+}
+
+
 

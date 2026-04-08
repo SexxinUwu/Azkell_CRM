@@ -3,8 +3,10 @@
 // ============================================================
 
 window.init_configuracion = function() {
-    // Cargar panel inicial
-    window.showConfig('perfil');
+    // Navegar al panel solicitado desde el sidebar, o default 'perfil'
+    const sectionTarget = window._pendingCfgSection || 'perfil';
+    window._pendingCfgSection = null;
+    window.showConfig(sectionTarget);
 
     // Poblar datos de perfil desde localStorage
     const nombre = localStorage.getItem('fleet_user') || '—';
