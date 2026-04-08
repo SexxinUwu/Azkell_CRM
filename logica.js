@@ -932,6 +932,48 @@ window.actualizarBadgesSidebar = function() {
     }
 };
 
+// ── Pull-to-refresh (mobile) ────────────────────────────────────────────────
+(function() {
+    var _sY = 0, _pulling = false, _THRESHOLD = 72;
+    document.addEventListener('touchstart', function(e) {
+        var root = document.getElementById('root-dinamico');
+        if ((root ? root.scrollTop : window.scrollY) === 0 && e.touches.length === 1) {
+            _sY = e.touches[0].clientY; _pulling = true;
+        }
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e) {
+        if (!_pulling) return;
+        var dy = e.touches[0].clientY - _sY;
+        var ind = document.getElementById('ptr-indicator');
+        var ico = document.getElementById('ptr-icon');
+        if (dy > 10 && ind) {
+            ind.classList.add('ptr-visible');
+            var pct = Math.min(dy / _THRESHOLD, 1);
+            if (ico) ico.style.transform = 'rotate(' + (pct * 200) + 'deg)';
+            var txt = document.getElementById('ptr-text');
+            if (txt) txt.textContent = dy >= _THRESHOLD ? 'Suelta para actualizar' : 'Desliza para refrescar';
+        }
+    }, { passive: true });
+    document.addEventListener('touchend', function(e) {
+        if (!_pulling) return; _pulling = false;
+        var dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : _sY) - _sY;
+        var ind = document.getElementById('ptr-indicator');
+        var ico = document.getElementById('ptr-icon');
+        if (ind) ind.classList.remove('ptr-visible');
+        if (ico) { ico.style.transform = ''; ico.classList.remove('ptr-spinning'); }
+        if (dy >= _THRESHOLD) {
+            if (ico) ico.classList.add('ptr-spinning');
+            var ruta = localStorage.getItem('fleet_rutaActual') || '';
+            var mod = ruta.split('/').pop();
+            setTimeout(function() {
+                if (ico) ico.classList.remove('ptr-spinning');
+                if (mod && typeof window['recargarModulo'] === 'function') window.recargarModulo(mod);
+                else if (typeof window.recargarDashboard === 'function') window.recargarDashboard();
+            }, 650);
+        }
+    }, { passive: true });
+})();
+
 window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
     icono       = icono       || 'bi-inbox';
     titulo      = titulo      || 'Sin datos';

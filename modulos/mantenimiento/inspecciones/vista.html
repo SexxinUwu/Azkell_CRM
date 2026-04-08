@@ -47,7 +47,20 @@
     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
         <thead><tr><th onclick="sortTable('tablaStatus', 0)"><span data-i18n="insp.col.plate">Placa / Cliente</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)"><span data-i18n="insp.col.type">Tipo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)"><span data-i18n="insp.col.tech">Técnico</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)"><span data-i18n="insp.col.date">Fecha de Insp.</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)"><span data-i18n="insp.col.next">Prox Insp</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)"><span data-i18n="insp.col.semaforo">Semáforo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> <span data-i18n="insp.col.gps">Ubicación GPS</span></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
         <tbody id="cuerpoTablaStatus"><tr><td colspan="10" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr></tbody>
-    </table></div></div>
+    </table></div>
+    <div class="pagination-row p-2 border-top d-flex justify-content-between align-items-center" id="insp-paginacion-row" style="display:none">
+        <span class="small text-muted fw-bold" id="insp-info-paginacion"></span>
+        <div class="d-flex align-items-center gap-2">
+            <select class="form-select form-select-sm" style="width:auto;font-size:0.75rem;" id="sel-insp-ppp" onchange="cambiarInspPorPagina(this.value)" title="Filas por página">
+                <option value="25">25 filas</option>
+                <option value="50" selected>50 filas</option>
+                <option value="100">100 filas</option>
+                <option value="0">Todas</option>
+            </select>
+            <div class="d-flex gap-1" id="insp-controles-paginacion"></div>
+        </div>
+    </div>
+</div>
 </div>
 
 <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">

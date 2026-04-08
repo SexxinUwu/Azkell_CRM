@@ -118,7 +118,10 @@ window.obtenerTipoCompuesto = function(motora, nomotora) {
 // ================================================================
 function mostrarStatusFlota(datos) {
     if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
-        document.getElementById('cuerpoTablaStatusFlota').innerHTML = '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
+        const _cS = document.getElementById('cuerpoTablaStatusFlota');
+        if (_cS) _cS.innerHTML = typeof generarSkeletonHtml === 'function'
+            ? generarSkeletonHtml(9, 6)
+            : '<tr><td colspan="9" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cruzando datos con Inspecciones Mecánicas...</td></tr>';
         fetch('/api/script/obtenerDatosInspecciones', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ args: [] })
