@@ -678,10 +678,8 @@ function recargarModulo(nombre) {
   CACHE[nombre] = null; CACHE_TIME[nombre] = null;
   const acciones = {
     placas:    () => {
-      if (typeof window.cargarTablaPlacas === 'function') {
-        window.dataGlobalPlacas = [];
-        window.cargarTablaPlacas(true);
-      }
+      // cargarTablaPlacas es function declaration — vive en window tras la carga del script
+      if (typeof window.cargarTablaPlacas === 'function') window.cargarTablaPlacas(true);
     },
     fleetrun:  () => {
       if (typeof window.cargarTablaFleetrun === 'function') {
