@@ -124,6 +124,14 @@ window.verificarSesionGuardada = function() {
     if (avatarTopWrap && typeof window.generarAvatar === 'function') {
         avatarTopWrap.outerHTML = window.generarAvatar(usuarioLogueado, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
     }
+    // Avatar grande en dropdown de perfil
+    var avatarDrop = document.getElementById('perfil-avatar-dropdown');
+    if (avatarDrop && typeof window.generarAvatar === 'function') {
+        avatarDrop.innerHTML = window.generarAvatar(usuarioLogueado, 68).replace(
+            'border-radius:' + Math.round(68/3) + 'px',
+            'border-radius:50%;width:100%;height:100%'
+        );
+    }
 
     if (guardadoCorreo) {
         let perfilCorreoEl = document.getElementById('perfil-correo');
@@ -803,6 +811,30 @@ window.animarContador = function(el, valorFinal, duracion) {
         else { el.textContent = valorFinal; el.classList.add('counter-done'); setTimeout(function() { el.classList.remove('counter-done'); }, 350); }
     }
     requestAnimationFrame(step);
+};
+
+window.sparklineSVG = function(data, color) {
+    if (!data || data.length < 2) return '';
+    var min = Math.min.apply(null, data);
+    var max = Math.max.apply(null, data);
+    var range = max - min || 1;
+    var W = 80, H = 28, pad = 2;
+    var pts = data.map(function(v, i) {
+        var x = (i / (data.length - 1)) * W;
+        var y = H - pad - ((v - min) / range) * (H - pad * 2);
+        return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    var fill = (color || '#007aff') + '22';
+    var lastPt = data.map(function(v, i) {
+        var x = (i / (data.length - 1)) * W;
+        var y = H - pad - ((v - min) / range) * (H - pad * 2);
+        return { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)) };
+    });
+    var areaPath = 'M' + lastPt[0].x + ',' + H + ' L' + pts.split(' ').map(function(p) { return p; }).join(' L') + ' L' + lastPt[lastPt.length-1].x + ',' + H + ' Z';
+    return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="overflow:visible">' +
+        '<path d="' + areaPath + '" fill="' + fill + '" />' +
+        '<polyline points="' + pts + '" fill="none" stroke="' + (color || '#007aff') + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
 };
 
 window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {

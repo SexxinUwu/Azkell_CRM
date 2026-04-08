@@ -320,12 +320,217 @@ window.cargarMapaWialonDash = async function() {
 };
 
 // ============================================================
+// 📈 KPI METRICS + ACTIVITY FEED
+// ============================================================
+
+window.renderKpiMetrics = async function() {
+    var placasActivas = (window.dataGlobalPlacas || []).filter(function(p) {
+        if ((p[0] || '').toUpperCase() === 'PLACA') return false;
+        var estado = normalizeStr(p[18] || p[8] || '');
+        var enUso  = normalizeStr(p[22] || p[13] || '');
+        return estado === 'ACTIVA' && (enUso === 'SI' || enUso === 'SÍ');
+    });
+    var flotaTotal = placasActivas.length;
+
+    var elFlota = document.getElementById('kpi-val-flota');
+    if (elFlota) {
+        elFlota.textContent = '—';
+        if (typeof window.animarContador === 'function') window.animarContador(elFlota, flotaTotal);
+        else elFlota.textContent = flotaTotal;
+    }
+
+    // Sparkline flota: línea plana con valor actual (sin historial real)
+    var sparkFlota = document.getElementById('kpi-spark-flota');
+    if (sparkFlota && typeof window.sparklineSVG === 'function') {
+        var fakeFlota = [flotaTotal, flotaTotal, flotaTotal, flotaTotal, flotaTotal, flotaTotal];
+        sparkFlota.innerHTML = window.sparklineSVG(fakeFlota, 'var(--crm-accent)');
+    }
+
+    // Cargar inspecciones si no hay en caché
+    var inspData = window.dataGlobalInspecciones;
+    if (!inspData || inspData.length === 0) {
+        try {
+            var res = await fetch('/api/script/obtenerDatosInspecciones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var json = await res.json();
+            inspData = json.data || [];
+            window.dataGlobalInspecciones = inspData;
+        } catch(e) {
+            console.warn('KPI dashboard: error cargando inspecciones', e);
+            return;
+        }
+    }
+
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var inspecciones = (inspData || []).filter(function(i) { return i.estado !== 'Eliminada'; });
+
+    var vigentes = 0, porVencer = 0, vencidas = 0;
+
+    placasActivas.forEach(function(p) {
+        var placaStr = normalizeStr(p[0]);
+        var listaOrd = inspecciones.slice().sort(function(a, b) {
+            var pa = parseInt((a.id || '').split('-')[1]) || 0;
+            var pb = parseInt((b.id || '').split('-')[1]) || 0;
+            return pb - pa;
+        });
+        var insp = listaOrd.find(function(i) { return normalizeStr(i.placa) === placaStr; });
+
+        if (!insp || !insp.fecha_ingreso) { vencidas++; return; }
+
+        var fIngreso;
+        try {
+            if (insp.fecha_ingreso.includes('/')) {
+                var px = insp.fecha_ingreso.split('/');
+                fIngreso = new Date(px[2], px[1]-1, px[0]);
+            } else {
+                fIngreso = new Date(insp.fecha_ingreso + 'T00:00:00');
+            }
+        } catch(e) { vencidas++; return; }
+
+        var dProp = parseInt(insp.dias_propuestos) || 30;
+        var fProx = new Date(fIngreso.getTime());
+        fProx.setDate(fProx.getDate() + dProp);
+        var diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+
+        if (diasRestantes < 0)       vencidas++;
+        else if (diasRestantes <= 7) porVencer++;
+        else                         vigentes++;
+    });
+
+    var elVig  = document.getElementById('kpi-val-vigentes');
+    var elPV   = document.getElementById('kpi-val-porvencer');
+    var elVenc = document.getElementById('kpi-val-vencidas');
+    if (elVig  && typeof window.animarContador === 'function') window.animarContador(elVig,  vigentes);
+    else if (elVig)  elVig.textContent  = vigentes;
+    if (elPV   && typeof window.animarContador === 'function') window.animarContador(elPV,   porVencer);
+    else if (elPV)   elPV.textContent   = porVencer;
+    if (elVenc && typeof window.animarContador === 'function') window.animarContador(elVenc, vencidas);
+    else if (elVenc) elVenc.textContent = vencidas;
+
+    // Sparklines semanales (últimas 6 semanas basado en fecha_ingreso)
+    var ahora = Date.now();
+    var semVig  = [0,0,0,0,0,0];
+    var semPV   = [0,0,0,0,0,0];
+    var semVenc = [0,0,0,0,0,0];
+
+    inspecciones.forEach(function(i) {
+        if (!i.fecha_ingreso) return;
+        var fi;
+        try {
+            if (i.fecha_ingreso.includes('/')) {
+                var px = i.fecha_ingreso.split('/');
+                fi = new Date(px[2], px[1]-1, px[0]);
+            } else {
+                fi = new Date(i.fecha_ingreso + 'T00:00:00');
+            }
+        } catch(e) { return; }
+        var dProp = parseInt(i.dias_propuestos) || 30;
+        var fProx = new Date(fi.getTime());
+        fProx.setDate(fProx.getDate() + dProp);
+        var dias = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+        var weeksAgo = Math.floor((ahora - fi.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        var idx = 5 - weeksAgo;
+        if (idx >= 0 && idx < 6) {
+            if (dias < 0)       semVenc[idx]++;
+            else if (dias <= 7) semPV[idx]++;
+            else                semVig[idx]++;
+        }
+    });
+
+    var sparkVig  = document.getElementById('kpi-spark-vigentes');
+    var sparkPV   = document.getElementById('kpi-spark-porvencer');
+    var sparkVenc = document.getElementById('kpi-spark-vencidas');
+    if (sparkVig  && typeof window.sparklineSVG === 'function') sparkVig.innerHTML  = window.sparklineSVG(semVig,  '#16a34a');
+    if (sparkPV   && typeof window.sparklineSVG === 'function') sparkPV.innerHTML   = window.sparklineSVG(semPV,   '#eab308');
+    if (sparkVenc && typeof window.sparklineSVG === 'function') sparkVenc.innerHTML = window.sparklineSVG(semVenc, '#ef4444');
+
+    // Badges de tendencia (semana anterior vs semana actual)
+    _dashTrendBadge('kpi-trend-vigentes',  semVig[4],  semVig[5],  'up-good');
+    _dashTrendBadge('kpi-trend-vencidas',  semVenc[4], semVenc[5], 'down-good');
+    _dashTrendBadge('kpi-trend-porvencer', semPV[4],   semPV[5],   'down-good');
+
+    // Activity feed
+    _renderDashActivityFeed(inspData);
+};
+
+function _dashTrendBadge(id, prev, curr, better) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (curr === 0 && prev === 0) { el.innerHTML = ''; return; }
+    var diff = curr - prev;
+    var isUp   = diff > 0;
+    var isGood = (better === 'up-good') ? isUp : !isUp;
+    var color  = diff === 0 ? '#6b7280' : (isGood ? '#16a34a' : '#ef4444');
+    var icon   = diff === 0 ? '→' : (isUp ? '↑' : '↓');
+    el.innerHTML = '<span style="font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:20px;background:' + color + '22;color:' + color + '">' + icon + ' ' + Math.abs(diff) + '</span>';
+}
+
+function _renderDashActivityFeed(inspData) {
+    var feed = document.getElementById('dash-activity-feed');
+    if (!feed) return;
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+    var sorted = (inspData || [])
+        .filter(function(i) { return i.estado !== 'Eliminada' && i.fecha_ingreso; })
+        .sort(function(a, b) {
+            var pa = parseInt((a.id || '').split('-')[1]) || 0;
+            var pb = parseInt((b.id || '').split('-')[1]) || 0;
+            return pb - pa;
+        })
+        .slice(0, 12);
+
+    if (sorted.length === 0) {
+        feed.innerHTML = typeof window.generarEstadoVacio === 'function'
+            ? window.generarEstadoVacio('bi-activity', 'Sin actividad', 'Aún no hay inspecciones registradas.', true)
+            : '<div class="text-center py-3" style="color:var(--subtext);font-size:0.82rem;">Sin actividad reciente</div>';
+        return;
+    }
+
+    feed.innerHTML = sorted.map(function(i) {
+        var fi;
+        try {
+            if (i.fecha_ingreso.includes('/')) {
+                var px = i.fecha_ingreso.split('/');
+                fi = new Date(px[2], px[1]-1, px[0]);
+            } else {
+                fi = new Date(i.fecha_ingreso + 'T00:00:00');
+            }
+        } catch(e) { fi = null; }
+
+        var dProp = parseInt(i.dias_propuestos) || 30;
+        var dRest = fi ? Math.ceil((new Date(fi.getTime() + dProp * 86400000) - hoy) / 86400000) : -999;
+
+        var badge, badgeColor;
+        if (dRest < 0)       { badge = 'Vencida'; badgeColor = '#ef4444'; }
+        else if (dRest <= 7) { badge = dRest + 'd';  badgeColor = '#eab308'; }
+        else                 { badge = 'OK';      badgeColor = '#16a34a'; }
+
+        var fechaStr = fi ? fi.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : '—';
+        var tipo = (i.tipo_inspeccion || i.tipo || '').substring(0, 24);
+
+        return '<div class="dash-feed-item">' +
+            '<div class="dash-feed-dot" style="background:' + badgeColor + '"></div>' +
+            '<div class="dash-feed-content">' +
+                '<span class="dash-feed-placa">' + (i.placa || '—') + '</span> ' +
+                '<span class="dash-feed-tipo">' + tipo + '</span>' +
+                '<div class="dash-feed-meta">' + fechaStr + ' · <span style="color:' + badgeColor + ';font-weight:700;">' + badge + '</span></div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+// ============================================================
 // 🔄 RECARGAR DASHBOARD
 // ============================================================
 
 window.recargarDashboard = function() {
     if (typeof procesarFleetrunParaDashboard === 'function') procesarFleetrunParaDashboard();
     if (typeof procesarInspeccionesParaDashboard === 'function') procesarInspeccionesParaDashboard();
+    if (typeof window.renderKpiMetrics === 'function') window.renderKpiMetrics();
     cargarMapaWialonDash();
 };
 

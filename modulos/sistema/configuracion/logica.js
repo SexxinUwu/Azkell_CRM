@@ -21,6 +21,17 @@ window.init_configuracion = function() {
 
     if (elNombre) elNombre.textContent = nombre;
     if (elCorreo) elCorreo.textContent = correo;
+
+    // Avatar generado con iniciales
+    var avatarWrap = document.getElementById('cfg-avatar-wrap');
+    if (avatarWrap && typeof window.generarAvatar === 'function') {
+        var av = window.generarAvatar(nombre, 72);
+        // Insertar el div dentro del wrapper circular, reemplazando el ícono genérico
+        avatarWrap.innerHTML = av.replace(
+            'border-radius:' + Math.round(72/3) + 'px',
+            'border-radius:50%;width:100%;height:100%'
+        );
+    }
     if (elRol) {
         elRol.textContent = rol.charAt(0).toUpperCase() + rol.slice(1);
     }
