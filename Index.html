@@ -33,16 +33,19 @@
             <!-- Brand + Toggle -->
             <div class="brand-container" id="brandContainer">
                 <div class="brand-left">
-                    <div class="brand-logo-icon"><i class="bi bi-truck-front-fill"></i></div>
+                    <div class="brand-logo-icon" onclick="if(document.getElementById('sidebarMenu').classList.contains('collapsed')) toggleSidebar()" title="Expandir menú">
+                        <i class="bi bi-truck-front-fill"></i>
+                    </div>
                     <span class="brand-title-text fw-bolder">AZKELL FLEET</span>
                 </div>
-                <button class="btn-toggle-sidebar" onclick="toggleSidebar()" title="Contraer menú">
-                    <i class="bi bi-layout-sidebar-reverse"></i>
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar(); event.stopPropagation();" title="Contraer menú">
+                    <i class="bi bi-chevron-left"></i>
                 </button>
             </div>
 
             <!-- Nav principal -->
             <nav class="sidebar-nav">
+                <!-- Dashboard (sin sección) -->
                 <div id="wrap-dashboard">
                     <a id="nav-dashboard" class="nav-item active" onclick="cargarModuloAislado('dashboard')">
                         <i class="bi bi-grid-1x2-fill nav-icon"></i>
@@ -50,86 +53,124 @@
                     </a>
                 </div>
 
+                <!-- MANTENIMIENTO -->
                 <div id="wrap-mantenimiento">
-                    <div class="nav-section-label"><span data-i18n="nav.mantenimiento">Mantenimiento</span></div>
-                    <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
-                        <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span>
-                    </a>
-                    <a id="nav-placas" class="nav-item" onclick="cargarModuloAislado('mantenimiento/placas')">
-                        <i class="bi bi-truck nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.placas">Placas</span>
-                    </a>
-                    <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
-                        <i class="bi bi-speedometer2 nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span>
-                    </a>
+                    <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="true" onclick="window.toggleNavSection('mantenimiento')">
+                        <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-mantenimiento">
+                        <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
+                            <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span>
+                        </a>
+                        <a id="nav-placas" class="nav-item" onclick="cargarModuloAislado('mantenimiento/placas')">
+                            <i class="bi bi-truck nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.placas">Placas</span>
+                        </a>
+                        <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
+                            <i class="bi bi-speedometer2 nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span>
+                        </a>
+                    </div>
                 </div>
 
+                <!-- ALMACÉN -->
                 <div id="wrap-almacen">
-                    <div class="nav-section-label"><span data-i18n="nav.almacen">Almacén</span></div>
-                    <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
-                        <i class="bi bi-box-fill nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.inventario">Inventario</span>
-                    </a>
+                    <button class="nav-section-toggle" data-section="almacen" aria-expanded="true" onclick="window.toggleNavSection('almacen')">
+                        <span class="link-text" data-i18n="nav.almacen">Almacén</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-almacen">
+                        <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
+                            <i class="bi bi-box-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.inventario">Inventario</span>
+                        </a>
+                    </div>
                 </div>
 
+                <!-- FLOTA -->
                 <div id="wrap-flota">
-                    <div class="nav-section-label"><span data-i18n="nav.flota">Flota</span></div>
-                    <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
-                        <i class="bi bi-geo-alt-fill nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.gps">GPS Flota</span>
-                    </a>
-                    <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
-                        <i class="bi bi-activity nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.status">Status Flota</span>
-                    </a>
+                    <button class="nav-section-toggle" data-section="flota" aria-expanded="true" onclick="window.toggleNavSection('flota')">
+                        <span class="link-text" data-i18n="nav.flota">Flota</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-flota">
+                        <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
+                            <i class="bi bi-geo-alt-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.gps">GPS Flota</span>
+                        </a>
+                        <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
+                            <i class="bi bi-activity nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.status">Status Flota</span>
+                        </a>
+                    </div>
                 </div>
 
+                <!-- DIRECTORIO -->
                 <div id="wrap-directorio">
-                    <div class="nav-section-label"><span data-i18n="nav.directorio">Directorio</span></div>
-                    <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
-                        <i class="bi bi-person-vcard-fill nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.conductores">Conductores</span>
-                    </a>
-                    <a id="nav-talleres" class="nav-item" onclick="alert('Pronto: Talleres')">
-                        <i class="bi bi-shop nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.talleres">Talleres</span>
-                    </a>
+                    <button class="nav-section-toggle" data-section="directorio" aria-expanded="true" onclick="window.toggleNavSection('directorio')">
+                        <span class="link-text" data-i18n="nav.directorio">Directorio</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-directorio">
+                        <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
+                            <i class="bi bi-person-vcard-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.conductores">Conductores</span>
+                        </a>
+                        <a id="nav-talleres" class="nav-item" onclick="alert('Pronto: Talleres')">
+                            <i class="bi bi-shop nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.talleres">Talleres</span>
+                        </a>
+                    </div>
                 </div>
 
-                <div class="nav-section-label">Sistema</div>
-                <div id="wrap-usuarios">
-                    <a id="nav-usuarios" class="nav-item" onclick="cargarModuloAislado('sistema/usuarios')">
-                        <i class="bi bi-people-fill nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.usuarios">Usuarios</span>
-                    </a>
-                </div>
-                <div id="wrap-auditoria">
-                    <a id="nav-auditoria" class="nav-item" onclick="cargarModuloAislado('sistema/auditoria')">
-                        <i class="bi bi-journal-code nav-icon"></i>
-                        <span class="link-text" data-i18n="nav.auditoria">Auditoría</span>
-                    </a>
+                <!-- SISTEMA -->
+                <div id="wrap-sistema">
+                    <button class="nav-section-toggle" data-section="sistema" aria-expanded="true" onclick="window.toggleNavSection('sistema')">
+                        <span class="link-text">Sistema</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-sistema">
+                        <div id="wrap-usuarios">
+                            <a id="nav-usuarios" class="nav-item" onclick="cargarModuloAislado('sistema/usuarios')">
+                                <i class="bi bi-people-fill nav-icon"></i>
+                                <span class="link-text" data-i18n="nav.usuarios">Usuarios</span>
+                            </a>
+                        </div>
+                        <div id="wrap-auditoria">
+                            <a id="nav-auditoria" class="nav-item" onclick="cargarModuloAislado('sistema/auditoria')">
+                                <i class="bi bi-journal-code nav-icon"></i>
+                                <span class="link-text" data-i18n="nav.auditoria">Auditoría</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- CONFIGURACIÓN -->
                 <div id="wrap-configuracion">
-                    <div class="nav-section-label"><span data-i18n="nav.configuracion">Configuración</span></div>
-                    <a id="nav-cfg-perfil" class="nav-item" onclick="window.cargarConfigSection('perfil')">
-                        <i class="bi bi-person-circle nav-icon"></i>
-                        <span class="link-text" data-i18n="cfg.nav.profile">Mi Perfil</span>
-                    </a>
-                    <a id="nav-cfg-apariencia" class="nav-item" onclick="window.cargarConfigSection('apariencia')">
-                        <i class="bi bi-palette2 nav-icon"></i>
-                        <span class="link-text" data-i18n="cfg.nav.appearance">Apariencia</span>
-                    </a>
-                    <a id="nav-cfg-accesibilidad" class="nav-item" onclick="window.cargarConfigSection('accesibilidad')">
-                        <i class="bi bi-universal-access nav-icon"></i>
-                        <span class="link-text" data-i18n="cfg.nav.accessibility">Accesibilidad</span>
-                    </a>
-                    <a id="nav-cfg-idioma" class="nav-item" onclick="window.cargarConfigSection('idioma')">
-                        <i class="bi bi-translate nav-icon"></i>
-                        <span class="link-text" data-i18n="cfg.nav.language">Idioma</span>
-                    </a>
+                    <button class="nav-section-toggle" data-section="configuracion" aria-expanded="true" onclick="window.toggleNavSection('configuracion')">
+                        <span class="link-text" data-i18n="nav.configuracion">Configuración</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items" id="section-items-configuracion">
+                        <a id="nav-cfg-perfil" class="nav-item" onclick="window.cargarConfigSection('perfil')">
+                            <i class="bi bi-person-circle nav-icon"></i>
+                            <span class="link-text" data-i18n="cfg.nav.profile">Mi Perfil</span>
+                        </a>
+                        <a id="nav-cfg-apariencia" class="nav-item" onclick="window.cargarConfigSection('apariencia')">
+                            <i class="bi bi-palette2 nav-icon"></i>
+                            <span class="link-text" data-i18n="cfg.nav.appearance">Apariencia</span>
+                        </a>
+                        <a id="nav-cfg-accesibilidad" class="nav-item" onclick="window.cargarConfigSection('accesibilidad')">
+                            <i class="bi bi-universal-access nav-icon"></i>
+                            <span class="link-text" data-i18n="cfg.nav.accessibility">Accesibilidad</span>
+                        </a>
+                        <a id="nav-cfg-idioma" class="nav-item" onclick="window.cargarConfigSection('idioma')">
+                            <i class="bi bi-translate nav-icon"></i>
+                            <span class="link-text" data-i18n="cfg.nav.language">Idioma</span>
+                        </a>
+                    </div>
                 </div>
             </nav>
 
