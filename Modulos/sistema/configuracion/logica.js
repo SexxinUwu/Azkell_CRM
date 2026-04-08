@@ -162,6 +162,7 @@ window.applyFontFamily = function(key, save) {
     };
     const family = FONTS[key] || FONTS.inter;
     document.documentElement.style.setProperty('--font-family', family);
+    document.documentElement.style.setProperty('--bs-body-font-family', family);
     document.querySelectorAll('#cfg-font-options .cfg-font-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.font === key);
     });
