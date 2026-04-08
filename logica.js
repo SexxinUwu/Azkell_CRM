@@ -677,21 +677,13 @@ function cargarModulo(nombre, fnRender, fnBackend) {
 function recargarModulo(nombre) {
   CACHE[nombre] = null; CACHE_TIME[nombre] = null;
   const acciones = {
-    placas:    () => {
-      // cargarTablaPlacas es function declaration — vive en window tras la carga del script
-      if (typeof window.cargarTablaPlacas === 'function') window.cargarTablaPlacas(true);
-    },
-    fleetrun:  () => {
-      if (typeof window.cargarTablaFleetrun === 'function') {
-        window.dataGlobalFleetrun = [];
-        window.cargarTablaFleetrun(true);
-      }
-    },
-    statusMant: () => {
-      if (typeof window.recargarInspecciones === 'function') {
-        window.recargarInspecciones();
-      }
-    }
+    placas:       () => { if (typeof window.cargarTablaPlacas   === 'function') window.cargarTablaPlacas(true); },
+    fleetrun:     () => { if (typeof window.cargarTablaFleetrun === 'function') { window.dataGlobalFleetrun = []; window.cargarTablaFleetrun(true); } },
+    statusMant:   () => { if (typeof window.recargarInspecciones === 'function') window.recargarInspecciones(); },
+    inspecciones: () => { if (typeof window.recargarInspecciones === 'function') window.recargarInspecciones(); },
+    conductores:  () => { if (typeof window.cargarTablaConductores === 'function') window.cargarTablaConductores(true); },
+    status:       () => { if (typeof window.cargarStatusFlota     === 'function') window.cargarStatusFlota(true); },
+    ubicacion:    () => { if (typeof recargarWialon === 'function') recargarWialon(true); }
   };
   if (acciones[nombre]) acciones[nombre]();
 }
@@ -1040,10 +1032,17 @@ window.actualizarBadgesSidebar = function() {
 (function() {
     var _sY = 0, _pulling = false, _THRESHOLD = 72;
     document.addEventListener('touchstart', function(e) {
-        var root = document.getElementById('root-dinamico');
-        if ((root ? root.scrollTop : window.scrollY) === 0 && e.touches.length === 1) {
-            _sY = e.touches[0].clientY; _pulling = true;
+        if (e.touches.length !== 1) return;
+        // Recorrer ancestros desde el punto de toque hasta root-dinamico
+        // Si alguno está scrolleado, NO activar PTR
+        var el = e.target;
+        while (el) {
+            if (el.id === 'sidebarMenu' || el.id === 'sidebarBackdrop') return;
+            if (el.scrollTop > 0) return; // contenido scrolleado hacia abajo
+            if (el.id === 'root-dinamico') break;
+            el = el.parentElement;
         }
+        _sY = e.touches[0].clientY; _pulling = true;
     }, { passive: true });
     document.addEventListener('touchmove', function(e) {
         if (!_pulling) return;
