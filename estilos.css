@@ -2210,5 +2210,78 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
     }
 }
 
+/* ================================================================
+   SECCIONES COLAPSABLES DEL SIDEBAR
+   ================================================================ */
 
+/* Botón-título de sección (Mantenimiento, Flota, etc.) */
+.nav-section-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    background: none !important;
+    border: none !important;
+    padding: 6px 12px 4px 12px !important;
+    margin: 8px 0 2px 0 !important;
+    cursor: pointer !important;
+    border-radius: 6px !important;
+    transition: background 0.15s !important;
+    gap: 6px !important;
+}
+.nav-section-toggle:hover {
+    background: var(--hover, rgba(100,100,100,0.12)) !important;
+}
+.nav-section-toggle .link-text {
+    font-size: 0.645rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.09em !important;
+    color: var(--subtext) !important;
+    pointer-events: none !important;
+}
+
+/* Chevron del toggle de sección */
+.section-chevron {
+    font-size: 0.65rem !important;
+    color: var(--subtext) !important;
+    transition: transform 0.25s ease !important;
+    pointer-events: none !important;
+    flex-shrink: 0 !important;
+}
+.nav-section-toggle[aria-expanded="false"] .section-chevron {
+    transform: rotate(-90deg) !important;
+}
+
+/* Contenedor de items de la sección — animación de colapso */
+.nav-section-items {
+    overflow: hidden !important;
+    max-height: 500px !important;
+    opacity: 1 !important;
+    transition: max-height 0.3s ease, opacity 0.25s ease !important;
+}
+.nav-section-items.nav-section-collapsed {
+    max-height: 0 !important;
+    opacity: 0 !important;
+}
+
+/* En sidebar colapsado (icono), siempre mostrar todos los items */
+.sidebar.collapsed .nav-section-toggle {
+    display: none !important;
+}
+.sidebar.collapsed .nav-section-items {
+    max-height: 500px !important;
+    opacity: 1 !important;
+}
+.sidebar.collapsed .nav-section-items.nav-section-collapsed {
+    max-height: 500px !important;
+    opacity: 1 !important;
+}
+
+/* En mobile — mostrar toggle normalmente */
+@media (max-width: 768px) {
+    .sidebar.collapsed .nav-section-toggle {
+        display: flex !important;
+    }
+}
 

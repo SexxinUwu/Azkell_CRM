@@ -312,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarModuloAislado('login');
   } else {
     if (typeof restaurarCascaronApp === 'function') restaurarCascaronApp();
+    if (typeof window.restoreNavSections === 'function') window.restoreNavSections();
     verificarSesionGuardada();
   }
   document.body.addEventListener('mousemove', registrarActividad);
@@ -350,20 +351,43 @@ function initTooltips() {
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebarMenu');
     const backdrop = document.getElementById('sidebarBackdrop');
-    const brandContainer = document.getElementById('brandContainer');
     if (window.innerWidth <= 768) {
         const isOpen = sidebar.classList.contains('mobile-open');
         sidebar.classList.toggle('mobile-open', !isOpen);
-        backdrop.classList.toggle('active', !isOpen);
+        if (backdrop) backdrop.classList.toggle('active', !isOpen);
     } else {
         sidebar.classList.toggle('collapsed');
-        // En modo colapsado el brand-container funciona como trigger de expansión
-        if (brandContainer) {
-            brandContainer.onclick = sidebar.classList.contains('collapsed') ? toggleSidebar : null;
-        }
         setTimeout(initTooltips, 300);
     }
 }
+
+window.toggleNavSection = function(sectionId) {
+    const items = document.getElementById('section-items-' + sectionId);
+    const btn   = document.querySelector('.nav-section-toggle[data-section="' + sectionId + '"]');
+    if (!items) return;
+    const isCollapsed = items.classList.toggle('nav-section-collapsed');
+    if (btn) btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    // Persistir estado
+    try {
+        const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
+        saved[sectionId] = isCollapsed ? 'collapsed' : 'expanded';
+        localStorage.setItem('fleet_nav_sections', JSON.stringify(saved));
+    } catch(e) {}
+};
+
+window.restoreNavSections = function() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
+        Object.keys(saved).forEach(function(sectionId) {
+            if (saved[sectionId] === 'collapsed') {
+                const items = document.getElementById('section-items-' + sectionId);
+                const btn   = document.querySelector('.nav-section-toggle[data-section="' + sectionId + '"]');
+                if (items) items.classList.add('nav-section-collapsed');
+                if (btn)   btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    } catch(e) {}
+};
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
 function registrarActividad() { if (usuarioLogueado) localStorage.setItem('fleet_ultimo_acceso', Date.now()); }
