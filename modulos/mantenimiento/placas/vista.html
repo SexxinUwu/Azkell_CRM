@@ -52,7 +52,14 @@
         </div>
         <div class="pagination-row p-2 border-top d-flex justify-content-between align-items-center mt-auto">
             <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas" data-i18n="plates.showing">Mostrando 0 de 0</span>
-            <div class="d-flex gap-1" id="controles-paginacion-placas"></div>
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm" style="width:auto;font-size:0.75rem;" id="sel-filas-placas" onchange="cambiarFilasPlacas(this.value)" title="Filas por página">
+                    <option value="4">4 filas</option>
+                    <option value="6">6 filas</option>
+                    <option value="8">8 filas</option>
+                </select>
+                <div class="d-flex gap-1" id="controles-paginacion-placas"></div>
+            </div>
         </div>
     </div>
 

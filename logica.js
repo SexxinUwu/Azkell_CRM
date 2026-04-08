@@ -837,6 +837,101 @@ window.sparklineSVG = function(data, color) {
         '</svg>';
 };
 
+// ── Skeleton loaders genéricos ─────────────────────────────────────────────
+window.mostrarSkeleton = function(containerId, tipo, count) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    count = count || 5;
+    var html = '';
+    if (tipo === 'cards') {
+        html = '<div class="row g-3">';
+        for (var i = 0; i < count; i++) {
+            html += '<div class="col-6 col-md-3 skeleton-card-wrap"><div class="skeleton"></div></div>';
+        }
+        html += '</div>';
+    } else if (tipo === 'table') {
+        var widths = [0.4, 2, 1, 1, 0.6];
+        for (var i = 0; i < count; i++) {
+            html += '<div class="skeleton-row">';
+            widths.forEach(function(f) {
+                html += '<div class="skeleton" style="flex:' + f + ';height:30px;border-radius:4px"></div>';
+            });
+            html += '</div>';
+        }
+    } else {
+        var pcts = [100, 75, 90, 60, 82, 70, 95, 55];
+        for (var i = 0; i < count; i++) {
+            html += '<div class="skeleton" style="height:13px;width:' + pcts[i % pcts.length] + '%;border-radius:4px;margin-bottom:7px"></div>';
+        }
+    }
+    el.innerHTML = html;
+};
+
+// ── Badges dinámicos de alerta en sidebar ─────────────────────────────────
+window.actualizarBadgesSidebar = function() {
+    // Badge INSPECCIONES — vencidas + próximas a vencer (≤7d)
+    var badgeInsp = document.getElementById('badge-insp-alerta');
+    if (badgeInsp && window.dataGlobalInspecciones && window.dataGlobalPlacas) {
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        var inspecciones = window.dataGlobalInspecciones.filter(function(i) { return i.estado !== 'Eliminada'; });
+        var placasActivas = window.dataGlobalPlacas.filter(function(p) {
+            if ((p[0] || '').toUpperCase() === 'PLACA') return false;
+            var est = (typeof normalizeStr === 'function') ? normalizeStr(p[18] || p[8] || '') : (p[18] || p[8] || '').toUpperCase().trim();
+            var enUso = (typeof normalizeStr === 'function') ? normalizeStr(p[22] || p[13] || '') : (p[22] || p[13] || '').toUpperCase().trim();
+            return est === 'ACTIVA' && (enUso === 'SI' || enUso === 'SÍ');
+        });
+        var alertas = 0, vencidas = 0;
+        placasActivas.forEach(function(p) {
+            var placaStr = (typeof normalizeStr === 'function') ? normalizeStr(p[0]) : (p[0] || '').toUpperCase().trim();
+            var insp = inspecciones.slice().sort(function(a, b) {
+                var pa = parseInt((a.id || '').split('-')[1]) || 0;
+                var pb = parseInt((b.id || '').split('-')[1]) || 0;
+                return pb - pa;
+            }).find(function(i) {
+                var pl = (typeof normalizeStr === 'function') ? normalizeStr(i.placa) : (i.placa||'').toUpperCase().trim();
+                return pl === placaStr;
+            });
+            if (!insp || !insp.fecha_ingreso) { alertas++; vencidas++; return; }
+            var fi;
+            try {
+                fi = insp.fecha_ingreso.includes('/')
+                    ? new Date((function(px){ return new Date(px[2], px[1]-1, px[0]); })(insp.fecha_ingreso.split('/')))
+                    : new Date(insp.fecha_ingreso + 'T00:00:00');
+            } catch(e) { alertas++; vencidas++; return; }
+            var dProp = parseInt(insp.dias_propuestos) || 30;
+            var fProx = new Date(fi.getTime());
+            fProx.setDate(fProx.getDate() + dProp);
+            var dias = Math.ceil((fProx - hoy) / 86400000);
+            if (dias < 0)       { alertas++; vencidas++; }
+            else if (dias <= 7) { alertas++; }
+        });
+        if (alertas > 0) {
+            badgeInsp.textContent = alertas > 99 ? '99+' : alertas;
+            badgeInsp.style.display = '';
+            badgeInsp.className = 'nav-item-badge' + (vencidas > 0 ? '' : ' warning');
+        } else {
+            badgeInsp.style.display = 'none';
+        }
+    }
+
+    // Badge PLACAS — total flota activa
+    var badgePlacas = document.getElementById('badge-placas-activas');
+    if (badgePlacas && window.dataGlobalPlacas) {
+        var total = window.dataGlobalPlacas.filter(function(p) {
+            if ((p[0] || '').toUpperCase() === 'PLACA') return false;
+            var est = (typeof normalizeStr === 'function') ? normalizeStr(p[18] || p[8] || '') : (p[18] || p[8] || '').toUpperCase().trim();
+            return est === 'ACTIVA';
+        }).length;
+        if (total > 0) {
+            badgePlacas.textContent = total;
+            badgePlacas.style.display = '';
+            badgePlacas.className = 'nav-item-badge success';
+        } else {
+            badgePlacas.style.display = 'none';
+        }
+    }
+};
+
 window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
     icono       = icono       || 'bi-inbox';
     titulo      = titulo      || 'Sin datos';
