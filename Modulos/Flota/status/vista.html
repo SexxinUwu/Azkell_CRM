@@ -6,59 +6,59 @@
             <input type="date" class="form-control form-control-sm border-primary text-primary fw-bold" id="filtroStatusFecha" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 140px;">
             <select class="form-select form-select-sm fw-bold" id="filtroStatusCorte" onchange="filtrarStatusFlotaAvanzado()" style="max-width: 100px; color: var(--text);"><option value="">Todos los Cortes</option><option value="1">Corte 1</option><option value="2">Corte 2</option><option value="3">Corte 3</option></select>
             <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatusFlota" onkeyup="filtrarStatusFlotaAvanzado()" placeholder="Buscar Placa, Conductor..."></div>
-            <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
+            <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.clients">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota">Sin cargar</span></span>
+            <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota" data-i18n="common.sinCargar">Sin cargar</span></span>
             <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="resetearYRecargarStatusFlota()" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> Expandir</button>
-            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-            <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> Exportar PDF</button>
-            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> Agregar</button>
+            <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
+            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaStatusFlota', 'Status_Flota')"><i class="bi bi-file-earmark-excel"></i> <span data-i18n="common.excel">Excel</span></button>
+            <button class="btn btn-outline-danger fw-bold btn-sm" onclick="generarPDFStatusFlota()"><i class="bi bi-file-pdf"></i> <span data-i18n="common.pdf">Exportar PDF</span></button>
+            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalNuevoStatusFlota()" data-perm-crear="flota"><i class="bi bi-plus-lg"></i> <span data-i18n="common.add">Agregar</span></button>
         </div>
     </div>
     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
-        <thead><tr><th>Tracto / Camión</th><th>Prox Insp. T/C</th><th>Carreta / Remolque</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Zona</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5">Cargando Status Flota...</td></tr></tbody>
+        <thead><tr><th data-i18n="fstatus.col.tracto">Tracto / Camión</th><th data-i18n="fstatus.col.insp.tc">Prox Insp. T/C</th><th data-i18n="fstatus.col.carreta">Carreta / Remolque</th><th data-i18n="fstatus.col.insp.cr">Prox Insp. C/R</th><th data-i18n="fstatus.col.driver">Conductor</th><th data-i18n="common.status">Estado</th><th data-i18n="common.zone">Zona</th><th data-i18n="fstatus.col.obs">Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5" data-i18n="common.loading">Cargando Status Flota...</td></tr></tbody>
     </table></div></div>
 </div>
 
 <!-- Modal Agregar/Editar Status Flota -->
-<div class="modal fade" id="modalStatusFlota" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-truck-front text-primary"></i> Agregar Status Flota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="sf_id" id="sf_id"><div class="modal-body">
+<div class="modal fade" id="modalStatusFlota" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold"><i class="bi bi-truck-front text-primary"></i> <span data-i18n="fstatus.modal.title">Agregar Status Flota</span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)"><input type="hidden" name="usuarioAutor"><input type="hidden" name="sf_id" id="sf_id"><div class="modal-body">
     <div class="row">
-        <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Fecha de Corte</label><input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required></div>
-        <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary">Corte (Turno)</label><div class="d-flex gap-3 mt-1"><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div></div></div>
+        <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary" data-i18n="fstatus.form.cutdate">Fecha de Corte</label><input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required></div>
+        <div class="col-md-6 mb-3"><label class="form-label fw-bold text-primary" data-i18n="fstatus.form.shift">Corte (Turno)</label><div class="d-flex gap-3 mt-1"><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div><div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div></div></div>
     </div>
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> Motora *</label>
+            <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> <span data-i18n="fstatus.form.motora">Motora *</span></label>
             <input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" name="sf_motora" id="sf_motora" list="dl-placas" onchange="autocompletarStatus('motora')" oninput="autocompletarStatus('motora')" placeholder="Buscar placa..." autocomplete="off">
             <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_motora" id="sf_cliente_motora" placeholder="Cliente Auto-completado..." readonly>
         </div>
         <div class="col-md-6 mb-3">
-            <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> No Motora</label>
+            <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> <span data-i18n="fstatus.form.nomotora">No Motora</span></label>
             <input type="text" class="form-control text-uppercase border-info fw-bold shadow-sm" name="sf_nomotora" id="sf_nomotora" list="dl-placas" onchange="autocompletarStatus('nomotora')" oninput="autocompletarStatus('nomotora')" placeholder="Buscar placa..." autocomplete="off">
             <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2" name="sf_cliente_nomotora" id="sf_cliente_nomotora" placeholder="Cliente Auto-completado..." readonly>
         </div>
     </div>
     <div class="mb-3">
-        <label class="form-label fw-bold">Zona</label>
+        <label class="form-label fw-bold" data-i18n="common.zone">Zona</label>
         <input type="text" class="form-control" name="sf_zona" id="sf_zona" list="dl-zonas" placeholder="Elige o escribe nueva...">
         <datalist id="dl-zonas"><option value="Lavado"><option value="Mantenimiento"></datalist>
     </div>
     <div class="mb-3">
-        <label for="input-conductor-nuevo" class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> Conductor</label>
+        <label for="input-conductor-nuevo" class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> <span data-i18n="fstatus.form.driver">Conductor</span></label>
         <input type="text" class="form-control" id="input-conductor-nuevo" name="sf_conductor" placeholder="Buscar conductor..." list="dl-conductores-status">
     </div>
     <div class="row">
         <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold">Estado</label>
+            <label class="form-label fw-bold" data-i18n="common.status">Estado</label>
             <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado" list="dl-estados" placeholder="Elige o escribe nuevo...">
             <datalist id="dl-estados"><option value="Vacío"><option value="Cargado"><option value="Con Devolución"></datalist>
         </div>
         <div class="col-md-6 mb-3"><label class="form-label fw-bold">Observaciones</label><textarea class="form-control" name="sf_obs" id="sf_obs" rows="1"></textarea></div>
     </div>
-</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF">Guardar Registro</button></div></form></div></div></div>
+</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button><button type="submit" class="btn btn-primary" id="btnGuardarSF" data-i18n="common.saverec">Guardar Registro</button></div></form></div></div></div>
 
 <!-- Plantilla PDF Status Flota -->
 <div id="contenedor-pdf-status-flota" style="display: none;">

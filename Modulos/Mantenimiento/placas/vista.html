@@ -13,10 +13,10 @@
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                 <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorPlacas" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa..."></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroCliente"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Tipos</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroTipo"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Marcas</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroMarca"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroEstado"></ul></div>
+                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.clients">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroCliente"></ul></div>
+                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.type">Tipos</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroTipo"></ul></div>
+                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.brand">Marcas</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroMarca"></ul></div>
+                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.status">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroEstado"></ul></div>
                 <select class="form-select form-select-sm fw-bold mx-1 d-none d-md-block" style="width: auto; cursor:pointer;" onchange="cambiarColumnasPlacas(this.value)">
                     <option value="3">3 Columnas (Ancho)</option>
                     <option value="4" selected>4 Columnas (Normal)</option>
@@ -24,10 +24,10 @@
                 </select>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span id="cache-badge-placas" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-placas">Sin cargar</span></span>
+                <span id="cache-badge-placas" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-placas" data-i18n="common.sinCargar">Sin cargar</span></span>
                 <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="activarModoSeleccionPlacas()"><i class="bi bi-ui-checks"></i> Seleccionar</button>
-                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-placas" onclick="seleccionarTodasLasPlacas()"><i class="bi bi-check-square"></i> Seleccionar Todo</button>
+                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="activarModoSeleccionPlacas()"><i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span></button>
+                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-placas" onclick="seleccionarTodasLasPlacas()"><i class="bi bi-check-square"></i> <span data-i18n="common.selectAll">Seleccionar Todo</span></button>
                 <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-placas">0</span>)</button>
                 <div class="dropdown">
                     <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -40,8 +40,8 @@
                     </ul>
                 </div>
                 <input type="file" id="inputFilePlacas" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelPlacas(event)">
-                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')"><i class="bi bi-download"></i> Exportar</button>
-                <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> Registrar</button>
+                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')"><i class="bi bi-download"></i> <span data-i18n="common.export">Exportar</span></button>
+                <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> <span data-i18n="common.register">Registrar</span></button>
             </div>
         </div>
     </div>
@@ -51,7 +51,7 @@
             <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
         </div>
         <div class="pagination-row p-2 border-top d-flex justify-content-between align-items-center mt-auto">
-            <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas">Mostrando 0 de 0</span>
+            <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas" data-i18n="plates.showing">Mostrando 0 de 0</span>
             <div class="d-flex gap-1" id="controles-paginacion-placas"></div>
         </div>
     </div>
@@ -82,7 +82,7 @@
         <ul class="nav nav-tabs nav-fill border-bottom px-3 pt-2 bg-theme-main" id="tabsDetallePlaca" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-bold small" id="tab-general-btn" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" role="tab">
-                    <i class="bi bi-info-circle me-1"></i> Info General
+                    <i class="bi bi-info-circle me-1"></i> <span data-i18n="plates.panel.general">Info General</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -95,38 +95,38 @@
         <div class="tab-content">
             <!-- PESTAÑA 1: Información General -->
             <div class="tab-pane fade show active p-4" id="tab-general" role="tabpanel">
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-gear-wide-connected me-1"></i> Especificaciones</h6>
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-gear-wide-connected me-1"></i> <span data-i18n="plates.s.tech">2. Especificaciones Técnicas</span></h6>
                 <div class="detalle-lateral-grid mb-4">
-                    <div class="det-lat-item"><span>Marca</span><strong id="det-marca"></strong></div>
-                    <div class="det-lat-item"><span>Modelo</span><strong id="det-modelo"></strong></div>
-                    <div class="det-lat-item"><span>Tipo</span><strong id="det-tipo"></strong></div>
-                    <div class="det-lat-item"><span>Sub Tipo</span><strong id="det-sub_tipo"></strong></div>
-                    <div class="det-lat-item"><span>Color</span><strong id="det-color"></strong></div>
-                    <div class="det-lat-item"><span>Configuración</span><strong id="det-conf"></strong></div>
-                    <div class="det-lat-item"><span>Año</span><strong id="det-anio"></strong></div>
-                    <div class="det-lat-item"><span>Combustible</span><strong id="det-comb"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="common.brand">Marca</span><strong id="det-marca"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.model">Modelo</span><strong id="det-modelo"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="common.type">Tipo</span><strong id="det-tipo"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.subtype">Sub Tipo</span><strong id="det-sub_tipo"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.color">Color</span><strong id="det-color"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.config">Configuración</span><strong id="det-conf"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.year">Año</span><strong id="det-anio"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.fuel">Combustible</span><strong id="det-comb"></strong></div>
                 </div>
 
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-upc-scan me-1"></i> Identificación</h6>
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-upc-scan me-1"></i> <span data-i18n="plates.s.general">1. Datos Generales</span></h6>
                 <div class="detalle-lateral-grid mb-4">
-                    <div class="det-lat-item"><span>Nº Motor</span><strong id="det-nro_motor"></strong></div>
-                    <div class="det-lat-item"><span>Nº Caja</span><strong id="det-nro_caja"></strong></div>
-                    <div class="det-lat-item"><span>Nº Corona</span><strong id="det-nro_corona"></strong></div>
-                    <div class="det-lat-item"><span>Nº VIN</span><strong id="det-nro_vin" class="text-break"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.motor">Nº Motor</span><strong id="det-nro_motor"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.caja">Nº Caja</span><strong id="det-nro_caja"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.corona">Nº Corona</span><strong id="det-nro_corona"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.vin">Nº VIN</span><strong id="det-nro_vin" class="text-break"></strong></div>
                 </div>
 
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-arrows-fullscreen me-1"></i> Dimensiones</h6>
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-arrows-fullscreen me-1"></i> <span data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</span></h6>
                 <div class="detalle-lateral-grid mb-4">
-                    <div class="det-lat-item"><span>Carga Útil</span><strong id="det-carga_util"></strong></div>
-                    <div class="det-lat-item"><span>Peso Neto</span><strong id="det-peso_neto"></strong></div>
-                    <div class="det-lat-item"><span>Peso Bruto</span><strong id="det-peso_bruto"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.cargautil">Carga Útil</span><strong id="det-carga_util"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.pesoneto">Peso Neto</span><strong id="det-peso_neto"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.pesobruto">Peso Bruto</span><strong id="det-peso_bruto"></strong></div>
                 </div>
 
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-geo-alt me-1"></i> Operación</h6>
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-geo-alt me-1"></i> <span data-i18n="plates.s.ops">4. Operatividad</span></h6>
                 <div class="detalle-lateral-grid mb-2">
-                    <div class="det-lat-item"><span>Zona UTS</span><strong id="det-uts"></strong></div>
-                    <div class="det-lat-item"><span>En Uso?</span><strong id="det-enuso"></strong></div>
-                    <div class="det-lat-item"><span>Llantas</span><strong id="det-llantas"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.zone">Zona UTS</span><strong id="det-uts"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.inuse">En Uso?</span><strong id="det-enuso"></strong></div>
+                    <div class="det-lat-item"><span data-i18n="plates.form.tires">Llantas</span><strong id="det-llantas"></strong></div>
                 </div>
             </div>
 
@@ -166,8 +166,8 @@
         </div>
     </div>
     <div class="offcanvas-footer border-top p-3 d-flex gap-2 bg-theme-main">
-        <button class="btn btn-outline-secondary w-50 fw-bold" data-bs-dismiss="offcanvas">Cerrar</button>
-        <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-editar-offcanvas"><i class="bi bi-pencil-square"></i> Editar</button>
+                <button class="btn btn-outline-secondary w-50 fw-bold" data-bs-dismiss="offcanvas" data-i18n="common.close">Cerrar</button>
+                <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-editar-offcanvas"><i class="bi bi-pencil-square"></i> <span data-i18n="common.edit">Editar</span></button>
     </div>
 </div>
 
@@ -176,21 +176,21 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="bi bi-truck text-info me-2"></i>Registrar Ficha Técnica</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-truck text-info me-2"></i><span data-i18n="plates.modal.reg">Registrar Ficha Técnica</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formPlaca" onsubmit="enviarPlaca(event, this)">
                 <input type="hidden" name="usuarioAutor">
                 <div class="modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">1. Datos Generales</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3" data-i18n="plates.s.general">1. Datos Generales</h6>
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold text-primary">Placa *</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.plate">Placa *</label>
                             <input type="text" class="form-control text-uppercase border-primary fw-bold" name="p_placa" placeholder="ABC-123" required>
                         </div>
                         <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold text-primary">Cliente *</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.client">Cliente *</label>
                             <div class="input-group">
                                 <select class="form-select border-primary fw-bold sel-inteligente" name="p_cliente" id="p_cliente" onchange="autocompletarRucSelect(this.value, 'p_ruc')" required>
                                     <option value="">Seleccione Cliente...</option>
@@ -199,35 +199,35 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold text-primary">RUC / DNI *</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.ruc">RUC / DNI *</label>
                             <input type="text" class="form-control bg-light text-primary fw-bold" name="p_ruc" id="p_ruc" placeholder="Auto..." required readonly>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">2. Especificaciones Técnicas</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Marca</label><select class="form-select text-uppercase sel-inteligente" name="p_marca" id="p_marca" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Modelo</label><input type="text" class="form-control text-uppercase" name="p_modelo" placeholder="Ej: FH 460"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_tipo" id="p_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_sub_tipo" id="p_sub_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.brand">Marca</label><select class="form-select text-uppercase sel-inteligente" name="p_marca" id="p_marca" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control text-uppercase" name="p_modelo" placeholder="Ej: FH 460"></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.type">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_tipo" id="p_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.subtype">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="p_sub_tipo" id="p_sub_tipo" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
                     </div>
 
                     <button type="button" id="btnToggleAvanzadoReg" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
-                        <i class="bi bi-gear"></i> Mostrar Configuración Avanzada
+                        <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
                     </button>
 
                     <div id="contenedorCamposAvanzadosReg" class="d-none mt-3">
                         <div class="row">
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="p_color" id="p_color" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.color">Color</label><select class="form-select text-uppercase sel-inteligente" name="p_color" id="p_color" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="p_conf" id="p_conf" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="p_anio" placeholder="2024"></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.config">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="p_conf" id="p_conf" onchange="gestionarNuevoSelect(this)"><option value="">Seleccione...</option></select></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.year">Año</label><input type="number" class="form-control" name="p_anio" placeholder="2024"></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.fuel">Combustible</label>
                                 <select class="form-select text-uppercase fw-bold text-primary" name="p_comb">
                                     <option value="DIESEL" selected>DIESEL</option>
                                     <option value="GASOLINA">GASOLINA</option>
@@ -236,30 +236,30 @@
                             </div>
                         </div>
 
-                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">4. Operatividad</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.ops">4. Operatividad</h6>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success">Estado</label><select class="form-select text-success fw-bold" name="p_estado"><option value="Activa" selected>Activa</option><option value="Inactiva">Inactiva</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Zona UTS</label>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success" data-i18n="common.status">Estado</label><select class="form-select text-success fw-bold" name="p_estado"><option value="Activa" selected>Activa</option><option value="Inactiva">Inactiva</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.zone">Zona UTS</label>
                             <select class="form-select text-uppercase" name="p_uts">
                                 <option value="" selected>(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Unidad</label><select class="form-select" name="p_motora"><option value="Motora" selected>Motora</option><option value="No Motora">No Motora</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning">En Uso?</label><select class="form-select fw-bold" name="p_enuso"><option value="Si" selected>Si</option><option value="No">No</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> Llantas</label><input type="number" class="form-control" name="p_llantas" placeholder="Ej: 10"></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.unit">Unidad</label><select class="form-select" name="p_motora"><option value="Motora" selected>Motora</option><option value="No Motora">No Motora</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select fw-bold" name="p_enuso"><option value="Si" selected>Si</option><option value="No">No</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control" name="p_llantas" placeholder="Ej: 10"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnGuardarPlaca"><i class="bi bi-save"></i> Guardar Ficha</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarPlaca"><i class="bi bi-save"></i> <span data-i18n="plates.btn.save">Guardar Ficha</span></button>
                 </div>
             </form>
         </div>
@@ -271,56 +271,56 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-warning me-2"></i>Editar Ficha Técnica</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-warning me-2"></i><span data-i18n="plates.modal.edit">Editar Ficha Técnica</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formEditarPlaca" onsubmit="enviarEdicionPlaca(event, this)">
                 <input type="hidden" name="usuarioAutor">
                 <div class="modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">1. Datos Generales</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3" data-i18n="plates.s.general">1. Datos Generales</h6>
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold text-primary">Placa</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="common.plate">Placa</label>
                             <input type="text" class="form-control text-uppercase bg-light fw-bold" name="editP_placa" id="e_placa" readonly>
                         </div>
                         <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold text-primary">Cliente *</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.client">Cliente *</label>
                             <div class="input-group">
                                 <select class="form-select border-primary fw-bold sel-inteligente" name="editP_cliente" id="e_cliente" onchange="autocompletarRucSelect(this.value, 'e_ruc')" required></select>
                                 <button class="btn btn-primary fw-bold" type="button" onclick="abrirModalNuevoCliente('e_cliente', 'e_ruc')" title="Nuevo Cliente"><i class="bi bi-plus-lg"></i></button>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold text-primary">RUC / DNI *</label>
+                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.ruc">RUC / DNI *</label>
                             <input type="text" class="form-control bg-light text-primary fw-bold" name="editP_ruc" id="e_ruc" required readonly>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">2. Especificaciones Técnicas</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Marca</label><select class="form-select text-uppercase sel-inteligente" name="editP_marca" id="e_marca" onchange="gestionarNuevoSelect(this)"></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Modelo</label><input type="text" class="form-control text-uppercase" name="editP_modelo" id="e_modelo"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_tipo" id="e_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_sub_tipo" id="e_sub_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.brand">Marca</label><select class="form-select text-uppercase sel-inteligente" name="editP_marca" id="e_marca" onchange="gestionarNuevoSelect(this)"></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control text-uppercase" name="editP_modelo" id="e_modelo"></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.type">Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_tipo" id="e_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.subtype">Sub Tipo</label><select class="form-select text-uppercase sel-inteligente" name="editP_sub_tipo" id="e_sub_tipo" onchange="gestionarNuevoSelect(this)"></select></div>
                     </div>
 
                     <button type="button" id="btnToggleAvanzadoEdit" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
-                        <i class="bi bi-gear"></i> Mostrar Configuración Avanzada
+                        <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
                     </button>
 
                     <div id="contenedorCamposAvanzadosEdit" class="d-none mt-3">
                         <div class="row">
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Color</label><select class="form-select text-uppercase sel-inteligente" name="editP_color" id="e_color" onchange="gestionarNuevoSelect(this)"></select></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Motor</label><input type="text" class="form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Caja</label><input type="text" class="form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold">Nº Corona</label><input type="text" class="form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.color">Color</label><select class="form-select text-uppercase sel-inteligente" name="editP_color" id="e_color" onchange="gestionarNuevoSelect(this)"></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Nº VIN</label><input type="text" class="form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="editP_conf" id="e_conf" onchange="gestionarNuevoSelect(this)"></select></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Año</label><input type="number" class="form-control" name="editP_anio" id="e_anio"></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold">Combustible</label>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.config">Configuración</label><select class="form-select text-uppercase sel-inteligente" name="editP_conf" id="e_conf" onchange="gestionarNuevoSelect(this)"></select></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.year">Año</label><input type="number" class="form-control" name="editP_anio" id="e_anio"></div>
+                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.fuel">Combustible</label>
                                 <select class="form-select text-uppercase fw-bold text-primary" name="editP_comb" id="e_comb">
                                     <option value="DIESEL">DIESEL</option>
                                     <option value="GASOLINA">GASOLINA</option>
@@ -329,30 +329,30 @@
                             </div>
                         </div>
 
-                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">3. Capacidades y Dimensiones</h6>
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
                         <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="editP_carga_util" id="e_carga_util"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_neto" id="e_peso_neto"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="editP_carga_util" id="e_carga_util"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_neto" id="e_peso_neto"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2">4. Operatividad</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.ops">4. Operatividad</h6>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success">Estado</label><select class="form-select text-success fw-bold" name="editP_estado" id="e_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Zona UTS</label>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success" data-i18n="common.status">Estado</label><select class="form-select text-success fw-bold" name="editP_estado" id="e_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.zone">Zona UTS</label>
                             <select class="form-select text-uppercase" name="editP_uts" id="e_uts">
                                 <option value="">(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
                             </select>
                         </div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold">Unidad</label><select class="form-select" name="editP_motora" id="e_motora"><option value="Motora">Motora</option><option value="No Motora">No Motora</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning">En Uso?</label><select class="form-select fw-bold" name="editP_enuso" id="e_enuso"><option value="Si">Si</option><option value="No">No</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> Llantas</label><input type="number" class="form-control" name="editP_llantas" id="e_llantas"></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.unit">Unidad</label><select class="form-select" name="editP_motora" id="e_motora"><option value="Motora">Motora</option><option value="No Motora">No Motora</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select fw-bold" name="editP_enuso" id="e_enuso"><option value="Si">Si</option><option value="No">No</option></select></div>
+                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control" name="editP_llantas" id="e_llantas"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning text-dark fw-bold" id="btnActualizarPlaca"><i class="bi bi-pencil-square"></i> Actualizar Ficha</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold" id="btnActualizarPlaca"><i class="bi bi-pencil-square"></i> <span data-i18n="plates.btn.update">Actualizar Ficha</span></button>
                 </div>
             </form>
         </div>
@@ -364,24 +364,24 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-primary shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h6 class="modal-title fw-bold"><i class="bi bi-building-add me-2"></i>Nuevo Cliente</h6>
+                <h6 class="modal-title fw-bold"><i class="bi bi-building-add me-2"></i><span data-i18n="plates.modal.newclient">Nuevo Cliente</span></h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Razón Social *</label>
+                    <label class="form-label fw-bold small" data-i18n="plates.form.razon">Razón Social *</label>
                     <input type="text" class="form-control form-control-sm text-uppercase" id="nc_nombre" placeholder="Ej: TRANSPORTES S.A.C.">
                 </div>
                 <div class="mb-2">
-                    <label class="form-label fw-bold small">RUC / DNI *</label>
+                    <label class="form-label fw-bold small" data-i18n="plates.form.ruc">RUC / DNI *</label>
                     <input type="number" class="form-control form-control-sm" id="nc_ruc" placeholder="20123456789">
                 </div>
                 <input type="hidden" id="nc_target_select">
                 <input type="hidden" id="nc_target_ruc">
             </div>
             <div class="modal-footer p-2">
-                <button type="button" class="btn btn-sm btn-secondary w-100 mb-1" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-primary fw-bold w-100" onclick="guardarNuevoCliente()"><i class="bi bi-check2"></i> Agregar</button>
+                <button type="button" class="btn btn-sm btn-secondary w-100 mb-1" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold w-100" onclick="guardarNuevoCliente()"><i class="bi bi-check2"></i> <span data-i18n="common.add">Agregar</span></button>
             </div>
         </div>
     </div>
