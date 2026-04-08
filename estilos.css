@@ -2311,21 +2311,17 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
 }
 
 /* Indicador visual: sección con módulo activo */
+.nav-section-toggle.section-has-active {
+    background: rgba(37,99,235,0.08) !important;
+    box-shadow: inset 3px 0 0 var(--crm-accent) !important;
+    border-radius: 0 6px 6px 0 !important;
+}
 .nav-section-toggle.section-has-active .link-text {
     color: var(--crm-accent) !important;
     font-weight: 800 !important;
 }
 .nav-section-toggle.section-has-active .section-chevron {
     color: var(--crm-accent) !important;
-}
-/* Punto azul a la izquierda del label de sección activa */
-.nav-section-toggle.section-has-active::before {
-    content: '' !important;
-    width: 4px !important;
-    height: 4px !important;
-    border-radius: 50% !important;
-    background: var(--crm-accent) !important;
-    flex-shrink: 0 !important;
 }
 
 /* En sidebar colapsado, ocultar badge (ya no hay texto) */
