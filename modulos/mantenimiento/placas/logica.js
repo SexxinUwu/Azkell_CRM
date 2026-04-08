@@ -210,6 +210,8 @@ window.filtrarPlacasAvanzado = function() {
     renderizarPaginaPlacas();
     _guardarFiltrosPlacas();
 };
+
+function actualizarIndicadoresPlacas(datos) {
     let camiones = 0, carretas = 0, semirremolques = 0, tractos = 0;
 
     datos.forEach(fila => {
@@ -744,3 +746,6 @@ window.init_placas = function() {
         });
     }
 };
+
+// Alias global para recargarModulo (main logica.js)
+window.cargarTablaPlacas = function(forzar) { cargarTablaPlacas(forzar); };

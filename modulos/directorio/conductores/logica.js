@@ -2,9 +2,11 @@
 // 🚗 MÓDULO CONDUCTORES - LÓGICA AISLADA
 // ================================================================
 
-let dataGlobalConductores = [];
-let expandCondMap = {};
-let expandAllCondState = true;
+let dataGlobalConductores = window.dataGlobalConductores || [];
+window.dataGlobalConductores = dataGlobalConductores;
+let expandCondMap = window.expandCondMap || {};
+window.expandCondMap = expandCondMap;
+let expandAllCondState = (window.expandAllCondState !== undefined) ? window.expandAllCondState : true;
 
 function toTitleCase(str) {
     if (!str) return "";

@@ -671,9 +671,23 @@ function cargarModulo(nombre, fnRender, fnBackend) {
 function recargarModulo(nombre) {
   CACHE[nombre] = null; CACHE_TIME[nombre] = null;
   const acciones = {
-    placas: () => cargarModulo('placas', mostrarPlacas, 'obtenerDatosPlacas'),
-    fleetrun: () => cargarModulo('fleetrun', mostrarFleetrun, 'obtenerDatosFleetrun'),
-    statusMant: () => cargarModulo('statusMant', mostrarStatusInspecciones, 'obtenerDatosInspecciones')
+    placas:    () => {
+      if (typeof window.cargarTablaPlacas === 'function') {
+        window.dataGlobalPlacas = [];
+        window.cargarTablaPlacas(true);
+      }
+    },
+    fleetrun:  () => {
+      if (typeof window.cargarTablaFleetrun === 'function') {
+        window.dataGlobalFleetrun = [];
+        window.cargarTablaFleetrun(true);
+      }
+    },
+    statusMant: () => {
+      if (typeof window.recargarInspecciones === 'function') {
+        window.recargarInspecciones();
+      }
+    }
   };
   if (acciones[nombre]) acciones[nombre]();
 }

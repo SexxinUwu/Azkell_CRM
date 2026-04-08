@@ -11,7 +11,9 @@ function cargarTablaAuditoria(forzarRefresh = false) {
         return;
     }
     document.getElementById('cuerpoTablaAuditoria').innerHTML =
-        '<tr><td colspan="4" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando bitácora...</td></tr>';
+        typeof generarSkeletonHtml === 'function'
+            ? generarSkeletonHtml(4, 6)
+            : '<tr><td colspan="4" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando bitácora...</td></tr>';
     google.script.run.withSuccessHandler(mostrarAuditoria).obtenerDatosAuditoria();
 }
 
