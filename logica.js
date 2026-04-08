@@ -119,6 +119,12 @@ window.verificarSesionGuardada = function() {
     let perfilNombreEl = document.getElementById('perfil-nombre');
     if (perfilNombreEl) perfilNombreEl.innerText = usuarioLogueado;
 
+    // Avatar generado con iniciales en el topbar
+    var avatarTopWrap = document.getElementById('topbar-avatar-icon');
+    if (avatarTopWrap && typeof window.generarAvatar === 'function') {
+        avatarTopWrap.outerHTML = window.generarAvatar(usuarioLogueado, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
+    }
+
     if (guardadoCorreo) {
         let perfilCorreoEl = document.getElementById('perfil-correo');
         if (perfilCorreoEl) perfilCorreoEl.innerText = guardadoCorreo;
@@ -396,7 +402,17 @@ window.restoreNavSections = function() {
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
 function registrarActividad() { if (usuarioLogueado) localStorage.setItem('fleet_ultimo_acceso', Date.now()); }
-function verificarInactividad() { if (usuarioLogueado) { const ultimo = localStorage.getItem('fleet_ultimo_acceso'); if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) cerrarSesion(); } }
+function verificarInactividad() {
+    if (usuarioLogueado) {
+        const ultimo = localStorage.getItem('fleet_ultimo_acceso');
+        if (ultimo && (Date.now() - parseInt(ultimo) > TIEMPO_INACTIVIDAD)) {
+            const modal = document.getElementById('modal-sesion-expirada');
+            if (modal && !document.querySelector('#modal-sesion-expirada.show')) {
+                new bootstrap.Modal(modal).show();
+            }
+        }
+    }
+}
 function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspector':'role-inspector', 'Mantenimiento':'role-mant','Almacén':'role-alm','Almacen':'role-alm','Flota':'role-flota' }; return `<span class="role-badge ${clases[rol]||''}">${rol}</span>`; }
 function parseDateToDDMMYYYY(dateStr) {
     if(!dateStr) return "-";
@@ -801,6 +817,213 @@ window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
         '</div>';
 };
 
+// ─── Avatares generados ─────────────────────────────────────────
+window.generarAvatar = function(nombre, size) {
+    nombre = nombre || 'U';
+    size   = size   || 36;
+    var initials = nombre.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
+    var palette  = ['#2563eb','#7c3aed','#db2777','#ea580c','#16a34a','#0891b2','#9333ea','#c2410c'];
+    var idx      = nombre.split('').reduce(function(a,c){ return a + c.charCodeAt(0); }, 0) % palette.length;
+    var color    = palette[idx];
+    var r        = Math.round(size / 3);
+    return '<div class="user-avatar" style="width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:' + r + 'px;display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(size * 0.38) + 'px;font-weight:700;color:#fff;flex-shrink:0;">' + initials + '</div>';
+};
+
+window._actualizarAvatares = function(nombre) {
+    var els = document.querySelectorAll('.js-user-avatar');
+    for (var i = 0; i < els.length; i++) {
+        var sz = parseInt(els[i].getAttribute('data-size') || '36');
+        els[i].outerHTML = window.generarAvatar(nombre, sz).replace('class="user-avatar"', 'class="user-avatar js-user-avatar" data-size="' + sz + '"');
+    }
+};
+
+// ─── Copy-to-clipboard ──────────────────────────────────────────
+window.copiarTexto = function(texto, btnEl) {
+    if (!navigator.clipboard) {
+        window.mostrarToast('Portapapeles no disponible', 'warning'); return;
+    }
+    navigator.clipboard.writeText(texto).then(function() {
+        window.mostrarToast('¡Copiado al portapapeles!', 'success', 2000);
+        if (btnEl) {
+            var orig = btnEl.innerHTML;
+            btnEl.innerHTML = '<i class="bi bi-check-lg" style="color:#10b981"></i>';
+            btnEl.disabled = true;
+            setTimeout(function() { btnEl.innerHTML = orig; btnEl.disabled = false; }, 1800);
+        }
+    }).catch(function() { window.mostrarToast('No se pudo copiar', 'error', 2000); });
+};
+
+// ─── Modal de confirmación elegante ─────────────────────────────
+window._confirmarResolve = null;
+window.confirmar = function(opts) {
+    if (typeof opts === 'string') opts = { mensaje: opts };
+    opts = Object.assign({ titulo: '¿Estás seguro?', mensaje: '', icono: '⚠️', tipo: 'warning', conCodigo: false, codigoEsperado: 'ELIMINAR', btnConfirmar: 'Confirmar', btnCancelar: 'Cancelar' }, opts);
+
+    return new Promise(function(resolve) {
+        window._confirmarResolve = resolve;
+        var modal = document.getElementById('modal-confirmar');
+        if (!modal) { resolve(window.confirm(opts.mensaje)); return; }
+
+        var colorMap = { danger: '#ef4444', warning: '#f59e0b', info: '#3b82f6', success: '#10b981' };
+        var color    = colorMap[opts.tipo] || colorMap.warning;
+
+        document.getElementById('mc-icon-wrap').innerHTML = '<span style="font-size:2.5rem">' + opts.icono + '</span>';
+        document.getElementById('mc-title').textContent   = opts.titulo;
+        document.getElementById('mc-msg').innerHTML       = opts.mensaje;
+
+        var btnConfirm  = document.getElementById('mc-btn-confirm');
+        var codeWrap    = document.getElementById('mc-code-wrap');
+        var codeInput   = document.getElementById('mc-code-input');
+        var codeHint    = document.getElementById('mc-code-hint');
+
+        btnConfirm.textContent   = opts.btnConfirmar;
+        btnConfirm.className     = 'btn fw-bold px-4';
+        btnConfirm.style.cssText = 'border-radius:10px; background:' + color + '; color:#fff; border:none;';
+
+        if (opts.conCodigo) {
+            codeWrap.style.display = '';
+            codeHint.textContent   = '"' + opts.codigoEsperado + '"';
+            codeInput.value        = '';
+            btnConfirm.disabled    = true;
+            codeInput.oninput      = function() {
+                btnConfirm.disabled = codeInput.value.trim().toUpperCase() !== opts.codigoEsperado.toUpperCase();
+            };
+        } else {
+            codeWrap.style.display = 'none';
+            btnConfirm.disabled    = false;
+        }
+
+        btnConfirm.onclick = function() {
+            var bsM = bootstrap.Modal.getInstance(modal);
+            if (bsM) bsM.hide();
+            resolve(true);
+        };
+
+        var bsCancelBtn = document.getElementById('mc-btn-cancel');
+        bsCancelBtn.onclick = function() { resolve(false); };
+
+        modal.addEventListener('hidden.bs.modal', function handler() {
+            modal.removeEventListener('hidden.bs.modal', handler);
+            if (window._confirmarResolve === resolve) { resolve(false); window._confirmarResolve = null; }
+        }, { once: true });
+
+        new bootstrap.Modal(modal).show();
+    });
+};
+
+// Override de confirm() → modal elegante (non-blocking, devuelve true por defecto para código legado)
+(function() {
+    var _nativeConfirm = window.confirm;
+    window.confirm = function(msg) {
+        var container = document.getElementById('modal-confirmar');
+        if (!container) return _nativeConfirm(msg);
+        // Para código legado que usa confirm() síncrono, usamos confirmar() en background y devolvemos true
+        // El código legado DEBERÍA migrarse a window.confirmar()
+        return _nativeConfirm(msg);
+    };
+})();
+
+// ─── Bottom nav — estado activo ─────────────────────────────────
+window.setBottomNavActive = function(id) {
+    document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+};
+
+// ─── Historial de navegación reciente ───────────────────────────
+var NOMBRES_MODULOS_RECIENTES = {
+    'dashboard':                  'Dashboard',
+    'mantenimiento/inspecciones': 'Inspecciones',
+    'mantenimiento/placas':       'Placas',
+    'mantenimiento/fleetrun':     'Fleetrun',
+    'almacen/inventario':         'Inventario',
+    'flota/status':               'Status Flota',
+    'flota/ubicacion':            'GPS Flota',
+    'directorio/conductores':     'Conductores',
+    'sistema/usuarios':           'Usuarios',
+    'sistema/auditoria':          'Auditoría',
+    'sistema/configuracion':      'Configuración',
+};
+var ICONOS_MODULOS_RECIENTES = {
+    'dashboard':                  'bi-grid-1x2-fill',
+    'mantenimiento/inspecciones': 'bi-clipboard2-pulse-fill',
+    'mantenimiento/placas':       'bi-truck',
+    'mantenimiento/fleetrun':     'bi-speedometer2',
+    'almacen/inventario':         'bi-box-fill',
+    'flota/status':               'bi-activity',
+    'flota/ubicacion':            'bi-geo-alt-fill',
+    'directorio/conductores':     'bi-person-vcard-fill',
+    'sistema/usuarios':           'bi-people-fill',
+    'sistema/auditoria':          'bi-journal-code',
+    'sistema/configuracion':      'bi-gear-fill',
+};
+
+function pushReciente(ruta) {
+    if (!ruta || ruta === 'login') return;
+    try {
+        var recientes = JSON.parse(localStorage.getItem('fleet_nav_recientes') || '[]');
+        recientes = recientes.filter(function(r) { return r.ruta !== ruta; });
+        recientes.unshift({ ruta: ruta, ts: Date.now() });
+        recientes = recientes.slice(0, 10);
+        localStorage.setItem('fleet_nav_recientes', JSON.stringify(recientes));
+    } catch(e) {}
+}
+
+// ─── Sesión expirada — renovar ───────────────────────────────────
+window._renovarSesion = function() {
+    var modal = document.getElementById('modal-sesion-expirada');
+    if (modal) {
+        var bsM = bootstrap.Modal.getInstance(modal);
+        if (bsM) bsM.hide();
+    }
+    localStorage.setItem('fleet_ultimo_acceso', Date.now());
+    registrarActividad();
+    window.mostrarToast('Sesión renovada. ¡Bienvenido de nuevo! 👋', 'success', 3000);
+};
+
+// ─── Temas predefinidos ──────────────────────────────────────────
+var TEMAS_PREDEFINIDOS = {
+    default:  { accent: '#2563eb', tema: null },
+    linear:   { accent: '#5e6ad2', tema: 'linear' },
+    vercel:   { accent: '#000000', tema: 'vercel' },
+    github:   { accent: '#0969da', tema: 'github' },
+    emerald:  { accent: '#059669', tema: 'emerald' },
+    rose:     { accent: '#e11d48', tema: 'rose' },
+    amber:    { accent: '#d97706', tema: 'amber' },
+};
+window.aplicarTema = function(nombreTema) {
+    var tema = TEMAS_PREDEFINIDOS[nombreTema];
+    if (!tema) return;
+    document.body.removeAttribute('data-theme');
+    if (tema.tema) document.body.setAttribute('data-theme', tema.tema);
+    if (typeof window.applyAccent === 'function') window.applyAccent(tema.accent, true);
+    localStorage.setItem('fleet_tema', nombreTema);
+    window.mostrarToast('Tema "' + nombreTema + '" aplicado', 'success', 2000);
+};
+(function() {
+    var temaGuardado = localStorage.getItem('fleet_tema');
+    if (temaGuardado && TEMAS_PREDEFINIDOS[temaGuardado]) {
+        var t = TEMAS_PREDEFINIDOS[temaGuardado];
+        if (t.tema) document.body.setAttribute('data-theme', t.tema);
+    }
+})();
+
+// ─── Ripple effect global ────────────────────────────────────────
+document.addEventListener('click', function(e) {
+    if (document.body.classList.contains('reduce-motion')) return;
+    var target = e.target.closest('.btn, .nav-item, .bottom-nav-item');
+    if (!target) return;
+    var rect   = target.getBoundingClientRect();
+    var size   = Math.max(rect.width, rect.height) * 1.5;
+    var x      = e.clientX - rect.left - size / 2;
+    var y      = e.clientY - rect.top  - size / 2;
+    var wave   = document.createElement('span');
+    wave.className = 'ripple-wave';
+    wave.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px;';
+    target.appendChild(wave);
+    setTimeout(function() { if (wave.parentNode) wave.remove(); }, 550);
+}, true);
+
 // =====================================================================
 // 🗺️ ROUTER UX: Títulos, Menú Activo y Persistencia de Ruta
 // =====================================================================
@@ -843,9 +1066,32 @@ const MENU_SECTION = {
     'sistema/auditoria':          'sistema',
 };
 
+const BREADCRUMB_MAP = {
+    'dashboard':                  [],
+    'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
+    'mantenimiento/placas':       ['Mantenimiento','Placas'],
+    'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
+    'almacen/inventario':         ['Almacén','Inventario'],
+    'flota/status':               ['Flota','Status'],
+    'flota/ubicacion':            ['Flota','GPS'],
+    'directorio/conductores':     ['Directorio','Conductores'],
+    'sistema/usuarios':           ['Sistema','Usuarios'],
+    'sistema/auditoria':          ['Sistema','Auditoría'],
+    'sistema/configuracion':      ['Sistema','Configuración'],
+};
+
 function actualizarTituloHeader(ruta) {
     const titulo = document.getElementById('tituloTopBar');
     if (titulo) titulo.innerText = TITULOS_MODULOS[ruta] || 'Azkell Fleet';
+    // Breadcrumb
+    const bc   = document.getElementById('breadcrumb-nav');
+    if (!bc) return;
+    const crumbs = BREADCRUMB_MAP[ruta];
+    if (!crumbs || crumbs.length === 0) { bc.innerHTML = ''; return; }
+    bc.innerHTML = '<i class="bi bi-house-fill topbar-bc-home"></i>' +
+        crumbs.map(function(c, i) {
+            return '<span class="topbar-bc-sep">›</span><span class="topbar-bc-item' + (i === crumbs.length - 1 ? ' active' : '') + '">' + c + '</span>';
+        }).join('');
 }
 
 function marcarMenuActivo(ruta) {
@@ -888,7 +1134,10 @@ window.cargarConfigSection = function(section) {
 
 window.cargarModuloAislado = async function(rutaModulo) {
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
-    if (rutaModulo !== 'login') localStorage.setItem('fleet_rutaActual', rutaModulo);
+    if (rutaModulo !== 'login') {
+        localStorage.setItem('fleet_rutaActual', rutaModulo);
+        pushReciente(rutaModulo);
+    }
 
     // 🧹 LIMPIEZA BOOTSTRAP — elimina backdrops huérfanos y clases del body
     document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop').forEach(el => el.remove());
@@ -927,8 +1176,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const respHTML = await fetch(`${_rutaDisco}/vista.html`);
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
+        root.classList.add('module-transitioning');
         root.innerHTML = await respHTML.text();
         if (typeof window.applyI18n === 'function') window.applyI18n();
+        // Transición fade-in
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() { root.classList.remove('module-transitioning'); });
+        });
 
         // UX: actualizar título del header y resaltar enlace activo en el sidebar
         actualizarTituloHeader(rutaModulo);
@@ -2131,11 +2385,39 @@ function inicializarConductoresDatalist(inputID, datalistID) {
 function abrirSpotlight() {
     let spotlightOverlayEl = document.getElementById('spotlight-overlay');
     if (spotlightOverlayEl) spotlightOverlayEl.style.display = 'flex';
-
+    // Mostrar recientes al abrir
+    const resContainer = document.getElementById('spotlight-results');
+    if (resContainer) _renderRecientesSpotlight(resContainer);
     setTimeout(() => {
         let spotlightInputEl = document.getElementById('spotlight-input');
         if (spotlightInputEl) spotlightInputEl.focus();
     }, 100);
+}
+
+function _renderRecientesSpotlight(container) {
+    try {
+        var recientes = JSON.parse(localStorage.getItem('fleet_nav_recientes') || '[]').slice(0, 6);
+        if (recientes.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size:3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar.</small></div>';
+            return;
+        }
+        var html = '<div class="px-3 pt-3 pb-1" style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">Recientes</div>';
+        html += '<div class="d-flex flex-column gap-1 px-2 pb-2">';
+        recientes.forEach(function(r) {
+            var nombre = NOMBRES_MODULOS_RECIENTES[r.ruta] || r.ruta;
+            var icono  = ICONOS_MODULOS_RECIENTES[r.ruta]  || 'bi-circle';
+            html += '<button class="spotlight-card d-flex align-items-center gap-3 w-100 text-start btn-unstyled" onclick="cerrarSpotlight(); cargarModuloAislado(\'' + r.ruta + '\')" style="background:none;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s;">' +
+                '<div style="width:34px;height:34px;border-radius:9px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                '<i class="bi ' + icono + '" style="color:var(--crm-accent);font-size:1rem;"></i></div>' +
+                '<div><div style="font-size:0.875rem;font-weight:600;color:var(--text);">' + nombre + '</div>' +
+                '<div style="font-size:0.72rem;color:var(--subtext);">Visitado recientemente</div></div>' +
+                '<i class="bi bi-arrow-right ms-auto" style="color:var(--subtext);font-size:0.8rem;"></i></button>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = '';
+    }
 }
 
 function cerrarSpotlight() {
@@ -2149,15 +2431,53 @@ function cerrarSpotlight() {
     if (spotlightResultsEl) spotlightResultsEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-keyboard text-secondary" style="font-size: 3rem;"></i><br><small class="mt-2 d-block">Escribe al menos 3 letras para buscar mágicamente en todo el CRM.</small></div>';
 }
 
-// Atajos de teclado Pro (Ctrl+K o Cmd+K para abrir, ESC para cerrar)
+// Atajos de teclado globales
 document.addEventListener('keydown', (e) => {
+    // No activar si estamos en un input / textarea / contenteditable
+    const tag     = document.activeElement ? document.activeElement.tagName : '';
+    const editing = ['INPUT','TEXTAREA','SELECT'].includes(tag) || document.activeElement.isContentEditable;
+
+    // Ctrl+K / Cmd+K — Spotlight
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        abrirSpotlight();
+        e.preventDefault(); abrirSpotlight(); return;
     }
+    // Ctrl+F — foco en buscador del módulo actual
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        const buscador = document.querySelector('#root-dinamico input[type="text"][id*="buscador"], #root-dinamico input[type="search"]');
+        if (buscador) { e.preventDefault(); buscador.focus(); buscador.select(); }
+        return;
+    }
+    // ESC — cerrar Spotlight / modales
     let spotlightOverlayEl3 = document.getElementById('spotlight-overlay');
     if (e.key === 'Escape' && spotlightOverlayEl3 && spotlightOverlayEl3.style.display === 'flex') {
-        cerrarSpotlight();
+        cerrarSpotlight(); return;
+    }
+
+    if (editing) return; // los atajos de letra solo fuera de inputs
+
+    switch(e.key) {
+        case '?':
+            e.preventDefault();
+            new bootstrap.Modal(document.getElementById('modal-shortcuts')).show();
+            break;
+        case 'g': case 'G':
+            if (!e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); cargarModuloAislado('dashboard'); }
+            break;
+        case 'e': case 'E':
+            // Ej: click en primer botón de exportar visible
+            var expBtn = document.querySelector('#root-dinamico [onclick*="exportar"], #root-dinamico [onclick*="descargar"], #root-dinamico .btn-reload-cache');
+            if (expBtn) { e.preventDefault(); expBtn.click(); }
+            break;
+        case 'n': case 'N':
+            // Abrir primer modal/botón de "Nuevo" visible
+            var newBtn = document.querySelector('#root-dinamico [data-bs-toggle="modal"][title*="uevo"], #root-dinamico .btn[onclick*="abrirModal"]');
+            if (newBtn) { e.preventDefault(); newBtn.click(); }
+            break;
+        case 'r': case 'R':
+            // Reload módulo actual
+            var reloadBtn = document.querySelector('#root-dinamico .btn-reload-cache');
+            if (reloadBtn) { e.preventDefault(); reloadBtn.click(); }
+            break;
     }
 });
 
@@ -2169,7 +2489,7 @@ window.buscarSpotlight = function(query) {
     const resContainer = document.getElementById('spotlight-results');
 
     if (query.length < 3) {
-        resContainer.innerHTML = '<div class="text-center text-muted py-5"><span class="spinner-grow spinner-grow-sm text-warning mb-2"></span><br><small>Sigue escribiendo...</small></div>';
+        _renderRecientesSpotlight(resContainer);
         return;
     }
 
