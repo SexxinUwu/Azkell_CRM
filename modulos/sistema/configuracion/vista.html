@@ -1,29 +1,7 @@
 <!-- Módulo: Configuración del Sistema -->
-<div class="config-layout d-flex gap-0" style="min-height: calc(100vh - 120px);">
+<div class="config-content p-4" style="background-color: var(--bg); min-height: 100%;">
 
-    <!-- Nav lateral -->
-    <div class="config-nav flex-shrink-0 p-3" style="width: 200px; background-color: var(--surface); border-right: 1px solid var(--border); border-radius: 12px 0 0 12px;">
-        <p class="text-uppercase fw-bold mb-3" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--subtext);">Configuración</p>
-        <div class="d-flex flex-column gap-1">
-            <button onclick="window.showConfig('perfil')" id="cfg-btn-perfil" class="config-nav-btn active d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: var(--crm-accent); color: #fff; font-size: 0.875rem;">
-                <i class="bi bi-person-circle"></i> <span data-i18n="cfg.nav.profile">Mi Perfil</span>
-            </button>
-            <button onclick="window.showConfig('apariencia')" id="cfg-btn-apariencia" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
-                <i class="bi bi-palette"></i> <span data-i18n="cfg.nav.appearance">Apariencia</span>
-            </button>
-            <button onclick="window.showConfig('accesibilidad')" id="cfg-btn-accesibilidad" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
-                <i class="bi bi-universal-access"></i> <span data-i18n="cfg.nav.accessibility">Accesibilidad</span>
-            </button>
-            <button onclick="window.showConfig('idioma')" id="cfg-btn-idioma" class="config-nav-btn d-flex align-items-center gap-2 px-3 py-2 rounded border-0 text-start w-100" style="background: transparent; color: var(--text); font-size: 0.875rem;">
-                <i class="bi bi-translate"></i> <span data-i18n="cfg.nav.language">Idioma</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Contenido de paneles -->
-    <div class="config-content flex-grow-1 p-4" style="background-color: var(--bg); border-radius: 0 12px 12px 0;">
-
-        <!-- Panel: Mi Perfil -->
+    <!-- Panel: Mi Perfil -->
         <div id="cfg-panel-perfil" class="config-panel">
             <h5 class="fw-bold mb-1" style="color: var(--text);" data-i18n="cfg.profile.title">Mi Perfil</h5>
             <p class="mb-4" style="color: var(--subtext); font-size: 0.875rem;" data-i18n="cfg.profile.subtitle">Información de tu cuenta en Azkell Fleet.</p>
@@ -224,7 +202,6 @@
             </div>
         </div>
 
-    </div>
 </div>
 
 <!-- Toast de confirmación -->

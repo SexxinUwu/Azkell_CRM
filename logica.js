@@ -347,7 +347,23 @@ function initTooltips() {
         items.forEach(el => el.removeAttribute('data-bs-title'));
     }
 }
-function toggleSidebar() { const sidebar = document.getElementById('sidebarMenu'); const backdrop = document.getElementById('sidebarBackdrop'); if (window.innerWidth <= 768) { const isOpen = sidebar.classList.contains('mobile-open'); sidebar.classList.toggle('mobile-open', !isOpen); backdrop.classList.toggle('active', !isOpen); } else { sidebar.classList.toggle('collapsed'); setTimeout(initTooltips, 300); } }
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebarMenu');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const brandContainer = document.getElementById('brandContainer');
+    if (window.innerWidth <= 768) {
+        const isOpen = sidebar.classList.contains('mobile-open');
+        sidebar.classList.toggle('mobile-open', !isOpen);
+        backdrop.classList.toggle('active', !isOpen);
+    } else {
+        sidebar.classList.toggle('collapsed');
+        // En modo colapsado el brand-container funciona como trigger de expansión
+        if (brandContainer) {
+            brandContainer.onclick = sidebar.classList.contains('collapsed') ? toggleSidebar : null;
+        }
+        setTimeout(initTooltips, 300);
+    }
+}
 function closeSidebar() { document.getElementById('sidebarMenu').classList.remove('mobile-open'); document.getElementById('sidebarBackdrop').classList.remove('active'); }
 function togglePassword(inputId, btn) { const input = document.getElementById(inputId); const icon = btn.querySelector('i'); if (input.type === 'password') { input.type = 'text'; icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill'); } else { input.type = 'password'; icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill'); } }
 function registrarActividad() { if (usuarioLogueado) localStorage.setItem('fleet_ultimo_acceso', Date.now()); }
@@ -660,23 +676,16 @@ const TITULOS_MODULOS = {
 };
 
 const MENU_IDS = {
-    'dashboard':                  'nav-dashboard',
-    'mantenimiento/inspecciones': 'btnMenuStatusMant',
-    'mantenimiento/placas':       'btnMenuPlacasMant',
-    'mantenimiento/fleetrun':     'btnMenuFleetrun',
-    'almacen/inventario':         'btnMenuInventario',
-    'flota/status':               'btnMenuStatusFlota',
-    'flota/ubicacion':            'btnMenuUbicacion',
-    'directorio/conductores':     'btnMenuConductores',
-    'sistema/usuarios':           'nav-usuarios',
-    'sistema/auditoria':          'nav-auditoria',
-};
-
-const SUBMENU_PADRE = {
-    'mantenimiento': 'menuMantenimiento',
-    'almacen':       'menuAlmacen',
-    'flota':         'menuFlota',
-    'directorio':    'menuDirectorio',
+    'dashboard':                   'nav-dashboard',
+    'mantenimiento/inspecciones':  'nav-inspecciones',
+    'mantenimiento/placas':        'nav-placas',
+    'mantenimiento/fleetrun':      'nav-fleetrun',
+    'almacen/inventario':          'nav-inventario',
+    'flota/status':                'nav-status-flota',
+    'flota/ubicacion':             'nav-ubicacion',
+    'directorio/conductores':      'nav-conductores',
+    'sistema/usuarios':            'nav-usuarios',
+    'sistema/auditoria':           'nav-auditoria',
 };
 
 function actualizarTituloHeader(ruta) {
@@ -685,27 +694,23 @@ function actualizarTituloHeader(ruta) {
 }
 
 function marcarMenuActivo(ruta) {
-    // 1. Quitar clase active de todos los links del sidebar
-    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-
-    // 2. Marcar el link correspondiente
+    document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     const idActivo = MENU_IDS[ruta];
     if (idActivo) {
         const el = document.getElementById(idActivo);
         if (el) el.classList.add('active');
     }
-
-    // 3. Expandir el grupo de submenú que lo contiene (si aplica)
-    const grupoPadre = ruta.split('/')[0];
-    const idSubMenu = SUBMENU_PADRE[grupoPadre];
-    if (idSubMenu) {
-        const subMenu = document.getElementById(idSubMenu);
-        if (subMenu && !subMenu.classList.contains('show')) {
-            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(subMenu, { toggle: false });
-            bsCollapse.show();
-        }
-    }
 }
+
+window.cargarConfigSection = function(section) {
+    window._pendingCfgSection = section;
+    // Marcar el item de config correcto como activo
+    document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
+    const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma' };
+    const el = document.getElementById(cfgMap[section] || 'nav-cfg-perfil');
+    if (el) el.classList.add('active');
+    cargarModuloAislado('sistema/configuracion');
+};
 
 window.cargarModuloAislado = async function(rutaModulo) {
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
