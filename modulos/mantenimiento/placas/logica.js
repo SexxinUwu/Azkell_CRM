@@ -758,6 +758,4 @@ window.init_placas = function() {
         });
     }
 };
-
-// Alias global para recargarModulo (main logica.js)
-window.cargarTablaPlacas = function(forzar) { cargarTablaPlacas(forzar); };
+// NOTA: cargarTablaPlacas es function declaration — va a window automáticamente al cargar el script.
