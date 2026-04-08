@@ -2,10 +2,10 @@
     <div class="controls-row d-flex justify-content-between align-items-center mb-2">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
-            <h5 class="m-0 fw-bold text-dark-theme">Centro de Comando</h5>
+            <h5 class="m-0 fw-bold text-dark-theme" data-i18n="dash.title">Centro de Comando</h5>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> Sistema Activo</span>
+            <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> <span data-i18n="dash.system.active">Sistema Activo</span></span>
             <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarDashboard()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
     </div>
@@ -15,7 +15,7 @@
 
         <div class="col">
             <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> Salud de Mantenimientos (Preventivos)</h6>
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud de Mantenimientos (Preventivos)</span></h6>
                 <div class="chart-container-dashboard">
                     <canvas id="chartDashFleetrunStatus"></canvas>
                 </div>
@@ -24,7 +24,7 @@
 
         <div class="col">
             <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> Estado General Inspecciones (Mes)</h6>
+                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> <span data-i18n="dash.insp.status">Estado General Inspecciones (Mes)</span></h6>
                 <div class="chart-container-dashboard">
                     <canvas id="chartGeneralInspecciones"></canvas>
                 </div>
@@ -38,7 +38,7 @@
         <div class="col-12 d-flex flex-column">
             <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 350px; position: relative;">
                 <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
-                    <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> GPS Global Wialon</span>
+                    <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> <span data-i18n="dash.gps.global">GPS Global Wialon</span></span>
                     <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
                 </div>
                 <div id="mapaDashboard" style="width: 100%; height: 100%; min-height: 350px; z-index: 1;"></div>
