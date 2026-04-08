@@ -1,48 +1,111 @@
 <div id="moduloDashboard" class="modulo-wrapper" style="display: flex;">
-    <div class="controls-row d-flex justify-content-between align-items-center mb-2">
+
+    <!-- Header -->
+    <div class="controls-row d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-grid-1x2-fill fs-4 text-primary"></i>
             <h5 class="m-0 fw-bold text-dark-theme" data-i18n="dash.title">Centro de Comando</h5>
         </div>
         <div class="d-flex gap-2 align-items-center">
             <span class="badge bg-success shadow-sm" id="badge-dash-status"><i class="bi bi-check-circle"></i> <span data-i18n="dash.system.active">Sistema Activo</span></span>
-            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm" onclick="recargarDashboard()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn btn-outline-primary fw-bold btn-sm shadow-sm btn-reload-cache" onclick="recargarDashboard()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
     </div>
 
-    <!-- Fila de 2 gráficos -->
-    <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+    <!-- ── KPI METRIC CARDS ─────────────────────────────── -->
+    <div class="row g-3 mb-4" id="kpi-metrics-row">
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap primary"><i class="bi bi-truck-front-fill"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-flota"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-flota">—</div>
+                <div class="kpi-metric-label">Flota Activa</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-flota"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card success">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap success"><i class="bi bi-shield-check"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vigentes"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-vigentes">—</div>
+                <div class="kpi-metric-label">Insp. Vigentes</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-vigentes"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card warning">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock-history"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-porvencer"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-porvencer">—</div>
+                <div class="kpi-metric-label">Por Vencer (7d)</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-porvencer"></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-metric-card danger">
+                <div class="kpi-metric-top">
+                    <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="kpi-metric-trend-wrap" id="kpi-trend-vencidas"></div>
+                </div>
+                <div class="kpi-metric-value" id="kpi-val-vencidas">—</div>
+                <div class="kpi-metric-label">Vencidas</div>
+                <div class="kpi-metric-sparkline" id="kpi-spark-vencidas"></div>
+            </div>
+        </div>
+    </div>
 
-        <div class="col">
+    <!-- ── GRÁFICOS + ACTIVIDAD RECIENTE ───────────────── -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-md-4">
             <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud de Mantenimientos (Preventivos)</span></h6>
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud Mantenimientos</span></h6>
                 <div class="chart-container-dashboard">
                     <canvas id="chartDashFleetrunStatus"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col">
+        <div class="col-12 col-md-4">
             <div class="kpi-card h-100 p-3 chart-card-dashboard">
-                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> <span data-i18n="dash.insp.status">Estado General Inspecciones (Mes)</span></h6>
+                <h6 class="fw-bold text-success mb-3"><i class="bi bi-bar-chart-fill"></i> <span data-i18n="dash.insp.status">Estado Inspecciones</span></h6>
                 <div class="chart-container-dashboard">
                     <canvas id="chartGeneralInspecciones"></canvas>
                 </div>
             </div>
         </div>
 
+        <div class="col-12 col-md-4">
+            <div class="kpi-card h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold m-0" style="color:var(--text)"><i class="bi bi-activity me-2" style="color:var(--crm-accent)"></i>Actividad Reciente</h6>
+                    <button class="btn btn-sm btn-link p-0" style="color:var(--crm-accent);font-size:0.75rem;" onclick="cargarModuloAislado('mantenimiento/inspecciones')">Ver todo →</button>
+                </div>
+                <div id="dash-activity-feed" style="overflow-y:auto;max-height:220px;">
+                    <div class="text-center py-3" style="color:var(--subtext);font-size:0.82rem;">Cargando actividad...</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Mapa GPS -->
+    <!-- ── MAPA GPS ─────────────────────────────────────── -->
     <div class="row g-3 flex-grow-1" style="min-height: 0;">
         <div class="col-12 d-flex flex-column">
-            <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 350px; position: relative;">
+            <div class="card p-0 shadow-sm flex-grow-1 overflow-hidden" style="min-height: 320px; position: relative;">
                 <div class="dash-gps-overlay p-2 px-3 fw-bold d-flex justify-content-between align-items-center shadow" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 20px; opacity: 0.95; width: 90%; max-width: 400px;">
                     <span><i class="bi bi-geo-alt-fill text-warning pulse-icon"></i> <span data-i18n="dash.gps.global">GPS Global Wialon</span></span>
                     <span class="badge bg-primary" id="dash-gps-count">0 Unidades</span>
                 </div>
-                <div id="mapaDashboard" style="width: 100%; height: 100%; min-height: 350px; z-index: 1;"></div>
+                <div id="mapaDashboard" style="width: 100%; height: 100%; min-height: 320px; z-index: 1;"></div>
             </div>
         </div>
     </div>
+
 </div>

@@ -2650,6 +2650,99 @@ body.dark[data-theme="rose"]    { --crm-accent: #fb7185; --bg: #1a0010; --surfac
 }
 .table-record-count strong { color: var(--crm-accent); font-weight: 700; }
 
+/* ================================================================
+   KPI METRIC CARDS (Dashboard Centro de Comando)
+   ================================================================ */
+.kpi-metric-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.kpi-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--crm-accent);
+    border-radius: 14px 14px 0 0;
+}
+.kpi-metric-card.success::before { background: #16a34a; }
+.kpi-metric-card.warning::before { background: #eab308; }
+.kpi-metric-card.danger::before  { background: #ef4444; }
+.kpi-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+.kpi-metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+.kpi-metric-icon-wrap {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    background: rgba(37,99,235,0.1);
+    color: var(--crm-accent);
+    flex-shrink: 0;
+}
+.kpi-metric-icon-wrap.primary { background: rgba(37,99,235,0.12); color: var(--crm-accent); }
+.kpi-metric-icon-wrap.success { background: rgba(22,163,74,0.12);  color: #16a34a; }
+.kpi-metric-icon-wrap.warning { background: rgba(234,179,8,0.15);  color: #b45309; }
+.kpi-metric-icon-wrap.danger  { background: rgba(239,68,68,0.12);  color: #ef4444; }
+body.dark .kpi-metric-icon-wrap.warning { color: #eab308; }
+.kpi-metric-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+}
+.kpi-metric-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+}
+.kpi-metric-sparkline {
+    height: 28px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+.kpi-metric-sparkline svg { width: 100%; height: 28px; overflow: visible; }
+.kpi-metric-trend-wrap { display: flex; align-items: center; }
+
+/* Activity Feed del Dashboard */
+.dash-feed-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+}
+.dash-feed-item:last-child { border-bottom: none; }
+.dash-feed-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+.dash-feed-content { flex: 1; min-width: 0; }
+.dash-feed-placa { font-weight: 700; font-size: 0.82rem; color: var(--crm-accent); }
+.dash-feed-tipo  { font-size: 0.8rem; color: var(--text); }
+.dash-feed-meta  { font-size: 0.72rem; color: var(--subtext); margin-top: 1px; }
+
 
 
 
