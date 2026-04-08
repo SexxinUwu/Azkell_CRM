@@ -688,6 +688,120 @@ window.cambiarModulo = function(modulo, idBoton) {
 }
 
 // =====================================================================
+// 🔔 UX GLOBAL: Toasts, Progress Bar, Contadores, Empty States
+// =====================================================================
+
+window.mostrarToast = function(mensaje, tipo, duracion) {
+    tipo     = tipo     || 'success';
+    duracion = duracion || 3500;
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const icons  = { success:'bi-check-circle-fill', error:'bi-x-circle-fill', warning:'bi-exclamation-triangle-fill', info:'bi-info-circle-fill' };
+    const colors = { success:'#10b981', error:'#ef4444', warning:'#f59e0b', info:'#3b82f6' };
+    const color  = colors[tipo] || colors.success;
+    const icon   = icons[tipo]  || icons.success;
+    const id     = 'toast-' + Date.now();
+
+    const t = document.createElement('div');
+    t.className = 'global-toast';
+    t.id = id;
+    t.style.setProperty('--toast-dur', duracion + 'ms');
+    t.innerHTML =
+        '<i class="bi ' + icon + ' toast-icon" style="color:' + color + '"></i>' +
+        '<span class="toast-msg">' + mensaje + '</span>' +
+        '<button class="toast-close" onclick="document.getElementById(\'' + id + '\').remove()" aria-label="Cerrar"><i class="bi bi-x"></i></button>' +
+        '<div class="toast-progress" style="background:' + color + '"></div>';
+
+    container.appendChild(t);
+    requestAnimationFrame(function() { requestAnimationFrame(function() { t.classList.add('show'); }); });
+
+    setTimeout(function() {
+        t.classList.remove('show');
+        setTimeout(function() { if (t.parentNode) t.remove(); }, 300);
+    }, duracion);
+};
+
+// Override global de window.alert → redirige a toast automáticamente
+// Upgradea toda la app sin tocar cada archivo individualmente
+(function() {
+    var _nativeAlert = window.alert;
+    window.alert = function(msg) {
+        var container = document.getElementById('toast-container');
+        if (!container || typeof window.mostrarToast !== 'function') { _nativeAlert(msg); return; }
+        var s = String(msg || '').replace(/\n/g, '<br>');
+        var tipo = 'info';
+        if (/^(error|❌|✗)/i.test(s))                                           tipo = 'error';
+        else if (/✅|éxito|completad|guardad|eliminad|registrad|importad/i.test(s)) tipo = 'success';
+        else if (/⚠️|warning|obligatorio|primero|vacío|inválido/i.test(s))      tipo = 'warning';
+        var dur = tipo === 'error' ? 5000 : tipo === 'success' ? 3500 : 4000;
+        window.mostrarToast(s, tipo, dur);
+    };
+})();
+
+// Barra de progreso de navegación (uso interno de cargarModuloAislado)
+window._navProgress = (function() {
+    var _tick = null;
+    var _prog = 0;
+    return {
+        start: function() {
+            var bar = document.getElementById('nav-progress-bar');
+            if (!bar) return;
+            clearInterval(_tick);
+            _prog = 0;
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            bar.classList.add('active');
+            _tick = setInterval(function() {
+                _prog = Math.min(_prog + Math.random() * 12, 85);
+                bar.style.transition = 'width 0.3s ease';
+                bar.style.width = _prog + '%';
+            }, 250);
+        },
+        done: function() {
+            var bar = document.getElementById('nav-progress-bar');
+            if (!bar) return;
+            clearInterval(_tick);
+            bar.style.transition = 'width 0.2s ease';
+            bar.style.width = '100%';
+            setTimeout(function() {
+                bar.classList.remove('active');
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+            }, 280);
+        }
+    };
+})();
+
+window.animarContador = function(el, valorFinal, duracion) {
+    if (!el || isNaN(valorFinal)) return;
+    duracion = duracion || 800;
+    if (document.body.classList.contains('reduce-motion')) { el.textContent = valorFinal; return; }
+    var start = null;
+    function step(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duracion, 1);
+        var eased    = 1 - Math.pow(1 - progress, 3); // ease-out cúbico
+        el.textContent = Math.round(eased * valorFinal);
+        if (progress < 1) { requestAnimationFrame(step); }
+        else { el.textContent = valorFinal; el.classList.add('counter-done'); setTimeout(function() { el.classList.remove('counter-done'); }, 350); }
+    }
+    requestAnimationFrame(step);
+};
+
+window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
+    icono       = icono       || 'bi-inbox';
+    titulo      = titulo      || 'Sin datos';
+    descripcion = descripcion || 'No hay registros para mostrar.';
+    var cls = compacto ? 'empty-state empty-state-sm' : 'empty-state';
+    return '<div class="' + cls + '">' +
+        '<i class="bi ' + icono + ' empty-icon"></i>' +
+        '<h5>' + titulo + '</h5>' +
+        '<p>' + descripcion + '</p>' +
+        '</div>';
+};
+
+// =====================================================================
 // 🗺️ ROUTER UX: Títulos, Menú Activo y Persistencia de Ruta
 // =====================================================================
 
@@ -777,11 +891,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
     if (rutaModulo !== 'login') localStorage.setItem('fleet_rutaActual', rutaModulo);
 
     // 🧹 LIMPIEZA BOOTSTRAP — elimina backdrops huérfanos y clases del body
-    // Evita el error 'Blocked aria-hidden' y el solapamiento de módulos
     document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop').forEach(el => el.remove());
     document.body.classList.remove('modal-open', 'offcanvas-open');
     document.body.style.paddingRight = '';
     document.body.style.overflow = '';
+
+    // ⏳ PROGRESS BAR
+    window._navProgress.start();
 
     // 1. Ocultar TODOS los módulos antiguos que siguen en el Index.html
     document.querySelectorAll('.modulo-wrapper, .container-fluid').forEach(el => {
@@ -835,14 +951,15 @@ window.cargarModuloAislado = async function(rutaModulo) {
             document.body.appendChild(script);
         } else {
             // Si el JS ya estaba cargado, llamamos a su función de inicio automático (si existe)
-            // Extraemos la última palabra (ej: de 'mantenimiento/placas' extraemos 'placas')
             let nombreCarpeta = rutaModulo.split('/')[1] || rutaModulo.split('/')[0];
             let funcionInit = `init_${nombreCarpeta}`;
             if (typeof window[funcionInit] === 'function') {
                 window[funcionInit]();
             }
         }
+        window._navProgress.done();
     } catch(e) {
+        window._navProgress.done();
         if (root) root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
     }
 };
