@@ -738,10 +738,8 @@ window.cargarModuloAislado = async function(rutaModulo) {
         return;
     }
 
-    // Resolver ruta real en disco (carpetas con mayúsculas: Almacen, Flota, Mantenimiento)
-    const _MAPA_CAT = { almacen: 'Almacen', flota: 'Flota', mantenimiento: 'Mantenimiento' };
-    const _partes = rutaModulo.split('/'); _partes[0] = _MAPA_CAT[_partes[0]] || _partes[0];
-    const _rutaDisco = '/Modulos/' + _partes.join('/');
+    // Ruta en disco — todo minúsculas (compatible con Linux/Render)
+    const _rutaDisco = '/modulos/' + rutaModulo;
 
     try {
         // 3. Traer el diseño (HTML) desde la carpeta específica

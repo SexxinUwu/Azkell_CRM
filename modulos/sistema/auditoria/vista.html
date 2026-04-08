@@ -1,0 +1,21 @@
+<div id="moduloAuditoria" class="modulo-wrapper">
+    <div class="controls-row d-flex justify-content-between">
+        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-journal-code"></i> <span data-i18n="audit.title">Registro de Actividad</span></h5>
+        <div class="d-flex gap-2 align-items-center w-50 justify-content-end">
+            <span id="cache-badge-auditoria" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-auditoria" data-i18n="common.sinCargar">Sin cargar</span></span>
+            <button class="btn-reload-cache" id="btn-reload-auditoria" onclick="cargarTablaAuditoria(true)" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
+            <input type="text" class="form-control form-control-sm w-50" id="buscadorAuditoria" onkeyup="filtrarTabla('cuerpoTablaAuditoria', 'buscadorAuditoria')" placeholder="Buscar en historial...">
+        </div>
+    </div>
+    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0 table-sm" id="tablaAuditoria" data-sort-dir="desc">
+        <thead><tr>
+            <th onclick="sortTable('tablaAuditoria', 0)"><span data-i18n="audit.col.datetime">Fecha y Hora</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 1)"><span data-i18n="audit.col.author">Usuario Autor</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 2)"><span data-i18n="audit.col.action">Acción</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+            <th onclick="sortTable('tablaAuditoria', 3)"><span data-i18n="audit.col.detail">Detalle Operación</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+        </tr></thead>
+        <tbody id="cuerpoTablaAuditoria">
+            <tr><td colspan="4" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr>
+        </tbody>
+    </table></div></div>
+</div>

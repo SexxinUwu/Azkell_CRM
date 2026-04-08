@@ -1,0 +1,832 @@
+// ================================================================
+// MÓDULO: INSPECCIONES — análisis de estados y formulario wizard
+// Cargado dinámicamente por cargarModuloAislado('mantenimiento/inspecciones')
+// ================================================================
+
+// ==========================================
+// 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
+// ==========================================
+function toggleGraficosStatus() { let panel = document.getElementById('panelGraficosStatus'); let btn = document.getElementById('btnToggleGraficos'); if(panel.style.display === 'none') { panel.style.display = 'flex'; btn.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Ocultar Gráficos'; } else { panel.style.display = 'none'; btn.innerHTML = '<i class="bi bi-eye-fill"></i> Mostrar Gráficos'; } }
+function toggleVistaStatus() { isHistorialStatus = !isHistorialStatus; let textBtn = document.getElementById('text-toggle-status'); if(textBtn) { textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; } expandAllStatusState = false; expandStatusMap = {}; mostrarStatusInspecciones(dataGlobalInspecciones); }
+function toggleGroupRowStatus(classTipo) { expandStatusMap[classTipo] = !expandStatusMap[classTipo]; filtrarStatusAvanzado(); }
+function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState; for(let key in expandStatusMap) { expandStatusMap[key] = expandAllStatusState; } const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header'); headers.forEach(header => { let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/); if(matchIcon) expandStatusMap[matchIcon[1]] = expandAllStatusState; }); filtrarStatusAvanzado(); }
+
+function mostrarStatusInspecciones(inspecciones) {
+  if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
+  dataGlobalInspecciones = inspecciones;
+  let hoy = new Date(); hoy.setHours(0,0,0,0);
+  let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
+  let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
+  inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
+  let dataFinal = [];
+
+  let placasActivasEnUso = dataGlobalPlacas.filter(p => {
+      if((p[0]||'').toUpperCase() === 'PLACA') return false;
+      let estado = normalizeStr(p[18] || p[8] || '');
+      let enUso = normalizeStr(p[22] || p[13] || '');
+      return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
+  });
+
+  if (!isHistorialStatus) {
+      placasActivasEnUso.forEach(p => {
+          let placaStr = normalizeStr(p[0]);
+          let insp = inspeccionesOrdenadas.find(i => normalizeStr(i.placa) === placaStr);
+          dataFinal.push({ infoPlaca: p, insp: insp });
+      });
+  } else {
+      inspeccionesOrdenadas.forEach(insp => {
+          let placaStr = normalizeStr(insp.placa);
+          let p = dataGlobalPlacas.find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"];
+          dataFinal.push({ infoPlaca: p, insp: insp });
+      });
+  }
+
+  let mapTipos = new Map(); let setClis = new Set(), setMarcas = new Set(), setEstadosStatus = new Set();
+  dataFinal.forEach(item => {
+      let tipoRaw = item.infoPlaca[5] ? item.infoPlaca[5].toString().trim().toUpperCase() : "SIN TIPO";
+      let tipoDisplay = tipoRaw === "SIN TIPO" || tipoRaw === "" ? "SIN TIPO" : tipoRaw.charAt(0).toUpperCase() + tipoRaw.slice(1).toLowerCase();
+      if(!mapTipos.has(tipoDisplay)) mapTipos.set(tipoDisplay, []);
+      mapTipos.get(tipoDisplay).push(item);
+  });
+
+  let html = '';
+  if(dataFinal.length === 0) { html = '<tr><td colspan="10" class="text-center py-4">No hay datos para analizar.</td></tr>'; }
+  else {
+      mapTipos.forEach((registros, tipoDisplay) => {
+          let classTipo = normalizarClase(tipoDisplay);
+          if (expandStatusMap[classTipo] === undefined) expandStatusMap[classTipo] = false;
+
+          html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
+              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
+                  <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
+                  <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
+                  <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
+              </td></tr>`;
+
+          registros.forEach((item) => {
+              let p = item.infoPlaca; let insp = item.insp;
+              let placa = p[0];
+              let cli = p[1] || "-";
+              let mar = p[3] || "-";
+              let mod = p[5] || "-";
+              let motora = p[20] || p[11] || "-";
+
+              if(cli !== "-") setClis.add(cli); if(mar !== "-") setMarcas.add(mar);
+
+              let fIngresoBonita = "-"; let diasRestantes = -9999; let tecnico = "-"; let colorFalta = ""; let txtEstado = ""; let estadoVigente2 = "";
+
+              if(insp && insp.fecha_ingreso) {
+                  fIngresoBonita = parseDateToDDMMYYYY(insp.fecha_ingreso); tecnico = insp.tecnico;
+                  let fIngreso;
+                  if (insp.fecha_ingreso.includes('/')) {
+                      let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1]-1, px[0]);
+                  } else {
+                      fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
+                  }
+
+                  let dProp = parseInt(insp.dias_propuestos) || 30;
+                  let fProx = new Date(fIngreso.getTime()); fProx.setDate(fProx.getDate() + dProp);
+                  diasRestantes = Math.ceil((fProx - hoy) / (1000 * 60 * 60 * 24));
+              }
+
+              let textoBadgeProx = "";
+              if (diasRestantes < 0 && diasRestantes !== -9999) {
+                  colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
+                  textoBadgeProx = `Vencido hace ${Math.abs(diasRestantes)} días`;
+              } else if (diasRestantes >= 0 && diasRestantes <= 7) {
+                  colorFalta = "#eab308"; txtEstado = "PRÓXIMO A VENCER"; estadoVigente2 = "PRÓXIMO A VENCER";
+                  textoBadgeProx = `Faltan ${diasRestantes} días`;
+              } else if (diasRestantes > 7) {
+                  colorFalta = "#16a34a"; txtEstado = "VIGENTE"; estadoVigente2 = "VIGENTE";
+                  textoBadgeProx = `Faltan ${diasRestantes} días`;
+              } else {
+                  colorFalta = "#dc2626"; txtEstado = "NO VIGENTE"; estadoVigente2 = "NO VIGENTE";
+              }
+
+              if(estadoVigente2 !== "") setEstadosStatus.add(estadoVigente2);
+
+              let badgeProx = diasRestantes === -9999 ? `<span class="badge bg-danger shadow-sm">Sin Registro</span>` : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`;
+              let badgeEst = `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
+              let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
+
+              let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
+                  ? `<input type="checkbox" class="form-check-input chk-bulk-statusMant" value="${insp.id}" style="pointer-events: none; transform: scale(1.2); margin-right: 8px;">`
+                  : '';
+
+              let ubicacionHtml = '<span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-geo-alt-fill"></i> N/A</span>';
+              let wialonData = buscarWialonPorPlaca(placa);
+              if (wialonData && wialonData.lat !== 0) {
+                  ubicacionHtml = `
+                  <div class="text-start">
+                      <button class="badge bg-primary text-white shadow-sm mb-1 border-0" onclick="abrirMapaFlotante('${placa}', ${wialonData.lat}, ${wialonData.lng})"><i class="bi bi-map-fill"></i> Mapa</button>
+                      <button class="badge bg-secondary text-white shadow-sm mb-1 border-0" onclick="obtenerDireccion(${wialonData.lat}, ${wialonData.lng}, this)"><i class="bi bi-signpost-2"></i> Calle</button><br>
+                      <span style="font-size: 0.75rem; color: var(--text); font-weight: bold;"><i class="bi bi-speedometer"></i> ${wialonData.km.toLocaleString()} km</span>
+                  </div>`;
+              }
+
+              let menuAcciones = '';
+              if (insp && insp.id) {
+                  let items = `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Resumen</a></li>`;
+                  items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
+                  items += `<li><hr class="dropdown-divider"></li>`;
+                  items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
+                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
+                  menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
+              } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
+
+              html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
+              <td class="fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
+              <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
+              <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
+              <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
+          });
+      });
+      rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
+  }
+  document.getElementById('cuerpoTablaStatus').innerHTML = html;
+  filtrarStatusAvanzado();
+}
+
+function filtrarStatusAvanzado() {
+    const txt = document.getElementById('buscadorStatus')?.value.toLowerCase() || '';
+    const chkCli = Array.from(document.querySelectorAll('#filtroStatusCliente input:checked')).map(e=>e.value);
+    const chkMar = Array.from(document.querySelectorAll('#filtroStatusMarca input:checked')).map(e=>e.value);
+    const chkEst = Array.from(document.querySelectorAll('#filtroStatusEstado input:checked')).map(e=>e.value);
+    let isFiltering = txt !== '' || chkCli.length > 0 || chkMar.length > 0 || chkEst.length > 0;
+
+    let cntTotalVig = 0, cntTotalNoVig = 0;
+    let cntMotVig = 0, cntMotNoVig = 0;
+    let cntNoMotVig = 0, cntNoMotNoVig = 0;
+
+    const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
+    headers.forEach(header => {
+        let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/);
+        if(!matchIcon) return;
+        let classTipo = matchIcon[1];
+        let childRows = document.querySelectorAll(`.child-st-${classTipo}`);
+        let visibleCount = 0;
+
+        childRows.forEach(row => {
+            let cli = row.getAttribute('data-cliente');
+            let mar = row.getAttribute('data-marca');
+            let est = row.getAttribute('data-estado-v2');
+            let textoFila = row.textContent.toLowerCase();
+
+            let matchCli = (!chkCli.length || chkCli.includes(cli));
+            let matchMar = (!chkMar.length || chkMar.includes(mar));
+            let matchEst = (!chkEst.length || chkEst.includes(est));
+            let matchTxt = (!txt || textoFila.includes(txt));
+
+            if(matchCli && matchMar && matchEst && matchTxt) {
+                visibleCount++;
+                row.style.display = (isFiltering || expandStatusMap[classTipo]) ? '' : 'none';
+
+                if(!isHistorialStatus) {
+                    let dias = parseInt(row.getAttribute('data-dias'));
+                    let mot = row.getAttribute('data-motor') || '';
+                    let esMotora = mot.toUpperCase().trim() === 'MOTORA';
+
+                    if (dias >= 0) {
+                        cntTotalVig++;
+                        if (esMotora) cntMotVig++; else cntNoMotVig++;
+                    } else {
+                        cntTotalNoVig++;
+                        if (esMotora) cntMotNoVig++; else cntNoMotNoVig++;
+                    }
+                }
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        let icon = header.querySelector('i'); let spanConteo = header.querySelector(`.span-conteo-${classTipo}`);
+        if(visibleCount > 0) {
+            header.style.display = '';
+            if(spanConteo) spanConteo.innerText = visibleCount + " Unidades";
+            if(icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
+        } else {
+            header.style.display = 'none';
+        }
+    });
+
+    if(!isHistorialStatus) {
+        updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig);
+    }
+}
+
+function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
+    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+    if(!insp) return;
+
+    let fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
+    let htmlFallas = ""; let countFallas = 0;
+
+    let htmlEvidenciasPDF = ""; let contEvidencias = 1;
+
+    try {
+        let detallesArray = [];
+        if (typeof insp.detalles_json === 'string') {
+            try { detallesArray = JSON.parse(insp.detalles_json); } catch(e){}
+        } else if (Array.isArray(insp.detalles_json)) {
+            detallesArray = insp.detalles_json;
+        }
+
+        if(detallesArray && detallesArray.length > 0) {
+            detallesArray.forEach(d => {
+                if(d.estado === "SIN DATOS" || d.estado === "") return;
+
+                let colorTxt = ""; let icon = ""; let pdfClass = "";
+                if(d.estado === "FALLA") {
+                    colorTxt = "color: #dc2626; font-weight: bold;"; icon = "❌"; countFallas++;
+                    pdfClass = "text-danger-pdf";
+                } else if(d.estado === "OK") {
+                    colorTxt = "color: #16a34a; font-weight: bold;"; icon = "✅";
+                    pdfClass = "text-success-pdf";
+                } else {
+                    colorTxt = "color: #0ea5e9; font-weight: bold;"; icon = "ℹ️";
+                    pdfClass = "text-info-pdf";
+                }
+
+                let extraFotoBtn = "";
+                if (d.foto && d.foto.length > 100) {
+                    let nombreFallaSeguro = d.item.replace(/'/g, "\\'");
+                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia('${d.foto}', 'Evidencia ${contEvidencias}: ${nombreFallaSeguro}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
+                    htmlEvidenciasPDF += `
+                        <div class="pdf-evidencia-card">
+                            <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
+                            <img src="${d.foto}">
+                            ${d.observacion ? `<p>${d.observacion}</p>` : ''}
+                        </div>
+                    `;
+                    contEvidencias++;
+                }
+
+                htmlFallas += `<div class="pdf-falla-item"><strong>${d.categoria.replace(/^\d+\.\s*/, '')} - ${d.item}:</strong> <span class="${pdfClass}" style="${colorTxt}">${icon} ${d.estado}</span>${d.observacion ? `<span class="pdf-falla-obs">Obs: ${d.observacion}</span>` : ''}${extraFotoBtn}</div>`;
+            });
+        }
+    } catch(e) { htmlFallas = "<p class='text-danger'>Error al leer los detalles históricos.</p>"; }
+
+    if(htmlFallas === "") htmlFallas = "<p class='text-center text-muted mt-3'>No hay fallas ni diagnósticos registrados en este reporte.</p>";
+
+    let htmlModal = `
+    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-card-checklist text-primary"></i> REGISTRO GENERAL</div><div class="insp-row"><span style="color:var(--text)">Fecha de Inspección</span><span style="color:var(--text)">${fIng}</span></div><div class="insp-row"><span style="color:var(--text)">Placa</span><span class="text-primary fw-bold">${insp.placa}</span></div><div class="insp-row"><span style="color:var(--text)">Kilometraje</span><span style="color:var(--text)">${insp.km_tablero || '-'}</span></div><div class="insp-row"><span style="color:var(--text)">Fallas Detectadas</span><span class="text-danger fw-bold">${countFallas}</span></div></div></div>
+    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-person-badge text-primary"></i> FIRMA Y RESPONSABLE</div><div class="insp-row"><span style="color:var(--text)">Técnico Inspector</span><span style="color:var(--text)">${insp.tecnico || '-'}</span></div>
+    <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div></div></div>
+    <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">DIAGNÓSTICO</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem; color:var(--text);">${htmlFallas}</div></div></div>`;
+
+    document.getElementById('pdf-insp-placa').innerText = insp.placa;
+    document.getElementById('pdf-insp-fecha').innerText = fIng;
+
+    let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
+    if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
+    document.getElementById('pdf-insp-km').innerText = insp.km_tablero || '-';
+    document.getElementById('pdf-insp-cliente').innerText = insp.cliente || (dataGlobalPlacas.find(p => normalizeStr(p[0]) === normalizeStr(insp.placa)) || [])[1] || "";
+    document.getElementById('pdf-insp-detalle-fallas').innerHTML = htmlFallas;
+
+    let ctnEvidencias = document.getElementById('pdf-insp-evidencias-container');
+    if (ctnEvidencias) {
+        if (htmlEvidenciasPDF !== "") {
+            document.getElementById('pdf-insp-evidencias').innerHTML = htmlEvidenciasPDF;
+            ctnEvidencias.style.display = 'block';
+        } else {
+            ctnEvidencias.style.display = 'none';
+        }
+    }
+
+    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
+    new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
+
+    let firmaImgPDF = document.getElementById('pdf-insp-firma');
+    if(insp.url_firma && insp.url_firma.length > 100) {
+        firmaImgPDF.src = insp.url_firma;
+        firmaImgPDF.style.display = 'inline-block';
+        document.getElementById('firma-visual-modal').innerHTML = `<img src="${insp.url_firma}" style="max-height: 100px; max-width:100%;">`;
+        if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
+    } else {
+        firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Sin firma registrada</span>';
+        if(autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
+    }
+}
+
+function generarPDFInspeccion() {
+    const btnElement = event.currentTarget || document.querySelector('#modalResumenInspeccion .btn-outline-danger');
+    let textoOriginal = "Exportar PDF";
+    if(btnElement) { textoOriginal = btnElement.innerHTML; btnElement.innerHTML = '<i class="bi bi-hourglass-split"></i> Creando...'; btnElement.classList.add('disabled'); }
+
+    const elemento = document.getElementById('pdf-inspeccion');
+    document.getElementById('contenedor-pdf-inspeccion').style.display = 'block';
+
+    html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `Inspeccion_${document.getElementById('pdf-insp-placa').innerText}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(elemento).save().then(() => {
+        document.getElementById('contenedor-pdf-inspeccion').style.display = 'none';
+        if(btnElement) { btnElement.innerHTML = textoOriginal; btnElement.classList.remove('disabled'); }
+    });
+}
+
+// ==========================================
+// 🔥 GUARDADO DEL WIZARD DE INSPECCIONES 🔥
+// ==========================================
+
+async function procesarGuardadoInspeccion() {
+    const btn = document.getElementById('btnWizGuardar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
+
+    let idInsp = document.getElementById('i_id_inspeccion').value || "INSP-" + Date.now();
+    let fecha = document.getElementById('i_fecha').value;
+    let placa = document.getElementById('i_placa').value.toUpperCase();
+    let km = document.getElementById('i_kmtablero').value;
+    let cliente = document.getElementById('i_cliente').value;
+    let tecnico = document.getElementById('i_tecnico').value;
+    let dias = document.getElementById('i_dias').value || "30";
+
+    if(!placa || !tecnico) {
+        alert("⚠️ La Placa y el Técnico son obligatorios.");
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
+        return;
+    }
+
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    let detalles = [];
+
+    for (let i = 0; i < WIZARD_SCHEMA.length; i++) {
+        let sec = WIZARD_SCHEMA[i];
+        if(sec.items) {
+            for (let j = 0; j < sec.items.length; j++) {
+                let item = sec.items[j];
+                let lbl = typeof item === 'string' ? item : item.label;
+                let t = typeof item === 'string' ? 'okfalla' : item.type;
+                let uid = `p_${i}_${j}`;
+                let estado = "SIN DATOS", obs = "", fotoEvidencia = "";
+
+                if(t === 'okfalla') {
+                    let ok = document.getElementById(`${uid}_ok`);
+                    let fa = document.getElementById(`${uid}_fa`);
+                    if(ok && ok.dataset.chk === '1') estado = "OK";
+                    if(fa && fa.dataset.chk === '1') {
+                        estado = "FALLA";
+                        let obsEl = document.getElementById(`obs_${uid}`);
+                        if(obsEl) obs = obsEl.value;
+                        let inputFoto = document.getElementById(`foto_${uid}`);
+                        if(inputFoto && inputFoto.files && inputFoto.files.length > 0) {
+                            try {
+                                fotoEvidencia = await fileToBase64(inputFoto.files[0]);
+                            } catch(e) { console.log("Error foto", e); }
+                        }
+                    }
+                } else if (t === 'percent') {
+                    let val = document.getElementById(`val_${uid}`);
+                    if(val && val.value) estado = val.value + "%";
+                } else if (t === 'text') {
+                    let txt = document.getElementById(`txt_${uid}`);
+                    if(txt && txt.value) { estado = "REGISTRADO"; obs = txt.value; }
+                }
+                detalles.push({ categoria: sec.tab, item: lbl, estado: estado, observacion: obs, foto: fotoEvidencia });
+            }
+        }
+    }
+
+    let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
+
+    let datos = {
+        form: {
+            id: idInsp, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
+            detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: usuarioLogueado
+        }
+    };
+
+    fetch('/api/script/guardarInspeccion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.json())
+    .then(r => {
+        if(r.data === 'Éxito') {
+            bootstrap.Modal.getInstance(document.getElementById('modalInspeccion')).hide();
+            recargarModulo('statusMant');
+        } else { alert("Error: " + r.data); }
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
+    }).catch(e => { alert("Error de red: " + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; });
+}
+
+// ============================================================
+// 🚀 AUTOCOMPLETAR INFO EN INSPECCIONES
+// ============================================================
+window.autocompletarInfoInsp = function() {
+    let placaInput = normalizeStr(document.getElementById('i_placa').value);
+    let match = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
+
+    if(match) {
+        document.getElementById('i_cliente').value = match[1] || "";
+        document.getElementById('i_modelo').value = match[5] || "";
+    } else {
+        document.getElementById('i_cliente').value = "";
+        document.getElementById('i_modelo').value = "";
+    }
+
+    let wialonData = buscarWialonPorPlaca(placaInput);
+    if(wialonData) {
+        document.getElementById('i_kmgps').value = wialonData.km;
+    } else {
+        document.getElementById('i_kmgps').value = '';
+    }
+};
+
+// ============================================================
+// 🚀 NAVEGACIÓN DEL WIZARD Y APERTURA DE MODALES
+// ============================================================
+
+window.cambiarPestana = function(index) {
+    if(index > 0 && !document.getElementById('i_placa').value) { alert("⚠️ Primero debes ingresar la Placa."); return; }
+    currentTab = index;
+
+    document.querySelectorAll('.wizard-tab').forEach((tab, i) => tab.style.display = (i === index) ? 'block' : 'none');
+    document.querySelectorAll('.wizard-step').forEach((step, i) => step.classList.toggle('active', i === index));
+
+    let activeBtn = document.getElementById('step-btn-' + index);
+    if(activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+    let btnAnt = document.getElementById('btnWizAnterior');
+    if(btnAnt) btnAnt.disabled = (index === 0);
+
+    let isLastTab = (index === WIZARD_SCHEMA.length - 1);
+    let btnSig = document.getElementById('btnWizSiguiente');
+    if(btnSig) btnSig.style.display = isLastTab ? 'none' : 'block';
+
+    let btnGua = document.getElementById('btnWizGuardar');
+    if(btnGua) btnGua.style.display = isLastTab ? 'block' : 'none';
+
+    if(isLastTab) setTimeout(initFirma, 300);
+};
+
+window.moverWizard = function(step) {
+    let n = currentTab + step;
+    if(n >= 0 && n < WIZARD_SCHEMA.length) window.cambiarPestana(n);
+};
+
+window.abrirModalNuevaInspeccion = function() {
+    document.getElementById('formNuevaInspeccion').reset();
+    document.getElementById('i_id_inspeccion').value = "";
+    let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pct-btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+    });
+    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    window.cambiarPestana(0);
+    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+};
+
+window.abrirModalEditarInspeccion = function(idBusqueda) {
+    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+    if(!insp) return;
+
+    document.getElementById('formNuevaInspeccion').reset();
+    document.getElementById('i_id_inspeccion').value = insp.id;
+
+    document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pct-btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'text-white');
+        btn.classList.add('btn-outline-primary');
+    });
+    document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    let fIngreso;
+    if (insp.fecha_ingreso && insp.fecha_ingreso.includes('/')) {
+        let p = insp.fecha_ingreso.split('/'); fIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+    } else if (insp.fecha_ingreso) {
+        fIngreso = insp.fecha_ingreso.split('T')[0];
+    } else { fIngreso = ""; }
+
+    document.getElementById('i_fecha').value = fIngreso;
+    document.getElementById('i_placa').value = insp.placa || "";
+    document.getElementById('i_kmtablero').value = insp.km_tablero || "";
+    document.getElementById('i_cliente').value = insp.cliente || "";
+    document.getElementById('i_tecnico').value = insp.tecnico || "";
+    document.getElementById('i_dias').value = insp.dias_propuestos || "30";
+
+    autocompletarInfoInsp();
+
+    let arr = [];
+    try {
+        arr = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : insp.detalles_json;
+    } catch(e) {}
+
+    if (Array.isArray(arr)) {
+        WIZARD_SCHEMA.forEach((sec, i) => {
+            if(sec.items) {
+                sec.items.forEach((item, j) => {
+                    let lbl = typeof item === 'string' ? item : item.label;
+                    let t = typeof item === 'string' ? 'okfalla' : item.type;
+                    let uid = `p_${i}_${j}`;
+
+                    let res = arr.find(x => x.item === lbl && x.categoria === sec.tab);
+
+                    if(res && res.estado && res.estado !== "SIN DATOS" && res.estado !== "") {
+                        if(t === 'okfalla') {
+                            if(res.estado === 'OK') {
+                                let rOk = document.getElementById(`${uid}_ok`);
+                                if(rOk) { rOk.checked = true; rOk.dataset.chk = '1'; }
+                            }
+                            else if (res.estado === 'FALLA') {
+                                let rFa = document.getElementById(`${uid}_fa`);
+                                if(rFa) {
+                                    rFa.checked = true; rFa.dataset.chk = '1';
+                                    toggleFalla(`f_${uid}`, true);
+                                    if(res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion;
+                                }
+                            }
+                        } else if (t === 'percent') {
+                            let val = res.estado.replace('%','');
+                            let inpVal = document.getElementById(`val_${uid}`);
+                            if(inpVal) inpVal.value = val;
+                            document.querySelectorAll(`.pct-${uid}`).forEach(b => {
+                                if(b.innerText === res.estado || b.innerText === val + '%') {
+                                    b.classList.remove('btn-outline-primary');
+                                    b.classList.add('btn-primary', 'text-white');
+                                }
+                            });
+                        } else if (t === 'text') {
+                            let txt = document.getElementById(`txt_${uid}`);
+                            if(txt) {
+                                txt.value = res.observacion || (res.estado !== 'REGISTRADO' ? res.estado : "");
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    window.cambiarPestana(0);
+    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+};
+
+// ============================================================
+// 🖱️ LÓGICA DE SELECCIÓN MASIVA PARA INSPECCIONES
+// ============================================================
+
+window.activarModoSeleccionStatusMant = function() {
+    window.modoSeleccion = window.modoSeleccion || {};
+    window.modoSeleccion['statusMant'] = !window.modoSeleccion['statusMant'];
+
+    const btnAll = document.getElementById('btn-select-all-statusMant');
+    const btnBulk = document.getElementById('btn-bulk-statusMant');
+
+    if (window.modoSeleccion['statusMant']) {
+        btnAll.classList.remove('d-none');
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    } else {
+        btnAll.classList.add('d-none');
+        btnBulk.classList.add('d-none');
+        document.querySelectorAll('.chk-bulk-statusMant').forEach(c => c.checked = false);
+        document.querySelectorAll('.child-row-status').forEach(c => c.classList.remove('row-selected'));
+    }
+
+    mostrarStatusInspecciones(dataGlobalInspecciones);
+};
+
+window.seleccionarFilaInspeccion = function(event, trElement) {
+    if (window.modoSeleccion && window.modoSeleccion['statusMant']) {
+        if (event.target.closest('.btn-icon-dropdown') || event.target.closest('.dropdown-menu') || event.target.closest('.badge')) return;
+
+        const checkbox = trElement.querySelector('.chk-bulk-statusMant');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) trElement.classList.add('row-selected');
+            else trElement.classList.remove('row-selected');
+            toggleBulkBtn('statusMant');
+        }
+    }
+};
+
+window.seleccionarTodasLasStatusMant = function() {
+    const btnAll = document.getElementById('btn-select-all-statusMant');
+    const checkboxes = document.querySelectorAll('.chk-bulk-statusMant');
+
+    const accionEsMarcar = btnAll.innerText.includes('Seleccionar Todo');
+
+    checkboxes.forEach(chk => {
+        chk.checked = accionEsMarcar;
+        const row = chk.closest('.child-row-status');
+        if (row) {
+            if (accionEsMarcar) row.classList.add('row-selected');
+            else row.classList.remove('row-selected');
+        }
+    });
+
+    if (accionEsMarcar) {
+        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
+        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
+    } else {
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    }
+
+    toggleBulkBtn('statusMant');
+};
+
+// ============================================================
+// 📥 IMPORTACIÓN / EXPORTACIÓN MASIVA DE INSPECCIONES
+// ============================================================
+
+function obtenerCabecerasDinamicas() {
+    let headers = [];
+    WIZARD_SCHEMA.forEach(sec => {
+        if(sec.items) {
+            sec.items.forEach(item => {
+                headers.push(typeof item === 'string' ? item : item.label);
+            });
+        }
+    });
+    return headers;
+}
+
+window.descargarPlantillaInspecciones = function() {
+    const baseHeaders = ['ID', 'FECHA INGRESO', 'PLACA', 'KM TABLERO', 'CLIENTE', 'TECNICO', 'DIAS PROPUESTOS'];
+    const dynamicHeaders = obtenerCabecerasDinamicas();
+    const allHeaders = [...baseHeaders, ...dynamicHeaders];
+
+    let filaEjemplo = ['(Dejar vacío para nuevo)', '2024-05-20', 'ABC-123', '150000', 'EMPRESA SAC', 'JUAN PEREZ', '30'];
+    dynamicHeaders.forEach(h => {
+        filaEjemplo.push(h.includes('Porcentaje') || h.includes('%') ? '50%' : 'OK');
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([allHeaders, filaEjemplo]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Inspecciones");
+    XLSX.writeFile(wb, "Plantilla_Importacion_Inspecciones.xlsx");
+};
+
+window.exportarExcelInspecciones = function() {
+    if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
+        alert("No hay inspecciones cargadas para exportar.");
+        return;
+    }
+
+    const baseHeaders = ['ID', 'FECHA INGRESO', 'PLACA', 'KM TABLERO', 'CLIENTE', 'TECNICO', 'DIAS PROPUESTOS'];
+    const dynamicHeaders = obtenerCabecerasDinamicas();
+    const ws_data = [[...baseHeaders, ...dynamicHeaders]];
+
+    dataGlobalInspecciones.forEach(i => {
+        if (i.estado === 'Eliminada') return;
+
+        let row = [i.id || '', i.fecha_ingreso || '', i.placa || '', i.km_tablero || '', i.cliente || '', i.tecnico || '', i.dias_propuestos || ''];
+
+        let detMap = {};
+        try {
+            let dArr = typeof i.detalles_json === 'string' ? JSON.parse(i.detalles_json) : i.detalles_json;
+            if(Array.isArray(dArr)) dArr.forEach(d => detMap[d.item] = d);
+        } catch(e) {}
+
+        dynamicHeaders.forEach(h => {
+            let d = detMap[h];
+            if(d && d.estado && d.estado !== 'SIN DATOS') {
+                row.push(d.observacion ? `${d.estado} | ${d.observacion}` : d.estado);
+            } else {
+                row.push('');
+            }
+        });
+
+        ws_data.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Base_Inspecciones");
+    XLSX.writeFile(wb, "Reporte_Inspecciones_Completas.xlsx");
+};
+
+window.importarExcelInspecciones = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
+
+        if (rawJson.length === 0) {
+            alert("El archivo Excel está vacío o no tiene datos válidos.");
+            return;
+        }
+
+        const confirmar = confirm(`Se importarán o actualizarán ${rawJson.length} inspecciones.\n¿Continuar?`);
+        if (!confirmar) { event.target.value = ''; return; }
+
+        document.body.style.cursor = 'wait';
+
+        let registrosProcesados = rawJson.map(r => {
+            let detalles = [];
+
+            WIZARD_SCHEMA.forEach(sec => {
+                if(sec.items) {
+                    sec.items.forEach(item => {
+                        let lbl = typeof item === 'string' ? item : item.label;
+                        let cellVal = r[lbl];
+
+                        if(cellVal && String(cellVal).trim() !== '') {
+                            let strVal = String(cellVal).trim();
+                            let upperVal = strVal.toUpperCase();
+                            let estadoF = "REGISTRADO", obsF = "";
+
+                            if (upperVal.includes('OK')) {
+                                estadoF = 'OK';
+                                let idx = upperVal.indexOf('OK');
+                                obsF = strVal.substring(idx + 2).replace(/^[\s|:-]+/, '').trim();
+                            } else if (upperVal.includes('FALLA')) {
+                                estadoF = 'FALLA';
+                                let idx = upperVal.indexOf('FALLA');
+                                obsF = strVal.substring(idx + 5).replace(/^[\s|:-]+/, '').trim();
+                            } else if (strVal.includes('%')) {
+                                estadoF = strVal;
+                            } else {
+                                estadoF = "REGISTRADO";
+                                obsF = strVal;
+                            }
+
+                            detalles.push({
+                                categoria: sec.tab,
+                                item: lbl,
+                                estado: estadoF,
+                                observacion: obsF,
+                                foto: ""
+                            });
+                        }
+                    });
+                }
+            });
+
+            let fechaIngreso = r['FECHA INGRESO'] || '';
+            if (fechaIngreso.includes('/')) {
+                let p = fechaIngreso.split('/');
+                if (p[2] && p[2].length === 4) {
+                    fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+                }
+            }
+
+            return {
+                id: r['ID'] && String(r['ID']).trim() !== '(Dejar vacío para nuevo)' ? String(r['ID']).trim() : `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                fecha_ingreso: fechaIngreso,
+                placa: r['PLACA'] || '',
+                km_tablero: r['KM TABLERO'] || '',
+                cliente: r['CLIENTE'] || '',
+                tecnico: r['TECNICO'] || '',
+                dias_propuestos: r['DIAS PROPUESTOS'] || '30',
+                detalles_json: JSON.stringify(detalles)
+            };
+        });
+
+        fetch('/api/importarInspeccionesMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros: registrosProcesados })
+        })
+        .then(res => res.json())
+        .then(r => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
+            recargarModulo('statusMant');
+        })
+        .catch(err => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert("❌ Error subiendo archivo: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+// ================================================================
+// 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
+// ================================================================
+window.init_inspecciones = function() {
+    if (typeof generarWizardFase3 === 'function') generarWizardFase3();
+    if (dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
+        mostrarStatusInspecciones(dataGlobalInspecciones);
+    } else {
+        recargarModulo('statusMant');
+    }
+};
