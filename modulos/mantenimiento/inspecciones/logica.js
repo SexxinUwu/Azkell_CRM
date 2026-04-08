@@ -28,8 +28,9 @@ function mostrarStatusInspecciones(inspecciones) {
   let placasActivasEnUso = dataGlobalPlacas.filter(p => {
       if((p[0]||'').toUpperCase() === 'PLACA') return false;
       let estado = normalizeStr(p[18] || p[8] || '');
-      let enUso = normalizeStr(p[22] || p[13] || '');
-      return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
+      let enUso  = normalizeStr(p[22] || p[13] || '');
+      // Incluir todas las ACTIVAS excepto las explícitamente marcadas como NO en uso
+      return estado === "ACTIVA" && enUso !== "NO";
   });
 
   if (!isHistorialStatus) {
@@ -891,6 +892,13 @@ window.importarExcelInspecciones = function(event) {
 // ================================================================
 window.init_inspecciones = function() {
     if (typeof generarWizardFase3 === 'function') generarWizardFase3();
+    // En móvil: gráficos ocultos por defecto para no ocupar espacio al entrar
+    if (window.innerWidth < 768) {
+        var panel = document.getElementById('panelGraficosStatus');
+        var btn   = document.getElementById('btnToggleGraficos');
+        if (panel) panel.style.display = 'none';
+        if (btn)   btn.innerHTML = '<i class="bi bi-eye-fill"></i> <span data-i18n="common.charts">Gráficos</span>';
+    }
     if (dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
         mostrarStatusInspecciones(dataGlobalInspecciones);
     } else {

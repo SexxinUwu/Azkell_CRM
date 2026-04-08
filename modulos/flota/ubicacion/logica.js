@@ -84,12 +84,9 @@ window.filtrarListaGPS = function(query) {
 };
 
 // ------------------------------------------------------------
-// DETALLE UNIDAD (panel derecho)
+// DETALLE UNIDAD (panel desktop | offcanvas móvil)
 // ------------------------------------------------------------
 window.abrirDetalleGPS = function(placa) {
-    let pane = document.getElementById('paneDetalleGPS');
-    if (!pane) return;
-
     let w = window._datosWialonGPS.find(x => (x.placa||'') === placa);
     if (!w) return;
 
@@ -115,7 +112,6 @@ window.abrirDetalleGPS = function(placa) {
     // Fila de dato con botón copiar
     function campoCopia(label, valor, valorCopia) {
         let id = 'copy-gps-' + Math.random().toString(36).substr(2,6);
-        // Escaping para onclick inline
         let vc = (valorCopia||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
         return `<div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--border);">
             <span class="text-muted" style="font-size:0.81rem;">${label}</span>
@@ -129,10 +125,10 @@ window.abrirDetalleGPS = function(placa) {
         </div>`;
     }
 
-    let dirId   = 'gps-dir-' + Date.now();
+    let dirId    = 'gps-dir-' + Date.now();
     let btnDirId = dirId + '-btn';
 
-    pane.innerHTML = `
+    let contentHTML = `
         <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
             <div>
                 <h5 class="fw-bold mb-0 text-primary">${w.placa || '—'}</h5>
@@ -168,6 +164,23 @@ window.abrirDetalleGPS = function(placa) {
             </div>
         </div>
     `;
+
+    // Detectar móvil y escribir en el contenedor correcto
+    var isMobile = window.innerWidth < 768;
+    if (isMobile) {
+        var titleEl    = document.getElementById('gpsDetalleOffcanvasTitle');
+        var subtitleEl = document.getElementById('gpsDetalleOffcanvasSubtitle');
+        var bodyEl     = document.getElementById('gpsDetalleOffcanvasBody');
+        if (titleEl)    titleEl.textContent    = w.placa || '—';
+        if (subtitleEl) subtitleEl.textContent = w.nombre_wialon || '';
+        if (bodyEl)     bodyEl.innerHTML       = contentHTML;
+        var oc = document.getElementById('gpsDetalleOffcanvas');
+        if (oc) bootstrap.Offcanvas.getOrCreateInstance(oc).show();
+    } else {
+        let pane = document.getElementById('paneDetalleGPS');
+        if (!pane) return;
+        pane.innerHTML = contentHTML;
+    }
 
     // Geocodificación asíncrona (Nominatim)
     if (tienePos) {

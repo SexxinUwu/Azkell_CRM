@@ -1,3 +1,8 @@
+<style>
+@media (max-width: 767.98px) {
+    #gps-panel-lista { flex: 1 1 100% !important; width: 100% !important; max-width: 100% !important; }
+}
+</style>
 <div id="moduloUbicacionGPS" class="modulo-wrapper" style="display: flex;">
 
     <!-- Barra de controles -->
@@ -18,8 +23,8 @@
     <!-- Cuerpo: lista izquierda + panel detalle derecha -->
     <div class="d-flex gap-3 flex-grow-1" style="min-height: 0; overflow: hidden;">
 
-        <!-- Panel izquierdo: lista de unidades -->
-        <div style="width: 340px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0;">
+        <!-- Panel izquierdo: lista de unidades — full width en móvil, 340px en desktop -->
+        <div id="gps-panel-lista" style="flex: 0 0 340px; max-width: 340px; width: 100%; display: flex; flex-direction: column; min-height: 0;">
             <div class="mb-2">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text border-end-0 bg-transparent">
@@ -39,8 +44,8 @@
             </div>
         </div>
 
-        <!-- Panel derecho: detalle de unidad seleccionada -->
-        <div id="paneDetalleGPS" class="card flex-grow-1 p-3" style="min-height:0; overflow-y:auto;">
+        <!-- Panel derecho: detalle — solo visible en desktop (≥768px) -->
+        <div id="paneDetalleGPS" class="card flex-grow-1 p-3 d-none d-md-flex flex-column" style="min-height:0; overflow-y:auto;">
             <div class="text-center text-muted py-5">
                 <i class="bi bi-geo-alt fs-2 opacity-40"></i>
                 <p class="mt-3 mb-0" data-i18n="gps.selectUnit">Selecciona una unidad de la lista para ver su detalle</p>
@@ -48,4 +53,19 @@
         </div>
 
     </div>
+
+    <!-- Offcanvas detalle para móvil (desliza desde abajo) -->
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas"
+         style="height:92vh; border-radius:18px 18px 0 0; background: var(--bg);">
+        <div class="offcanvas-header" style="background: var(--surface); border-bottom: 1px solid var(--border); border-radius:18px 18px 0 0;">
+            <div>
+                <h6 class="offcanvas-title fw-bold mb-0 text-primary" id="gpsDetalleOffcanvasTitle">—</h6>
+                <small class="text-muted" id="gpsDetalleOffcanvasSubtitle"></small>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body p-3" id="gpsDetalleOffcanvasBody" style="overflow-y: auto; background: var(--bg);">
+        </div>
+    </div>
+
 </div>
