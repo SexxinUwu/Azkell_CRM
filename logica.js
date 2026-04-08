@@ -273,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   const savedFontFamily = localStorage.getItem('fleet_fontfamily') || 'inter';
   document.documentElement.style.setProperty('--font-family', _FF_MAP[savedFontFamily] || _FF_MAP.inter);
+  document.documentElement.style.setProperty('--bs-body-font-family', _FF_MAP[savedFontFamily] || _FF_MAP.inter);
 
   // Restaurar accesibilidad
   if (localStorage.getItem('fleet_reduce_anims') === 'true') {
