@@ -159,6 +159,15 @@ function mostrarStatusInspecciones(inspecciones) {
   document.getElementById('cuerpoTablaStatus').innerHTML = html;
   filtrarStatusAvanzado();
   _renderInspPaginacion(window.dataFinalInspGlobal.length);
+  if (typeof window.initColPicker === 'function') {
+      window.initColPicker('col-picker-insp', 'tablaStatus', [
+          {label: 'Tipo',        idx: 2, visible: true},
+          {label: 'Técnico',     idx: 3, visible: true},
+          {label: 'Fecha Insp.', idx: 4, visible: true},
+          {label: 'Prox. Insp.', idx: 5, visible: true},
+          {label: 'GPS',         idx: 8, visible: true}
+      ], 'fleet_cols_insp');
+  }
 }
 
 function _renderInspPaginacion(total) {

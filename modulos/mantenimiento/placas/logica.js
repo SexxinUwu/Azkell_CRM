@@ -291,17 +291,29 @@ function renderizarPaginaPlacas() {
 
         let checkHtml = window.modoSeleccion && window.modoSeleccion['placas'] ? `<input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" style="pointer-events: none;">` : '';
 
+        let swipeActionsHtml = '';
+        if (canEditP || canDeleteP) {
+            swipeActionsHtml = '<div class="card-swipe-actions">';
+            if (canEditP)  swipeActionsHtml += `<button class="swipe-action-btn edit" onclick="event.stopPropagation();abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil-fill"></i></button>`;
+            if (canDeleteP) swipeActionsHtml += `<button class="swipe-action-btn del" onclick="event.stopPropagation();eliminarPlacaDesdeTarjeta('${plc}')"><i class="bi bi-trash-fill"></i></button>`;
+            swipeActionsHtml += '</div>';
+        }
+
         html += `<div class="card-premium" onclick="abrirDetallePlaca(event, ${indexGlobal})">
-            <div class="card-header-theme">
-                <div class="d-flex align-items-center gap-2">${checkHtml}<div class="card-title-prem">${plc}</div></div>
-                ${menuAcciones}
+            <div class="card-inner">
+                <div class="card-header-theme">
+                    <div class="d-flex align-items-center gap-2">${checkHtml}<div class="card-title-prem">${plc}</div></div>
+                    ${menuAcciones}
+                </div>
+                <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
+                <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
             </div>
-            <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
-            <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
+            ${swipeActionsHtml}
         </div>`;
     });
 
     contenedor.innerHTML = html;
+    if (typeof window.initSwipeCards === 'function') window.initSwipeCards('contenedorPlacasDinamico');
     const fin = Math.min(inicio + ITEMS_POR_PAGINA, datosFiltradosPlacas.length);
     if(infoPag) infoPag.innerText = `Mostrando ${inicio + 1}–${fin} de ${datosFiltradosPlacas.length} placas`;
     let btnHtml = `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(-1)" ${paginaActualPlacas === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
