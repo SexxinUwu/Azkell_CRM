@@ -367,6 +367,11 @@ window.toggleNavSection = function(sectionId) {
     if (!items) return;
     const isCollapsed = items.classList.toggle('nav-section-collapsed');
     if (btn) btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    // Animación de entrada solo al expandir
+    if (!isCollapsed) {
+        items.classList.add('nav-section-expanding');
+        setTimeout(function() { items.classList.remove('nav-section-expanding'); }, 420);
+    }
     // Persistir estado
     try {
         const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
@@ -712,6 +717,18 @@ const MENU_IDS = {
     'sistema/auditoria':           'nav-auditoria',
 };
 
+const MENU_SECTION = {
+    'mantenimiento/inspecciones': 'mantenimiento',
+    'mantenimiento/placas':       'mantenimiento',
+    'mantenimiento/fleetrun':     'mantenimiento',
+    'almacen/inventario':         'almacen',
+    'flota/status':               'flota',
+    'flota/ubicacion':            'flota',
+    'directorio/conductores':     'directorio',
+    'sistema/usuarios':           'sistema',
+    'sistema/auditoria':          'sistema',
+};
+
 function actualizarTituloHeader(ruta) {
     const titulo = document.getElementById('tituloTopBar');
     if (titulo) titulo.innerText = TITULOS_MODULOS[ruta] || 'Azkell Fleet';
@@ -719,20 +736,39 @@ function actualizarTituloHeader(ruta) {
 
 function marcarMenuActivo(ruta) {
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
     const idActivo = MENU_IDS[ruta];
     if (idActivo) {
         const el = document.getElementById(idActivo);
         if (el) el.classList.add('active');
     }
+    // Marcar sección padre y auto-expandir si está colapsada
+    const seccion = MENU_SECTION[ruta];
+    if (seccion) {
+        const sectionBtn = document.querySelector('.nav-section-toggle[data-section="' + seccion + '"]');
+        if (sectionBtn) sectionBtn.classList.add('section-has-active');
+        const sectionItems = document.getElementById('section-items-' + seccion);
+        if (sectionItems && sectionItems.classList.contains('nav-section-collapsed')) {
+            window.toggleNavSection(seccion);
+        }
+    }
 }
 
 window.cargarConfigSection = function(section) {
     window._pendingCfgSection = section;
-    // Marcar el item de config correcto como activo
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
     const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma' };
     const el = document.getElementById(cfgMap[section] || 'nav-cfg-perfil');
     if (el) el.classList.add('active');
+    // Marcar sección configuración como activa
+    const cfgBtn = document.querySelector('.nav-section-toggle[data-section="configuracion"]');
+    if (cfgBtn) cfgBtn.classList.add('section-has-active');
+    // Auto-expandir si estaba colapsada
+    const cfgItems = document.getElementById('section-items-configuracion');
+    if (cfgItems && cfgItems.classList.contains('nav-section-collapsed')) {
+        window.toggleNavSection('configuracion');
+    }
     cargarModuloAislado('sistema/configuracion');
 };
 

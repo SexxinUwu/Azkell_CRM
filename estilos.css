@@ -2285,3 +2285,64 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
     }
 }
 
+/* ================================================================
+   BADGE CONTADOR, INDICADOR DE SECCIÓN ACTIVA, ANIMACIONES
+   ================================================================ */
+
+/* Badge de conteo de items en la sección */
+.section-badge {
+    margin-left: auto !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    color: var(--subtext) !important;
+    background: var(--hover, rgba(100,100,100,0.12)) !important;
+    border-radius: 10px !important;
+    padding: 1px 6px !important;
+    min-width: 18px !important;
+    text-align: center !important;
+    line-height: 1.6 !important;
+    transition: background 0.2s, color 0.2s !important;
+    flex-shrink: 0 !important;
+}
+/* Badge destaca cuando la sección tiene el módulo activo */
+.nav-section-toggle.section-has-active .section-badge {
+    background: rgba(37,99,235,0.18) !important;
+    color: var(--crm-accent) !important;
+}
+
+/* Indicador visual: sección con módulo activo */
+.nav-section-toggle.section-has-active .link-text {
+    color: var(--crm-accent) !important;
+    font-weight: 800 !important;
+}
+.nav-section-toggle.section-has-active .section-chevron {
+    color: var(--crm-accent) !important;
+}
+/* Punto azul a la izquierda del label de sección activa */
+.nav-section-toggle.section-has-active::before {
+    content: '' !important;
+    width: 4px !important;
+    height: 4px !important;
+    border-radius: 50% !important;
+    background: var(--crm-accent) !important;
+    flex-shrink: 0 !important;
+}
+
+/* En sidebar colapsado, ocultar badge (ya no hay texto) */
+.sidebar.collapsed .section-badge {
+    display: none !important;
+}
+
+/* ================================================================
+   ANIMACIÓN DE ENTRADA AL EXPANDIR SECCIÓN
+   ================================================================ */
+@keyframes navItemSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.nav-section-expanding .nav-item:nth-child(1) { animation: navItemSlideIn 0.22s ease both; animation-delay: 0ms; }
+.nav-section-expanding .nav-item:nth-child(2) { animation: navItemSlideIn 0.22s ease both; animation-delay: 40ms; }
+.nav-section-expanding .nav-item:nth-child(3) { animation: navItemSlideIn 0.22s ease both; animation-delay: 80ms; }
+.nav-section-expanding .nav-item:nth-child(4) { animation: navItemSlideIn 0.22s ease both; animation-delay: 120ms; }
+.nav-section-expanding .nav-item:nth-child(5) { animation: navItemSlideIn 0.22s ease both; animation-delay: 160ms; }
+
