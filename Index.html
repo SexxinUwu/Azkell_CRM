@@ -193,8 +193,11 @@
             <div class="topbar">
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn-hamburger-mobile" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-                    <h4 class="m-0 fw-bold" id="tituloTopBar" style="font-size: 1.3rem;">Cargando...</h4>
-                    <button id="btn-wialon-status" class="btn btn-sm btn-outline-secondary ms-3 rounded-pill px-3 shadow-sm" onclick="recargarWialon(true)" title="Actualizar GPS en tiempo real" style="font-size: 0.8rem;">
+                    <div class="topbar-title-block">
+                        <h4 class="m-0 fw-bold" id="tituloTopBar" style="font-size: 1.1rem; line-height: 1.2;">Cargando...</h4>
+                        <nav id="breadcrumb-nav" class="topbar-breadcrumb"></nav>
+                    </div>
+                    <button id="btn-wialon-status" class="btn btn-sm btn-outline-secondary ms-2 rounded-pill px-3 shadow-sm d-none d-md-inline-flex align-items-center gap-1" onclick="recargarWialon(true)" title="Actualizar GPS en tiempo real" style="font-size: 0.8rem;">
                         <i class="bi bi-geo-alt-fill"></i> <span id="wialon-text" class="fw-bold">GPS Off</span>
                     </button>
                 </div>
@@ -212,7 +215,7 @@
                     </button>
                     <div class="dropdown d-inline-block">
     <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; transition: 0.2s;">
-        <i class="bi bi-person-circle fs-4" style="color: var(--crm-accent) !important;"></i>
+        <div class="user-avatar" id="topbar-avatar-icon" style="width:32px;height:32px;background:var(--crm-accent);border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">U</div>
         <span id="nombre-usuario-top" class="fw-bold ms-2 text-truncate" style="max-width: 150px;">Usuario</span>
         <span id="badge-rol-top" class="ms-2 d-none d-md-inline-block"></span>
         <i class="bi bi-chevron-down ms-2" style="font-size: 0.8rem; color: var(--subtext);"></i>
@@ -335,6 +338,111 @@
 
     <!-- Contenedor de toasts globales -->
     <div id="toast-container" aria-live="polite"></div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL CONFIRMACIÓN ELEGANTE                                   -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="modal-confirmar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content" style="border-radius:16px; border:1px solid var(--border); background:var(--surface); overflow:hidden;">
+                <div class="modal-body p-4 text-center">
+                    <div id="mc-icon-wrap" class="mb-3" style="font-size:2.5rem;"></div>
+                    <h5 id="mc-title" class="fw-bold mb-2" style="color:var(--text);"></h5>
+                    <p id="mc-msg" class="mb-3" style="color:var(--subtext); font-size:0.9rem; line-height:1.5;"></p>
+                    <!-- Confirmación con código (eliminar crítico) -->
+                    <div id="mc-code-wrap" class="mb-3" style="display:none;">
+                        <p class="mb-1" style="font-size:0.8rem; color:var(--subtext);">Escribe <strong id="mc-code-hint" style="color:var(--text);"></strong> para confirmar</p>
+                        <input id="mc-code-input" type="text" class="form-control text-center fw-bold" style="border-radius:10px; border:2px solid var(--border); background:var(--bg); color:var(--text);" autocomplete="off">
+                    </div>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button id="mc-btn-cancel" class="btn btn-outline-secondary fw-bold px-4" style="border-radius:10px;" data-bs-dismiss="modal">Cancelar</button>
+                        <button id="mc-btn-confirm" class="btn fw-bold px-4" style="border-radius:10px;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL SESIÓN EXPIRADA                                         -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="modal-sesion-expirada" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content" style="border-radius:16px; border:1px solid var(--border); background:var(--surface); overflow:hidden;">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3" style="font-size:3rem;">😴</div>
+                    <h5 class="fw-bold mb-2" style="color:var(--text);">Se te durmió la sesión</h5>
+                    <p class="mb-4" style="color:var(--subtext); font-size:0.875rem;">Por seguridad, tu sesión expiró tras 30 minutos de inactividad.</p>
+                    <div class="d-flex flex-column gap-2">
+                        <button class="btn btn-primary fw-bold w-100" style="border-radius:10px;" onclick="window._renovarSesion()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>¡Despertamos!
+                        </button>
+                        <button class="btn btn-outline-secondary fw-bold w-100" style="border-radius:10px;" onclick="cerrarSesion()">
+                            Cerrar sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL ATAJOS DE TECLADO                                       -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="modal-shortcuts" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px; border:1px solid var(--border); background:var(--surface); overflow:hidden;">
+                <div class="modal-header pb-2" style="border-bottom:1px solid var(--border);">
+                    <h5 class="modal-title fw-bold" style="color:var(--text);">⌨️ Atajos de Teclado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <p class="fw-bold mb-2" style="color:var(--subtext); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Navegación</p>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="shortcut-row"><kbd>Ctrl</kbd><kbd>K</kbd><span>Buscar (Spotlight)</span></div>
+                                <div class="shortcut-row"><kbd>G</kbd><span>Ir al Dashboard</span></div>
+                                <div class="shortcut-row"><kbd>?</kbd><span>Ver atajos</span></div>
+                                <div class="shortcut-row"><kbd>Esc</kbd><span>Cerrar / Cancelar</span></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <p class="fw-bold mb-2" style="color:var(--subtext); font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;">Acciones</p>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="shortcut-row"><kbd>Ctrl</kbd><kbd>F</kbd><span>Buscar en tabla</span></div>
+                                <div class="shortcut-row"><kbd>E</kbd><span>Exportar módulo</span></div>
+                                <div class="shortcut-row"><kbd>N</kbd><span>Nuevo registro</span></div>
+                                <div class="shortcut-row"><kbd>R</kbd><span>Recargar módulo</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-3 mb-0 text-center" style="font-size:0.78rem; color:var(--subtext);">Los atajos solo funcionan fuera de campos de texto</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- BOTTOM NAV MOBILE                                             -->
+    <!-- ============================================================ -->
+    <nav class="bottom-nav d-flex d-md-none" id="bottom-nav">
+        <a class="bottom-nav-item active" id="bnav-dashboard" onclick="cargarModuloAislado('dashboard'); setBottomNavActive('bnav-dashboard')">
+            <i class="bi bi-grid-1x2-fill"></i><span>Inicio</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-inspecciones" onclick="cargarModuloAislado('mantenimiento/inspecciones'); setBottomNavActive('bnav-inspecciones')">
+            <i class="bi bi-clipboard2-pulse-fill"></i><span>Insp.</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-placas" onclick="cargarModuloAislado('mantenimiento/placas'); setBottomNavActive('bnav-placas')">
+            <i class="bi bi-truck"></i><span>Placas</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-gps" onclick="cargarModuloAislado('flota/ubicacion'); setBottomNavActive('bnav-gps')">
+            <i class="bi bi-geo-alt-fill"></i><span>GPS</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-mas" onclick="toggleSidebar()">
+            <i class="bi bi-layout-sidebar-reverse"></i><span>Más</span>
+        </a>
+    </nav>
 
 </body>
 </html>

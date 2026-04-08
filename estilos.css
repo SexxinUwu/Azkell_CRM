@@ -2478,4 +2478,178 @@ body.reduce-motion .global-toast .toast-progress { animation: none !important; }
 .counter-done { animation: counterPop 0.3s ease; }
 body.reduce-motion [data-counter] { animation: none !important; }
 
+/* ================================================================
+   BREADCRUMB EN TOPBAR
+   ================================================================ */
+.topbar-title-block { display: flex; flex-direction: column; justify-content: center; }
+.topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--subtext);
+    line-height: 1;
+    margin-top: 2px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+.topbar-bc-home { font-size: 0.68rem; color: var(--subtext); }
+.topbar-bc-sep { color: var(--subtext); opacity: 0.5; font-size: 0.7rem; }
+.topbar-bc-item { color: var(--subtext); white-space: nowrap; }
+.topbar-bc-item.active { color: var(--crm-accent) !important; font-weight: 600; }
+@media (max-width: 768px) { .topbar-breadcrumb { display: none !important; } }
+
+/* ================================================================
+   TRANSICIONES ENTRE MÓDULOS
+   ================================================================ */
+#root-dinamico {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#root-dinamico.module-transitioning {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+}
+body.reduce-motion #root-dinamico { transition: none !important; }
+
+/* ================================================================
+   RIPPLE EFFECT EN BOTONES
+   ================================================================ */
+.btn, .nav-item, .bottom-nav-item {
+    position: relative;
+    overflow: hidden;
+}
+.ripple-wave {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.28);
+    transform: scale(0);
+    animation: rippleAnim 0.5s linear;
+    pointer-events: none;
+}
+@keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+}
+body.reduce-motion .ripple-wave { animation: none !important; display: none !important; }
+
+/* ================================================================
+   BOTTOM NAVIGATION MOBILE
+   ================================================================ */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    z-index: 1040;
+    align-items: stretch;
+    padding: 0 4px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--subtext) !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 6px 4px;
+    transition: color 0.15s, background 0.15s;
+    font-size: 0.62rem;
+    font-weight: 600;
+    margin: 4px 2px;
+    border: none;
+    background: none;
+}
+.bottom-nav-item i { font-size: 1.2rem; line-height: 1; }
+.bottom-nav-item span { line-height: 1; }
+.bottom-nav-item.active {
+    color: var(--crm-accent) !important;
+    background: rgba(37,99,235,0.1) !important;
+}
+.bottom-nav-item:hover { color: var(--crm-accent) !important; background: rgba(37,99,235,0.07) !important; }
+/* Cuando el bottom nav está visible, añadir padding al área de contenido */
+@media (max-width: 767px) {
+    #root-dinamico { padding-bottom: 72px !important; }
+    .content { padding-bottom: 62px; }
+}
+
+/* ================================================================
+   AVATAR GENERADO DE USUARIO
+   ================================================================ */
+.user-avatar {
+    flex-shrink: 0;
+    user-select: none;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+#topbar-avatar-wrap { display: flex; align-items: center; gap: 8px; }
+
+/* ================================================================
+   ATAJOS DE TECLADO (KBD BADGES)
+   ================================================================ */
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text);
+}
+.shortcut-row span { color: var(--subtext); font-size: 0.8rem; }
+kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 0.72rem;
+    font-family: inherit;
+    font-weight: 700;
+    color: var(--text);
+    box-shadow: 0 1px 0 var(--border);
+    white-space: nowrap;
+    min-width: 24px;
+}
+
+/* ================================================================
+   TEMAS PREDEFINIDOS SaaS
+   ================================================================ */
+[data-theme="linear"]     { --crm-accent: #5e6ad2; --bg: #f7f8ff; }
+[data-theme="vercel"]     { --crm-accent: #000000; --bg: #fafafa; }
+[data-theme="github"]     { --crm-accent: #0969da; --bg: #f6f8fa; }
+[data-theme="emerald"]    { --crm-accent: #059669; --bg: #f0fdf4; }
+[data-theme="rose"]       { --crm-accent: #e11d48; --bg: #fff1f2; }
+[data-theme="amber"]      { --crm-accent: #d97706; --bg: #fffbeb; }
+body.dark[data-theme="linear"]  { --crm-accent: #818cf8; --bg: #0f1117; --surface: #1a1b23; }
+body.dark[data-theme="vercel"]  { --crm-accent: #ffffff; --bg: #000; --surface: #111; }
+body.dark[data-theme="github"]  { --crm-accent: #58a6ff; --bg: #0d1117; --surface: #161b22; }
+body.dark[data-theme="emerald"] { --crm-accent: #34d399; --bg: #022c22; --surface: #064e3b; }
+body.dark[data-theme="rose"]    { --crm-accent: #fb7185; --bg: #1a0010; --surface: #27002a; }
+
+/* ================================================================
+   STICKY HEADER + CONTADOR DE REGISTROS
+   ================================================================ */
+.table-record-count {
+    font-size: 0.75rem;
+    color: var(--subtext);
+    font-weight: 500;
+    padding: 4px 0 8px 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.table-record-count strong { color: var(--crm-accent); font-weight: 700; }
+
+
+
 
