@@ -105,6 +105,18 @@ function mostrarFleetrun(datos) {
   let kpiP = document.getElementById('kpi-fleet-porvencer'); if(kpiP) kpiP.textContent = cntPV;
   let kpiVe = document.getElementById('kpi-fleet-vencidos'); if(kpiVe) kpiVe.textContent = cntVenc;
   if (!isHistorialFleetrun) { updateGraficoFleetrun(cntVig, cntPV, cntVenc); }
+  if (typeof window.initColPicker === 'function') {
+      window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
+          {label: 'Fecha',         idx: 1, visible: true},
+          {label: 'Tipo MP',       idx: 2, visible: true},
+          {label: 'KM Cambio',     idx: 3, visible: true},
+          {label: 'Falta',         idx: 4, visible: true},
+          {label: 'Prox. Cambio',  idx: 5, visible: true},
+          {label: 'Observación',   idx: 6, visible: true},
+          {label: 'Frecuencia',    idx: 7, visible: true},
+          {label: 'KM GPS',        idx: 8, visible: true}
+      ], 'fleet_cols_fleetrun');
+  }
 }
 
 window.filtrarFleetrunAvanzado = function() {

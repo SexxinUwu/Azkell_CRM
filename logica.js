@@ -397,12 +397,18 @@ window.toggleNavSection = function(sectionId) {
 window.restoreNavSections = function() {
     try {
         const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
-        Object.keys(saved).forEach(function(sectionId) {
-            if (saved[sectionId] === 'collapsed') {
-                const items = document.getElementById('section-items-' + sectionId);
-                const btn   = document.querySelector('.nav-section-toggle[data-section="' + sectionId + '"]');
-                if (items) items.classList.add('nav-section-collapsed');
-                if (btn)   btn.setAttribute('aria-expanded', 'false');
+        // HTML ya arranca colapsado. Solo expandir secciones guardadas como 'expanded'.
+        const all = ['mantenimiento','almacen','flota','directorio','sistema','configuracion'];
+        all.forEach(function(id) {
+            const items = document.getElementById('section-items-' + id);
+            const btn   = document.querySelector('.nav-section-toggle[data-section="' + id + '"]');
+            if (!items) return;
+            if (saved[id] === 'expanded') {
+                items.classList.remove('nav-section-collapsed');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            } else {
+                items.classList.add('nav-section-collapsed');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
             }
         });
     } catch(e) {}
@@ -879,6 +885,92 @@ window.mostrarSkeleton = function(containerId, tipo, count) {
         }
     }
     el.innerHTML = html;
+};
+
+// ── Column picker — muestra/oculta columnas de tabla, persiste en localStorage ──
+window.initColPicker = function(containerId, tableId, cols, lsKey) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var saved = JSON.parse(localStorage.getItem(lsKey) || 'null');
+    if (saved) {
+        cols.forEach(function(c) { if (saved[c.idx] !== undefined) c.visible = saved[c.idx]; });
+    }
+    window._applyColVis(tableId, cols);
+    var items = cols.map(function(c) {
+        return '<li><label class="dropdown-item d-flex align-items-center gap-2 small py-1" onclick="event.stopPropagation()">'
+            + '<input type="checkbox" class="form-check-input m-0" ' + (c.visible ? 'checked' : '')
+            + ' onchange="window._toggleCol(\'' + tableId + '\',' + c.idx + ',this.checked,\'' + lsKey + '\')">'
+            + c.label + '</label></li>';
+    }).join('');
+    container.innerHTML = '<div class="dropdown">'
+        + '<button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" title="Columnas visibles">'
+        + '<i class="bi bi-layout-three-columns"></i></button>'
+        + '<ul class="dropdown-menu dropdown-menu-end shadow">'
+        + '<li><h6 class="dropdown-header small">Mostrar columnas</h6></li>'
+        + items + '</ul></div>';
+};
+window._applyColVis = function(tableId, cols) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    cols.forEach(function(c) {
+        table.querySelectorAll('tr > *:nth-child(' + (c.idx + 1) + ')').forEach(function(cell) {
+            cell.classList.toggle('d-none', !c.visible);
+        });
+    });
+};
+window._toggleCol = function(tableId, colIdx, visible, lsKey) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('tr > *:nth-child(' + (colIdx + 1) + ')').forEach(function(cell) {
+        cell.classList.toggle('d-none', !visible);
+    });
+    var state = JSON.parse(localStorage.getItem(lsKey) || '{}');
+    state[colIdx] = visible;
+    localStorage.setItem(lsKey, JSON.stringify(state));
+};
+
+// ── Swipe-to-reveal en cards (para divs con .card-premium) ─────────────────
+window.initSwipeCards = function(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var startX, startY, target;
+    var SWIPE_THRESHOLD = 60;
+
+    function closeSwiped(except) {
+        container.querySelectorAll('.card-premium.swiped').forEach(function(c) {
+            if (c !== except) c.classList.remove('swiped');
+        });
+    }
+
+    container.addEventListener('touchstart', function(e) {
+        var card = e.target.closest('.card-premium');
+        if (!card) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        target = card;
+    }, {passive: true});
+
+    container.addEventListener('touchmove', function(e) {
+        if (!target) return;
+        var dx = e.touches[0].clientX - startX;
+        var dy = e.touches[0].clientY - startY;
+        if (Math.abs(dy) > Math.abs(dx) + 10) { target = null; return; }
+        if (dx < -SWIPE_THRESHOLD) {
+            closeSwiped(target);
+            target.classList.add('swiped');
+        } else if (dx > 20 && target.classList.contains('swiped')) {
+            target.classList.remove('swiped');
+        }
+    }, {passive: true});
+
+    container.addEventListener('touchend', function() { target = null; }, {passive: true});
+
+    // Cerrar al click fuera del área de acciones
+    container.addEventListener('click', function(e) {
+        if (!e.target.closest('.card-swipe-actions')) {
+            closeSwiped(null);
+        }
+    });
 };
 
 // ── Badges dinámicos de alerta en sidebar ─────────────────────────────────

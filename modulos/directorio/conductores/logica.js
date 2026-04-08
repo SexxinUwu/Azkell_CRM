@@ -111,7 +111,7 @@ function mostrarConductores(datos) {
 function abrirModalConductor(f = null) {
     document.getElementById('formConductor').reset();
     document.getElementById('c_foto_base64').value = "";
-    document.getElementById('c_foto_preview').src = "https://via.placeholder.com/120";
+    document.getElementById('c_foto_preview').src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20120%20120'%3E%3Ccircle%20cx%3D'60'%20cy%3D'60'%20r%3D'60'%20fill%3D'%23e2e8f0'%2F%3E%3Ccircle%20cx%3D'60'%20cy%3D'45'%20r%3D'22'%20fill%3D'%2394a3b8'%2F%3E%3Cellipse%20cx%3D'60'%20cy%3D'105'%20rx%3D'38'%20ry%3D'32'%20fill%3D'%2394a3b8'%2F%3E%3C%2Fsvg%3E";
 
     const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
     const camposSelect = ['c_estado'];
@@ -152,7 +152,7 @@ function abrirModalConductor(f = null) {
         document.getElementById('btnGuardarConductor').style.display = 'inline-block';
     }
 
-    new bootstrap.Modal(document.getElementById('modalConductor')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConductor')).show();
 }
 
 function activarEdicionConductor() {
