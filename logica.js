@@ -1484,6 +1484,8 @@ window.cargarModuloAislado = async function(rutaModulo) {
             }
         }
         window._navProgress.done();
+        // Actualizar visibilidad FAB según módulo activo
+        if (typeof actualizarFAB === 'function') actualizarFAB();
     } catch(e) {
         window._navProgress.done();
         if (root) root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
@@ -2511,45 +2513,93 @@ function toggleFabMenu() {
     }
 }
 
+// Mapa de acciones FAB por ruta. `null` = módulo sin FAB (botón "+" oculto).
+var FAB_ACCIONES_POR_RUTA = {
+    // Con acciones
+    'mantenimiento/inspecciones': [
+        { icon: 'bi-plus-lg', cls: 'primary',      texto: 'Registrar Inspección', fn: function() { if(typeof abrirModalNuevaInspeccion==='function') abrirModalNuevaInspeccion(); } },
+        { icon: 'bi-clock-history', cls: 'info',   texto: 'Ver Historial',        fn: function() { if(typeof toggleVistaStatus==='function') toggleVistaStatus(); } },
+        { icon: 'bi-arrows-expand', cls: 'warning', texto: 'Expandir Todo',       fn: function() { if(typeof toggleAllStatusGroups==='function') toggleAllStatusGroups(); } },
+        { icon: 'bi-eye-fill', cls: 'secondary',   texto: 'Mostrar / Ocultar Gráficos', fn: function() { if(typeof toggleGraficosStatus==='function') toggleGraficosStatus(); } }
+    ],
+    'mantenimiento/placas': [
+        { icon: 'bi-plus-lg', cls: 'primary', texto: 'Registrar Placa', fn: function() { var b = document.getElementById('btnNuevaPlaca'); if(b) b.click(); } }
+    ],
+    'directorio/conductores': [
+        { icon: 'bi-person-plus-fill', cls: 'primary', texto: 'Nuevo Conductor', fn: function() { if(typeof abrirModalConductor==='function') abrirModalConductor(); } }
+    ],
+    'sistema/usuarios': [
+        { icon: 'bi-person-plus-fill', cls: 'primary', texto: 'Nuevo Usuario', fn: function() { var b = document.getElementById('btnNuevoUsuario'); if(b) b.click(); } }
+    ],
+    // Sin FAB
+    'mantenimiento/fleetrun':  null,
+    'flota/status':             null,
+    'flota/ubicacion':          null,
+    'sistema/auditoria':        null,
+    'sistema/configuracion':    null,
+    'dashboard':                null,
+    'almacen/inventario':       null,
+};
+
+function actualizarFAB() {
+    if (window.innerWidth > 768) return;
+    var fabContainer = document.querySelector('.fab-container');
+    if (!fabContainer) return;
+    var ruta = localStorage.getItem('fleet_rutaActual') || '';
+    // Si está explícitamente mapeado como null → ocultar FAB
+    if (FAB_ACCIONES_POR_RUTA.hasOwnProperty(ruta) && FAB_ACCIONES_POR_RUTA[ruta] === null) {
+        fabContainer.style.visibility = 'hidden';
+        fabContainer.style.pointerEvents = 'none';
+    } else {
+        fabContainer.style.visibility = '';
+        fabContainer.style.pointerEvents = '';
+    }
+}
+
 function generarListaAccionesFab() {
     const listContent = document.getElementById('fabActionListContent');
     listContent.innerHTML = '';
 
-    let moduloActual = null;
-    document.querySelectorAll('[id^="modulo"]').forEach(mod => {
-        const display = window.getComputedStyle(mod).display;
-        if (display === 'block' || display === 'flex') {
-            moduloActual = mod;
-        }
-    });
+    const ruta = localStorage.getItem('fleet_rutaActual') || '';
+    const accionesRuta = FAB_ACCIONES_POR_RUTA[ruta];
 
-    if (!moduloActual) return;
-
-    const divBotonesAll = moduloActual.querySelectorAll('.controls-row .d-flex.align-items-center.gap-2');
-    const divBotones = divBotonesAll[divBotonesAll.length - 1];
-
-    if (!divBotones) return;
-
-    // 🔥 MAGIA: Ahora buscamos botones normales Y TAMBIÉN las opciones dentro de los menús desplegables (.dropdown-item)
-    const buttons = divBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item, .cache-badge');
-
-    if (buttons.length === 0) {
-        listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>';
+    // Usar acciones del mapa si están definidas
+    if (Array.isArray(accionesRuta) && accionesRuta.length > 0) {
+        accionesRuta.forEach(function(acc) {
+            var item = document.createElement('div');
+            item.className = 'fab-action-item';
+            item.innerHTML = '<i class="bi ' + acc.icon + ' text-' + acc.cls + ' me-2"></i>' + acc.texto;
+            item.addEventListener('click', function() {
+                try { acc.fn(); } catch(e) { console.error(e); }
+                setTimeout(toggleFabMenu, 150);
+            });
+            listContent.appendChild(item);
+        });
         return;
     }
 
+    // Fallback DOM scraping para módulos no mapeados
+    let moduloActual = null;
+    document.querySelectorAll('[id^="modulo"]').forEach(mod => {
+        const display = window.getComputedStyle(mod).display;
+        if (display === 'block' || display === 'flex') moduloActual = mod;
+    });
+    if (!moduloActual) { listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>'; return; }
+
+    const divBotonesAll = moduloActual.querySelectorAll('.controls-row .d-flex.align-items-center.gap-2');
+    const divBotones = divBotonesAll[divBotonesAll.length - 1];
+    if (!divBotones) { listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>'; return; }
+
+    const buttons = divBotones.querySelectorAll('button:not(.dropdown-toggle), .dropdown-item, .cache-badge');
+    if (buttons.length === 0) { listContent.innerHTML = '<div class="text-center p-3 text-muted" style="font-size:0.8rem;">Sin acciones</div>'; return; }
+
     buttons.forEach(btn => {
         if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
-
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
-
-        // Convertimos el diseño al estándar del botón flotante
         clonedBtn.className = 'fab-action-item text-decoration-none';
-
         const originalClasses = btn.className;
         const icon = clonedBtn.querySelector('i');
-
         if (icon) {
             if (originalClasses.includes('success')) icon.classList.add('text-success');
             else if (originalClasses.includes('info')) icon.classList.add('text-info');
@@ -2557,13 +2607,8 @@ function generarListaAccionesFab() {
             else if (originalClasses.includes('danger')) icon.classList.add('text-danger');
             else if (originalClasses.includes('primary')) icon.classList.add('text-primary');
         }
-
-        if(clonedBtn.tagName.toLowerCase() === 'span') {
-            clonedBtn.style.cursor = 'default';
-        } else {
-            clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); });
-        }
-
+        if (clonedBtn.tagName.toLowerCase() === 'span') { clonedBtn.style.cursor = 'default'; }
+        else { clonedBtn.addEventListener('click', () => { setTimeout(toggleFabMenu, 150); }); }
         listContent.appendChild(clonedBtn);
     });
 }

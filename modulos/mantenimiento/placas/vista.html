@@ -18,6 +18,7 @@
                 <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.type">Tipos</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroTipo"></ul></div>
                 <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.brand">Marcas</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroMarca"></ul></div>
                 <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.status">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroEstado"></ul></div>
+                <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
                 <select class="form-select form-select-sm fw-bold mx-1 d-none d-md-block" style="width: auto; cursor:pointer;" onchange="cambiarColumnasPlacas(this.value)">
                     <option value="3">3 Columnas (Ancho)</option>
                     <option value="4" selected>4 Columnas (Normal)</option>
@@ -25,8 +26,7 @@
                 </select>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span id="cache-badge-placas" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-placas" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <span id="cache-badge-placas" class="cache-badge d-none d-md-flex"><i class="bi bi-database"></i> <span id="cache-label-placas" data-i18n="common.sinCargar">Sin cargar</span></span>
                 <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="activarModoSeleccionPlacas()"><i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span></button>
                 <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-placas" onclick="seleccionarTodasLasPlacas()"><i class="bi bi-check-square"></i> <span data-i18n="common.selectAll">Seleccionar Todo</span></button>
                 <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-placas">0</span>)</button>
@@ -51,7 +51,7 @@
         <div class="flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-4" id="contenedorPlacasDinamico">
             <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
         </div>
-        <div class="pagination-row p-2 border-top d-flex justify-content-between align-items-center mt-auto">
+        <div class="pagination-row p-2 border-top d-none d-md-flex justify-content-between align-items-center mt-auto">
             <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas" data-i18n="plates.showing">Mostrando 0 de 0</span>
             <div class="d-flex align-items-center gap-2">
                 <select class="form-select form-select-sm" style="width:auto;font-size:0.75rem;" id="sel-filas-placas" onchange="cambiarFilasPlacas(this.value)" title="Filas por página">
