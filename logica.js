@@ -2,6 +2,15 @@
 // ============================================================
 // 🌉 PUENTE MÁGICO: EMULADOR DE GOOGLE APPS SCRIPT PARA NODE.JS
 // ============================================================
+
+// Mapa de métodos de lectura a stores IDB (para offline cache)
+const IDB_READ_STORES = {
+    obtenerDatosPlacas: 'placas',
+    obtenerDatosFleetrun: 'fleetrun',
+    obtenerDatosInspecciones: 'inspecciones',
+    obtenerDatosConductores: 'conductores',
+};
+
 class GoogleRunner {
     constructor() {
         this.successCb = null;
@@ -11,6 +20,7 @@ class GoogleRunner {
     withSuccessHandler(cb) { this.successCb = cb; return this.proxyRef; }
     withFailureHandler(cb) { this.failureCb = cb; return this.proxyRef; }
     async _call(method, ...args) {
+        const idbStore = IDB_READ_STORES[method];
         try {
             let parsedArgs = args.map(arg => {
                 if (arg instanceof HTMLFormElement) {
@@ -42,8 +52,30 @@ class GoogleRunner {
             }
 
             if (this.successCb) this.successCb(json.data);
+            // 💾 Guardar en IDB si es un método de lectura con datos válidos
+            if (idbStore && window.FleetDB && Array.isArray(json.data) && json.data.length > 0) {
+                window.FleetDB.save(idbStore, json.data);
+            }
         } catch (e) {
-            if (this.failureCb) this.failureCb(e); else console.error("Error BD:", e);
+            // 📴 Fallback offline: intentar cargar desde IDB
+            if (idbStore && window.FleetDB && this.successCb) {
+                var _successCb = this.successCb;
+                var _failureCb = this.failureCb;
+                window.FleetDB.load(idbStore).then(function(record) {
+                    if (record && record.data && record.data.length > 0) {
+                        if (typeof window.mostrarOfflineBadge === 'function') {
+                            var ts = new Date(record.ts);
+                            var hora = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0');
+                            window.mostrarOfflineBadge(idbStore, hora);
+                        }
+                        _successCb(record.data);
+                    } else {
+                        if (_failureCb) _failureCb(e); else console.error('Error BD:', e);
+                    }
+                }).catch(function() { if (_failureCb) _failureCb(e); else console.error('Error BD:', e); });
+            } else {
+                if (this.failureCb) this.failureCb(e); else console.error("Error BD:", e);
+            }
         }
     }
 }
@@ -204,7 +236,8 @@ window.verificarSesionGuardada = function() {
         cargarModuloAislado('dashboard');
     }
 
-    // --- Precarga de datos ---
+    // --- Iniciar sincronización SSE en tiempo real ---
+    if (typeof window.initSSE === 'function') window.initSSE();
     google.script.run.withSuccessHandler(d => {
         dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
         let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
@@ -234,6 +267,7 @@ window.verificarSesionGuardada = function() {
 }
 
 function cerrarSesion() {
+    if (window.cerrarSSE) window.cerrarSSE();
     localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 
@@ -252,6 +286,269 @@ window.restaurarCascaronApp = function() {
     if(sb) sb.style.display = '';
     if(tb) tb.style.display = '';
 };
+
+// ================================================================
+// 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL (AppSheet-style)
+// ================================================================
+window._sse = window._sse || null;
+
+window.initSSE = function() {
+    if (window._sse) return;
+    window._sse = new EventSource('/api/eventos');
+
+    var CACHE_KEY_MAP = {
+        fleetrun: 'fleetrun', placas: 'placas', inspecciones: 'statusMant',
+        conductores: 'conductores', status: 'statusFlota', usuarios: 'usuarios'
+    };
+    var MODULO_RUTA = {
+        fleetrun: 'mantenimiento/fleetrun', placas: 'mantenimiento/placas',
+        inspecciones: 'mantenimiento/inspecciones', conductores: 'directorio/conductores',
+        status: 'flota/status', usuarios: 'sistema/usuarios'
+    };
+
+    window._sse.addEventListener('datos-actualizados', function(e) {
+        var d; try { d = JSON.parse(e.data); } catch(err) { return; }
+        var cacheKey = CACHE_KEY_MAP[d.modulo];
+        if (cacheKey) { CACHE[cacheKey] = null; CACHE_TIME[cacheKey] = null; }
+        var rutaActual = localStorage.getItem('fleet_rutaActual') || '';
+        if (MODULO_RUTA[d.modulo] === rutaActual) {
+            setTimeout(function() { recargarModulo(d.modulo); }, 800);
+        }
+        mostrarToastSSE(d.modulo);
+    });
+    // onerror: EventSource reconecta automáticamente, no se necesita ninguna acción
+};
+
+window.cerrarSSE = function() {
+    if (window._sse) { window._sse.close(); window._sse = null; }
+};
+
+// ================================================================
+// 💾 FleetDB — IndexedDB para modo offline
+// ================================================================
+window.FleetDB = (function() {
+    var DB_NAME = 'AzkellFleet', VERSION = 1;
+    var STORES = ['placas', 'fleetrun', 'inspecciones', 'conductores', 'wialon'];
+    var db = null;
+
+    function open() {
+        return new Promise(function(resolve, reject) {
+            if (db) { resolve(db); return; }
+            if (!window.indexedDB) { reject(new Error('IDB no disponible')); return; }
+            var req = indexedDB.open(DB_NAME, VERSION);
+            req.onupgradeneeded = function(e) {
+                var idb = e.target.result;
+                STORES.forEach(function(s) {
+                    if (!idb.objectStoreNames.contains(s)) idb.createObjectStore(s, { keyPath: '_ak' });
+                });
+            };
+            req.onsuccess = function(e) { db = e.target.result; resolve(db); };
+            req.onerror = function(e) { reject(e.target.error); };
+        });
+    }
+
+    async function save(store, data) {
+        try {
+            var idb = await open();
+            var tx = idb.transaction([store], 'readwrite');
+            tx.objectStore(store).put({ _ak: store, data: data, ts: Date.now() });
+        } catch(e) { console.warn('FleetDB.save:', e); }
+    }
+
+    async function load(store) {
+        try {
+            var idb = await open();
+            return new Promise(function(resolve) {
+                var tx = idb.transaction([store], 'readonly');
+                var req = tx.objectStore(store).get(store);
+                req.onsuccess = function() { resolve(req.result || null); };
+                req.onerror = function() { resolve(null); };
+            });
+        } catch(e) { return null; }
+    }
+
+    async function clear(store) {
+        try { var idb = await open(); idb.transaction([store], 'readwrite').objectStore(store).clear(); } catch(e) {}
+    }
+
+    // Abrir automáticamente al cargar
+    open().catch(function() {});
+
+    return { open: open, save: save, load: load, clear: clear };
+})();
+
+window.mostrarOfflineBadge = function(store, hora) {
+    var nombres = { placas:'Placas', fleetrun:'Fleetrun', inspecciones:'Inspecciones', conductores:'Conductores' };
+    var nombre = nombres[store] || store;
+    var chip = document.createElement('div');
+    chip.style.cssText = 'position:fixed;bottom:80px;right:12px;background:#475569;color:#fff;padding:6px 14px;border-radius:99px;font-size:0.75rem;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap;';
+    chip.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Offline · ' + nombre + ' (' + hora + ')';
+    document.body.appendChild(chip);
+    setTimeout(function() { if (chip.parentNode) chip.remove(); }, 5000);
+};
+
+window.mostrarToastSSE = function(modulo) {
+    var nombres = { fleetrun:'Fleetrun', placas:'Placas', inspecciones:'Inspecciones',
+                    conductores:'Conductores', status:'Status Flota', usuarios:'Usuarios' };
+    var nombre = nombres[modulo] || modulo;
+    var chip = document.createElement('div');
+    chip.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--crm-accent);color:#fff;padding:6px 16px;border-radius:99px;font-size:0.78rem;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;';
+    chip.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>' + nombre + ' actualizado';
+    document.body.appendChild(chip);
+    requestAnimationFrame(function() {
+        chip.style.opacity = '1';
+        chip.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    setTimeout(function() {
+        chip.style.opacity = '0'; chip.style.transform = 'translateX(-50%) translateY(10px)';
+        setTimeout(function() { if (chip.parentNode) chip.remove(); }, 350);
+    }, 3500);
+};
+
+// ================================================================
+// 🔔 PWA BADGE — Contador de vencidos en el ícono de la app
+// ================================================================
+window.actualizarPWABadge = function() {
+    if (!('setAppBadge' in navigator)) return;
+    var vencFleet = parseInt((document.getElementById('kpi-fleet-vencidos') || {}).textContent) || 0;
+    var vencInsp  = parseInt((document.getElementById('kpi-val-vencidas')   || {}).textContent) || 0;
+    var total = vencFleet + vencInsp;
+    if (total > 0) navigator.setAppBadge(total).catch(function(){});
+    else           navigator.clearAppBadge().catch(function(){});
+};
+
+// ================================================================
+// 🔍 OFFCANVAS DETALLE PLACA GLOBAL
+// ================================================================
+window.abrirDetallePlacaGlobal = function(placa) {
+    placa = (placa || '').toUpperCase().trim();
+    var elPlaca  = document.getElementById('odp-placa');
+    var elBadges = document.getElementById('odp-badges');
+    if (elPlaca) elPlaca.textContent = placa;
+
+    var infoP = (dataGlobalPlacas || []).find(function(p) { return normalizeStr(p[0]) === normalizeStr(placa); });
+
+    // Badges de header
+    if (elBadges) {
+        if (infoP) {
+            var estado = infoP[18] || '—';
+            var bCls = estado === 'Activa' ? 'success' : 'secondary';
+            elBadges.innerHTML = '<span class="badge bg-' + bCls + '">' + estado + '</span>'
+                + (infoP[19] ? ' <span class="badge bg-info text-dark">' + infoP[19] + '</span>' : '');
+        } else {
+            elBadges.innerHTML = '';
+        }
+    }
+
+    // --- Tab Info ---
+    var infoEl = document.getElementById('odp-tab-info');
+    if (infoEl) {
+        if (!infoP) {
+            infoEl.innerHTML = '<p class="text-muted text-center py-4">Sin datos de placa.</p>';
+        } else {
+            infoEl.innerHTML = '<table class="table table-sm table-borderless mb-0" style="font-size:0.82rem;"><tbody>'
+                + _odpFila('Cliente', infoP[1]) + _odpFila('RUC/DNI', infoP[2])
+                + _odpFila('Marca', infoP[3]) + _odpFila('Modelo', infoP[4])
+                + _odpFila('Tipo', infoP[5]) + _odpFila('Sub Tipo', infoP[6])
+                + _odpFila('Color', infoP[7]) + _odpFila('Año', infoP[13])
+                + _odpFila('Combustible', infoP[14]) + _odpFila('N° Motor', infoP[8])
+                + _odpFila('N° Caja', infoP[9]) + _odpFila('N° VIN', infoP[11])
+                + _odpFila('Config.', infoP[12]) + _odpFila('Llantas', infoP[21])
+                + _odpFila('En Uso', infoP[22])
+                + '</tbody></table>';
+        }
+    }
+
+    // --- Tab Inspecciones (últimas 5) ---
+    var inspEl = document.getElementById('odp-tab-insp');
+    if (inspEl) {
+        var insps = (dataGlobalInspecciones || []).filter(function(i) {
+            return normalizeStr(i.placa) === normalizeStr(placa);
+        }).sort(function(a, b) {
+            return (parseInt((b.id || '').split('-')[1]) || 0) - (parseInt((a.id || '').split('-')[1]) || 0);
+        }).slice(0, 5);
+        if (!insps.length) {
+            inspEl.innerHTML = '<p class="text-muted text-center py-4">Sin inspecciones registradas.</p>';
+        } else {
+            var hoy = new Date(); hoy.setHours(0,0,0,0);
+            inspEl.innerHTML = insps.map(function(i) {
+                var dias = '—'; var bCl = 'secondary';
+                if (i.fecha_ingreso) {
+                    try {
+                        var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
+                        var fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+                        dias = Math.ceil((fp - hoy) / 864e5);
+                        bCl = dias < 0 ? 'danger' : (dias <= 7 ? 'warning' : 'success');
+                    } catch(e) {}
+                }
+                return '<div class="border rounded p-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex justify-content-between mb-1">'
+                    + '<span class="fw-bold" style="color:var(--crm-accent)">' + (i.id || '—') + '</span>'
+                    + '<span class="badge bg-' + bCl + '">' + (dias === '—' ? '—' : (dias < 0 ? 'Vencida' : dias + 'd')) + '</span>'
+                    + '</div><div style="color:var(--subtext);">' + (i.fecha_ingreso || '—') + ' · ' + (i.tecnico || '—') + '</div></div>';
+            }).join('');
+        }
+    }
+
+    // --- Tab Fleetrun (últimos 5 MPs) ---
+    var fleetEl = document.getElementById('odp-tab-fleet');
+    if (fleetEl) {
+        var recs = (dataGlobalFleetrun || []).filter(function(r) {
+            return normalizeStr(r[4]) === normalizeStr(placa);
+        }).slice(0, 5);
+        if (!recs.length) {
+            fleetEl.innerHTML = '<p class="text-muted text-center py-4">Sin registros de mantenimiento.</p>';
+        } else {
+            fleetEl.innerHTML = recs.map(function(r) {
+                var kmProx = parseFloat(r[11]) || 0;
+                var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
+                var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
+                var falta = kmProx - kmGps;
+                var bCl = falta <= 0 ? 'danger' : (falta <= 1500 ? 'warning' : 'success');
+                return '<div class="border rounded p-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex justify-content-between mb-1">'
+                    + '<span class="fw-bold" style="color:#2D438A">' + (r[8] || '—') + '</span>'
+                    + '<span class="badge bg-' + bCl + '">' + (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km</span>'
+                    + '</div><div style="color:var(--subtext);">' + (typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : r[3] || '—') + ' · ' + (r[13] || '—') + '</div></div>';
+            }).join('');
+        }
+    }
+
+    // --- Tab GPS (solo texto — CLAUDE.md: GPS en Placas SOLO TEXTO) ---
+    var gpsEl = document.getElementById('odp-tab-gps');
+    if (gpsEl) {
+        var wialon = ((CACHE && CACHE.wialon) ? CACHE.wialon : []).find(function(w) {
+            return normalizeStr(w.placa) === normalizeStr(placa);
+        });
+        if (!wialon) {
+            gpsEl.innerHTML = '<p class="text-muted text-center py-4"><i class="bi bi-geo-alt-fill me-2"></i>Sin datos GPS para esta placa.</p>';
+        } else {
+            gpsEl.innerHTML = '<div class="d-flex flex-column">'
+                + _odpFila2('Unidad Wialon', wialon.nombre_wialon)
+                + _odpFila2('KM Actual', (wialon.km || 0).toLocaleString() + ' km')
+                + _odpFila2('Horas Motor', (wialon.horas || 0).toLocaleString() + ' h')
+                + _odpFila2('Latitud', wialon.lat ? wialon.lat.toFixed(6) : '—')
+                + _odpFila2('Longitud', wialon.lng ? wialon.lng.toFixed(6) : '—')
+                + '</div>';
+        }
+    }
+
+    // Resetear a pestaña Info y mostrar
+    var firstTab = document.querySelector('#odpTabs [data-bs-target="#odp-tab-info"]');
+    if (firstTab) bootstrap.Tab.getOrCreateInstance(firstTab).show();
+    var el = document.getElementById('offcanvasDetallePlacaGlobal');
+    if (el) bootstrap.Offcanvas.getOrCreateInstance(el).show();
+};
+
+function _odpFila(label, val) {
+    return '<tr><td class="text-muted fw-semibold" style="width:42%;white-space:nowrap;font-size:0.8rem;">' + label + '</td>'
+        + '<td class="fw-bold" style="color:var(--text);font-size:0.8rem;">' + (val || '—') + '</td></tr>';
+}
+function _odpFila2(label, val) {
+    return '<div class="d-flex justify-content-between py-2 px-1" style="border-bottom:1px solid var(--border);font-size:0.82rem;">'
+        + '<span class="text-muted fw-semibold">' + label + '</span>'
+        + '<span class="fw-bold" style="color:var(--text);">' + (val || '—') + '</span></div>';
+}
 
 // Aplica color de acento guardado (accesible desde módulo configuración)
 window.applyAccent = function(hex, save) {
