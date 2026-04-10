@@ -452,6 +452,13 @@ window.importarExcelFleetrun = function(event) {
 
 window.chartFleetrunInst = window.chartFleetrunInst || null;
 
+window.limpiarFiltrosFleetrun = function() {
+    var f = document.getElementById('buscadorFechaFleetrun');
+    if (f) f.value = '';
+    document.querySelectorAll('#filtroFleetCliente input[type=checkbox], #filtroFleetUts input[type=checkbox], #filtroFleetEstado input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+    filtrarFleetrunAvanzado();
+};
+
 window.toggleGraficosFleetrun = function() {
     let panel = document.getElementById('panelGraficosFleetrun');
     let btn = document.getElementById('btnToggleGraficosFleetrun');
