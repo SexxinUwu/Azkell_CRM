@@ -271,6 +271,7 @@ function renderizarPaginaPlacas() {
         const plc = (fila[0]||'').trim();
         const cli = fila[1] ? fila[1].trim() : 'Sin Asignar';
         const mar = fila[3] ? fila[3].trim() : '-';
+        const tip = fila[5] ? fila[5].trim() : '-';
         const est = fila[18] ? fila[18].trim() : '';
         const badgeCls = est === 'Activa' ? 'badge-green' : (est === 'Inactiva' ? 'badge-red' : '');
         const indexGlobal = dataGlobalPlacas.findIndex(x => x[0] === plc);
@@ -302,10 +303,14 @@ function renderizarPaginaPlacas() {
         html += `<div class="card-premium" onclick="abrirDetallePlaca(event, ${indexGlobal})">
             <div class="card-inner">
                 <div class="card-header-theme">
-                    <div class="d-flex align-items-center gap-2">${checkHtml}<div class="card-title-prem">${plc}</div></div>
+                    <div class="d-flex align-items-center gap-2">${checkHtml}<div>
+                        <div class="card-title-prem">${plc}</div>
+                        <div class="card-client-sub" style="font-size:0.73rem;color:var(--subtext);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${cli}</div>
+                    </div></div>
                     ${menuAcciones}
                 </div>
                 <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
+                <div class="card-data-row"><span>TIPO</span><span title="${tip}">${tip}</span></div>
                 <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
             </div>
             ${swipeActionsHtml}

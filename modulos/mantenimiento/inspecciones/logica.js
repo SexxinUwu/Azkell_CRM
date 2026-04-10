@@ -11,7 +11,7 @@ window.inspPaginaActual     = window.inspPaginaActual     || 1;
 // ==========================================
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
-function toggleGraficosStatus() { let panel = document.getElementById('panelGraficosStatus'); let btn = document.getElementById('btnToggleGraficos'); if(panel.style.display === 'none') { panel.style.display = 'flex'; btn.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Ocultar Gráficos'; } else { panel.style.display = 'none'; btn.innerHTML = '<i class="bi bi-eye-fill"></i> Mostrar Gráficos'; } }
+function toggleGraficosStatus() { let panel = document.getElementById('panelGraficosStatus'); if(panel.style.display === 'none') { panel.style.display = 'flex'; } else { panel.style.display = 'none'; } }
 function toggleVistaStatus() { isHistorialStatus = !isHistorialStatus; let textBtn = document.getElementById('text-toggle-status'); if(textBtn) { textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; } expandAllStatusState = false; expandStatusMap = {}; mostrarStatusInspecciones(dataGlobalInspecciones); }
 function toggleGroupRowStatus(classTipo) { expandStatusMap[classTipo] = !expandStatusMap[classTipo]; filtrarStatusAvanzado(); }
 function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState; for(let key in expandStatusMap) { expandStatusMap[key] = expandAllStatusState; } const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header'); headers.forEach(header => { let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/); if(matchIcon) expandStatusMap[matchIcon[1]] = expandAllStatusState; }); filtrarStatusAvanzado(); }

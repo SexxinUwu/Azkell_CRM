@@ -1,4 +1,11 @@
 <!-- Módulo Fleetrun - Aislado en SPA -->
+<style>
+/* Dropdown de filtros fleetrun: flex-column solo cuando está abierto */
+#moduloFleetrun #btnFiltrosFleetrun ~ .dropdown-menu.show {
+    display: flex !important;
+    flex-direction: column;
+}
+</style>
 
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
     <div id="panelGraficosFleetrun" class="row mb-4" style="display: none;">
@@ -14,7 +21,7 @@
 
     <div class="controls-row">
         <div class="d-none d-md-flex justify-content-end mb-2">
-            <button class="btn btn-sm btn-outline-primary fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()"><i class="bi bi-eye-fill"></i> <span data-i18n="common.showCharts">Mostrar Gráficos</span></button>
+            <button class="btn btn-sm btn-outline-warning fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill"></i></button>
         </div>
 
         <div class="kpi-wrapper mb-3">
@@ -39,41 +46,68 @@
                         <i class="bi bi-funnel-fill"></i>
                         <span class="badge bg-primary ms-1 d-none" id="badge-filtros-fleet" style="font-size:0.65rem; vertical-align:middle;"></span>
                     </button>
-                    <div class="dropdown-menu shadow p-0" style="min-width:290px; overflow:hidden;">
+                    <div class="dropdown-menu shadow p-0" style="min-width:290px; max-height:calc(100dvh - 80px); overflow:hidden;">
                         <!-- Header fijo -->
-                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="position:sticky; top:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="flex-shrink:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
                             <span class="fw-bold" style="font-size:0.82rem; color:var(--text);">Filtros</span>
                             <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.78rem;" onclick="window.limpiarFiltrosFleetrun()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
                         </div>
                         <!-- Contenido scrolleable -->
-                        <div style="max-height:55vh; overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                        <!-- Fecha -->
-                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
-                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.date">Fecha</div>
-                            <input type="date" class="form-control form-control-sm fw-bold text-primary border-primary" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()">
+                        <div style="max-height:calc(100dvh - 140px); overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                        <!-- Acordeón: Fecha -->
+                        <div style="border-bottom:1px solid var(--border);">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.date">Fecha</span>
+                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 8px;">
+                                <input type="date" class="form-control form-control-sm fw-bold text-primary border-primary" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()">
+                            </div>
                         </div>
-                        <!-- Clientes -->
-                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
-                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.clients">Cliente</div>
-                            <ul class="list-unstyled mb-0" id="filtroFleetCliente" style="max-height:110px; overflow-y:auto;"></ul>
+                        <!-- Acordeón: Cliente -->
+                        <div style="border-bottom:1px solid var(--border);">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.clients">Cliente</span>
+                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 8px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0" id="filtroFleetCliente" style="max-height:110px;overflow-y:auto;"></ul>
+                            </div>
                         </div>
-                        <!-- UTS -->
-                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
-                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="fleet.btn.uts">UTS</div>
-                            <ul class="list-unstyled mb-0" id="filtroFleetUts"></ul>
+                        <!-- Acordeón: UTS -->
+                        <div style="border-bottom:1px solid var(--border);">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="fleet.btn.uts">UTS</span>
+                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 8px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar UTS..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetUts li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0" id="filtroFleetUts"></ul>
+                            </div>
                         </div>
-                        <!-- Estado -->
-                        <div class="px-3 py-2">
-                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.status">Estado</div>
-                            <ul class="list-unstyled mb-0" id="filtroFleetEstado">
-                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-success" data-i18n="fleet.filter.valid">Vigente</span></label></li>
-                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-warning" data-i18n="fleet.filter.exp">Por Vencer</span></label></li>
-                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-danger" data-i18n="fleet.filter.expired">Vencido</span></label></li>
-                            </ul>
+                        <!-- Acordeón: Estado -->
+                        <div>
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.status">Estado</span>
+                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 8px;">
+                                <ul class="list-unstyled mb-0" id="filtroFleetEstado">
+                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-success" data-i18n="fleet.filter.valid">Vigente</span></label></li>
+                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-warning" data-i18n="fleet.filter.exp">Por Vencer</span></label></li>
+                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-danger" data-i18n="fleet.filter.expired">Vencido</span></label></li>
+                                </ul>
+                            </div>
                         </div>
                         </div><!-- fin scroll -->
                     </div>
                 </div>
+            </div>
+            <!-- Botones icono solo-móvil: gráfico + reload -->
+            <div class="d-flex d-md-none align-items-center gap-2 ms-auto">
+                <button class="btn btn-sm btn-outline-warning fw-bold px-2" id="btnToggleGraficosFleetrunMob" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill"></i></button>
+                <button class="btn-reload-cache" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <!-- Derecha: acciones (ocultas en móvil — el FAB las cubre) -->
             <div class="d-none d-md-flex align-items-center gap-2">
