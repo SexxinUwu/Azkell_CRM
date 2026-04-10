@@ -390,7 +390,6 @@ function renderizarPaginaPlacas() {
                 </div>
                 <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
                 <div class="card-data-row"><span>TIPO</span><span title="${tip}">${tip}</span></div>
-                <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
                 ${tlHtml}
             </div>
             ${swipeActionsHtml}

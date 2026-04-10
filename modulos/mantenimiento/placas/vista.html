@@ -273,6 +273,11 @@
                 <button class="btn btn-outline-secondary w-50 fw-bold" data-bs-dismiss="offcanvas" data-i18n="common.close">Cerrar</button>
                 <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-editar-offcanvas"><i class="bi bi-pencil-square"></i> <span data-i18n="common.edit">Editar</span></button>
     </div>
+    <div class="p-2" style="background:var(--surface);border-top:1px solid var(--border);">
+        <button class="btn btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-2" onclick="(function(){var t=document.getElementById('det-placa-titulo');if(!t)return;var placa=t.innerText.trim();var p=(window.dataGlobalPlacas||[]).find(function(x){return x[0]===placa;});var cli=p?p[1]:'';var mar=p?p[3]:'';var tip=p?p[5]:'';var est=p?p[18]:'';var txt='*Ficha Vehículo — Azkell Fleet*\n━━━━━━━━━━━━━━━━━━━━\n🚛 *Placa:* '+placa+(cli?'\n👤 *Cliente:* '+cli:'')+(mar?'\n🔧 *Marca:* '+mar:'')+(tip?'\n🚌 *Tipo:* '+tip:'')+(est?'\n🟢 *Estado:* '+est:'')+'\n\nAzkell Fleet';window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(txt),'_blank');})()" style="font-size:0.85rem;">
+            <i class="bi bi-whatsapp"></i> Compartir por WhatsApp
+        </button>
+    </div>
 </div>
 
 <!-- ── MODAL: REGISTRAR FICHA TÉCNICA ─────────────────────────────── -->

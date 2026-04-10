@@ -2840,6 +2840,9 @@ body.dark .kpi-metric-icon-wrap.warning { color: #eab308; }
 /* FEATURES PLACAS — Timeline + Modo Revisor + KPIs Cliente         */
 /* ================================================================ */
 
+/* Ocultar badge "Sin cargar" — ya no es necesario con REST API */
+.cache-badge { display: none !important; }
+
 /* Feature 4 — Mini timeline circular (5 puntos) */
 .tl-dot {
     width: 11px; height: 11px;
