@@ -7,9 +7,14 @@
     display: flex !important;
     flex-direction: column;
 }
-/* Móvil: grid 3 columnas compacto — solo muestra la placa, lista scrolleable hasta el bottom nav */
+/* Móvil: card llena exactamente hasta el bottom nav + lista scrolleable */
 @media (max-width: 767.98px) {
-    /* Sin override de height — flex-grow-1 + padding-bottom:68px global llenan hasta el nav */
+    /* Altura fija con dvh: viewport - topbar(50) - padding-top(8) - bottom-nav(68) */
+    #moduloPlacas {
+        height: calc(100dvh - 126px) !important;
+        overflow: hidden !important;
+    }
+    #moduloPlacas .card.flex-grow-1 { min-height: 0 !important; }
     /* Grid 3 columnas */
     #moduloPlacas .placas-grid-view,
     #moduloPlacas .placas-grid-view.grid-cols-3,
@@ -24,11 +29,18 @@
     #moduloPlacas .card-header-theme { margin-bottom: 0 !important; }
     #moduloPlacas .card-title-prem { font-size: 0.85rem !important; letter-spacing: 0 !important; line-height: 1.2; }
     #moduloPlacas .card-client-sub,
-    #moduloPlacas .card-data-row { display: none !important; }
-    /* Headers de grupo compactos en móvil */
+    #moduloPlacas .card-data-row,
+    #moduloPlacas .card-timeline { display: none !important; }
+    /* Headers de grupo compactos */
     #moduloPlacas .group-header-left { padding: 8px 0 4px 4px !important; font-size: 0.95rem !important; }
-    /* Ocultar paginación en móvil */
-    #moduloPlacas .pagination-row { display: none !important; }
+    /* Paginación: siempre visible en móvil, compacta al centro */
+    #moduloPlacas .pagination-row {
+        display: flex !important;
+        justify-content: center !important;
+        padding: 5px 8px !important;
+    }
+    #moduloPlacas .pagination-row .small.text-muted,
+    #moduloPlacas #sel-filas-placas { display: none !important; }
 }
 </style>
 
@@ -475,6 +487,54 @@
                 <button type="button" class="btn btn-sm btn-secondary w-100 mb-1" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
                 <button type="button" class="btn btn-sm btn-primary fw-bold w-100" onclick="guardarNuevoCliente()"><i class="bi bi-check2"></i> <span data-i18n="common.add">Agregar</span></button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL KPIs CLIENTE (Feature 6) -->
+<div class="modal fade" id="modalKPIsCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);">
+            <div class="modal-header border-bottom" style="background:var(--crm-sidebar);border-radius:0.375rem 0.375rem 0 0;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-building-fill text-white fs-5"></i>
+                    <div>
+                        <div class="fw-bold text-white" style="font-size:0.85rem;">Panel de Cliente</div>
+                        <div class="fw-bold text-white" id="kpi-cli-nombre" style="font-size:1rem;"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3 pb-2" id="kpi-cli-body"></div>
+        </div>
+    </div>
+</div>
+
+<!-- BOTTOM SHEET ACCIONES (Feature 2 — long-press móvil) -->
+<div class="offcanvas offcanvas-bottom rounded-top-3 shadow-lg" tabindex="-1" id="bottomSheetPlacas"
+     style="height:auto;max-height:55dvh;border-top:1px solid var(--border);background:var(--surface);">
+    <div class="offcanvas-header border-bottom pb-2" style="background:var(--surface);">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-truck-front text-primary fs-5"></i>
+            <span class="fw-bold" id="bs-placa-nombre" style="font-size:1rem;letter-spacing:1px;">—</span>
+        </div>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <input type="hidden" id="bs-placa-index" value="-1">
+    <div class="offcanvas-body pt-2 pb-3 px-3">
+        <div class="d-flex flex-column gap-2">
+            <button class="btn btn-outline-primary fw-bold d-flex align-items-center gap-2" onclick="(function(){var n=document.getElementById('bs-placa-nombre')?.textContent;bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('bottomSheetPlacas')).hide();if(n)abrirDetallePlacaGlobal(n);})()">
+                <i class="bi bi-eye-fill"></i> Ver detalle completo
+            </button>
+            <button class="btn btn-outline-success fw-bold d-flex align-items-center gap-2" onclick="(function(){var idx=parseInt(document.getElementById('bs-placa-index')?.value||'-1');bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('bottomSheetPlacas')).hide();if(idx>=0)setTimeout(function(){abrirModalEditarPlaca(idx);},300);})()">
+                <i class="bi bi-pencil-fill"></i> Editar datos del vehículo
+            </button>
+            <button class="btn btn-outline-info fw-bold d-flex align-items-center gap-2" onclick="(function(){var n=document.getElementById('bs-placa-nombre')?.textContent;if(!n)return;var p=(window.dataGlobalPlacas||[]).find(function(x){return x[0]===n;});var cli=p?p[1]:'';var txt='Vehículo: '+n+(cli?'\nCliente: '+cli:'')+'\nAzkell Fleet';window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(txt),'_blank');})()">
+                <i class="bi bi-whatsapp"></i> Compartir por WhatsApp
+            </button>
+            <button class="btn btn-outline-warning fw-bold d-flex align-items-center gap-2" onclick="(function(){var n=document.getElementById('bs-placa-nombre')?.textContent;bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('bottomSheetPlacas')).hide();if(n)setTimeout(function(){abrirDetallePlacaGlobal(n);},300);})()">
+                <i class="bi bi-clipboard2-check-fill"></i> Ver inspecciones
+            </button>
         </div>
     </div>
 </div>

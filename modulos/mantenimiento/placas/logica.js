@@ -234,6 +234,78 @@ function actualizarIndicadoresPlacas(datos) {
     if (elTractos) elTractos.innerText = tractos;
 }
 
+// ── Helpers Features ────────────────────────────────────────────
+
+function _contarAlertasCliente(cli) {
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var venc = 0, pv = 0;
+    (window.dataGlobalInspecciones || []).forEach(function(i) {
+        var placaDelCliente = (window.dataGlobalPlacas || []).find(function(p) {
+            return p[1] && p[1].trim() === cli && p[0] && p[0].trim() === (i.placa || '').trim();
+        });
+        if (!placaDelCliente) return;
+        if (!i.fecha_ingreso) return;
+        try {
+            var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
+            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+            var dias = Math.ceil((fp - hoy) / 864e5);
+            if (dias < 0) venc++;
+            else if (dias <= 7) pv++;
+        } catch(e) {}
+    });
+    return { venc: venc, pv: pv };
+}
+
+function _timelinePlaca(plc) {
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var insps = (window.dataGlobalInspecciones || []).filter(function(i) {
+        return (i.placa || '').toUpperCase().trim() === plc.toUpperCase().trim();
+    }).slice(0, 5);
+    while (insps.length < 5) insps.push(null);
+    return insps.map(function(i) {
+        if (!i || !i.fecha_ingreso) return 'tl-empty';
+        try {
+            var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
+            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+            var dias = Math.ceil((fp - hoy) / 864e5);
+            return dias < 0 ? 'tl-venc' : (dias <= 7 ? 'tl-pv' : 'tl-ok');
+        } catch(e) { return 'tl-empty'; }
+    });
+}
+
+window.mostrarKPIsCliente = function(cli) {
+    var placasCli = (window.dataGlobalPlacas || []).filter(function(p) { return p[1] && p[1].trim() === cli; });
+    var total = placasCli.length;
+    var activas = placasCli.filter(function(p) { return p[18] === 'Activa'; }).length;
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var venc = 0, pv = 0, ok = 0, ultInspFecha = '—';
+    (window.dataGlobalInspecciones || []).forEach(function(i) {
+        var esDeCli = placasCli.some(function(p) { return p[0] && p[0].trim() === (i.placa || '').trim(); });
+        if (!esDeCli || !i.fecha_ingreso) return;
+        try {
+            var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
+            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+            var dias = Math.ceil((fp - hoy) / 864e5);
+            if (dias < 0) venc++; else if (dias <= 7) pv++; else ok++;
+            if (ultInspFecha === '—') ultInspFecha = i.fecha_ingreso;
+        } catch(e) {}
+    });
+    var modal = document.getElementById('modalKPIsCliente');
+    var nombre = document.getElementById('kpi-cli-nombre');
+    var body = document.getElementById('kpi-cli-body');
+    if (!modal || !nombre || !body) return;
+    nombre.textContent = cli;
+    body.innerHTML = '<div class="row g-2 mb-3">'
+        + '<div class="col-6"><div class="kpi-mini-card"><div class="kpi-mini-val">' + total + '</div><div class="kpi-mini-lbl">Unidades</div></div></div>'
+        + '<div class="col-6"><div class="kpi-mini-card kpi-green"><div class="kpi-mini-val">' + activas + '</div><div class="kpi-mini-lbl">Activas</div></div></div>'
+        + '<div class="col-4"><div class="kpi-mini-card kpi-red"><div class="kpi-mini-val">' + venc + '</div><div class="kpi-mini-lbl">Insp. Vencidas</div></div></div>'
+        + '<div class="col-4"><div class="kpi-mini-card kpi-yellow"><div class="kpi-mini-val">' + pv + '</div><div class="kpi-mini-lbl">Por Vencer</div></div></div>'
+        + '<div class="col-4"><div class="kpi-mini-card kpi-blue"><div class="kpi-mini-val">' + ok + '</div><div class="kpi-mini-lbl">Al día</div></div></div>'
+        + '</div>'
+        + '<div class="text-muted small"><i class="bi bi-clock-history me-1"></i>Última inspección registrada: <strong>' + ultInspFecha + '</strong></div>';
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+};
+
 // ── Paginación y renderizado ─────────────────────────────────────
 function renderizarPaginaPlacas() {
     const contenedor = document.getElementById('contenedorPlacasDinamico');
@@ -278,7 +350,11 @@ function renderizarPaginaPlacas() {
 
         if (cli !== clienteActual) {
             clienteActual = cli;
-            html += `<div class="group-header-left"><i class="bi bi-building me-2 text-primary"></i> ${cli}</div>`;
+            var alertas = _contarAlertasCliente(cli);
+            var badgesHtml = '';
+            if (alertas.venc > 0) badgesHtml += `<span class="badge bg-danger ms-2" style="font-size:0.65rem;">${alertas.venc} venc.</span>`;
+            if (alertas.pv > 0) badgesHtml += `<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">${alertas.pv} x/venc</span>`;
+            html += `<div class="group-header-left d-flex align-items-center" style="cursor:pointer;" onclick="mostrarKPIsCliente('${cli.replace(/'/g, "\\'")}')"><i class="bi bi-building me-2 text-primary"></i> ${cli}${badgesHtml}<i class="bi bi-bar-chart-fill ms-auto text-primary opacity-50" style="font-size:0.75rem;"></i></div>`;
         }
 
         let menuAcciones = '';
@@ -300,7 +376,10 @@ function renderizarPaginaPlacas() {
             swipeActionsHtml += '</div>';
         }
 
-        html += `<div class="card-premium" onclick="abrirDetallePlaca(event, ${indexGlobal})">
+        var tl = _timelinePlaca(plc);
+        var tlHtml = `<div class="card-timeline d-none d-md-flex align-items-center gap-1 mt-2" title="Historial inspecciones (más reciente →)">${tl.map((cls,i) => `<span class="tl-dot ${cls}" title="${cls.replace('tl-','').replace('venc','Vencida').replace('pv','Por vencer').replace('ok','Vigente').replace('empty','Sin registro')}"></span>`).join('')}<span style="font-size:0.65rem;color:var(--subtext);margin-left:2px;">insp.</span></div>`;
+
+        html += `<div class="card-premium" data-placa="${plc}" onclick="abrirDetallePlaca(event, ${indexGlobal})">
             <div class="card-inner">
                 <div class="card-header-theme">
                     <div class="d-flex align-items-center gap-2">${checkHtml}<div>
@@ -312,12 +391,35 @@ function renderizarPaginaPlacas() {
                 <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
                 <div class="card-data-row"><span>TIPO</span><span title="${tip}">${tip}</span></div>
                 <div class="card-data-row"><span>ESTADO</span><span class="badge-premium ${badgeCls}">${est}</span></div>
+                ${tlHtml}
             </div>
             ${swipeActionsHtml}
         </div>`;
     });
 
     contenedor.innerHTML = html;
+    // Feature 2 — Long-press en móvil → bottom sheet acciones
+    if (window.innerWidth < 768) {
+        contenedor.querySelectorAll('.card-premium').forEach(function(card) {
+            var timer = null;
+            card.addEventListener('touchstart', function(e) {
+                timer = setTimeout(function() {
+                    timer = null;
+                    var plc = card.dataset.placa;
+                    if (!plc) return;
+                    var bsEl = document.getElementById('bottomSheetPlacas');
+                    var bsPlaca = document.getElementById('bs-placa-nombre');
+                    var bsIdx = document.getElementById('bs-placa-index');
+                    if (!bsEl) return;
+                    if (bsPlaca) bsPlaca.textContent = plc;
+                    if (bsIdx) bsIdx.value = (window.dataGlobalPlacas || []).findIndex(function(x) { return x[0] === plc; });
+                    bootstrap.Offcanvas.getOrCreateInstance(bsEl).show();
+                }, 600);
+            }, { passive: true });
+            card.addEventListener('touchend', function() { clearTimeout(timer); timer = null; }, { passive: true });
+            card.addEventListener('touchmove', function() { clearTimeout(timer); timer = null; }, { passive: true });
+        });
+    }
     if (typeof window.initSwipeCards === 'function') window.initSwipeCards('contenedorPlacasDinamico');
     const fin = Math.min(inicio + ITEMS_POR_PAGINA, datosFiltradosPlacas.length);
     if(infoPag) infoPag.innerText = `Mostrando ${inicio + 1}–${fin} de ${datosFiltradosPlacas.length} placas`;

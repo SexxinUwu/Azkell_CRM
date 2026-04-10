@@ -477,6 +477,7 @@ window.scoreSaludBadge = function(placa) {
 // ================================================================
 window.abrirDetallePlacaGlobal = function(placa) {
     placa = (placa || '').toUpperCase().trim();
+    window._odpPlacaActual = placa;
     var elPlaca  = document.getElementById('odp-placa');
     var elBadges = document.getElementById('odp-badges');
     if (elPlaca) elPlaca.textContent = placa;
@@ -623,6 +624,41 @@ function _odpFila2(label, val) {
         + '<span class="text-muted fw-semibold">' + label + '</span>'
         + '<span class="fw-bold" style="color:var(--text);">' + (val || '—') + '</span></div>';
 }
+
+window.compartirPlacaWhatsApp = function() {
+    var placa = window._odpPlacaActual || '';
+    var infoP = (dataGlobalPlacas || []).find(function(p) { return (p[0] || '').toUpperCase() === placa; });
+    var lineas = ['*Ficha Vehículo — Azkell Fleet*', '━━━━━━━━━━━━━━━━━━━━'];
+    if (infoP) {
+        lineas.push('🚛 *Placa:* ' + placa);
+        if (infoP[1]) lineas.push('👤 *Cliente:* ' + infoP[1]);
+        if (infoP[3]) lineas.push('🔧 *Marca:* ' + infoP[3]);
+        if (infoP[4]) lineas.push('📋 *Modelo:* ' + infoP[4]);
+        if (infoP[5]) lineas.push('🚌 *Tipo:* ' + infoP[5]);
+        if (infoP[18]) lineas.push('🟢 *Estado:* ' + infoP[18]);
+    } else {
+        lineas.push('🚛 *Placa:* ' + (placa || 'Sin datos'));
+    }
+    window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+};
+
+window.toggleModoRevisor = function() {
+    var activo = document.body.classList.toggle('modo-revisor');
+    localStorage.setItem('fleet_modoRevisor', activo ? '1' : '0');
+    var btn = document.getElementById('btn-modo-revisor');
+    if (btn) {
+        btn.style.color = activo ? 'var(--bs-warning)' : 'var(--subtext)';
+        btn.title = activo ? 'Modo Revisor ACTIVO — clic para desactivar' : 'Modo Revisor — oculta botones de edición';
+    }
+};
+// Restaurar Modo Revisor al cargar
+(function() {
+    if (localStorage.getItem('fleet_modoRevisor') === '1') {
+        document.body.classList.add('modo-revisor');
+        var btn = document.getElementById('btn-modo-revisor');
+        if (btn) { btn.style.color = 'var(--bs-warning)'; btn.title = 'Modo Revisor ACTIVO — clic para desactivar'; }
+    }
+})();
 
 // Aplica color de acento guardado (accesible desde módulo configuración)
 window.applyAccent = function(hex, save) {
