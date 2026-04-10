@@ -2,7 +2,7 @@
 
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
     <div id="panelGraficosFleetrun" class="row mb-4" style="display: none;">
-        <div class="col-md-6 mx-auto">
+        <div class="col-12 col-md-6 mx-md-auto">
             <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3">
                 <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="fleet.health">Salud de Mantenimientos</span></h6>
                 <div style="position: relative; height: 220px; width: 100%;">
@@ -13,7 +13,7 @@
     </div>
 
     <div class="controls-row">
-        <div class="d-flex justify-content-end mb-2">
+        <div class="d-none d-md-flex justify-content-end mb-2">
             <button class="btn btn-sm btn-outline-primary fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()"><i class="bi bi-eye-fill"></i> <span data-i18n="common.showCharts">Mostrar Gráficos</span></button>
         </div>
 
@@ -30,20 +30,52 @@
         </div>
 
         <div class="d-flex justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="input-group input-group-sm" style="max-width: 250px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico..."></div>
-                <input type="date" class="form-control form-control-sm text-primary fw-bold" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()" style="max-width: 140px;">
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.clients">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetCliente"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="fleet.btn.uts">UTS</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetUts"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.status">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroFleetEstado">
-                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span data-i18n="fleet.filter.valid">Vigente</span></label></li>
-                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> <span data-i18n="fleet.filter.exp">Por Vencer</span></label></li>
-                    <li><label class="dropdown-item form-check-label d-flex align-items-center"><input type="checkbox" class="form-check-input me-2 mt-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span data-i18n="fleet.filter.expired">Vencido</span></label></li>
-                </ul></div>
-            </div>
+            <!-- Izquierda: búsqueda + filtros embudo (siempre visible) -->
             <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm" style="max-width: 250px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico..."></div>
+                <!-- Botón embudo — abre panel con todos los filtros -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary fw-bold" id="btnFiltrosFleetrun" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <i class="bi bi-funnel-fill"></i> <span data-i18n="common.filters">Filtros</span>
+                        <span class="badge bg-primary ms-1 d-none" id="badge-filtros-fleet" style="font-size:0.65rem;"></span>
+                    </button>
+                    <div class="dropdown-menu shadow p-0" style="min-width:290px; max-height:460px; overflow-y:auto;">
+                        <!-- Separador de header -->
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="background:var(--surface); border-bottom:1px solid var(--border);">
+                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text);">Filtros</span>
+                            <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.78rem;" onclick="window.limpiarFiltrosFleetrun()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                        </div>
+                        <!-- Fecha -->
+                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
+                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.date">Fecha</div>
+                            <input type="date" class="form-control form-control-sm fw-bold text-primary border-primary" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()">
+                        </div>
+                        <!-- Clientes -->
+                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
+                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.clients">Cliente</div>
+                            <ul class="list-unstyled mb-0" id="filtroFleetCliente" style="max-height:110px; overflow-y:auto;"></ul>
+                        </div>
+                        <!-- UTS -->
+                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
+                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="fleet.btn.uts">UTS</div>
+                            <ul class="list-unstyled mb-0" id="filtroFleetUts"></ul>
+                        </div>
+                        <!-- Estado -->
+                        <div class="px-3 py-2" style="border-bottom:1px solid var(--border);">
+                            <div class="text-muted fw-bold mb-1" style="font-size:0.71rem; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="common.status">Estado</div>
+                            <ul class="list-unstyled mb-0" id="filtroFleetEstado">
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-success" data-i18n="fleet.filter.valid">Vigente</span></label></li>
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="POR_VENCER" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-warning" data-i18n="fleet.filter.exp">Por Vencer</span></label></li>
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-danger" data-i18n="fleet.filter.expired">Vencido</span></label></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Derecha: acciones (ocultas en móvil — el FAB las cubre) -->
+            <div class="d-none d-md-flex align-items-center gap-2">
                 <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn btn-outline-secondary btn-sm rounded-circle px-2" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Sincronizar Datos"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn-reload-cache" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
                 <div id="col-picker-fleet"></div>
                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun" data-i18n="common.history">Historial</span></button>
@@ -64,7 +96,7 @@
             </div>
         </div>
     </div>
-    <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaFleetrun">
+    <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column"><div class="table-container flex-grow-1 overflow-auto"><table class="table table-custom m-0" id="tablaFleetrun">
         <thead><tr><th data-i18n="fleet.col.plate">Placa / Registro</th><th data-i18n="common.date">Fecha</th><th data-i18n="fleet.col.type">Tipo MP</th><th data-i18n="common.kmchange">KM de Cambio</th><th data-i18n="common.remaining">Falta</th><th data-i18n="common.nextchange">Próximo Cambio</th><th data-i18n="common.obs">Observación</th><th data-i18n="common.freq">Frecuencia</th><th data-i18n="fleet.col.kmgps">KM GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
         <tbody id="cuerpoTablaFleetrun"><tr><td colspan="10" class="text-center py-5" data-i18n="common.loading">Cargando módulo Fleetrun...</td></tr></tbody>
     </table></div></div>
