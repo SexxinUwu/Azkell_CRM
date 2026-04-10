@@ -212,6 +212,9 @@
                         <i class="bi bi-moon-stars-fill"></i>
                     </button>
                     <input type="checkbox" id="theme-toggle" class="d-none">
+                    <button class="btn btn-link p-0 fs-5" id="btn-modo-revisor" onclick="window.toggleModoRevisor()" title="Modo Revisor — oculta botones de edición" style="color: var(--subtext);" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                        <i class="bi bi-eye-fill"></i>
+                    </button>
                     <button class="btn btn-link p-0 fs-5" onclick="cargarModuloAislado('sistema/configuracion')" title="Configuración" style="color: var(--subtext);">
                         <i class="bi bi-gear-fill"></i>
                     </button>
@@ -504,6 +507,11 @@
                 <div class="tab-pane fade" id="odp-tab-fleet"></div>
                 <div class="tab-pane fade" id="odp-tab-gps"></div>
             </div>
+        </div>
+        <div class="offcanvas-footer border-top p-2 d-flex gap-2" style="background:var(--surface);flex-shrink:0;">
+            <button class="btn btn-success fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="window.compartirPlacaWhatsApp()" style="font-size:0.85rem;">
+                <i class="bi bi-whatsapp"></i> Compartir por WhatsApp
+            </button>
         </div>
     </div>
 

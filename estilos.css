@@ -2836,6 +2836,50 @@ body.dark .kpi-metric-icon-wrap.warning { color: #eab308; }
 #ptr-indicator.ptr-visible  { transform: translateX(-50%) translateY(0); }
 #ptr-icon.ptr-spinning { animation: spin 0.7s linear infinite; }
 
+/* ================================================================ */
+/* FEATURES PLACAS — Timeline + Modo Revisor + KPIs Cliente         */
+/* ================================================================ */
+
+/* Feature 4 — Mini timeline circular (5 puntos) */
+.tl-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    transition: transform 0.15s;
+}
+.tl-dot:hover { transform: scale(1.35); }
+.tl-dot.tl-ok    { background: #22c55e; border-color: #16a34a; }
+.tl-dot.tl-pv    { background: #f59e0b; border-color: #d97706; }
+.tl-dot.tl-venc  { background: #ef4444; border-color: #dc2626; }
+.tl-dot.tl-empty { background: var(--border); border-color: var(--border); }
+
+/* Feature 5 — Modo Revisor */
+body.modo-revisor [data-perm-crear],
+body.modo-revisor .btn-primary:not(#btn-modo-revisor),
+body.modo-revisor .btn-outline-primary.btn-agregar,
+body.modo-revisor .fab-btn,
+body.modo-revisor .card-swipe-actions,
+body.modo-revisor .btn-dots { display: none !important; }
+
+/* Feature 6 — KPI cards en modal cliente */
+.kpi-mini-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+}
+.kpi-mini-val { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 2px; }
+.kpi-mini-lbl { font-size: 0.68rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; }
+.kpi-mini-card.kpi-green .kpi-mini-val { color: #22c55e; }
+.kpi-mini-card.kpi-red   .kpi-mini-val { color: #ef4444; }
+.kpi-mini-card.kpi-yellow .kpi-mini-val { color: #f59e0b; }
+.kpi-mini-card.kpi-blue  .kpi-mini-val { color: #3b82f6; }
+
+/* Offcanvas footer (WhatsApp) */
+.offcanvas-footer { flex-shrink: 0; }
+
 
 
 
