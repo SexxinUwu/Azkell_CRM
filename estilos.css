@@ -77,7 +77,7 @@ body {
     .role-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; } .role-admin { background: #facc15; color: #1e293b; } .role-inspector { background: #3b82f6; color: #ffffff; } .role-mant { background: #10b981; color: #ffffff; }
     .kpi-wrapper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; } .kpi-card { background: var(--surface); border: 1px solid var(--border); border-left: 5px solid var(--crm-accent); border-radius: 10px; padding: 10px 15px; box-shadow: 0 4px 10px var(--shadow); display: flex; flex-direction: column; justify-content: center;} .kpi-title { font-size: 0.75rem; color: var(--subtext); text-transform: uppercase; font-weight: bold; } .kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1.2; }
     .card { background-color: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 12px; box-shadow: 0 4px 20px var(--shadow) !important; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; overflow: hidden !important; }
-    .table-container { flex: 1 1 0; min-height: 400px; overflow: auto !important; padding: 0; margin: 0; position: relative; } .table-container::-webkit-scrollbar { width: 8px; height: 8px; } .table-container::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 10px; }
+    .table-container { flex: 1 1 0; min-height: 0; overflow: auto !important; padding: 0; margin: 0; position: relative; } .table-container::-webkit-scrollbar { width: 8px; height: 8px; } .table-container::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 10px; }
     .table-custom { color: var(--text) !important; margin-bottom: 0; width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; } .table-custom th { color: var(--subtext) !important; font-weight: 600; padding: 10px 15px; font-size: 0.85rem; border: none; background: var(--surface) !important; white-space: nowrap; position: sticky; top: 0; z-index: 20; cursor: pointer; user-select: none; border-bottom: 2px solid var(--border);} .table-custom td { color: var(--text) !important; padding: 6px 15px; font-size: 0.8rem; vertical-align: middle; border-top: 1px solid var(--border) !important; background: var(--surface) !important; white-space: nowrap; }
     .group-header td { background-color: rgba(128,128,128,0.08) !important; font-size: 0.85rem; color: var(--text) !important; padding: 8px 15px; border-top: 2px solid var(--border) !important; cursor: pointer; } .group-count { background: var(--crm-accent); color: var(--crm-sidebar); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px; font-weight: bold; }
     .clickable-row { cursor: pointer; transition: background-color 0.15s;} .clickable-row:hover td { background-color: rgba(128, 128, 128, 0.05) !important; }
@@ -108,7 +108,7 @@ body {
     @media (max-width: 768px) {
         .sidebar { position: fixed !important; left: 0; top: 0; height: 100% !important; width: 250px !important; z-index: 999; transform: translateX(-100%); transition: transform 0.3s ease; } .sidebar.mobile-open { transform: translateX(0); box-shadow: 8px 0 30px rgba(0,0,0,0.4); } .sidebar.collapsed { width: 250px !important; } .sidebar.collapsed .brand-text { opacity: 1 !important; width: auto !important; } .sidebar.collapsed a { justify-content: flex-start !important; padding: 0 20px !important; } .sidebar.collapsed a i { margin-right: 15px !important; } .sidebar.collapsed a span.link-text, .sidebar.collapsed a .chevron-icon { display: inline !important; }
         .content { width: 100% !important; min-width: 0 !important; } .topbar { padding: 8px 12px !important; height: auto !important; min-height: 50px; gap: 8px; } #tituloTopBar { font-size: 1.1rem !important; max-width: 140px; } #nombre-usuario-top, #badge-rol-top { display: none !important; } .btn-hamburger-mobile { display: flex !important; margin-right: 10px; }
-        .main-area { padding: 8px !important; } .kpi-wrapper { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; margin-bottom: 8px !important; } .chart-container-status { height: 160px; } .table-container { min-height: 400px; -webkit-overflow-scrolling: touch; } .modal-dialog.modal-lg, .modal-dialog.modal-xl { margin: 8px !important; max-width: calc(100% - 16px) !important; }
+        .main-area { padding: 8px !important; } .kpi-wrapper { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; margin-bottom: 8px !important; } .chart-container-status { height: 160px; } .table-container { min-height: 0; -webkit-overflow-scrolling: touch; } .modal-dialog.modal-lg, .modal-dialog.modal-xl { margin: 8px !important; max-width: calc(100% - 16px) !important; }
     }
 
     /* ========================================================
@@ -2603,7 +2603,7 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
 }
 /* Cuando el bottom nav está visible, añadir padding al área de contenido */
 @media (max-width: 767px) {
-    #root-dinamico { padding-bottom: 78px !important; }
+    #root-dinamico { padding-bottom: 68px !important; }
     .content { padding-bottom: 68px; }
 }
 
