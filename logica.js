@@ -475,7 +475,7 @@ window.scoreSaludBadge = function(placa) {
 // ================================================================
 // 🔍 OFFCANVAS DETALLE PLACA GLOBAL
 // ================================================================
-window.abrirDetallePlacaGlobal = function(placa) {
+window.abrirDetallePlacaGlobal = function(placa, defaultTab) {
     placa = (placa || '').toUpperCase().trim();
     window._odpPlacaActual = placa;
     var elPlaca  = document.getElementById('odp-placa');
@@ -608,9 +608,10 @@ window.abrirDetallePlacaGlobal = function(placa) {
         }
     }
 
-    // Resetear a pestaña Info y mostrar
-    var firstTab = document.querySelector('#odpTabs [data-bs-target="#odp-tab-info"]');
-    if (firstTab) bootstrap.Tab.getOrCreateInstance(firstTab).show();
+    // Navegar a la pestaña solicitada (o Info por defecto)
+    var tabTarget = '#odp-tab-' + (defaultTab || 'info');
+    var tabBtn = document.querySelector('#odpTabs [data-bs-target="' + tabTarget + '"]');
+    if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
     var el = document.getElementById('offcanvasDetallePlacaGlobal');
     if (el) bootstrap.Offcanvas.getOrCreateInstance(el).show();
 };
@@ -837,13 +838,20 @@ function verificarInactividad() {
 function badgeRol(rol) { const clases = { 'Administrador':'role-admin','Inspector':'role-inspector', 'Mantenimiento':'role-mant','Almacén':'role-alm','Almacen':'role-alm','Flota':'role-flota' }; return `<span class="role-badge ${clases[rol]||''}">${rol}</span>`; }
 function parseDateToDDMMYYYY(dateStr) {
     if(!dateStr) return "-";
-    if(typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return dateStr;
+    if(typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        if(dateStr.endsWith('/2000') && dateStr.startsWith('01/01/')) return '-';
+        return dateStr;
+    }
     if (typeof dateStr === 'string' && dateStr.includes('-')) {
         let p = dateStr.split('T')[0].split('-');
-        if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+        if(p.length === 3) {
+            if(p[0] === '2000' && p[1] === '01' && p[2] === '01') return '-';
+            return `${p[2]}/${p[1]}/${p[0]}`;
+        }
     }
     let d = new Date(dateStr);
     if(isNaN(d.getTime())) return dateStr;
+    if(d.getFullYear() === 2000 && d.getMonth() === 0 && d.getDate() === 1) return '-';
     let day = d.getDate().toString().padStart(2, '0');
     let month = (d.getMonth() + 1).toString().padStart(2, '0');
     let year = d.getFullYear();

@@ -192,25 +192,18 @@ function mostrarFleetrunCards(datosAMostrar) {
         var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-info text-dark ms-1" style="font-size:0.68rem;">${utsRaw}</span>` : '';
         var multiHtml = mantenimientos.length > 1 ? `<div class="mt-1" style="font-size:0.71rem;color:var(--subtext);"><i class="bi bi-layers me-1"></i>${mantenimientos.length} tipos de MP</div>` : '';
 
-        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')">
+        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
             <div class="card-body py-2 px-3">
                 <div class="d-flex justify-content-between align-items-start mb-1">
                     <div>
                         <span class="fw-bold" style="font-size:1rem;color:var(--text);">${placaRaw}</span>
-                        <i class="bi bi-info-circle-fill text-info ms-1" style="font-size:0.8rem;cursor:pointer;" title="Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i>
+                        <i class="bi bi-info-circle-fill text-info ms-1" style="font-size:0.8rem;cursor:pointer;" title="Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')"></i>
                         <span class="badge bg-secondary ms-2" style="font-size:0.68rem;">${cli}</span>
                         ${utsHtml}
                     </div>
                     <span class="badge bg-${badgeCls}" style="font-size:0.71rem;color:${badgeCls==='warning'?'#000':'#fff'};">
                         <i class="bi ${badgeIcon}"></i> ${badgeLabel}
                     </span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span style="font-size:0.8rem;color:var(--subtext);">
-                        <i class="bi bi-tools me-1"></i><strong style="color:#2D438A;">${tipo_mp}</strong>
-                        <span class="ms-2">${fechaLimpia}</span>
-                    </span>
-                    <span class="fw-bold" style="font-size:0.9rem;color:${borderColor};">${falta_km.toLocaleString()} km</span>
                 </div>
                 ${multiHtml}
             </div>
