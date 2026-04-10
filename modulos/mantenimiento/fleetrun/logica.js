@@ -118,6 +118,9 @@ function mostrarFleetrun(datos) {
       ], 'fleet_cols_fleetrun');
   }
 
+  // Guardar referencia para filtrado en cards móvil
+  window._fleetrunDatosAMostrar = datosAMostrar;
+
   // Modo móvil: mostrar cards, ocultar tabla
   var isMovil = window.innerWidth < 768;
   var tableWrap = document.getElementById('fleetrun-tabla-wrap');
@@ -189,7 +192,7 @@ function mostrarFleetrunCards(datosAMostrar) {
         var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-info text-dark ms-1" style="font-size:0.68rem;">${utsRaw}</span>` : '';
         var multiHtml = mantenimientos.length > 1 ? `<div class="mt-1" style="font-size:0.71rem;color:var(--subtext);"><i class="bi bi-layers me-1"></i>${mantenimientos.length} tipos de MP</div>` : '';
 
-        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="mostrarDetalleFleetrun(${originalIndex})">
+        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')">
             <div class="card-body py-2 px-3">
                 <div class="d-flex justify-content-between align-items-start mb-1">
                     <div>
@@ -263,7 +266,51 @@ window.filtrarFleetrunAvanzado = function() {
         header.style.display = hasVisibleChild ? '' : 'none';
     });
     updateGraficoFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+
+    // En móvil: re-renderizar cards con datos filtrados
+    if (window.innerWidth < 768 && window._fleetrunDatosAMostrar) {
+        mostrarFleetrunCards(_filtrarDatosAMostrar(window._fleetrunDatosAMostrar));
+    }
 };
+
+// Filtra el array de datos raw según los controles activos (buscador, checkboxes)
+function _filtrarDatosAMostrar(datos) {
+    var txt = (document.getElementById('buscadorFleetrun')?.value || '').toLowerCase();
+    var dateF = document.getElementById('buscadorFechaFleetrun')?.value || '';
+    var dateCompare = '';
+    if (dateF) { var pf = dateF.split('-'); dateCompare = pf[2]+'/'+pf[1]+'/'+pf[0]; }
+    var chkCli = Array.from(document.querySelectorAll('#filtroFleetCliente input:checked')).map(function(e){return e.value;});
+    var chkUts = Array.from(document.querySelectorAll('#filtroFleetUts input:checked')).map(function(e){return e.value;});
+    var chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(function(e){return e.value;});
+
+    return datos.filter(function(fila) {
+        var placaRaw = (fila[4] || '').toLowerCase();
+        var tipo     = (fila[1] || '').toLowerCase();
+        var dueno    = (fila[6] || '').toLowerCase();
+        var fechaFila = fila[3] || '';
+        var infoP    = dataGlobalPlacas.find(function(p){ return p[0] === fila[4]; });
+        var cli      = infoP ? (infoP[1] || '') : (fila[6] || '');
+        var utsRaw   = infoP && infoP[19] ? String(infoP[19]).trim() : (fila[7] || '');
+        var utsDisp  = utsRaw ? utsRaw.charAt(0).toUpperCase()+utsRaw.slice(1).toLowerCase() : '-';
+
+        // Cálculo estado KPI
+        var km_actual = parseFloat(fila[2]) || 0;
+        var km_prox   = parseFloat(fila[12]) || 0;
+        var falta_km  = km_prox - km_actual;
+        var estado;
+        if (falta_km <= 0) estado = 'VENCIDO';
+        else if (falta_km <= 1000) estado = 'POR_VENCER';
+        else estado = 'VIGENTE';
+
+        var textoFila = placaRaw + ' ' + tipo + ' ' + dueno;
+        if (txt && !textoFila.includes(txt)) return false;
+        if (dateCompare && fechaFila !== dateCompare) return false;
+        if (chkCli.length && !chkCli.includes(cli)) return false;
+        if (chkUts.length && !chkUts.includes(utsDisp)) return false;
+        if (chkEst.length && !chkEst.includes(estado)) return false;
+        return true;
+    });
+}
 
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
 
@@ -558,13 +605,10 @@ window.limpiarFiltrosFleetrun = function() {
 
 window.toggleGraficosFleetrun = function() {
     let panel = document.getElementById('panelGraficosFleetrun');
-    let btn = document.getElementById('btnToggleGraficosFleetrun');
     if(panel.style.display === 'none') {
         panel.style.display = 'flex';
-        btn.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Ocultar Gráficos';
     } else {
         panel.style.display = 'none';
-        btn.innerHTML = '<i class="bi bi-eye-fill"></i> Mostrar Gráficos';
     }
 };
 

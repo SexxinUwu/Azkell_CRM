@@ -254,7 +254,28 @@
         </div>
     </div> 
 
-    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="offcanvasIA" style="width: 350px;"><div class="offcanvas-header bg-dark text-white"><h5 class="offcanvas-title text-white !important"><i class="bi bi-stars text-warning"></i> Azkell IA Analyst</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button></div><div class="offcanvas-body d-flex flex-column"><div id="chat-historial" class="flex-grow-1 overflow-auto mb-3 p-2 border rounded shadow-sm" style="background-color: var(--surface);"><div class="mb-3 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--bg);"><em>🤖 ¡Hola! Estoy conectado a tu base de datos. Pregúntame resúmenes o detalles.</em></span></div></div><div class="input-group shadow-sm"><input type="text" id="inputPregunta" class="form-control border-warning" placeholder="Escribe aquí..." onkeypress="if(event.key === 'Enter') enviarPreguntaIA()"><button class="btn btn-warning fw-bold text-dark" onclick="enviarPreguntaIA()" id="btnEnviarIA"><i class="bi bi-send-fill"></i></button></div></div></div>
+    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="offcanvasIA" style="width: min(420px, 100vw);">
+        <div class="offcanvas-header" style="background: linear-gradient(135deg,#1e293b,#0f172a);">
+            <h5 class="offcanvas-title text-white fw-bold"><i class="bi bi-stars text-warning me-2"></i>Azkell IA Analyst</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-3 gap-2">
+            <div id="chat-historial" class="flex-grow-1 overflow-auto p-2 border rounded shadow-sm" style="background-color: var(--surface); min-height: 200px;">
+                <div class="mb-3 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--bg);font-size:0.85rem;"><i class="bi bi-robot text-warning me-1"></i><em>¡Hola! Estoy conectado a la base de datos. Pregúntame resúmenes o detalles de la flota.</em></span></div>
+            </div>
+            <!-- Chips de sugerencia rápida -->
+            <div class="d-flex flex-wrap gap-1">
+                <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="document.getElementById('inputPregunta').value='¿Cuántas inspecciones están vencidas hoy?';enviarPreguntaIA()"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Vencidas hoy</button>
+                <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="document.getElementById('inputPregunta').value='¿Qué placas tienen MP de mantenimiento vencido?';enviarPreguntaIA()"><i class="bi bi-tools text-warning me-1"></i>MP vencidos</button>
+                <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="document.getElementById('inputPregunta').value='Dame un resumen general del estado de la flota';enviarPreguntaIA()"><i class="bi bi-clipboard2-data text-primary me-1"></i>Resumen flota</button>
+                <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="document.getElementById('inputPregunta').value='¿Cuáles son los 5 vehículos que necesitan atención urgente?';enviarPreguntaIA()"><i class="bi bi-fire text-danger me-1"></i>Urgentes</button>
+            </div>
+            <div class="input-group shadow-sm">
+                <input type="text" id="inputPregunta" class="form-control border-warning" style="font-size:0.85rem;" placeholder="Pregunta sobre tu flota..." onkeypress="if(event.key === 'Enter') enviarPreguntaIA()">
+                <button class="btn btn-warning fw-bold text-dark" onclick="enviarPreguntaIA()" id="btnEnviarIA"><i class="bi bi-send-fill"></i></button>
+            </div>
+        </div>
+    </div>
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasOT" aria-labelledby="offcanvasOTLabel" style="width: 480px; border-left: 1px solid var(--border);">
         <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
             <h5 class="offcanvas-title fw-bold text-danger" id="offcanvasOTLabel">

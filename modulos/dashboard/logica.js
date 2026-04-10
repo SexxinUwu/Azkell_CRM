@@ -6,6 +6,7 @@
 window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 window.chartInspDashInst     = window.chartInspDashInst     || null;
 window.mapaDashInst          = window.mapaDashInst          || null;
+window.chartPrediccion90dInst = window.chartPrediccion90dInst || null;
 
 // ============================================================
 // 📊 GRÁFICO FLEETRUN (Salud de Mantenimientos)
@@ -544,6 +545,67 @@ function _renderDashActivityFeed(inspData) {
 }
 
 // ============================================================
+// 📅 PREDICCIÓN DE VENCIMIENTOS — 90 DÍAS (inspecciones)
+// ============================================================
+
+window.calcularPrediccionVencimientos = function() {
+    var ctx = document.getElementById('chartPrediccion90d');
+    if (!ctx) return;
+
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var semanas = new Array(13).fill(0); // semanas 0-12 (próximos 91 días)
+
+    (dataGlobalInspecciones||[]).forEach(function(i) {
+        if (i.estado === 'Eliminada' || !i.fecha_ingreso) return;
+        try {
+            var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { fi=new Date(i.fecha_ingreso+'T00:00:00'); }
+            var fp=new Date(fi.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
+            var dRest=Math.ceil((fp-hoy)/864e5);
+            if (dRest >= 0 && dRest < 91) { semanas[Math.min(Math.floor(dRest/7), 12)]++; }
+        } catch(e) {}
+    });
+
+    var total = semanas.reduce(function(a,b){ return a+b; }, 0);
+    var badge = document.getElementById('dash-pred-total');
+    if (badge) badge.textContent = total + ' en 90d';
+
+    var labels = semanas.map(function(_, i){ return i === 0 ? 'Esta sem.' : 'S+'+(i); });
+    var bgColors = semanas.map(function(v, i) {
+        if (i === 0) return '#dc2626cc';
+        if (i <= 2)  return '#eab308cc';
+        return '#2563ebcc';
+    });
+
+    if (window.chartPrediccion90dInst && !document.contains(window.chartPrediccion90dInst.canvas)) {
+        window.chartPrediccion90dInst.destroy(); window.chartPrediccion90dInst = null;
+    }
+    if (window.chartPrediccion90dInst) {
+        window.chartPrediccion90dInst.data.datasets[0].data = semanas;
+        window.chartPrediccion90dInst.data.datasets[0].backgroundColor = bgColors;
+        window.chartPrediccion90dInst.update();
+        return;
+    }
+    Chart.defaults.font.family = 'Inter';
+    window.chartPrediccion90dInst = new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Insp. que vencen', data: semanas, backgroundColor: bgColors, borderRadius: 4, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: {
+                label: function(c) { return c.raw + ' inspección' + (c.raw !== 1 ? 'es' : ''); }
+            }}},
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#64748b' } },
+                y: { grid: { color: '#e2e8f033' }, ticks: { font: { size: 10 }, color: '#64748b', stepSize: 1 }, beginAtZero: true }
+            }
+        }
+    });
+};
+
+// ============================================================
 // 🔄 RECARGAR DASHBOARD
 // ============================================================
 
@@ -552,6 +614,7 @@ window.recargarDashboard = function() {
     if (typeof procesarInspeccionesParaDashboard === 'function') procesarInspeccionesParaDashboard();
     if (typeof window.renderKpiMetrics === 'function') window.renderKpiMetrics();
     cargarMapaWialonDash();
+    setTimeout(function() { if (typeof window.calcularPrediccionVencimientos === 'function') window.calcularPrediccionVencimientos(); }, 500);
 };
 
 // ============================================================
@@ -578,6 +641,10 @@ window.init_dashboard = function() {
     if (window.chartInspDashInst && !document.contains(window.chartInspDashInst.canvas)) {
         window.chartInspDashInst.destroy();
         window.chartInspDashInst = null;
+    }
+    if (window.chartPrediccion90dInst && !document.contains(window.chartPrediccion90dInst.canvas)) {
+        window.chartPrediccion90dInst.destroy();
+        window.chartPrediccion90dInst = null;
     }
 
     // Inicializar gráficos

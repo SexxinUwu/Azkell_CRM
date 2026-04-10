@@ -1,6 +1,36 @@
 <!-- ================================================================ -->
 <!-- MÓDULO: PLACAS (vista aislada — sin <html>, <head> ni <body>)   -->
 <!-- ================================================================ -->
+<style>
+/* Funnel placas: flex-column solo cuando está abierto */
+#moduloPlacas #btnFiltrosPlacas ~ .dropdown-menu.show {
+    display: flex !important;
+    flex-direction: column;
+}
+/* Móvil: grid 3 columnas compacto — solo muestra la placa, lista scrolleable hasta el bottom nav */
+@media (max-width: 767.98px) {
+    /* Sin override de height — flex-grow-1 + padding-bottom:68px global llenan hasta el nav */
+    /* Grid 3 columnas */
+    #moduloPlacas .placas-grid-view,
+    #moduloPlacas .placas-grid-view.grid-cols-3,
+    #moduloPlacas .placas-grid-view.grid-cols-4,
+    #moduloPlacas .placas-grid-view.grid-cols-5 {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.35rem !important;
+        padding: 0.4rem !important;
+    }
+    /* Cards compactas: solo placa visible */
+    #moduloPlacas .card-premium { padding: 8px 8px 6px !important; min-height: 54px !important; }
+    #moduloPlacas .card-header-theme { margin-bottom: 0 !important; }
+    #moduloPlacas .card-title-prem { font-size: 0.85rem !important; letter-spacing: 0 !important; line-height: 1.2; }
+    #moduloPlacas .card-client-sub,
+    #moduloPlacas .card-data-row { display: none !important; }
+    /* Headers de grupo compactos en móvil */
+    #moduloPlacas .group-header-left { padding: 8px 0 4px 4px !important; font-size: 0.95rem !important; }
+    /* Ocultar paginación en móvil */
+    #moduloPlacas .pagination-row { display: none !important; }
+}
+</style>
 
 <div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex;">
     <div class="controls-row">
@@ -13,11 +43,65 @@
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                 <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorPlacas" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa..."></div>
-                <button class="btn btn-sm btn-outline-danger d-none" id="btn-limpiar-filtros-placas" onclick="limpiarFiltrosPlacas()" title="Limpiar filtros activos"><i class="bi bi-x-circle"></i> Limpiar</button>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.clients">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroCliente"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.type">Tipos</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroTipo"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.brand">Marcas</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroMarca"></ul></div>
-                <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.status">Estado</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroEstado"></ul></div>
+                <button class="btn btn-sm btn-outline-danger d-none" id="btn-limpiar-filtros-placas" onclick="limpiarFiltrosPlacas()" title="Limpiar filtros activos"><i class="bi bi-x-circle"></i></button>
+                <!-- Botón embudo con todos los filtros -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary fw-bold px-2" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
+                        <i class="bi bi-funnel-fill"></i>
+                    </button>
+                    <div class="dropdown-menu shadow p-0" style="min-width:280px; max-height:calc(100dvh - 80px); overflow:hidden;">
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="flex-shrink:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
+                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text);">Filtros</span>
+                            <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.78rem;" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                        </div>
+                        <div style="max-height:calc(100dvh - 140px); overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                            <!-- Acordeón: Cliente -->
+                            <div style="border-bottom:1px solid var(--border);">
+                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.clients">Cliente</span>
+                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                                </button>
+                                <div style="display:none;padding:0 12px 8px;">
+                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                    <ul class="list-unstyled mb-0" id="filtroCliente" style="max-height:110px;overflow-y:auto;"></ul>
+                                </div>
+                            </div>
+                            <!-- Acordeón: Tipo -->
+                            <div style="border-bottom:1px solid var(--border);">
+                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.type">Tipo</span>
+                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                                </button>
+                                <div style="display:none;padding:0 12px 8px;">
+                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                    <ul class="list-unstyled mb-0" id="filtroTipo" style="max-height:110px;overflow-y:auto;"></ul>
+                                </div>
+                            </div>
+                            <!-- Acordeón: Marca -->
+                            <div style="border-bottom:1px solid var(--border);">
+                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.brand">Marca</span>
+                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                                </button>
+                                <div style="display:none;padding:0 12px 8px;">
+                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                    <ul class="list-unstyled mb-0" id="filtroMarca" style="max-height:110px;overflow-y:auto;"></ul>
+                                </div>
+                            </div>
+                            <!-- Acordeón: Estado -->
+                            <div>
+                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.status">Estado</span>
+                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
+                                </button>
+                                <div style="display:none;padding:0 12px 8px;">
+                                    <ul class="list-unstyled mb-0" id="filtroEstado"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Reload icono -->
                 <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
                 <select class="form-select form-select-sm fw-bold mx-1 d-none d-md-block" style="width: auto; cursor:pointer;" onchange="cambiarColumnasPlacas(this.value)">
                     <option value="3">3 Columnas (Ancho)</option>

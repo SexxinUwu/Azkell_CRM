@@ -113,6 +113,21 @@
 
     </div>
 
+    <!-- ── PREDICCIÓN DE VENCIMIENTOS (90 días) ─────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="kpi-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold m-0" style="color:var(--text);"><i class="bi bi-calendar-range text-primary me-2"></i>Vencimientos próximos 90 días</h6>
+                    <span class="badge bg-primary" id="dash-pred-total">—</span>
+                </div>
+                <div style="position:relative; height:120px;">
+                    <canvas id="chartPrediccion90d"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── MAPA GPS ─────────────────────────────────────── -->
     <div class="row g-3 flex-grow-1 d-none d-md-flex" style="min-height: 0;">
         <div class="col-12 d-flex flex-column">

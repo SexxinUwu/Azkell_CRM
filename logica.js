@@ -418,6 +418,61 @@ window.actualizarPWABadge = function() {
 };
 
 // ================================================================
+// 💊 SCORE DE SALUD DE FLOTA (0-100)
+// ================================================================
+window.calcularScoreSalud = function(placa) {
+    placa = (placa || '').toUpperCase().trim();
+    var score = 100;
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+    // --- Inspecciones ---
+    var insps = (dataGlobalInspecciones || []).filter(function(i) {
+        return normalizeStr(i.placa) === normalizeStr(placa) && i.estado !== 'Eliminada';
+    });
+    if (!insps.length) {
+        score -= 40;
+    } else {
+        var ultima = insps.sort(function(a,b) {
+            return (parseInt((b.id||'').split('-')[1])||0) - (parseInt((a.id||'').split('-')[1])||0);
+        })[0];
+        var diasRest = null;
+        if (ultima.fecha_ingreso) {
+            try {
+                var fi; if (ultima.fecha_ingreso.includes('/')) { var px = ultima.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(ultima.fecha_ingreso+'T00:00:00'); }
+                var fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(ultima.dias_propuestos)||30));
+                diasRest = Math.ceil((fp - hoy) / 864e5);
+            } catch(e) {}
+        }
+        if (diasRest === null) score -= 40;
+        else if (diasRest < 0) score -= 30;
+        else if (diasRest <= 7) score -= 15;
+    }
+
+    // --- Fleetrun MPs (toma el peor) ---
+    var infoP = (dataGlobalPlacas||[]).find(function(p){ return normalizeStr(p[0])===normalizeStr(placa); });
+    var utsP = infoP ? (infoP[19]||'NACIONAL').toUpperCase() : 'NACIONAL';
+    var limKm = utsP === 'LOCAL' ? 100 : 1500;
+    var recs = (dataGlobalFleetrun||[]).filter(function(r){ return normalizeStr(r[4])===normalizeStr(placa); });
+    if (recs.length) {
+        var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placa) : null;
+        var minFalta = recs.reduce(function(mn, r) {
+            var falta = (parseFloat(r[11])||0) - (wD ? wD.km : (parseFloat(r[14])||0));
+            return Math.min(mn, falta);
+        }, Infinity);
+        if (minFalta <= 0) score -= 30;
+        else if (minFalta <= limKm) score -= 20;
+    }
+    return Math.max(0, Math.min(100, score));
+};
+
+window.scoreSaludBadge = function(placa) {
+    var s = window.calcularScoreSalud(placa);
+    var cls = s >= 75 ? 'success' : (s >= 50 ? 'warning' : 'danger');
+    var ico = s >= 75 ? 'bi-heart-fill' : (s >= 50 ? 'bi-heart-half' : 'bi-heart');
+    return '<span class="badge bg-'+cls+' ms-1" title="Score de Salud"><i class="bi '+ico+' me-1"></i>'+s+'/100</span>';
+};
+
+// ================================================================
 // 🔍 OFFCANVAS DETALLE PLACA GLOBAL
 // ================================================================
 window.abrirDetallePlacaGlobal = function(placa) {
@@ -434,7 +489,8 @@ window.abrirDetallePlacaGlobal = function(placa) {
             var estado = infoP[18] || '—';
             var bCls = estado === 'Activa' ? 'success' : 'secondary';
             elBadges.innerHTML = '<span class="badge bg-' + bCls + '">' + estado + '</span>'
-                + (infoP[19] ? ' <span class="badge bg-info text-dark">' + infoP[19] + '</span>' : '');
+                + (infoP[19] ? ' <span class="badge bg-info text-dark">' + infoP[19] + '</span>' : '')
+                + ' ' + window.scoreSaludBadge(placa);
         } else {
             elBadges.innerHTML = '';
         }
@@ -471,21 +527,30 @@ window.abrirDetallePlacaGlobal = function(placa) {
             inspEl.innerHTML = '<p class="text-muted text-center py-4">Sin inspecciones registradas.</p>';
         } else {
             var hoy = new Date(); hoy.setHours(0,0,0,0);
-            inspEl.innerHTML = insps.map(function(i) {
-                var dias = '—'; var bCl = 'secondary';
+            inspEl.innerHTML = insps.map(function(i, idx) {
+                var dias = '—'; var bCl = 'secondary'; var diasLabel = '—';
                 if (i.fecha_ingreso) {
                     try {
                         var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
                         var fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
                         dias = Math.ceil((fp - hoy) / 864e5);
                         bCl = dias < 0 ? 'danger' : (dias <= 7 ? 'warning' : 'success');
+                        diasLabel = dias < 0 ? 'Vencida' : (dias === 0 ? 'Vence hoy' : 'Faltan '+dias+'d');
                     } catch(e) {}
                 }
-                return '<div class="border rounded p-2 mb-2" style="font-size:0.8rem;">'
-                    + '<div class="d-flex justify-content-between mb-1">'
-                    + '<span class="fw-bold" style="color:var(--crm-accent)">' + (i.id || '—') + '</span>'
-                    + '<span class="badge bg-' + bCl + '">' + (dias === '—' ? '—' : (dias < 0 ? 'Vencida' : dias + 'd')) + '</span>'
-                    + '</div><div style="color:var(--subtext);">' + (i.fecha_ingreso || '—') + ' · ' + (i.tecnico || '—') + '</div></div>';
+                var lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:16px;"></div>' : '';
+                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-'+bCl+'" style="width:1.6rem;height:1.6rem;flex-shrink:0;">'
+                    + '<i class="bi bi-clipboard2-check text-white" style="font-size:0.65rem;"></i></div>'
+                    + lineH + '</div>'
+                    + '<div class="flex-grow-1 pb-1">'
+                    + '<div class="d-flex justify-content-between align-items-center">'
+                    + '<span class="fw-bold" style="color:var(--crm-accent);">' + (i.id || '—') + '</span>'
+                    + '<span class="badge bg-'+bCl+'" style="font-size:0.65rem;">' + diasLabel + '</span>'
+                    + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.75rem;">' + (i.fecha_ingreso || '—') + ' · ' + (i.tecnico || '—') + '</div>'
+                    + '</div></div>';
             }).join('');
         }
     }
@@ -499,17 +564,26 @@ window.abrirDetallePlacaGlobal = function(placa) {
         if (!recs.length) {
             fleetEl.innerHTML = '<p class="text-muted text-center py-4">Sin registros de mantenimiento.</p>';
         } else {
-            fleetEl.innerHTML = recs.map(function(r) {
+            fleetEl.innerHTML = recs.map(function(r, idx) {
                 var kmProx = parseFloat(r[11]) || 0;
                 var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
                 var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
                 var falta = kmProx - kmGps;
                 var bCl = falta <= 0 ? 'danger' : (falta <= 1500 ? 'warning' : 'success');
-                return '<div class="border rounded p-2 mb-2" style="font-size:0.8rem;">'
-                    + '<div class="d-flex justify-content-between mb-1">'
-                    + '<span class="fw-bold" style="color:#2D438A">' + (r[8] || '—') + '</span>'
-                    + '<span class="badge bg-' + bCl + '">' + (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km</span>'
-                    + '</div><div style="color:var(--subtext);">' + (typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : r[3] || '—') + ' · ' + (r[13] || '—') + '</div></div>';
+                var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km';
+                var lineH = idx < recs.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:16px;"></div>' : '';
+                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-'+bCl+'" style="width:1.6rem;height:1.6rem;flex-shrink:0;">'
+                    + '<i class="bi bi-tools text-white" style="font-size:0.65rem;"></i></div>'
+                    + lineH + '</div>'
+                    + '<div class="flex-grow-1 pb-1">'
+                    + '<div class="d-flex justify-content-between align-items-center">'
+                    + '<span class="fw-bold" style="color:#2D438A;">' + (r[8] || '—') + '</span>'
+                    + '<span class="badge bg-'+bCl+'" style="font-size:0.65rem;">' + faltaLabel + '</span>'
+                    + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.75rem;">' + (typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : r[3] || '—') + ' · ' + (r[13] || '—') + '</div>'
+                    + '</div></div>';
             }).join('');
         }
     }
@@ -2738,8 +2812,27 @@ function enviarPreguntaIA() {
     const btn = document.getElementById('btnEnviarIA');
     btn.disabled = true;
 
-    // Le enviamos un resumen ligero en vez de toda la base de datos para que no se cuelgue
-    let resumenContexto = "Resumen actual de BD: " + dataGlobalPlacas.length + " placas, " + dataGlobalInspecciones.length + " inspecciones.";
+    // Contexto enriquecido con estado real de la flota
+    var placasActivas = (dataGlobalPlacas||[]).filter(function(p){ return p[18]==='Activa'; }).length;
+    var hoy2 = new Date(); hoy2.setHours(0,0,0,0);
+    var inspV=0, inspPV=0, inspVig=0;
+    (dataGlobalInspecciones||[]).filter(function(i){ return i.estado!=='Eliminada'; }).forEach(function(i) {
+        if (!i.fecha_ingreso) return;
+        try {
+            var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { fi=new Date(i.fecha_ingreso+'T00:00:00'); }
+            var fp=new Date(fi.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
+            var d=Math.ceil((fp-hoy2)/864e5);
+            if (d<0) inspV++; else if (d<=7) inspPV++; else inspVig++;
+        } catch(e) {}
+    });
+    var mpV=0, mpPV=0;
+    (dataGlobalFleetrun||[]).forEach(function(r) {
+        var falta=(parseFloat(r[11])||0)-(parseFloat(r[14])||0);
+        if(falta<=0) mpV++; else if(falta<=1500) mpPV++;
+    });
+    var resumenContexto = 'Contexto Azkell Fleet: '+dataGlobalPlacas.length+' placas totales, '
+        +placasActivas+' activas. Inspecciones: '+inspVig+' vigentes, '+inspPV+' por vencer (≤7d), '
+        +inspV+' vencidas. MPs Fleetrun: '+mpV+' vencidos, '+mpPV+' por vencer.';
 
     google.script.run.withSuccessHandler(r => {
         historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--surface); color: var(--text);">${r}</span></div>`;
@@ -2832,8 +2925,7 @@ var FAB_ACCIONES_POR_RUTA = {
     'mantenimiento/inspecciones': [
         { icon: 'bi-plus-lg', cls: 'primary',      texto: 'Registrar Inspección', fn: function() { if(typeof abrirModalNuevaInspeccion==='function') abrirModalNuevaInspeccion(); } },
         { icon: 'bi-clock-history', cls: 'info',   texto: 'Ver Historial',        fn: function() { if(typeof toggleVistaStatus==='function') toggleVistaStatus(); } },
-        { icon: 'bi-arrows-expand', cls: 'warning', texto: 'Expandir Todo',       fn: function() { if(typeof toggleAllStatusGroups==='function') toggleAllStatusGroups(); } },
-        { icon: 'bi-eye-fill', cls: 'secondary',   texto: 'Mostrar / Ocultar Gráficos', fn: function() { if(typeof toggleGraficosStatus==='function') toggleGraficosStatus(); } }
+        { icon: 'bi-arrows-expand', cls: 'warning', texto: 'Expandir Todo',       fn: function() { if(typeof toggleAllStatusGroups==='function') toggleAllStatusGroups(); } }
     ],
     'mantenimiento/placas': [
         { icon: 'bi-plus-lg', cls: 'primary', texto: 'Registrar Placa', fn: function() { var b = document.getElementById('btnNuevaPlaca'); if(b) b.click(); } }
@@ -2846,7 +2938,6 @@ var FAB_ACCIONES_POR_RUTA = {
     ],
     'mantenimiento/fleetrun': [
         { icon: 'bi-plus-lg',         cls: 'primary',   texto: 'Nuevo Preventivo',           fn: function() { if(typeof window.abrirModalNuevoFleetrun==='function') window.abrirModalNuevoFleetrun(); } },
-        { icon: 'bi-eye-fill',         cls: 'warning',   texto: 'Mostrar / Ocultar Gráficos', fn: function() { if(typeof window.toggleGraficosFleetrun==='function') window.toggleGraficosFleetrun(); } },
         { icon: 'bi-clock-history',    cls: 'info',      texto: 'Ver Historial Completo',      fn: function() { if(typeof toggleVistaFleetrun==='function') toggleVistaFleetrun(); } },
         { icon: 'bi-download',         cls: 'success',   texto: 'Exportar Excel',              fn: function() { if(typeof window.exportarExcelFleetrun==='function') window.exportarExcelFleetrun(); } },
         { icon: 'bi-arrow-clockwise',  cls: 'secondary', texto: 'Recargar Datos',              fn: function() { recargarModulo('fleetrun'); } }
