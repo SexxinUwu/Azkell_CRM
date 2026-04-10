@@ -41,6 +41,38 @@ db.getConnection((err, connection) => {
 });
 
 // ============================================================
+// 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL
+// ============================================================
+const sseClients = new Set();
+
+setInterval(() => {
+    sseClients.forEach(c => {
+        try { c.write(': ping\n\n'); } catch(e) { sseClients.delete(c); }
+    });
+}, 30000);
+
+app.get('/api/eventos', (req, res) => {
+    res.set({
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+    });
+    res.flushHeaders();
+    res.write('data: {"tipo":"conectado"}\n\n');
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+});
+
+function broadcast(modulo, accion, detalle) {
+    const payload = Object.assign({ modulo, accion }, detalle || {});
+    const msg = `event: datos-actualizados\ndata: ${JSON.stringify(payload)}\n\n`;
+    sseClients.forEach(c => {
+        try { c.write(msg); } catch(e) { sseClients.delete(c); }
+    });
+}
+
+// ============================================================
 // ⏰ RUTA DESPERTADOR (MANTIENE VIVO A RENDER Y AIVEN)
 // ============================================================
 app.get('/api/ping', (req, res) => {
@@ -229,6 +261,7 @@ app.post('/api/script/:metodo', async (req, res) => {
         db.query(query, values, (err) => {
             if (err) { console.error("❌ Error BD Status Flota:", err); return res.json({ data: "Error al guardar en Base de Datos" }); }
             console.log("✅ Status Flota guardado correctamente");
+            broadcast('status', metodo);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -252,6 +285,7 @@ app.post('/api/script/:metodo', async (req, res) => {
         db.query(query, values, (err) => {
             if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }
             console.log("✅ Inspección guardada correctamente");
+            broadcast('inspecciones', metodo);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -276,6 +310,8 @@ app.post('/api/script/:metodo', async (req, res) => {
         db.query(sql, [listaIds], (err) => {
             if (err) { console.error("❌ Error en BD:", err); return res.json({ data: "Error al procesar registro" }); }
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
+            const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', StatusFlota:'status', Usuarios:'usuarios' };
+            broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
             return res.json({ data: "Éxito" });
         });
         return;
@@ -304,12 +340,14 @@ app.post('/api/script/:metodo', async (req, res) => {
                 const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, estado=?, permisos_json=?, rol=? WHERE idUsuario=?";
                 db.query(sqlUpdate, [nombre, cargo, correo, password, estado, permisos, rol, idFinal], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
+                    broadcast('usuarios', 'actualizar');
                     return res.json({ data: "Éxito" });
                 });
             } else {
                 const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, rol, estado, permisos], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
+                    broadcast('usuarios', 'guardar');
                     return res.json({ data: "Éxito" });
                 });
             }
@@ -376,6 +414,7 @@ app.post('/api/script/:metodo', async (req, res) => {
 
         db.query(query, [...valores, ...valoresUpdate], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
+            broadcast('placas', metodo);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -403,6 +442,7 @@ app.post('/api/script/:metodo', async (req, res) => {
         `;
         db.query(query, [...values, ...values.slice(1)], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
+            broadcast('fleetrun', metodo);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -434,12 +474,14 @@ app.post('/api/script/:metodo', async (req, res) => {
             sql += ' WHERE idConductor=?'; params.push(form.idConductor);
             db.query(sql, params, (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
+                broadcast('conductores', 'actualizar');
                 return res.json({ data: "Éxito" });
             });
         } else {
             db.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [nombre, empresa, telefono, dni, licencia, estado, foto], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
+                broadcast('conductores', 'guardar');
                 return res.json({ data: "Éxito" });
             });
         }
@@ -586,11 +628,9 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
     }));
 
     await Promise.all(promesas);
+    broadcast('placas', 'importar');
     res.json({ ok, errores });
 });
-
-// ============================================================
-// 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
 // ============================================================
 app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     const registros = req.body.registros;
@@ -637,6 +677,7 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
         }
     }
 
+    broadcast('inspecciones', 'importar');
     res.json({ ok: okCount, errores: errCount });
 });
 
@@ -669,6 +710,7 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
             okCount++;
         } catch (e) { console.error("Error importando fleetrun:", e); errCount++; }
     }
+    broadcast('fleetrun', 'importar');
     res.json({ ok: okCount, errores: errCount });
 });
 
@@ -718,6 +760,8 @@ app.post('/api/eliminarMasivo', (req, res) => {
                         return res.status(500).json({ error: "MySQL dice: " + errDelete.message });
                     }
 
+                    const COLECCION_MODULO2 = { Placas:'placas', Fleetrun:'fleetrun', Mantenimientos:'fleetrun', Inspecciones:'inspecciones', statusMant:'inspecciones', StatusFlota:'status', statusFlota:'status' };
+                    broadcast(COLECCION_MODULO2[coleccion] || coleccion.toLowerCase(), 'eliminarMasivo');
                     res.json({ data: 'Éxito', afectados: result.affectedRows });
                 });
             });

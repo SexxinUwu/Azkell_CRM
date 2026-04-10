@@ -71,7 +71,7 @@ function mostrarFleetrun(datos) {
           let isActive = infoP && infoP[18] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
           html += `<tr class="group-header data-row-fleetrun" style="cursor:pointer;" onclick="toggleGroupRow('child-${classPlaca}', this)" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}">
-              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span><span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
+              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span><span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[14] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
 
@@ -117,6 +117,103 @@ function mostrarFleetrun(datos) {
           {label: 'KM GPS',        idx: 8, visible: true}
       ], 'fleet_cols_fleetrun');
   }
+
+  // Modo móvil: mostrar cards, ocultar tabla
+  var isMovil = window.innerWidth < 768;
+  var tableWrap = document.getElementById('fleetrun-tabla-wrap');
+  var cardCont  = document.getElementById('fleetrunCardContainer');
+  if (isMovil) {
+      if (tableWrap) tableWrap.style.display = 'none';
+      if (cardCont)  { cardCont.style.display = ''; mostrarFleetrunCards(datosAMostrar); }
+  } else {
+      if (tableWrap) tableWrap.style.display = '';
+      if (cardCont)  cardCont.style.display = 'none';
+  }
+
+  // PWA Badge
+  if (typeof window.actualizarPWABadge === 'function') window.actualizarPWABadge();
+}
+
+function mostrarFleetrunCards(datosAMostrar) {
+    var container = document.getElementById('fleetrunCardContainer');
+    if (!container) return;
+    if (!datosAMostrar || datosAMostrar.length === 0) {
+        container.innerHTML = '<p class="text-center py-4 text-muted">No hay mantenimientos.</p>';
+        return;
+    }
+
+    var mapPlacas = new Map();
+    datosAMostrar.forEach(function(fila) {
+        var p = fila[4] || '-';
+        if (!mapPlacas.has(p)) mapPlacas.set(p, []);
+        mapPlacas.get(p).push(fila);
+    });
+
+    var html = '';
+    var estadoOrder = { VENCIDO: 0, POR_VENCER: 1, VIGENTE: 2 };
+
+    mapPlacas.forEach(function(mantenimientos, placaRaw) {
+        var infoP = (dataGlobalPlacas || []).find(function(p) { return p[0] === placaRaw; });
+        var cli    = infoP ? infoP[1] : (mantenimientos[0][6] || '-');
+        var utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || '-');
+        var wialonData = buscarWialonPorPlaca(placaRaw);
+
+        // Determinar el MP más crítico
+        var criticalMp = null, criticalEstado = 'VIGENTE';
+        mantenimientos.forEach(function(fila) {
+            var km_prox = parseFloat(fila[11]) || 0;
+            var km_gps  = wialonData ? wialonData.km : (parseFloat(fila[14]) || 0);
+            var falta   = km_prox - km_gps;
+            var estado;
+            if (falta <= 0) estado = 'VENCIDO';
+            else if ((normalizeStr(utsRaw) === 'NACIONAL' && falta <= 1500) || (normalizeStr(utsRaw) === 'LOCAL' && falta <= 100)) estado = 'POR_VENCER';
+            else estado = 'VIGENTE';
+            if (estadoOrder[estado] < estadoOrder[criticalEstado] || !criticalMp) {
+                criticalMp = fila; criticalEstado = estado;
+            }
+        });
+        if (!criticalMp) criticalMp = mantenimientos[0];
+
+        var tipo_mp    = criticalMp[8];
+        var fechaLimpia = parseDateToDDMMYYYY(criticalMp[3]);
+        var km_prox    = parseFloat(criticalMp[11]) || 0;
+        var km_gps     = wialonData ? wialonData.km : (parseFloat(criticalMp[14]) || 0);
+        var falta_km   = km_prox - km_gps;
+        var originalIndex = dataGlobalFleetrun.findIndex(function(x) { return x[0] === criticalMp[0]; });
+
+        var badgeCls, badgeIcon, badgeLabel, borderColor;
+        if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeIcon = 'bi-exclamation-circle-fill';    badgeLabel = 'Vencido';    borderColor = 'var(--bs-danger)'; }
+        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeIcon = 'bi-exclamation-triangle-fill'; badgeLabel = 'Por Vencer'; borderColor = 'var(--bs-warning)'; }
+        else                                   { badgeCls = 'success'; badgeIcon = 'bi-check-circle-fill';          badgeLabel = 'Vigente';    borderColor = 'var(--bs-success)'; }
+
+        var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-info text-dark ms-1" style="font-size:0.68rem;">${utsRaw}</span>` : '';
+        var multiHtml = mantenimientos.length > 1 ? `<div class="mt-1" style="font-size:0.71rem;color:var(--subtext);"><i class="bi bi-layers me-1"></i>${mantenimientos.length} tipos de MP</div>` : '';
+
+        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="mostrarDetalleFleetrun(${originalIndex})">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div>
+                        <span class="fw-bold" style="font-size:1rem;color:var(--text);">${placaRaw}</span>
+                        <i class="bi bi-info-circle-fill text-info ms-1" style="font-size:0.8rem;cursor:pointer;" title="Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i>
+                        <span class="badge bg-secondary ms-2" style="font-size:0.68rem;">${cli}</span>
+                        ${utsHtml}
+                    </div>
+                    <span class="badge bg-${badgeCls}" style="font-size:0.71rem;color:${badgeCls==='warning'?'#000':'#fff'};">
+                        <i class="bi ${badgeIcon}"></i> ${badgeLabel}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span style="font-size:0.8rem;color:var(--subtext);">
+                        <i class="bi bi-tools me-1"></i><strong style="color:#2D438A;">${tipo_mp}</strong>
+                        <span class="ms-2">${fechaLimpia}</span>
+                    </span>
+                    <span class="fw-bold" style="font-size:0.9rem;color:${borderColor};">${falta_km.toLocaleString()} km</span>
+                </div>
+                ${multiHtml}
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
 }
 
 window.filtrarFleetrunAvanzado = function() {

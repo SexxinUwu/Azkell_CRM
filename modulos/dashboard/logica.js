@@ -292,6 +292,8 @@ window.initMapaDashboard = function(datos) {
 };
 
 window.cargarMapaWialonDash = async function() {
+    // Skip mapa en móvil — pesado e innecesario en pantallas pequeñas
+    if (window.innerWidth < 768) return;
     try {
         const res = await fetch('/api/script/obtenerDatosWialon', {
             method: 'POST',
@@ -410,6 +412,21 @@ window.renderKpiMetrics = async function() {
     else if (elPV)   elPV.textContent   = porVencer;
     if (elVenc && typeof window.animarContador === 'function') window.animarContador(elVenc, vencidas);
     else if (elVenc) elVenc.textContent = vencidas;
+
+    // Sync acciones rápidas móvil
+    var dMobV = document.getElementById('dash-mob-vencidas');
+    var dMobP = document.getElementById('dash-mob-porvencer');
+    if (dMobV) dMobV.textContent = vencidas;
+    if (dMobP) dMobP.textContent = porVencer;
+    // kpi-fleet-vencidos lo actualiza el módulo fleetrun; intentamos leerlo si ya está
+    var dMobF = document.getElementById('dash-mob-fleet-vencidos');
+    if (dMobF) {
+        var kpiFlV = document.getElementById('kpi-fleet-vencidos');
+        if (kpiFlV) dMobF.textContent = kpiFlV.textContent || '—';
+    }
+
+    // PWA Badge
+    if (typeof window.actualizarPWABadge === 'function') window.actualizarPWABadge();
 
     // Sparklines semanales (últimas 6 semanas basado en fecha_ingreso)
     var ahora = Date.now();
