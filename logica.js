@@ -2548,6 +2548,7 @@ var FAB_ACCIONES_POR_RUTA = {
         { icon: 'bi-person-plus-fill', cls: 'primary', texto: 'Nuevo Usuario', fn: function() { var b = document.getElementById('btnNuevoUsuario'); if(b) b.click(); } }
     ],
     'mantenimiento/fleetrun': [
+        { icon: 'bi-plus-lg',         cls: 'primary',   texto: 'Nuevo Preventivo',           fn: function() { if(typeof window.abrirModalNuevoFleetrun==='function') window.abrirModalNuevoFleetrun(); } },
         { icon: 'bi-eye-fill',         cls: 'warning',   texto: 'Mostrar / Ocultar Gráficos', fn: function() { if(typeof window.toggleGraficosFleetrun==='function') window.toggleGraficosFleetrun(); } },
         { icon: 'bi-clock-history',    cls: 'info',      texto: 'Ver Historial Completo',      fn: function() { if(typeof toggleVistaFleetrun==='function') toggleVistaFleetrun(); } },
         { icon: 'bi-download',         cls: 'success',   texto: 'Exportar Excel',              fn: function() { if(typeof window.exportarExcelFleetrun==='function') window.exportarExcelFleetrun(); } },
