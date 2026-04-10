@@ -2558,15 +2558,16 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     bottom: 0;
     left: 0;
     right: 0;
-    height: 62px;
+    height: 68px;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.14);
     z-index: 1040;
-    align-items: stretch;
-    padding: 0 4px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    align-items: center;
+    padding: 5px 6px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    gap: 2px;
 }
 .bottom-nav-item {
     flex: 1;
@@ -2578,26 +2579,32 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     color: var(--subtext) !important;
     text-decoration: none !important;
     cursor: pointer;
-    border-radius: 10px;
-    padding: 6px 4px;
-    transition: color 0.15s, background 0.15s;
-    font-size: 0.62rem;
+    border-radius: 14px;
+    padding: 7px 4px;
+    transition: color 0.2s, background 0.2s, transform 0.18s, box-shadow 0.18s;
+    font-size: 0.64rem;
     font-weight: 600;
-    margin: 4px 2px;
     border: none;
     background: none;
+    min-width: 0;
+    letter-spacing: 0.01em;
 }
-.bottom-nav-item i { font-size: 1.2rem; line-height: 1; }
+.bottom-nav-item i { font-size: 1.3rem; line-height: 1; }
 .bottom-nav-item span { line-height: 1; }
 .bottom-nav-item.active {
-    color: var(--crm-accent) !important;
-    background: rgba(37,99,235,0.1) !important;
+    color: #fff !important;
+    background: var(--crm-accent) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.38);
 }
-.bottom-nav-item:hover { color: var(--crm-accent) !important; background: rgba(37,99,235,0.07) !important; }
+.bottom-nav-item:not(.active):hover {
+    color: var(--crm-accent) !important;
+    background: rgba(37,99,235,0.08) !important;
+}
 /* Cuando el bottom nav está visible, añadir padding al área de contenido */
 @media (max-width: 767px) {
-    #root-dinamico { padding-bottom: 72px !important; }
-    .content { padding-bottom: 62px; }
+    #root-dinamico { padding-bottom: 78px !important; }
+    .content { padding-bottom: 68px; }
 }
 
 /* ================================================================

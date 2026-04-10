@@ -1202,6 +1202,20 @@ window.setBottomNavActive = function(id) {
     if (el) el.classList.add('active');
 };
 
+// Mapa ruta SPA → id del ítem en la barra inferior
+var BNAV_RUTA_A_ID = {
+    'dashboard':                  'bnav-dashboard',
+    'mantenimiento/inspecciones': 'bnav-inspecciones',
+    'mantenimiento/placas':       'bnav-placas',
+    'flota/ubicacion':            'bnav-gps',
+};
+// Llama cuando cambia el módulo activo — limpia todos y activa el que corresponde (o deja todo limpio)
+function actualizarBottomNavActivo(ruta) {
+    document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
+    var id = BNAV_RUTA_A_ID[ruta];
+    if (id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
+}
+
 // ─── Historial de navegación reciente ───────────────────────────
 var NOMBRES_MODULOS_RECIENTES = {
     'dashboard':                  'Dashboard',
@@ -1486,6 +1500,8 @@ window.cargarModuloAislado = async function(rutaModulo) {
         window._navProgress.done();
         // Actualizar visibilidad FAB según módulo activo
         if (typeof actualizarFAB === 'function') actualizarFAB();
+        // Actualizar ítem activo en bottom nav
+        if (typeof actualizarBottomNavActivo === 'function') actualizarBottomNavActivo(rutaModulo);
     } catch(e) {
         window._navProgress.done();
         if (root) root.innerHTML = `<div class="alert alert-danger m-4 shadow-sm"><i class="bi bi-exclamation-triangle-fill"></i> Error de Arquitectura: ${e.message}</div>`;
@@ -2531,8 +2547,13 @@ var FAB_ACCIONES_POR_RUTA = {
     'sistema/usuarios': [
         { icon: 'bi-person-plus-fill', cls: 'primary', texto: 'Nuevo Usuario', fn: function() { var b = document.getElementById('btnNuevoUsuario'); if(b) b.click(); } }
     ],
+    'mantenimiento/fleetrun': [
+        { icon: 'bi-eye-fill',         cls: 'warning',   texto: 'Mostrar / Ocultar Gráficos', fn: function() { if(typeof window.toggleGraficosFleetrun==='function') window.toggleGraficosFleetrun(); } },
+        { icon: 'bi-clock-history',    cls: 'info',      texto: 'Ver Historial Completo',      fn: function() { if(typeof toggleVistaFleetrun==='function') toggleVistaFleetrun(); } },
+        { icon: 'bi-download',         cls: 'success',   texto: 'Exportar Excel',              fn: function() { if(typeof window.exportarExcelFleetrun==='function') window.exportarExcelFleetrun(); } },
+        { icon: 'bi-arrow-clockwise',  cls: 'secondary', texto: 'Recargar Datos',              fn: function() { recargarModulo('fleetrun'); } }
+    ],
     // Sin FAB
-    'mantenimiento/fleetrun':  null,
     'flota/status':             null,
     'flota/ubicacion':          null,
     'sistema/auditoria':        null,
