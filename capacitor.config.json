@@ -3,7 +3,7 @@
   "appName": "Azkell Fleet",
   "webDir": "web",
   "server": {
-    "url": "https://TU-APP.onrender.com",
+    "url": "https://azkell-crm.onrender.com",
     "cleartext": false,
     "androidScheme": "https"
   },
