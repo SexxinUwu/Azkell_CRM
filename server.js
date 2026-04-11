@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const ALLOWED_ORIGINS = [
+    'https://azkell-crm.onrender.com',
     process.env.APP_URL,
     'capacitor://localhost',
     'http://localhost',
