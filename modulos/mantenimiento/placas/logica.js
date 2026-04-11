@@ -547,6 +547,91 @@ window.abrirDetallePlaca = function(event, index) {
         }
     }
 
+    // ── Pestaña Inspecciones ──────────────────────────────────────────────────
+    const inspPanelEl = document.getElementById('tab-insp-panel-body');
+    if (inspPanelEl) {
+        const insps = (window.dataGlobalInspecciones || []).filter(function(i) {
+            return (i.placa || '').toString().toUpperCase().trim() === placaActual;
+        }).sort(function(a, b) { return parseInt(b.id || 0) - parseInt(a.id || 0); }).slice(0, 5);
+        if (!insps.length) {
+            inspPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-clipboard2-x fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de inspección.</div></div>';
+        } else {
+            const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
+            inspPanelEl.innerHTML = insps.map(function(i, idx) {
+                let bCl = 'secondary', diasLabel = '—';
+                try {
+                    let fi; const fv = i.fecha_ingreso || '';
+                    if (fv.includes('/')) { const px = fv.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(fv + 'T00:00:00'); }
+                    const fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+                    const dias = Math.ceil((fp - hoy2) / 864e5);
+                    bCl = dias < 0 ? 'danger' : (dias <= 7 ? 'warning' : 'success');
+                    diasLabel = dias < 0 ? 'Vencida' : (dias === 0 ? 'Vence hoy' : 'Faltan ' + dias + 'd');
+                } catch(e) {}
+                const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
+                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + '" style="width:1.5rem;height:1.5rem;flex-shrink:0;">'
+                    + '<i class="bi bi-clipboard2-check text-white" style="font-size:0.6rem;"></i></div>'
+                    + lineH + '</div>'
+                    + '<div class="flex-grow-1 pb-1">'
+                    + '<div class="d-flex justify-content-between align-items-center">'
+                    + '<span class="fw-bold" style="color:var(--crm-accent);">#' + (i.id || '—') + '</span>'
+                    + '<span class="badge bg-' + bCl + '" style="font-size:0.62rem;">' + diasLabel + '</span>'
+                    + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.72rem;">' + (i.fecha_ingreso || '—') + (i.tecnico ? ' · ' + i.tecnico : '') + '</div>'
+                    + '</div></div>';
+            }).join('');
+        }
+    }
+
+    // ── Pestaña MP (Fleetrun) ─────────────────────────────────────────────────
+    const fleetPanelEl = document.getElementById('tab-fleet-panel-body');
+    if (fleetPanelEl) {
+        const fleetRecs = (window.dataGlobalFleetrun || []).filter(function(r) {
+            return (r[4] || '').toString().toUpperCase().trim() === placaActual;
+        });
+        if (!fleetRecs.length) {
+            fleetPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-tools fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de mantenimiento.</div></div>';
+        } else {
+            // Latest per tipo_mp
+            const byTipo = {};
+            fleetRecs.forEach(function(r) {
+                const tipo = (r[8] || '').toUpperCase().trim();
+                if (!byTipo[tipo] || parseInt(r[0]) > parseInt(byTipo[tipo][0])) byTipo[tipo] = r;
+            });
+            let recsLatest = Object.values(byTipo);
+            recsLatest.sort(function(a, b) {
+                const ta = (a[8] || '').toUpperCase().trim(), tb = (b[8] || '').toUpperCase().trim();
+                const mpa = ta.match(/^MP(\d+)$/), mpb = tb.match(/^MP(\d+)$/);
+                if (mpa && mpb) return parseInt(mpa[1]) - parseInt(mpb[1]);
+                if (mpa) return -1; if (mpb) return 1;
+                return ta.localeCompare(tb);
+            });
+            const utsP = p[19] || '';
+            const umbralP = (utsP || '').toUpperCase() === 'LOCAL' ? 100 : 1500;
+            const wD2 = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaActual) : null;
+            fleetPanelEl.innerHTML = recsLatest.map(function(r) {
+                const kmProx = parseFloat(r[11]) || 0;
+                const kmGps = wD2 ? wD2.km : (parseFloat(r[14]) || 0);
+                const falta = kmProx - kmGps;
+                const bCl = falta <= 0 ? 'danger' : (falta <= umbralP ? 'warning' : 'success');
+                const faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km';
+                const fechaM = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
+                return '<div class="d-flex align-items-center gap-2 py-2 px-1" style="border-bottom:1px solid var(--border);font-size:0.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + '" style="width:1.8rem;height:1.8rem;flex-shrink:0;">'
+                    + '<i class="bi bi-tools text-white" style="font-size:0.65rem;"></i></div>'
+                    + '<div class="flex-grow-1 min-width-0">'
+                    + '<div class="fw-bold" style="color:var(--crm-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r[8] || '—') + '</div>'
+                    + (fechaM !== '-' ? '<div style="color:var(--subtext);font-size:0.7rem;">' + fechaM + '</div>' : '')
+                    + '</div>'
+                    + '<div class="text-end flex-shrink-0">'
+                    + '<span class="badge bg-' + bCl + '" style="font-size:0.65rem;">' + faltaLabel + '</span>'
+                    + '<div style="font-size:0.65rem;color:var(--subtext);margin-top:1px;">Próx: ' + kmProx.toLocaleString() + '</div>'
+                    + '</div></div>';
+            }).join('');
+        }
+    }
+
     // Resetear a primera pestaña al abrir offcanvas
     const tabGenBtn = document.getElementById('tab-general-btn');
     if (tabGenBtn) bootstrap.Tab.getOrCreateInstance(tabGenBtn).show();

@@ -36,9 +36,53 @@ db.getConnection((err, connection) => {
         console.error('🚨 Error al conectar con Aiven:', err.message);
     } else {
         console.log('✅ Base de datos conectada con éxito (Pool Activo)');
-        connection.release();
+        connection.query(
+            `CREATE TABLE IF NOT EXISTS auditoria (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+                usuario VARCHAR(150) DEFAULT 'sistema',
+                modulo VARCHAR(50),
+                accion VARCHAR(50),
+                detalle TEXT
+            )`,
+            (err2) => {
+                connection.release();
+                if (err2) console.error('❌ No se pudo crear tabla auditoria:', err2.message);
+                else console.log('✅ Tabla auditoria verificada/creada');
+            }
+        );
     }
 });
+
+// 📋 Helper de auditoría
+const CREATE_AUDITORIA_SQL = `CREATE TABLE IF NOT EXISTS auditoria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    usuario VARCHAR(150) DEFAULT 'sistema',
+    modulo VARCHAR(50),
+    accion VARCHAR(50),
+    detalle TEXT
+)`;
+
+function logAudit(usuario, modulo, accion, detalle) {
+    const values = [usuario || 'sistema', modulo || '', accion || '', detalle || ''];
+    db.query(
+        'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
+        values,
+        (err) => {
+            if (err) {
+                if (err.code === 'ER_NO_SUCH_TABLE') {
+                    // La tabla no existe aún — crearla y reintentar
+                    db.query(CREATE_AUDITORIA_SQL, (err2) => {
+                        if (!err2) db.query('INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)', values, () => {});
+                    });
+                } else {
+                    console.warn('Audit log error:', err.message);
+                }
+            }
+        }
+    );
+}
 
 // ============================================================
 // 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL
@@ -286,6 +330,8 @@ app.post('/api/script/:metodo', async (req, res) => {
             if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }
             console.log("✅ Inspección guardada correctamente");
             broadcast('inspecciones', metodo);
+            const usuario = req.body.usuario || datos.tecnico || 'sistema';
+            logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -312,6 +358,8 @@ app.post('/api/script/:metodo', async (req, res) => {
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
             const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', StatusFlota:'status', Usuarios:'usuarios' };
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
+            const usuario = req.body.usuario || 'sistema';
+            logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -415,6 +463,8 @@ app.post('/api/script/:metodo', async (req, res) => {
         db.query(query, [...valores, ...valoresUpdate], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             broadcast('placas', metodo);
+            const usuario = req.body.usuario || 'sistema';
+            logAudit(usuario, 'placas', metodo === 'actualizarPlaca' ? 'MODIFICÓ' : 'CREÓ', `${placa} · ${cliente || '?'}`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -443,6 +493,12 @@ app.post('/api/script/:metodo', async (req, res) => {
         db.query(query, [...values, ...values.slice(1)], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             broadcast('fleetrun', metodo);
+            const usuario = req.body.usuario || 'sistema';
+            const form = req.body.args[0];
+            const isEdit = metodo === 'actualizarFleetrun';
+            const placa = isEdit ? form.editF_placa : form.f_placa;
+            const tipomp = isEdit ? form.editF_tipomp : form.f_tipomp;
+            logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${(placa||'?').toUpperCase()}`);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -1132,6 +1188,30 @@ app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
     db.query("UPDATE ordenes_trabajo SET estado = ? WHERE ticket_entrada = ?", [req.body.estado, req.params.ticket], (err) => {
         if(err) return res.status(500).json({error: err.message});
         res.json({data: 'Situación actualizada correctamente'});
+    });
+});
+
+// ============================================================
+// 📋 MÓDULO AUDITORÍA
+// ============================================================
+app.get('/api/auditoria', (req, res) => {
+    // Garantizar que la tabla exista antes de consultar
+    db.query(CREATE_AUDITORIA_SQL, (createErr) => {
+        if (createErr) { console.error('Error creando tabla auditoria:', createErr.message); }
+        const { modulo, accion, usuario, limit } = req.query;
+        let sql = 'SELECT id, fecha, usuario, modulo, accion, detalle FROM auditoria';
+        const params = [];
+        const conditions = [];
+        if (modulo) { conditions.push('modulo = ?'); params.push(modulo); }
+        if (accion) { conditions.push('accion = ?'); params.push(accion); }
+        if (usuario) { conditions.push('usuario LIKE ?'); params.push('%' + usuario + '%'); }
+        if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+        sql += ' ORDER BY fecha DESC LIMIT ?';
+        params.push(Math.min(parseInt(limit) || 300, 500));
+        db.query(sql, params, (err, results) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ data: results });
+        });
     });
 });
 

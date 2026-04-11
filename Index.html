@@ -462,19 +462,19 @@
     <!-- ============================================================ -->
     <nav class="bottom-nav d-flex d-md-none" id="bottom-nav">
         <a class="bottom-nav-item active" id="bnav-dashboard" onclick="cargarModuloAislado('dashboard'); setBottomNavActive('bnav-dashboard')">
-            <i class="bi bi-grid-1x2-fill"></i><span>Inicio</span>
+            <i class="bi bi-grid-1x2-fill"></i><span data-i18n="bnav.home">Inicio</span>
         </a>
         <a class="bottom-nav-item" id="bnav-inspecciones" onclick="cargarModuloAislado('mantenimiento/inspecciones'); setBottomNavActive('bnav-inspecciones')">
-            <i class="bi bi-clipboard2-pulse-fill"></i><span>Insp.</span>
+            <i class="bi bi-clipboard2-pulse-fill"></i><span data-i18n="bnav.insp">Insp.</span>
         </a>
         <a class="bottom-nav-item" id="bnav-placas" onclick="cargarModuloAislado('mantenimiento/placas'); setBottomNavActive('bnav-placas')">
-            <i class="bi bi-truck"></i><span>Placas</span>
+            <i class="bi bi-truck"></i><span data-i18n="bnav.plates">Placas</span>
         </a>
         <a class="bottom-nav-item" id="bnav-gps" onclick="cargarModuloAislado('flota/ubicacion'); setBottomNavActive('bnav-gps')">
-            <i class="bi bi-geo-alt-fill"></i><span>GPS</span>
+            <i class="bi bi-geo-alt-fill"></i><span data-i18n="bnav.gps">GPS</span>
         </a>
         <a class="bottom-nav-item" id="bnav-mas" onclick="toggleSidebar()">
-            <i class="bi bi-grid-3x3-gap-fill"></i><span>Módulos</span>
+            <i class="bi bi-grid-3x3-gap-fill"></i><span data-i18n="bnav.modules">Módulos</span>
         </a>
     </nav>
 
@@ -510,7 +510,10 @@
         </div>
         <div class="offcanvas-footer border-top p-2 d-flex gap-2" style="background:var(--surface);flex-shrink:0;">
             <button class="btn btn-success fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="window.compartirPlacaWhatsApp()" style="font-size:0.85rem;">
-                <i class="bi bi-whatsapp"></i> Compartir por WhatsApp
+                <i class="bi bi-whatsapp"></i> WhatsApp
+            </button>
+            <button class="btn btn-danger fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="window.exportarFichaPlacaPDF()" style="font-size:0.85rem;">
+                <i class="bi bi-file-earmark-pdf-fill"></i> PDF
             </button>
         </div>
     </div>
