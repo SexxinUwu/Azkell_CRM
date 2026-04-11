@@ -26,6 +26,7 @@ async function iniciarSesion(event, formObj) {
             localStorage.setItem('fleet_correo', formObj.correo.value);
             localStorage.setItem('fleet_permisos', respuesta.permisos || '{}');
             localStorage.setItem('fleet_ultimo_acceso', Date.now());
+            localStorage.setItem('fleet_token', respuesta.token || '');
             formObj.reset();
             btn.disabled = false;
             btn.innerHTML = 'Ingresar al Sistema';

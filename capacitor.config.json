@@ -1,0 +1,18 @@
+{
+  "appId": "com.azkell.fleet",
+  "appName": "Azkell Fleet",
+  "webDir": "web",
+  "server": {
+    "url": "https://TU-APP.onrender.com",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#1a1a2e",
+      "showSpinner": true,
+      "spinnerColor": "#007aff"
+    }
+  }
+}

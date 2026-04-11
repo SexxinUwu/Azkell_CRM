@@ -3,9 +3,23 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
-app.use(cors());
+const ALLOWED_ORIGINS = [
+    process.env.APP_URL,
+    'capacitor://localhost',
+    'http://localhost',
+    'http://localhost:3000'
+].filter(Boolean);
+app.use(cors({
+    origin: function(origin, cb) {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+        cb(new Error('CORS bloqueado: ' + origin));
+    },
+    credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 app.use(express.static(__dirname));
@@ -73,6 +87,8 @@ db.getConnection((err, connection) => {
             (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_ip:', e.message); });
         connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_dispositivo VARCHAR(200) NULL DEFAULT NULL`,
             (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_dispositivo:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN password_visible VARCHAR(255) NOT NULL DEFAULT ''`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER password_visible:', e.message); });
         // Orden/jerarquía en roles
         connection.query(`ALTER TABLE roles ADD COLUMN orden INT NOT NULL DEFAULT 0`,
             (e) => {
@@ -97,6 +113,23 @@ function logAudit(usuario, modulo, accion, detalle) {
 // 📡 SSE — SINCRONIZACIÓN EN TIEMPO REAL
 // ============================================================
 const sseClients = new Set();
+
+// ============================================================
+// 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
+// ============================================================
+function verifyToken(req, res, next) {
+    const PUBLIC_PATHS = ['/login', '/ping', '/eventos'];
+    if (PUBLIC_PATHS.includes(req.path)) return next();
+    const auth = req.headers['authorization'];
+    if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'No autorizado' });
+    try {
+        req.user = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+        next();
+    } catch(e) {
+        return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+}
+app.use('/api', verifyToken);
 
 setInterval(() => {
     sseClients.forEach(c => {
@@ -150,7 +183,7 @@ app.post('/api/login', (req, res) => {
         LEFT JOIN roles r ON u.rol_id = r.id
         WHERE u.correo = ?`;
 
-    db.query(sql, [correo], (err, results) => {
+    db.query(sql, [correo], async (err, results) => {
         if (err) {
             console.error("🚨 FALLO EN LOGIN SQL:", err.message);
             return res.status(500).json({ exito: false, mensaje: "Error BD: " + err.code });
@@ -158,7 +191,21 @@ app.post('/api/login', (req, res) => {
 
         if (results.length > 0) {
             const usuario = results[0];
-            if (usuario.password === password) {
+
+            // Verificación gradual: hash bcrypt o texto plano
+            const esHash = usuario.password && (usuario.password.startsWith('$2b$') || usuario.password.startsWith('$2a$'));
+            let passwordValida = false;
+            if (esHash) {
+                passwordValida = await bcrypt.compare(password, usuario.password);
+            } else {
+                passwordValida = (usuario.password === password);
+                if (passwordValida) {
+                    const hashed = await bcrypt.hash(password, 10);
+                    db.query('UPDATE usuarios SET password=? WHERE correo=?', [hashed, correo]);
+                }
+            }
+
+            if (passwordValida) {
                 if (usuario.estado === 'Inactivo' && correo.toLowerCase() !== 'admin@azkell.com') {
                     return res.json({ exito: false, mensaje: "Cuenta inactiva." });
                 }
@@ -201,6 +248,11 @@ app.post('/api/login', (req, res) => {
 
                 return res.json({
                     exito: true,
+                    token: jwt.sign(
+                        { id: usuario.idUsuario, correo: usuario.correo, rol: rolFinal, permisos: permisosFinales },
+                        process.env.JWT_SECRET,
+                        { expiresIn: '12h' }
+                    ),
                     nombre: usuario.nombre,
                     rol: rolFinal,
                     permisos: permisosFinales,
@@ -304,10 +356,10 @@ app.post('/api/script/:metodo', async (req, res) => {
                         if (typeof permisosFinales === 'string') permisosFinales = JSON.parse(permisosFinales);
                     } catch (e) { permisosFinales = {}; }
                 }
-                // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+                // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
                 return [
                     r.idUsuario, r.nombre, r.cargo, r.correo,
-                    rolLabel, r.estado, r.password,
+                    rolLabel, r.estado, r.password_visible || '',
                     JSON.stringify(permisosFinales), r.rol_id || null, r.rol_color || null,
                     r.ultimo_acceso || null, r.ultimo_ip || null, r.ultimo_dispositivo || null
                 ];
@@ -431,11 +483,12 @@ app.post('/api/script/:metodo', async (req, res) => {
         const form = req.body.args[0];
         const isEdit = (form.idUsuarioEdit && form.idUsuarioEdit.trim() !== '') ? true : false;
 
-        const ejecutarGuardado = (idFinal) => {
+        const ejecutarGuardado = async (idFinal) => {
             const nombre = form.nombreUsuarioEdit || '';
             const cargo = form.cargoUsuarioEdit || '';
             const correo = form.correoUsuarioEdit || '';
-            const password = form.passwordUsuarioEdit || '';
+            const passwordPlain = form.passwordUsuarioEdit || '';
+            const password = passwordPlain ? await bcrypt.hash(passwordPlain, 10) : '';
             let estado = form.estadoUsuarioEdit || 'Activo';
             let permisos = form.permisos_json || "{}";
             let rol = "Personalizado";
@@ -449,15 +502,24 @@ app.post('/api/script/:metodo', async (req, res) => {
             if (typeof permisos === 'object') permisos = JSON.stringify(permisos);
 
             if (isEdit) {
-                const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
-                db.query(sqlUpdate, [nombre, cargo, correo, password, estado, permisos, rol, rolId, idFinal], (err) => {
-                    if (err) return res.json({ data: "Error BD: " + err.message });
-                    broadcast('usuarios', 'actualizar');
-                    return res.json({ data: "Éxito" });
-                });
+                if (passwordPlain) {
+                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, password_visible=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
+                    db.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, idFinal], (err) => {
+                        if (err) return res.json({ data: "Error BD: " + err.message });
+                        broadcast('usuarios', 'actualizar');
+                        return res.json({ data: "Éxito" });
+                    });
+                } else {
+                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
+                    db.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, idFinal], (err) => {
+                        if (err) return res.json({ data: "Error BD: " + err.message });
+                        broadcast('usuarios', 'actualizar');
+                        return res.json({ data: "Éxito" });
+                    });
+                }
             } else {
-                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json, rol_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, rol, estado, permisos, rolId], (err) => {
+                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'guardar');
                     return res.json({ data: "Éxito" });
@@ -1341,12 +1403,13 @@ app.delete('/api/roles/:id', (req, res) => {
 // 👤 USUARIOS v2 — ENDPOINTS MODERNOS
 // ============================================================
 
-app.post('/api/usuarios-v2', (req, res) => {
+app.post('/api/usuarios-v2', async (req, res) => {
     const { nombre, cargo, correo, password, estado, rol_id } = req.body;
     if (!correo) return res.status(400).json({ error: 'Correo requerido' });
     const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
     let rol = 'Personalizado';
     if (correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : '';
     db.query('SELECT idUsuario FROM usuarios', (err, results) => {
         let maxId = 1000;
         if (!err && results) {
@@ -1359,8 +1422,8 @@ app.post('/api/usuarios-v2', (req, res) => {
         }
         const newId = `USR-${maxId + 1}`;
         db.query(
-            'INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?)',
-            [newId, nombre || '', cargo || '', correo, password || '', rol, estado || 'Activo', '{}', rolId],
+            'INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [newId, nombre || '', cargo || '', correo, hashedPassword, password || '', rol, estado || 'Activo', '{}', rolId],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 broadcast('usuarios', 'crear');
@@ -1372,7 +1435,7 @@ app.post('/api/usuarios-v2', (req, res) => {
     });
 });
 
-app.put('/api/usuarios-v2/:id', (req, res) => {
+app.put('/api/usuarios-v2/:id', async (req, res) => {
     const { id } = req.params;
     const { nombre, cargo, correo, password, estado, rol_id } = req.body;
     const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
@@ -1380,7 +1443,11 @@ app.put('/api/usuarios-v2/:id', (req, res) => {
     if (correo && correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
     const fields = ['nombre=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
     const values = [nombre || '', cargo || '', correo || '', estado || 'Activo', rol, rolId];
-    if (password && password.trim() !== '') { fields.push('password=?'); values.push(password); }
+    if (password && password.trim() !== '') {
+        const hashedPassword = await bcrypt.hash(password.trim(), 10);
+        fields.push('password=?'); values.push(hashedPassword);
+        fields.push('password_visible=?'); values.push(password.trim());
+    }
     values.push(id);
     db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -1388,6 +1455,30 @@ app.put('/api/usuarios-v2/:id', (req, res) => {
         const editor = req.body.editado_por || 'admin';
         logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
         res.json({ data: 'Éxito' });
+    });
+});
+
+// ============================================================
+// 🔑 CAMBIO DE CONTRASEÑA (usuario cambia su propia clave)
+// ============================================================
+app.post('/api/cambiar-password', async (req, res) => {
+    const { correo, passwordActual, passwordNueva } = req.body;
+    if (!correo || !passwordActual || !passwordNueva)
+        return res.status(400).json({ error: 'Datos incompletos' });
+    db.query('SELECT password FROM usuarios WHERE correo=?', [correo], async (err, rows) => {
+        if (err || !rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const hash = rows[0].password;
+        const esHash = hash && (hash.startsWith('$2b$') || hash.startsWith('$2a$'));
+        const valida = esHash ? await bcrypt.compare(passwordActual, hash) : (passwordActual === hash);
+        if (!valida) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+        const nuevoHash = await bcrypt.hash(passwordNueva, 10);
+        db.query('UPDATE usuarios SET password=?, password_visible=? WHERE correo=?',
+            [nuevoHash, passwordNueva, correo],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                logAudit(correo, 'usuarios', 'CAMBIÓ CONTRASEÑA', 'Auto-cambio de clave');
+                res.json({ data: 'Éxito' });
+            });
     });
 });
 
