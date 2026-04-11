@@ -123,7 +123,7 @@ function _guRelTime(dt) {
 function _guRenderUserItem(u) {
     var color = u.rol_color || _guColorFrom(u.nombre||u.correo||'U');
     var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'usuario' && window._guSeleccionado.id === u.id;
-    return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="window.guSeleccionarUsuario(' + u.id + ')">'
+    return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="window.guSeleccionarUsuario(\'' + u.id + '\')">'
         + '<div class="gu-role-dot" style="background:' + color + ';font-size:.65rem;">' + _guInitials(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-sub">' + _guEsc(u.cargo||u.correo||'') + (u.ultimo_acceso ? ' · ' + _guRelTime(u.ultimo_acceso) : '') + '</div></div>'
