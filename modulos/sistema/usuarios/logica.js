@@ -1,253 +1,637 @@
 // ================================================================
-// 👥 MÓDULO USUARIOS Y PERMISOS - LÓGICA AISLADA
+// MÓDULO: GESTIÓN DE USUARIOS v2 — Discord-style
 // ================================================================
+window.dataGlobalRoles    = window.dataGlobalRoles    || [];
+window.dataGlobalUsuarios = window.dataGlobalUsuarios || [];
+window._guTabActiva       = window._guTabActiva       || 'roles';
+window._guSeleccionado    = window._guSeleccionado    || null;
+window._guEsNuevo         = window._guEsNuevo         || false;
 
-let dataGlobalUsuarios = [];
+// ── Módulos de permisos ──────────────────────────────────────────
+window._GU_MODULOS = window._GU_MODULOS || [
+    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones', lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',        lcad:true  },
+    { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',        lcad:true  },
+    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades',     lcad:true  },
+    { grupo:'FLOTA',         key:'cond',          nombre:'Conductores',      desc:'Directorio de personal operativo',    lcad:true  },
+    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',        lcad:false },
+    { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',           lcad:true  },
+    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',   lcad:false },
+];
 
-// ================================================================
-// 📊 FUNCIONES DE CARGAR DATOS
-// ================================================================
-function cargarTablaUsuarios() {
-    cargarModulo('usuarios', mostrarUsuarios, 'obtenerDatosUsuarios');
+window._GU_COLORS = window._GU_COLORS || [
+    '#5865F2','#57F287','#1ABC9C','#3498DB','#E67E22',
+    '#9B59B6','#ED4245','#EB459E','#F1C40F','#95A5A6'
+];
+
+// Helpers ─────────────────────────────────────────────────────
+function _guColorFrom(str) {
+    var h = 0;
+    for (var i = 0; i < (str||'').length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xFFFFFF;
+    return window._GU_COLORS[Math.abs(h) % window._GU_COLORS.length];
+}
+function _guInitials(str) {
+    var parts = (str || 'S').split(/[@.\s]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return (parts[0] || 'S').slice(0, 2).toUpperCase();
+}
+function _guEsc(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _guShowInPanel(contentHtml, actionsHtml, title) {
+    if (window.innerWidth < 768) {
+        var ob = document.getElementById('offcanvasGU');
+        var oc = document.getElementById('guOffcanvasContent');
+        var oa = document.getElementById('guOffcanvasActions');
+        var ot = document.getElementById('offcanvasGUTitle');
+        if (ot) ot.textContent = title || 'Detalle';
+        if (oc) oc.innerHTML = contentHtml;
+        if (oa) { oa.innerHTML = actionsHtml; oa.style.display = actionsHtml ? '' : 'none'; }
+        if (ob && window.bootstrap) { bootstrap.Offcanvas.getOrCreateInstance(ob).show(); }
+    } else {
+        var pe = document.getElementById('guPanelEmpty');
+        var pc = document.getElementById('guPanelContent');
+        var pa = document.getElementById('guPanelActions');
+        if (pe) pe.style.display = 'none';
+        if (pc) { pc.style.display = ''; pc.innerHTML = contentHtml; }
+        if (pa) { pa.style.display = actionsHtml ? '' : 'none'; pa.innerHTML = actionsHtml; }
+    }
 }
 
-// ================================================================
-// 📋 MOSTRAR USUARIOS EN TABLA
-// ================================================================
-function mostrarUsuarios(datos) {
-    dataGlobalUsuarios = datos;
-    window.dataGlobalUsuarios = datos;
-    let html = '';
-    if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay usuarios registrados.</td></tr>';
-    } else {
-        datos.forEach((fila) => {
-            const estadoBadge = fila[5] === 'Activo' ? '<span class="badge bg-success shadow-sm">Activo</span>' : '<span class="badge bg-danger shadow-sm">Inactivo</span>';
-            let pObj = {};
-            try {
-                let raw = fila[7] || '{}';
-                pObj = (typeof raw === 'string') ? JSON.parse(raw) : raw;
-                if (typeof pObj === 'string') pObj = JSON.parse(pObj);
-            } catch(e){}
-
-            let esAdminMaster = (fila[3] || '').trim().toLowerCase() === 'admin@azkell.com';
-            let esAdmin = esAdminMaster || pObj.admin === true;
-
-            const rolBadge = esAdminMaster ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
-                           : (esAdmin ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
-                           : '<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> Personalizado</span>');
-
-            let menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
-
-            // 👑 Solo los Administradores y el Fundador ven los 3 puntitos
-            let correoActual = (localStorage.getItem('crm_correo') || '').toLowerCase();
-            if (permisosUsuario.admin === true || correoActual === 'admin@azkell.com') {
-                menuAcciones = `<div class="dropstart text-center">
-                    <button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                    <ul class="dropdown-menu shadow">
-                        <li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalGestorUsuario('${fila[0]}', false)"><i class="bi bi-pencil text-primary"></i> Editar Permisos</a></li>
-                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="abrirModalGestorUsuario('${fila[0]}', true)"><i class="bi bi-copy"></i> Clonar Usuario</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${fila[0]}','Usuarios')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>
-                    </ul>
-                </div>`;
-            }
-            html += `<tr><td class="fw-bold text-secondary">${fila[0]}</td><td class="fw-bold" style="color:#1e293b;">${fila[1]}</td><td>${fila[2]}</td><td>${fila[3]}</td><td>${rolBadge}</td><td>${estadoBadge}</td><td>${menuAcciones}</td></tr>`;
+// ── Carga de datos ────────────────────────────────────────────
+window.guCargarTodo = async function(forzar) {
+    var list = document.getElementById('guList');
+    if (!list) return;
+    list.innerHTML = '<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</div>';
+    try {
+        var resRoles = await fetch('/api/roles');
+        var resUsers = await fetch('/api/script/obtenerDatosUsuarios', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
         });
+        if (!resRoles.ok) throw new Error('Roles HTTP ' + resRoles.status);
+        if (!resUsers.ok) throw new Error('Usuarios HTTP ' + resUsers.status);
+        var jRoles = await resRoles.json();
+        var jUsers = await resUsers.json();
+        window.dataGlobalRoles = jRoles.data || [];
+        var rawUsers = jUsers.data || [];
+        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+        window.dataGlobalUsuarios = rawUsers.map(function(r) {
+            return { id:r[0], nombre:r[1], cargo:r[2], correo:r[3], rol_label:r[4],
+                     estado:r[5], password:r[6], permisos:r[7], rol_id:r[8], rol_color:r[9],
+                     ultimo_acceso:r[10], ultimo_ip:r[11], ultimo_dispositivo:r[12] };
+        });
+        var sub = document.getElementById('gu-subtitle');
+        if (sub) sub.textContent = window.dataGlobalRoles.length + ' roles · ' + window.dataGlobalUsuarios.length + ' miembros';
+        var cr = document.getElementById('gu-count-roles');
+        var cm = document.getElementById('gu-count-miembros');
+        if (cr) cr.textContent = '(' + window.dataGlobalRoles.length + ')';
+        if (cm) cm.textContent = '(' + window.dataGlobalUsuarios.length + ')';
+        window.guRenderLista();
+    } catch(e) {
+        if (list) list.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>' + e.message + '</div>';
     }
-    document.getElementById('cuerpoTablaUsuarios').innerHTML = html;
-}
-
-// ================================================================
-// 🔐 GENERAR MATRIZ DE PERMISOS
-// ================================================================
-function generarMatrizUI() {
-    const target = document.getElementById('bodyMatrizPermisos');
-    if (!target) return;
-    target.innerHTML = `
-        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-tools text-warning me-2"></i>MANTENIMIENTO</th></tr>
-        <tr data-k="insp"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Inspecciones</span><br><small class="text-muted">Registro y análisis de inspecciones</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="insp" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="fleet"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Fleetrun</span><br><small class="text-muted">Datos operativos de la flota</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="fleet" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-box-seam text-info me-2"></i>ALMACÉN</th></tr>
-        <tr data-k="placas"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Placas <small class="text-muted">(Mant+Alm)</small></span><br><small class="text-muted">Fichas técnicas de vehículos</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'l')"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'c')"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'e')"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d sync-placas p-placas" data-k="placas" style="width:18px;height:18px;cursor:pointer;" onchange="syncPlacasUI(this,'d')"></td></tr>
-        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-truck-front text-success me-2"></i>FLOTA</th></tr>
-        <tr data-k="status"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Status Flota</span><br><small class="text-muted">Estado y agrupación de unidades</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="cond"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Conductores</span><br><small class="text-muted">Directorio de personal operativo</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="gps"><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">GPS / Ubicación</span><br><small class="text-muted">Visualización en tiempo real</small></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="gps" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td>
-            <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="gps" style="width:18px;height:18px;cursor:pointer;" disabled></td></tr>
-        <tr><th colspan="5" style="background-color: var(--crm-sidebar); color: var(--text);" class="text-start ps-3 py-2 small fw-bold"><i class="bi bi-shield-fill-check text-primary me-2"></i>MÓDULOS EXTRA</th></tr>
-        <tr><td class="text-start ps-3 small"><span class="fw-semibold" style="color:var(--text);">Auditoría</span><br><small class="text-muted">Bitácora de actividad del sistema</small></td>
-            <td><input type="checkbox" class="form-check-input p-mod" data-k="mod_auditoria" style="width:18px;height:18px;cursor:pointer;"></td>
-            <td colspan="3" class="text-muted small text-center">Solo lectura</td></tr>
-    `;
-}
-
-function logicaCheckboxes(chk, moduloId, accion) {
-    let tr = chk.closest('tr');
-    let chkLeer = tr.querySelector('.p-leer');
-    if (chk.checked && accion !== 'leer') {
-        chkLeer.checked = true;
-    }
-    if (!chk.checked && accion === 'leer') {
-        tr.querySelectorAll('.perm-chk').forEach(c => c.checked = false);
-    }
-}
-
-// ================================================================
-// 🔲 ABRIR MODAL GESTOR USUARIO
-// ================================================================
-window.abrirModalGestorUsuario = function(idBusqueda = null, esClon = false) {
-    if (typeof idBusqueda === 'object') idBusqueda = null;
-
-    document.getElementById('formGestorUsuario').reset();
-    generarMatrizUI();
-
-    document.querySelectorAll('.p-chk, .p-mod').forEach(c => { c.checked = false; c.disabled = false; });
-    document.getElementById('gu_estado').disabled = false;
-    document.getElementById('gu_correo').readOnly = false;
-    let adminSwitch = document.getElementById('gu_is_admin');
-    if (adminSwitch) { adminSwitch.checked = false; adminSwitch.disabled = false; }
-
-    let filaData = idBusqueda ? dataGlobalUsuarios.find(u => u[0] === idBusqueda) : null;
-
-    if (!filaData) {
-        document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-person-plus-fill text-success"></i> Crear Nuevo Personal';
-        document.getElementById('gu_id').value = '';
-    } else {
-        if (esClon) {
-            document.getElementById('tituloModalUser').innerHTML = `<i class="bi bi-copy text-success"></i> Clonando permisos de: ${filaData[1]}`;
-            document.getElementById('gu_id').value = '';
-            document.getElementById('gu_nombre').value = '';
-            document.getElementById('gu_correo').value = '';
-            document.getElementById('gu_password').value = '';
-            document.getElementById('gu_cargo').value = filaData[2];
-        } else {
-            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-pencil-square text-warning"></i> Editar Accesos de Personal';
-            document.getElementById('gu_id').value = filaData[0];
-            document.getElementById('gu_nombre').value = filaData[1];
-            document.getElementById('gu_cargo').value = filaData[2];
-            document.getElementById('gu_correo').value = filaData[3];
-            document.getElementById('gu_password').value = filaData[6];
-            document.getElementById('gu_estado').value = filaData[5];
-        }
-
-        let pObj = {};
-        try {
-            let raw = filaData[7] || '{}';
-            pObj = JSON.parse(typeof raw === 'string' ? raw : JSON.stringify(raw));
-            if (typeof pObj === 'string') pObj = JSON.parse(pObj);
-        } catch(e) { pObj = {}; }
-
-        if (adminSwitch) adminSwitch.checked = pObj.admin === true;
-        if (pObj.admin === true) toggleAdminUI(true);
-
-        const setRow = (key, obj) => {
-            if (!obj) return;
-            document.querySelectorAll(`.p-chk[data-k="${key}"]`).forEach(chk => {
-                if (chk.classList.contains('p-l') && obj.l) chk.checked = true;
-                if (chk.classList.contains('p-c') && obj.c) chk.checked = true;
-                if (chk.classList.contains('p-e') && obj.e) chk.checked = true;
-                if (chk.classList.contains('p-d') && obj.d) chk.checked = true;
-            });
-        };
-        setRow('insp', pObj.insp); setRow('placas', pObj.placas); setRow('fleet', pObj.fleet);
-        setRow('gps', { l: pObj.gps?.l });
-        setRow('status', pObj.status); setRow('seg', pObj.seg); setRow('cond', pObj.cond);
-        let modAud = document.querySelector('.p-mod[data-k="mod_auditoria"]');
-        if (modAud) modAud.checked = !!pObj.mod_auditoria;
-
-        if ((filaData[3] || '').trim().toLowerCase() === 'admin@azkell.com' && !esClon) {
-            document.getElementById('tituloModalUser').innerHTML = '<i class="bi bi-shield-lock-fill text-warning"></i> Cuenta Fundador (Intocable)';
-            if (adminSwitch) { adminSwitch.checked = true; adminSwitch.disabled = true; }
-            toggleAdminUI(true);
-            document.getElementById('gu_estado').value = 'Activo';
-            document.getElementById('gu_estado').disabled = true;
-            document.getElementById('gu_correo').readOnly = true;
-        }
-    }
-    new bootstrap.Modal(document.getElementById('modalGestorUsuario')).show();
 };
 
-// ================================================================
-// 💾 GUARDAR USUARIO Y PERMISOS
-// ================================================================
-window.procesarGuardadoUsuario = function(event, formObj) {
-    event.preventDefault();
-    const btn = document.getElementById('btnGuardarUser');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+window.guSetTab = function(tab) {
+    window._guTabActiva = tab;
+    window._guSeleccionado = null;
+    var tr = document.getElementById('gu-tab-roles');
+    var tm = document.getElementById('gu-tab-miembros');
+    if (tr) tr.classList.toggle('active', tab === 'roles');
+    if (tm) tm.classList.toggle('active', tab === 'miembros');
+    window.guRenderLista();
+    var pc = document.getElementById('guPanelContent');
+    var pa = document.getElementById('guPanelActions');
+    var pe = document.getElementById('guPanelEmpty');
+    if (pc) { pc.style.display = 'none'; pc.innerHTML = ''; }
+    if (pa) { pa.style.display = 'none'; pa.innerHTML = ''; }
+    if (pe) pe.style.display = '';
+};
 
-    const getChk = (key, cls) => document.querySelector(`.p-chk[data-k="${key}"].${cls}`)?.checked || false;
-    const getL = k => getChk(k, 'p-l'), getC = k => getChk(k, 'p-c'), getE = k => getChk(k, 'p-e'), getD = k => getChk(k, 'p-d');
-    let isAdmin = document.getElementById('gu_is_admin')?.checked || false;
-    let pObj = {
-        admin:  isAdmin,
-        insp:   { l: getL('insp'),   c: getC('insp'),   e: getE('insp'),   d: getD('insp')   },
-        placas: { l: getL('placas'), c: getC('placas'), e: getE('placas'), d: getD('placas') },
-        fleet:  { l: getL('fleet'),  c: getC('fleet'),  e: getE('fleet'),  d: getD('fleet')  },
-        gps:    { l: getL('gps') },
-        status: { l: getL('status'), c: getC('status'), e: getE('status'), d: getD('status') },
-        seg:    { l: getL('seg'),    c: getC('seg'),    e: getE('seg'),    d: getD('seg')    },
-        cond:   { l: getL('cond'),   c: getC('cond'),   e: getE('cond'),   d: getD('cond')   },
-        mod_auditoria: document.querySelector('.p-mod[data-k="mod_auditoria"]')?.checked || false
-    };
+function _guRelTime(dt) {
+    if (!dt) return 'Nunca';
+    var d = new Date(dt);
+    if (isNaN(d.getTime())) return 'Nunca';
+    var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60)       return 'Hace un momento';
+    if (diff < 3600)     return 'Hace ' + Math.floor(diff/60) + ' min';
+    if (diff < 86400)    return 'Hace ' + Math.floor(diff/3600) + ' h';
+    if (diff < 2592000)  return 'Hace ' + Math.floor(diff/86400) + ' días';
+    return d.toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'});
+}
 
-    document.getElementById('gu_permisos').value = JSON.stringify(pObj);
+function _guRenderUserItem(u) {
+    var color = u.rol_color || _guColorFrom(u.nombre||u.correo||'U');
+    var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'usuario' && window._guSeleccionado.id === u.id;
+    return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="window.guSeleccionarUsuario(' + u.id + ')">'
+        + '<div class="gu-role-dot" style="background:' + color + ';font-size:.65rem;">' + _guInitials(u.nombre||u.correo) + '</div>'
+        + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(u.nombre||u.correo) + '</div>'
+        + '<div class="gu-list-sub">' + _guEsc(u.cargo||u.correo||'') + (u.ultimo_acceso ? ' · ' + _guRelTime(u.ultimo_acceso) : '') + '</div></div>'
+        + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
+}
 
-    fetch('/api/script/actualizarUsuario', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ args: [{
-            idUsuarioEdit:       document.getElementById('gu_id').value,
-            nombreUsuarioEdit:   document.getElementById('gu_nombre').value,
-            cargoUsuarioEdit:    document.getElementById('gu_cargo').value,
-            correoUsuarioEdit:   document.getElementById('gu_correo').value,
-            passwordUsuarioEdit: document.getElementById('gu_password').value,
-            estadoUsuarioEdit:   document.getElementById('gu_estado').value,
-            permisos_json:       document.getElementById('gu_permisos').value
-        }]})
-    })
-    .then(r => r.json())
-    .then(r => {
-        if (r.data === 'Éxito') {
-            bootstrap.Modal.getInstance(document.getElementById('modalGestorUsuario')).hide();
-            recargarModulo('usuarios');
-        } else { alert("Error: " + r.data); }
-        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
-    })
-    .catch(e => {
-        alert("Error de Red: " + e.message);
-        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
+// ── Render Lista ──────────────────────────────────────────────
+window.guRenderLista = function() {
+    var list = document.getElementById('guList');
+    if (!list) return;
+    var html = '';
+    if (window._guTabActiva === 'roles') {
+        if (!window.dataGlobalRoles.length) {
+            html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay roles. Crea el primero.</div>';
+        } else {
+            window.dataGlobalRoles.forEach(function(r) {
+                var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'rol' && window._guSeleccionado.id == r.id;
+                var cnt = r.miembros || 0;
+                html += '<div class="gu-list-item' + (isSel ? ' selected' : '') + '" onclick="window.guSeleccionarRol(' + r.id + ')">'
+                    + '<div class="gu-role-dot" style="background:' + (r.color||'#5865F2') + ';"><i class="bi bi-shield-fill" style="font-size:.7rem;"></i></div>'
+                    + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(r.nombre) + '</div>'
+                    + '<div class="gu-list-sub">' + cnt + ' miembro' + (cnt!==1?'s':'') + (r.es_admin ? ' · <span style="color:#ED4245;font-weight:700;">Admin</span>' : '') + '</div></div>'
+                    + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
+            });
+        }
+        html += '<button class="gu-add-btn" onclick="window.guNuevoRol()"><i class="bi bi-plus-lg"></i> Crear Rol</button>';
+    } else {
+        if (!window.dataGlobalUsuarios.length) {
+            html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay miembros.</div>';
+        } else {
+            // Agrupar por rol (Discord-style)
+            var grupos = {};
+            var sinRol = [];
+            window.dataGlobalUsuarios.forEach(function(u) {
+                if (u.rol_id) {
+                    var key = String(u.rol_id);
+                    if (!grupos[key]) grupos[key] = { rol: null, users: [] };
+                    grupos[key].users.push(u);
+                } else { sinRol.push(u); }
+            });
+            // Asignar info del rol a cada grupo, en el orden de dataGlobalRoles
+            window.dataGlobalRoles.forEach(function(r) {
+                var key = String(r.id);
+                if (grupos[key]) grupos[key].rol = r;
+            });
+            // Renderizar grupos ordenados por orden del rol
+            var gruposOrdenados = Object.values(grupos).sort(function(a, b) {
+                var oa = a.rol ? (a.rol.orden||0) : 999;
+                var ob = b.rol ? (b.rol.orden||0) : 999;
+                return oa - ob;
+            });
+            gruposOrdenados.forEach(function(g) {
+                var r = g.rol;
+                var color = r ? (r.color||'#6b7280') : '#6b7280';
+                var nombre = r ? r.nombre : 'Desconocido';
+                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">'
+                    + '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>'
+                    + _guEsc(nombre) + ' — ' + g.users.length + '</div>';
+                g.users.forEach(function(u) { html += _guRenderUserItem(u); });
+            });
+            if (sinRol.length) {
+                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">SIN ROL — ' + sinRol.length + '</div>';
+                sinRol.forEach(function(u) { html += _guRenderUserItem(u); });
+            }
+        }
+    }
+    list.innerHTML = html;
+};
+
+// ── Panel ROL ─────────────────────────────────────────────────
+function _guBuildRolPanel(rol) {
+    var p = {};
+    try { p = JSON.parse(rol.permisos_json || '{}'); } catch(e) {}
+    var esAdmin = !!rol.es_admin;
+    var colorActual = rol.color || '#5865F2';
+    var html = '';
+
+    // Nombre
+    html += '<div class="gu-field-label">Nombre del Rol</div>'
+        + '<input type="text" id="guRolNombre" class="form-control" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
+
+    // Color
+    html += '<div class="gu-field-label">Color del Rol</div><div class="gu-colors" id="guColorSwatches">';
+    window._GU_COLORS.forEach(function(c) {
+        html += '<div class="gu-color-swatch' + (c.toLowerCase()===colorActual.toLowerCase()?' selected':'') + '" '
+            + 'style="background:' + c + ';" data-color="' + c + '" onclick="window._guSelectColor(this)"></div>';
+    });
+    html += '<input type="text" class="gu-hex-input" id="guRolColor" value="' + _guEsc(colorActual) + '" '
+        + 'placeholder="#5865F2" oninput="window._guHexColorInput(this.value)"></div>';
+
+    // Prioridad
+    html += '<div class="gu-field-label">Prioridad / Orden</div>'
+        + '<input type="number" id="guRolOrden" class="form-control" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px;">'
+        + '<div style="font-size:.72rem;color:var(--subtext);margin-top:3px;">Número menor aparece primero en la lista.</div>';
+
+    // Permisos
+    html += '<div class="gu-section-header" style="margin-top:18px;">Permisos de Módulo</div>';
+    var lastGrp = '';
+    window._GU_MODULOS.forEach(function(mod) {
+        if (mod.grupo !== lastGrp) {
+            html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
+            lastGrp = mod.grupo;
+        }
+        if (mod.key === 'mod_auditoria') {
+            var val = (typeof p['mod_auditoria']==='boolean') ? p['mod_auditoria'] : !!p['mod_auditoria'];
+            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+                + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
+                + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
+                + '<input type="checkbox" class="dc-toggle" id="pt-mod_auditoria-l"' + (val?' checked':'') + '>'
+                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-mod_auditoria-l"></label>'
+                + '<span class="gu-perm-label">Leer</span></div></div></div>';
+        } else if (!mod.lcad) {
+            var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
+            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+                + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
+                + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
+                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + '>'
+                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
+                + '<span class="gu-perm-label">Leer</span></div></div></div>';
+        } else {
+            var m = p[mod.key] || {};
+            var accs = ['l','c','e','d'];
+            var lbls = ['Leer','Crear','Editar','Elim'];
+            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+                + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
+            accs.forEach(function(a,i) {
+                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + '>'
+                    + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
+                    + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
+            });
+            html += '</div></div>';
+        }
+    });
+
+    // Admin toggle
+    html += '<div class="gu-section-header" style="margin-top:18px;">Permisos Avanzados</div>'
+        + '<div class="gu-perm-row" style="padding:14px 0;">'
+        + '<div class="gu-perm-info"><div class="gu-perm-name" style="color:#ED4245;">Administrador</div>'
+        + '<div class="gu-perm-desc">Otorga acceso total al sistema. <strong style="color:#ED4245;">Es peligroso otorgar este permiso.</strong></div></div>'
+        + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
+        + '<input type="checkbox" class="dc-toggle" id="pt-admin" onchange="window._guToggleAdmin(this)"' + (esAdmin?' checked':'') + '>'
+        + '<label class="dc-toggle-label danger" for="pt-admin"></label></div></div></div>';
+
+    // Miembros con este rol
+    var miembros = (rol.id ? window.dataGlobalUsuarios.filter(function(u){ return u.rol_id == rol.id; }) : []);
+    if (miembros.length) {
+        html += '<div class="gu-section-header" style="margin-top:18px;">Miembros (' + miembros.length + ')</div>';
+        miembros.forEach(function(u) {
+            var uc = _guColorFrom(u.nombre||u.correo);
+            html += '<div class="gu-member-chip">'
+                + '<div class="gu-avatar" style="background:' + uc + ';">' + _guInitials(u.nombre||u.correo) + '</div>'
+                + '<div><div class="gu-member-name">' + _guEsc(u.nombre) + '</div>'
+                + '<div class="gu-member-cargo">' + _guEsc(u.cargo||u.correo) + '</div></div></div>';
+        });
+    }
+    return html;
+}
+
+window.guSeleccionarRol = function(id) {
+    window._guSeleccionado = { tipo:'rol', id:id };
+    window._guEsNuevo = false;
+    window.guRenderLista();
+    var rol = window.dataGlobalRoles.find(function(r){ return r.id == id; });
+    if (!rol) return;
+    var content = _guBuildRolPanel(rol);
+    var actions = '<button class="btn-gu-danger" onclick="window.guEliminarRol(' + id + ')"><i class="bi bi-trash me-1"></i>Eliminar Rol</button>'
+        + '<button class="btn-gu-save" onclick="window.guGuardarRol()"><i class="bi bi-save me-1"></i>Guardar Cambios</button>';
+    _guShowInPanel(content, actions, rol.nombre);
+};
+
+window.guNuevoRol = function() {
+    window._guSeleccionado = { tipo:'rol', id:'nuevo' };
+    window._guEsNuevo = true;
+    window.guRenderLista();
+    var content = _guBuildRolPanel({ id:null, nombre:'', color:'#5865F2', permisos_json:'{}', es_admin:0 });
+    var actions = '<button class="btn-gu-save" onclick="window.guGuardarRol()"><i class="bi bi-plus me-1"></i>Crear Rol</button>';
+    _guShowInPanel(content, actions, 'Nuevo Rol');
+};
+
+window._guSelectColor = function(el) {
+    document.querySelectorAll('.gu-color-swatch').forEach(function(s){ s.classList.remove('selected'); });
+    el.classList.add('selected');
+    var ci = document.getElementById('guRolColor');
+    if (ci) ci.value = el.dataset.color;
+};
+
+window._guHexColorInput = function(val) {
+    if (!val || val.length < 4) return;
+    document.querySelectorAll('.gu-color-swatch').forEach(function(s){
+        s.classList.toggle('selected', s.dataset.color.toLowerCase() === val.toLowerCase());
     });
 };
 
-// ================================================================
-// 🎯 MÓDULO INIT
-// ================================================================
-window.init_usuarios = function() {
-    if(typeof cargarTablaUsuarios === 'function') {
-        cargarTablaUsuarios();
+window._guToggleAdmin = function(chk) {
+    document.querySelectorAll('.dc-toggle-label:not(.danger)').forEach(function(lbl){
+        lbl.classList.toggle('readonly', chk.checked);
+    });
+};
+
+function _guCollectPermisos() {
+    var pObj = {};
+    window._GU_MODULOS.forEach(function(mod) {
+        if (mod.key === 'mod_auditoria') {
+            var el = document.getElementById('pt-mod_auditoria-l');
+            pObj['mod_auditoria'] = el ? el.checked : false;
+        } else if (!mod.lcad) {
+            var el = document.getElementById('pt-' + mod.key + '-l');
+            pObj[mod.key] = { l: el && el.checked ? 1 : 0 };
+        } else {
+            pObj[mod.key] = {
+                l: !!(document.getElementById('pt-'+mod.key+'-l')||{}).checked ? 1 : 0,
+                c: !!(document.getElementById('pt-'+mod.key+'-c')||{}).checked ? 1 : 0,
+                e: !!(document.getElementById('pt-'+mod.key+'-e')||{}).checked ? 1 : 0,
+                d: !!(document.getElementById('pt-'+mod.key+'-d')||{}).checked ? 1 : 0,
+            };
+        }
+    });
+    return JSON.stringify(pObj);
+}
+
+window.guGuardarRol = async function() {
+    var nombreEl = document.getElementById('guRolNombre');
+    var colorEl  = document.getElementById('guRolColor');
+    var adminEl  = document.getElementById('pt-admin');
+    if (!nombreEl || !nombreEl.value.trim()) { alert('El nombre del rol es requerido.'); return; }
+    var nombre   = nombreEl.value.trim();
+    var color    = (colorEl && colorEl.value.trim()) || '#5865F2';
+    var es_admin = adminEl ? adminEl.checked : false;
+    var permisos = es_admin ? '{}' : _guCollectPermisos();
+    var ordenEl  = document.getElementById('guRolOrden');
+    var orden    = ordenEl ? (parseInt(ordenEl.value)||0) : 0;
+    var saveBtn  = document.querySelector('.btn-gu-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando...'; }
+    try {
+        var eId = (window._guSeleccionado && window._guSeleccionado.id !== 'nuevo') ? window._guSeleccionado.id : null;
+        var res = await fetch(eId ? '/api/roles/'+eId : '/api/roles', {
+            method: eId ? 'PUT' : 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ nombre, color, permisos_json: permisos, es_admin: es_admin ? 1 : 0, orden })
+        });
+        var json = await res.json();
+        if (!res.ok) throw new Error(json.error || res.statusText);
+        var newId = eId || json.id;
+        await window.guCargarTodo(true);
+        if (newId) window.guSeleccionarRol(newId);
+    } catch(e) {
+        alert('Error: ' + e.message);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar Cambios'; }
     }
+};
+
+window.guEliminarRol = async function(id) {
+    if (!confirm('¿Eliminar este rol?')) return;
+    try {
+        var res = await fetch('/api/roles/'+id, { method:'DELETE' });
+        var json = await res.json();
+        if (!res.ok) throw new Error(json.error || res.statusText);
+        window._guSeleccionado = null;
+        var pe = document.getElementById('guPanelEmpty');
+        var pc = document.getElementById('guPanelContent');
+        var pa = document.getElementById('guPanelActions');
+        if (pe) pe.style.display = '';
+        if (pc) { pc.style.display='none'; pc.innerHTML=''; }
+        if (pa) { pa.style.display='none'; pa.innerHTML=''; }
+        await window.guCargarTodo(true);
+    } catch(e) { alert('No se pudo eliminar: ' + e.message); }
+};
+
+// ── Panel USUARIO ─────────────────────────────────────────────
+function _guBuildUserPanel(user) {
+    var color    = user.rol_color || _guColorFrom(user.nombre||user.correo||'U');
+    var initials = _guInitials(user.nombre||user.correo||'U');
+    var html = '';
+
+    if (user.nombre || user.correo) {
+        html += '<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:4px;">'
+            + '<div class="gu-avatar" style="width:52px;height:52px;font-size:1rem;background:' + color + ';">' + initials + '</div>'
+            + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">' + _guEsc(user.nombre||'Nuevo usuario') + '</div>'
+            + '<div style="font-size:.75rem;color:var(--subtext);">' + _guEsc(user.correo||'') + '</div></div></div>';
+    }
+
+    html += '<div class="gu-field-label">Nombre Completo</div>'
+        + '<input type="text" id="guUserNombre" class="form-control" value="' + _guEsc(user.nombre||'') + '" required>';
+    html += '<div class="gu-field-label">Cargo</div>'
+        + '<input type="text" id="guUserCargo" class="form-control" value="' + _guEsc(user.cargo||'') + '">';
+    html += '<div class="gu-field-label">Correo (login)</div>'
+        + '<input type="email" id="guUserCorreo" class="form-control" value="' + _guEsc(user.correo||'') + '" required>';
+
+    // Contraseña: usuario existente vs nuevo
+    if (user.id) {
+        // Mostrar contraseña actual con ojo + sección de cambio colapsable
+        html += '<div class="gu-field-label">Contraseña actual</div>'
+            + '<div class="input-group mb-1">'
+            + '<input type="password" id="guUserPassActual" class="form-control" value="' + _guEsc(user.password||'') + '" readonly style="background:var(--surface);color:var(--text);">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassActual\',this)" title="Ver contraseña">'
+            + '<i class="bi bi-eye"></i></button></div>'
+            + '<button class="btn btn-sm btn-outline-primary mt-1" type="button" onclick="window._guToggleChangePass()">'
+            + '<i class="bi bi-pencil me-1"></i>Cambiar contraseña</button>'
+            + '<div id="guChangePassSection" style="display:none;margin-top:10px;">'
+            + '<div class="gu-field-label">Nueva contraseña</div>'
+            + '<div class="input-group">'
+            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Nueva contraseña...">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<i class="bi bi-eye"></i></button></div>'
+            + '<div style="font-size:.72rem;color:var(--subtext);margin-top:4px;">Deja vacío para no cambiar la contraseña.</div>'
+            + '</div>';
+    } else {
+        // Nuevo usuario: campo simple con ojo
+        html += '<div class="gu-field-label">Contraseña</div>'
+            + '<div class="input-group">'
+            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Contraseña inicial...">'
+            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<i class="bi bi-eye"></i></button></div>';
+    }
+    html += '<div style="max-width:200px;"><div class="gu-field-label">Estado</div>'
+        + '<select id="guUserEstado" class="form-select">'
+        + '<option value="Activo"' + (user.estado==='Activo'?' selected':'') + '>Activo</option>'
+        + '<option value="Inactivo"' + (user.estado==='Inactivo'?' selected':'') + '>Inactivo</option>'
+        + '</select></div>';
+
+    html += '<div class="gu-section-header" style="margin-top:18px;">Rol Asignado</div>'
+        + '<div style="font-size:.75rem;color:var(--subtext);margin:8px 0 6px;">El usuario hereda los permisos del rol seleccionado.</div>'
+        + '<select id="guUserRolId" class="form-select">'
+        + '<option value="">— Sin rol asignado —</option>';
+    window.dataGlobalRoles.forEach(function(r) {
+        html += '<option value="' + r.id + '"' + (user.rol_id==r.id?' selected':'') + '>'
+            + _guEsc(r.nombre) + (r.es_admin?' (Administrador)':'') + '</option>';
+    });
+    html += '</select>';
+
+    // Última sesión
+    if (user.id && (user.ultimo_acceso || user.ultimo_ip || user.ultimo_dispositivo)) {
+        html += '<div class="gu-section-header" style="margin-top:18px;">Última Sesión</div>'
+            + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px;">';
+        if (user.ultimo_acceso) {
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
+                + '<span style="font-size:.75rem;color:var(--subtext);"><i class="bi bi-clock me-1"></i>Último acceso</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:var(--text);">' + _guRelTime(user.ultimo_acceso) + '</span></div>';
+        }
+        if (user.ultimo_ip) {
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
+                + '<span style="font-size:.75rem;color:var(--subtext);"><i class="bi bi-globe me-1"></i>Dirección IP</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:var(--text);font-family:monospace;">' + _guEsc(user.ultimo_ip) + '</span></div>';
+        }
+        if (user.ultimo_dispositivo) {
+            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;gap:10px;">'
+                + '<span style="font-size:.75rem;color:var(--subtext);flex-shrink:0;"><i class="bi bi-phone me-1"></i>Dispositivo</span>'
+                + '<span style="font-size:.72rem;color:var(--subtext);text-align:right;word-break:break-all;">' + _guEsc(user.ultimo_dispositivo) + '</span></div>';
+        }
+        html += '</div>';
+    }
+    return html;
+}
+
+window._guToggleEye = function(inputId, btn) {
+    var el = document.getElementById(inputId);
+    if (!el) return;
+    var icon = btn ? btn.querySelector('i') : null;
+    if (el.type === 'password') {
+        el.type = 'text';
+        if (icon) { icon.className = 'bi bi-eye-slash'; }
+    } else {
+        el.type = 'password';
+        if (icon) { icon.className = 'bi bi-eye'; }
+    }
+};
+
+window._guToggleChangePass = function() {
+    var sec = document.getElementById('guChangePassSection');
+    if (!sec) return;
+    var visible = sec.style.display !== 'none';
+    sec.style.display = visible ? 'none' : '';
+    if (!visible) { var inp = document.getElementById('guUserPassword'); if (inp) inp.focus(); }
+};
+
+window.guSeleccionarUsuario = function(id) {
+    window._guSeleccionado = { tipo:'usuario', id:id };
+    window._guEsNuevo = false;
+    window.guRenderLista();
+    var user = window.dataGlobalUsuarios.find(function(u){ return u.id === id; });
+    if (!user) return;
+    var esFundador = (user.correo||'').toLowerCase() === 'admin@azkell.com';
+    var content  = _guBuildUserPanel(user);
+    var actions  = '';
+    if (!esFundador) {
+        actions = '<button class="btn-gu-danger" onclick="window.guEliminarUsuario(\'' + id.replace("'", "\\'") + '\')"><i class="bi bi-trash me-1"></i>Eliminar</button>';
+    }
+    actions += '<button class="btn-gu-save" onclick="window.guGuardarUsuario()"><i class="bi bi-save me-1"></i>Guardar</button>';
+    _guShowInPanel(content, actions, user.nombre||user.correo);
+};
+
+window.guNuevoMiembro = function() {
+    window._guSeleccionado = { tipo:'usuario', id:'nuevo' };
+    window._guEsNuevo = true;
+    if (window._guTabActiva !== 'miembros') {
+        window._guTabActiva = 'miembros';
+        var tr = document.getElementById('gu-tab-roles');
+        var tm = document.getElementById('gu-tab-miembros');
+        if (tr) tr.classList.remove('active');
+        if (tm) tm.classList.add('active');
+        window.guRenderLista();
+    }
+    var content = _guBuildUserPanel({ nombre:'', cargo:'', correo:'', estado:'Activo', rol_id:null, rol_color:null });
+    var actions = '<button class="btn-gu-save" onclick="window.guGuardarUsuario()"><i class="bi bi-person-plus me-1"></i>Crear Miembro</button>';
+    _guShowInPanel(content, actions, 'Nuevo Miembro');
+};
+
+window.guGuardarUsuario = async function() {
+    var nombre   = (document.getElementById('guUserNombre')  ||{}).value || '';
+    var cargo    = (document.getElementById('guUserCargo')   ||{}).value || '';
+    var correo   = (document.getElementById('guUserCorreo')  ||{}).value || '';
+    var password = (document.getElementById('guUserPassword')||{}).value || '';
+    var estado   = (document.getElementById('guUserEstado')  ||{}).value || 'Activo';
+    var rol_id   = (document.getElementById('guUserRolId')   ||{}).value || '';
+    if (!correo.trim()) { alert('El correo es requerido.'); return; }
+    var saveBtn = document.querySelector('.btn-gu-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando...'; }
+    try {
+        var eId  = (window._guSeleccionado && window._guSeleccionado.id !== 'nuevo') ? window._guSeleccionado.id : null;
+        var url  = eId ? '/api/usuarios-v2/' + eId : '/api/usuarios-v2';
+        var meth = eId ? 'PUT' : 'POST';
+        var body = { nombre, cargo, correo, estado, rol_id: rol_id || null,
+            creado_por: localStorage.getItem('fleet_correo')||'admin',
+            editado_por: localStorage.getItem('fleet_correo')||'admin' };
+        if (password.trim()) body.password = password.trim();
+        var res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        var json = await res.json();
+        if (!res.ok) throw new Error(json.error || res.statusText);
+        var newId = eId || json.id;
+        var savedPass = !eId ? password.trim() : '';
+        await window.guCargarTodo(true);
+        if (newId) {
+            window.guSetTab('miembros');
+            setTimeout(function(){ window.guSeleccionarUsuario(newId); }, 50);
+        }
+        if (!eId && savedPass) {
+            window._guShowCredsPopup(nombre||correo, correo, savedPass);
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Guardar'; }
+    }
+};
+
+window.guEliminarUsuario = async function(id) {
+    if (!confirm('¿Eliminar este usuario permanentemente?')) return;
+    try {
+        await fetch('/api/script/eliminarDocumento', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ ids:[id], coleccion:'Usuarios',
+                usuario: localStorage.getItem('fleet_correo')||'admin' })
+        });
+        window._guSeleccionado = null;
+        var pe = document.getElementById('guPanelEmpty');
+        var pc = document.getElementById('guPanelContent');
+        var pa = document.getElementById('guPanelActions');
+        if (pe) pe.style.display = '';
+        if (pc) { pc.style.display='none'; pc.innerHTML=''; }
+        if (pa) { pa.style.display='none'; pa.innerHTML=''; }
+        await window.guCargarTodo(true);
+    } catch(e) { alert('Error: ' + e.message); }
+};
+
+window._guShowCredsPopup = function(nombre, correo, password) {
+    var texto = '¡Hola ' + nombre + '! Te comparto tus credenciales de acceso al sistema Azkell Fleet:\n\n📧 Correo: ' + correo + '\n🔑 Contraseña: ' + password + '\n\nAccede en: ' + window.location.origin;
+    var waLink = 'https://wa.me/?text=' + encodeURIComponent(texto);
+    var overlay = document.createElement('div');
+    overlay.id = 'guCredsOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = '<div style="background:var(--surface);border-radius:16px;padding:28px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">'
+        + '<div style="width:42px;height:42px;border-radius:50%;background:#57F287;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">✓</div>'
+        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">Usuario creado exitosamente</div>'
+        + '<div style="font-size:.75rem;color:var(--subtext);">Comparte estas credenciales con el nuevo miembro</div></div></div>'
+        + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px;">'
+        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);margin-bottom:12px;">Credenciales de acceso</div>'
+        + '<div style="margin-bottom:10px;"><div style="font-size:.7rem;color:var(--subtext);margin-bottom:2px;">Correo</div>'
+        + '<div style="font-size:.88rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(correo) + '</div></div>'
+        + '<div><div style="font-size:.7rem;color:var(--subtext);margin-bottom:2px;">Contraseña</div>'
+        + '<div style="font-size:.88rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(password) + '</div></div></div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '<a href="' + waLink + '" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#25D366;color:#fff;border-radius:8px;padding:9px 14px;font-weight:700;font-size:.82rem;text-decoration:none;">'
+        + '<i class="bi bi-whatsapp"></i> Enviar por WhatsApp</a>'
+        + '<button onclick="document.getElementById(\'guCredsOverlay\').remove()" style="background:var(--border);color:var(--text);border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
+        + '</div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+};
+
+// ── Init ──────────────────────────────────────────────────────
+window.init_usuarios = function() {
+    // Solo administradores pueden acceder a este módulo
+    try {
+        var p = JSON.parse(localStorage.getItem('fleet_permisos')||'{}');
+        if (!p || p.admin !== true) {
+            var list = document.getElementById('guList');
+            var panel = document.getElementById('guPanel');
+            var tabs  = document.querySelector('.gu-tabs');
+            if (list)  list.innerHTML = '<div class="text-center py-5" style="color:var(--subtext);"><i class="bi bi-lock-fill d-block mb-2" style="font-size:2rem;opacity:.3;"></i><div style="font-size:.85rem;font-weight:600;">Acceso restringido</div><div style="font-size:.75rem;margin-top:4px;">Solo los administradores pueden gestionar usuarios y roles.</div></div>';
+            if (panel) panel.style.display = 'none';
+            if (tabs)  tabs.style.display = 'none';
+            return;
+        }
+    } catch(e) {}
+    window.dataGlobalRoles    = [];
+    window.dataGlobalUsuarios = [];
+    window._guSeleccionado    = null;
+    window._guEsNuevo         = false;
+    window._guTabActiva       = 'roles';
+    window.guCargarTodo(true);
 };

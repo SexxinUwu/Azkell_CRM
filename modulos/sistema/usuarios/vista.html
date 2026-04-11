@@ -1,61 +1,136 @@
-<!-- Módulo Usuarios y Permisos - Aislado en SPA -->
+<!-- Módulo Gestión de Usuarios v2 — Discord-style -->
+<style>
+/* ── Layout principal ─────────────────────────────── */
+#moduloUsuarios { display:flex; flex-direction:column; height:100%; background:var(--bg); }
+.gu-header { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.gu-tabs { background:var(--surface); border-bottom:2px solid var(--border); flex-shrink:0; padding:0 16px; display:flex; gap:0; }
+.gu-tab { font-size:0.82rem; font-weight:600; padding:10px 16px; border:none; background:transparent; color:var(--subtext); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; letter-spacing:.3px; }
+.gu-tab:hover { color:var(--text); }
+.gu-tab.active { color:var(--crm-accent); border-bottom-color:var(--crm-accent); }
+.gu-body { display:flex; flex:1 1 0; min-height:0; overflow:hidden; }
 
-<div id="moduloUsuarios" class="modulo-wrapper">
-    <div class="controls-row d-flex justify-content-between">
-        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-person-lines-fill"></i> <span data-i18n="users.title">Directorio del Personal</span></h5>
+/* ── Lista ────────────────────────────────────────── */
+.gu-list { width:280px; flex-shrink:0; border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
+.gu-list-item { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border); position:relative; }
+.gu-list-item:hover { background:var(--border); }
+.gu-list-item.selected { background:color-mix(in srgb, var(--crm-accent) 12%, transparent); }
+.gu-role-dot { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:#fff; }
+.gu-list-info { flex:1; min-width:0; }
+.gu-list-name { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gu-list-sub  { font-size:0.7rem; color:var(--subtext); }
+.gu-list-chevron { color:var(--subtext); font-size:0.8rem; }
+.gu-add-btn { margin:10px 12px; padding:8px 12px; border:2px dashed var(--border); border-radius:10px; background:transparent; color:var(--subtext); font-size:0.8rem; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
+.gu-add-btn:hover { border-color:var(--crm-accent); color:var(--crm-accent); }
+
+/* ── Panel derecho (desktop) ──────────────────────── */
+.gu-panel { flex:1 1 0; overflow-y:auto; display:flex; flex-direction:column; }
+.gu-panel-body { padding:20px 24px 80px; flex:1; }
+.gu-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--subtext); text-align:center; padding:40px; gap:12px; }
+.gu-panel-empty i { font-size:2.5rem; opacity:.25; }
+
+/* ── Secciones dentro del panel ───────────────────── */
+.gu-section-header { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:var(--subtext); padding:18px 0 8px; border-bottom:1px solid var(--border); margin-bottom:0; }
+.gu-field-label { font-size:0.75rem; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; margin-top:14px; }
+.gu-colors { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; }
+.gu-color-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .1s,border-color .1s; }
+.gu-color-swatch.selected, .gu-color-swatch:hover { border-color:var(--text); transform:scale(1.15); }
+.gu-hex-input { font-size:0.78rem; width:90px; padding:3px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); }
+
+/* ── Módulo permiso row ───────────────────────────── */
+.gu-perm-group { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--subtext); padding:16px 0 4px; }
+.gu-perm-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
+.gu-perm-row:last-child { border-bottom:none; }
+.gu-perm-info { flex:1; }
+.gu-perm-name { font-size:0.85rem; font-weight:600; color:var(--text); }
+.gu-perm-desc { font-size:0.72rem; color:var(--subtext); margin-top:1px; }
+.gu-perm-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.gu-perm-label { font-size:0.65rem; font-weight:600; color:var(--subtext); text-align:center; min-width:28px; }
+/* Toggles estilo Discord */
+.dc-toggle { display:none; }
+.dc-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.dc-toggle-label { display:inline-block; width:36px; height:20px; border-radius:10px; background:#4f545c; cursor:pointer; position:relative; transition:background .15s; flex-shrink:0; }
+.dc-toggle:checked + .dc-toggle-label { background:#5865F2; }
+.dc-toggle-label::after { content:''; position:absolute; width:16px; height:16px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+.dc-toggle:checked + .dc-toggle-label::after { left:18px; }
+.dc-toggle-label.readonly { cursor:not-allowed; opacity:.55; }
+/* Toggle de admin (danger) */
+.dc-toggle:checked + .dc-toggle-label.danger { background:#ED4245; }
+
+/* ── Miembros del rol ─────────────────────────────── */
+.gu-member-chip { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.gu-member-chip:last-child { border-bottom:none; }
+.gu-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; }
+.gu-member-name { font-size:0.82rem; font-weight:600; color:var(--text); flex:1; }
+.gu-member-cargo { font-size:0.7rem; color:var(--subtext); }
+.gu-badge-rol { font-size:0.63rem; padding:2px 8px; border-radius:10px; font-weight:700; white-space:nowrap; }
+
+/* ── Actions bar del panel ────────────────────────── */
+.gu-panel-actions { display:flex; gap:8px; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+.btn-gu-danger { background:transparent; border:1px solid #ef4444; color:#ef4444; font-size:0.8rem; font-weight:600; padding:6px 14px; border-radius:8px; cursor:pointer; transition:all .15s; }
+.btn-gu-danger:hover { background:#ef4444; color:#fff; }
+.btn-gu-save { background:var(--crm-accent); border:none; color:#fff; font-size:0.8rem; font-weight:700; padding:6px 18px; border-radius:8px; cursor:pointer; transition:opacity .15s; margin-left:auto; }
+.btn-gu-save:hover { opacity:.88; }
+
+/* ── Mobile ───────────────────────────────────────── */
+@media (max-width:767px) {
+    .gu-list { width:100%; border-right:none; }
+    .gu-panel { display:none; }
+    .gu-body { flex-direction:column; }
+}
+</style>
+
+<div id="moduloUsuarios">
+    <!-- Header -->
+    <div class="gu-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-people-fill" style="font-size:1.1rem;color:var(--crm-accent);"></i>
+            <div>
+                <div class="fw-bold" style="color:var(--text);font-size:0.88rem;">Gestión de Usuarios</div>
+                <div id="gu-subtitle" style="font-size:0.7rem;color:var(--subtext);">Cargando...</div>
+            </div>
+        </div>
         <div class="d-flex gap-2 align-items-center">
-            <span id="cache-badge-usuarios" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-usuarios" data-i18n="common.sinCargar">Sin cargar</span></span>
-            <button class="btn-reload-cache" id="btn-reload-usuarios" onclick="recargarModulo('usuarios')" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalGestorUsuario()" data-perm-crear="usuarios"><i class="bi bi-person-plus"></i> <span data-i18n="users.new">Nuevo Usuario</span></button>
+            <button class="btn-reload-cache" onclick="window.guCargarTodo && window.guCargarTodo(true)" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn btn-primary btn-sm fw-bold" onclick="window.guNuevoMiembro && window.guNuevoMiembro()"><i class="bi bi-person-plus me-1"></i>Nuevo Miembro</button>
         </div>
     </div>
-    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0" id="tablaUsuarios" data-sort-dir="asc">
-        <thead><tr><th onclick="sortTable('tablaUsuarios', 0)"><span data-i18n="users.col.id">ID</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 1)"><span data-i18n="users.col.fullname">Nombre Completo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 2)"><span data-i18n="users.col.cargo">Cargo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 3)"><span data-i18n="common.email">Correo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 4)"><span data-i18n="users.col.rol">Rol</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaUsuarios', 5)"><span data-i18n="common.status">Estado</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-        <tbody id="cuerpoTablaUsuarios"><tr><td colspan="7" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr></tbody>
-    </table></div></div>
+
+    <!-- Tabs -->
+    <div class="gu-tabs">
+        <button class="gu-tab active" id="gu-tab-roles" onclick="window.guSetTab && window.guSetTab('roles')"><i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="ms-1 opacity-60"></span></button>
+        <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Miembros <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+    </div>
+
+    <!-- Body split -->
+    <div class="gu-body">
+        <!-- Lista izquierda -->
+        <div class="gu-list" id="guList">
+            <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</div>
+        </div>
+
+        <!-- Panel derecho (solo desktop) -->
+        <div class="gu-panel" id="guPanel">
+            <div class="gu-panel-body">
+                <div class="gu-panel-empty" id="guPanelEmpty">
+                    <i class="bi bi-shield-lock"></i>
+                    <div class="fw-bold" style="font-size:.9rem;">Selecciona un rol o miembro</div>
+                    <div style="font-size:.78rem;">Haz clic en la lista para ver y editar sus detalles.</div>
+                </div>
+                <div id="guPanelContent" style="display:none;"></div>
+            </div>
+            <div class="gu-panel-actions" id="guPanelActions" style="display:none;"></div>
+        </div>
+    </div>
 </div>
 
-<!-- Modal Gestor de Usuarios y Permisos -->
-<div class="modal fade" id="modalGestorUsuario" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="tituloModalUser"><i class="bi bi-shield-lock-fill text-warning"></i> <span data-i18n="users.modal.title">Gestor de Accesos</span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formGestorUsuario" onsubmit="procesarGuardadoUsuario(event, this)">
-                <input type="hidden" name="idUsuarioEdit" id="gu_id">
-                <input type="hidden" name="permisos_json" id="gu_permisos">
-                <div class="modal-body">
-                    <div class="card p-3 shadow-sm mb-3 border-0">
-                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="bi bi-person-lines-fill"></i> <span data-i18n="users.section.data">Datos del Personal</span></h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3"><label class="fw-bold" data-i18n="users.form.fullname">Nombre Completo</label><input type="text" class="form-control fw-bold" name="nombreUsuarioEdit" id="gu_nombre" required></div>
-                            <div class="col-md-6 mb-3"><label class="fw-bold" data-i18n="users.form.cargo">Cargo</label><input type="text" class="form-control" name="cargoUsuarioEdit" id="gu_cargo" required></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-5 mb-3"><label class="fw-bold" data-i18n="users.form.email">Correo (Usuario)</label><input type="email" class="form-control" name="correoUsuarioEdit" id="gu_correo" required></div>
-                            <div class="col-md-4 mb-3"><label class="fw-bold" data-i18n="common.password">Contraseña</label><input type="text" class="form-control" name="passwordUsuarioEdit" id="gu_password" required></div>
-                            <div class="col-md-3 mb-3"><label class="fw-bold" data-i18n="common.status">Estado</label><select class="form-select" name="estadoUsuarioEdit" id="gu_estado"><option value="Activo" data-i18n="common.active">Activo</option><option value="Inactivo" data-i18n="common.inactive">Inactivo</option></select></div>
-                        </div>
-                    </div>
-                    <div class="card p-0 shadow-sm border-0 overflow-hidden">
-                        <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-grid-3x3-gap-fill"></i> <span data-i18n="users.matrix.title">Matriz de Permisos (Checkboxes)</span></div>
-                        <div class="table-responsive m-0">
-                        <table class="table table-hover table-bordered text-center align-middle mb-0" style="font-size: 0.9rem;" id="tablaMatrizPermisos">
-                                <thead>
-                                    <tr><th class="text-start" data-i18n="users.matrix.module">Módulo de Sistema</th><th><i class="bi bi-eye text-info"></i> <span data-i18n="users.matrix.read">Leer</span></th><th><i class="bi bi-plus-circle text-success"></i> <span data-i18n="users.matrix.create">Crear</span></th><th><i class="bi bi-pencil text-warning"></i> <span data-i18n="users.matrix.edit">Editar</span></th><th><i class="bi bi-trash text-danger"></i> <span data-i18n="users.matrix.delete">Eliminar</span></th></tr>
-                                </thead>
-                                <tbody id="bodyMatrizPermisos"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4" id="btnGuardarUser"><i class="bi bi-save"></i> <span data-i18n="users.save">Guardar Accesos</span></button>
-                </div>
-            </form>
-        </div>
+<!-- Offcanvas para móvil -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(420px,100vw);background:var(--bg);">
+    <div class="offcanvas-header" style="background:var(--surface);border-bottom:1px solid var(--border);">
+        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:var(--text);">Detalle</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0" style="overflow-y:auto;">
+        <div id="guOffcanvasContent" style="padding:18px 18px 80px;"></div>
+        <div id="guOffcanvasActions" class="gu-panel-actions" style="display:none;position:sticky;bottom:0;"></div>
     </div>
 </div>
