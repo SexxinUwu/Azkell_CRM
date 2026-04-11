@@ -128,8 +128,9 @@ window.verificarSesionGuardada = function() {
     const guardadoCorreo   = localStorage.getItem('fleet_correo');
     const guardadoPermisos = localStorage.getItem('fleet_permisos');
     const guardadoRol      = localStorage.getItem('fleet_rol');
+    const guardadoToken    = localStorage.getItem('fleet_token');
 
-    if (!guardadoUser || !guardadoTime || Date.now() - parseInt(guardadoTime) >= TIEMPO_INACTIVIDAD) {
+    if (!guardadoUser || !guardadoTime || !guardadoToken || Date.now() - parseInt(guardadoTime) >= TIEMPO_INACTIVIDAD) {
         cargarModuloAislado('login');
         return;
     }
@@ -219,8 +220,8 @@ window.verificarSesionGuardada = function() {
     safe('btnMenuConductores', isAdm || p?.cond?.l);
 
     sec('wrap-directorio', null, showDir);
-    safe('wrap-usuarios',  isAdm);
-    safe('wrap-auditoria', isAdm || p?.mod_auditoria);
+    safe('wrap-usuarios',  isAdm || !!(p?.seg?.l));
+    safe('wrap-auditoria', isAdm || !!(p?.mod_auditoria?.l));
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---
     let rootDinamico = document.getElementById('root-dinamico');
@@ -268,7 +269,7 @@ window.verificarSesionGuardada = function() {
 
 function cerrarSesion() {
     if (window.cerrarSSE) window.cerrarSSE();
-    localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos');
+    localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos'); localStorage.removeItem('fleet_token');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 
     // 🧹 Limpieza Total de Pantalla
@@ -825,6 +826,35 @@ window.applyAccent = function(hex, save) {
     document.body.style.setProperty('--crm-accent-light', hex + '1a'); // 10% opacity
     if (save) localStorage.setItem('fleet_accent', hex);
 };
+
+// ============================================================
+// 🔑 INTERCEPTOR FETCH GLOBAL — inyecta JWT en todas las peticiones /api/
+// ============================================================
+(function installFetchInterceptor() {
+    if (window._fetchInterceptorInstalled) return;
+    window._fetchInterceptorInstalled = true;
+    const _orig = window.fetch.bind(window);
+    window.fetch = async function(url, options) {
+        options = options || {};
+        const urlStr = typeof url === 'string' ? url : String(url);
+        if (!urlStr.startsWith('/api/')) return _orig(url, options);
+        let urlFinal = url;
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const base = window._FLEET_API_BASE || '';
+            if (base) urlFinal = base + urlStr;
+        }
+        const token = localStorage.getItem('fleet_token');
+        if (token) {
+            options = Object.assign({}, options);
+            options.headers = Object.assign({}, options.headers || {}, { 'Authorization': 'Bearer ' + token });
+        }
+        const response = await _orig(urlFinal, options);
+        if (response.status === 401) {
+            setTimeout(function() { if (typeof cerrarSesion === 'function') cerrarSesion(); }, 0);
+        }
+        return response;
+    };
+})();
 
 document.addEventListener('DOMContentLoaded', function() {
   const toggle = document.getElementById('theme-toggle');
@@ -1921,8 +1951,8 @@ const MENU_SECTION = {
     'flota/status':               'flota',
     'flota/ubicacion':            'flota',
     'directorio/conductores':     'directorio',
-    'sistema/usuarios':           'sistema',
-    'sistema/auditoria':          'sistema',
+    'sistema/usuarios':           'configuracion',
+    'sistema/auditoria':          'configuracion',
 };
 
 const BREADCRUMB_MAP = {
@@ -1934,8 +1964,8 @@ const BREADCRUMB_MAP = {
     'flota/status':               ['Flota','Status'],
     'flota/ubicacion':            ['Flota','GPS'],
     'directorio/conductores':     ['Directorio','Conductores'],
-    'sistema/usuarios':           ['Sistema','Usuarios'],
-    'sistema/auditoria':          ['Sistema','Auditoría'],
+    'sistema/usuarios':           ['Configuración','Usuarios'],
+    'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
 };
 

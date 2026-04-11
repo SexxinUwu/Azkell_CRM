@@ -16,7 +16,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'FLOTA',         key:'cond',          nombre:'Conductores',      desc:'Directorio de personal operativo',    lcad:true  },
     { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',        lcad:false },
     { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',           lcad:true  },
-    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',   lcad:false },
+    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',   lcad:true  },
 ];
 
 window._GU_COLORS = window._GU_COLORS || [
@@ -74,7 +74,7 @@ window.guCargarTodo = async function(forzar) {
         var jUsers = await resUsers.json();
         window.dataGlobalRoles = jRoles.data || [];
         var rawUsers = jUsers.data || [];
-        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
         window.dataGlobalUsuarios = rawUsers.map(function(r) {
             return { id:r[0], nombre:r[1], cargo:r[2], correo:r[3], rol_label:r[4],
                      estado:r[5], password:r[6], permisos:r[7], rol_id:r[8], rol_color:r[9],
@@ -227,15 +227,7 @@ function _guBuildRolPanel(rol) {
             html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
             lastGrp = mod.grupo;
         }
-        if (mod.key === 'mod_auditoria') {
-            var val = (typeof p['mod_auditoria']==='boolean') ? p['mod_auditoria'] : !!p['mod_auditoria'];
-            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
-                + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
-                + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
-                + '<input type="checkbox" class="dc-toggle" id="pt-mod_auditoria-l"' + (val?' checked':'') + '>'
-                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-mod_auditoria-l"></label>'
-                + '<span class="gu-perm-label">Leer</span></div></div></div>';
-        } else if (!mod.lcad) {
+        if (!mod.lcad) {
             var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
             html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
@@ -326,10 +318,7 @@ window._guToggleAdmin = function(chk) {
 function _guCollectPermisos() {
     var pObj = {};
     window._GU_MODULOS.forEach(function(mod) {
-        if (mod.key === 'mod_auditoria') {
-            var el = document.getElementById('pt-mod_auditoria-l');
-            pObj['mod_auditoria'] = el ? el.checked : false;
-        } else if (!mod.lcad) {
+        if (!mod.lcad) {
             var el = document.getElementById('pt-' + mod.key + '-l');
             pObj[mod.key] = { l: el && el.checked ? 1 : 0 };
         } else {
@@ -553,14 +542,14 @@ window.guGuardarUsuario = async function() {
         var json = await res.json();
         if (!res.ok) throw new Error(json.error || res.statusText);
         var newId = eId || json.id;
-        var savedPass = !eId ? password.trim() : '';
+        var savedPass = password.trim();
         await window.guCargarTodo(true);
         if (newId) {
             window.guSetTab('miembros');
             setTimeout(function(){ window.guSeleccionarUsuario(newId); }, 50);
         }
-        if (!eId && savedPass) {
-            window._guShowCredsPopup(nombre||correo, correo, savedPass);
+        if (savedPass) {
+            window._guShowCredsPopup(nombre||correo, correo, savedPass, !!eId);
         }
     } catch(e) {
         alert('Error: ' + e.message);
@@ -587,28 +576,63 @@ window.guEliminarUsuario = async function(id) {
     } catch(e) { alert('Error: ' + e.message); }
 };
 
-window._guShowCredsPopup = function(nombre, correo, password) {
-    var texto = '¡Hola ' + nombre + '! Te comparto tus credenciales de acceso al sistema Azkell Fleet:\n\n📧 Correo: ' + correo + '\n🔑 Contraseña: ' + password + '\n\nAccede en: ' + window.location.origin;
-    var waLink = 'https://wa.me/?text=' + encodeURIComponent(texto);
+window._guShowCredsPopup = function(nombre, correo, password, esReset) {
+    var titulo    = esReset ? 'Contraseña actualizada' : 'Usuario creado exitosamente';
+    var subtitulo = esReset ? 'Comparte la nueva clave con el miembro' : 'Comparte estas credenciales con el nuevo miembro';
+    var icono     = esReset ? 'bi-key-fill' : 'bi-person-check-fill';
+    var iconoBg   = esReset ? '#f59e0b' : '#10b981';
+
+    var lineaUsuario = esReset ? '' : ('\u2753 Usuario: ' + nombre + '\n');
+    var textoWA = '\u00a1Hola ' + nombre + '! \u{1F44B}\n\n'
+        + (esReset ? 'Tu contrase\u00f1a en Azkell Fleet fue restablecida:\n\n'
+                   : 'Te comparto tus credenciales para Azkell Fleet:\n\n')
+        + '\u{1F4E7} Correo: ' + correo + '\n'
+        + '\u{1F511} Contrase\u00f1a: ' + password + '\n'
+        + '\u{1F310} Acceso: ' + window.location.origin + '\n\n'
+        + '\u26A0\uFE0F Guarda estos datos en un lugar seguro.';
+
+    var waLink = 'https://wa.me/?text=' + encodeURIComponent(textoWA);
+
     var overlay = document.createElement('div');
     overlay.id = 'guCredsOverlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-    overlay.innerHTML = '<div style="background:var(--surface);border-radius:16px;padding:28px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
-        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">'
-        + '<div style="width:42px;height:42px;border-radius:50%;background:#57F287;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">✓</div>'
-        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">Usuario creado exitosamente</div>'
-        + '<div style="font-size:.75rem;color:var(--subtext);">Comparte estas credenciales con el nuevo miembro</div></div></div>'
-        + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px;">'
-        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);margin-bottom:12px;">Credenciales de acceso</div>'
-        + '<div style="margin-bottom:10px;"><div style="font-size:.7rem;color:var(--subtext);margin-bottom:2px;">Correo</div>'
-        + '<div style="font-size:.88rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(correo) + '</div></div>'
-        + '<div><div style="font-size:.7rem;color:var(--subtext);margin-bottom:2px;">Contraseña</div>'
-        + '<div style="font-size:.88rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(password) + '</div></div></div>'
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = '<div style="background:var(--surface);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.55);">'
+
+        // Header con ícono + títulos
+        + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">'
+        + '<div style="width:46px;height:46px;border-radius:50%;background:' + iconoBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<i class="bi ' + icono + '" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">' + titulo + '</div>'
+        + '<div style="font-size:.75rem;color:var(--subtext);margin-top:1px;">' + subtitulo + '</div></div></div>'
+
+        // Card de credenciales
+        + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;">'
+        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--subtext);margin-bottom:14px;">Credenciales de acceso</div>'
+
+        // Correo
+        + '<div style="margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+        + '<i class="bi bi-envelope-fill" style="font-size:.75rem;color:var(--subtext);"></i>'
+        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--subtext);">Correo</span></div>'
+        + '<div style="font-size:.9rem;font-weight:700;color:var(--text);font-family:monospace;word-break:break-all;">' + _guEsc(correo) + '</div></div>'
+
+        // Contraseña
+        + '<div>'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+        + '<i class="bi bi-key-fill" style="font-size:.75rem;color:var(--subtext);"></i>'
+        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--subtext);">Contrase\u00f1a</span></div>'
+        + '<div style="font-size:.9rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(password) + '</div>'
+        + '</div></div>'
+
+        // Botones
         + '<div style="display:flex;gap:8px;">'
-        + '<a href="' + waLink + '" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#25D366;color:#fff;border-radius:8px;padding:9px 14px;font-weight:700;font-size:.82rem;text-decoration:none;">'
-        + '<i class="bi bi-whatsapp"></i> Enviar por WhatsApp</a>'
-        + '<button onclick="document.getElementById(\'guCredsOverlay\').remove()" style="background:var(--border);color:var(--text);border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
+        + '<a href="' + waLink + '" target="_blank" '
+        + 'style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.82rem;text-decoration:none;">'
+        + '<i class="bi bi-whatsapp" style="font-size:1rem;"></i> Enviar por WhatsApp</a>'
+        + '<button onclick="document.getElementById(\'guCredsOverlay\').remove()" '
+        + 'style="background:var(--border);color:var(--text);border:none;border-radius:10px;padding:10px 18px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
         + '</div></div>';
+
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
 };
