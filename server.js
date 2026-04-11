@@ -36,51 +36,60 @@ db.getConnection((err, connection) => {
         console.error('🚨 Error al conectar con Aiven:', err.message);
     } else {
         console.log('✅ Base de datos conectada con éxito (Pool Activo)');
+        // Migraciones de esquema al arrancar
         connection.query(
-            `CREATE TABLE IF NOT EXISTS auditoria (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-                usuario VARCHAR(150) DEFAULT 'sistema',
-                modulo VARCHAR(50),
-                accion VARCHAR(50),
-                detalle TEXT
-            )`,
+            `ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL`,
             (err2) => {
+                if (err2 && err2.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER auditoria:', err2.message);
+                else console.log('✅ Columna modulo verificada en auditoria');
+            }
+        );
+        // Crear tabla roles si no existe
+        connection.query(
+            `CREATE TABLE IF NOT EXISTS roles (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                color VARCHAR(20) DEFAULT '#5865F2',
+                permisos_json TEXT,
+                es_admin TINYINT(1) DEFAULT 0
+            )`,
+            (err3) => {
+                if (err3) console.warn('CREATE TABLE roles:', err3.message);
+                else console.log('✅ Tabla roles verificada');
+            }
+        );
+        // Agregar rol_id a usuarios si no existe
+        connection.query(
+            `ALTER TABLE usuarios ADD COLUMN rol_id INT NULL DEFAULT NULL`,
+            (err4) => {
+                if (err4 && err4.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER usuarios rol_id:', err4.message);
+                else console.log('✅ Columna rol_id verificada en usuarios');
+            }
+        );
+        // Columnas de actividad/sesión
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_acceso DATETIME NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_acceso:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_ip VARCHAR(80) NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_ip:', e.message); });
+        connection.query(`ALTER TABLE usuarios ADD COLUMN ultimo_dispositivo VARCHAR(200) NULL DEFAULT NULL`,
+            (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_dispositivo:', e.message); });
+        // Orden/jerarquía en roles
+        connection.query(`ALTER TABLE roles ADD COLUMN orden INT NOT NULL DEFAULT 0`,
+            (e) => {
                 connection.release();
-                if (err2) console.error('❌ No se pudo crear tabla auditoria:', err2.message);
-                else console.log('✅ Tabla auditoria verificada/creada');
+                if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER roles orden:', e.message);
+                else console.log('✅ Esquema v2 verificado');
             }
         );
     }
 });
 
-// 📋 Helper de auditoría
-const CREATE_AUDITORIA_SQL = `CREATE TABLE IF NOT EXISTS auditoria (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-    usuario VARCHAR(150) DEFAULT 'sistema',
-    modulo VARCHAR(50),
-    accion VARCHAR(50),
-    detalle TEXT
-)`;
-
+// 📋 Helper de auditoría — usa esquema real: idAuditoria, fecha, usuario, accion, detalle, modulo
 function logAudit(usuario, modulo, accion, detalle) {
-    const values = [usuario || 'sistema', modulo || '', accion || '', detalle || ''];
     db.query(
         'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
-        values,
-        (err) => {
-            if (err) {
-                if (err.code === 'ER_NO_SUCH_TABLE') {
-                    // La tabla no existe aún — crearla y reintentar
-                    db.query(CREATE_AUDITORIA_SQL, (err2) => {
-                        if (!err2) db.query('INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)', values, () => {});
-                    });
-                } else {
-                    console.warn('Audit log error:', err.message);
-                }
-            }
-        }
+        [usuario || 'sistema', modulo || '', accion || '', detalle || ''],
+        (err) => { if (err) console.warn('Audit log error:', err.message); }
     );
 }
 
@@ -134,7 +143,12 @@ app.get('/api/ping', (req, res) => {
 // ============================================================
 app.post('/api/login', (req, res) => {
     const { correo, password } = req.body;
-    const sql = 'SELECT * FROM usuarios WHERE correo = ?';
+    const sql = `
+        SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
+               r.color AS rol_color, r.es_admin AS rol_es_admin, r.id AS rol_id_fk
+        FROM usuarios u
+        LEFT JOIN roles r ON u.rol_id = r.id
+        WHERE u.correo = ?`;
 
     db.query(sql, [correo], (err, results) => {
         if (err) {
@@ -149,15 +163,50 @@ app.post('/api/login', (req, res) => {
                     return res.json({ exito: false, mensaje: "Cuenta inactiva." });
                 }
 
-                let permisosFinales = usuario.permisos_json || "{}";
+                let permisosFinales;
                 let rolFinal = usuario.rol || "Personalizado";
 
                 if (correo.toLowerCase() === 'admin@azkell.com') {
                     permisosFinales = JSON.stringify({ admin: true });
-                    rolFinal = "Administrador";
+                    rolFinal = "Fundador";
+                } else if (usuario.rol_id && usuario.rol_es_admin) {
+                    permisosFinales = JSON.stringify({ admin: true });
+                    rolFinal = usuario.rol_nombre || "Administrador";
+                } else if (usuario.rol_id && usuario.rol_permisos) {
+                    permisosFinales = usuario.rol_permisos;
+                    rolFinal = usuario.rol_nombre || "Personalizado";
+                } else {
+                    permisosFinales = usuario.permisos_json || "{}";
                 }
 
-                return res.json({ exito: true, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales });
+                // Registrar actividad de sesión
+                const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?';
+                const ua = req.headers['user-agent'] || '';
+                let dispositivo = 'PC';
+                if (/Mobile|Android|iPhone|iPad/i.test(ua)) {
+                    if (/iPhone/i.test(ua)) dispositivo = 'iPhone';
+                    else if (/iPad/i.test(ua)) dispositivo = 'iPad';
+                    else if (/Android/i.test(ua)) dispositivo = 'Android';
+                    else dispositivo = 'Móvil';
+                } else if (/Chrome/i.test(ua)) dispositivo = 'Chrome (PC)';
+                else if (/Firefox/i.test(ua)) dispositivo = 'Firefox (PC)';
+                else if (/Safari/i.test(ua)) dispositivo = 'Safari (PC)';
+                else if (/Edg/i.test(ua)) dispositivo = 'Edge (PC)';
+
+                db.query(
+                    'UPDATE usuarios SET ultimo_acceso=NOW(), ultimo_ip=?, ultimo_dispositivo=? WHERE correo=?',
+                    [ip, dispositivo, correo],
+                    (err) => { if (err) console.warn('UPDATE sesion:', err.message); }
+                );
+
+                return res.json({
+                    exito: true,
+                    nombre: usuario.nombre,
+                    rol: rolFinal,
+                    permisos: permisosFinales,
+                    rol_color: usuario.rol_color || null,
+                    rol_id: usuario.rol_id || null
+                });
             } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
         } else { return res.json({ exito: false, mensaje: "El correo no está registrado." }); }
     });
@@ -230,25 +279,38 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosUsuarios') {
-        const query = "SELECT idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json FROM usuarios";
+        const query = `
+            SELECT u.idUsuario, u.nombre, u.cargo, u.correo, u.password, u.rol,
+                   u.estado, u.permisos_json, u.rol_id,
+                   u.ultimo_acceso, u.ultimo_ip, u.ultimo_dispositivo,
+                   r.nombre AS rol_nombre, r.color AS rol_color, r.es_admin AS rol_es_admin
+            FROM usuarios u
+            LEFT JOIN roles r ON u.rol_id = r.id`;
         db.query(query, (err, results) => {
             if (err) return res.status(500).json({ data: "Error BD: " + err.message });
             const filas = results.map(r => {
                 let permisosFinales = {};
                 let correoMin = (r.correo || '').trim().toLowerCase();
+                let rolLabel = r.rol_nombre || r.rol || 'Personalizado';
                 if (correoMin === 'admin@azkell.com') {
+                    permisosFinales = { admin: true };
+                    rolLabel = 'Fundador';
+                } else if (r.rol_id && r.rol_es_admin) {
                     permisosFinales = { admin: true };
                 } else {
                     try {
                         let raw = r.permisos_json || '{}';
                         permisosFinales = (typeof raw === 'string') ? JSON.parse(raw) : raw;
                         if (typeof permisosFinales === 'string') permisosFinales = JSON.parse(permisosFinales);
-                    } catch (e) {
-                        console.error(`Error parseando permisos de ${r.correo}:`, e);
-                        permisosFinales = {};
-                    }
+                    } catch (e) { permisosFinales = {}; }
                 }
-                return [ r.idUsuario, r.nombre, r.cargo, r.correo, r.rol, r.estado, r.password, JSON.stringify(permisosFinales) ];
+                // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+                return [
+                    r.idUsuario, r.nombre, r.cargo, r.correo,
+                    rolLabel, r.estado, r.password,
+                    JSON.stringify(permisosFinales), r.rol_id || null, r.rol_color || null,
+                    r.ultimo_acceso || null, r.ultimo_ip || null, r.ultimo_dispositivo || null
+                ];
             });
             return res.json({ data: filas });
         });
@@ -377,23 +439,25 @@ app.post('/api/script/:metodo', async (req, res) => {
             let estado = form.estadoUsuarioEdit || 'Activo';
             let permisos = form.permisos_json || "{}";
             let rol = "Personalizado";
+            const rolIdRaw = form.rol_id || null;
+            const rolId = (rolIdRaw && rolIdRaw !== '' && rolIdRaw !== 'null') ? parseInt(rolIdRaw) || null : null;
 
             if (correo.trim().toLowerCase() === 'admin@azkell.com') {
                 permisos = JSON.stringify({ admin: true });
-                estado = "Activo"; rol = "Administrador";
+                estado = "Activo"; rol = "Fundador";
             }
             if (typeof permisos === 'object') permisos = JSON.stringify(permisos);
 
             if (isEdit) {
-                const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, estado=?, permisos_json=?, rol=? WHERE idUsuario=?";
-                db.query(sqlUpdate, [nombre, cargo, correo, password, estado, permisos, rol, idFinal], (err) => {
+                const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
+                db.query(sqlUpdate, [nombre, cargo, correo, password, estado, permisos, rol, rolId, idFinal], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'actualizar');
                     return res.json({ data: "Éxito" });
                 });
             } else {
-                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, rol, estado, permisos], (err) => {
+                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json, rol_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, rol, estado, permisos, rolId], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'guardar');
                     return res.json({ data: "Éxito" });
@@ -1195,23 +1259,135 @@ app.put('/api/taller/entradas/:ticket/estado', (req, res) => {
 // 📋 MÓDULO AUDITORÍA
 // ============================================================
 app.get('/api/auditoria', (req, res) => {
-    // Garantizar que la tabla exista antes de consultar
-    db.query(CREATE_AUDITORIA_SQL, (createErr) => {
-        if (createErr) { console.error('Error creando tabla auditoria:', createErr.message); }
+    // Garantizar columna modulo antes de consultar
+    db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
         const { modulo, accion, usuario, limit } = req.query;
-        let sql = 'SELECT id, fecha, usuario, modulo, accion, detalle FROM auditoria';
+        // Usar nombres reales: idAuditoria, fecha, usuario, accion, detalle, modulo
+        let sql = 'SELECT idAuditoria AS id, COALESCE(fecha, `timestamp`) AS fecha, usuario, IFNULL(modulo,\'\') AS modulo, accion, detalle FROM auditoria';
         const params = [];
         const conditions = [];
         if (modulo) { conditions.push('modulo = ?'); params.push(modulo); }
         if (accion) { conditions.push('accion = ?'); params.push(accion); }
         if (usuario) { conditions.push('usuario LIKE ?'); params.push('%' + usuario + '%'); }
         if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
-        sql += ' ORDER BY fecha DESC LIMIT ?';
+        sql += ' ORDER BY idAuditoria DESC LIMIT ?';
         params.push(Math.min(parseInt(limit) || 300, 500));
         db.query(sql, params, (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ data: results });
         });
+    });
+});
+
+// ============================================================
+// 🎭 ROLES — CRUD COMPLETO
+// ============================================================
+
+app.get('/api/roles', (req, res) => {
+    const sql = `
+        SELECT r.*, COUNT(u.idUsuario) AS miembros
+        FROM roles r
+        LEFT JOIN usuarios u ON u.rol_id = r.id
+        GROUP BY r.id
+        ORDER BY r.orden ASC, r.id ASC`;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: results });
+    });
+});
+
+app.post('/api/roles', (req, res) => {
+    const { nombre, color, permisos_json, es_admin, orden } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    db.query(
+        'INSERT INTO roles (nombre, color, permisos_json, es_admin, orden) VALUES (?, ?, ?, ?, ?)',
+        [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            broadcast('usuarios', 'crear_rol');
+            res.json({ data: 'Éxito', id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/roles/:id', (req, res) => {
+    const { nombre, color, permisos_json, es_admin, orden } = req.body;
+    const { id } = req.params;
+    db.query(
+        'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
+        [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            broadcast('usuarios', 'actualizar_rol');
+            res.json({ data: 'Éxito' });
+        }
+    );
+});
+
+app.delete('/api/roles/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
+        db.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            broadcast('usuarios', 'eliminar_rol');
+            res.json({ data: 'Éxito' });
+        });
+    });
+});
+
+// ============================================================
+// 👤 USUARIOS v2 — ENDPOINTS MODERNOS
+// ============================================================
+
+app.post('/api/usuarios-v2', (req, res) => {
+    const { nombre, cargo, correo, password, estado, rol_id } = req.body;
+    if (!correo) return res.status(400).json({ error: 'Correo requerido' });
+    const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
+    let rol = 'Personalizado';
+    if (correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    db.query('SELECT idUsuario FROM usuarios', (err, results) => {
+        let maxId = 1000;
+        if (!err && results) {
+            results.forEach(r => {
+                if (r.idUsuario && r.idUsuario.startsWith('USR-')) {
+                    let num = parseInt(r.idUsuario.split('-')[1]);
+                    if (!isNaN(num) && num > maxId) maxId = num;
+                }
+            });
+        }
+        const newId = `USR-${maxId + 1}`;
+        db.query(
+            'INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?)',
+            [newId, nombre || '', cargo || '', correo, password || '', rol, estado || 'Activo', '{}', rolId],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                broadcast('usuarios', 'crear');
+                const usuario = req.body.creado_por || 'admin';
+                logAudit(usuario, 'usuarios', 'CREÓ', `${nombre || correo}`);
+                res.json({ data: 'Éxito', id: newId });
+            }
+        );
+    });
+});
+
+app.put('/api/usuarios-v2/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, cargo, correo, password, estado, rol_id } = req.body;
+    const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
+    let rol = 'Personalizado';
+    if (correo && correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    const fields = ['nombre=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
+    const values = [nombre || '', cargo || '', correo || '', estado || 'Activo', rol, rolId];
+    if (password && password.trim() !== '') { fields.push('password=?'); values.push(password); }
+    values.push(id);
+    db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        broadcast('usuarios', 'actualizar');
+        const editor = req.body.editado_por || 'admin';
+        logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
+        res.json({ data: 'Éxito' });
     });
 });
 
