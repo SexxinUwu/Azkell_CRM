@@ -135,16 +135,10 @@
                 <div id="wrap-sistema">
                     <button class="nav-section-toggle" data-section="sistema" aria-expanded="false" onclick="window.toggleNavSection('sistema')">
                         <span class="link-text">Sistema</span>
-                        <span class="section-badge">2</span>
+                        <span class="section-badge">1</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-sistema">
-                        <div id="wrap-usuarios">
-                            <a id="nav-usuarios" class="nav-item" onclick="cargarModuloAislado('sistema/usuarios')">
-                                <i class="bi bi-people-fill nav-icon"></i>
-                                <span class="link-text" data-i18n="nav.usuarios">Usuarios</span>
-                            </a>
-                        </div>
                         <div id="wrap-auditoria">
                             <a id="nav-auditoria" class="nav-item" onclick="cargarModuloAislado('sistema/auditoria')">
                                 <i class="bi bi-journal-code nav-icon"></i>
@@ -158,10 +152,16 @@
                 <div id="wrap-configuracion">
                     <button class="nav-section-toggle" data-section="configuracion" aria-expanded="false" onclick="window.toggleNavSection('configuracion')">
                         <span class="link-text" data-i18n="nav.configuracion">Configuración</span>
-                        <span class="section-badge">4</span>
+                        <span class="section-badge">5</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-configuracion">
+                        <div id="wrap-usuarios">
+                            <a id="nav-usuarios" class="nav-item" onclick="cargarModuloAislado('sistema/usuarios')">
+                                <i class="bi bi-people-fill nav-icon"></i>
+                                <span class="link-text" data-i18n="nav.usuarios">Usuarios</span>
+                            </a>
+                        </div>
                         <a id="nav-cfg-perfil" class="nav-item" onclick="window.cargarConfigSection('perfil')">
                             <i class="bi bi-person-circle nav-icon"></i>
                             <span class="link-text" data-i18n="cfg.nav.profile">Mi Perfil</span>
@@ -247,7 +247,7 @@
             <div class="main-area">
 
 
-            <div id="root-dinamico" style="display: none; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 15px 25px;"></div>
+            <div id="root-dinamico" style="display: none; flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 15px 25px;"></div>
 
 
 

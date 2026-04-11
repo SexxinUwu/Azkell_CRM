@@ -244,19 +244,26 @@ window.procesarInspeccionesParaDashboard = async function() {
     window.chartInspDashInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
     window.chartInspDashInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
     window.chartInspDashInst.update();
+
+    // Calcular vencimientos AQUÍ — los datos ya están en window.dataGlobalInspecciones
+    if (typeof window.calcularPrediccionVencimientos === 'function') window.calcularPrediccionVencimientos();
 };
 
 // ============================================================
 // 🗺️ MAPA GPS WIALON (Leaflet)
 // ============================================================
 
+// ============================================================
+// 🗺️ MAPA GPS WIALON (Google Maps embed)
+// ============================================================
+
 window.initMapaDashboard = function(datos) {
     let contenedor = document.getElementById('mapaDashboard');
     if (!contenedor) return;
 
-    // Destruir mapa anterior si existe
+    // Limpiar instancia Leaflet anterior si existía
     if (window.mapaDashInst) {
-        window.mapaDashInst.remove();
+        try { window.mapaDashInst.remove(); } catch(e) {}
         window.mapaDashInst = null;
     }
 
@@ -264,32 +271,25 @@ window.initMapaDashboard = function(datos) {
     let countEl = document.getElementById('dash-gps-count');
     if (countEl) countEl.textContent = (datos || []).length + ' Unidades';
 
-    window.mapaDashInst = L.map('mapaDashboard', { zoomControl: true, scrollWheelZoom: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OSM', maxZoom: 18
-    }).addTo(window.mapaDashInst);
-
-    if (vehiculosConPos.length === 0) {
-        window.mapaDashInst.setView([-12.0464, -77.0428], 11); // Lima, Perú
-        return;
+    // Calcular centroide para centrar el mapa en toda la flota
+    let lat = -12.0464, lng = -77.0428, zoom = 12;
+    if (vehiculosConPos.length === 1) {
+        lat = vehiculosConPos[0].lat;
+        lng = vehiculosConPos[0].lng;
+        zoom = 14;
+    } else if (vehiculosConPos.length > 1) {
+        let sumLat = 0, sumLng = 0;
+        vehiculosConPos.forEach(v => { sumLat += v.lat; sumLng += v.lng; });
+        lat = sumLat / vehiculosConPos.length;
+        lng = sumLng / vehiculosConPos.length;
+        zoom = 12;
     }
 
-    let bounds = [];
-    vehiculosConPos.forEach(w => {
-        let marker = L.marker([w.lat, w.lng]).addTo(window.mapaDashInst);
-        let popup = `<div style="font-family: system-ui; min-width:160px;">
-            <b style="font-size:0.95rem;">🚛 ${w.nombre_wialon}</b><br>
-            <span style="font-size:0.8rem; color:#555;">Placa: <b>${w.placa}</b></span><br>
-            <span style="font-size:0.8rem; color:#555;"><i>📍</i> ${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}</span><br>
-            <span style="font-size:0.8rem; color:#555;">🏁 ${(w.km || 0).toLocaleString()} km</span>
-        </div>`;
-        marker.bindPopup(popup);
-        bounds.push([w.lat, w.lng]);
-    });
-
-    window.mapaDashInst.fitBounds(bounds, { padding: [30, 30] });
-    // Forzar repintado del mapa (fix Leaflet en SPA)
-    setTimeout(() => { if (window.mapaDashInst) window.mapaDashInst.invalidateSize(); }, 300);
+    let iframeSrc = 'https://maps.google.com/maps?q=' + lat.toFixed(6) + ',' + lng.toFixed(6)
+        + '&z=' + zoom + '&output=embed';
+    contenedor.innerHTML = '<iframe src="' + iframeSrc + '" '
+        + 'style="width:100%;height:100%;min-height:320px;border:0;display:block;" '
+        + 'loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>';
 };
 
 window.cargarMapaWialonDash = async function() {
@@ -555,7 +555,7 @@ window.calcularPrediccionVencimientos = function() {
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var semanas = new Array(13).fill(0); // semanas 0-12 (próximos 91 días)
 
-    (dataGlobalInspecciones||[]).forEach(function(i) {
+    (window.dataGlobalInspecciones||[]).forEach(function(i) {
         if (i.estado === 'Eliminada' || !i.fecha_ingreso) return;
         try {
             var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { fi=new Date(i.fecha_ingreso+'T00:00:00'); }
@@ -613,8 +613,6 @@ window.recargarDashboard = function() {
     if (typeof procesarFleetrunParaDashboard === 'function') procesarFleetrunParaDashboard();
     if (typeof procesarInspeccionesParaDashboard === 'function') procesarInspeccionesParaDashboard();
     if (typeof window.renderKpiMetrics === 'function') window.renderKpiMetrics();
-    cargarMapaWialonDash();
-    setTimeout(function() { if (typeof window.calcularPrediccionVencimientos === 'function') window.calcularPrediccionVencimientos(); }, 500);
 };
 
 // ============================================================
@@ -626,9 +624,8 @@ window.init_dashboard = function() {
 
     let ctx1 = document.getElementById('chartDashFleetrunStatus');
     let ctx2 = document.getElementById('chartGeneralInspecciones');
-    let mapa = document.getElementById('mapaDashboard');
 
-    if (!ctx1 || !ctx2 || !mapa) {
+    if (!ctx1 || !ctx2) {
         setTimeout(window.init_dashboard, 200);
         return;
     }
