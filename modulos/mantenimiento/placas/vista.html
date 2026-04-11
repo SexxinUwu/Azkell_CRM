@@ -194,6 +194,16 @@
                     <i class="bi bi-broadcast me-1"></i> GPS
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold small" id="tab-insp-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-insp-panel" type="button" role="tab">
+                    <i class="bi bi-clipboard2-check me-1"></i> Insp.
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold small" id="tab-fleet-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-fleet-panel" type="button" role="tab">
+                    <i class="bi bi-tools me-1"></i> MP
+                </button>
+            </li>
         </ul>
 
         <div class="tab-content">
@@ -267,15 +277,34 @@
                     </li>
                 </ul>
             </div>
+
+            <!-- PESTAÑA 3: Última Inspección -->
+            <div class="tab-pane fade p-3" id="tab-insp-panel" role="tabpanel">
+                <div id="tab-insp-panel-body" class="text-muted text-center py-4">
+                    <i class="bi bi-clipboard2-x fs-3 opacity-50"></i>
+                    <div class="mt-2 small">Sin registros de inspección.</div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 4: Mantenimiento Preventivo (Fleetrun) -->
+            <div class="tab-pane fade p-3" id="tab-fleet-panel" role="tabpanel">
+                <div id="tab-fleet-panel-body" class="text-muted text-center py-4">
+                    <i class="bi bi-tools fs-3 opacity-50"></i>
+                    <div class="mt-2 small">Sin registros de mantenimiento.</div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="offcanvas-footer border-top p-3 d-flex gap-2 bg-theme-main">
                 <button class="btn btn-outline-secondary w-50 fw-bold" data-bs-dismiss="offcanvas" data-i18n="common.close">Cerrar</button>
                 <button class="btn btn-warning w-50 fw-bold text-dark" id="btn-editar-offcanvas"><i class="bi bi-pencil-square"></i> <span data-i18n="common.edit">Editar</span></button>
     </div>
-    <div class="p-2" style="background:var(--surface);border-top:1px solid var(--border);">
-        <button class="btn btn-success fw-bold w-100 d-flex align-items-center justify-content-center gap-2" onclick="(function(){var t=document.getElementById('det-placa-titulo');if(!t)return;var placa=t.innerText.trim();var p=(window.dataGlobalPlacas||[]).find(function(x){return x[0]===placa;});var cli=p?p[1]:'';var mar=p?p[3]:'';var tip=p?p[5]:'';var est=p?p[18]:'';var txt='*Ficha Vehículo — Azkell Fleet*\n━━━━━━━━━━━━━━━━━━━━\n🚛 *Placa:* '+placa+(cli?'\n👤 *Cliente:* '+cli:'')+(mar?'\n🔧 *Marca:* '+mar:'')+(tip?'\n🚌 *Tipo:* '+tip:'')+(est?'\n🟢 *Estado:* '+est:'')+'\n\nAzkell Fleet';window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(txt),'_blank');})()" style="font-size:0.85rem;">
-            <i class="bi bi-whatsapp"></i> Compartir por WhatsApp
+    <div class="p-2 d-flex gap-2" style="background:var(--surface);border-top:1px solid var(--border);">
+        <button class="btn btn-success fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="(function(){var t=document.getElementById('det-placa-titulo');if(!t)return;var placa=t.innerText.trim();var p=(window.dataGlobalPlacas||[]).find(function(x){return x[0]===placa;});var cli=p?p[1]:'';var mar=p?p[3]:'';var tip=p?p[5]:'';var est=p?p[18]:'';var txt='*Ficha Vehículo — Azkell Fleet*\n━━━━━━━━━━━━━━━━━━━━\n🚛 *Placa:* '+placa+(cli?'\n👤 *Cliente:* '+cli:'')+(mar?'\n🔧 *Marca:* '+mar:'')+(tip?'\n🚌 *Tipo:* '+tip:'')+(est?'\n🟢 *Estado:* '+est:'')+'\n\nAzkell Fleet';window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(txt),'_blank');})()" style="font-size:0.82rem;">
+            <i class="bi bi-whatsapp"></i> WhatsApp
+        </button>
+        <button class="btn btn-danger fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="(function(){var t=document.getElementById('det-placa-titulo');if(!t)return;window.exportarFichaPlacaPDF(t.innerText.trim());})()" style="font-size:0.82rem;">
+            <i class="bi bi-file-earmark-pdf-fill"></i> PDF
         </button>
     </div>
 </div>

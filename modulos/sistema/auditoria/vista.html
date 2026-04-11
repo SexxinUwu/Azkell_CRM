@@ -1,21 +1,74 @@
-<div id="moduloAuditoria" class="modulo-wrapper">
-    <div class="controls-row d-flex justify-content-between">
-        <h5 class="mb-0 mt-1 fw-bold"><i class="bi bi-journal-code"></i> <span data-i18n="audit.title">Registro de Actividad</span></h5>
-        <div class="d-flex gap-2 align-items-center w-50 justify-content-end">
-            <span id="cache-badge-auditoria" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-auditoria" data-i18n="common.sinCargar">Sin cargar</span></span>
-            <button class="btn-reload-cache" id="btn-reload-auditoria" onclick="cargarTablaAuditoria(true)" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
-            <input type="text" class="form-control form-control-sm w-50" id="buscadorAuditoria" onkeyup="filtrarTabla('cuerpoTablaAuditoria', 'buscadorAuditoria')" placeholder="Buscar en historial...">
+<style>
+#moduloAuditoria { display:flex; flex-direction:column; height:100%; background:var(--bg); }
+.audit-header { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; padding:10px 16px; }
+.audit-chips { background:var(--surface); border-bottom:2px solid var(--border); flex-shrink:0; padding:8px 16px; gap:6px; display:flex; flex-wrap:wrap; align-items:center; }
+.audit-chip { font-size:0.75rem; padding:3px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--subtext); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.audit-chip:hover { border-color:var(--crm-accent); color:var(--crm-accent); }
+.audit-chip.active { background:var(--crm-accent); border-color:var(--crm-accent); color:#fff; }
+.audit-chip.cre { border-color:#22c55e; color:#16a34a; }
+.audit-chip.cre.active { background:#22c55e; color:#fff; }
+.audit-chip.mod { border-color:#f59e0b; color:#b45309; }
+.audit-chip.mod.active { background:#f59e0b; color:#fff; }
+.audit-chip.del { border-color:#ef4444; color:#dc2626; }
+.audit-chip.del.active { background:#ef4444; color:#fff; }
+.audit-feed { flex:1 1 0; overflow-y:auto; padding:4px 0 60px; }
+.audit-day-sep { text-align:center; padding:12px 0 4px; font-size:0.72rem; color:var(--subtext); letter-spacing:1px; text-transform:uppercase; position:relative; }
+.audit-day-sep::before, .audit-day-sep::after { content:''; position:absolute; top:50%; width:calc(50% - 60px); height:1px; background:var(--border); }
+.audit-day-sep::before { left:16px; } .audit-day-sep::after { right:16px; }
+.audit-msg { display:flex; gap:12px; padding:6px 16px 4px; align-items:flex-start; transition:background .1s; }
+.audit-msg:hover { background:var(--surface); }
+.audit-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; margin-top:2px; user-select:none; }
+.audit-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; }
+.audit-name { font-size:0.85rem; font-weight:700; color:var(--text); }
+.audit-time { font-size:0.7rem; color:var(--subtext); }
+.audit-badge { font-size:0.63rem; padding:2px 7px; border-radius:10px; font-weight:700; letter-spacing:.4px; }
+.audit-badge-cre { background:rgba(34,197,94,.18); color:#16a34a; }
+.audit-badge-mod { background:rgba(245,158,11,.2); color:#b45309; }
+.audit-badge-del { background:rgba(239,68,68,.18); color:#dc2626; }
+.audit-badge-mod-name { background:rgba(99,102,241,.15); color:#6366f1; }
+.audit-detail { background:var(--surface); border-left:3px solid var(--border); border-radius:0 6px 6px 0; padding:5px 10px; font-size:0.82rem; color:var(--text); margin-top:2px; max-width:100%; word-break:break-word; }
+</style>
+
+<div id="moduloAuditoria">
+    <!-- Header -->
+    <div class="audit-header d-flex align-items-center gap-2 justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text text-primary" style="font-size:1.1rem;"></i>
+            <div>
+                <div class="fw-bold" style="color:var(--text);font-size:0.88rem;" data-i18n="audit.title">Registro de Actividad</div>
+                <div id="audit-subtitle" style="font-size:0.7rem;color:var(--subtext);">Cargando...</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <input type="text" class="form-control form-control-sm" placeholder="Buscar..." id="auditSearch"
+                   style="width:148px;font-size:0.8rem;" oninput="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+            <button class="btn-reload-cache" onclick="window.cargarAuditoria && window.cargarAuditoria(true)" title="Actualizar">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
         </div>
     </div>
-    <div class="card p-0 mt-2"><div class="table-container"><table class="table table-custom m-0 table-sm" id="tablaAuditoria" data-sort-dir="desc">
-        <thead><tr>
-            <th onclick="sortTable('tablaAuditoria', 0)"><span data-i18n="audit.col.datetime">Fecha y Hora</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-            <th onclick="sortTable('tablaAuditoria', 1)"><span data-i18n="audit.col.author">Usuario Autor</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-            <th onclick="sortTable('tablaAuditoria', 2)"><span data-i18n="audit.col.action">Acción</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-            <th onclick="sortTable('tablaAuditoria', 3)"><span data-i18n="audit.col.detail">Detalle Operación</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
-        </tr></thead>
-        <tbody id="cuerpoTablaAuditoria">
-            <tr><td colspan="4" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr>
-        </tbody>
-    </table></div></div>
+
+    <!-- Filter chips -->
+    <div class="audit-chips" id="auditChips">
+        <button class="audit-chip active" data-filter="all" onclick="window.setAuditFilter('all')">Todos</button>
+        <button class="audit-chip cre" data-filter="CREÓ" onclick="window.setAuditFilter('CREÓ')">✅ Creó</button>
+        <button class="audit-chip mod" data-filter="MODIFICÓ" onclick="window.setAuditFilter('MODIFICÓ')">📝 Modificó</button>
+        <button class="audit-chip del" data-filter="ELIMINÓ" onclick="window.setAuditFilter('ELIMINÓ')">🗑 Eliminó</button>
+        <select class="form-select form-select-sm ms-auto" id="auditModuloFilter"
+                style="width:130px;font-size:0.75rem;" onchange="window.filtrarAuditFeed && window.filtrarAuditFeed()">
+            <option value="">Todos los módulos</option>
+            <option value="fleetrun">Fleetrun</option>
+            <option value="placas">Placas</option>
+            <option value="inspecciones">Inspecciones</option>
+            <option value="usuarios">Usuarios</option>
+            <option value="status">Status Flota</option>
+        </select>
+    </div>
+
+    <!-- Feed Discord -->
+    <div class="audit-feed" id="auditFeed">
+        <div class="text-center py-5 text-muted">
+            <span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...
+        </div>
+    </div>
 </div>

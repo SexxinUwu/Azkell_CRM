@@ -33,7 +33,7 @@ class GoogleRunner {
 
             let res = await fetch('/api/script/' + method, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ args: parsedArgs })
+                body: JSON.stringify({ args: parsedArgs, usuario: localStorage.getItem('fleet_correo') || 'sistema' })
             });
             let json = await res.json();
 
@@ -481,6 +481,12 @@ window.abrirDetallePlacaGlobal = function(placa, defaultTab) {
     var elPlaca  = document.getElementById('odp-placa');
     var elBadges = document.getElementById('odp-badges');
     if (elPlaca) elPlaca.textContent = placa;
+    var isFleetView = (defaultTab === 'fleet');
+
+    // Mostrar solo pestaña MP cuando se abre desde Fleetrun
+    document.querySelectorAll('#odpTabs .nav-item').forEach(function(li, idx) {
+        li.style.display = isFleetView ? (idx === 2 ? '' : 'none') : '';
+    });
 
     var infoP = (dataGlobalPlacas || []).find(function(p) { return normalizeStr(p[0]) === normalizeStr(placa); });
 
@@ -491,7 +497,7 @@ window.abrirDetallePlacaGlobal = function(placa, defaultTab) {
             var bCls = estado === 'Activa' ? 'success' : 'secondary';
             elBadges.innerHTML = '<span class="badge bg-' + bCls + '">' + estado + '</span>'
                 + (infoP[19] ? ' <span class="badge bg-info text-dark">' + infoP[19] + '</span>' : '')
-                + ' ' + window.scoreSaludBadge(placa);
+                + (isFleetView ? '' : ' ' + window.scoreSaludBadge(placa));
         } else {
             elBadges.innerHTML = '';
         }
@@ -556,37 +562,17 @@ window.abrirDetallePlacaGlobal = function(placa, defaultTab) {
         }
     }
 
-    // --- Tab Fleetrun (últimos 5 MPs) ---
+    // --- Tab Fleetrun (MPs agrupados por tipo, último por tipo, con historial) ---
     var fleetEl = document.getElementById('odp-tab-fleet');
     if (fleetEl) {
         var recs = (dataGlobalFleetrun || []).filter(function(r) {
             return normalizeStr(r[4]) === normalizeStr(placa);
-        }).slice(0, 5);
-        if (!recs.length) {
-            fleetEl.innerHTML = '<p class="text-muted text-center py-4">Sin registros de mantenimiento.</p>';
-        } else {
-            fleetEl.innerHTML = recs.map(function(r, idx) {
-                var kmProx = parseFloat(r[11]) || 0;
-                var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
-                var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
-                var falta = kmProx - kmGps;
-                var bCl = falta <= 0 ? 'danger' : (falta <= 1500 ? 'warning' : 'success');
-                var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km';
-                var lineH = idx < recs.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:16px;"></div>' : '';
-                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
-                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
-                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-'+bCl+'" style="width:1.6rem;height:1.6rem;flex-shrink:0;">'
-                    + '<i class="bi bi-tools text-white" style="font-size:0.65rem;"></i></div>'
-                    + lineH + '</div>'
-                    + '<div class="flex-grow-1 pb-1">'
-                    + '<div class="d-flex justify-content-between align-items-center">'
-                    + '<span class="fw-bold" style="color:#2D438A;">' + (r[8] || '—') + '</span>'
-                    + '<span class="badge bg-'+bCl+'" style="font-size:0.65rem;">' + faltaLabel + '</span>'
-                    + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.75rem;">' + (typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : r[3] || '—') + ' · ' + (r[13] || '—') + '</div>'
-                    + '</div></div>';
-            }).join('');
-        }
+        });
+        var utsPlaca = infoP ? (infoP[19] || '') : '';
+        window._odpFleetRecs = recs;
+        window._odpFleetMode = 'current';
+        window._odpFleetUts = utsPlaca;
+        window._buildFleetTab('current');
     }
 
     // --- Tab GPS (solo texto — CLAUDE.md: GPS en Placas SOLO TEXTO) ---
@@ -626,6 +612,104 @@ function _odpFila2(label, val) {
         + '<span class="fw-bold" style="color:var(--text);">' + (val || '—') + '</span></div>';
 }
 
+window._buildFleetTab = function(mode) {
+    var fleetEl = document.getElementById('odp-tab-fleet');
+    if (!fleetEl) return;
+    var recs = window._odpFleetRecs || [];
+    var utsPlaca = window._odpFleetUts || '';
+    var umbral = normalizeStr(utsPlaca) === 'LOCAL' ? 100 : 1500;
+    if (!recs.length) {
+        fleetEl.innerHTML = '<p class="text-muted text-center py-4">Sin registros de mantenimiento.</p>';
+        return;
+    }
+    var recsToShow;
+    if (mode === 'current') {
+        var byTipo = {};
+        recs.forEach(function(r) {
+            var tipo = (r[8] || '').toUpperCase().trim();
+            if (!byTipo[tipo] || parseInt(r[0]) > parseInt(byTipo[tipo][0])) byTipo[tipo] = r;
+        });
+        recsToShow = Object.values(byTipo);
+        recsToShow.sort(function(a, b) {
+            var ta = (a[8] || '').toUpperCase().trim();
+            var tb = (b[8] || '').toUpperCase().trim();
+            var mpa = ta.match(/^MP(\d+)$/); var mpb = tb.match(/^MP(\d+)$/);
+            if (mpa && mpb) return parseInt(mpa[1]) - parseInt(mpb[1]);
+            if (mpa) return -1; if (mpb) return 1;
+            return ta.localeCompare(tb);
+        });
+    } else {
+        recsToShow = recs.slice().sort(function(a, b) { return parseInt(b[0]) - parseInt(a[0]); });
+    }
+    var html = '<div class="px-2 pt-2 pb-1"><input type="text" class="form-control form-control-sm" placeholder="Buscar tipo de MP..." oninput="var q=this.value.toLowerCase();var fl=document.getElementById(\'odp-tab-fleet\');if(fl)fl.querySelectorAll(\'[data-mp-tipo]\').forEach(function(el){el.hidden=!el.dataset.mpTipo.toLowerCase().includes(q);});"></div>'
+        + '<div style="font-size:0.82rem;">';
+    recsToShow.forEach(function(r) {
+        var kmProx = parseFloat(r[11]) || 0;
+        var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
+        var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
+        var falta = kmProx - kmGps;
+        var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
+        var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km';
+        var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
+        var globalIdx = (window._odpFleetRecs || []).indexOf(r);
+        html += '<div class="d-flex align-items-center gap-2 py-2 px-1" data-mp-tipo="' + (r[8] || '').replace(/"/g,'') + '" style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="window._showMPDetail(' + globalIdx + ')">'
+            + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + '" style="width:2rem;height:2rem;flex-shrink:0;">'
+            + '<i class="bi bi-tools text-white" style="font-size:0.7rem;"></i></div>'
+            + '<div class="flex-grow-1 min-width-0">'
+            + '<div class="fw-bold" style="color:var(--crm-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r[8] || '—') + '</div>'
+            + (fechaMost !== '-' ? '<div style="color:var(--subtext);font-size:0.72rem;">' + fechaMost + '</div>' : '')
+            + '</div>'
+            + '<div class="text-end flex-shrink-0">'
+            + '<span class="badge bg-' + bCl + '" style="font-size:0.7rem;">' + faltaLabel + '</span>'
+            + '<div style="font-size:0.68rem;color:var(--subtext);margin-top:1px;">Próx: ' + kmProx.toLocaleString() + '</div>'
+            + '</div>'
+            + '<i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size:0.75rem;"></i>'
+            + '</div>';
+    });
+    var toggleMode = mode === 'current' ? 'all' : 'current';
+    var toggleLabel = mode === 'current'
+        ? '<i class="bi bi-clock-history me-1"></i>Ver Historial Completo'
+        : '<i class="bi bi-arrow-left me-1"></i>← Ver actuales';
+    html += '</div><div class="p-2"><button class="btn btn-outline-secondary btn-sm w-100" onclick="window._toggleFleetTab(\'' + toggleMode + '\')">' + toggleLabel + '</button></div>';
+    fleetEl.innerHTML = html;
+};
+
+window._toggleFleetTab = function(mode) {
+    window._odpFleetMode = mode;
+    window._buildFleetTab(mode);
+};
+
+window._showMPDetail = function(idx) {
+    var r = (window._odpFleetRecs || [])[idx];
+    if (!r) return;
+    var fleetEl = document.getElementById('odp-tab-fleet');
+    if (!fleetEl) return;
+    var utsPlaca = window._odpFleetUts || '';
+    var umbral = normalizeStr(utsPlaca) === 'LOCAL' ? 100 : 1500;
+    var kmProx = parseFloat(r[11]) || 0;
+    var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
+    var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
+    var falta = kmProx - kmGps;
+    var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
+    var bLabel = falta <= 0 ? 'Vencido' : (falta <= umbral ? 'Por Vencer' : 'Vigente');
+    var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
+    fleetEl.innerHTML = '<div style="font-size:0.82rem;">'
+        + '<button class="btn btn-link text-decoration-none ps-0 mb-2" style="color:var(--crm-accent);font-size:0.85rem;" onclick="window._buildFleetTab(window._odpFleetMode||\'current\')">'
+        + '<i class="bi bi-arrow-left me-1"></i>← Volver a preventivos</button>'
+        + '<div class="fw-bold mb-3" style="font-size:1rem;color:var(--text);">'
+        + '<span class="badge bg-' + bCl + ' me-2">' + bLabel + '</span>' + (r[8] || '—') + '</div>'
+        + '<div class="d-flex flex-column">'
+        + _odpFila2('ID Mantenimiento', '#' + (r[0] || '—'))
+        + _odpFila2('Fecha Registro', fechaMost)
+        + _odpFila2('KM de Registro', (parseFloat(r[2]) || 0).toLocaleString() + ' km')
+        + _odpFila2('Frecuencia', r[10] ? (parseFloat(r[10]).toLocaleString() + ' km') : '—')
+        + _odpFila2('KM Próximo', kmProx.toLocaleString() + ' km')
+        + _odpFila2('KM GPS Actual', kmGps.toLocaleString() + ' km')
+        + _odpFila2('Falta / Exceso', (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km')
+        + _odpFila2('Técnico', r[13] || '—')
+        + '</div></div>';
+};
+
 window.compartirPlacaWhatsApp = function() {
     var placa = window._odpPlacaActual || '';
     var infoP = (dataGlobalPlacas || []).find(function(p) { return (p[0] || '').toUpperCase() === placa; });
@@ -660,6 +744,78 @@ window.toggleModoRevisor = function() {
         if (btn) { btn.style.color = 'var(--bs-warning)'; btn.title = 'Modo Revisor ACTIVO — clic para desactivar'; }
     }
 })();
+
+// ── PWA Notificaciones push ──────────────────────────────────────
+window.verificarNotificacionesPWA = function() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'denied') return;
+    var insps = window.dataGlobalInspecciones || [];
+    if (!insps.length) return;
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var todayStr = hoy.toISOString().slice(0, 10);
+    if (localStorage.getItem('fleet_lastNotif') === todayStr) return;
+    var vencidas = new Set(), porVencer = new Set();
+    insps.forEach(function(i) {
+        if (!i.fecha_ingreso) return;
+        try {
+            var fi = i.fecha_ingreso.includes('/') ? (function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})() : new Date(i.fecha_ingreso+'T00:00:00');
+            var fp = new Date(fi); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
+            var dias = Math.ceil((fp-hoy)/864e5);
+            if (dias < 0) vencidas.add(i.placa);
+            else if (dias <= 7) porVencer.add(i.placa);
+        } catch(e) {}
+    });
+    if (!vencidas.size && !porVencer.size) return;
+    var body = '';
+    if (vencidas.size) body += vencidas.size + ' placa(s) con inspección vencida. ';
+    if (porVencer.size) body += porVencer.size + ' placa(s) por vencer en 7 días.';
+    function _enviar() {
+        new Notification('Azkell Fleet — Alertas', { body: body, icon: '/icons/icon-192.png' });
+        localStorage.setItem('fleet_lastNotif', todayStr);
+    }
+    if (Notification.permission === 'granted') { _enviar(); }
+    else { Notification.requestPermission().then(function(p){ if(p==='granted') _enviar(); }); }
+};
+// Programar chequeo a los 8 segundos de cargar (espera que cargue dataGlobalInspecciones)
+setTimeout(function(){ if(typeof window.verificarNotificacionesPWA==='function') window.verificarNotificacionesPWA(); }, 8000);
+
+// ── PDF Ficha Individual de Placa ────────────────────────────────
+window.exportarFichaPlacaPDF = function(placaArg) {
+    var placa = (placaArg || (document.getElementById('det-placa-titulo')||{}).innerText || window._odpPlacaActual || '').toString().toUpperCase().trim();
+    if (!placa) return;
+    var p = (window.dataGlobalPlacas||[]).find(function(x){ return (x[0]||'').toUpperCase()===placa; });
+    if (!p) { alert('Sin datos de placa para exportar.'); return; }
+    var insps = (window.dataGlobalInspecciones||[]).filter(function(i){ return normalizeStr(i.placa)===placa; }).slice(0,8);
+    var mps   = (window.dataGlobalFleetrun||[]).filter(function(r){ return normalizeStr(r[4])===placa; });
+    function r2(a,b,c,d){ return '<tr><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(a||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(b||'—')+'</td><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(c||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(d||'—')+'</td></tr>'; }
+    function sec(title,rows){ return '<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">'+title+'</div><table style="width:100%;border-collapse:collapse;">'+rows+'</table></div>'; }
+    var html='<div style="font-family:Arial,sans-serif;padding:18px;font-size:0.82rem;">'
+        +'<div style="background:#2D438A;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:14px;">'
+        +'<div style="font-size:2rem;font-weight:700;letter-spacing:3px;">'+placa+'</div>'
+        +'<div style="margin-top:4px;opacity:.9">'+(p[1]||'Sin cliente')+(p[2]?' · RUC: '+p[2]:'')+'</div>'
+        +'<div style="margin-top:6px"><span style="background:'+(p[18]==='Activa'?'#22c55e':'#ef4444')+';padding:2px 10px;border-radius:4px;font-size:0.82rem">'+(p[18]||'—')+'</span>'+(p[19]?' <span style="background:#06b6d4;padding:2px 10px;border-radius:4px;font-size:0.82rem">'+p[19]+'</span>':'')+'</div>'
+        +'</div>';
+    html+=sec('Especificaciones Técnicas',r2('Marca',p[3],'Modelo',p[4])+r2('Tipo',p[5],'Sub Tipo',p[6])+r2('Color',p[7],'Configuración',p[12])+r2('Año',p[13],'Combustible',p[14]));
+    html+=sec('Datos de Identificación',r2('Nº Motor',p[8],'Nº Caja',p[9])+r2('Nº Corona',p[10],'Nº VIN',p[11]));
+    html+=sec('Capacidades y Operatividad',r2('Carga Útil',p[15],'Peso Neto',p[16])+r2('Peso Bruto',p[17],'Llantas',p[21])+r2('Zona UTS',p[19],'En Uso',p[22]));
+    if (insps.length) {
+        var hoy=new Date(); hoy.setHours(0,0,0,0);
+        html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Últimas Inspecciones</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px">ID</td><td style="padding:4px 8px">Fecha</td><td style="padding:4px 8px">Técnico</td><td style="padding:4px 8px">Estado</td></tr>'
+        +insps.map(function(i){
+            var est='—', cls='#64748b';
+            if(i.fecha_ingreso){ try{ var fi=i.fecha_ingreso.includes('/')?(function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})():new Date(i.fecha_ingreso+'T00:00:00'); var fp=new Date(fi);fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30)); var d=Math.ceil((fp-hoy)/864e5); est=d<0?'Vencida':(d<=7?'Por vencer':'Vigente'); cls=d<0?'#ef4444':(d<=7?'#f59e0b':'#22c55e'); }catch(e){} }
+            return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px">'+(i.id||'—')+'</td><td style="padding:3px 8px">'+(i.fecha_ingreso||'—')+'</td><td style="padding:3px 8px">'+(i.tecnico||'—')+'</td><td style="padding:3px 8px;color:'+cls+';font-weight:700">'+est+'</td></tr>';
+        }).join('')+'</table></div>';
+    }
+    if (mps.length) {
+        html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Mantenimientos Preventivos</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px">Tipo MP</td><td style="padding:4px 8px">Fecha Registro</td><td style="padding:4px 8px">Próx. Cambio</td><td style="padding:4px 8px">Observación</td></tr>'
+        +mps.map(function(r){ return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;font-weight:600">'+(r[8]||'—')+'</td><td style="padding:3px 8px">'+(parseDateToDDMMYYYY(r[3]))+'</td><td style="padding:3px 8px">'+(parseFloat(r[11])||0).toLocaleString()+' km</td><td style="padding:3px 8px;color:#64748b">'+(r[13]||'—')+'</td></tr>'; }).join('')+'</table></div>';
+    }
+    html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
+    var c=document.createElement('div'); c.innerHTML=html; c.style.cssText='position:fixed;left:-9999px;top:0;width:800px;background:#fff;';
+    document.body.appendChild(c);
+    html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(c).save().then(function(){ document.body.removeChild(c); });
+};
 
 // Aplica color de acento guardado (accesible desde módulo configuración)
 window.applyAccent = function(hex, save) {
@@ -950,8 +1106,10 @@ function recargarWialon(forzarVista = false) {
             
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
             if (document.getElementById('moduloStatus')?.style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
-            let modFleetrunEl = document.getElementById('moduloFleetrun');
-            if (modFleetrunEl && modFleetrunEl.style.display === 'flex') mostrarFleetrun(dataGlobalFleetrun);
+            // SPA: verificar ruta actual en lugar del elemento legacy #moduloFleetrun
+            if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun' && typeof window.mostrarFleetrun === 'function') {
+                window.mostrarFleetrun(window.dataGlobalFleetrun);
+            }
             if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(d);
         } else {
             if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
@@ -3329,6 +3487,56 @@ window.buscarSpotlight = function(query) {
                 </div>`;
                 count++;
             }
+        });
+    }
+
+    // 3. Buscar en Inspecciones (por placa, técnico)
+    var inspData = window.dataGlobalInspecciones || [];
+    if (inspData.length > 0 && count < 12) {
+        var hoyS = new Date(); hoyS.setHours(0,0,0,0);
+        var vistasInsp = new Set();
+        inspData.forEach(function(i) {
+            if (count >= 13) return;
+            var pStr = (i.placa || '').toLowerCase();
+            var tStr = (i.tecnico || '').toLowerCase();
+            if (!(pStr.includes(query) || tStr.includes(query))) return;
+            var key = (i.placa || '').toUpperCase();
+            if (vistasInsp.has(key)) return;
+            vistasInsp.add(key);
+            var dias = '—'; var bClI = 'secondary';
+            if (i.fecha_ingreso) {
+                try {
+                    var fi = i.fecha_ingreso.includes('/') ? (function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})() : new Date(i.fecha_ingreso+'T00:00:00');
+                    var fp = new Date(fi); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
+                    dias = Math.ceil((fp-hoyS)/864e5);
+                    bClI = dias<0?'danger':(dias<=7?'warning':'success');
+                    dias = dias<0?'Vencida':(dias===0?'Hoy':'Faltan '+dias+'d');
+                } catch(e) { dias='—'; }
+            }
+            html += '<div class="spotlight-card d-flex justify-content-between align-items-center" onclick="cerrarSpotlight();cargarModuloAislado(\'mantenimiento/inspecciones\');setTimeout(function(){var el=document.getElementById(\'buscadorStatus\');if(el){el.value=\''+key+'\';if(typeof filtrarStatusAvanzado===\'function\')filtrarStatusAvanzado();}},1200);">'
+                + '<div><div class="fw-bold" style="color:#0ea5e9;font-size:0.95rem;"><i class="bi bi-clipboard2-check me-2"></i>' + key + '</div>'
+                + '<div class="text-muted small mt-1">' + (i.tecnico||'Sin técnico') + ' · <span class="badge bg-'+bClI+'" style="font-size:0.65rem;">' + dias + '</span></div></div>'
+                + '<i class="bi bi-arrow-right text-muted"></i></div>';
+            count++;
+        });
+    }
+
+    // 4. Buscar en Fleetrun (por tipo_mp)
+    var fleetData = window.dataGlobalFleetrun || [];
+    if (fleetData.length > 0 && count < 15 && query.length >= 3) {
+        var tiposEncontrados = new Set();
+        fleetData.forEach(function(r) {
+            if (count >= 15) return;
+            var tipoStr = (r[8] || '').toLowerCase();
+            if (!tipoStr.includes(query)) return;
+            if (tiposEncontrados.has(tipoStr)) return;
+            tiposEncontrados.add(tipoStr);
+            var cantPlacas = fleetData.filter(function(x) { return (x[8]||'').toLowerCase() === tipoStr; }).length;
+            html += '<div class="spotlight-card d-flex justify-content-between align-items-center" onclick="cerrarSpotlight();cargarModuloAislado(\'mantenimiento/fleetrun\');setTimeout(function(){var el=document.getElementById(\'buscadorFleetrun\');if(el){el.value=\''+r[8]+'\';if(typeof filtrarFleetrunAvanzado===\'function\')filtrarFleetrunAvanzado();}},400);">'
+                + '<div><div class="fw-bold" style="color:#2D438A;font-size:0.95rem;"><i class="bi bi-tools me-2"></i>' + (r[8]||'—') + '</div>'
+                + '<div class="text-muted small mt-1">' + cantPlacas + ' registro' + (cantPlacas!==1?'s':'') + ' encontrado' + (cantPlacas!==1?'s':'') + '</div></div>'
+                + '<i class="bi bi-arrow-right text-muted"></i></div>';
+            count++;
         });
     }
 
