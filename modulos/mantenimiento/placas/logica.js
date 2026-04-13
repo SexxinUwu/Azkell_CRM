@@ -916,7 +916,19 @@ window.init_placas = function() {
     if (selFilas) selFilas.value = String(window.filasPlacasConfig);
     ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
 
-    cargarTablaPlacas();
+    // Precargar inspecciones si aún no están disponibles (para KPIs de cliente)
+    var _arrancarPlacas = function() { cargarTablaPlacas(); };
+    if (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0) {
+        fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+            .then(function(j) {
+                window.dataGlobalInspecciones = j.data || [];
+                _arrancarPlacas();
+            })
+            .catch(function() { _arrancarPlacas(); });
+    } else {
+        _arrancarPlacas();
+    }
 
     const fabMenu = document.getElementById('fab-menu');
     if (fabMenu) {
