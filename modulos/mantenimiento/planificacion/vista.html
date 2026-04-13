@@ -1,0 +1,869 @@
+<!-- Módulo Planificación Preventivos - Azkell Fleet -->
+<style>
+#moduloPlanificacion .plan-nav-tabs .nav-link {
+    color: var(--subtext);
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    padding: 8px 16px;
+    white-space: nowrap;
+}
+#moduloPlanificacion .plan-nav-tabs .nav-link.active {
+    color: var(--primary, #5865F2);
+    border-bottom-color: var(--primary, #5865F2);
+    background: transparent;
+}
+/* Columnas semana Kanban */
+#moduloPlanificacion .kanban-col {
+    min-width: 220px;
+    flex: 1 1 220px;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+}
+#moduloPlanificacion .kanban-col-header {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--subtext);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+}
+/* Tarjeta plan */
+#moduloPlanificacion .plan-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.1s;
+}
+#moduloPlanificacion .plan-card:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+#moduloPlanificacion .plan-card.estado-completada {
+    opacity: 0.6;
+    border-left: 3px solid #22c55e;
+}
+#moduloPlanificacion .plan-card.estado-cancelada {
+    opacity: 0.45;
+    border-left: 3px solid #ef4444;
+}
+#moduloPlanificacion .plan-card.estado-diferida {
+    border-left: 3px solid #a855f7;
+}
+#moduloPlanificacion .plan-card.estado-atrasada {
+    border-left: 3px solid #ef4444;
+}
+#moduloPlanificacion .plan-card.estado-vigente {
+    border-left: 3px solid #22c55e;
+}
+#moduloPlanificacion .plan-card.estado-porvencer {
+    border-left: 3px solid #f59e0b;
+}
+#moduloPlanificacion .plan-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    display: inline-block;
+}
+#moduloPlanificacion .badge-vigente  { background:#dcfce7; color:#16a34a; }
+#moduloPlanificacion .badge-porvencer{ background:#fef9c3; color:#ca8a04; }
+#moduloPlanificacion .badge-atrasada { background:#fee2e2; color:#dc2626; }
+#moduloPlanificacion .badge-diferida { background:#f3e8ff; color:#7c3aed; }
+#moduloPlanificacion .badge-completada{background:#dcfce7; color:#16a34a; }
+#moduloPlanificacion .badge-cancelada { background:#f1f5f9; color:#64748b; }
+#moduloPlanificacion .badge-programada{background:#e0f2fe; color:#0284c7; }
+/* Comparativa tabla */
+#moduloPlanificacion .comp-table th {
+    font-size: 0.73rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+#moduloPlanificacion .comp-table td {
+    font-size: 0.82rem;
+    vertical-align: middle;
+}
+/* Upload zone */
+#moduloPlanificacion .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+#moduloPlanificacion .upload-zone:hover, #moduloPlanificacion .upload-zone.drag-over {
+    border-color: var(--primary,#5865F2);
+    background: rgba(88,101,242,0.05);
+}
+</style>
+
+<div id="moduloPlanificacion" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
+
+    <!-- HEADER CONTROLS -->
+    <div class="controls-row">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0 fw-bold" style="color:var(--text)"><i class="bi bi-calendar2-check me-1" style="color:var(--primary,#5865F2)"></i>Planificación de Mantenimientos</h5>
+                <span class="badge bg-primary ms-1" id="plan-badge-total" style="font-size:0.72rem">0</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Selector mes/año -->
+                <div class="d-flex align-items-center gap-1">
+                    <select class="form-select form-select-sm fw-bold" id="plan-sel-mes" onchange="window.cargarBoardPlan()" style="max-width:130px">
+                        <option value="1">Enero</option><option value="2">Febrero</option>
+                        <option value="3">Marzo</option><option value="4">Abril</option>
+                        <option value="5">Mayo</option><option value="6">Junio</option>
+                        <option value="7">Julio</option><option value="8">Agosto</option>
+                        <option value="9">Septiembre</option><option value="10">Octubre</option>
+                        <option value="11">Noviembre</option><option value="12">Diciembre</option>
+                    </select>
+                    <select class="form-select form-select-sm fw-bold" id="plan-sel-anio" onchange="window.cargarBoardPlan()" style="max-width:90px">
+                    </select>
+                </div>
+                <button class="btn btn-sm btn-outline-primary fw-bold" onclick="window.abrirModalNuevoPlan()">
+                    <i class="bi bi-plus-circle me-1"></i>Nuevo
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarBoardPlan()" title="Actualizar">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- TABS PRINCIPALES -->
+        <ul class="nav plan-nav-tabs mb-3 border-bottom" style="gap:0">
+            <li class="nav-item">
+                <button class="nav-link active" id="plan-tab-board" onclick="window.mostrarTabPlan('board')">
+                    <i class="bi bi-kanban me-1"></i>Board
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="plan-tab-upload" onclick="window.mostrarTabPlan('upload')">
+                    <i class="bi bi-file-earmark-arrow-up me-1"></i>Subir Excel
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="plan-tab-comparativa" onclick="window.mostrarTabPlan('comparativa')">
+                    <i class="bi bi-bar-chart-line me-1"></i>Comparativa
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="plan-tab-requerimientos" onclick="window.mostrarTabPlan('requerimientos')">
+                    <i class="bi bi-box-seam me-1"></i>Requerimientos
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="plan-tab-config" onclick="window.mostrarTabPlan('config')">
+                    <i class="bi bi-gear me-1"></i>Configuración
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ============== TAB BOARD ============== -->
+    <div id="plan-panel-board" class="flex-grow-1 overflow-auto">
+        <!-- KPI bar -->
+        <div class="kpi-wrapper mb-3" id="plan-kpi-bar">
+            <div class="kpi-card">
+                <div class="kpi-title">Planificadas</div>
+                <div class="kpi-value" id="kpi-plan-total">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Completadas</div>
+                <div class="kpi-value text-success" id="kpi-plan-completas">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">% Cumplimiento</div>
+                <div class="kpi-value" id="kpi-plan-pct">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Atrasadas</div>
+                <div class="kpi-value text-danger" id="kpi-plan-atrasadas">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Diferidas</div>
+                <div class="kpi-value text-warning" id="kpi-plan-diferidas">0</div>
+            </div>
+        </div>
+
+        <!-- Filtros y búsqueda Board -->
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <div class="input-group input-group-sm" style="max-width:220px">
+                <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color:var(--subtext)"></i></span>
+                <input type="text" class="form-control border-start-0 ps-0" id="plan-buscador" placeholder="Placa, técnico..." oninput="window.filtrarBoardPlan()">
+            </div>
+            <select class="form-select form-select-sm" id="plan-fil-estado" onchange="window.filtrarBoardPlan()" style="max-width:160px">
+                <option value="">Todos los estados</option>
+                <option value="Programada">Programada</option>
+                <option value="Confirmada">Confirmada</option>
+                <option value="En Progreso">En Progreso</option>
+                <option value="Diferida">Diferida</option>
+                <option value="Atrasada">Atrasadas</option>
+            </select>
+            <select class="form-select form-select-sm" id="plan-fil-tipomp" onchange="window.filtrarBoardPlan()" style="max-width:120px">
+                <option value="">Todos los MP</option>
+            </select>
+        </div>
+
+        <!-- KANBAN BOARD por semanas -->
+        <div class="d-flex gap-3 overflow-auto pb-3" id="plan-kanban-contenedor" style="min-height:300px; align-items: flex-start;">
+            <div class="text-center py-5 w-100" style="color:var(--subtext)">
+                <i class="bi bi-calendar2-check" style="font-size:2.5rem; opacity:0.3"></i>
+                <p class="mt-2 mb-0">Cargando planificación...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== TAB UPLOAD ============== -->
+    <div id="plan-panel-upload" class="flex-grow-1 overflow-auto" style="display:none">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="kpi-card p-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-file-earmark-excel text-success me-1"></i>Carga Masiva de Planificación</h6>
+                    <p class="text-muted mb-3" style="font-size:0.83rem">Sube un Excel con el plan mensual. Las columnas obligatorias son: <strong>PLACA, TIPO_MP, FECHA_INICIO, FECHA_FIN</strong></p>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold" style="font-size:0.8rem">Mes</label>
+                            <select class="form-select form-select-sm" id="up-sel-mes">
+                                <option value="1">Enero</option><option value="2">Febrero</option>
+                                <option value="3">Marzo</option><option value="4">Abril</option>
+                                <option value="5">Mayo</option><option value="6">Junio</option>
+                                <option value="7">Julio</option><option value="8">Agosto</option>
+                                <option value="9">Septiembre</option><option value="10">Octubre</option>
+                                <option value="11">Noviembre</option><option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold" style="font-size:0.8rem">Año</label>
+                            <select class="form-select form-select-sm" id="up-sel-anio"></select>
+                        </div>
+                    </div>
+
+                    <!-- Zona drag&drop -->
+                    <div class="upload-zone" id="plan-upload-zone" onclick="document.getElementById('plan-file-input').click()">
+                        <i class="bi bi-cloud-arrow-up" style="font-size:2.5rem; color:var(--subtext); opacity:0.6"></i>
+                        <p class="mb-1 mt-2 fw-bold" style="color:var(--text)">Arrastra tu Excel aquí o haz clic</p>
+                        <p class="mb-0" style="font-size:0.78rem; color:var(--subtext)">Formatos: .xlsx, .xls</p>
+                        <input type="file" id="plan-file-input" accept=".xlsx,.xls" style="display:none" onchange="window.procesarArchivoExcelPlan(this)">
+                    </div>
+
+                    <div id="plan-upload-preview" class="mt-3" style="display:none">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-table me-1"></i>Vista previa (<span id="plan-up-count">0</span> registros)</span>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="window.cancelarUploadPlan()"><i class="bi bi-x me-1"></i>Cancelar</button>
+                                <button class="btn btn-sm btn-success fw-bold" onclick="window.confirmarUploadPlan()"><i class="bi bi-check2 me-1"></i>Importar</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="max-height:350px; overflow-y:auto; border-radius:8px; border:1px solid var(--border)">
+                            <table class="table table-sm table-hover mb-0 comp-table">
+                                <thead id="plan-up-thead"></thead>
+                                <tbody id="plan-up-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Log de resultado -->
+                    <div id="plan-upload-resultado" class="mt-3" style="display:none"></div>
+
+                    <!-- Plantilla -->
+                    <div class="mt-4 pt-3 border-top">
+                        <p class="mb-2 fw-bold" style="font-size:0.8rem; color:var(--subtext)">¿No tienes la plantilla? Descárgala aquí:</p>
+                        <button class="btn btn-sm btn-outline-success" onclick="window.descargarPlantillaPlan()">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Descargar Plantilla Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== TAB COMPARATIVA ============== -->
+    <div id="plan-panel-comparativa" class="flex-grow-1 overflow-auto" style="display:none">
+        <!-- KPI cards comparativa -->
+        <div class="kpi-wrapper mb-4" id="comp-kpi-bar">
+            <div class="kpi-card">
+                <div class="kpi-title">Planificadas</div>
+                <div class="kpi-value" id="comp-total">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Ejecutadas</div>
+                <div class="kpi-value text-success" id="comp-ejecutadas">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">% Cumplimiento</div>
+                <div class="kpi-value" id="comp-pct">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Promedio Retraso</div>
+                <div class="kpi-value text-muted" id="comp-avg-retraso">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Diferidas</div>
+                <div class="kpi-value text-warning" id="comp-diferidas">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Canceladas</div>
+                <div class="kpi-value text-secondary" id="comp-canceladas">—</div>
+            </div>
+        </div>
+
+        <!-- Tabla detallada -->
+        <div class="kpi-card p-0 overflow-hidden">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
+                <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-list-check me-1"></i>Detalle del Mes</span>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control form-control-sm" id="comp-buscador" placeholder="Buscar placa..." oninput="window.filtrarComparativa()" style="max-width:180px">
+                    <button class="btn btn-sm btn-outline-success" onclick="window.exportarComparativaExcel()">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:calc(100vh - 420px); overflow-y:auto">
+                <table class="table table-sm table-hover mb-0 comp-table">
+                    <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+                        <tr>
+                            <th>Placa</th>
+                            <th>Cliente</th>
+                            <th>Tipo MP</th>
+                            <th>Ventana Plan.</th>
+                            <th>Fecha Real</th>
+                            <th>Retraso</th>
+                            <th>KM Est.</th>
+                            <th>KM Real</th>
+                            <th>Técnico</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comp-tbody">
+                        <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Sin datos cargados</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== TAB REQUERIMIENTOS ============== -->
+    <div id="plan-panel-requerimientos" class="flex-grow-1 overflow-auto" style="display:none">
+        <!-- KPIs -->
+        <div class="kpi-wrapper mb-3">
+            <div class="kpi-card">
+                <div class="kpi-title">Ítems requeridos</div>
+                <div class="kpi-value" id="req-kpi-items">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Costo total mes</div>
+                <div class="kpi-value text-success" id="req-kpi-costo">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Planes c/kits</div>
+                <div class="kpi-value" id="req-kpi-planes">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Marcas</div>
+                <div class="kpi-value" id="req-kpi-marcas">—</div>
+            </div>
+        </div>
+        <!-- Filtros -->
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <select class="form-select form-select-sm" id="req-fil-marca" onchange="window.filtrarRequerimientos()" style="max-width:160px">
+                <option value="">Todas las marcas</option>
+            </select>
+            <select class="form-select form-select-sm" id="req-fil-tipomp" onchange="window.filtrarRequerimientos()" style="max-width:160px">
+                <option value="">Todos los tipos</option>
+            </select>
+            <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.exportarRequerimientos()">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarRequerimientos()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+        <!-- Tabla agrupada (render dinámico) -->
+        <div id="req-tabla-contenedor">
+            <div class="text-center py-5" style="color:var(--subtext)">
+                <i class="bi bi-box-seam" style="font-size:2.5rem; opacity:0.3"></i>
+                <p class="mt-2 mb-0">Selecciona un mes para cargar los requerimientos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== TAB CONFIGURACIÓN ============== -->
+    <div id="plan-panel-config" class="flex-grow-1 overflow-auto" style="display:none">
+        <!-- Sub-tabs -->
+        <ul class="nav nav-pills mb-3 gap-1" id="cfg-subtabs">
+            <li class="nav-item">
+                <button class="nav-link active btn-sm" id="cfg-tab-flota" onclick="window.mostrarSubTabConfig('flota')" style="font-size:0.8rem">
+                    <i class="bi bi-list-check me-1"></i>Tipos de Mantenimiento
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link btn-sm" id="cfg-tab-kits" onclick="window.mostrarSubTabConfig('kits')" style="font-size:0.8rem">
+                    <i class="bi bi-tools me-1"></i>Kits de Mantenimiento
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link btn-sm" id="cfg-tab-correos" onclick="window.mostrarSubTabConfig('correos')" style="font-size:0.8rem">
+                    <i class="bi bi-envelope me-1"></i>Correos de Alerta
+                </button>
+            </li>
+        </ul>
+
+        <!-- ── SUB-PANEL: Tipos de Mantenimiento ── -->
+        <div id="cfg-panel-flota">
+            <div class="kpi-card p-0 overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
+                    <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-list-check me-1"></i>Tipos de Mantenimiento por Marca</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm" id="cfg-flota-fil-marca" onchange="window.filtrarTablaConfigFlota()" style="max-width:140px">
+                            <option value="">Todas las marcas</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="cfg-flota-fil-uts" onchange="window.filtrarTablaConfigFlota()" style="max-width:110px">
+                            <option value="">Toda UTS</option>
+                            <option value="LOCAL">LOCAL</option>
+                            <option value="NACIONAL">NACIONAL</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="window.abrirModalConfigFlota()">
+                            <i class="bi bi-plus me-1"></i>Nuevo Tipo MP
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:calc(100vh - 320px); overflow-y:auto">
+                    <table class="table table-sm table-hover mb-0 comp-table">
+                        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+                            <tr>
+                                <th>Marca</th><th>Tipo MP</th><th>UTS</th>
+                                <th>Frec. KM</th><th>Frec. Horas</th><th>Frec. Días</th>
+                                <th>Tipo</th><th>Sistema</th><th>Descripción</th><th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cfg-flota-tbody">
+                            <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUB-PANEL: Kits MP ── -->
+        <div id="cfg-panel-kits" style="display:none">
+            <div class="kpi-card p-0 overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
+                    <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-tools me-1"></i>Kits de Mantenimiento por Marca</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <!-- Filtros rápidos -->
+                        <select class="form-select form-select-sm" id="cfg-kit-fil-marca" onchange="window.filtrarTablaKits()" style="max-width:130px">
+                            <option value="">Todas las marcas</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="cfg-kit-fil-tipo" onchange="window.filtrarTablaKits()" style="max-width:140px">
+                            <option value="">Todo MP</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="window.abrirModalKit()">
+                            <i class="bi bi-plus me-1"></i>Nuevo Item
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:calc(100vh - 320px); overflow-y:auto">
+                    <table class="table table-sm table-hover mb-0 comp-table">
+                        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+                            <tr>
+                                <th>Marca</th><th>MP</th><th>Kit</th><th>Código</th>
+                                <th>Ítem</th><th>Cant.</th><th>Unidad</th>
+                                <th>C.Unit.</th><th>C.Total</th><th>Ord.</th><th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cfg-kits-tbody">
+                            <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUB-PANEL: Correos de Alerta ── -->
+        <div id="cfg-panel-correos" style="display:none">
+            <div class="row g-3">
+                <div class="col-12 col-lg-7">
+                    <div class="kpi-card p-0 overflow-hidden">
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
+                            <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-envelope me-1"></i>Destinatarios de Alertas</span>
+                            <button class="btn btn-sm btn-primary" onclick="window.abrirModalDestinatario()">
+                                <i class="bi bi-plus me-1"></i>Agregar
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0 comp-table">
+                                <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+                                    <tr>
+                                        <th>Nombre</th><th>Correo</th><th>Cargo</th>
+                                        <th title="+1d">+1d</th><th title="+3d">+3d</th>
+                                        <th title="+7d">+7d</th><th>Estado</th><th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cfg-correos-tbody">
+                                    <tr><td colspan="8" class="text-center py-4" style="color:var(--subtext)">Sin destinatarios</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <div class="kpi-card p-3">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-send me-1"></i>Configuración SMTP</h6>
+                        <p class="mb-2" style="font-size:0.8rem; color:var(--subtext)">
+                            El email se envía desde la cuenta configurada en el servidor (<code>.env</code>).<br>
+                            Completa las variables de entorno para activar el envío real.
+                        </p>
+                        <div class="mb-2">
+                            <div id="cfg-email-status" style="font-size:0.82rem; padding:8px 12px; border-radius:6px; background:var(--bg); border:1px solid var(--border)">
+                                <i class="bi bi-circle-fill me-1" style="font-size:0.55rem; color:#f59e0b"></i>Verificando configuración...
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <input type="email" class="form-control form-control-sm" id="cfg-test-email" placeholder="correo@prueba.com" style="max-width:200px">
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.enviarEmailPrueba()">
+                                <i class="bi bi-send me-1"></i>Test Email
+                            </button>
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning mt-2 w-100" onclick="window.dispararAlertasManuales()">
+                            <i class="bi bi-bell me-1"></i>Forzar verificación de alertas ahora
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ======= MODAL NUEVO/EDITAR PLAN ======= -->
+<div class="modal fade" id="modalNuevoPlan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold" id="modalNuevoPlan-titulo"><i class="bi bi-calendar2-plus me-1 text-primary"></i>Nueva Planificación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="np-id">
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Placa *</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-placa" placeholder="ABC-123" list="np-placas-list" maxlength="20">
+                        <datalist id="np-placas-list"></datalist>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
+                        <datalist id="np-dl-tipomps"></datalist>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-tipomp" placeholder="MP1, FILTRO DE AIRE..." list="np-dl-tipomps" autocomplete="off">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Prioridad</label>
+                        <select class="form-select form-select-sm" id="np-prioridad">
+                            <option value="Normal">Normal</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Crítica">Crítica</option>
+                            <option value="Baja">Baja</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Inicio Ventana *</label>
+                        <input type="date" class="form-control form-control-sm" id="np-fecha-ini">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Fin Ventana *</label>
+                        <input type="date" class="form-control form-control-sm" id="np-fecha-fin">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">KM Estimado</label>
+                        <input type="number" class="form-control form-control-sm" id="np-km-est" placeholder="0">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">KM Mínimo</label>
+                        <input type="number" class="form-control form-control-sm" id="np-km-min" placeholder="0">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">KM Máximo</label>
+                        <input type="number" class="form-control form-control-sm" id="np-km-max" placeholder="0">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Técnico Asignado</label>
+                        <input type="text" class="form-control form-control-sm" id="np-tecnico" placeholder="Nombre técnico">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Estado</label>
+                        <select class="form-select form-select-sm" id="np-estado">
+                            <option value="Programada">Programada</option>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="En Progreso">En Progreso</option>
+                            <option value="Diferida">Diferida</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Observaciones</label>
+                        <textarea class="form-control form-control-sm" id="np-obs" rows="2" placeholder="Detalles, notas..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.guardarNuevoPlan()"><i class="bi bi-check2 me-1"></i>Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======= MODAL COMPLETAR PLAN ======= -->
+<div class="modal fade" id="modalCompletarPlan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle text-success me-1"></i>Completar Planificación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="comp-plan-id">
+                <div class="alert alert-info p-2 mb-3" id="comp-plan-info" style="font-size:0.82rem"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:0.8rem">ID Fleetrun vinculado *</label>
+                    <input type="text" class="form-control form-control-sm" id="comp-fleetrun-id" placeholder="FL-XXXXXXXXXX o buscar...">
+                    <div class="form-text">Ingresa el ID del registro Fleetrun ejecutado</div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Real de Ejecución</label>
+                        <input type="date" class="form-control form-control-sm" id="comp-fecha-real">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">KM al Ejecutar</label>
+                        <input type="number" class="form-control form-control-sm" id="comp-km-real" placeholder="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-success fw-bold" onclick="window.confirmarCompletarPlan()"><i class="bi bi-check2 me-1"></i>Marcar Completada</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======= MODAL POSPONER PLAN ======= -->
+<div class="modal fade" id="modalPosponerPlan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus text-warning me-1"></i>Posponer / Diferir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="posp-plan-id">
+                <div class="alert alert-warning p-2 mb-3" id="posp-plan-info" style="font-size:0.82rem"></div>
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Nueva Fecha Inicio *</label>
+                        <input type="date" class="form-control form-control-sm" id="posp-fecha-ini">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Nueva Fecha Fin *</label>
+                        <input type="date" class="form-control form-control-sm" id="posp-fecha-fin">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Motivo del diferimiento</label>
+                        <textarea class="form-control form-control-sm" id="posp-motivo" rows="2" placeholder="¿Por qué se pospone?"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-warning fw-bold" onclick="window.confirmarPosponerPlan()"><i class="bi bi-calendar-plus me-1"></i>Diferir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======= MODAL CONFIG TIPO MP ======= -->
+<div class="modal fade" id="modalConfigFlota" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold" id="modalConfigFlota-titulo"><i class="bi bi-list-check me-1 text-primary"></i>Tipo de Mantenimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cf-id">
+                <datalist id="cf-dl-marcas"></datalist>
+                <datalist id="cf-dl-tipomps"></datalist>
+                <datalist id="cf-dl-sistemas"></datalist>
+                <div class="row g-3">
+                    <div class="col-sm-5">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="cf-marca" placeholder="VOLVO, SCANIA..." list="cf-dl-marcas" autocomplete="off">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="cf-tipo-mp" placeholder="MP1, FILTRO DE AIRE..." list="cf-dl-tipomps" autocomplete="off">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">UTS</label>
+                        <select class="form-select form-select-sm" id="cf-uts">
+                            <option value="LOCAL">LOCAL</option>
+                            <option value="NACIONAL">NACIONAL</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia KM</label>
+                        <input type="number" class="form-control form-control-sm" id="cf-frec-km" placeholder="5000">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia Horas</label>
+                        <input type="number" class="form-control form-control-sm" id="cf-frec-horas" placeholder="250">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia Días</label>
+                        <input type="number" class="form-control form-control-sm" id="cf-frec-dias" placeholder="180">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Tipo</label>
+                        <input type="text" class="form-control form-control-sm" id="cf-tipo" placeholder="Cambio, Campaña, Correctivo...">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Sistema</label>
+                        <input type="text" class="form-control form-control-sm" id="cf-sistema" placeholder="Motor, Frenos, Transmisión..." list="cf-dl-sistemas" autocomplete="off">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Descripción</label>
+                        <input type="text" class="form-control form-control-sm" id="cf-descripcion" placeholder="Descripción breve del servicio">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.guardarConfigFlota()"><i class="bi bi-check2 me-1"></i>Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======= MODAL KIT MP ======= -->
+<div class="modal fade" id="modalKit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold" id="modalKit-titulo"><i class="bi bi-tools me-1 text-primary"></i>Item de Kit MP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="kit-id">
+                <datalist id="kit-dl-tipomps"></datalist>
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="kit-marca" placeholder="VOLVO" list="cf-dl-marcas" autocomplete="off">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="kit-tipomp" placeholder="MP1, FILTRO DE AIRE..." list="kit-dl-tipomps" autocomplete="off">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Nombre Kit</label>
+                        <input type="text" class="form-control form-control-sm" id="kit-nombre" placeholder="Ej: Cambio aceite y filtros">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Código Inventario</label>
+                        <input type="text" class="form-control form-control-sm" id="kit-codigo" placeholder="INV-0001">
+                    </div>
+                    <div class="col-sm-8">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Nombre del Ítem *</label>
+                        <input type="text" class="form-control form-control-sm" id="kit-item-nombre" placeholder="Aceite Motor 15W40...">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Cantidad</label>
+                        <input type="number" class="form-control form-control-sm" id="kit-cantidad" placeholder="1" step="0.01">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Unidad</label>
+                        <input type="text" class="form-control form-control-sm" id="kit-unidad" placeholder="LT, UND, GAL...">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Costo Unit. (S/.)</label>
+                        <input type="number" class="form-control form-control-sm" id="kit-costo-unit" placeholder="0.00" step="0.01" oninput="window.calcularCostoTotalKit()">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Costo Total (S/.)</label>
+                        <input type="number" class="form-control form-control-sm" id="kit-costo-total" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="col-sm-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Orden</label>
+                        <input type="number" class="form-control form-control-sm" id="kit-orden" placeholder="1">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.guardarKit()"><i class="bi bi-check2 me-1"></i>Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======= MODAL DESTINATARIO ======= -->
+<div class="modal fade" id="modalDestinatario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:var(--surface); color:var(--text)">
+            <div class="modal-header" style="border-bottom:1px solid var(--border)">
+                <h5 class="modal-title fw-bold" id="modalDest-titulo"><i class="bi bi-person-plus me-1 text-primary"></i>Destinatario de Alertas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="dest-id">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Nombre *</label>
+                        <input type="text" class="form-control form-control-sm" id="dest-nombre" placeholder="Juan García">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Correo *</label>
+                        <input type="email" class="form-control form-control-sm" id="dest-correo" placeholder="correo@empresa.com">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold" style="font-size:0.8rem">Cargo / Rol</label>
+                        <input type="text" class="form-control form-control-sm" id="dest-cargo" placeholder="Jefe de Taller, Gerencia...">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold d-block mb-2" style="font-size:0.8rem">Tipos de alerta a recibir</label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dest-n1d" checked>
+                                <label class="form-check-label" for="dest-n1d" style="font-size:0.82rem">+1 día de retraso</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dest-n3d" checked>
+                                <label class="form-check-label" for="dest-n3d" style="font-size:0.82rem">+3 días de retraso</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dest-n7d" checked>
+                                <label class="form-check-label" for="dest-n7d" style="font-size:0.82rem">+7 días de retraso</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border)">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.guardarDestinatario()"><i class="bi bi-check2 me-1"></i>Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
