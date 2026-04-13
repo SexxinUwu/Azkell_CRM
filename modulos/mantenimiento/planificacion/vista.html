@@ -106,6 +106,22 @@
     border-color: var(--primary,#5865F2);
     background: rgba(88,101,242,0.05);
 }
+/* Override Bootstrap d-flex cuando el board está en vista tabla */
+#plan-kanban-contenedor.plan-vista-tabla {
+    display: block !important;
+    gap: 0 !important;
+    overflow-x: visible !important;
+}
+#plan-kanban-contenedor.plan-vista-tabla .table-responsive {
+    width: 100%;
+}
+#plan-kanban-contenedor.plan-vista-tabla .comp-table td {
+    padding: 10px 10px !important;
+    vertical-align: middle !important;
+}
+#plan-kanban-contenedor.plan-vista-tabla .comp-table th {
+    padding: 9px 10px !important;
+}
 </style>
 
 <div id="moduloPlanificacion" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
@@ -137,6 +153,9 @@
                 <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarBoardPlan()" title="Actualizar">
                     <i class="bi bi-arrow-clockwise"></i>
                 </button>
+                <button class="btn btn-sm btn-outline-secondary" id="plan-btn-vista" onclick="window.toggleVistaPlan()" title="Cambiar vista tabla/kanban">
+                    <i class="bi bi-kanban"></i>
+                </button>
             </div>
         </div>
 
@@ -160,6 +179,11 @@
             <li class="nav-item">
                 <button class="nav-link" id="plan-tab-requerimientos" onclick="window.mostrarTabPlan('requerimientos')">
                     <i class="bi bi-box-seam me-1"></i>Requerimientos
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="plan-tab-proyeccion" onclick="window.mostrarTabPlan('proyeccion')">
+                    <i class="bi bi-graph-up-arrow me-1"></i>Proyección
                 </button>
             </li>
             <li class="nav-item">
@@ -399,6 +423,70 @@
         </div>
     </div>
 
+    <!-- ============== TAB PROYECCIÓN ============== -->
+    <div id="plan-panel-proyeccion" class="flex-grow-1 overflow-auto" style="display:none">
+        <!-- Controls -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="fw-bold" style="font-size:0.85rem; color:var(--subtext)"><i class="bi bi-calendar-range me-1"></i>Horizonte:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary fw-bold proy-horizon-btn active" data-meses="3" onclick="window.setPrHorizonte(3,this)">3 meses</button>
+                    <button type="button" class="btn btn-outline-primary fw-bold proy-horizon-btn" data-meses="6" onclick="window.setPrHorizonte(6,this)">6 meses</button>
+                    <button type="button" class="btn btn-outline-primary fw-bold proy-horizon-btn" data-meses="12" onclick="window.setPrHorizonte(12,this)">12 meses</button>
+                </div>
+                <div class="input-group input-group-sm" style="max-width:200px">
+                    <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search" style="color:var(--subtext)"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" id="proy-buscador" placeholder="Placa..." oninput="window.filtrarProyeccion()">
+                </div>
+                <select class="form-select form-select-sm" id="proy-fil-tipomp" onchange="window.filtrarProyeccion()" style="max-width:140px">
+                    <option value="">Todos los MP</option>
+                </select>
+                <select class="form-select form-select-sm" id="proy-fil-estado" onchange="window.filtrarProyeccion()" style="max-width:150px">
+                    <option value="">Todos los estados</option>
+                    <option value="vencida">Vencidos</option>
+                    <option value="urgente">Urgente (≤7 días)</option>
+                    <option value="proximo">Próximo (8–30 días)</option>
+                    <option value="programado">Programado (31+ días)</option>
+                    <option value="km">Solo por KM</option>
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarProyeccion()" title="Actualizar">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.exportarProyeccionExcel()">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                </button>
+            </div>
+        </div>
+        <!-- KPI bar -->
+        <div class="kpi-wrapper mb-3" id="proy-kpi-bar">
+            <div class="kpi-card">
+                <div class="kpi-title">Proyectados</div>
+                <div class="kpi-value" id="proy-kpi-total">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Vencidos</div>
+                <div class="kpi-value text-danger" id="proy-kpi-vencidos">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Urgentes ≤7d</div>
+                <div class="kpi-value text-warning" id="proy-kpi-urgentes">—</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Costo Estimado</div>
+                <div class="kpi-value text-success" id="proy-kpi-costo">—</div>
+            </div>
+        </div>
+        <!-- Tabla proyecciones -->
+        <div id="proy-tabla-cont">
+            <div class="text-center py-5" style="color:var(--subtext)">
+                <i class="bi bi-graph-up-arrow" style="font-size:2.5rem;opacity:0.3"></i>
+                <p class="mt-2">Selecciona un horizonte y carga las proyecciones</p>
+            </div>
+        </div>
+    </div>
+
     <!-- ============== TAB CONFIGURACIÓN ============== -->
     <div id="plan-panel-config" class="flex-grow-1 overflow-auto" style="display:none">
         <!-- Sub-tabs -->
@@ -454,6 +542,20 @@
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- ── Panel herramientas admin (migración de códigos) ── -->
+        <div class="mt-3 p-3 rounded" style="background:var(--surface);border:1px dashed var(--border)">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <span class="fw-bold" style="font-size:0.8rem"><i class="bi bi-tools me-1 text-warning"></i>Herramientas de Datos</span>
+                    <p class="mb-0" style="font-size:0.75rem; color:var(--subtext)">Actualiza los IDs antiguos de Fleetrun al formato legible (FL-PLACA-TIPO-FECHA). Ejecutar solo una vez.</p>
+                </div>
+                <button class="btn btn-sm btn-outline-warning fw-bold" onclick="window.migrarCodigosFleetrun()">
+                    <i class="bi bi-arrow-repeat me-1"></i>Migrar códigos Fleetrun
+                </button>
+            </div>
+            <div id="migrar-resultado" class="mt-2" style="display:none"></div>
         </div>
 
         <!-- ── SUB-PANEL: Kits MP ── -->
@@ -560,13 +662,13 @@
                 <div class="row g-3">
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Placa *</label>
-                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-placa" placeholder="ABC-123" list="np-placas-list" maxlength="20">
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-placa" placeholder="ABC-123" list="np-placas-list" maxlength="20" onchange="window.sugerirFechasNuevoPlan()">
                         <datalist id="np-placas-list"></datalist>
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
                         <datalist id="np-dl-tipomps"></datalist>
-                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-tipomp" placeholder="MP1, FILTRO DE AIRE..." list="np-dl-tipomps" autocomplete="off">
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-tipomp" placeholder="MP1, FILTRO DE AIRE..." list="np-dl-tipomps" autocomplete="off" onchange="window.sugerirFechasNuevoPlan()">
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Prioridad</label>
@@ -626,34 +728,67 @@
 
 <!-- ======= MODAL COMPLETAR PLAN ======= -->
 <div class="modal fade" id="modalCompletarPlan" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content" style="background:var(--surface); color:var(--text)">
             <div class="modal-header" style="border-bottom:1px solid var(--border)">
-                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle text-success me-1"></i>Completar Planificación</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle text-success me-1"></i>Registrar Preventivo y Completar Plan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="comp-plan-id">
+                <input type="hidden" id="comp-hidden-placa">
+                <input type="hidden" id="comp-hidden-tipomp">
+                <!-- Resumen del plan -->
                 <div class="alert alert-info p-2 mb-3" id="comp-plan-info" style="font-size:0.82rem"></div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold" style="font-size:0.8rem">ID Fleetrun vinculado *</label>
-                    <input type="text" class="form-control form-control-sm" id="comp-fleetrun-id" placeholder="FL-XXXXXXXXXX o buscar...">
-                    <div class="form-text">Ingresa el ID del registro Fleetrun ejecutado</div>
+                <!-- Formulario Fleetrun embebido -->
+                <p class="fw-bold mb-3" style="font-size:0.82rem; color:var(--subtext); border-bottom:1px solid var(--border); padding-bottom:8px">
+                    <i class="bi bi-clipboard-plus me-1"></i>Datos del registro Fleetrun (nuevo preventivo)
+                </p>
+                <div class="row g-3">
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-calendar3 me-1 text-primary"></i>Fecha de Ejecución *</label>
+                        <input type="date" class="form-control form-control-sm" id="comp-fr-fecha">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-speedometer me-1 text-success"></i>KM Actual *</label>
+                        <input type="number" class="form-control form-control-sm" id="comp-fr-kmact" placeholder="Ej: 155000" oninput="window.compRecalcKmProx()">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-arrow-repeat me-1 text-warning"></i>Frecuencia KM</label>
+                        <input type="number" class="form-control form-control-sm" id="comp-fr-freckm" placeholder="Calculando..." oninput="window.compRecalcKmProx()">
+                        <div class="form-text" style="font-size:0.7rem; color:var(--subtext)">Editable solo para este registro</div>
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-flag-fill me-1 text-danger"></i>KM Próximo</label>
+                        <input type="number" class="form-control form-control-sm" id="comp-fr-kmprox" placeholder="Auto: Actual + Frec." readonly
+                               style="background:rgba(88,101,242,0.06); cursor:not-allowed; color:var(--subtext)">
+                        <div class="form-text" style="font-size:0.7rem; color:var(--subtext)">Calculado automáticamente</div>
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-bold" id="comp-fr-gps-label" style="font-size:0.8rem">
+                            <i class="bi bi-broadcast text-muted me-1"></i>KM GPS
+                        </label>
+                        <input type="number" class="form-control form-control-sm" id="comp-fr-kmgps" placeholder="Autocompletado...">
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-person-badge me-1 text-info"></i>Técnico Encargado</label>
+                        <datalist id="comp-fr-tec-list"></datalist>
+                        <input type="text" class="form-control form-control-sm" id="comp-fr-tec" placeholder="EJ: JUAN PEREZ" list="comp-fr-tec-list" autocomplete="off">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-bold" style="font-size:0.8rem"><i class="bi bi-chat-left-text me-1 text-secondary"></i>Observación</label>
+                        <input type="text" class="form-control form-control-sm" id="comp-fr-obs" placeholder="Detalles adicionales...">
+                    </div>
                 </div>
-                <div class="row g-2">
-                    <div class="col-sm-6">
-                        <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Real de Ejecución</label>
-                        <input type="date" class="form-control form-control-sm" id="comp-fecha-real">
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label fw-bold" style="font-size:0.8rem">KM al Ejecutar</label>
-                        <input type="number" class="form-control form-control-sm" id="comp-km-real" placeholder="0">
-                    </div>
+                <div class="mt-3 p-2 rounded" style="background:var(--bg); border:1px solid var(--border); font-size:0.77rem; color:var(--subtext)">
+                    <i class="bi bi-info-circle me-1"></i>Al guardar se crea el registro Fleetrun con código legible y el plan queda como <strong>Completada</strong>. Se generará automáticamente el siguiente preventivo.
                 </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--border)">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-success fw-bold" onclick="window.confirmarCompletarPlan()"><i class="bi bi-check2 me-1"></i>Marcar Completada</button>
+                <button type="button" class="btn btn-sm btn-success fw-bold" id="comp-btn-guardar" onclick="window.confirmarCompletarPlan()">
+                    <i class="bi bi-check2-circle me-1"></i>Registrar y Completar
+                </button>
             </div>
         </div>
     </div>
