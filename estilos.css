@@ -2342,6 +2342,19 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
     color: var(--crm-accent) !important;
 }
 
+/* Sub-etiqueta dentro de sección del nav (ej: "Preventivo" bajo Mantenimiento) */
+.nav-sub-label {
+    font-size: 0.64rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--subtext) !important;
+    padding: 10px 22px 2px !important;
+    opacity: 0.65;
+    pointer-events: none;
+}
+.sidebar.collapsed .nav-sub-label { display: none !important; }
+
 /* En sidebar colapsado, ocultar badge (ya no hay texto) */
 .sidebar.collapsed .section-badge {
     display: none !important;

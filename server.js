@@ -849,69 +849,74 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'guardarFleetrun' || metodo === 'actualizarFleetrun') {
         const form = req.body.args[0];
         const isEdit = metodo === 'actualizarFleetrun';
-        const values = [
-            isEdit ? form.editF_id : (form.f_id || `FL-${Date.now()}`),
-            isEdit ? form.editF_fecha : form.f_fecha, isEdit ? form.editF_mes : form.f_mes,
-            isEdit ? form.editF_anio : form.f_anio, (isEdit ? form.editF_placa : form.f_placa).toUpperCase(),
-            isEdit ? form.editF_marca : form.f_marca, isEdit ? form.editF_dueno : form.f_dueno,
-            isEdit ? form.editF_uts : form.f_uts, isEdit ? form.editF_tipomp : form.f_tipomp,
-            isEdit ? form.editF_kmact : form.f_kmact, isEdit ? form.editF_freckm : form.f_freckm,
-            isEdit ? form.editF_kmprox : form.f_kmprox, isEdit ? form.editF_obs : form.f_obs,
-            isEdit ? form.editF_tec : form.f_tec, isEdit ? form.editF_kmgps : form.f_kmgps
-        ];
 
-        const query = `
-            INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia, km_proximo, observacion, tecnico, km_gps)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
-        `;
-        db.query(query, [...values, ...values.slice(1)], (err) => {
-            if (err) return res.json({ data: "Error BD: " + err.message });
-            broadcast('fleetrun', metodo);
-            const usuario = req.body.usuario || 'sistema';
-            const form = req.body.args[0];
-            const isEdit = metodo === 'actualizarFleetrun';
-            const placa   = (isEdit ? form.editF_placa   : form.f_placa  ) || '';
-            const tipomp  = (isEdit ? form.editF_tipomp  : form.f_tipomp ) || '';
-            const kmActual = isEdit ? form.editF_kmact : form.f_kmact;
-            const fechaFR  = isEdit ? form.editF_fecha  : form.f_fecha;
-            const idFleetrun = values[0];
-            logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${(placa||'?').toUpperCase()}`);
-            // Auto-link a planificación si existe una en estado activo
-            if (placa && tipomp && !isEdit) {
-                db.query(
-                    `SELECT id FROM planificacion
-                     WHERE placa=? AND tipo_mp=?
-                     AND estado IN ('Programada','Confirmada','En Progreso')
-                     ORDER BY fecha_fin_ventana ASC LIMIT 1`,
-                    [placa.toUpperCase(), tipomp],
-                    (errP, plans) => {
-                        if (!errP && plans.length) {
-                            const planId = plans[0].id;
-                            db.query(
-                                `UPDATE planificacion SET
-                                    estado='Completada',
-                                    fleetrun_id_ejecutado=?,
-                                    fecha_real_ejecucion=?,
-                                    km_real_ejecucion=?,
-                                    desviacion_dias=DATEDIFF(?, fecha_inicio_ventana),
-                                    alertas_enviadas=0
-                                 WHERE id=?`,
-                                [idFleetrun, fechaFR || null, kmActual || null, fechaFR || null, planId],
-                                (errU) => {
-                                    if (!errU) {
-                                        broadcast('planificacion', 'completar');
-                                        generarProximaMP(placa.toUpperCase(), tipomp, usuario);
-                                    }
-                                }
-                            );
+        const _ejecutarGuardado = (idFinal) => {
+            const values = [
+                idFinal,
+                isEdit ? form.editF_fecha : form.f_fecha,
+                isEdit ? form.editF_mes   : form.f_mes,
+                isEdit ? form.editF_anio  : form.f_anio,
+                ((isEdit ? form.editF_placa : form.f_placa) || '').toUpperCase(),
+                isEdit ? form.editF_marca   : form.f_marca,
+                isEdit ? form.editF_dueno   : form.f_dueno,
+                isEdit ? form.editF_uts     : form.f_uts,
+                isEdit ? form.editF_tipomp  : form.f_tipomp,
+                isEdit ? form.editF_kmact   : form.f_kmact,
+                isEdit ? form.editF_freckm  : form.f_freckm,
+                isEdit ? form.editF_kmprox  : form.f_kmprox,
+                isEdit ? form.editF_obs     : form.f_obs,
+                isEdit ? form.editF_tec     : form.f_tec,
+                isEdit ? form.editF_kmgps   : form.f_kmgps
+            ];
+            const query = `
+                INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia, km_proximo, observacion, tecnico, km_gps)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
+            `;
+            db.query(query, [...values, ...values.slice(1)], (err) => {
+                if (err) return res.json({ data: "Error BD: " + err.message });
+                broadcast('fleetrun', metodo);
+                const usuario = req.body.usuario || 'sistema';
+                const placa   = ((isEdit ? form.editF_placa  : form.f_placa)  || '').toUpperCase();
+                const tipomp  = (isEdit ? form.editF_tipomp : form.f_tipomp) || '';
+                logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${placa || '?'} · ${idFinal}`);
+                // Auto-link a planificación si existe una activa
+                if (placa && tipomp && !isEdit) {
+                    db.query(
+                        `SELECT id FROM planificacion
+                         WHERE UPPER(placa)=? AND tipo_mp=? AND estado NOT IN ('Completada','Cancelada')
+                         ORDER BY fecha_inicio_ventana ASC LIMIT 1`,
+                        [placa, tipomp],
+                        (e2, plans) => {
+                            if (!e2 && plans.length) {
+                                db.query(
+                                    `UPDATE planificacion SET fleetrun_id_ejecutado=? WHERE id=?`,
+                                    [idFinal, plans[0].id],
+                                    () => {}
+                                );
+                            }
                         }
-                    }
-                );
+                    );
+                }
+                return res.json({ data: "Éxito", idRegistro: idFinal });
+            });
+        };
+
+        if (isEdit) {
+            _ejecutarGuardado(form.editF_id);
+        } else {
+            // Para nuevos: generar código legible si no viene uno
+            const placaNueva  = (form.f_placa  || '').toUpperCase();
+            const tipoMpNuevo = form.f_tipomp  || '';
+            const fechaNueva  = form.f_fecha   || new Date().toISOString().split('T')[0];
+            if (form.f_id && !String(form.f_id).match(/^FL-\d{13}$/)) {
+                // ID manual enviado por el frontend (no timestamp)
+                _ejecutarGuardado(form.f_id);
+            } else {
+                generarIdFleetrunUnico(placaNueva, tipoMpNuevo, fechaNueva, _ejecutarGuardado);
             }
-            return res.json({ data: "Éxito" });
-        });
+        }
         return;
     }
 
@@ -1770,6 +1775,30 @@ app.post('/api/cambiar-password', async (req, res) => {
 // ============================================================
 // MÓDULO PLANIFICACIÓN PREVENTIVOS
 // ============================================================
+// GENERADORES DE ID
+// ============================================================
+
+// Genera ID legible para Fleetrun: FL-AJH832-MP1-20260415
+// Si ya existe ese ID (mismo placa+tipomp+fecha), agrega -2, -3, etc.
+function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
+    const p = (placa || 'XX').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+    const t = (tipoMp || 'MP').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+    const fechaStr = (fecha || new Date().toISOString().split('T')[0]).split('T')[0].replace(/-/g, '');
+    const base = `FL-${p}-${t}-${fechaStr}`;
+    db.query(
+        'SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 10',
+        [base + '%'],
+        (err, rows) => {
+            if (err || !rows.length) return cb(base);
+            // Si existe el base exacto, buscar el próximo número
+            const existing = rows.map(r => r.idRegistro);
+            if (!existing.includes(base)) return cb(base);
+            let seq = 2;
+            while (existing.includes(`${base}-${seq}`)) seq++;
+            cb(`${base}-${seq}`);
+        }
+    );
+}
 
 // Genera el próximo ID de planificación (PLAN-YYYYMM-XXXX)
 function generarIdPlan(mes, anio, cb) {
@@ -2231,14 +2260,236 @@ app.get('/api/requerimientos-planificacion', (req, res) => {
     });
 });
 
+// GET /api/planificacion-proyeccion?meses=3&placa=ALL
+// Proyecta próximos mantenimientos basándose en el último Fleetrun + frecuencia configurada
+app.get('/api/planificacion-proyeccion', (req, res) => {
+    const meses = Math.max(1, Math.min(24, parseInt(req.query.meses) || 3));
+    const placa = (req.query.placa || '').toUpperCase().trim();
+
+    const sql = `
+        SELECT
+            fr.placa, fr.tipo_mp,
+            fr.ultima_fecha, fr.ultimo_km, fr.km_proximo,
+            p.marca, p.cliente, p.uts,
+            tm.frecuencia_km, tm.frecuencia_dias,
+            COALESCE(ks.costo_total_kit, 0) AS costo_kit
+        FROM (
+            SELECT f.placa, f.tipo_mp,
+                   MAX(f.fecha)     AS ultima_fecha,
+                   MAX(f.km_actual) AS ultimo_km,
+                   MAX(f.km_proximo) AS km_proximo
+            FROM fleetrun f
+            INNER JOIN (
+                SELECT placa, tipo_mp, MAX(fecha) AS max_fecha
+                FROM fleetrun
+                GROUP BY placa, tipo_mp
+            ) lf ON f.placa = lf.placa AND f.tipo_mp = lf.tipo_mp AND f.fecha = lf.max_fecha
+            GROUP BY f.placa, f.tipo_mp
+        ) fr
+        LEFT JOIN placas p   ON UPPER(p.placa) = UPPER(fr.placa)
+        LEFT JOIN tipos_mantenimiento tm
+            ON UPPER(tm.marca) = UPPER(COALESCE(p.marca,'')) AND tm.tipo_mp = fr.tipo_mp
+        LEFT JOIN (
+            SELECT marca_vehiculo, tipo_mp, SUM(costo_total) AS costo_total_kit
+            FROM mantenimiento_kits
+            WHERE activo = 1 OR activo IS NULL
+            GROUP BY marca_vehiculo, tipo_mp
+        ) ks ON UPPER(ks.marca_vehiculo) = UPPER(COALESCE(p.marca,'')) AND ks.tipo_mp = fr.tipo_mp
+        ${placa ? 'WHERE UPPER(fr.placa) = ?' : ''}
+        ORDER BY fr.placa, fr.tipo_mp
+    `;
+
+    const params = placa ? [placa] : [];
+
+    db.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const horizonte = new Date(today);
+        horizonte.setMonth(horizonte.getMonth() + meses);
+
+        const resultado = [];
+
+        rows.forEach(row => {
+            let fecha_proyectada = null;
+            let metodo = null;
+            let vencida = false;
+            let dias_restantes = null;
+
+            if (row.ultima_fecha && row.frecuencia_dias) {
+                const base = new Date(String(row.ultima_fecha).split('T')[0] + 'T00:00:00');
+                fecha_proyectada = new Date(base);
+                fecha_proyectada.setDate(fecha_proyectada.getDate() + parseInt(row.frecuencia_dias));
+                metodo  = 'dias';
+                vencida = fecha_proyectada < today;
+                dias_restantes = Math.round((fecha_proyectada - today) / 86400000);
+                if (!vencida && fecha_proyectada > horizonte) return;
+            } else if (row.km_proximo) {
+                metodo = 'km';
+            } else {
+                return;
+            }
+
+            resultado.push({
+                placa:           row.placa,
+                marca:           row.marca || '',
+                cliente:         row.cliente || '',
+                uts:             row.uts    || '',
+                tipo_mp:         row.tipo_mp,
+                frecuencia_km:   row.frecuencia_km   || null,
+                frecuencia_dias: row.frecuencia_dias || null,
+                ultima_fecha:    row.ultima_fecha,
+                ultimo_km:       row.ultimo_km,
+                km_proximo:      row.km_proximo,
+                costo_kit:       parseFloat(row.costo_kit) || 0,
+                fecha_proyectada: fecha_proyectada ? fecha_proyectada.toISOString().split('T')[0] : null,
+                metodo,
+                vencida,
+                dias_restantes
+            });
+        });
+
+        res.json({ data: resultado, total: resultado.length });
+    });
+});
+
+// GET /api/planificacion-sugerir?placa=X&tipomp=Y — sugiere fechas/KM para nuevo plan
+app.get('/api/planificacion-sugerir', (req, res) => {
+    const { placa, tipomp } = req.query;
+    if (!placa || !tipomp) return res.status(400).json({ error: 'placa y tipomp requeridos' });
+
+    // 1. Último registro Fleetrun para esa placa+tipomp
+    db.query(
+        `SELECT fecha, km_actual, km_proximo FROM fleetrun
+         WHERE UPPER(placa)=? AND UPPER(tipo_mp)=?
+         ORDER BY fecha DESC, idRegistro DESC LIMIT 1`,
+        [placa.toUpperCase(), tipomp.toUpperCase()],
+        (err, frRows) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // 2. Configuración de frecuencia desde tipos_mantenimiento
+            db.query(
+                `SELECT tm.frecuencia_km, tm.frecuencia_dias
+                 FROM tipos_mantenimiento tm
+                 INNER JOIN placas p ON UPPER(p.marca) = UPPER(tm.marca)
+                 WHERE UPPER(p.placa)=? AND UPPER(tm.tipo_mp)=?
+                 LIMIT 1`,
+                [placa.toUpperCase(), tipomp.toUpperCase()],
+                (err2, tmRows) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+
+                    const tm = tmRows[0] || {};
+                    const fr = frRows[0] || {};
+
+                    // Calcular fecha sugerida
+                    let fechaSugerida = null;
+                    let fechaFinSugerida = null;
+                    let kmSugerido = null;
+
+                    const frecDias = parseInt(tm.frecuencia_dias) || 0;
+                    const frecKm   = parseInt(tm.frecuencia_km)   || 0;
+
+                    if (fr.fecha) {
+                        const base = new Date(String(fr.fecha).split('T')[0] + 'T00:00:00');
+                        if (frecDias > 0) {
+                            const ini = new Date(base);
+                            ini.setDate(ini.getDate() + frecDias);
+                            fechaSugerida = ini.toISOString().split('T')[0];
+                            // Ventana por defecto: 7 días
+                            const fin = new Date(ini);
+                            fin.setDate(fin.getDate() + 7);
+                            fechaFinSugerida = fin.toISOString().split('T')[0];
+                        }
+                    }
+                    if (fr.km_actual && frecKm > 0) {
+                        kmSugerido = parseInt(fr.km_actual) + frecKm;
+                    }
+
+                    if (!fechaSugerida && !kmSugerido) {
+                        return res.json({ ok: false, mensaje: 'Sin datos suficientes para sugerir fechas' });
+                    }
+
+                    res.json({
+                        ok: true,
+                        fecha_sugerida:     fechaSugerida,
+                        fecha_fin_sugerida: fechaFinSugerida,
+                        km_sugerido:        kmSugerido,
+                        basado_en: {
+                            ultimo_fleetrun_fecha: fr.fecha || null,
+                            ultimo_km_actual:      fr.km_actual || null,
+                            frecuencia_dias:       frecDias || null,
+                            frecuencia_km:         frecKm   || null
+                        }
+                    });
+                }
+            );
+        }
+    );
+});
+
+// GET /api/fleetrun/buscar/:id — buscar un registro por idRegistro (para completar plan)
+app.get('/api/fleetrun/buscar/:id', (req, res) => {
+    db.query(
+        `SELECT idRegistro, fecha, placa, tipo_mp, km_actual, km_proximo, frecuencia, tecnico, observacion
+         FROM fleetrun WHERE idRegistro = ? LIMIT 1`,
+        [req.params.id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
+            res.json({ data: rows[0] });
+        }
+    );
+});
+
+// POST /api/fleetrun-backfill-codigos — migra IDs tipo FL-1713000000000 al formato legible
+app.post('/api/fleetrun-backfill-codigos', (req, res) => {
+    // Buscar registros con el antiguo formato timestamp (FL-13dígitos)
+    db.query(
+        `SELECT idRegistro, placa, tipo_mp, fecha FROM fleetrun
+         WHERE idRegistro REGEXP '^FL-[0-9]{10,}$' OR idRegistro NOT REGEXP '^FL-[A-Z]'
+         ORDER BY fecha ASC`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.json({ ok: true, actualizados: 0, mensaje: 'No hay registros con IDs antiguos' });
+
+            let pendientes = rows.length;
+            let actualizados = 0;
+            let errores = 0;
+
+            const procesarSiguiente = (idx) => {
+                if (idx >= rows.length) {
+                    return res.json({ ok: true, actualizados, errores, total: rows.length });
+                }
+                const r = rows[idx];
+                const fechaStr = r.fecha
+                    ? (r.fecha instanceof Date ? r.fecha.toISOString() : String(r.fecha)).split('T')[0]
+                    : new Date().toISOString().split('T')[0];
+
+                generarIdFleetrunUnico(r.placa, r.tipo_mp, fechaStr, (nuevoId) => {
+                    db.query(
+                        'UPDATE fleetrun SET idRegistro = ? WHERE idRegistro = ?',
+                        [nuevoId, r.idRegistro],
+                        (err2) => {
+                            if (err2) { errores++; } else { actualizados++; }
+                            procesarSiguiente(idx + 1);
+                        }
+                    );
+                });
+            };
+
+            procesarSiguiente(0);
+        }
+    );
+});
+
 // GET /api/requerimientos-resumen?mes=X&anio=Y — vista consolidada por marca/tipo
 app.get('/api/requerimientos-resumen', (req, res) => {
     const { mes, anio } = req.query;
     if (!mes || !anio) return res.status(400).json({ error: 'mes y anio son requeridos' });
     const sql = `
-        SELECT pl2.marca, r.tipo_mp, mk.nombre_kit,
+        SELECT pl2.marca, p.tipo_mp, mk.nombre_kit,
                r.item_codigo, r.item_nombre,
-               SUM(r.cantidad) AS total_cantidad, r.unidad_medida,
+               SUM(r.cantidad_requerida) AS total_cantidad, r.unidad_medida,
                r.costo_unitario, SUM(r.costo_total) AS total_costo,
                COUNT(DISTINCT r.plan_id) AS num_planes
         FROM requerimientos_planificacion r
@@ -2246,13 +2497,13 @@ app.get('/api/requerimientos-resumen', (req, res) => {
         LEFT JOIN placas pl2 ON UPPER(pl2.placa) = UPPER(p.placa)
         LEFT JOIN mantenimiento_kits mk
                ON UPPER(mk.marca_vehiculo) = UPPER(pl2.marca)
-              AND mk.tipo_mp = r.tipo_mp
+              AND mk.tipo_mp = p.tipo_mp
               AND mk.item_codigo = r.item_codigo
         WHERE r.mes_ejecucion = ? AND r.anio_ejecucion = ?
           AND p.estado NOT IN ('Cancelada')
-        GROUP BY pl2.marca, r.tipo_mp, mk.nombre_kit, r.item_codigo,
+        GROUP BY pl2.marca, p.tipo_mp, mk.nombre_kit, r.item_codigo,
                  r.item_nombre, r.unidad_medida, r.costo_unitario
-        ORDER BY pl2.marca, r.tipo_mp, r.item_codigo`;
+        ORDER BY pl2.marca, p.tipo_mp, r.item_codigo`;
     db.query(sql, [parseInt(mes), parseInt(anio)], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: rows });

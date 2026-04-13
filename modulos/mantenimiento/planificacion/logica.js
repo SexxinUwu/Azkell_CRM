@@ -14,18 +14,22 @@ window.planDataFiltrado= window.planDataFiltrado|| [];
 window.planTabActiva   = window.planTabActiva   || 'board';
 window.planUpRows      = window.planUpRows      || [];
 window.compDataDetalle = window.compDataDetalle || [];
+window.planVistaTabla  = window.planVistaTabla  !== undefined ? window.planVistaTabla : true;
 
 // ── Helpers de fecha ──────────────────────────────────────────────
 function _planFmtFecha(iso) {
     if (!iso) return '—';
-    var d = new Date(iso + 'T00:00:00');
+    // MySQL puede devolver '2026-04-15T00:00:00.000Z' — tomar solo la parte de fecha
+    var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
+    var d = new Date(s + 'T00:00:00');
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('es-PE', { day:'2-digit', month:'short' });
 }
 
 function _planEstadoCard(plan) {
     var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var fin = new Date(plan.fecha_fin_ventana + 'T00:00:00');
-    var ini = new Date(plan.fecha_inicio_ventana + 'T00:00:00');
+    var fin = new Date((plan.fecha_fin_ventana    || '').split('T')[0] + 'T00:00:00');
+    var ini = new Date((plan.fecha_inicio_ventana || '').split('T')[0] + 'T00:00:00');
     if (plan.estado === 'Completada') return 'completada';
     if (plan.estado === 'Cancelada')  return 'cancelada';
     if (plan.estado === 'Diferida')   return 'diferida';
@@ -131,7 +135,7 @@ window.init_planificacion = function() {
 // ── TABS ─────────────────────────────────────────────────────────
 window.mostrarTabPlan = function(tab) {
     window.planTabActiva = tab;
-    var tabs = ['board','upload','comparativa','requerimientos','config'];
+    var tabs = ['board','upload','comparativa','requerimientos','proyeccion','config'];
     tabs.forEach(function(t) {
         var panel = document.getElementById('plan-panel-' + t);
         var navBtn = document.getElementById('plan-tab-' + t);
@@ -144,6 +148,7 @@ window.mostrarTabPlan = function(tab) {
     if (tab === 'comparativa')    window.cargarComparativa();
     if (tab === 'config')         window.cargarSubTabConfig();
     if (tab === 'requerimientos') window.cargarRequerimientos();
+    if (tab === 'proyeccion')     window.cargarProyeccion();
 };
 
 // ── BOARD CARGA ───────────────────────────────────────────────────
@@ -205,11 +210,22 @@ function _planActualizarKPIs() {
     if (kpiPct) kpiPct.style.color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444';
 }
 
+// ── TOGGLE VISTA TABLA / KANBAN ───────────────────────────────────
+window.toggleVistaPlan = function() {
+    window.planVistaTabla = !window.planVistaTabla;
+    var btn = document.getElementById('plan-btn-vista');
+    if (btn) btn.innerHTML = window.planVistaTabla
+        ? '<i class="bi bi-kanban"></i>'
+        : '<i class="bi bi-table"></i>';
+    var cont = document.getElementById('plan-kanban-contenedor');
+    if (cont) cont.style.overflowX = window.planVistaTabla ? '' : 'auto';
+    window.renderizarBoardPlan();
+};
+
 // ── BOARD RENDER ─────────────────────────────────────────────────
 window.renderizarBoardPlan = function() {
     var cont = document.getElementById('plan-kanban-contenedor');
     if (!cont) return;
-
     var data = window.planDataFiltrado;
 
     if (!data.length) {
@@ -217,7 +233,77 @@ window.renderizarBoardPlan = function() {
         return;
     }
 
-    // Agrupar por semanas del mes
+    if (window.planVistaTabla) {
+        _planRenderTablaVista(data, cont);
+    } else {
+        _planRenderKanban(data, cont);
+    }
+};
+
+// ── VISTA TABLA ───────────────────────────────────────────────────
+function _planRenderTablaVista(data, cont) {
+    // Ordenar: primero por estado (no-completadas primero), luego por fecha inicio
+    var orden = { 'Programada':0,'Confirmada':1,'En Progreso':2,'Diferida':3,'Atrasada':4,'Completada':5,'Cancelada':6 };
+    var sorted = data.slice().sort(function(a,b) {
+        var ea = _planEstadoCard(a); var eb = _planEstadoCard(b);
+        var oa = orden[ea] !== undefined ? orden[ea] : 9;
+        var ob = orden[eb] !== undefined ? orden[eb] : 9;
+        if (oa !== ob) return oa - ob;
+        return (a.fecha_inicio_ventana || '').localeCompare(b.fecha_inicio_ventana || '');
+    });
+
+    var filas = sorted.map(function(plan) {
+        var tipo = _planEstadoCard(plan);
+        var retraso = _planRetraso(plan);
+        var retrasoTxt = tipo === 'atrasada'
+            ? '<span class="text-danger fw-bold" style="font-size:0.72rem">+' + retraso + 'd</span>'
+            : '—';
+        var prioColor = _planColorPrioridad(plan.prioridad);
+        var prioBadge = plan.prioridad && plan.prioridad !== 'Normal'
+            ? '<span style="font-size:0.68rem;font-weight:700;color:' + prioColor + '"><i class="bi bi-flag-fill me-1"></i>' + plan.prioridad + '</span>'
+            : '';
+
+        var acciones = '';
+        if (['Programada','Confirmada','En Progreso'].includes(plan.estado)) {
+            acciones =
+                '<button class="btn btn-xs btn-success py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirCompletarPlan(\'' + plan.id + '\')" title="Completar"><i class="bi bi-check2"></i></button>' +
+                '<button class="btn btn-xs btn-warning py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirPosponerPlan(\'' + plan.id + '\')" title="Posponer"><i class="bi bi-calendar-plus"></i></button>' +
+                '<button class="btn btn-xs btn-outline-secondary py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirEditarPlan(\'' + plan.id + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+                '<button class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:0.7rem" onclick="window.cancelarPlan(\'' + plan.id + '\')" title="Cancelar"><i class="bi bi-x"></i></button>';
+        } else if (plan.estado === 'Completada') {
+            acciones = '<span style="font-size:0.72rem;color:#16a34a"><i class="bi bi-check-circle me-1"></i>' + (plan.fleetrun_id_ejecutado || '') + '</span>';
+        }
+
+        return '<tr style="' + (plan.estado==='Cancelada'?'opacity:0.45':'') + '">' +
+            '<td class="fw-bold" style="white-space:nowrap">' + plan.placa + '</td>' +
+            '<td><span class="badge bg-primary">' + plan.tipo_mp + '</span>' + (prioBadge ? '<br>' + prioBadge : '') + '</td>' +
+            '<td style="font-size:0.78rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (plan.cliente || '—') + '</td>' +
+            '<td style="white-space:nowrap;font-size:0.78rem">' + _planFmtFecha(plan.fecha_inicio_ventana) + '</td>' +
+            '<td style="white-space:nowrap;font-size:0.78rem">' + _planFmtFecha(plan.fecha_fin_ventana) + '</td>' +
+            '<td style="font-size:0.78rem">' + (plan.km_estimado ? plan.km_estimado.toLocaleString() + ' km' : '—') + '</td>' +
+            '<td style="font-size:0.78rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (plan.tecnico_asignado || '<span style="color:#f59e0b">Sin asignar</span>') + '</td>' +
+            '<td>' + _planBadge(tipo) + '</td>' +
+            '<td style="white-space:nowrap">' + retrasoTxt + '</td>' +
+            '<td class="text-end" style="white-space:nowrap">' + acciones + '</td>' +
+            '</tr>';
+    }).join('');
+
+    cont.innerHTML =
+        '<div class="table-responsive" style="max-height:calc(100vh - 290px); overflow-y:auto">' +
+        '<table class="table table-sm table-hover mb-0 comp-table" style="width:100%;table-layout:auto">' +
+        '<thead style="position:sticky;top:0;background:var(--surface);z-index:1"><tr>' +
+        '<th>Placa</th><th>Tipo MP</th><th>Cliente</th>' +
+        '<th>F. Inicio</th><th>F. Fin</th><th>KM Est.</th>' +
+        '<th>Técnico</th><th>Estado</th><th>Retraso</th><th></th>' +
+        '</tr></thead>' +
+        '<tbody>' + filas + '</tbody>' +
+        '</table></div>';
+    cont.classList.add('plan-vista-tabla');
+}
+
+// ── VISTA KANBAN ──────────────────────────────────────────────────
+function _planRenderKanban(data, cont) {
+    cont.classList.remove('plan-vista-tabla');
     var mes  = parseInt((document.getElementById('plan-sel-mes')  || {}).value  || (new Date().getMonth()+1));
     var anio = parseInt((document.getElementById('plan-sel-anio') || {}).value  || new Date().getFullYear());
 
@@ -232,7 +318,7 @@ window.renderizarBoardPlan = function() {
         var asignada = false;
         for (var i = 0; i < semanas.length - 1; i++) {
             var s = semanas[i];
-            var ini = new Date(plan.fecha_inicio_ventana + 'T00:00:00');
+            var ini = new Date((plan.fecha_inicio_ventana || '').split('T')[0] + 'T00:00:00');
             if (ini >= s.start && ini <= s.end) {
                 cols[s.key].push(plan);
                 asignada = true;
@@ -259,7 +345,8 @@ window.renderizarBoardPlan = function() {
     });
 
     cont.innerHTML = html;
-};
+    cont.style.display = 'flex';
+}
 
 function _planCalcularSemanas(mes, anio) {
     var semanas = [];
@@ -358,7 +445,89 @@ window.filtrarBoardPlan = function() {
     window.renderizarBoardPlan();
 };
 
-// ── MODAL NUEVO / EDITAR PLAN ─────────────────────────────────────
+// ── MIGRAR CÓDIGOS FLEETRUN ANTIGUOS ─────────────────────────────
+window.migrarCodigosFleetrun = function() {
+    var div = document.getElementById('migrar-resultado');
+    if (div) { div.style.display = ''; div.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Migrando...'; }
+    fetch('/api/fleetrun-backfill-codigos', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(j) {
+            if (div) {
+                var color = j.errores > 0 ? 'warning' : 'success';
+                div.innerHTML = '<div class="alert alert-' + color + ' py-2 mb-0" style="font-size:0.8rem">' +
+                    '<i class="bi bi-check2 me-1"></i>' + (j.mensaje || ('Actualizados: <strong>' + j.actualizados + '</strong> de ' + j.total + ' registros')) +
+                    (j.errores ? ' — Errores: ' + j.errores : '') +
+                    '</div>';
+            }
+        })
+        .catch(function(e) {
+            if (div) div.innerHTML = '<div class="alert alert-danger py-2 mb-0" style="font-size:0.8rem">Error: ' + e.message + '</div>';
+        });
+};
+
+// ── BUSCAR FLEETRUN POR CÓDIGO (auto-fill al completar) ───────────
+window.buscarFleetrunPorCodigo = function() {
+    var input  = document.getElementById('comp-fleetrun-id');
+    var status = document.getElementById('comp-fleetrun-status');
+    if (!input) return;
+    var codigo = (input.value || '').trim();
+
+    if (codigo.length < 8) {
+        if (status) status.innerHTML = '<i class="bi bi-search"></i>';
+        return;
+    }
+
+    if (status) status.innerHTML = '<div class="spinner-border spinner-border-sm" style="width:12px;height:12px"></div>';
+
+    fetch('/api/fleetrun/buscar/' + encodeURIComponent(codigo))
+        .then(function(r) { return r.json(); })
+        .then(function(j) {
+            if (j.data) {
+                var fr = j.data;
+                // Auto-fill fecha real
+                var fReal = document.getElementById('comp-fecha-real');
+                if (fReal && fr.fecha) {
+                    fReal.value = (String(fr.fecha)).split('T')[0];
+                }
+                // Auto-fill KM real
+                var kmReal = document.getElementById('comp-km-real');
+                if (kmReal && fr.km_actual) {
+                    kmReal.value = fr.km_actual;
+                }
+                if (status) status.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            } else {
+                if (status) status.innerHTML = '<i class="bi bi-x-circle text-danger" title="No encontrado"></i>';
+            }
+        })
+        .catch(function() {
+            if (status) status.innerHTML = '<i class="bi bi-search"></i>';
+        });
+};
+
+// ── SUGERIR FECHAS AL CREAR PLAN (basado en último Fleetrun + tipos_mant) ──
+window.sugerirFechasNuevoPlan = function() {
+    var placa  = ((document.getElementById('np-placa')  || {}).value || '').trim().toUpperCase();
+    var tipoMp = ((document.getElementById('np-tipomp') || {}).value || '').trim().toUpperCase();
+    if (!placa || !tipoMp) return;
+
+    // Buscar último Fleetrun de esa placa+tipomp
+    fetch('/api/planificacion-sugerir?placa=' + encodeURIComponent(placa) + '&tipomp=' + encodeURIComponent(tipoMp))
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(j) {
+            if (!j || !j.fecha_sugerida) return;
+            var fIni = document.getElementById('np-fecha-ini');
+            var fFin = document.getElementById('np-fecha-fin');
+            var kmEst = document.getElementById('np-km-est');
+            // Solo auto-rellenar si el campo está vacío
+            if (fIni && !fIni.value) fIni.value = j.fecha_sugerida;
+            if (fFin && !fFin.value) fFin.value = j.fecha_fin_sugerida || j.fecha_sugerida;
+            if (kmEst && !kmEst.value && j.km_sugerido) kmEst.value = j.km_sugerido;
+            if (j.fecha_sugerida) {
+                window.mostrarToast('Fechas sugeridas basadas en el último ' + tipoMp + ' de ' + placa, 'info');
+            }
+        })
+        .catch(function() {}); // silencioso si falla
+};
 window.abrirModalNuevoPlan = function() {
     var campos = ['np-id','np-placa','np-tipomp','np-fecha-ini','np-fecha-fin',
                   'np-km-est','np-km-min','np-km-max','np-tecnico','np-obs'];
@@ -473,50 +642,178 @@ window.abrirCompletarPlan = function(planId) {
     var plan = window.planData.find(function(p){ return p.id === planId; });
     if (!plan) return;
 
-    var el = document.getElementById('comp-plan-id');
-    if (el) el.value = planId;
+    // Hidden state
+    var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = (v || ''); };
+    set('comp-plan-id',       planId);
+    set('comp-hidden-placa',  plan.placa);
+    set('comp-hidden-tipomp', plan.tipo_mp);
 
+    // Plan info banner
     var info = document.getElementById('comp-plan-info');
     if (info) info.innerHTML =
-        '<strong>' + plan.placa + '</strong> · ' + plan.tipo_mp +
-        '<br>Ventana: ' + _planFmtFecha(plan.fecha_inicio_ventana) + ' – ' + _planFmtFecha(plan.fecha_fin_ventana) +
-        (plan.km_estimado ? ' · KM Est: ' + plan.km_estimado.toLocaleString() : '');
+        '<strong>' + plan.placa + '</strong> · <span class="badge bg-primary">' + plan.tipo_mp + '</span>' +
+        '<br><small>Ventana: ' + _planFmtFecha(plan.fecha_inicio_ventana) + ' – ' + _planFmtFecha(plan.fecha_fin_ventana) +
+        (plan.km_estimado ? ' · KM estimado: ' + plan.km_estimado.toLocaleString() : '') + '</small>';
 
-    // Prellenar fecha real con hoy
-    var hoy = new Date().toISOString().split('T')[0];
-    var fReal = document.getElementById('comp-fecha-real');
-    if (fReal) fReal.value = hoy;
-    var kmReal = document.getElementById('comp-km-real');
-    if (kmReal) kmReal.value = '';
-    var frId = document.getElementById('comp-fleetrun-id');
-    if (frId) frId.value = '';
+    // Pre-fill fecha con hoy
+    set('comp-fr-fecha', new Date().toISOString().split('T')[0]);
+    // Pre-fill KM actual desde el estimado del plan
+    set('comp-fr-kmact', plan.km_estimado || '');
+    // Pre-fill técnico del plan
+    set('comp-fr-tec',   plan.tecnico_asignado || '');
+    set('comp-fr-obs',   '');
+    set('comp-fr-kmgps', '');
 
-    var modal = _bsModal(document.getElementById('modalCompletarPlan'));
-    modal.show();
+    // Reset botón
+    var btn = document.getElementById('comp-btn-guardar');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Registrar y Completar'; }
+
+    var _show = function() {
+        // Marca de la placa para matching preciso en cfgDataFlota
+        var placaRow   = (window.dataGlobalPlacas || []).find(function(p){ return (p[0]||'') === plan.placa; });
+        var marcaPlaca = placaRow ? (placaRow[3] || '').toUpperCase().trim() : '';
+
+        // Buscar frecuencia: primero placa.marca + tipo_mp, si no tipo_mp solo
+        var tipoMpNorm = (plan.tipo_mp || '').toUpperCase().trim();
+        var confT = (window.cfgDataFlota || []).find(function(t){
+            return (t.tipo_mp||'').toUpperCase().trim() === tipoMpNorm && (t.marca||'').toUpperCase().trim() === marcaPlaca;
+        }) || (window.cfgDataFlota || []).find(function(t){
+            return (t.tipo_mp||'').toUpperCase().trim() === tipoMpNorm;
+        });
+        var frec = confT ? (parseInt(confT.frecuencia_km) || 0) : 0;
+        set('comp-fr-freckm', frec || '');
+
+        // KM próximo auto-calculado (readonly — no editable por el usuario)
+        var kmBase = parseInt(plan.km_estimado) || 0;
+        set('comp-fr-kmprox', (kmBase && frec) ? (kmBase + frec) : '');
+
+        // GPS KM: auto-fill desde Wialon si está disponible (cargado por Fleetrun)
+        var kmGpsEl    = document.getElementById('comp-fr-kmgps');
+        var kmGpsLabel = document.getElementById('comp-fr-gps-label');
+        if (kmGpsEl) {
+            var wialonData = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(plan.placa) : null;
+            if (wialonData && wialonData.km) {
+                kmGpsEl.value = wialonData.km;
+                kmGpsEl.readOnly = false;
+                if (kmGpsLabel) kmGpsLabel.innerHTML = '<i class="bi bi-broadcast-pin text-primary me-1"></i>KM GPS <span class="badge bg-primary" style="font-size:0.6rem">EN VIVO</span>';
+            } else {
+                kmGpsEl.value = '';
+                kmGpsEl.readOnly = false;
+                if (kmGpsLabel) kmGpsLabel.innerHTML = '<i class="bi bi-broadcast text-muted me-1"></i>KM GPS';
+            }
+        }
+
+        // Poblar datalist de técnicos desde dataGlobalFleetrun (índice 13 = tecnico)
+        var dl = document.getElementById('comp-fr-tec-list');
+        if (dl) {
+            var tecnicos = [];
+            (window.dataGlobalFleetrun || []).forEach(function(f) {
+                var t = (f[13] || '').trim();
+                if (t && t !== '-' && !tecnicos.includes(t)) tecnicos.push(t);
+            });
+            tecnicos.sort();
+            dl.innerHTML = tecnicos.map(function(t){ return '<option value="' + t + '">'; }).join('');
+        }
+        _bsModal(document.getElementById('modalCompletarPlan')).show();
+    };
+    if (window.cfgDataFlota && window.cfgDataFlota.length) {
+        _show();
+    } else {
+        fetch('/api/tipos-mantenimiento')
+            .then(function(r){ return r.ok ? r.json() : {data:[]}; })
+            .then(function(j){ window.cfgDataFlota = j.data || []; _show(); })
+            .catch(_show);
+    }
+};
+
+// Helper: recalcular KM próximo cuando cambia KM actual o frecuencia
+window.compRecalcKmProx = function() {
+    var kmActEl  = document.getElementById('comp-fr-kmact');
+    var frecEl   = document.getElementById('comp-fr-freckm');
+    var kmProxEl = document.getElementById('comp-fr-kmprox');
+    if (!kmActEl || !frecEl || !kmProxEl) return;
+    var kmAct = parseInt(kmActEl.value) || 0;
+    var frec  = parseInt(frecEl.value)  || 0;
+    if (kmAct && frec) kmProxEl.value = kmAct + frec;
 };
 
 window.confirmarCompletarPlan = function() {
-    var planId = (document.getElementById('comp-plan-id') || {}).value;
-    var frId   = ((document.getElementById('comp-fleetrun-id') || {}).value || '').trim();
-    var fReal  = (document.getElementById('comp-fecha-real')   || {}).value;
-    var kmReal = parseInt((document.getElementById('comp-km-real') || {}).value) || 0;
+    var planId  = ((document.getElementById('comp-plan-id')       || {}).value || '').trim();
+    var placa   = ((document.getElementById('comp-hidden-placa')  || {}).value || '').trim().toUpperCase();
+    var tipoMp  = ((document.getElementById('comp-hidden-tipomp') || {}).value || '').trim();
+    var fecha   = ((document.getElementById('comp-fr-fecha')      || {}).value || '').trim();
+    var kmAct   = parseInt((document.getElementById('comp-fr-kmact')  || {}).value) || 0;
+    var kmProx  = parseInt((document.getElementById('comp-fr-kmprox') || {}).value) || 0;
+    var frecuencia = parseInt((document.getElementById('comp-fr-freckm') || {}).value) || 0;
+    var kmGps   = parseInt((document.getElementById('comp-fr-kmgps') || {}).value) || null;
+    var tec     = ((document.getElementById('comp-fr-tec') || {}).value || '').trim();
+    var obs     = ((document.getElementById('comp-fr-obs') || {}).value || '').trim();
 
-    if (!planId || !frId) return window.mostrarToast('El ID de Fleetrun es requerido', 'warning');
+    if (!planId || !placa || !tipoMp) return window.mostrarToast('Error: datos del plan incompletos', 'error');
+    if (!fecha)  return window.mostrarToast('La fecha de ejecución es requerida', 'warning');
+    if (!kmAct)  return window.mostrarToast('El KM actual es requerido', 'warning');
 
+    // Datos adicionales del vehículo desde dataGlobalPlacas
+    var placaRow = (window.dataGlobalPlacas || []).find(function(p){ return (p[0]||'') === placa; });
+    var marca = placaRow ? (placaRow[3] || '') : '';
+    var dueno = placaRow ? (placaRow[1] || '') : '';
+
+    var d    = new Date(fecha + 'T00:00:00');
+    var mes  = d.getMonth() + 1;
+    var anio = d.getFullYear();
     var usuario = localStorage.getItem('fleet_correo') || 'sistema';
-    fetch('/api/planificacion/' + planId + '/completar', {
+
+    // Deshabilitar botón
+    var btn = document.getElementById('comp-btn-guardar');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner-border spinner-border-sm me-1" style="width:14px;height:14px"></div>Guardando...'; }
+
+    // PASO 1: Crear Fleetrun
+    fetch('/api/script', {
         method:  'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ fleetrun_id: frId, fecha_real: fReal || null, km_real: kmReal || null, usuario: usuario })
+        body: JSON.stringify({
+            action: 'guardarFleetrun',
+            args: [{
+                f_fecha:  fecha,
+                f_mes:    mes,
+                f_anio:   anio,
+                f_placa:  placa,
+                f_marca:  marca,
+                f_dueno:  dueno,
+                f_uts:    '',
+                f_tipomp: tipoMp,
+                f_kmact:  kmAct,
+                f_freckm: frecuencia || null,
+                f_kmprox: kmProx || (kmAct + (frecuencia || 0)) || null,
+                f_obs:    obs,
+                f_tec:    tec,
+                f_kmgps:  kmGps || null
+            }],
+            usuario: usuario
+        })
     })
-    .then(function(r) { return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
-    .then(function() {
-        var modal = bootstrap.Modal.getInstance(document.getElementById('modalCompletarPlan'));
-        if (modal) modal.hide();
-        window.mostrarToast('Plan completado. Se generó la próxima MP automáticamente.', 'success');
-        window.cargarBoardPlan();
+    .then(function(r) { return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.data || e.error); }); })
+    .then(function(j) {
+        if (!j.idRegistro) throw new Error('No se recibió código del Fleetrun');
+        var frId = j.idRegistro;
+        // PASO 2: Completar plan con el ID del Fleetrun recién creado
+        return fetch('/api/planificacion/' + planId + '/completar', {
+            method:  'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ fleetrun_id: frId, fecha_real: fecha, km_real: kmAct, usuario: usuario })
+        })
+        .then(function(r2) { return r2.ok ? r2.json() : r2.json().then(function(e){ throw new Error(e.error); }); })
+        .then(function() {
+            var modal = bootstrap.Modal.getInstance(document.getElementById('modalCompletarPlan'));
+            if (modal) modal.hide();
+            window.mostrarToast('Preventivo registrado (' + frId + ') y plan completado', 'success');
+            window.cargarBoardPlan();
+        });
     })
-    .catch(function(e) { window.mostrarToast('Error: ' + e.message, 'error'); });
+    .catch(function(e) {
+        window.mostrarToast('Error: ' + e.message, 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Registrar y Completar'; }
+    });
 };
 
 // ── POSPONER PLAN ─────────────────────────────────────────────────
@@ -992,19 +1289,20 @@ window.abrirModalConfigFlota = function() {
 };
 
 window.editarConfigFlota = function(id) {
-    var r = (window.cfgDataFlota||[]).find(function(x){ return x.id===id; });
+    var r = (window.cfgDataFlota||[]).find(function(x){ return x.id == id; });
     if (!r) return;
-    var set = function(elId, v){ var el=document.getElementById(elId); if(el) el.value=v||''; };
+    var set    = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v != null ? v : ''; };
+    var setStr = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v || ''; };
     set('cf-id',           r.id);
-    set('cf-marca',        r.marca);
-    set('cf-tipo-mp',      r.tipo_mp);
-    set('cf-uts',          r.uts||'LOCAL');
+    setStr('cf-marca',     r.marca);
+    setStr('cf-tipo-mp',   r.tipo_mp);
+    setStr('cf-uts',       r.uts || 'LOCAL');
     set('cf-frec-km',      r.frecuencia_km);
     set('cf-frec-horas',   r.frecuencia_horas);
     set('cf-frec-dias',    r.frecuencia_dias);
-    set('cf-tipo',         r.tipo);
-    set('cf-sistema',      r.sistema);
-    set('cf-descripcion',  r.descripcion);
+    setStr('cf-tipo',      r.tipo);
+    setStr('cf-sistema',   r.sistema);
+    setStr('cf-descripcion', r.descripcion);
     var t=document.getElementById('modalConfigFlota-titulo');
     if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar — ' + r.marca + ' ' + r.tipo_mp;
     _cfPopularDatalists();
@@ -1475,4 +1773,211 @@ window.exportarRequerimientos = function() {
     ws['!cols'] = [{wch:14},{wch:20},{wch:22},{wch:12},{wch:30},{wch:8},{wch:8},{wch:10},{wch:10},{wch:8}];
     XLSX.utils.book_append_sheet(wb, ws, 'Requerimientos');
     XLSX.writeFile(wb, 'Requerimientos_' + mes + '_' + anio + '.xlsx');
+};
+
+// ================================================================
+// TAB PROYECCIÓN — Próximas MPs proyectadas (3 / 6 / 12 meses)
+// ================================================================
+
+window.planProyData    = window.planProyData    || [];
+window.planProyDataFil = window.planProyDataFil || [];
+window.planProyMeses   = window.planProyMeses   || 3;
+
+window.setPrHorizonte = function(meses, btn) {
+    window.planProyMeses = meses;
+    // Actualizar estado activo en los botones de horizonte
+    var btns = document.querySelectorAll('[data-meses]');
+    btns.forEach(function(b) {
+        b.classList.toggle('active', parseInt(b.getAttribute('data-meses')) === meses);
+    });
+    window.cargarProyeccion();
+};
+
+window.cargarProyeccion = function() {
+    var cont = document.getElementById('proy-tabla-cont');
+    if (cont) cont.innerHTML = '<div class="text-center py-5" style="color:var(--subtext)"><div class="spinner-border spinner-border-sm me-2"></div>Calculando proyecciones...</div>';
+
+    fetch('/api/planificacion-proyeccion?meses=' + (window.planProyMeses || 3))
+        .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function(j) {
+            window.planProyData = j.data || [];
+
+            // Poblar filtro de tipo MP dinámicamente
+            var selTipo = document.getElementById('proy-fil-tipomp');
+            if (selTipo) {
+                var tipos = [];
+                window.planProyData.forEach(function(p) {
+                    if (p.tipo_mp && !tipos.includes(p.tipo_mp)) tipos.push(p.tipo_mp);
+                });
+                tipos.sort();
+                var prevT = selTipo.value;
+                selTipo.innerHTML = '<option value="">Todos los tipos</option>' +
+                    tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
+            }
+
+            window.filtrarProyeccion();
+        })
+        .catch(function(e) {
+            console.error('Error proyección:', e);
+            if (cont) cont.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error al calcular proyecciones</div>';
+        });
+};
+
+window.filtrarProyeccion = function() {
+    var busq    = ((document.getElementById('proy-buscador')   ||{}).value||'').toLowerCase().trim();
+    var tipomp  = ((document.getElementById('proy-fil-tipomp') ||{}).value||'');
+    var estadoF = ((document.getElementById('proy-fil-estado') ||{}).value||'');
+
+    window.planProyDataFil = window.planProyData.filter(function(p) {
+        if (busq && !(
+            (p.placa   ||'').toLowerCase().includes(busq) ||
+            (p.cliente ||'').toLowerCase().includes(busq) ||
+            (p.tipo_mp ||'').toLowerCase().includes(busq)
+        )) return false;
+        if (tipomp && p.tipo_mp !== tipomp) return false;
+        if (estadoF) {
+            if (estadoF === 'vencida'    && !p.vencida)   return false;
+            if (estadoF === 'urgente'    && !(p.dias_restantes != null && !p.vencida && p.dias_restantes <= 15)) return false;
+            if (estadoF === 'proximo'    && !(p.dias_restantes != null && !p.vencida && p.dias_restantes > 15 && p.dias_restantes <= 45)) return false;
+            if (estadoF === 'programado' && !(p.dias_restantes != null && !p.vencida && p.dias_restantes > 45)) return false;
+            if (estadoF === 'km'         && p.metodo !== 'km') return false;
+        }
+        return true;
+    });
+
+    _proyUpdateKpis(window.planProyDataFil);
+    _proyRenderTabla(window.planProyDataFil);
+};
+
+function _proyUpdateKpis(data) {
+    var total     = data.length;
+    var vencidas  = data.filter(function(p){ return p.vencida; }).length;
+    var urgentes  = data.filter(function(p){ return !p.vencida && p.dias_restantes != null && p.dias_restantes <= 15; }).length;
+    var costoTotal = data.reduce(function(acc, p){ return acc + (parseFloat(p.costo_kit)||0); }, 0);
+
+    var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    set('proy-kpi-total',    total);
+    set('proy-kpi-vencidos', vencidas);
+    set('proy-kpi-urgentes', urgentes);
+    set('proy-kpi-costo',    costoTotal > 0 ? 'S/ ' + costoTotal.toLocaleString('es-PE', {minimumFractionDigits:0, maximumFractionDigits:0}) : '—');
+
+    var kpiVenc = document.getElementById('proy-kpi-vencidos');
+    if (kpiVenc) kpiVenc.style.color = vencidas > 0 ? '#ef4444' : '';
+    var kpiUrg  = document.getElementById('proy-kpi-urgentes');
+    if (kpiUrg)  kpiUrg.style.color  = urgentes > 0 ? '#f59e0b' : '';
+}
+
+function _proyGetEstado(p) {
+    if (p.vencida)                                              return { cat:'vencida',    label:'Vencida',       cls:'danger'  };
+    if (p.metodo === 'km')                                      return { cat:'km',         label:'Por KM',        cls:'info'    };
+    if (p.dias_restantes != null && p.dias_restantes <= 15)    return { cat:'urgente',     label:'Urgente',       cls:'warning' };
+    if (p.dias_restantes != null && p.dias_restantes <= 45)    return { cat:'proximo',     label:'Próximo',       cls:'primary' };
+    return { cat:'programado', label:'Programado', cls:'secondary' };
+}
+
+function _proyRenderTabla(data) {
+    var cont = document.getElementById('proy-tabla-cont');
+    if (!cont) return;
+
+    if (!data.length) {
+        cont.innerHTML = '<div class="text-center py-5" style="color:var(--subtext)"><i class="bi bi-calendar-check me-2"></i>No hay MPs proyectadas para este horizonte</div>';
+        return;
+    }
+
+    // Agrupar por mes proyectado (para las entradas con fecha)
+    var grupos = {};
+    var sinFecha = [];
+    data.forEach(function(p) {
+        if (p.fecha_proyectada) {
+            var d = new Date(p.fecha_proyectada);
+            var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+            if (!grupos[key]) grupos[key] = [];
+            grupos[key].push(p);
+        } else {
+            sinFecha.push(p);
+        }
+    });
+
+    var mesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var html = '';
+    var mesesOrdenados = Object.keys(grupos).sort();
+
+    mesesOrdenados.forEach(function(key) {
+        var partes = key.split('-');
+        var anio   = partes[0];
+        var mes    = parseInt(partes[1]);
+        var label  = mesNombres[mes-1] + ' ' + anio;
+        var items  = grupos[key];
+        html += '<tr style="background:var(--bg)">' +
+            '<td colspan="9" class="fw-bold py-2 ps-3" style="font-size:0.8rem; color:var(--subtext); letter-spacing:0.05em">' +
+            '<i class="bi bi-calendar3 me-1"></i>' + label.toUpperCase() + ' — ' + items.length + ' MP' + (items.length !== 1 ? 's' : '') +
+            '</td></tr>';
+        items.forEach(function(p) {
+            html += _proyRenderFila(p);
+        });
+    });
+
+    if (sinFecha.length) {
+        html += '<tr style="background:var(--bg)"><td colspan="9" class="fw-bold py-2 ps-3" style="font-size:0.8rem; color:var(--subtext); letter-spacing:0.05em">' +
+            '<i class="bi bi-speedometer2 me-1"></i>POR KILOMETRAJE (sin fecha estimada) — ' + sinFecha.length + '</td></tr>';
+        sinFecha.forEach(function(p) { html += _proyRenderFila(p); });
+    }
+
+    cont.innerHTML = '<div class="kpi-card p-0 overflow-hidden"><div class="table-responsive">' +
+        '<table class="table table-sm table-hover mb-0 comp-table">' +
+        '<thead style="position:sticky;top:0;background:var(--surface);z-index:1"><tr>' +
+        '<th>Placa</th><th>Cliente</th><th>Tipo MP</th><th>Fecha Proyectada</th>' +
+        '<th>Días Restantes</th><th>Últ. Ejecución</th><th>KM Próximo</th><th>Costo Est.</th><th>Estado</th>' +
+        '</tr></thead><tbody>' + html + '</tbody></table></div></div>';
+}
+
+function _proyRenderFila(p) {
+    var est = _proyGetEstado(p);
+    var fechaProyHtml = p.fecha_proyectada ? _planFmtFecha(p.fecha_proyectada) : '—';
+    var diasHtml;
+    if (p.vencida) {
+        diasHtml = '<span class="text-danger fw-bold">+'+ Math.abs(p.dias_restantes||0) +'d atrasada</span>';
+    } else if (p.dias_restantes != null) {
+        diasHtml = '<span class="' + (p.dias_restantes <= 15 ? 'text-warning fw-bold' : 'text-success') + '">' + p.dias_restantes + ' días</span>';
+    } else {
+        diasHtml = '<span class="text-muted">—</span>';
+    }
+    var costoHtml = p.costo_kit > 0
+        ? 'S/ ' + parseFloat(p.costo_kit).toLocaleString('es-PE', {minimumFractionDigits:0, maximumFractionDigits:0})
+        : '<span class="text-muted" style="font-size:0.75rem">No registrado</span>';
+
+    return '<tr>' +
+        '<td class="fw-bold">' + (p.placa||'—') + '</td>' +
+        '<td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.cliente||'—') + '</td>' +
+        '<td><span class="badge bg-primary">' + (p.tipo_mp||'—') + '</span></td>' +
+        '<td style="white-space:nowrap">' + fechaProyHtml + '</td>' +
+        '<td>' + diasHtml + '</td>' +
+        '<td style="white-space:nowrap">' + (p.ultima_fecha ? _planFmtFecha(p.ultima_fecha) : '—') + '</td>' +
+        '<td>' + (p.km_proximo ? parseInt(p.km_proximo).toLocaleString() : '—') + '</td>' +
+        '<td>' + costoHtml + '</td>' +
+        '<td><span class="badge bg-' + est.cls + '">' + est.label + '</span></td>' +
+        '</tr>';
+}
+
+window.exportarProyeccionExcel = function() {
+    if (!window.planProyDataFil.length) return window.mostrarToast('No hay datos para exportar', 'warning');
+    var meses = window.planProyMeses || 3;
+    var headers = ['Placa','Cliente','UTS','Tipo MP','Fecha Proyectada','Días Restantes','Últ. Fecha Ejecución','Últ. KM','KM Próximo','Frec. KM','Método','Costo Est. (S/)','Estado'];
+    var rows = window.planProyDataFil.map(function(p) {
+        var est = _proyGetEstado(p);
+        return [
+            p.placa||'', p.cliente||'', p.uts||'', p.tipo_mp||'',
+            p.fecha_proyectada||'',
+            p.vencida ? -Math.abs(p.dias_restantes||0) : (p.dias_restantes||''),
+            p.ultima_fecha||'', p.ultimo_km||'', p.km_proximo||'',
+            p.frecuencia_km||'', p.metodo||'fecha',
+            p.costo_kit||0,
+            est.label
+        ];
+    });
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+    ws['!cols'] = [{wch:10},{wch:20},{wch:10},{wch:22},{wch:14},{wch:12},{wch:16},{wch:10},{wch:12},{wch:10},{wch:8},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Proyeccion');
+    XLSX.writeFile(wb, 'Proyeccion_MPs_' + meses + 'meses.xlsx');
 };
