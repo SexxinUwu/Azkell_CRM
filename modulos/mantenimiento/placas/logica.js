@@ -278,16 +278,32 @@ window.mostrarKPIsCliente = function(cli) {
     var total = placasCli.length;
     var activas = placasCli.filter(function(p) { return p[18] === 'Activa'; }).length;
     var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var venc = 0, pv = 0, ok = 0, ultInspFecha = '—';
-    (window.dataGlobalInspecciones || []).forEach(function(i) {
-        var esDeCli = placasCli.some(function(p) { return p[0] && p[0].trim() === (i.placa || '').trim(); });
-        if (!esDeCli || !i.fecha_ingreso) return;
+    var venc = 0, pv = 0, ok = 0, sinInsp = 0, ultInspMs = 0, ultInspFecha = '—';
+
+    function parseInspFecha(f) {
+        if (!f) return null;
+        if (f.includes('/')) { var px = f.split('/'); return new Date(px[2], px[1]-1, px[0]); }
+        return new Date(f + 'T00:00:00');
+    }
+
+    // Por cada placa del cliente, tomar SOLO la inspección más reciente
+    placasCli.forEach(function(placa) {
+        var pNum = (placa[0] || '').trim().toUpperCase();
+        var insps = (window.dataGlobalInspecciones || []).filter(function(i) {
+            return (i.placa || '').trim().toUpperCase() === pNum && i.fecha_ingreso;
+        });
+        if (!insps.length) { sinInsp++; return; }
+        // Ordenar desc y tomar la más reciente
+        insps.sort(function(a, b) {
+            return (parseInspFecha(b.fecha_ingreso) || 0) - (parseInspFecha(a.fecha_ingreso) || 0);
+        });
+        var latest = insps[0];
         try {
-            var fi; if (i.fecha_ingreso.includes('/')) { var px = i.fecha_ingreso.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(i.fecha_ingreso + 'T00:00:00'); }
-            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+            var fi = parseInspFecha(latest.fecha_ingreso);
+            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(latest.dias_propuestos) || 30));
             var dias = Math.ceil((fp - hoy) / 864e5);
             if (dias < 0) venc++; else if (dias <= 7) pv++; else ok++;
-            if (ultInspFecha === '—') ultInspFecha = i.fecha_ingreso;
+            if (fi && fi.getTime() > ultInspMs) { ultInspMs = fi.getTime(); ultInspFecha = latest.fecha_ingreso; }
         } catch(e) {}
     });
     var modal = document.getElementById('modalKPIsCliente');
@@ -295,6 +311,9 @@ window.mostrarKPIsCliente = function(cli) {
     var body = document.getElementById('kpi-cli-body');
     if (!modal || !nombre || !body) return;
     nombre.textContent = cli;
+    var sinInspHtml = sinInsp > 0
+        ? '<div class="text-muted small mt-1"><i class="bi bi-exclamation-circle me-1 text-warning"></i>' + sinInsp + ' unidad(es) sin inspección registrada</div>'
+        : '';
     body.innerHTML = '<div class="row g-2 mb-3">'
         + '<div class="col-6"><div class="kpi-mini-card"><div class="kpi-mini-val">' + total + '</div><div class="kpi-mini-lbl">Unidades</div></div></div>'
         + '<div class="col-6"><div class="kpi-mini-card kpi-green"><div class="kpi-mini-val">' + activas + '</div><div class="kpi-mini-lbl">Activas</div></div></div>'
@@ -302,7 +321,8 @@ window.mostrarKPIsCliente = function(cli) {
         + '<div class="col-4"><div class="kpi-mini-card kpi-yellow"><div class="kpi-mini-val">' + pv + '</div><div class="kpi-mini-lbl">Por Vencer</div></div></div>'
         + '<div class="col-4"><div class="kpi-mini-card kpi-blue"><div class="kpi-mini-val">' + ok + '</div><div class="kpi-mini-lbl">Al día</div></div></div>'
         + '</div>'
-        + '<div class="text-muted small"><i class="bi bi-clock-history me-1"></i>Última inspección registrada: <strong>' + ultInspFecha + '</strong></div>';
+        + '<div class="text-muted small"><i class="bi bi-clock-history me-1"></i>Última inspección registrada: <strong>' + ultInspFecha + '</strong></div>'
+        + sinInspHtml;
     bootstrap.Modal.getOrCreateInstance(modal).show();
 };
 
