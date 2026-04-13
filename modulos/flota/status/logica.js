@@ -211,7 +211,7 @@ function mostrarStatusFlota(datos) {
                 let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
 
                 let pSF = permisosUsuario || {};
-                let isAdmSF = pSF.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+                let isAdmSF = pSF.admin === true || (localStorage.getItem('fleet_correo') || '').toLowerCase() === 'admin@azkell.com';
                 let canEditSF = isAdmSF || pSF.status?.e === true;
                 let canDeleteSF = isAdmSF || pSF.status?.d === true;
                 let itemsSF = '';

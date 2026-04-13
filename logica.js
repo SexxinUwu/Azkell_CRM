@@ -1825,6 +1825,7 @@ var NOMBRES_MODULOS_RECIENTES = {
     'mantenimiento/inspecciones': 'Inspecciones',
     'mantenimiento/placas':       'Placas',
     'mantenimiento/fleetrun':     'Fleetrun',
+    'mantenimiento/planificacion':'Planificación',
     'almacen/inventario':         'Inventario',
     'flota/status':               'Status Flota',
     'flota/ubicacion':            'GPS Flota',
@@ -1838,6 +1839,7 @@ var ICONOS_MODULOS_RECIENTES = {
     'mantenimiento/inspecciones': 'bi-clipboard2-pulse-fill',
     'mantenimiento/placas':       'bi-truck',
     'mantenimiento/fleetrun':     'bi-speedometer2',
+    'mantenimiento/planificacion':'bi-calendar2-check',
     'almacen/inventario':         'bi-box-fill',
     'flota/status':               'bi-activity',
     'flota/ubicacion':            'bi-geo-alt-fill',
@@ -1922,6 +1924,7 @@ const TITULOS_MODULOS = {
     'mantenimiento/inspecciones':  'Análisis de Inspecciones',
     'mantenimiento/placas':        'Gestión de Placas',
     'mantenimiento/fleetrun':      'Sistema Fleetrun',
+    'mantenimiento/planificacion': 'Planificación de Mantenimientos',
     'almacen/inventario':          'Inventario',
     'flota/status':                'Status de Flota',
     'flota/ubicacion':             'Ubicación GPS Flota',
@@ -1935,6 +1938,7 @@ const MENU_IDS = {
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'mantenimiento/placas':        'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
+    'mantenimiento/planificacion': 'nav-planificacion',
     'almacen/inventario':          'nav-inventario',
     'flota/status':                'nav-status-flota',
     'flota/ubicacion':             'nav-ubicacion',
@@ -3171,8 +3175,10 @@ var FAB_ACCIONES_POR_RUTA = {
     'mantenimiento/fleetrun': [
         { icon: 'bi-plus-lg',         cls: 'primary',   texto: 'Nuevo Preventivo',           fn: function() { if(typeof window.abrirModalNuevoFleetrun==='function') window.abrirModalNuevoFleetrun(); } },
         { icon: 'bi-clock-history',    cls: 'info',      texto: 'Ver Historial Completo',      fn: function() { if(typeof toggleVistaFleetrun==='function') toggleVistaFleetrun(); } },
-        { icon: 'bi-download',         cls: 'success',   texto: 'Exportar Excel',              fn: function() { if(typeof window.exportarExcelFleetrun==='function') window.exportarExcelFleetrun(); } },
-        { icon: 'bi-arrow-clockwise',  cls: 'secondary', texto: 'Recargar Datos',              fn: function() { recargarModulo('fleetrun'); } }
+        { icon: 'bi-download',         cls: 'success',   texto: 'Exportar Excel',              fn: function() { if(typeof window.exportarExcelFleetrun==='function') window.exportarExcelFleetrun(); } }
+    ],
+    'mantenimiento/planificacion': [
+        { icon: 'bi-plus-lg', cls: 'primary', texto: 'Nueva Planificación', fn: function() { if(typeof window.abrirModalNuevoPlan==='function') window.abrirModalNuevoPlan(); } }
     ],
     // Sin FAB
     'flota/status':             null,
@@ -3237,6 +3243,10 @@ function generarListaAccionesFab() {
 
     buttons.forEach(btn => {
         if (btn.style.display === 'none' || window.getComputedStyle(btn).display === 'none') return;
+        // Excluir botones de recarga (solo icono bi-arrow-clockwise o title="Actualizar")
+        if (btn.title === 'Actualizar') return;
+        var icons = btn.querySelectorAll('i');
+        if (icons.length === 1 && icons[0].className.includes('bi-arrow-clockwise') && btn.textContent.trim().length <= 1) return;
         let clonedBtn = btn.cloneNode(true);
         clonedBtn.removeAttribute('id');
         clonedBtn.className = 'fab-action-item text-decoration-none';

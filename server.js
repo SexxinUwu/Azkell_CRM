@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const ALLOWED_ORIGINS = [
@@ -93,15 +94,263 @@ db.getConnection((err, connection) => {
         // Orden/jerarquía en roles
         connection.query(`ALTER TABLE roles ADD COLUMN orden INT NOT NULL DEFAULT 0`,
             (e) => {
-                connection.release();
                 if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER roles orden:', e.message);
                 else console.log('✅ Esquema v2 verificado');
+
+                // ── Módulo Planificación v1 ──────────────────────────────────
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS configuracion_flota (
+                        id              INT AUTO_INCREMENT PRIMARY KEY,
+                        marca           VARCHAR(50)  NOT NULL,
+                        uts_categoria   VARCHAR(20)  NOT NULL,
+                        km_mensuales    INT          NOT NULL DEFAULT 0,
+                        dias_operativos INT          NOT NULL DEFAULT 26,
+                        mp1_intervalo_km INT         NOT NULL DEFAULT 5000,
+                        mp2_intervalo_km INT         NOT NULL DEFAULT 10000,
+                        mp3_intervalo_km INT         NOT NULL DEFAULT 20000,
+                        activa          TINYINT(1)   NOT NULL DEFAULT 1,
+                        observaciones   TEXT,
+                        created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+                        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY uq_marca_uts (marca, uts_categoria)
+                    )`,
+                    (e1) => {
+                        if (e1) console.warn('CREATE configuracion_flota:', e1.message);
+                        else console.log('✅ Tabla configuracion_flota verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS mantenimiento_kits (
+                        id              INT           AUTO_INCREMENT PRIMARY KEY,
+                        marca_vehiculo  VARCHAR(50)   NOT NULL,
+                        tipo_mp         VARCHAR(60)   NOT NULL,
+                        nombre_kit      VARCHAR(150),
+                        item_codigo     VARCHAR(30)   NOT NULL,
+                        item_nombre     VARCHAR(200)  NOT NULL,
+                        cantidad        DECIMAL(10,2) NOT NULL,
+                        unidad_medida   VARCHAR(10)   NOT NULL,
+                        costo_unitario  DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        costo_total     DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        orden           INT           NOT NULL DEFAULT 1,
+                        activo          TINYINT(1)    NOT NULL DEFAULT 1,
+                        created_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+                        updated_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_marca_mp (marca_vehiculo, tipo_mp)
+                    )`,
+                    (e2) => {
+                        if (e2) console.warn('CREATE mantenimiento_kits:', e2.message);
+                        else console.log('✅ Tabla mantenimiento_kits verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS planificacion (
+                        id                      VARCHAR(50)   NOT NULL PRIMARY KEY,
+                        placa                   VARCHAR(20)   NOT NULL,
+                        configuracion_flota_id  INT           NULL DEFAULT NULL,
+                        tipo_mp                 VARCHAR(60)   NOT NULL,
+                        fecha_inicio_ventana    DATE          NOT NULL,
+                        fecha_fin_ventana       DATE          NOT NULL,
+                        mes_ejecucion           INT           NOT NULL,
+                        anio_ejecucion          INT           NOT NULL,
+                        km_estimado             INT           NOT NULL DEFAULT 0,
+                        km_minimo               INT,
+                        km_maximo               INT,
+                        tecnico_asignado        VARCHAR(100),
+                        prioridad               ENUM('Baja','Normal','Alta','Crítica') NOT NULL DEFAULT 'Normal',
+                        observaciones_plan      TEXT,
+                        estado                  ENUM('Programada','Confirmada','En Progreso','Completada','Cancelada','Diferida') NOT NULL DEFAULT 'Programada',
+                        motivo_cancelacion      TEXT,
+                        fleetrun_id_ejecutado   VARCHAR(50),
+                        fecha_real_ejecucion    DATE,
+                        km_real_ejecucion       INT,
+                        desviacion_km           INT,
+                        desviacion_dias         INT,
+                        fecha_primer_retraso    DATE,
+                        alertas_enviadas        TINYINT NOT NULL DEFAULT 0,
+                        source                  ENUM('manual_excel','auto_generada') NOT NULL DEFAULT 'manual_excel',
+                        created_by              VARCHAR(100),
+                        created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_estado (estado),
+                        INDEX idx_placa (placa),
+                        INDEX idx_mes_anio (mes_ejecucion, anio_ejecucion),
+                        INDEX idx_fecha_ventana (fecha_fin_ventana)
+                    )`,
+                    (e3) => {
+                        if (e3) console.warn('CREATE planificacion:', e3.message);
+                        else console.log('✅ Tabla planificacion verificada');
+                    }
+                );
+                connection.query(
+                    `CREATE TABLE IF NOT EXISTS requerimientos_planificacion (
+                        id                  INT           AUTO_INCREMENT PRIMARY KEY,
+                        plan_id             VARCHAR(50)   NOT NULL,
+                        mes_ejecucion       INT           NOT NULL,
+                        anio_ejecucion      INT           NOT NULL,
+                        item_codigo         VARCHAR(30),
+                        item_nombre         VARCHAR(200)  NOT NULL,
+                        cantidad_requerida  DECIMAL(10,2) NOT NULL,
+                        unidad_medida       VARCHAR(10)   NOT NULL,
+                        costo_unitario      DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        costo_total         DECIMAL(10,2) NOT NULL DEFAULT 0,
+                        estado_req          ENUM('Pendiente','Solicitado','Recibido','Entregado al Taller','Cancelado') NOT NULL DEFAULT 'Pendiente',
+                        fecha_solicitud     DATE,
+                        fecha_entrega       DATE,
+                        responsable_almacen VARCHAR(100),
+                        observaciones       TEXT,
+                        created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_plan       (plan_id),
+                        INDEX idx_mes_req    (mes_ejecucion, anio_ejecucion),
+                        INDEX idx_estado_req (estado_req)
+                    )`,
+                    (e4) => {
+                        connection.release();
+                        if (e4) console.warn('CREATE requerimientos_planificacion:', e4.message);
+                        else console.log('✅ Esquema planificacion v1 listo');
+                        // Migración de seguridad: asegurar que configuracion_flota_id sea nullable
+                        db.query(
+                            `ALTER TABLE planificacion MODIFY configuracion_flota_id INT NULL DEFAULT NULL`,
+                            (eM) => { if (eM && eM.code !== 'ER_DUP_FIELDNAME') console.log('✅ planificacion.configuracion_flota_id nullable'); }
+                        );
+                    }
+                );
             }
         );
     }
 });
 
-// 📋 Helper de auditoría — usa esquema real: idAuditoria, fecha, usuario, accion, detalle, modulo
+// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──
+db.query(
+    `CREATE TABLE IF NOT EXISTS destinatarios_alertas (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        nombre       VARCHAR(100) NOT NULL,
+        correo       VARCHAR(150) NOT NULL,
+        cargo        VARCHAR(80),
+        notif_1d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+1 día retraso',
+        notif_3d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+3 días retraso',
+        notif_7d     TINYINT(1) NOT NULL DEFAULT 1  COMMENT '+7 días retraso',
+        notif_completada TINYINT(1) NOT NULL DEFAULT 0,
+        activo       TINYINT(1) NOT NULL DEFAULT 1,
+        created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE KEY uq_correo (correo)
+    ) COMMENT 'Destinatarios de alertas del módulo Planificación'`,
+    (e) => {
+        if (e) console.warn('CREATE destinatarios_alertas:', e.message);
+        else   console.log('✅ Tabla destinatarios_alertas verificada');
+    }
+);
+// ── Migración: columna frecuencia_horas en tipos_mantenimiento ────────────
+db.query(
+    `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL`,
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_horas verificada'); }
+);
+// ── Migración: columna frecuencia_dias en tipos_mantenimiento ──────────────
+db.query(
+    `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_dias INT NULL DEFAULT NULL`,
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_dias verificada'); }
+);
+// ── Nodemailer: transporter de correo ─────────────────────────────────────
+const mailTransporter = nodemailer.createTransport({
+    host:   process.env.EMAIL_HOST       || 'smtp.gmail.com',
+    port:   parseInt(process.env.EMAIL_PORT_SMTP) || 587,
+    secure: false,
+    auth: {
+        user: process.env.EMAIL_USER || '',
+        pass: process.env.EMAIL_PASS || ''
+    },
+    tls: { rejectUnauthorized: false }
+});
+
+// ── Función de envío de email ─────────────────────────────────────────────
+async function enviarEmailAlerta(para, asunto, htmlBody) {
+    if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('correo@')) {
+        console.log(`[Email DEMO] Para: ${para} | Asunto: ${asunto}`);
+        return { demo: true };
+    }
+    return mailTransporter.sendMail({
+        from:    process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to:      para,
+        subject: asunto,
+        html:    htmlBody
+    });
+}
+
+// ── Scheduler de alertas de retraso (+1/+3/+7 días) ──────────────────────
+// Corre una vez al día (cada 24h), revisa planes vencidos y manda emails
+async function verificarAlertasRetraso() {
+    const hoy = new Date().toISOString().split('T')[0];
+    // Planes activos cuya fecha_fin_ventana ya pasó
+    db.query(
+        `SELECT p.*, pl.cliente, pl.marca
+         FROM planificacion p
+         LEFT JOIN placas pl ON pl.placa = p.placa
+         WHERE p.estado IN ('Programada','Confirmada','En Progreso')
+         AND p.fecha_fin_ventana < ?`,
+        [hoy],
+        async (err, planes) => {
+            if (err || !planes.length) return;
+
+            // Destinatarios activos
+            db.query(`SELECT * FROM destinatarios_alertas WHERE activo=1`, async (err2, dest) => {
+                if (err2 || !dest.length) return;
+
+                for (const plan of planes) {
+                    const diasRetraso = Math.round(
+                        (new Date(hoy) - new Date(plan.fecha_fin_ventana)) / 86400000
+                    );
+                    if (diasRetraso < 1) continue;
+
+                    const nivel = diasRetraso >= 7 ? 3 : diasRetraso >= 3 ? 2 : 1;
+                    const yaEnviados = plan.alertas_enviadas || 0;
+                    if (yaEnviados >= nivel) continue; // ya se notificó este nivel
+
+                    const destinatariosFiltrados = dest.filter(d =>
+                        (nivel === 1 && d.notif_1d) ||
+                        (nivel === 2 && d.notif_3d) ||
+                        (nivel === 3 && d.notif_7d)
+                    );
+                    if (!destinatariosFiltrados.length) continue;
+
+                    const etiqueta  = nivel === 3 ? '🔴 CRÍTICO' : nivel === 2 ? '🟠 URGENTE' : '🟡 AVISO';
+                    const htmlEmail =
+                        `<div style="font-family:Arial,sans-serif; max-width:600px;">
+                         <h2 style="color:#ef4444;">${etiqueta} — Plan de Mantenimiento Atrasado</h2>
+                         <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Placa</td><td style="padding:6px;">${plan.placa}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Cliente</td><td style="padding:6px;">${plan.cliente || '—'}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Tipo MP</td><td style="padding:6px;">${plan.tipo_mp}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Ventana</td><td style="padding:6px;">${plan.fecha_inicio_ventana} → ${plan.fecha_fin_ventana}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Días de retraso</td><td style="padding:6px; color:#ef4444; font-weight:bold;">${diasRetraso} días</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Técnico</td><td style="padding:6px;">${plan.tecnico_asignado || 'Sin asignar'}</td></tr>
+                           <tr><td style="padding:6px; background:#f8fafc; font-weight:bold;">Plan ID</td><td style="padding:6px;">${plan.id}</td></tr>
+                         </table>
+                         <p style="margin-top:16px; color:#64748b; font-size:12px;">— Sistema Azkell Fleet | Alerta automática</p>
+                         </div>`;
+
+                    const promesas = destinatariosFiltrados.map(d =>
+                        enviarEmailAlerta(d.correo, `${etiqueta} — ${plan.placa} ${plan.tipo_mp} (+${diasRetraso}d)`, htmlEmail)
+                            .catch(e => console.warn(`Email error a ${d.correo}:`, e.message))
+                    );
+                    await Promise.all(promesas);
+
+                    // Registrar nivel de alerta enviada
+                    db.query(
+                        `UPDATE planificacion SET alertas_enviadas=?,
+                         fecha_primer_retraso=COALESCE(fecha_primer_retraso,?) WHERE id=?`,
+                        [nivel, hoy, plan.id]
+                    );
+                    console.log(`📧 Alerta nivel ${nivel} enviada: ${plan.id} (${plan.placa} ${plan.tipo_mp}, +${diasRetraso}d)`);
+                }
+            });
+        }
+    );
+}
+
+// Correr scheduler una vez al día (cada 24 horas)
+setInterval(verificarAlertasRetraso, 24 * 60 * 60 * 1000);
+// Correr también al arrancar (con 30s de delay para que el pool esté listo)
+setTimeout(verificarAlertasRetraso, 30000);
 function logAudit(usuario, modulo, accion, detalle) {
     db.query(
         'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
@@ -623,9 +872,44 @@ app.post('/api/script/:metodo', async (req, res) => {
             const usuario = req.body.usuario || 'sistema';
             const form = req.body.args[0];
             const isEdit = metodo === 'actualizarFleetrun';
-            const placa = isEdit ? form.editF_placa : form.f_placa;
-            const tipomp = isEdit ? form.editF_tipomp : form.f_tipomp;
+            const placa   = (isEdit ? form.editF_placa   : form.f_placa  ) || '';
+            const tipomp  = (isEdit ? form.editF_tipomp  : form.f_tipomp ) || '';
+            const kmActual = isEdit ? form.editF_kmact : form.f_kmact;
+            const fechaFR  = isEdit ? form.editF_fecha  : form.f_fecha;
+            const idFleetrun = values[0];
             logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${(placa||'?').toUpperCase()}`);
+            // Auto-link a planificación si existe una en estado activo
+            if (placa && tipomp && !isEdit) {
+                db.query(
+                    `SELECT id FROM planificacion
+                     WHERE placa=? AND tipo_mp=?
+                     AND estado IN ('Programada','Confirmada','En Progreso')
+                     ORDER BY fecha_fin_ventana ASC LIMIT 1`,
+                    [placa.toUpperCase(), tipomp],
+                    (errP, plans) => {
+                        if (!errP && plans.length) {
+                            const planId = plans[0].id;
+                            db.query(
+                                `UPDATE planificacion SET
+                                    estado='Completada',
+                                    fleetrun_id_ejecutado=?,
+                                    fecha_real_ejecucion=?,
+                                    km_real_ejecucion=?,
+                                    desviacion_dias=DATEDIFF(?, fecha_inicio_ventana),
+                                    alertas_enviadas=0
+                                 WHERE id=?`,
+                                [idFleetrun, fechaFR || null, kmActual || null, fechaFR || null, planId],
+                                (errU) => {
+                                    if (!errU) {
+                                        broadcast('planificacion', 'completar');
+                                        generarProximaMP(placa.toUpperCase(), tipomp, usuario);
+                                    }
+                                }
+                            );
+                        }
+                    }
+                );
+            }
             return res.json({ data: "Éxito" });
         });
         return;
@@ -1480,6 +1764,741 @@ app.post('/api/cambiar-password', async (req, res) => {
                 logAudit(correo, 'usuarios', 'CAMBIÓ CONTRASEÑA', 'Auto-cambio de clave');
                 res.json({ data: 'Éxito' });
             });
+    });
+});
+
+// ============================================================
+// MÓDULO PLANIFICACIÓN PREVENTIVOS
+// ============================================================
+
+// Genera el próximo ID de planificación (PLAN-YYYYMM-XXXX)
+function generarIdPlan(mes, anio, cb) {
+    const prefix = `PLAN-${anio}${String(mes).padStart(2,'0')}`;
+    db.query(
+        `SELECT id FROM planificacion WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+        [`${prefix}%`],
+        (err, rows) => {
+            let seq = 1;
+            if (!err && rows.length) {
+                const last = rows[0].id.split('-')[2];
+                seq = (parseInt(last, 10) || 0) + 1;
+            }
+            cb(`${prefix}-${String(seq).padStart(4,'0')}`);
+        }
+    );
+}
+
+// Auto-genera requerimientos de kits para un plan creado
+function generarRequerimientos(planId, placa, tipoMp, mes, anio) {
+    db.query('SELECT marca FROM placas WHERE placa=?', [placa], (err, rows) => {
+        if (err || !rows.length) return;
+        const marca = (rows[0].marca || '').toUpperCase();
+        db.query(
+            `SELECT item_codigo, item_nombre, cantidad, unidad_medida, costo_unitario, costo_total
+             FROM mantenimiento_kits
+             WHERE UPPER(marca_vehiculo)=? AND tipo_mp=? AND activo=1
+             ORDER BY orden`,
+            [marca, tipoMp],
+            (err2, kits) => {
+                if (err2 || !kits.length) return;
+                const inserts = kits.map(k => [
+                    planId, mes, anio,
+                    k.item_codigo, k.item_nombre,
+                    k.cantidad, k.unidad_medida,
+                    k.costo_unitario, k.costo_total
+                ]);
+                db.query(
+                    `INSERT INTO requerimientos_planificacion
+                     (plan_id, mes_ejecucion, anio_ejecucion, item_codigo, item_nombre,
+                      cantidad_requerida, unidad_medida, costo_unitario, costo_total)
+                     VALUES ?`,
+                    [inserts],
+                    (err3) => {
+                        if (err3) console.warn('Requerimientos insert error:', err3.message);
+                    }
+                );
+            }
+        );
+    });
+}
+
+// Auto-genera la PRÓXIMA planificación cuando se completa una
+function generarProximaMP(placa, tipoMp, createdBy) {
+    db.query(
+        `SELECT km_actual, km_proximo, frecuencia, fecha, km_gps FROM fleetrun
+         WHERE placa=? AND tipo_mp=? ORDER BY fecha DESC, idRegistro DESC LIMIT 1`,
+        [placa, tipoMp],
+        (err, rows) => {
+            if (err || !rows.length) return;
+            const last = rows[0];
+            const intervalo = last.frecuencia
+                ? parseInt(last.frecuencia)
+                : (last.km_proximo && last.km_actual ? last.km_proximo - last.km_actual : 0);
+            if (!intervalo || intervalo <= 0) return;
+
+            const nextKm = (parseInt(last.km_proximo) || parseInt(last.km_actual) + intervalo);
+
+            // Obtener config para estimar fecha
+            db.query(
+                `SELECT p.marca, cf.km_diarios
+                 FROM placas p
+                 LEFT JOIN configuracion_flota cf ON UPPER(cf.marca)=UPPER(p.marca) AND cf.activa=1
+                 WHERE p.placa=?
+                 ORDER BY cf.uts_categoria ASC LIMIT 1`,
+                [placa],
+                (err2, cfRows) => {
+                    const kmDiarios = (cfRows && cfRows.length && cfRows[0].km_diarios)
+                        ? parseFloat(cfRows[0].km_diarios) : 0;
+
+                    const kmGpsActual = parseInt(last.km_gps) || parseInt(last.km_proximo) || parseInt(last.km_actual);
+                    let diasAlProximo = 30; // default 1 mes
+                    if (kmDiarios > 0) {
+                        const faltanKm = nextKm - kmGpsActual;
+                        diasAlProximo = Math.max(7, Math.round(faltanKm / kmDiarios));
+                    }
+
+                    const hoy = new Date();
+                    const fechaEstimada = new Date(hoy.getTime() + diasAlProximo * 86400000);
+                    const fechaInicio = new Date(fechaEstimada.getTime() - 5 * 86400000);
+                    const fechaFin    = new Date(fechaEstimada.getTime() + 5 * 86400000);
+
+                    const mes  = fechaEstimada.getMonth() + 1;
+                    const anio = fechaEstimada.getFullYear();
+
+                    generarIdPlan(mes, anio, (newId) => {
+                        db.query(
+                            `INSERT INTO planificacion
+                             (id, placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+                              mes_ejecucion, anio_ejecucion, km_estimado, km_minimo, km_maximo,
+                              estado, source, created_by)
+                             VALUES (?,?,?,?,?,?,?,?,?,?,'Programada','auto_generada',?)`,
+                            [
+                                newId, placa, tipoMp,
+                                fechaInicio.toISOString().split('T')[0],
+                                fechaFin.toISOString().split('T')[0],
+                                mes, anio, nextKm,
+                                nextKm - 5000, nextKm + 5000,
+                                createdBy || 'sistema'
+                            ],
+                            (err3) => {
+                                if (!err3) {
+                                    generarRequerimientos(newId, placa, tipoMp, mes, anio);
+                                    broadcast('planificacion', 'auto_generada');
+                                    console.log(`✅ Próxima MP generada: ${newId} (${placa} ${tipoMp})`);
+                                } else {
+                                    console.warn('generarProximaMP insert error:', err3.message);
+                                }
+                            }
+                        );
+                    });
+                }
+            );
+        }
+    );
+}
+
+// GET /api/configuracion-flota
+app.get('/api/configuracion-flota', (req, res) => {
+    db.query(
+        `SELECT id, marca, uts_categoria, km_mensuales, dias_operativos,
+                CASE WHEN dias_operativos > 0 THEN ROUND(km_mensuales / dias_operativos, 2) ELSE 0 END AS km_diarios,
+                mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, activa, observaciones
+         FROM configuracion_flota ORDER BY marca, uts_categoria`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ data: rows });
+        }
+    );
+});
+
+// PUT /api/configuracion-flota/:id  (Gerencia ajusta km/mes e intervalos)
+app.put('/api/configuracion-flota/:id', (req, res) => {
+    const { id } = req.params;
+    const { km_mensuales, dias_operativos, mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones, activa } = req.body;
+    db.query(
+        `UPDATE configuracion_flota
+         SET km_mensuales=?, dias_operativos=?, mp1_intervalo_km=?, mp2_intervalo_km=?, mp3_intervalo_km=?,
+             observaciones=?, activa=?
+         WHERE id=?`,
+        [km_mensuales, dias_operativos, mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones, activa, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+// GET /api/mantenimiento-kits?marca=X&tipo_mp=Y
+app.get('/api/mantenimiento-kits', (req, res) => {
+    const { marca, tipo_mp } = req.query;
+    let sql = `SELECT id, marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+                      cantidad, unidad_medida, costo_unitario, costo_total, orden
+               FROM mantenimiento_kits WHERE activo=1`;
+    const params = [];
+    if (marca)   { sql += ' AND UPPER(marca_vehiculo)=?'; params.push(marca.toUpperCase()); }
+    if (tipo_mp) { sql += ' AND tipo_mp=?'; params.push(tipo_mp); }
+    sql += ' ORDER BY marca_vehiculo, tipo_mp, orden';
+    db.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+// GET /api/planificacion?mes=X&anio=Y&estado=X&placa=X
+app.get('/api/planificacion', (req, res) => {
+    const { mes, anio, estado, placa } = req.query;
+    let sql = `SELECT p.*, pl.marca, pl.cliente, pl.modelo_uts, pl.tipo
+               FROM planificacion p
+               LEFT JOIN placas pl ON pl.placa = p.placa
+               WHERE 1=1`;
+    const params = [];
+    if (mes)    { sql += ' AND p.mes_ejecucion=?';   params.push(parseInt(mes)); }
+    if (anio)   { sql += ' AND p.anio_ejecucion=?';  params.push(parseInt(anio)); }
+    if (estado) { sql += ' AND p.estado=?';           params.push(estado); }
+    if (placa)  { sql += ' AND p.placa=?';            params.push(placa.toUpperCase()); }
+    sql += ' ORDER BY p.fecha_inicio_ventana ASC, p.prioridad DESC';
+    db.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+// POST /api/importarPlanificacionMasivo  (JSON desde SheetJS en frontend)
+app.post('/api/importarPlanificacionMasivo', async (req, res) => {
+    const { registros, mes, anio, createdBy } = req.body;
+    if (!Array.isArray(registros) || !registros.length)
+        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
+
+    const mesN  = parseInt(mes)  || new Date().getMonth() + 1;
+    const anioN = parseInt(anio) || new Date().getFullYear();
+
+    let ok = 0, errores = 0;
+    const detallesError = [];
+
+    // Validar que todas las placas existen
+    const placasUnicas = [...new Set(registros.map(r => (r.placa || r.PLACA || '').toString().trim().toUpperCase()).filter(Boolean))];
+    const placasEnDB = await new Promise(resolve => {
+        if (!placasUnicas.length) return resolve([]);
+        db.query('SELECT placa FROM placas WHERE placa IN (?)', [placasUnicas], (err, rows) => {
+            resolve(err ? [] : rows.map(r => r.placa));
+        });
+    });
+
+    for (let i = 0; i < registros.length; i++) {
+        const r = registros[i];
+        const placa    = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
+        const tipoMp   = (r.tipo_mp || r.TIPO_MP || r['TIPO MP'] || '').toString().trim().toUpperCase();
+        const fechaIni = r.fecha_inicio || r.FECHA_INICIO || r['FECHA INICIO'] || '';
+        const fechaFin = r.fecha_fin    || r.FECHA_FIN    || r['FECHA FIN']    || '';
+
+        if (!placa || !tipoMp || !fechaIni || !fechaFin) {
+            errores++;
+            detallesError.push(`Fila ${i+2}: datos incompletos (placa, tipo_mp, fechas son obligatorios)`);
+            continue;
+        }
+        if (!placasEnDB.includes(placa)) {
+            errores++;
+            detallesError.push(`Fila ${i+2}: placa ${placa} no existe en el sistema`);
+            continue;
+        }
+
+        const kmEst  = parseInt(r.km_estimado || r.KM_ESTIMADO || r['KM ESTIMADO'] || 0) || 0;
+        const kmMin  = parseInt(r.km_minimo   || r.KM_MINIMO   || r['KM MINIMO']   || 0) || null;
+        const kmMax  = parseInt(r.km_maximo   || r.KM_MAXIMO   || r['KM MAXIMO']   || 0) || null;
+        const tecnico   = r.tecnico   || r.TECNICO   || null;
+        const prioridad = r.prioridad || r.PRIORIDAD || 'Normal';
+        const obs       = r.observaciones || r.OBSERVACIONES || null;
+
+        await new Promise(resolve => {
+            generarIdPlan(mesN, anioN, (newId) => {
+                db.query(
+                    `INSERT INTO planificacion
+                     (id, placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+                      mes_ejecucion, anio_ejecucion, km_estimado, km_minimo, km_maximo,
+                      tecnico_asignado, prioridad, observaciones_plan,
+                      estado, source, created_by)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Programada','manual_excel',?)`,
+                    [newId, placa, tipoMp, fechaIni, fechaFin,
+                     mesN, anioN, kmEst, kmMin, kmMax,
+                     tecnico, prioridad, obs, createdBy || 'sistema'],
+                    (err) => {
+                        if (err) {
+                            errores++;
+                            detallesError.push(`Fila ${i+2}: ${err.message}`);
+                        } else {
+                            ok++;
+                            generarRequerimientos(newId, placa, tipoMp, mesN, anioN);
+                        }
+                        resolve();
+                    }
+                );
+            });
+        });
+    }
+
+    if (ok > 0) broadcast('planificacion', 'importar');
+    res.json({ ok, errores, errores_detalle: detallesError });
+});
+
+// POST /api/planificacion  (crear uno solo manualmente)
+app.post('/api/planificacion', (req, res) => {
+    const { placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+            mes_ejecucion, anio_ejecucion, km_estimado, km_minimo, km_maximo,
+            tecnico_asignado, prioridad, observaciones_plan, created_by } = req.body;
+
+    if (!placa || !tipo_mp || !fecha_inicio_ventana || !fecha_fin_ventana)
+        return res.status(400).json({ error: 'Placa, tipo_mp y fechas son requeridos' });
+
+    const mes  = parseInt(mes_ejecucion)  || new Date().getMonth() + 1;
+    const anio = parseInt(anio_ejecucion) || new Date().getFullYear();
+
+    generarIdPlan(mes, anio, (newId) => {
+        db.query(
+            `INSERT INTO planificacion
+             (id, placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+              mes_ejecucion, anio_ejecucion, km_estimado, km_minimo, km_maximo,
+              tecnico_asignado, prioridad, observaciones_plan,
+              estado, source, created_by)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Programada','manual_excel',?)`,
+            [newId, placa.toUpperCase(), tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+             mes, anio, km_estimado || 0, km_minimo || null, km_maximo || null,
+             tecnico_asignado || null, prioridad || 'Normal', observaciones_plan || null,
+             created_by || 'sistema'],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                generarRequerimientos(newId, placa.toUpperCase(), tipo_mp, mes, anio);
+                broadcast('planificacion', 'crear');
+                res.json({ ok: true, id: newId });
+            }
+        );
+    });
+});
+
+// PUT /api/planificacion/:id  (cambiar estado, reasignar, posponer)
+app.put('/api/planificacion/:id', (req, res) => {
+    const { id } = req.params;
+    const {
+        estado, tecnico_asignado, prioridad, observaciones_plan,
+        fecha_inicio_ventana, fecha_fin_ventana,
+        mes_ejecucion, anio_ejecucion,
+        motivo_cancelacion
+    } = req.body;
+
+    const campos = [];
+    const vals   = [];
+
+    if (estado !== undefined)               { campos.push('estado=?');                 vals.push(estado); }
+    if (tecnico_asignado !== undefined)     { campos.push('tecnico_asignado=?');       vals.push(tecnico_asignado); }
+    if (prioridad !== undefined)            { campos.push('prioridad=?');              vals.push(prioridad); }
+    if (observaciones_plan !== undefined)   { campos.push('observaciones_plan=?');     vals.push(observaciones_plan); }
+    if (fecha_inicio_ventana !== undefined) { campos.push('fecha_inicio_ventana=?');   vals.push(fecha_inicio_ventana); }
+    if (fecha_fin_ventana !== undefined)    { campos.push('fecha_fin_ventana=?');      vals.push(fecha_fin_ventana); }
+    if (mes_ejecucion !== undefined)        { campos.push('mes_ejecucion=?');          vals.push(mes_ejecucion); }
+    if (anio_ejecucion !== undefined)       { campos.push('anio_ejecucion=?');         vals.push(anio_ejecucion); }
+    if (motivo_cancelacion !== undefined)   { campos.push('motivo_cancelacion=?');     vals.push(motivo_cancelacion); }
+
+    // Si se pospone: resetear alertas
+    if (estado === 'Diferida') {
+        campos.push('fecha_primer_retraso=NULL');
+        campos.push('alertas_enviadas=0');
+    }
+
+    if (!campos.length) return res.status(400).json({ error: 'Sin campos a actualizar' });
+
+    vals.push(id);
+    db.query(`UPDATE planificacion SET ${campos.join(',')} WHERE id=?`, vals, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        broadcast('planificacion', 'actualizar');
+        res.json({ ok: true });
+    });
+});
+
+// POST /api/planificacion/:id/completar  (link a Fleetrun + generar próxima MP)
+app.post('/api/planificacion/:id/completar', (req, res) => {
+    const { id } = req.params;
+    const { fleetrun_id, fecha_real, km_real, usuario } = req.body;
+
+    if (!fleetrun_id)
+        return res.status(400).json({ error: 'fleetrun_id es requerido' });
+
+    db.query('SELECT placa, tipo_mp, km_estimado, fecha_inicio_ventana FROM planificacion WHERE id=?', [id], (err, rows) => {
+        if (err || !rows.length) return res.status(404).json({ error: 'Plan no encontrado' });
+        const plan = rows[0];
+        const kmReal  = parseInt(km_real) || 0;
+        const desviacionKm   = kmReal ? kmReal - plan.km_estimado : null;
+        const desviacionDias = fecha_real
+            ? Math.round((new Date(fecha_real) - new Date(plan.fecha_inicio_ventana)) / 86400000)
+            : null;
+
+        db.query(
+            `UPDATE planificacion SET
+                estado='Completada',
+                fleetrun_id_ejecutado=?,
+                fecha_real_ejecucion=?,
+                km_real_ejecucion=?,
+                desviacion_km=?,
+                desviacion_dias=?,
+                alertas_enviadas=0
+             WHERE id=?`,
+            [fleetrun_id, fecha_real || null, kmReal || null, desviacionKm, desviacionDias, id],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                broadcast('planificacion', 'completar');
+                logAudit(usuario || 'sistema', 'planificacion', 'COMPLETÓ', `${plan.tipo_mp} · ${plan.placa} → ${fleetrun_id}`);
+                // Auto-generar próxima MP
+                generarProximaMP(plan.placa, plan.tipo_mp, usuario || 'sistema');
+                res.json({ ok: true });
+            }
+        );
+    });
+});
+
+// DELETE /api/planificacion/:id  (cancelar con motivo)
+app.delete('/api/planificacion/:id', (req, res) => {
+    const { id }     = req.params;
+    const { motivo, usuario } = req.body;
+
+    db.query(
+        `UPDATE planificacion SET estado='Cancelada', motivo_cancelacion=? WHERE id=?`,
+        [motivo || null, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            logAudit(usuario || 'sistema', 'planificacion', 'CANCELÓ', `Plan ${id}: ${motivo || 'sin motivo'}`);
+            broadcast('planificacion', 'cancelar');
+            res.json({ ok: true });
+        }
+    );
+});
+
+// GET /api/reportePlanificacion?mes=X&anio=Y
+app.get('/api/reportePlanificacion', (req, res) => {
+    const mes  = parseInt(req.query.mes)  || new Date().getMonth() + 1;
+    const anio = parseInt(req.query.anio) || new Date().getFullYear();
+
+    db.query(
+        `SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN estado='Completada' THEN 1 ELSE 0 END) AS completadas,
+            SUM(CASE WHEN estado='Cancelada'  THEN 1 ELSE 0 END) AS canceladas,
+            SUM(CASE WHEN estado='Diferida'   THEN 1 ELSE 0 END) AS diferidas,
+            SUM(CASE WHEN estado NOT IN ('Completada','Cancelada','Diferida') THEN 1 ELSE 0 END) AS pendientes,
+            ROUND(
+                SUM(CASE WHEN estado='Completada' THEN 1 ELSE 0 END) * 100.0 /
+                NULLIF(COUNT(*),0), 1
+            ) AS pct_cumplimiento,
+            ROUND(AVG(CASE WHEN desviacion_dias IS NOT NULL THEN desviacion_dias END),1) AS promedio_desviacion_dias,
+            MAX(CASE WHEN desviacion_dias > 0 THEN desviacion_dias END) AS max_retraso_dias
+         FROM planificacion
+         WHERE mes_ejecucion=? AND anio_ejecucion=?`,
+        [mes, anio],
+        (err, kpis) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            db.query(
+                `SELECT p.id, p.placa, pl.cliente, pl.marca, p.tipo_mp,
+                        p.fecha_inicio_ventana, p.fecha_fin_ventana,
+                        p.fecha_real_ejecucion, p.km_estimado, p.km_real_ejecucion,
+                        p.desviacion_km, p.desviacion_dias, p.tecnico_asignado,
+                        p.estado, p.prioridad, p.observaciones_plan, p.motivo_cancelacion,
+                        p.fleetrun_id_ejecutado, p.source
+                 FROM planificacion p
+                 LEFT JOIN placas pl ON pl.placa=p.placa
+                 WHERE p.mes_ejecucion=? AND p.anio_ejecucion=?
+                 ORDER BY p.fecha_inicio_ventana ASC`,
+                [mes, anio],
+                (err2, detalle) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ kpis: kpis[0], detalle });
+                }
+            );
+        }
+    );
+});
+
+// GET /api/requerimientos-planificacion?mes=X&anio=Y&plan_id=X
+app.get('/api/requerimientos-planificacion', (req, res) => {
+    const { mes, anio, plan_id } = req.query;
+    let sql = `SELECT r.*, p.placa, p.tipo_mp FROM requerimientos_planificacion r
+               LEFT JOIN planificacion p ON p.id=r.plan_id WHERE 1=1`;
+    const params = [];
+    if (plan_id) { sql += ' AND r.plan_id=?'; params.push(plan_id); }
+    if (mes)     { sql += ' AND r.mes_ejecucion=?'; params.push(parseInt(mes)); }
+    if (anio)    { sql += ' AND r.anio_ejecucion=?'; params.push(parseInt(anio)); }
+    sql += ' ORDER BY r.plan_id, r.id';
+    db.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+// GET /api/requerimientos-resumen?mes=X&anio=Y — vista consolidada por marca/tipo
+app.get('/api/requerimientos-resumen', (req, res) => {
+    const { mes, anio } = req.query;
+    if (!mes || !anio) return res.status(400).json({ error: 'mes y anio son requeridos' });
+    const sql = `
+        SELECT pl2.marca, r.tipo_mp, mk.nombre_kit,
+               r.item_codigo, r.item_nombre,
+               SUM(r.cantidad) AS total_cantidad, r.unidad_medida,
+               r.costo_unitario, SUM(r.costo_total) AS total_costo,
+               COUNT(DISTINCT r.plan_id) AS num_planes
+        FROM requerimientos_planificacion r
+        LEFT JOIN planificacion p ON p.id = r.plan_id
+        LEFT JOIN placas pl2 ON UPPER(pl2.placa) = UPPER(p.placa)
+        LEFT JOIN mantenimiento_kits mk
+               ON UPPER(mk.marca_vehiculo) = UPPER(pl2.marca)
+              AND mk.tipo_mp = r.tipo_mp
+              AND mk.item_codigo = r.item_codigo
+        WHERE r.mes_ejecucion = ? AND r.anio_ejecucion = ?
+          AND p.estado NOT IN ('Cancelada')
+        GROUP BY pl2.marca, r.tipo_mp, mk.nombre_kit, r.item_codigo,
+                 r.item_nombre, r.unidad_medida, r.costo_unitario
+        ORDER BY pl2.marca, r.tipo_mp, r.item_codigo`;
+    db.query(sql, [parseInt(mes), parseInt(anio)], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+// ============================================================
+// CRUD TIPOS MANTENIMIENTO
+// ============================================================
+app.get('/api/tipos-mantenimiento', (req, res) => {
+    const { marca, uts } = req.query;
+    let sql = `SELECT id, marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias,
+                      tipo, sistema, descripcion
+               FROM tipos_mantenimiento WHERE 1=1`;
+    const params = [];
+    if (marca) { sql += ' AND UPPER(marca)=?'; params.push(marca.toUpperCase()); }
+    if (uts)   { sql += ' AND UPPER(uts)=?';   params.push(uts.toUpperCase()); }
+    sql += ' ORDER BY marca, tipo_mp, uts';
+    db.query(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+app.post('/api/tipos-mantenimiento', (req, res) => {
+    const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    if (!marca || !tipo_mp) return res.status(400).json({ error: 'Marca y tipo_mp son requeridos' });
+    db.query(
+        `INSERT INTO tipos_mantenimiento (marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [marca, tipo_mp, uts || '', frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || ''],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.put('/api/tipos-mantenimiento/:id', (req, res) => {
+    const { id } = req.params;
+    const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    db.query(
+        `UPDATE tipos_mantenimiento SET marca=?, tipo_mp=?, uts=?, frecuencia_km=?,
+         frecuencia_horas=?, frecuencia_dias=?, tipo=?, sistema=?, descripcion=? WHERE id=?`,
+        [marca, tipo_mp, uts || '', frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || '', id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/tipos-mantenimiento/:id', (req, res) => {
+    db.query('DELETE FROM tipos_mantenimiento WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// CRUD DESTINATARIOS ALERTAS
+// ============================================================
+app.get('/api/destinatarios-alertas', (req, res) => {
+    db.query('SELECT * FROM destinatarios_alertas ORDER BY nombre', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+app.post('/api/destinatarios-alertas', (req, res) => {
+    const { nombre, correo, cargo, notif_1d, notif_3d, notif_7d, notif_completada } = req.body;
+    if (!nombre || !correo) return res.status(400).json({ error: 'Nombre y correo son requeridos' });
+    db.query(
+        `INSERT INTO destinatarios_alertas (nombre, correo, cargo, notif_1d, notif_3d, notif_7d, notif_completada)
+         VALUES (?,?,?,?,?,?,?)
+         ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), cargo=VALUES(cargo),
+         notif_1d=VALUES(notif_1d), notif_3d=VALUES(notif_3d),
+         notif_7d=VALUES(notif_7d), notif_completada=VALUES(notif_completada), activo=1`,
+        [nombre, correo.trim().toLowerCase(), cargo || null,
+         notif_1d ? 1 : 0, notif_3d ? 1 : 0, notif_7d ? 1 : 0, notif_completada ? 1 : 0],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.put('/api/destinatarios-alertas/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, correo, cargo, notif_1d, notif_3d, notif_7d, notif_completada, activo } = req.body;
+    db.query(
+        `UPDATE destinatarios_alertas SET nombre=?, correo=?, cargo=?,
+         notif_1d=?, notif_3d=?, notif_7d=?, notif_completada=?, activo=?
+         WHERE id=?`,
+        [nombre, correo?.trim().toLowerCase(), cargo || null,
+         notif_1d ? 1 : 0, notif_3d ? 1 : 0, notif_7d ? 1 : 0,
+         notif_completada ? 1 : 0, activo !== undefined ? (activo ? 1 : 0) : 1, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/destinatarios-alertas/:id', (req, res) => {
+    db.query('DELETE FROM destinatarios_alertas WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// Disparo manual de alertas (para probar o forzar envío)
+app.post('/api/dispararAlertas', async (req, res) => {
+    try {
+        await verificarAlertasRetraso();
+        res.json({ ok: true, msg: 'Verificación ejecutada' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Test de email (envía a un correo de prueba)
+app.post('/api/testEmail', async (req, res) => {
+    const { correo } = req.body;
+    if (!correo) return res.status(400).json({ error: 'Correo requerido' });
+    try {
+        await enviarEmailAlerta(
+            correo,
+            '✅ Test Azkell Fleet — Email configurado correctamente',
+            `<div style="font-family:Arial,sans-serif">
+             <h2 style="color:#10b981;">✅ Configuración de email correcta</h2>
+             <p>Este es un correo de prueba del sistema <strong>Azkell Fleet</strong>.</p>
+             <p>Las alertas de mantenimiento llegarán a esta bandeja.</p>
+             <p style="color:#64748b; font-size:12px;">— Sistema Azkell Fleet</p>
+             </div>`
+        );
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ============================================================
+// CRUD CONFIGURACION FLOTA (ya tiene GET y PUT, falta DELETE y POST)
+// ============================================================
+app.post('/api/configuracion-flota', (req, res) => {
+    const { marca, uts_categoria, km_mensuales, dias_operativos,
+            mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones } = req.body;
+    if (!marca || !uts_categoria) return res.status(400).json({ error: 'Marca y UTS son requeridos' });
+    db.query(
+        `INSERT INTO configuracion_flota
+         (marca, uts_categoria, km_mensuales, dias_operativos, mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [marca.toUpperCase(), uts_categoria.toUpperCase(),
+         km_mensuales || 0, dias_operativos || 26,
+         mp1_intervalo_km || 5000, mp2_intervalo_km || 10000, mp3_intervalo_km || 20000,
+         observaciones || null],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/configuracion-flota/:id', (req, res) => {
+    db.query('DELETE FROM configuracion_flota WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// CRUD MANTENIMIENTO KITS (ya tiene GET, falta POST/PUT/DELETE)
+// ============================================================
+app.post('/api/mantenimiento-kits', (req, res) => {
+    const { marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+            cantidad, unidad_medida, costo_unitario, costo_total, orden } = req.body;
+    if (!marca_vehiculo || !tipo_mp || !item_nombre)
+        return res.status(400).json({ error: 'Marca, tipo_mp e item_nombre son requeridos' });
+    db.query(
+        `INSERT INTO mantenimiento_kits
+         (marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+          cantidad, unidad_medida, costo_unitario, costo_total, orden)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [marca_vehiculo.toUpperCase(), tipo_mp, nombre_kit || null,
+         item_codigo || null, item_nombre,
+         cantidad || 1, unidad_medida || 'UND',
+         costo_unitario || 0, costo_total || 0, orden || 1],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.put('/api/mantenimiento-kits/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre_kit, item_codigo, item_nombre, cantidad,
+            unidad_medida, costo_unitario, costo_total, orden, activo } = req.body;
+    db.query(
+        `UPDATE mantenimiento_kits
+         SET nombre_kit=?, item_codigo=?, item_nombre=?, cantidad=?,
+             unidad_medida=?, costo_unitario=?, costo_total=?, orden=?, activo=?
+         WHERE id=?`,
+        [nombre_kit || null, item_codigo || null, item_nombre,
+         cantidad || 1, unidad_medida || 'UND',
+         costo_unitario || 0, costo_total || 0, orden || 1,
+         activo !== undefined ? (activo ? 1 : 0) : 1, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/mantenimiento-kits/:id', (req, res) => {
+    db.query('DELETE FROM mantenimiento_kits WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// CRUD REQUERIMIENTOS PLANIFICACION (ya tiene GET, agregar PUT y DELETE manual)
+// ============================================================
+app.put('/api/requerimientos-planificacion/:id', (req, res) => {
+    const { id } = req.params;
+    const { estado_req, fecha_solicitud, fecha_entrega, responsable_almacen, observaciones } = req.body;
+    db.query(
+        `UPDATE requerimientos_planificacion
+         SET estado_req=?, fecha_solicitud=?, fecha_entrega=?,
+             responsable_almacen=?, observaciones=?
+         WHERE id=?`,
+        [estado_req || 'Pendiente', fecha_solicitud || null, fecha_entrega || null,
+         responsable_almacen || null, observaciones || null, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/requerimientos-planificacion/:id', (req, res) => {
+    db.query('DELETE FROM requerimientos_planificacion WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
     });
 });
 

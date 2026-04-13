@@ -348,7 +348,7 @@ function renderizarPaginaPlacas() {
     }
 
     let perms = permisosUsuario || {};
-    let isAdmP = perms.admin === true || (localStorage.getItem('crm_correo') || '').toLowerCase() === 'admin@azkell.com';
+    let isAdmP = perms.admin === true || (localStorage.getItem('fleet_correo') || '').toLowerCase() === 'admin@azkell.com';
     const canEditP = isAdmP || perms.placas?.e === true;
     const canDeleteP = isAdmP || perms.placas?.d === true;
 
