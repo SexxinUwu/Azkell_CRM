@@ -40,6 +40,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME,
     port: Number(process.env.DB_PORT),
     ssl: { rejectUnauthorized: false }, // Crucial para que Render acepte a Aiven
+    charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -250,6 +251,31 @@ db.query(
     `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_dias INT NULL DEFAULT NULL`,
     (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_dias verificada'); }
 );
+// ── Fix: normalizar marca a UPPERCASE en tipos_mantenimiento ──────────────
+db.query(
+    `UPDATE tipos_mantenimiento SET marca = UPPER(TRIM(marca)) WHERE marca != UPPER(TRIM(marca)) OR marca != TRIM(marca)`,
+    (e) => { if (!e) console.log('✅ tipos_mantenimiento.marca normalizada a UPPERCASE'); }
+);
+// ── Fix: corregir encoding UTF-8 corrupto en tipos_mantenimiento ──────────
+const _encFixes = [
+    ["CampaÃ±a",  "Campaña"],  ["CorreccioÌ€n", "Corrección"],
+    ["ProteccioÌ€n","Protección"],["InspecciÃ³n","Inspección"],
+    ["reparaciÃ³n","reparación"],["cambioÂ",    "cambio"],
+    ["Ã³",        "ó"],         ["Ã©",         "é"],
+    ["Ãº",        "ú"],         ["Ãñ",         "ñ"],
+];
+_encFixes.forEach(([bad, good]) => {
+    db.query(
+        `UPDATE tipos_mantenimiento SET tipo = REPLACE(tipo, ?, ?) WHERE tipo LIKE CONCAT('%', ?, '%')`,
+        [bad, good, bad],
+        (e) => { if (e) console.error('encoding fix error:', e.message); }
+    );
+    db.query(
+        `UPDATE tipos_mantenimiento SET descripcion = REPLACE(descripcion, ?, ?) WHERE descripcion LIKE CONCAT('%', ?, '%')`,
+        [bad, good, bad],
+        (e) => { if (e) console.error('encoding fix error:', e.message); }
+    );
+});
 // ── Nodemailer: transporter de correo ─────────────────────────────────────
 const mailTransporter = nodemailer.createTransport({
     host:   process.env.EMAIL_HOST       || 'smtp.gmail.com',
