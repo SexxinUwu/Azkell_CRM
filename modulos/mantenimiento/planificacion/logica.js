@@ -178,6 +178,26 @@ window.cargarBoardPlan = function() {
                     tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
             }
 
+            // Poblar filtro de mes de inicio dinámicamente
+            var selMes = document.getElementById('plan-fil-mes-inicio');
+            if (selMes) {
+                var mesesMap = {};
+                var NOMBRES_MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                window.planData.forEach(function(p) {
+                    if (!p.fecha_inicio_ventana) return;
+                    var key = (typeof p.fecha_inicio_ventana === 'string' ? p.fecha_inicio_ventana : String(p.fecha_inicio_ventana)).split('T')[0].substring(0, 7);
+                    if (key && !mesesMap[key]) {
+                        var parts = key.split('-');
+                        mesesMap[key] = NOMBRES_MES[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+                    }
+                });
+                var prevM = selMes.value;
+                selMes.innerHTML = '<option value="">Todos los meses</option>' +
+                    Object.keys(mesesMap).sort().map(function(k) {
+                        return '<option value="' + k + '"' + (k === prevM ? ' selected' : '') + '>' + mesesMap[k] + '</option>';
+                    }).join('');
+            }
+
             _planActualizarKPIs();
             window.renderizarBoardPlan();
         })
@@ -423,9 +443,10 @@ function _planRenderCard(plan) {
 
 // ── FILTRO BOARD ─────────────────────────────────────────────────
 window.filtrarBoardPlan = function() {
-    var busq     = ((document.getElementById('plan-buscador')    || {}).value || '').toLowerCase().trim();
-    var filEst   = ((document.getElementById('plan-fil-estado')  || {}).value || '');
-    var filTipoMp= ((document.getElementById('plan-fil-tipomp')  || {}).value || '');
+    var busq      = ((document.getElementById('plan-buscador')       || {}).value || '').toLowerCase().trim();
+    var filEst    = ((document.getElementById('plan-fil-estado')     || {}).value || '');
+    var filTipoMp = ((document.getElementById('plan-fil-tipomp')     || {}).value || '');
+    var filMes    = ((document.getElementById('plan-fil-mes-inicio') || {}).value || '');
 
     window.planDataFiltrado = window.planData.filter(function(p) {
         var matchBusq = !busq ||
@@ -439,7 +460,11 @@ window.filtrarBoardPlan = function() {
 
         var matchMP = !filTipoMp || p.tipo_mp === filTipoMp;
 
-        return matchBusq && matchEst && matchMP;
+        var matchMes = !filMes || (p.fecha_inicio_ventana &&
+            (typeof p.fecha_inicio_ventana === 'string' ? p.fecha_inicio_ventana : String(p.fecha_inicio_ventana))
+                .split('T')[0].substring(0, 7) === filMes);
+
+        return matchBusq && matchEst && matchMP && matchMes;
     });
 
     window.renderizarBoardPlan();
@@ -528,6 +553,40 @@ window.sugerirFechasNuevoPlan = function() {
         })
         .catch(function() {}); // silencioso si falla
 };
+// Auto-calcular fecha fin ventana = fecha inicio + 7 días
+window.npAutoFechaFin = function() {
+    var fIni = document.getElementById('np-fecha-ini');
+    var fFin = document.getElementById('np-fecha-fin');
+    if (!fIni || !fFin || !fIni.value) return;
+    var d = new Date(fIni.value + 'T00:00:00');
+    if (isNaN(d.getTime())) return;
+    d.setDate(d.getDate() + 7);
+    fFin.value = d.toISOString().split('T')[0];
+};
+
+// Auto-calcular KM Mínimo y Máximo según KM Estimado + UTS de la placa
+// Nacional: ±1000 | Local: ±100 | Sin UTS: ±1500
+window.npAutoKmMinMax = function() {
+    var kmEst = parseInt((document.getElementById('np-km-est') || {}).value) || 0;
+    if (!kmEst) return;
+    var placa  = ((document.getElementById('np-placa') || {}).value || '').toUpperCase().trim();
+    var margen = 1500; // default
+    if (placa && window.dataGlobalPlacas && window.dataGlobalPlacas.length) {
+        var infoP = window.dataGlobalPlacas.find(function(p) {
+            return (p[0] || '').toUpperCase().trim() === placa;
+        });
+        if (infoP) {
+            var uts = (infoP[19] || '').toUpperCase().trim();
+            if (uts === 'NACIONAL') margen = 1000;
+            else if (uts === 'LOCAL') margen = 100;
+        }
+    }
+    var elMin = document.getElementById('np-km-min');
+    var elMax = document.getElementById('np-km-max');
+    if (elMin) elMin.value = kmEst - margen;
+    if (elMax) elMax.value = kmEst + margen;
+};
+
 window.abrirModalNuevoPlan = function() {
     var campos = ['np-id','np-placa','np-tipomp','np-fecha-ini','np-fecha-fin',
                   'np-km-est','np-km-min','np-km-max','np-tecnico','np-obs'];
@@ -1047,6 +1106,7 @@ window.cargarComparativa = function() {
             setText('comp-diferidas',    k.diferidas || 0);
             setText('comp-canceladas',   k.canceladas || 0);
             setText('comp-avg-retraso',  k.promedio_desviacion_dias != null ? k.promedio_desviacion_dias + ' días' : '—');
+            setText('comp-avg-km',       k.promedio_desviacion_km  != null ? (k.promedio_desviacion_km > 0 ? '+' : '') + Math.round(k.promedio_desviacion_km).toLocaleString() + ' km' : '—');
 
             var pctEl = document.getElementById('comp-pct');
             if (pctEl) {
@@ -1076,7 +1136,7 @@ function _planRenderComparativa(data) {
     if (!tb) return;
 
     if (!data.length) {
-        tb.innerHTML = '<tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Sin datos para este mes</td></tr>';
+        tb.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Sin datos para este mes</td></tr>';
         return;
     }
 
@@ -1090,6 +1150,12 @@ function _planRenderComparativa(data) {
                 ? '<span class="text-danger fw-bold">+' + _planRetraso(p) + 'd</span>'
                 : '—');
 
+        var desvKm = p.desviacion_km != null
+            ? (p.desviacion_km > 0
+                ? '<span class="text-danger fw-bold">+' + p.desviacion_km.toLocaleString() + '</span>'
+                : '<span class="text-success">' + p.desviacion_km.toLocaleString() + '</span>')
+            : '—';
+
         return '<tr>' +
             '<td class="fw-bold">' + p.placa + '</td>' +
             '<td style="max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">' + (p.cliente || '—') + '</td>' +
@@ -1099,6 +1165,7 @@ function _planRenderComparativa(data) {
             '<td>' + retrasoDias + '</td>' +
             '<td>' + (p.km_estimado ? p.km_estimado.toLocaleString() : '—') + '</td>' +
             '<td>' + (p.km_real_ejecucion ? p.km_real_ejecucion.toLocaleString() : '—') + '</td>' +
+            '<td>' + desvKm + '</td>' +
             '<td>' + (p.tecnico_asignado || '—') + '</td>' +
             '<td>' + _planBadge(estadoCard) + '</td>' +
             '</tr>';
@@ -1111,13 +1178,14 @@ window.exportarComparativaExcel = function() {
     var mes  = (document.getElementById('plan-sel-mes')  || {}).value  || (new Date().getMonth()+1);
     var anio = (document.getElementById('plan-sel-anio') || {}).value  || new Date().getFullYear();
 
-    var headers = ['Placa','Cliente','Tipo MP','Fecha Inicio Plan','Fecha Fin Plan','Fecha Real','Retraso (días)','KM Estimado','KM Real','Técnico','Estado','Observaciones'];
+    var headers = ['Placa','Cliente','Tipo MP','Fecha Inicio Plan','Fecha Fin Plan','Fecha Real','Retraso (días)','KM Estimado','KM Real','Desv. KM','Técnico','Estado','Observaciones'];
     var rows = window.compDataDetalle.map(function(p) {
         return [
             p.placa, p.cliente || '', p.tipo_mp,
             p.fecha_inicio_ventana || '', p.fecha_fin_ventana || '',
             p.fecha_real_ejecucion || '', p.desviacion_dias != null ? p.desviacion_dias : '',
             p.km_estimado || '', p.km_real_ejecucion || '',
+            p.desviacion_km != null ? p.desviacion_km : '',
             p.tecnico_asignado || '', p.estado, p.observaciones_plan || ''
         ];
     });
@@ -1905,8 +1973,13 @@ function _proyRenderTabla(data) {
         var label  = mesNombres[mes-1] + ' ' + anio;
         var items  = grupos[key];
         html += '<tr style="background:var(--bg)">' +
-            '<td colspan="9" class="fw-bold py-2 ps-3" style="font-size:0.8rem; color:var(--subtext); letter-spacing:0.05em">' +
+            '<td colspan="7" class="fw-bold py-2 ps-3" style="font-size:0.8rem; color:var(--subtext); letter-spacing:0.05em">' +
             '<i class="bi bi-calendar3 me-1"></i>' + label.toUpperCase() + ' — ' + items.length + ' MP' + (items.length !== 1 ? 's' : '') +
+            '</td>' +
+            '<td colspan="2" class="text-end pe-2">' +
+            '<button class="btn btn-outline-primary py-0" style="font-size:0.72rem;padding:2px 8px" ' +
+            'onclick="event.stopPropagation();window.generarPlanesDesdeProyeccion(\'' + key + '\')">' +
+            '<i class="bi bi-plus-circle me-1"></i>Generar planes</button>' +
             '</td></tr>';
         items.forEach(function(p) {
             html += _proyRenderFila(p);
@@ -1954,6 +2027,53 @@ function _proyRenderFila(p) {
         '<td><span class="badge bg-' + est.cls + '">' + est.label + '</span></td>' +
         '</tr>';
 }
+
+// ── Generar planes desde proyección para un mes específico ───────────────────
+window.generarPlanesDesdeProyeccion = function(mesKey) {
+    var items = window.planProyDataFil.filter(function(p) {
+        if (!p.fecha_proyectada) return false;
+        var d = new Date(p.fecha_proyectada + 'T00:00:00');
+        var k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        return k === mesKey;
+    });
+    if (!items.length) return window.mostrarToast('Sin proyecciones con fecha en este mes', 'warning');
+    var partes = mesKey.split('-');
+    var mesN  = parseInt(partes[1]);
+    var anioN = parseInt(partes[0]);
+    var MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var label = MESES_ES[mesN-1] + ' ' + anioN;
+    if (!confirm('¿Generar ' + items.length + ' plan(es) para ' + label + '?\n\nSe crearán como "Programada". Los que ya tengan plan en el mismo mes serán ignorados.')) return;
+    var usuario = localStorage.getItem('fleet_correo') || 'sistema';
+    var payload = items.map(function(p) {
+        var d = new Date(p.fecha_proyectada + 'T00:00:00');
+        var fIni = new Date(d); fIni.setDate(fIni.getDate() - 5);
+        var fFin = new Date(d); fFin.setDate(fFin.getDate() + 5);
+        return {
+            placa:               p.placa,
+            tipo_mp:             p.tipo_mp,
+            fecha_inicio_ventana: fIni.toISOString().split('T')[0],
+            fecha_fin_ventana:    fFin.toISOString().split('T')[0],
+            mes_ejecucion:       mesN,
+            anio_ejecucion:      anioN,
+            km_estimado:         p.km_proximo || 0,
+            prioridad:           'Normal',
+            source:              'auto_generada',
+            created_by:          usuario
+        };
+    });
+    fetch('/api/planificacion/lote', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ planes: payload })
+    })
+    .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
+    .then(function(j) {
+        var msg = '✅ ' + (j.creados || 0) + ' plan(es) generados para ' + label;
+        if (j.ignorados) msg += ' (' + j.ignorados + ' ignorados: ya existían)';
+        window.mostrarToast(msg, 'success');
+    })
+    .catch(function(e) { window.mostrarToast('Error: ' + e.message, 'error'); });
+};
 
 window.exportarProyeccionExcel = function() {
     if (!window.planProyDataFil.length) return window.mostrarToast('No hay datos para exportar', 'warning');
