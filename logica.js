@@ -304,7 +304,8 @@ window.initSSE = function() {
     var MODULO_RUTA = {
         fleetrun: 'mantenimiento/fleetrun', placas: 'mantenimiento/placas',
         inspecciones: 'mantenimiento/inspecciones', conductores: 'directorio/conductores',
-        status: 'flota/status', usuarios: 'sistema/usuarios'
+        status: 'flota/status', usuarios: 'sistema/usuarios',
+        planificacion: 'mantenimiento/planificacion'
     };
 
     window._sse.addEventListener('datos-actualizados', function(e) {
@@ -1286,7 +1287,8 @@ function recargarModulo(nombre) {
     inspecciones: () => { if (typeof window.recargarInspecciones === 'function') window.recargarInspecciones(); },
     conductores:  () => { if (typeof window.cargarTablaConductores === 'function') window.cargarTablaConductores(true); },
     status:       () => { if (typeof window.cargarStatusFlota     === 'function') window.cargarStatusFlota(true); },
-    ubicacion:    () => { if (typeof recargarWialon === 'function') recargarWialon(true); }
+    ubicacion:    () => { if (typeof recargarWialon === 'function') recargarWialon(true); },
+    planificacion:() => { if (typeof window.cargarBoardPlan       === 'function') window.cargarBoardPlan(); }
   };
   if (acciones[nombre]) acciones[nombre]();
 }

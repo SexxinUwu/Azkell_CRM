@@ -346,7 +346,7 @@ async function verificarAlertasRetraso() {
                     const diasRetraso = Math.round(
                         (new Date(hoy) - new Date(plan.fecha_fin_ventana)) / 86400000
                     );
-                    if (diasRetraso < 1) continue;
+                    if (!diasRetraso || isNaN(diasRetraso) || diasRetraso < 1) continue;
 
                     const nivel = diasRetraso >= 7 ? 3 : diasRetraso >= 3 ? 2 : 1;
                     const yaEnviados = plan.alertas_enviadas || 0;
@@ -786,6 +786,24 @@ app.post('/api/script/:metodo', async (req, res) => {
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
             const usuario = req.body.usuario || 'sistema';
             logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);
+
+            // Al eliminar Fleetrun: revertir planes Completadas que referenciaban esos registros
+            if (coleccion === 'Fleetrun' && listaIds.length > 0) {
+                db.query(
+                    `UPDATE planificacion
+                     SET estado = 'Programada',
+                         fleetrun_id_ejecutado = NULL,
+                         fecha_real_ejecucion = NULL,
+                         km_real_ejecucion = NULL
+                     WHERE fleetrun_id_ejecutado IN (?) AND estado = 'Completada'`,
+                    [listaIds],
+                    (errRev) => {
+                        if (errRev) console.error('⚠️ Error al revertir planificación tras eliminar Fleetrun:', errRev.message);
+                        else broadcast('planificacion', 'revertir');
+                    }
+                );
+            }
+
             return res.json({ data: "Éxito" });
         });
         return;
@@ -943,6 +961,17 @@ app.post('/api/script/:metodo', async (req, res) => {
                 const placa   = ((isEdit ? form.editF_placa  : form.f_placa)  || '').toUpperCase();
                 const tipomp  = (isEdit ? form.editF_tipomp : form.f_tipomp) || '';
                 logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${placa || '?'} · ${idFinal}`);
+                // Si es edición, sincronizar planificacion vinculada (fecha_real y km_real)
+                if (isEdit) {
+                    const newFecha = (isEdit ? form.editF_fecha : null) || null;
+                    const newKmAct = parseFloat(isEdit ? form.editF_kmact : 0) || null;
+                    db.query(
+                        `UPDATE planificacion SET fecha_real_ejecucion=?, km_real_ejecucion=?
+                         WHERE fleetrun_id_ejecutado=? AND estado='Completada'`,
+                        [newFecha, newKmAct, idFinal],
+                        () => { broadcast('planificacion', 'actualizar'); }
+                    );
+                }
                 // Auto-link a planificación si existe una activa
                 if (placa && tipomp && !isEdit) {
                     db.query(
@@ -966,7 +995,18 @@ app.post('/api/script/:metodo', async (req, res) => {
         };
 
         if (isEdit) {
-            _ejecutarGuardado(form.editF_id);
+            const placaEnviada = (form.editF_placa || '').trim();
+            if (!placaEnviada) {
+                // Safeguard: placa vacía → recuperar del propio registro en DB antes de sobrescribir
+                db.query('SELECT placa FROM fleetrun WHERE idRegistro=? LIMIT 1', [form.editF_id], (errP, rowsP) => {
+                    if (!errP && rowsP.length && rowsP[0].placa) {
+                        form.editF_placa = rowsP[0].placa;
+                    }
+                    _ejecutarGuardado(form.editF_id);
+                });
+            } else {
+                _ejecutarGuardado(form.editF_id);
+            }
         } else {
             // Para nuevos: generar código legible si no viene uno
             const placaNueva  = (form.f_placa  || '').toUpperCase();
@@ -1614,7 +1654,8 @@ app.get('/api/taller/trabajos/:id_ot/repuestos', (req, res) => {
 // O. Agregar un repuesto/servicio a una OT
 app.post('/api/taller/trabajos/:id_ot/repuestos', (req, res) => {
     const { item, cantidad, precio_unitario } = req.body;
-    const total = parseFloat(cantidad) * parseFloat(precio_unitario);
+    if (!item) return res.status(400).json({ error: 'item es requerido' });
+    const total = (parseFloat(cantidad) || 0) * (parseFloat(precio_unitario) || 0);
     const sql = `INSERT INTO trabajos_ot_repuestos (id_ot, item, cantidad, precio_unitario, total) VALUES (?, ?, ?, ?, ?)`;
     db.query(sql, [req.params.id_ot, item.toUpperCase(), cantidad, precio_unitario, total], (err) => {
         if(err) return res.status(500).json({error: err.message});
@@ -2131,6 +2172,47 @@ app.post('/api/importarPlanificacionMasivo', async (req, res) => {
     res.json({ ok, errores, errores_detalle: detallesError });
 });
 
+// POST /api/planificacion/lote — Genera múltiples planes desde proyección
+app.post('/api/planificacion/lote', (req, res) => {
+    const { planes } = req.body;
+    if (!Array.isArray(planes) || !planes.length) return res.status(400).json({ error: 'planes[] requerido' });
+    let creados = 0, ignorados = 0;
+    const procesarPlan = (plan, cb) => {
+        const { placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+                mes_ejecucion, anio_ejecucion, km_estimado, prioridad, source, created_by } = plan;
+        if (!placa || !tipo_mp || !fecha_inicio_ventana || !fecha_fin_ventana) { ignorados++; return cb(); }
+        db.query(
+            `SELECT id FROM planificacion
+             WHERE UPPER(placa)=? AND UPPER(tipo_mp)=? AND mes_ejecucion=? AND anio_ejecucion=?
+               AND estado NOT IN ('Cancelada','Diferida') LIMIT 1`,
+            [placa.toUpperCase(), tipo_mp.toUpperCase(), mes_ejecucion, anio_ejecucion],
+            (err, rows) => {
+                if (err || rows.length) { ignorados++; return cb(); }
+                generarIdPlan(mes_ejecucion, anio_ejecucion, (newId) => {
+                    db.query(
+                        `INSERT INTO planificacion (id, placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+                         mes_ejecucion, anio_ejecucion, km_estimado, prioridad, estado, source, created_by)
+                         VALUES (?,?,?,?,?,?,?,?,?,'Programada',?,?)`,
+                        [newId, placa.toUpperCase(), tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
+                         mes_ejecucion, anio_ejecucion, km_estimado || 0,
+                         prioridad || 'Normal', source || 'auto_generada', created_by || 'sistema'],
+                        (e2) => { if (!e2) creados++; cb(); }
+                    );
+                });
+            }
+        );
+    };
+    let i = 0;
+    const siguiente = () => {
+        if (i >= planes.length) {
+            broadcast('planificacion', 'lote');
+            return res.json({ ok: true, creados, ignorados });
+        }
+        procesarPlan(planes[i++], siguiente);
+    };
+    siguiente();
+});
+
 // POST /api/planificacion  (crear uno solo manualmente)
 app.post('/api/planificacion', (req, res) => {
     const { placa, tipo_mp, fecha_inicio_ventana, fecha_fin_ventana,
@@ -2212,14 +2294,29 @@ app.post('/api/planificacion/:id/completar', (req, res) => {
     if (!fleetrun_id)
         return res.status(400).json({ error: 'fleetrun_id es requerido' });
 
-    db.query('SELECT placa, tipo_mp, km_estimado, fecha_inicio_ventana FROM planificacion WHERE id=?', [id], (err, rows) => {
+    db.query('SELECT placa, tipo_mp, km_estimado, fecha_inicio_ventana, estado FROM planificacion WHERE id=?', [id], (err, rows) => {
         if (err || !rows.length) return res.status(404).json({ error: 'Plan no encontrado' });
         const plan = rows[0];
-        const kmReal  = parseInt(km_real) || 0;
-        const desviacionKm   = kmReal ? kmReal - plan.km_estimado : null;
-        const desviacionDias = fecha_real
-            ? Math.round((new Date(fecha_real) - new Date(plan.fecha_inicio_ventana)) / 86400000)
-            : null;
+
+        // Idempotencia: si ya está completado con el mismo Fleetrun, responder OK sin duplicar
+        if (plan.estado === 'Completada') {
+            return res.json({ ok: true, ya_completado: true });
+        }
+
+        const kmReal = parseInt(km_real) || 0;
+        const desviacionKm = kmReal ? kmReal - plan.km_estimado : null;
+
+        // Calcular desviacion_dias solo si ambas fechas son válidas
+        let desviacionDias = null;
+        if (fecha_real) {
+            const dReal = new Date(fecha_real);
+            const dPlan = plan.fecha_inicio_ventana instanceof Date
+                ? plan.fecha_inicio_ventana
+                : new Date(String(plan.fecha_inicio_ventana || ''));
+            if (!isNaN(dReal.getTime()) && !isNaN(dPlan.getTime())) {
+                desviacionDias = Math.round((dReal - dPlan) / 86400000);
+            }
+        }
 
         db.query(
             `UPDATE planificacion SET
@@ -2230,7 +2327,7 @@ app.post('/api/planificacion/:id/completar', (req, res) => {
                 desviacion_km=?,
                 desviacion_dias=?,
                 alertas_enviadas=0
-             WHERE id=?`,
+             WHERE id=? AND estado != 'Completada'`,
             [fleetrun_id, fecha_real || null, kmReal || null, desviacionKm, desviacionDias, id],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
@@ -2278,6 +2375,7 @@ app.get('/api/reportePlanificacion', (req, res) => {
                 NULLIF(COUNT(*),0), 1
             ) AS pct_cumplimiento,
             ROUND(AVG(CASE WHEN desviacion_dias IS NOT NULL THEN desviacion_dias END),1) AS promedio_desviacion_dias,
+            ROUND(AVG(CASE WHEN desviacion_km IS NOT NULL AND estado='Completada' THEN desviacion_km END),0) AS promedio_desviacion_km,
             MAX(CASE WHEN desviacion_dias > 0 THEN desviacion_dias END) AS max_retraso_dias
          FROM planificacion
          WHERE mes_ejecucion=? AND anio_ejecucion=?`,
@@ -2337,9 +2435,10 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
             COALESCE(ks.costo_total_kit, 0) AS costo_kit
         FROM (
             SELECT f.placa, f.tipo_mp,
-                   MAX(f.fecha)     AS ultima_fecha,
-                   MAX(f.km_actual) AS ultimo_km,
-                   MAX(f.km_proximo) AS km_proximo
+                   MAX(f.fecha)      AS ultima_fecha,
+                   MAX(f.km_actual)  AS ultimo_km,
+                   MAX(f.km_proximo) AS km_proximo,
+                   MAX(f.marca)      AS fr_marca
             FROM fleetrun f
             INNER JOIN (
                 SELECT placa, tipo_mp, MAX(fecha) AS max_fecha
@@ -2352,7 +2451,8 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
         LEFT JOIN tipos_mantenimiento tm
             ON tm.id = (
                 SELECT id FROM tipos_mantenimiento
-                WHERE UPPER(marca) = UPPER(COALESCE(p.marca,'')) AND UPPER(tipo_mp) = UPPER(fr.tipo_mp)
+                WHERE UPPER(marca) = UPPER(COALESCE(p.marca, fr.fr_marca, ''))
+                  AND UPPER(tipo_mp) = UPPER(fr.tipo_mp)
                 ORDER BY CASE WHEN UPPER(uts) = UPPER(COALESCE(p.uts,'')) THEN 0 ELSE 1 END, id ASC
                 LIMIT 1
             )
@@ -2384,7 +2484,9 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
             let dias_restantes = null;
 
             if (row.ultima_fecha && row.frecuencia_dias) {
-                const _rawUF = row.ultima_fecha instanceof Date ? row.ultima_fecha.toISOString() : String(row.ultima_fecha || '');
+                const _rawUF = (row.ultima_fecha instanceof Date && !isNaN(row.ultima_fecha.getTime()))
+                    ? row.ultima_fecha.toISOString()
+                    : String(row.ultima_fecha || '');
                 const base = new Date(_rawUF.slice(0, 10) + 'T00:00:00');
                 if (!isNaN(base.getTime())) {
                     fecha_proyectada = new Date(base);
@@ -2412,7 +2514,9 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
                 tipo_mp:         row.tipo_mp,
                 frecuencia_km:   row.frecuencia_km   || null,
                 frecuencia_dias: row.frecuencia_dias || null,
-                ultima_fecha:    row.ultima_fecha instanceof Date ? row.ultima_fecha.toISOString().split('T')[0] : (row.ultima_fecha || null),
+                ultima_fecha:    (row.ultima_fecha instanceof Date && !isNaN(row.ultima_fecha.getTime()))
+                    ? row.ultima_fecha.toISOString().split('T')[0]
+                    : (row.ultima_fecha || null),
                 ultimo_km:       row.ultimo_km,
                 km_proximo:      row.km_proximo,
                 costo_kit:       parseFloat(row.costo_kit) || 0,

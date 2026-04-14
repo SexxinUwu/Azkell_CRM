@@ -176,12 +176,12 @@
                     <i class="bi bi-bar-chart-line me-1"></i>Comparativa
                 </button>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" style="display:none">
                 <button class="nav-link" id="plan-tab-requerimientos" onclick="window.mostrarTabPlan('requerimientos')">
                     <i class="bi bi-box-seam me-1"></i>Requerimientos
                 </button>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" style="display:none">
                 <button class="nav-link" id="plan-tab-proyeccion" onclick="window.mostrarTabPlan('proyeccion')">
                     <i class="bi bi-graph-up-arrow me-1"></i>Proyección
                 </button>
@@ -236,6 +236,9 @@
             </select>
             <select class="form-select form-select-sm" id="plan-fil-tipomp" onchange="window.filtrarBoardPlan()" style="max-width:120px">
                 <option value="">Todos los MP</option>
+            </select>
+            <select class="form-select form-select-sm" id="plan-fil-mes-inicio" onchange="window.filtrarBoardPlan()" style="max-width:160px">
+                <option value="">Todos los meses</option>
             </select>
         </div>
 
@@ -334,6 +337,10 @@
                 <div class="kpi-value text-muted" id="comp-avg-retraso">—</div>
             </div>
             <div class="kpi-card">
+                <div class="kpi-title">Desv. KM prom.</div>
+                <div class="kpi-value text-muted" id="comp-avg-km">—</div>
+            </div>
+            <div class="kpi-card">
                 <div class="kpi-title">Diferidas</div>
                 <div class="kpi-value text-warning" id="comp-diferidas">—</div>
             </div>
@@ -366,12 +373,13 @@
                             <th>Retraso</th>
                             <th>KM Est.</th>
                             <th>KM Real</th>
+                            <th>Desv. KM</th>
                             <th>Técnico</th>
                             <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody id="comp-tbody">
-                        <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Sin datos cargados</td></tr>
+                        <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Sin datos cargados</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -662,7 +670,7 @@
                 <div class="row g-3">
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Placa *</label>
-                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-placa" placeholder="ABC-123" list="np-placas-list" maxlength="20" onchange="window.sugerirFechasNuevoPlan()">
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="np-placa" placeholder="ABC-123" list="np-placas-list" maxlength="20" onchange="window.sugerirFechasNuevoPlan(); window.npAutoKmMinMax();">
                         <datalist id="np-placas-list"></datalist>
                     </div>
                     <div class="col-sm-4">
@@ -681,7 +689,8 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Inicio Ventana *</label>
-                        <input type="date" class="form-control form-control-sm" id="np-fecha-ini">
+                        <input type="date" class="form-control form-control-sm" id="np-fecha-ini"
+                               oninput="window.npAutoFechaFin()">
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label fw-bold" style="font-size:0.8rem">Fecha Fin Ventana *</label>
@@ -689,7 +698,8 @@
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">KM Estimado</label>
-                        <input type="number" class="form-control form-control-sm" id="np-km-est" placeholder="0">
+                        <input type="number" class="form-control form-control-sm" id="np-km-est"
+                               placeholder="0" oninput="window.npAutoKmMinMax()">
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label fw-bold" style="font-size:0.8rem">KM Mínimo</label>
