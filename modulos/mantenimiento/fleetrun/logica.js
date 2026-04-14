@@ -781,15 +781,15 @@ window.init_fleetrun = function() {
         window.chartFleetrunInst = null;
     }
 
-    // Usar datos ya en memoria si existen (evita re-fetch innecesario y la race condition con placas)
+    // Si hay datos en memoria → mostrar inmediatamente para UX rápido
+    // Luego SIEMPRE hacer fetch fresco (puede haber registros nuevos desde la última visita)
     const datosEnMemoria = (window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0)
         ? window.dataGlobalFleetrun
-        : dataGlobalFleetrun;
+        : null;
 
-    if (datosEnMemoria.length > 0) {
-        mostrarFleetrun(datosEnMemoria);
-    } else {
-        cargarTablaFleetrun();
+    if (datosEnMemoria) {
+        mostrarFleetrun(datosEnMemoria); // render inmediato con caché
     }
+    cargarTablaFleetrun(true); // fetch fresco en paralelo (actualiza la tabla al llegar)
 };
 // NOTA: cargarTablaFleetrun es function declaration — va a window automáticamente al cargar el script.

@@ -256,6 +256,27 @@ db.query(
     `UPDATE tipos_mantenimiento SET marca = UPPER(TRIM(marca)) WHERE marca != UPPER(TRIM(marca)) OR marca != TRIM(marca)`,
     (e) => { if (!e) console.log('✅ tipos_mantenimiento.marca normalizada a UPPERCASE'); }
 );
+// ── Fix: corregir frecuencia_km — paso 1: limpiar valores con coma ('20,000.00' → 20000)
+db.query(
+    `UPDATE tipos_mantenimiento
+     SET frecuencia_km = CAST(REPLACE(CONVERT(frecuencia_km, CHAR), ',', '') AS DECIMAL(10,0))
+     WHERE CONVERT(frecuencia_km, CHAR) LIKE '%,%'`,
+    (e, r) => {
+        if (e) console.error('❌ fix frecuencia_km coma:', e.message);
+        else if (r && r.affectedRows > 0) console.log('✅ frecuencia_km: quitadas comas en', r.affectedRows, 'registros');
+        else console.log('✅ frecuencia_km: sin valores con coma');
+        // Paso 2: multiplicar x1000 los valores que quedaron con ceros faltantes (< 1000)
+        db.query(
+            `UPDATE tipos_mantenimiento SET frecuencia_km = frecuencia_km * 1000
+             WHERE frecuencia_km > 0 AND frecuencia_km < 1000`,
+            (e2, r2) => {
+                if (e2) console.error('❌ fix frecuencia_km x1000:', e2.message);
+                else if (r2 && r2.affectedRows > 0) console.log('✅ frecuencia_km corregida x1000 en', r2.affectedRows, 'registros');
+                else console.log('✅ frecuencia_km ya estaba correcta (sin cambios)');
+            }
+        );
+    }
+);
 // ── Fix: corregir encoding UTF-8 corrupto en tipos_mantenimiento ──────────
 const _encFixes = [
     ["CampaÃ±a",  "Campaña"],  ["CorreccioÌ€n", "Corrección"],
@@ -592,14 +613,29 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'obtenerDatosFleetrun') {
         db.query('SELECT * FROM fleetrun', (err, results) => {
             if (err) return res.json({ data: [] });
+            // fila[3] debe ser fecha DD/MM/YYYY — el módulo fleetrun la usa para ordenar y mostrar
+            const _fmtFecha = (f) => {
+                if (!f) return '';
+                const d = f instanceof Date ? f : new Date(String(f));
+                if (!isNaN(d.getTime())) {
+                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                }
+                return String(f); // ya viene como "DD/MM/YYYY" (registros legacy)
+            };
             const data = results.map(r => [
-                r.idRegistro || r.IDREGISTRO || '', r.fecha || r.FECHA || '', r.mes || r.MES || '',
-                r.anio || r.ANIO || '', r.placa || r.PLACA || '', r.marca || r.MARCA || '',
-                r.dueno || r.DUENO || '', r.uts || r.UTS || '', r.tipo_mp || r.TIPO_MP || '',
+                r.idRegistro || r.IDREGISTRO || '',                        // [0] ID
+                r.fecha || r.FECHA || '',                                   // [1] fecha ISO/raw
+                r.mes || r.MES || '',                                       // [2] mes
+                _fmtFecha(r.fecha || r.FECHA),                             // [3] fecha DD/MM/YYYY ← fix
+                r.placa || r.PLACA || '', r.marca || r.MARCA || '',
+                r.dueno || r.DUENO || '', r.uts || r.UTS || '',
+                r.tipo_mp || r.TIPO_MP || '',
                 r.km_actual || r.KM_ACTUAL || '',
-                r.frecuencia || r.FRECUENCIA || r.frecuencia_km || '',
-                r.km_proximo || r.KM_PROXIMO || '', r.observacion || r.OBSERVACION || '',
-                r.tecnico || r.TECNICO || '', r.km_gps || r.KM_GPS || ''
+                r.frecuencia_km || r.FRECUENCIA_KM || '',
+                r.km_proximo || r.KM_PROXIMO || '',
+                r.observacion || r.OBSERVACION || '',
+                r.tecnico || r.TECNICO || '',
+                r.km_gps || r.KM_GPS || ''
             ]);
             return res.json({ data });
         });
@@ -895,10 +931,10 @@ app.post('/api/script/:metodo', async (req, res) => {
                 isEdit ? form.editF_kmgps   : form.f_kmgps
             ];
             const query = `
-                INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia, km_proximo, observacion, tecnico, km_gps)
+                INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
-                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
+                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
             `;
             db.query(query, [...values, ...values.slice(1)], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
@@ -1880,14 +1916,14 @@ function generarRequerimientos(planId, placa, tipoMp, mes, anio) {
 // Auto-genera la PRÓXIMA planificación cuando se completa una
 function generarProximaMP(placa, tipoMp, createdBy) {
     db.query(
-        `SELECT km_actual, km_proximo, frecuencia, fecha, km_gps FROM fleetrun
+        `SELECT km_actual, km_proximo, frecuencia_km, fecha, km_gps FROM fleetrun
          WHERE placa=? AND tipo_mp=? ORDER BY fecha DESC, idRegistro DESC LIMIT 1`,
         [placa, tipoMp],
         (err, rows) => {
             if (err || !rows.length) return;
             const last = rows[0];
-            const intervalo = last.frecuencia
-                ? parseInt(last.frecuencia)
+            const intervalo = last.frecuencia_km
+                ? parseInt(last.frecuencia_km)
                 : (last.km_proximo && last.km_actual ? last.km_proximo - last.km_actual : 0);
             if (!intervalo || intervalo <= 0) return;
 
@@ -2002,7 +2038,7 @@ app.get('/api/mantenimiento-kits', (req, res) => {
 // GET /api/planificacion?mes=X&anio=Y&estado=X&placa=X
 app.get('/api/planificacion', (req, res) => {
     const { mes, anio, estado, placa } = req.query;
-    let sql = `SELECT p.*, pl.marca, pl.cliente, pl.modelo_uts, pl.tipo
+    let sql = `SELECT p.*, pl.marca, pl.cliente, pl.modelo_uts, pl.tipo, pl.uts AS placa_uts
                FROM planificacion p
                LEFT JOIN placas pl ON pl.placa = p.placa
                WHERE 1=1`;
@@ -2314,7 +2350,12 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
         ) fr
         LEFT JOIN placas p   ON UPPER(p.placa) = UPPER(fr.placa)
         LEFT JOIN tipos_mantenimiento tm
-            ON UPPER(tm.marca) = UPPER(COALESCE(p.marca,'')) AND tm.tipo_mp = fr.tipo_mp
+            ON tm.id = (
+                SELECT id FROM tipos_mantenimiento
+                WHERE UPPER(marca) = UPPER(COALESCE(p.marca,'')) AND UPPER(tipo_mp) = UPPER(fr.tipo_mp)
+                ORDER BY CASE WHEN UPPER(uts) = UPPER(COALESCE(p.uts,'')) THEN 0 ELSE 1 END, id ASC
+                LIMIT 1
+            )
         LEFT JOIN (
             SELECT marca_vehiculo, tipo_mp, SUM(costo_total) AS costo_total_kit
             FROM mantenimiento_kits
@@ -2343,13 +2384,20 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
             let dias_restantes = null;
 
             if (row.ultima_fecha && row.frecuencia_dias) {
-                const base = new Date(String(row.ultima_fecha).split('T')[0] + 'T00:00:00');
-                fecha_proyectada = new Date(base);
-                fecha_proyectada.setDate(fecha_proyectada.getDate() + parseInt(row.frecuencia_dias));
-                metodo  = 'dias';
-                vencida = fecha_proyectada < today;
-                dias_restantes = Math.round((fecha_proyectada - today) / 86400000);
-                if (!vencida && fecha_proyectada > horizonte) return;
+                const _rawUF = row.ultima_fecha instanceof Date ? row.ultima_fecha.toISOString() : String(row.ultima_fecha || '');
+                const base = new Date(_rawUF.slice(0, 10) + 'T00:00:00');
+                if (!isNaN(base.getTime())) {
+                    fecha_proyectada = new Date(base);
+                    fecha_proyectada.setDate(fecha_proyectada.getDate() + parseInt(row.frecuencia_dias));
+                    metodo  = 'dias';
+                    vencida = fecha_proyectada < today;
+                    dias_restantes = Math.round((fecha_proyectada - today) / 86400000);
+                    if (!vencida && fecha_proyectada > horizonte) return;
+                } else if (row.km_proximo) {
+                    metodo = 'km';
+                } else {
+                    return;
+                }
             } else if (row.km_proximo) {
                 metodo = 'km';
             } else {
@@ -2364,11 +2412,11 @@ app.get('/api/planificacion-proyeccion', (req, res) => {
                 tipo_mp:         row.tipo_mp,
                 frecuencia_km:   row.frecuencia_km   || null,
                 frecuencia_dias: row.frecuencia_dias || null,
-                ultima_fecha:    row.ultima_fecha,
+                ultima_fecha:    row.ultima_fecha instanceof Date ? row.ultima_fecha.toISOString().split('T')[0] : (row.ultima_fecha || null),
                 ultimo_km:       row.ultimo_km,
                 km_proximo:      row.km_proximo,
                 costo_kit:       parseFloat(row.costo_kit) || 0,
-                fecha_proyectada: fecha_proyectada ? fecha_proyectada.toISOString().split('T')[0] : null,
+                fecha_proyectada: (fecha_proyectada && !isNaN(fecha_proyectada.getTime())) ? fecha_proyectada.toISOString().split('T')[0] : null,
                 metodo,
                 vencida,
                 dias_restantes
@@ -2394,11 +2442,13 @@ app.get('/api/planificacion-sugerir', (req, res) => {
             if (err) return res.status(500).json({ error: err.message });
 
             // 2. Configuración de frecuencia desde tipos_mantenimiento
+            // ORDER BY prioriza el que coincide con el uts del vehículo (NACIONAL vs LOCAL)
             db.query(
-                `SELECT tm.frecuencia_km, tm.frecuencia_dias
+                `SELECT tm.frecuencia_km, tm.frecuencia_dias, tm.uts
                  FROM tipos_mantenimiento tm
                  INNER JOIN placas p ON UPPER(p.marca) = UPPER(tm.marca)
                  WHERE UPPER(p.placa)=? AND UPPER(tm.tipo_mp)=?
+                 ORDER BY CASE WHEN UPPER(tm.uts) = UPPER(p.uts) THEN 0 ELSE 1 END, tm.id ASC
                  LIMIT 1`,
                 [placa.toUpperCase(), tipomp.toUpperCase()],
                 (err2, tmRows) => {
@@ -2416,8 +2466,9 @@ app.get('/api/planificacion-sugerir', (req, res) => {
                     const frecKm   = parseInt(tm.frecuencia_km)   || 0;
 
                     if (fr.fecha) {
-                        const base = new Date(String(fr.fecha).split('T')[0] + 'T00:00:00');
-                        if (frecDias > 0) {
+                        const fechaRaw = fr.fecha instanceof Date ? fr.fecha.toISOString() : String(fr.fecha || '');
+                        const base = new Date(fechaRaw.slice(0, 10) + 'T00:00:00');
+                        if (!isNaN(base.getTime()) && frecDias > 0) {
                             const ini = new Date(base);
                             ini.setDate(ini.getDate() + frecDias);
                             fechaSugerida = ini.toISOString().split('T')[0];
@@ -2456,7 +2507,7 @@ app.get('/api/planificacion-sugerir', (req, res) => {
 // GET /api/fleetrun/buscar/:id — buscar un registro por idRegistro (para completar plan)
 app.get('/api/fleetrun/buscar/:id', (req, res) => {
     db.query(
-        `SELECT idRegistro, fecha, placa, tipo_mp, km_actual, km_proximo, frecuencia, tecnico, observacion
+        `SELECT idRegistro, fecha, placa, tipo_mp, km_actual, km_proximo, frecuencia_km, tecnico, observacion
          FROM fleetrun WHERE idRegistro = ? LIMIT 1`,
         [req.params.id],
         (err, rows) => {
@@ -2587,6 +2638,51 @@ app.delete('/api/tipos-mantenimiento/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
     });
+});
+
+// POST /api/tipos-mantenimiento/importar — importación masiva (upsert por marca+tipo_mp+uts)
+app.post('/api/tipos-mantenimiento/importar', async (req, res) => {
+    const { registros } = req.body;
+    if (!Array.isArray(registros) || !registros.length)
+        return res.status(400).json({ error: 'Sin registros' });
+
+    let insertados = 0, actualizados = 0;
+    try {
+        for (const r of registros) {
+            const marca   = (r.marca   || '').toUpperCase().trim();
+            const tipo_mp = (r.tipo_mp || '').toUpperCase().trim();
+            const uts     = (r.uts     || 'LOCAL').toUpperCase().trim();
+            if (!marca || !tipo_mp) continue;
+
+            const [existing] = await db.promise().query(
+                'SELECT id FROM tipos_mantenimiento WHERE UPPER(marca)=? AND UPPER(tipo_mp)=? AND UPPER(uts)=? LIMIT 1',
+                [marca, tipo_mp, uts]
+            );
+            if (existing.length) {
+                await db.promise().query(
+                    `UPDATE tipos_mantenimiento SET
+                        frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
+                        tipo=?, sistema=?, descripcion=?
+                     WHERE id=?`,
+                    [r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                     r.tipo||null, r.sistema||null, r.descripcion||null, existing[0].id]
+                );
+                actualizados++;
+            } else {
+                await db.promise().query(
+                    `INSERT INTO tipos_mantenimiento
+                        (marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
+                     VALUES (?,?,?,?,?,?,?,?,?)`,
+                    [marca, tipo_mp, uts, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                     r.tipo||null, r.sistema||null, r.descripcion||null]
+                );
+                insertados++;
+            }
+        }
+        res.json({ ok: true, insertados, actualizados });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================================

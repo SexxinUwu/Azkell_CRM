@@ -1,0 +1,125 @@
+<div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
+
+  <!-- ── HEADER ────────────────────────────────────────────────── -->
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 flex-shrink-0"
+       style="border-bottom:1px solid var(--border); background:var(--surface)">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-tools text-primary" style="font-size:1.1rem"></i>
+      <span class="fw-bold" style="font-size:1rem">Kits de Mantenimiento</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-reload-cache" title="Actualizar"
+              onclick="window.kitsCargarTabla()">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-primary fw-bold" onclick="window.kitsAbrirModal()">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Ítem de Kit
+      </button>
+    </div>
+  </div>
+
+  <!-- ── FILTROS ───────────────────────────────────────────────── -->
+  <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
+       style="border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap">
+    <select class="form-select form-select-sm" id="kits-fil-marca"
+            onchange="window.kitsFiltrar()" style="max-width:150px">
+      <option value="">Todas las marcas</option>
+    </select>
+    <select class="form-select form-select-sm" id="kits-fil-tipo"
+            onchange="window.kitsFiltrar()" style="max-width:150px">
+      <option value="">Todo MP</option>
+    </select>
+  </div>
+
+  <!-- ── TABLA ─────────────────────────────────────────────────── -->
+  <div class="flex-1 overflow-auto px-2 py-2">
+    <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
+      <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+        <tr style="border-bottom:2px solid var(--border)">
+          <th></th><th></th><th>Kit</th><th>Código</th>
+          <th style="min-width:160px">Ítem</th>
+          <th>Cant.</th><th>Unidad</th>
+          <th>C.Unit.</th><th>C.Total</th><th>Ord.</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="kits-tbody">
+        <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ======= MODAL KIT MP ======= -->
+<div class="modal fade" id="kitsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:var(--surface); color:var(--text)">
+      <div class="modal-header" style="border-bottom:1px solid var(--border)">
+        <h5 class="modal-title fw-bold" id="kitsModal-titulo">
+          <i class="bi bi-tools me-1 text-primary"></i>Ítem de Kit MP
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="kits-id">
+        <datalist id="kits-dl-marcas"></datalist>
+        <datalist id="kits-dl-tipomps"></datalist>
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="kits-marca"
+                   placeholder="VOLVO" list="kits-dl-marcas" autocomplete="off">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="kits-tipomp"
+                   placeholder="MP1..." list="kits-dl-tipomps" autocomplete="off">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Nombre Kit</label>
+            <input type="text" class="form-control form-control-sm" id="kits-nombre"
+                   placeholder="Cambio aceite y filtros">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Código Inventario</label>
+            <input type="text" class="form-control form-control-sm" id="kits-codigo" placeholder="INV-0001">
+          </div>
+          <div class="col-sm-8">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Nombre del Ítem *</label>
+            <input type="text" class="form-control form-control-sm" id="kits-item-nombre"
+                   placeholder="Aceite Motor 15W40...">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Cantidad</label>
+            <input type="number" class="form-control form-control-sm" id="kits-cantidad"
+                   placeholder="1" step="0.01">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Unidad</label>
+            <input type="text" class="form-control form-control-sm" id="kits-unidad" placeholder="LT, UND, GAL...">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Costo Unit. (S/.)</label>
+            <input type="number" class="form-control form-control-sm" id="kits-costo-unit"
+                   placeholder="0.00" step="0.01" oninput="window.kitsCalcularTotal()">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Costo Total (S/.)</label>
+            <input type="number" class="form-control form-control-sm" id="kits-costo-total"
+                   placeholder="0.00" step="0.01">
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Orden</label>
+            <input type="number" class="form-control form-control-sm" id="kits-orden" placeholder="1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border)">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.kitsGuardar()">
+          <i class="bi bi-check2 me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
