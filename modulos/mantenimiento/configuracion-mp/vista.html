@@ -1,0 +1,192 @@
+<div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
+
+  <!-- ── HEADER ────────────────────────────────────────────────── -->
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 flex-shrink-0"
+       style="border-bottom:1px solid var(--border); background:var(--surface)">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-sliders text-primary" style="font-size:1.1rem"></i>
+      <span class="fw-bold" style="font-size:1rem">Frecuencias de Mantenimiento</span>
+    </div>
+    <div class="d-flex gap-2">
+      <!-- Importar: estilo Placas -->
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-upload me-1"></i>Importar
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#" onclick="window.cmpDescargarPlantilla();return false">
+            <i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>1. Descargar Plantilla
+          </a></li>
+          <li>
+            <label class="dropdown-item mb-0" style="cursor:pointer">
+              <i class="bi bi-cloud-upload me-2 text-success"></i>2. Subir Excel Lleno
+              <input type="file" id="cmp-input-file" accept=".xlsx,.xls" style="display:none"
+                     onchange="window.cmpImportarExcel(this)">
+            </label>
+          </li>
+        </ul>
+      </div>
+      <!-- Exportar: botón simple -->
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cmpExportarExcel()">
+        <i class="bi bi-download me-1"></i>Exportar
+      </button>
+    </div>
+  </div>
+
+  <!-- ── PANEL: TIPOS DE MANTENIMIENTO ─────────────────────────── -->
+  <!-- SIN clase d-flex — Bootstrap .d-flex usa !important y anularía display:none -->
+  <div id="cmp-panel-tipos" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden">
+    <!-- Controles -->
+    <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
+         style="border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap">
+      <select class="form-select form-select-sm" id="cfg-flota-fil-marca"
+              onchange="window.filtrarTablaConfigFlota()" style="max-width:150px">
+        <option value="">Todas las marcas</option>
+      </select>
+      <select class="form-select form-select-sm" id="cfg-flota-fil-uts"
+              onchange="window.filtrarTablaConfigFlota()" style="max-width:110px">
+        <option value="">Toda UTS</option>
+        <option value="LOCAL">LOCAL</option>
+        <option value="NACIONAL">NACIONAL</option>
+      </select>
+      <input type="search" class="form-control form-control-sm" id="cmp-tipos-buscar"
+             placeholder="Buscar tipo MP..." style="max-width:200px"
+             oninput="window.filtrarTablaConfigFlota()">
+      <button class="btn btn-sm btn-reload-cache ms-auto" title="Actualizar"
+              onclick="window.cargarTablaConfigFlota()">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-primary fw-bold" onclick="window.abrirModalConfigFlota()">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Tipo MP
+      </button>
+    </div>
+    <!-- Tabla -->
+    <div class="flex-1 overflow-auto px-2 py-2">
+      <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
+        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="min-width:80px">Marca</th>
+            <th style="min-width:140px">Tipo MP</th>
+            <th>UTS</th>
+            <th>Frec. KM</th>
+            <th>Frec. Horas</th>
+            <th>Frec. Días</th>
+            <th>Tipo</th>
+            <th>Sistema</th>
+            <th style="min-width:160px">Descripción</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cfg-flota-tbody">
+          <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- ======= MODAL TIPO MP ======= -->
+<div class="modal fade" id="modalConfigFlota" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--surface); color:var(--text)">
+      <div class="modal-header" style="border-bottom:1px solid var(--border)">
+        <h5 class="modal-title fw-bold" id="modalConfigFlota-titulo">
+          <i class="bi bi-list-check me-1 text-primary"></i>Tipo de Mantenimiento
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cf-id">
+        <datalist id="cf-dl-marcas"></datalist>
+        <datalist id="cf-dl-tipomps"></datalist>
+        <datalist id="cf-dl-sistemas"></datalist>
+        <div class="row g-3">
+          <div class="col-sm-5">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="cf-marca"
+                   placeholder="VOLVO, SCANIA..." list="cf-dl-marcas" autocomplete="off">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="cf-tipo-mp"
+                   placeholder="MP1, FILTRO DE AIRE..." list="cf-dl-tipomps" autocomplete="off">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold" style="font-size:0.8rem">UTS</label>
+            <select class="form-select form-select-sm" id="cf-uts">
+              <option value="LOCAL">LOCAL</option>
+              <option value="NACIONAL">NACIONAL</option>
+            </select>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia KM</label>
+            <input type="number" class="form-control form-control-sm" id="cf-frec-km"
+                   placeholder="Ej: 10000" min="0">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia Horas</label>
+            <input type="number" class="form-control form-control-sm" id="cf-frec-horas"
+                   placeholder="Ej: 250" min="0">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia Días</label>
+            <input type="number" class="form-control form-control-sm" id="cf-frec-dias"
+                   placeholder="Ej: 180" min="0">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo</label>
+            <input type="text" class="form-control form-control-sm" id="cf-tipo"
+                   placeholder="Cambio, Campaña, Correctivo...">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Sistema</label>
+            <input type="text" class="form-control form-control-sm" id="cf-sistema"
+                   placeholder="Motor, Frenos, Transmisión..." list="cf-dl-sistemas" autocomplete="off">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Descripción</label>
+            <input type="text" class="form-control form-control-sm" id="cf-descripcion"
+                   placeholder="Descripción breve del servicio">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border)">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.guardarConfigFlota()">
+          <i class="bi bi-check2 me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación de importación -->
+<div class="modal fade" id="cmpModalImport" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--surface); color:var(--text)">
+      <div class="modal-header" style="border-bottom:1px solid var(--border)">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-file-earmark-excel me-1 text-success"></i>Confirmar Importación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="cmp-import-preview" class="mb-3" style="font-size:0.85rem"></div>
+        <div class="alert alert-warning py-2" style="font-size:0.82rem">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Los registros existentes con misma Marca + Tipo MP + UTS serán <strong>actualizados</strong>.
+          Los nuevos serán <strong>insertados</strong>.
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border)">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-success fw-bold" id="cmp-btn-confirmar-import"
+                onclick="window.cmpConfirmarImport()">
+          <i class="bi bi-upload me-1"></i>Importar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
