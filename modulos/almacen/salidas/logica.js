@@ -313,7 +313,12 @@ window.filtrarSalidas = function() {
         var matchB = !buscar ||
             (d.id||'').toLowerCase().includes(buscar) ||
             (d.placa||'').toLowerCase().includes(buscar) ||
-            (d.responsable||'').toLowerCase().includes(buscar);
+            (d.responsable||'').toLowerCase().includes(buscar) ||
+            (d.observaciones||'').toLowerCase().includes(buscar) ||
+            (d.items||[]).some(function(it) {
+                return (it.inventario_id||'').toLowerCase().includes(buscar) ||
+                       (it.descripcion||'').toLowerCase().includes(buscar);
+            });
         var matchT = !filTipo || d.tipo_destino === filTipo;
         var fecha = d.fecha ? String(d.fecha).split('T')[0] : '';
         var matchD = !desde || fecha >= desde;
@@ -336,61 +341,147 @@ window._salLimpiarFechas = function() {
 
 // ── Render tabla ──────────────────────────────────────────────────
 window._salRender = function() {
+    var buscar = ((document.getElementById('sal-buscar') || {}).value || '').trim();
+    var modoPlano = buscar.length > 0;
     var datos = window._salFiltrados || [];
-    var total = datos.length;
-    var totalPag = Math.max(1, Math.ceil(total / _SAL_POR_PAG));
-    var pag = Math.min(window._salPagActual, totalPag);
-    window._salPagActual = pag;
-    var pagina = datos.slice((pag-1)*_SAL_POR_PAG, pag*_SAL_POR_PAG);
+    var thead = document.querySelector('#tabla-salidas thead');
 
-    var cont = document.getElementById('sal-contador');
-    if (cont) cont.textContent = total + ' registro' + (total !== 1 ? 's' : '');
-
-    var tbody = document.getElementById('tbody-salidas');
-    if (!tbody) return;
-    if (!pagina.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin salidas encontradas</td></tr>';
-    } else {
-        tbody.innerHTML = pagina.map(function(d) {
+    if (modoPlano) {
+        // ── Vista plana: una fila por artículo ────────────────────
+        var filas = [];
+        datos.forEach(function(d) {
             var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
-            var tipoBadge = d.tipo_destino === 'Vehiculo'
-                ? '<span class="badge bg-primary-subtle text-primary">Vehículo</span>'
-                : '<span class="badge bg-warning-subtle text-warning">Personal</span>';
-            var destino = d.tipo_destino === 'Vehiculo' ? _salEsc(d.placa || '—') : '<i class="bi bi-person me-1"></i>';
-            var total_pen = parseFloat(d.total_pen || 0);
-            var totalFmt = 'S/ ' + total_pen.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2});
-            var nitems   = (d.items || []).length;
-            return '<tr>' +
-                '<td><span class="badge bg-secondary fw-normal">' + _salEsc(d.id || '') + '</span></td>' +
-                '<td>' + fecha + '</td>' +
-                '<td>' + tipoBadge + '</td>' +
-                '<td>' + destino + '</td>' +
-                '<td><small>' + _salEsc(d.responsable || '—') + '</small></td>' +
-                '<td class="text-center">'+
-                    '<button class="btn btn-xs btn-outline-secondary sal-btn-det" onclick="window._salToggleDetalle(this,\'' + _salEsc(d.id) + '\')" title="Ver artículos">'+
-                        '<i class="bi bi-list-ul me-1"></i>' + nitems + ' art. <i class="bi bi-chevron-down" style="font-size:0.6rem"></i>'+
-                    '</button>'+
-                '</td>' +
-                '<td class="text-end fw-semibold">' + totalFmt + '</td>' +
-                '<td class="text-center" style="white-space:nowrap;">' +
-                    '<div class="d-flex gap-1 justify-content-center">' +
-                        '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Descargar PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
-                    '</div>' +
-                '</td>' +
-            '</tr>';
-        }).join('');
-    }
+            var items = d.items || [];
+            if (!items.length) {
+                filas.push({ d: d, fecha: fecha, it: null });
+            } else {
+                items.forEach(function(it) { filas.push({ d: d, fecha: fecha, it: it }); });
+            }
+        });
+        var totalFilas = filas.length;
+        var totalPag = Math.max(1, Math.ceil(totalFilas / _SAL_POR_PAG));
+        var pag = Math.min(window._salPagActual, totalPag);
+        window._salPagActual = pag;
+        var paginadas = filas.slice((pag-1)*_SAL_POR_PAG, pag*_SAL_POR_PAG);
 
-    var paginEl = document.getElementById('sal-paginacion');
-    if (paginEl) {
-        if (totalPag <= 1) { paginEl.innerHTML = ''; return; }
-        paginEl.innerHTML = '<div class="d-flex align-items-center gap-1">' +
-            '<button class="btn btn-xs btn-outline-secondary" ' + (pag<=1?'disabled':'') + ' onclick="window._salIrPag('+(pag-1)+')"><i class="bi bi-chevron-left"></i></button>' +
-            '<span class="small text-muted mx-2">Pág. ' + pag + ' / ' + totalPag + '</span>' +
-            '<button class="btn btn-xs btn-outline-secondary" ' + (pag>=totalPag?'disabled':'') + ' onclick="window._salIrPag('+(pag+1)+')"><i class="bi bi-chevron-right"></i></button>' +
-            '</div>';
+        var cont = document.getElementById('sal-contador');
+        if (cont) cont.textContent = totalFilas + ' movimiento' + (totalFilas !== 1 ? 's' : '');
+
+        if (thead) thead.innerHTML = '<tr>' +
+            '<th>Fecha / Código</th><th>Artículo</th>' +
+            '<th class="text-center">Cantidad</th><th class="text-end">Costo Unit.</th>' +
+            '<th class="text-end">Importe</th><th>Responsable</th>' +
+            '<th>Placa / Destino</th><th>Observación</th>' +
+            '<th class="text-center"><i class="bi bi-three-dots-vertical"></i></th></tr>';
+
+        var tbody = document.getElementById('tbody-salidas');
+        if (!tbody) return;
+        if (!paginadas.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin resultados</td></tr>';
+        } else {
+            tbody.innerHTML = paginadas.map(function(row) {
+                var d = row.d; var it = row.it;
+                var cant = it ? parseFloat(it.cantidad || 0) : 0;
+                var cu   = it ? parseFloat(it.costo_unitario || 0) : 0;
+                var imp  = it ? parseFloat(it.importe || cant * cu || 0) : 0;
+                var mon  = d.moneda === 'USD' ? '$' : 'S/';
+                var artTxt = it
+                    ? (_salEsc(it.descripcion || it.inventario_id || '—') +
+                       (it.inventario_id ? ' <span class="badge bg-secondary fw-normal ms-1" style="font-size:0.63rem">' + _salEsc(it.inventario_id) + '</span>' : ''))
+                    : '<span class="text-muted small">Sin artículos</span>';
+                var destinoTxt = d.tipo_destino === 'Vehiculo'
+                    ? '<span class="badge bg-primary-subtle text-primary">' + _salEsc(d.placa || '—') + '</span>'
+                    : '<span class="badge bg-warning-subtle text-warning">Personal</span>';
+                return '<tr>' +
+                    '<td><div class="small">' + _salEsc(row.fecha) + '</div>' +
+                        '<span class="badge bg-secondary fw-normal" style="font-size:0.62rem">' + _salEsc(d.id||'') + '</span></td>' +
+                    '<td>' + artTxt + '</td>' +
+                    '<td class="text-center">' + (it ? cant.toLocaleString('es-PE',{maximumFractionDigits:3}) : '—') + '</td>' +
+                    '<td class="text-end">' + (it ? mon+' '+cu.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4}) : '—') + '</td>' +
+                    '<td class="text-end fw-semibold">' + (it ? mon+' '+imp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—') + '</td>' +
+                    '<td><small>' + _salEsc(d.responsable || '—') + '</small></td>' +
+                    '<td>' + destinoTxt + '</td>' +
+                    '<td><small class="text-muted">' + _salEsc(d.observaciones || '—') + '</small></td>' +
+                    '<td class="text-center" style="white-space:nowrap;">' +
+                        '<div class="d-flex gap-1 justify-content-center">' +
+                            '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                        '</div>' +
+                    '</td></tr>';
+            }).join('');
+        }
+        var paginEl = document.getElementById('sal-paginacion');
+        if (paginEl) {
+            if (totalPag <= 1) { paginEl.innerHTML = ''; return; }
+            paginEl.innerHTML = '<div class="d-flex align-items-center gap-1">' +
+                '<button class="btn btn-xs btn-outline-secondary" ' + (pag<=1?'disabled':'') + ' onclick="window._salIrPag('+(pag-1)+')"><i class="bi bi-chevron-left"></i></button>' +
+                '<span class="small text-muted mx-2">Pág. ' + pag + ' / ' + totalPag + '</span>' +
+                '<button class="btn btn-xs btn-outline-secondary" ' + (pag>=totalPag?'disabled':'') + ' onclick="window._salIrPag('+(pag+1)+')"><i class="bi bi-chevron-right"></i></button>' +
+                '</div>';
+        }
+
+    } else {
+        // ── Vista agrupada (normal) ────────────────────────────────
+        if (thead) thead.innerHTML = '<tr>' +
+            '<th>Código</th><th>Fecha</th><th>Tipo</th><th>Placa / Destino</th>' +
+            '<th>Responsable</th><th>Artículos</th><th class="text-end">Total</th>' +
+            '<th class="text-center"><i class="bi bi-three-dots-vertical"></i></th></tr>';
+
+        var total = datos.length;
+        var totalPag2 = Math.max(1, Math.ceil(total / _SAL_POR_PAG));
+        var pag2 = Math.min(window._salPagActual, totalPag2);
+        window._salPagActual = pag2;
+        var pagina = datos.slice((pag2-1)*_SAL_POR_PAG, pag2*_SAL_POR_PAG);
+
+        var cont2 = document.getElementById('sal-contador');
+        if (cont2) cont2.textContent = total + ' registro' + (total !== 1 ? 's' : '');
+
+        var tbody2 = document.getElementById('tbody-salidas');
+        if (!tbody2) return;
+        if (!pagina.length) {
+            tbody2.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin salidas encontradas</td></tr>';
+        } else {
+            tbody2.innerHTML = pagina.map(function(d) {
+                var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+                var tipoBadge = d.tipo_destino === 'Vehiculo'
+                    ? '<span class="badge bg-primary-subtle text-primary">Vehículo</span>'
+                    : '<span class="badge bg-warning-subtle text-warning">Personal</span>';
+                var destino = d.tipo_destino === 'Vehiculo' ? _salEsc(d.placa || '—') : '<i class="bi bi-person me-1"></i>';
+                var total_pen = parseFloat(d.total_pen || 0);
+                var totalFmt = 'S/ ' + total_pen.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2});
+                var nitems = (d.items || []).length;
+                return '<tr>' +
+                    '<td><span class="badge bg-secondary fw-normal">' + _salEsc(d.id || '') + '</span></td>' +
+                    '<td>' + fecha + '</td>' +
+                    '<td>' + tipoBadge + '</td>' +
+                    '<td>' + destino + '</td>' +
+                    '<td><small>' + _salEsc(d.responsable || '—') + '</small></td>' +
+                    '<td class="text-center">' +
+                        '<button class="btn btn-xs btn-outline-secondary sal-btn-det" onclick="window._salToggleDetalle(this,\'' + _salEsc(d.id) + '\')" title="Ver artículos">' +
+                            '<i class="bi bi-list-ul me-1"></i>' + nitems + ' art. <i class="bi bi-chevron-down" style="font-size:0.6rem"></i>' +
+                        '</button>' +
+                    '</td>' +
+                    '<td class="text-end fw-semibold">' + totalFmt + '</td>' +
+                    '<td class="text-center" style="white-space:nowrap;">' +
+                        '<div class="d-flex gap-1 justify-content-center">' +
+                            '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Descargar PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+        }
+        var paginEl2 = document.getElementById('sal-paginacion');
+        if (paginEl2) {
+            if (totalPag2 <= 1) { paginEl2.innerHTML = ''; return; }
+            paginEl2.innerHTML = '<div class="d-flex align-items-center gap-1">' +
+                '<button class="btn btn-xs btn-outline-secondary" ' + (pag2<=1?'disabled':'') + ' onclick="window._salIrPag('+(pag2-1)+')"><i class="bi bi-chevron-left"></i></button>' +
+                '<span class="small text-muted mx-2">Pág. ' + pag2 + ' / ' + totalPag2 + '</span>' +
+                '<button class="btn btn-xs btn-outline-secondary" ' + (pag2>=totalPag2?'disabled':'') + ' onclick="window._salIrPag('+(pag2+1)+')"><i class="bi bi-chevron-right"></i></button>' +
+                '</div>';
+        }
     }
 };
 
