@@ -1,0 +1,126 @@
+<!-- Módulo Almacén / Proveedores — SPA Aislado -->
+<div id="mod-proveedores" class="modulo-wrapper d-flex flex-column h-100">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-building-fill text-primary me-1"></i>Proveedores
+      </h2>
+      <p class="text-muted small mb-0">Proveedores de repuestos e insumos</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarProveedores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+      <button class="btn btn-sm btn-primary" onclick="window.abrirModalProveedor()">
+        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nuevo Proveedor</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+    <input type="text" id="prov-buscar" class="form-control form-control-sm" style="max-width:280px;" placeholder="Nombre, RUC, marca…" oninput="window.filtrarProveedores()">
+    <select id="prov-fil-estado" class="form-select form-select-sm" style="max-width:130px;" onchange="window.filtrarProveedores()">
+      <option value="">Todos</option>
+      <option value="Activo">Activos</option>
+      <option value="Inactivo">Inactivos</option>
+    </select>
+    <span id="prov-contador" class="text-muted small ms-auto"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
+    <table class="table table-custom table-hover m-0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Tipo Doc.</th>
+          <th>N° Documento</th>
+          <th>Teléfono</th>
+          <th>Marcas</th>
+          <th>Estado</th>
+          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-proveedores">
+        <tr><td colspan="8" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ MODAL ADD/EDIT PROVEEDOR ══════════════════════════════════ -->
+<div class="modal fade" id="modal-proveedor" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="modal-prov-titulo"><i class="bi bi-building-fill me-1"></i>Nuevo Proveedor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-proveedor" onsubmit="window.guardarProveedor(event)">
+        <input type="hidden" id="prov-edit-id">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="fw-semibold small">Nombre <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="prov-f-nombre" required placeholder="Nombre o razón comercial">
+            </div>
+            <div class="col-md-4">
+              <label class="fw-semibold small">Estado</label>
+              <select class="form-select" id="prov-f-estado">
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="fw-semibold small">Razón Social</label>
+              <input type="text" class="form-control" id="prov-f-razon" placeholder="Razón Social completa">
+            </div>
+            <div class="col-md-2">
+              <label class="fw-semibold small">Tipo Doc.</label>
+              <select class="form-select" id="prov-f-tipo-doc">
+                <option value="RUC">RUC</option>
+                <option value="DNI">DNI</option>
+                <option value="CE">C.E.</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="fw-semibold small">N° Documento</label>
+              <input type="text" class="form-control" id="prov-f-num-doc" placeholder="20123456789">
+            </div>
+            <div class="col-md-4">
+              <label class="fw-semibold small">Teléfono</label>
+              <input type="text" class="form-control" id="prov-f-telefono" placeholder="+51 999 999 999">
+            </div>
+            <div class="col-md-4">
+              <label class="fw-semibold small">Email</label>
+              <input type="email" class="form-control" id="prov-f-email" placeholder="proveedor@email.com">
+            </div>
+            <div class="col-md-4">
+              <label class="fw-semibold small">Dirección</label>
+              <input type="text" class="form-control" id="prov-f-dir" placeholder="Dirección física…">
+            </div>
+            <div class="col-md-12">
+              <label class="fw-semibold small">Marcas que provee</label>
+              <div class="d-flex gap-2 mb-1">
+                <input type="text" class="form-control form-control-sm" id="prov-f-marca-input" placeholder="Ej: WIX" style="max-width:180px;"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();window._provAgregarMarca();}">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="window._provAgregarMarca()"><i class="bi bi-plus"></i> Agregar</button>
+              </div>
+              <div id="prov-marcas-tags" class="d-flex flex-wrap gap-1 mt-1"></div>
+            </div>
+            <div class="col-md-12">
+              <label class="fw-semibold small">Observaciones</label>
+              <textarea class="form-control" id="prov-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

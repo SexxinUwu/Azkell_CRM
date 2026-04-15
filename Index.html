@@ -98,13 +98,33 @@
                 <div id="wrap-almacen">
                     <button class="nav-section-toggle" data-section="almacen" aria-expanded="false" onclick="window.toggleNavSection('almacen')">
                         <span class="link-text" data-i18n="nav.almacen">Almacén</span>
-                        <span class="section-badge">1</span>
+                        <span class="section-badge">6</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
                         <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
                             <i class="bi bi-box-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.inventario">Inventario</span>
+                            <span class="link-text">Inventario</span>
+                        </a>
+                        <a id="nav-entradas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/entradas')">
+                            <i class="bi bi-arrow-down-circle-fill nav-icon"></i>
+                            <span class="link-text">Entradas</span>
+                        </a>
+                        <a id="nav-salidas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/salidas')">
+                            <i class="bi bi-arrow-up-circle-fill nav-icon"></i>
+                            <span class="link-text">Salidas</span>
+                        </a>
+                        <a id="nav-proveedores-inv" class="nav-item" onclick="cargarModuloAislado('almacen/proveedores')">
+                            <i class="bi bi-building-fill nav-icon"></i>
+                            <span class="link-text">Proveedores</span>
+                        </a>
+                        <a id="nav-kardex" class="nav-item" onclick="cargarModuloAislado('almacen/kardex')">
+                            <i class="bi bi-journal-text nav-icon"></i>
+                            <span class="link-text">Kardex</span>
+                        </a>
+                        <a id="nav-costos-inv" class="nav-item" onclick="cargarModuloAislado('almacen/costos')">
+                            <i class="bi bi-graph-up-arrow nav-icon"></i>
+                            <span class="link-text">Costos</span>
                         </a>
                     </div>
                 </div>

@@ -1,0 +1,108 @@
+<!-- Módulo Almacén / Costos — SPA Aislado -->
+<div id="mod-costos" class="modulo-wrapper d-flex flex-column h-100">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-graph-up-arrow text-success me-1"></i>Costos de Almacén
+      </h2>
+      <p class="text-muted small mb-0">Análisis de consumo por familia, almacén y artículo</p>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarCostos()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+  </div>
+
+  <!-- Filtro de fechas -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+    <label class="small fw-semibold text-muted mb-0">Período:</label>
+    <div class="d-flex gap-1 align-items-center">
+      <input type="date" id="cos-desde" class="form-control form-control-sm" style="max-width:145px;">
+      <span class="text-muted small">→</span>
+      <input type="date" id="cos-hasta" class="form-control form-control-sm" style="max-width:145px;">
+    </div>
+    <button class="btn btn-sm btn-primary" onclick="window.cargarCostos()"><i class="bi bi-filter me-1"></i>Filtrar</button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="window._cosClearFechas()">Todo</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4" id="cos-kpis">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
+        <div class="small text-muted mb-1"><i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Total Entradas</div>
+        <div class="fw-bold fs-4 text-success" id="cos-kpi-entradas">—</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
+        <div class="small text-muted mb-1"><i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Total Salidas</div>
+        <div class="fw-bold fs-4 text-danger" id="cos-kpi-salidas">—</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
+        <div class="small text-muted mb-1"><i class="bi bi-wallet2 text-primary me-1"></i>Balance (Ent. − Sal.)</div>
+        <div class="fw-bold fs-4 text-primary" id="cos-kpi-balance">—</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
+        <div class="small text-muted mb-1"><i class="bi bi-boxes text-warning me-1"></i>Familias Activas</div>
+        <div class="fw-bold fs-4 text-warning" id="cos-kpi-familias">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs: Por Familia | Por Almacén | Top Artículos -->
+  <ul class="nav nav-tabs mb-3" id="cos-tabs">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cos-tab-familia">Por Familia</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-almacen">Por Almacén</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-top">Top Artículos</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-chart">Gráfico</button></li>
+  </ul>
+
+  <div class="tab-content flex-grow-1" style="overflow:auto;">
+
+    <!-- Por Familia -->
+    <div class="tab-pane fade show active" id="cos-tab-familia">
+      <div class="card p-0 shadow-sm">
+        <table class="table table-custom table-hover m-0">
+          <thead><tr><th>Familia</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
+          <tbody id="tbody-cos-familia">
+            <tr><td colspan="4" class="text-center py-5 text-muted">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Por Almacén -->
+    <div class="tab-pane fade" id="cos-tab-almacen">
+      <div class="card p-0 shadow-sm">
+        <table class="table table-custom table-hover m-0">
+          <thead><tr><th>Almacén</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
+          <tbody id="tbody-cos-almacen">
+            <tr><td colspan="4" class="text-center py-5 text-muted">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top Artículos -->
+    <div class="tab-pane fade" id="cos-tab-top">
+      <div class="card p-0 shadow-sm">
+        <table class="table table-custom table-hover m-0">
+          <thead><tr><th>Código</th><th>Artículo</th><th>Familia</th><th class="text-end">Cant. Total</th><th class="text-end">Costo Total</th></tr></thead>
+          <tbody id="tbody-cos-top">
+            <tr><td colspan="5" class="text-center py-5 text-muted">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="tab-pane fade" id="cos-tab-chart">
+      <div class="card shadow-sm p-3" style="max-height:400px;">
+        <canvas id="chart-cos-familia" height="300"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
