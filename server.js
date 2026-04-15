@@ -466,6 +466,25 @@ db.query(
         }
     }
 );
+// ── Tabla historial de cambios por placa ─────────────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS placa_auditoria (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        placa       VARCHAR(20)  NOT NULL,
+        campo       VARCHAR(60)  NOT NULL,
+        valor_ant   TEXT,
+        valor_nuevo TEXT,
+        usuario     VARCHAR(100),
+        ip          VARCHAR(80),
+        fecha       TIMESTAMP    NOT NULL DEFAULT NOW(),
+        INDEX idx_placa (placa),
+        INDEX idx_fecha  (fecha)
+    ) COMMENT 'Historial de cambios por placa'`,
+    (e) => {
+        if (e) console.warn('CREATE placa_auditoria:', e.message);
+        else   console.log('✅ Tabla placa_auditoria verificada');
+    }
+);
 // ── Nodemailer: transporter de correo ─────────────────────────────────────
 const mailTransporter = nodemailer.createTransport({
     host:   process.env.EMAIL_HOST       || 'smtp.gmail.com',
@@ -3304,17 +3323,15 @@ app.delete('/api/requerimientos-planificacion/:id', (req, res) => {
     });
 });
 
-// ── Multer: storage para imágenes de inventario ───────────────────
-const _uploadsDir = path.join(__dirname, 'uploads', 'inventario');
-if (!fs.existsSync(_uploadsDir)) fs.mkdirSync(_uploadsDir, { recursive: true });
+// ── Cloudinary + Multer (memoria) para imágenes de inventario ─────
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 const _multerInv = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, _uploadsDir),
-        filename:    (req, file, cb) => {
-            const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-            cb(null, (req.params.id || 'inv') + '_' + Date.now() + ext);
-        }
-    }),
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máx
     fileFilter: (req, file, cb) => {
         if (/^image\/(jpeg|jpg|png|webp|gif)$/.test(file.mimetype)) return cb(null, true);
@@ -3334,6 +3351,65 @@ app.get('/api/placas-lista', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
+});
+
+// ── PUT /api/placas/:placa — Editar ficha + auditoría de cambios ──────────────
+app.put('/api/placas/:placa', (req, res) => {
+    const placa   = req.params.placa;
+    const usuario = (req.user?.correo || req.body.usuario_autor || '').substring(0, 100);
+    const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
+    const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
+                     'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
+                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso'];
+
+    db.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
+        if (err)  return res.status(500).json({ error: err.message });
+        if (!rows.length) return res.status(404).json({ error: 'Placa no encontrada' });
+
+        const actual = rows[0];
+        const nuevo  = req.body;
+
+        // Detectar diferencias campo a campo
+        const diffs = [];
+        campos.forEach(c => {
+            const vAnt = actual[c] == null ? '' : String(actual[c]).trim();
+            const vNue = nuevo[c]  == null ? '' : String(nuevo[c]).trim();
+            if (vAnt !== vNue) diffs.push([placa, c, vAnt, vNue, usuario, ip]);
+        });
+
+        // Actualizar la placa
+        const sets = campos.map(c => `${c}=?`).join(', ');
+        const vals = campos.map(c => nuevo[c] != null ? String(nuevo[c]).trim() || null : null);
+        db.query(`UPDATE placas SET ${sets} WHERE placa=?`, [...vals, placa], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+
+            // Insertar diffs en auditoría (fire-and-forget)
+            if (diffs.length) {
+                db.query(
+                    'INSERT INTO placa_auditoria (placa, campo, valor_ant, valor_nuevo, usuario, ip) VALUES ?',
+                    [diffs], () => {}
+                );
+                logAudit(usuario, 'placas', 'editar', `Placa ${placa}: ${diffs.map(d => d[1]).join(', ')}`);
+            }
+            res.json({ ok: true, cambios: diffs.length });
+        });
+    });
+});
+
+// ── GET /api/placas/:placa/historial ──────────────────────────────────────────
+app.get('/api/placas/:placa/historial', (req, res) => {
+    db.query(
+        `SELECT id, campo, valor_ant, valor_nuevo, usuario, ip, fecha
+         FROM placa_auditoria
+         WHERE placa = ?
+         ORDER BY fecha DESC
+         LIMIT 100`,
+        [req.params.placa],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
 });
 
 // ============================================================
@@ -3646,7 +3722,7 @@ app.post('/api/almacen/inventario', (req, res) => {
              proveedor_id,marca,observaciones,
              codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
              ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, moneda||'PEN',
              parseFloat(costo_referencial)||0,
              proveedor_id||null, marca||null, observaciones||null,
@@ -3700,28 +3776,80 @@ app.delete('/api/almacen/inventario/:id', (req, res) => {
     });
 });
 
-// Upload imagen de artículo
+// Upload imagen de artículo → Cloudinary
 app.post('/api/almacen/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
-    const url = '/uploads/inventario/' + req.file.filename;
-    db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true, url });
+    const publicId = 'inventario/' + req.params.id;
+    // Eliminar imagen anterior si existía (ignorar error)
+    cloudinary.uploader.destroy(publicId, { invalidate: true }, () => {});
+    // Subir desde buffer en memoria
+    const uploadStream = cloudinary.uploader.upload_stream(
+        { public_id: publicId, overwrite: true, invalidate: true },
+        (error, result) => {
+            if (error) return res.status(500).json({ error: error.message });
+            const url = result.secure_url;
+            db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, imagen_url: url });
+            });
+        }
+    );
+    uploadStream.end(req.file.buffer);
+});
+
+// Eliminar imagen de artículo → Cloudinary
+app.delete('/api/almacen/inventario/:id/imagen', (req, res) => {
+    const publicId = 'inventario/' + req.params.id;
+    cloudinary.uploader.destroy(publicId, { invalidate: true }, (error) => {
+        if (error) console.error('Cloudinary destroy error:', error.message);
+        db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
     });
 });
 
-// Eliminar imagen de artículo
-app.delete('/api/almacen/inventario/:id/imagen', (req, res) => {
-    db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], (err, rows) => {
+// Regularizar stock físico (autocontrol)
+app.post('/api/almacen/inventario/:id/regularizar', (req, res) => {
+    const { stock_fisico, motivo, usuario } = req.body;
+    const id = req.params.id;
+    if (stock_fisico == null || isNaN(parseFloat(stock_fisico))) {
+        return res.status(400).json({ error: 'stock_fisico requerido' });
+    }
+    const stockVal = parseFloat(stock_fisico);
+    const fechaHoy = new Date().toISOString().split('T')[0];
+
+    // Obtener stock virtual actual para registrar en observaciones
+    db.query(`SELECT
+        COALESCE(i.stock_regularizado,0)
+        + COALESCE((SELECT SUM(d.cantidad) FROM almacen_entradas_det d
+                    JOIN almacen_entradas e ON e.id=d.entrada_id
+                    WHERE d.inventario_id=i.id
+                    AND (i.fecha_regularizacion IS NULL OR e.fecha >= i.fecha_regularizacion)),0)
+        - COALESCE((SELECT SUM(d.cantidad) FROM almacen_salidas_det d
+                    JOIN almacen_salidas s ON s.id=d.salida_id
+                    WHERE d.inventario_id=i.id
+                    AND (i.fecha_regularizacion IS NULL OR s.fecha >= i.fecha_regularizacion)),0)
+        AS stock_virtual,
+        i.stock_regularizado AS stock_ant,
+        i.fecha_regularizacion AS fecha_reg_ant
+        FROM inventario i WHERE i.id=?`, [id], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        const imgUrl = rows[0]?.imagen_url;
-        if (imgUrl && imgUrl.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, imgUrl);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-        db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (e2) => {
-            if (e2) return res.status(500).json({ error: e2.message });
-            res.json({ ok: true });
+        const stockVirtual = parseFloat(rows[0]?.stock_virtual || 0);
+        const stockAnt     = parseFloat(rows[0]?.stock_ant || 0);
+
+        const obsAudit = `Regularización: virtual=${stockVirtual.toFixed(2)} → físico=${stockVal.toFixed(2)}` +
+                         (motivo ? ` | Motivo: ${motivo}` : '') +
+                         ` | Usuario: ${usuario || 'sistema'} | Fecha: ${fechaHoy}`;
+
+        db.query(`UPDATE inventario SET stock_regularizado=?, fecha_regularizacion=? WHERE id=?`,
+            [stockVal, fechaHoy, id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            // Registrar en observaciones de auditoría (append)
+            db.query(`UPDATE inventario SET observaciones = CONCAT(COALESCE(observaciones,''), ?)
+                      WHERE id=?`,
+                ['\n[REG ' + fechaHoy + '] ' + obsAudit, id], () => {});
+            res.json({ ok: true, fecha_regularizacion: fechaHoy, stock_anterior: stockAnt, stock_nuevo: stockVal });
         });
     });
 });
@@ -3750,20 +3878,25 @@ app.post('/api/almacen/inventario/importar', async (req, res) => {
             await new Promise((resolve, reject) => {
                 _generarCodigoAlmacen('INV', null, (err, id) => {
                     if (err) return reject(err);
+                    const cantInicial = parseFloat(f.cantidad_inicial) || 0;
+                    const stockReg    = cantInicial > 0 ? cantInicial : 0;
+                    const fechaReg    = cantInicial > 0 ? new Date().toISOString().split('T')[0] : null;
                     db.query(`INSERT INTO inventario
-                        (id,descripcion,articulo,codigo_articulo,familia,unidad,moneda,costo_referencial,
+                        (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,
                          marca,observaciones,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
-                         ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                         ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras,
+                         stock_regularizado,fecha_regularizacion)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                         [id, descGenerada||'Sin nombre',
-                         f.articulo||null, f.codigo_articulo||null, f.familia||null, f.unidad||null,
+                         f.articulo||null, f.codigo_articulo||null, f.familia||null, f.almacen||null, f.unidad||null,
                          f.moneda||'PEN', parseFloat(f.costo_referencial)||0,
                          f.marca||null, f.observaciones||null,
                          marcaUnidadJson, f.sistema||null, f.sub_sistema||null,
                          f.tipo||null, f.sub_tipo||null, f.ubicacion||null,
                          f.anaquel!=null?parseFloat(f.anaquel):null,
                          parseFloat(f.stock_min)||0, parseFloat(f.stock_max)||0,
-                         f.estado_art||'Activo', f.codigo_barras||null],
+                         f.estado_art||'Activo', f.codigo_barras||null,
+                         stockReg, fechaReg],
                         (err2) => { if (err2) return reject(err2); insertados++; resolve(); });
                 });
             });

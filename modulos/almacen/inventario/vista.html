@@ -229,30 +229,35 @@
                   </div>
                 </div>
                 <div class="col-md-4">
-                  <label class="fw-semibold small">Ubicación en Almacén</label>
-                  <input type="text" class="form-control" id="inv-f-ubicacion" list="inv-list-ubicaciones" placeholder="Ej: Almacén Principal">
-                  <datalist id="inv-list-ubicaciones">
-                    <option value="Almacén Principal">
-                    <option value="Almacén de Filtros">
-                    <option value="Almacén de Neumáticos">
-                    <option value="Almacén de Lubricantes">
+                  <label class="fw-semibold small">Almacén</label>
+                  <input type="text" class="form-control" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: Principal, Neumáticos, Llantas">
+                  <datalist id="inv-list-almacenes">
+                    <option value="Principal">
+                    <option value="Neumáticos">
+                    <option value="Llantas">
+                    <option value="Lubricantes">
+                    <option value="Filtros">
                   </datalist>
                 </div>
 
-                <!-- Anaquel + Stock Min + Stock Max + Código Barras -->
-                <div class="col-md-3">
-                  <label class="fw-semibold small">Anaquel / Estante</label>
+                <!-- Ubicación/Estante + Anaquel + Stock Min + Stock Max + Código Barras -->
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Ubicación / Estante</label>
+                  <input type="text" class="form-control" id="inv-f-ubicacion" placeholder="Ej: Estante B3, Cajón 2">
+                </div>
+                <div class="col-md-2">
+                  <label class="fw-semibold small">Anaquel Nro.</label>
                   <input type="number" class="form-control" id="inv-f-anaquel" step="0.01" placeholder="Ej: 3.5">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="fw-semibold small">Stock Mínimo</label>
                   <input type="number" class="form-control" id="inv-f-stock-min" step="0.0001" placeholder="0">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="fw-semibold small">Stock Máximo</label>
                   <input type="number" class="form-control" id="inv-f-stock-max" step="0.0001" placeholder="0">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="fw-semibold small">Código de Barras</label>
                   <input type="text" class="form-control" id="inv-f-codigo-barras" placeholder="EAN-13 / QR...">
                 </div>
@@ -327,8 +332,54 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" id="modal-det-btn-regularizar" class="btn btn-outline-warning"><i class="bi bi-sliders me-1"></i>Regularizar Stock</button>
         <button type="button" id="modal-det-btn-editar" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Editar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL REGULARIZADOR DE STOCK ════════════════════════════════ -->
+<div class="modal fade" id="modal-inv-regularizar" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-1 text-warning"></i>Regularizar Stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-inv-regularizar" onsubmit="window.guardarRegularizacion(event)">
+        <input type="hidden" id="reg-item-id">
+        <div class="modal-body">
+          <div class="alert alert-warning py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Establece el stock físico real. <strong>No afecta entradas/salidas anteriores.</strong>
+            El nuevo stock base reemplaza al virtual desde hoy.
+          </div>
+          <div class="mb-3">
+            <label class="fw-semibold small">Artículo</label>
+            <p id="reg-item-desc" class="fw-bold mb-0 small text-truncate" style="max-width:100%;color:var(--text);"></p>
+          </div>
+          <div class="mb-3">
+            <label class="fw-semibold small">Stock virtual actual</label>
+            <p id="reg-stock-virtual" class="fs-5 fw-bold mb-0" style="color:var(--text);"></p>
+          </div>
+          <div class="mb-3">
+            <label class="fw-semibold small text-danger">Stock físico real <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-lg fw-bold" id="reg-stock-fisico"
+              min="0" step="0.0001" placeholder="0" required
+              style="font-size:1.4rem;text-align:center;">
+            <div class="form-text">Ingresa el conteo físico exacto de unidades en almacén.</div>
+          </div>
+          <div class="mb-1">
+            <label class="fw-semibold small">Motivo / Observación <span class="text-muted fw-normal">(opcional)</span></label>
+            <textarea class="form-control" id="reg-motivo" rows="2" placeholder="Ej: Conteo físico mayo 2025, descarte por vencimiento…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning text-dark fw-semibold"><i class="bi bi-check-lg me-1"></i>Guardar Regularización</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

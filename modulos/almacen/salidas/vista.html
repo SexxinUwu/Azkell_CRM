@@ -30,7 +30,12 @@
       <option value="Vehiculo">Vehículo</option>
       <option value="Personal">Personal</option>
     </select>
-    <input type="month" id="sal-fil-mes" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()">
+    <div class="d-flex align-items-center gap-1">
+      <input type="date" id="sal-fil-desde" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()" title="Desde">
+      <span class="text-muted small">—</span>
+      <input type="date" id="sal-fil-hasta" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()" title="Hasta">
+      <button class="btn btn-xs btn-outline-secondary" onclick="window._salLimpiarFechas()" title="Limpiar fechas"><i class="bi bi-x-lg"></i></button>
+    </div>
     <span id="sal-contador" class="text-muted small ms-auto"></span>
   </div>
 
