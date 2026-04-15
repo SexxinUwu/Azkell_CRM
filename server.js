@@ -2979,6 +2979,522 @@ app.delete('/api/requerimientos-planificacion/:id', (req, res) => {
     });
 });
 
+// ── Helper endpoints para formularios de Almacén ─────────────────
+app.get('/api/conductores-lista', (req, res) => {
+    db.query("SELECT id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+app.get('/api/placas-lista', (req, res) => {
+    db.query("SELECT placa, cliente FROM placas ORDER BY placa", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// ============================================================
+// MÓDULO ALMACÉN — Tablas (fire-and-forget al arrancar)
+// ============================================================
+db.query(
+    `CREATE TABLE IF NOT EXISTS configuracion_almacen (
+        clave       VARCHAR(50)  NOT NULL PRIMARY KEY,
+        valor       VARCHAR(500) NOT NULL DEFAULT '',
+        descripcion VARCHAR(200)
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE configuracion_almacen:', e.message);
+        else {
+            console.log('✅ Tabla configuracion_almacen verificada');
+            db.query(`INSERT IGNORE INTO configuracion_almacen (clave,valor,descripcion) VALUES ('tipo_cambio','3.70','Tipo de cambio USD → PEN')`,
+                (e2) => { if (e2) console.warn('INSERT tipo_cambio:', e2.message); });
+        }
+    }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS proveedores_inv (
+        id               VARCHAR(20)  NOT NULL PRIMARY KEY,
+        nombre           VARCHAR(200) NOT NULL,
+        razon_social     VARCHAR(200),
+        tipo_documento   ENUM('RUC','DNI','CE','Otro') DEFAULT 'RUC',
+        numero_documento VARCHAR(20),
+        telefono         VARCHAR(30),
+        email            VARCHAR(150),
+        direccion        TEXT,
+        estado           ENUM('Activo','Inactivo') DEFAULT 'Activo',
+        observaciones    TEXT,
+        created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => { if (e) console.warn('CREATE proveedores_inv:', e.message); else console.log('✅ Tabla proveedores_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS proveedor_marcas_inv (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id VARCHAR(20) NOT NULL,
+        marca        VARCHAR(100) NOT NULL,
+        INDEX idx_prov (proveedor_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE proveedor_marcas_inv:', e.message); else console.log('✅ Tabla proveedor_marcas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS inventario (
+        id                   VARCHAR(20)  NOT NULL PRIMARY KEY,
+        descripcion          VARCHAR(400) NOT NULL,
+        familia              VARCHAR(100),
+        sub_familia          VARCHAR(100),
+        almacen              VARCHAR(100),
+        unidad               VARCHAR(30),
+        moneda               ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        costo_referencial    DECIMAL(14,4) NOT NULL DEFAULT 0,
+        stock_regularizado   DECIMAL(14,4) NOT NULL DEFAULT 0,
+        fecha_regularizacion DATE,
+        proveedor_id         VARCHAR(20),
+        marca                VARCHAR(100),
+        activo               TINYINT(1) NOT NULL DEFAULT 1,
+        observaciones        TEXT,
+        created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_familia (familia),
+        INDEX idx_almacen (almacen),
+        INDEX idx_activo  (activo)
+    )`,
+    (e) => { if (e) console.warn('CREATE inventario:', e.message); else console.log('✅ Tabla inventario verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS entradas_inv (
+        id                   VARCHAR(20) NOT NULL PRIMARY KEY,
+        fecha                DATE        NOT NULL,
+        proveedor_id         VARCHAR(20),
+        proveedor_nombre     VARCHAR(200),
+        documento_referencia VARCHAR(100),
+        moneda               ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        tipo_cambio          DECIMAL(8,4),
+        total_pen            DECIMAL(14,4) NOT NULL DEFAULT 0,
+        observaciones        TEXT,
+        creado_por           VARCHAR(100),
+        created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+        INDEX idx_fecha (fecha)
+    )`,
+    (e) => { if (e) console.warn('CREATE entradas_inv:', e.message); else console.log('✅ Tabla entradas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_entradas_inv (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        entrada_id     VARCHAR(20)  NOT NULL,
+        inventario_id  VARCHAR(20)  NOT NULL,
+        descripcion    VARCHAR(400),
+        cantidad       DECIMAL(14,4) NOT NULL,
+        costo_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        importe        DECIMAL(14,4) NOT NULL DEFAULT 0,
+        INDEX idx_entrada (entrada_id),
+        INDEX idx_item    (inventario_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE detalle_entradas_inv:', e.message); else console.log('✅ Tabla detalle_entradas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS salidas_inv (
+        id             VARCHAR(20)  NOT NULL PRIMARY KEY,
+        fecha          DATE         NOT NULL,
+        tipo_destino   ENUM('Vehiculo','Personal') NOT NULL,
+        placa          VARCHAR(20),
+        responsable    VARCHAR(150),
+        responsable_id INT,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        tipo_cambio    DECIMAL(8,4),
+        total_pen      DECIMAL(14,4) NOT NULL DEFAULT 0,
+        observaciones  TEXT,
+        creado_por     VARCHAR(100),
+        created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+        INDEX idx_fecha (fecha),
+        INDEX idx_placa (placa)
+    )`,
+    (e) => { if (e) console.warn('CREATE salidas_inv:', e.message); else console.log('✅ Tabla salidas_inv verificada'); }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS detalle_salidas_inv (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        salida_id      VARCHAR(20)  NOT NULL,
+        inventario_id  VARCHAR(20)  NOT NULL,
+        descripcion    VARCHAR(400),
+        cantidad       DECIMAL(14,4) NOT NULL,
+        costo_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
+        moneda         ENUM('PEN','USD') NOT NULL DEFAULT 'PEN',
+        importe        DECIMAL(14,4) NOT NULL DEFAULT 0,
+        INDEX idx_salida (salida_id),
+        INDEX idx_item   (inventario_id)
+    )`,
+    (e) => { if (e) console.warn('CREATE detalle_salidas_inv:', e.message); else console.log('✅ Tabla detalle_salidas_inv verificada'); }
+);
+
+// ── Helper: generar código secuencial para Almacén ───────────────────────
+function _generarCodigoAlmacen(tipo, anio, cb) {
+    const tablas = { INV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', PROV: 'proveedores_inv' };
+    const tabla = tablas[tipo];
+    const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
+    db.query(`SELECT MAX(id) AS max_id FROM \`${tabla}\` WHERE id LIKE ?`, [prefix + '%'], (err, rows) => {
+        if (err) return cb(err);
+        let num = 1;
+        const last = rows[0]?.max_id;
+        if (last) { const p = last.split('-'); num = parseInt(p[p.length - 1], 10) + 1; }
+        const pad = anio ? 5 : 4;
+        cb(null, prefix + String(num).padStart(pad, '0'));
+    });
+}
+
+// ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
+function _calcularTotalPen(detalles, tc) {
+    return detalles.reduce((acc, d) => {
+        const imp = parseFloat(d.importe) || 0;
+        return acc + (d.moneda === 'USD' ? imp * parseFloat(tc || 1) : imp);
+    }, 0);
+}
+
+// ============================================================
+// ALMACÉN — Configuración
+// ============================================================
+app.get('/api/almacen/configuracion', (req, res) => {
+    db.query('SELECT clave, valor FROM configuracion_almacen', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const obj = {};
+        rows.forEach(r => { obj[r.clave] = r.valor; });
+        res.json(obj);
+    });
+});
+app.put('/api/almacen/configuracion', (req, res) => {
+    const entries = Object.entries(req.body);
+    if (!entries.length) return res.json({ ok: true });
+    const vals = entries.map(([k, v]) => [k, String(v)]);
+    db.query('INSERT INTO configuracion_almacen (clave,valor) VALUES ? ON DUPLICATE KEY UPDATE valor=VALUES(valor)',
+        [vals], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+
+// ============================================================
+// ALMACÉN — Proveedores
+// ============================================================
+app.get('/api/almacen/proveedores', (req, res) => {
+    db.query('SELECT p.*, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR ", ") AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id ORDER BY p.nombre', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+app.post('/api/almacen/proveedores', (req, res) => {
+    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas } = req.body;
+    const anio = new Date().getFullYear();
+    _generarCodigoAlmacen('PROV', null, (err, id) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query('INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [id, nombre, razon_social||null, tipo_documento||'RUC', numero_documento||null, telefono||null, email||null, direccion||null, estado||'Activo', observaciones||null],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (marcas && marcas.length) {
+                    const mVals = marcas.map(m => [id, m]);
+                    db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
+                }
+                res.json({ ok: true, id });
+            });
+    });
+});
+app.put('/api/almacen/proveedores/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas } = req.body;
+    db.query('UPDATE proveedores_inv SET nombre=?,razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
+        [nombre, razon_social||null, tipo_documento||'RUC', numero_documento||null, telefono||null, email||null, direccion||null, estado||'Activo', observaciones||null, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [id], () => {
+                if (marcas && marcas.length) {
+                    const mVals = marcas.map(m => [id, m]);
+                    db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
+                }
+                res.json({ ok: true });
+            });
+        });
+});
+app.delete('/api/almacen/proveedores/:id', (req, res) => {
+    db.query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Inventario (Catálogo)
+// ============================================================
+const _stockSQL = `
+  SELECT i.*,
+    ROUND(
+      COALESCE(i.stock_regularizado,0)
+      + COALESCE((SELECT SUM(d.cantidad) FROM detalle_entradas_inv d
+                  JOIN entradas_inv e ON e.id=d.entrada_id
+                  WHERE d.inventario_id=i.id
+                    AND (i.fecha_regularizacion IS NULL OR e.fecha >= i.fecha_regularizacion)),0)
+      - COALESCE((SELECT SUM(d.cantidad) FROM detalle_salidas_inv d
+                  JOIN salidas_inv s ON s.id=d.salida_id
+                  WHERE d.inventario_id=i.id
+                    AND (i.fecha_regularizacion IS NULL OR s.fecha >= i.fecha_regularizacion)),0)
+    , 4) AS stock_actual
+  FROM inventario i
+  WHERE i.activo=1
+  ORDER BY i.id`;
+
+app.get('/api/almacen/inventario', (req, res) => {
+    db.query(_stockSQL, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+app.post('/api/almacen/inventario', (req, res) => {
+    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones } = req.body;
+    _generarCodigoAlmacen('INV', null, (err, id) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query('INSERT INTO inventario (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,proveedor_id,marca,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [id, descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
+             parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
+             fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ ok: true, id });
+            });
+    });
+});
+app.put('/api/almacen/inventario/:id', (req, res) => {
+    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones, activo } = req.body;
+    db.query('UPDATE inventario SET descripcion=?,familia=?,sub_familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,stock_regularizado=?,fecha_regularizacion=?,proveedor_id=?,marca=?,observaciones=?,activo=? WHERE id=?',
+        [descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
+         parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
+         fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null,
+         activo != null ? activo : 1, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+app.delete('/api/almacen/inventario/:id', (req, res) => {
+    db.query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// Import masivo desde Excel
+app.post('/api/almacen/inventario/importar', async (req, res) => {
+    const { filas } = req.body; // [{descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,marca,observaciones}]
+    if (!filas || !filas.length) return res.json({ ok: true, insertados: 0 });
+    let insertados = 0;
+    const errors = [];
+    for (let i = 0; i < filas.length; i++) {
+        const f = filas[i];
+        if (!f.descripcion) { errors.push(`Fila ${i+2}: falta descripción`); continue; }
+        try {
+            await new Promise((resolve, reject) => {
+                _generarCodigoAlmacen('INV', null, (err, id) => {
+                    if (err) return reject(err);
+                    db.query('INSERT INTO inventario (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,marca,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                        [id, f.descripcion, f.familia||null, f.sub_familia||null, f.almacen||null, f.unidad||null,
+                         f.moneda||'PEN', parseFloat(f.costo_referencial)||0, parseFloat(f.stock_regularizado)||0,
+                         f.fecha_regularizacion||null, f.marca||null, f.observaciones||null],
+                        (err2) => { if (err2) return reject(err2); insertados++; resolve(); });
+                });
+            });
+        } catch(e) { errors.push(`Fila ${i+2}: ${e.message}`); }
+    }
+    res.json({ ok: true, insertados, errores: errors });
+});
+
+// ============================================================
+// ALMACÉN — Entradas
+// ============================================================
+app.get('/api/almacen/entradas', (req, res) => {
+    db.query(`SELECT e.*, GROUP_CONCAT(CONCAT(d.descripcion,'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
+              FROM entradas_inv e
+              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
+              GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        rows.forEach(r => {
+            r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
+                const [desc, cant, cu, mon, invId] = s.split('|');
+                return { descripcion: desc, cantidad: parseFloat(cant), costo_unitario: parseFloat(cu), moneda: mon, inventario_id: invId };
+            }) : [];
+            delete r.items_raw;
+        });
+        res.json(rows);
+    });
+});
+app.post('/api/almacen/entradas', (req, res) => {
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
+    const anio = new Date(fecha || Date.now()).getFullYear();
+    const tc = parseFloat(tipo_cambio) || 1;
+    _generarCodigoAlmacen('ENT', anio, (err, id) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const total_pen = _calcularTotalPen(items || [], tc);
+        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,creado_por) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
+             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (items && items.length) {
+                    const dVals = items.map(d => [id, d.inventario_id, d.descripcion||null,
+                        parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
+                        parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))]);
+                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
+                }
+                res.json({ ok: true, id });
+            });
+    });
+});
+app.delete('/api/almacen/entradas/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ ok: true });
+        });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Salidas
+// ============================================================
+app.get('/api/almacen/salidas', (req, res) => {
+    db.query(`SELECT s.*, GROUP_CONCAT(CONCAT(d.descripcion,'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
+              FROM salidas_inv s
+              LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
+              GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        rows.forEach(r => {
+            r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
+                const [desc, cant, cu, mon, invId] = s.split('|');
+                return { descripcion: desc, cantidad: parseFloat(cant), costo_unitario: parseFloat(cu), moneda: mon, inventario_id: invId };
+            }) : [];
+            delete r.items_raw;
+        });
+        res.json(rows);
+    });
+});
+app.post('/api/almacen/salidas', (req, res) => {
+    const { fecha, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
+    const anio = new Date(fecha || Date.now()).getFullYear();
+    const tc = parseFloat(tipo_cambio) || 1;
+    _generarCodigoAlmacen('SAL', anio, (err, id) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const total_pen = _calcularTotalPen(items || [], tc);
+        db.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [id, fecha||new Date().toISOString().split('T')[0], tipo_destino, placa||null, responsable||null,
+             responsable_id||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (items && items.length) {
+                    const dVals = items.map(d => [id, d.inventario_id, d.descripcion||null,
+                        parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
+                        parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))]);
+                    db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
+                }
+                res.json({ ok: true, id });
+            });
+    });
+});
+app.delete('/api/almacen/salidas/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ ok: true });
+        });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Kardex (movimientos por artículo)
+// ============================================================
+app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
+    const id = req.params.inventario_id;
+    db.query(`
+        SELECT 'Entrada' AS tipo, e.fecha, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+        FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
+        WHERE d.inventario_id=?
+        UNION ALL
+        SELECT 'Salida' AS tipo, s.fecha, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+        FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
+        WHERE d.inventario_id=?
+        ORDER BY fecha ASC, doc_id ASC
+    `, [id, id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Calcular saldo acumulado
+        db.query('SELECT stock_regularizado, fecha_regularizacion FROM inventario WHERE id=?', [id], (e2, inv) => {
+            if (e2) return res.status(500).json({ error: e2.message });
+            const base = parseFloat(inv[0]?.stock_regularizado || 0);
+            const regDate = inv[0]?.fecha_regularizacion ? new Date(inv[0].fecha_regularizacion) : null;
+            let saldo = base;
+            rows.forEach(r => {
+                const fecha = new Date(r.fecha);
+                if (regDate && fecha < regDate) { r.saldo = null; return; }
+                if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad);
+                else saldo -= parseFloat(r.cantidad);
+                r.saldo = parseFloat(saldo.toFixed(4));
+            });
+            res.json({ stock_base: base, fecha_regularizacion: inv[0]?.fecha_regularizacion, movimientos: rows });
+        });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Costos (análisis)
+// ============================================================
+app.get('/api/almacen/costos', (req, res) => {
+    const { desde, hasta } = req.query;
+    const conds = [];
+    const params = [];
+    if (desde) { conds.push('s.fecha >= ?'); params.push(desde); }
+    if (hasta)  { conds.push('s.fecha <= ?'); params.push(hasta); }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    Promise.all([
+        // Por familia
+        new Promise((resolve, reject) => {
+            db.query(`SELECT COALESCE(i.familia,'Sin familia') AS familia, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                      FROM detalle_salidas_inv d
+                      JOIN salidas_inv s ON s.id=d.salida_id
+                      JOIN inventario i ON i.id=d.inventario_id
+                      ${where}
+                      GROUP BY familia ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
+        }),
+        // Por almacen
+        new Promise((resolve, reject) => {
+            db.query(`SELECT COALESCE(i.almacen,'Sin almacén') AS almacen, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                      FROM detalle_salidas_inv d
+                      JOIN salidas_inv s ON s.id=d.salida_id
+                      JOIN inventario i ON i.id=d.inventario_id
+                      ${where}
+                      GROUP BY almacen ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
+        }),
+        // Totales (entradas vs salidas)
+        new Promise((resolve, reject) => {
+            const p2 = [...params, ...params];
+            db.query(`SELECT
+                        (SELECT SUM(total_pen) FROM entradas_inv e ${conds.length ? 'WHERE e.fecha >= ? AND e.fecha <= ?' : ''}) AS total_entradas,
+                        (SELECT SUM(total_pen) FROM salidas_inv s ${conds.length ? 'WHERE s.fecha >= ? AND s.fecha <= ?' : ''}) AS total_salidas`,
+                conds.length ? [desde, hasta, desde, hasta] : [], (e, r) => e ? reject(e) : resolve(r[0]));
+        }),
+        // Top 10 artículos más consumidos
+        new Promise((resolve, reject) => {
+            db.query(`SELECT i.id, i.descripcion, i.familia, SUM(d.cantidad) AS cantidad_total, SUM(d.importe) AS costo_total, i.unidad
+                      FROM detalle_salidas_inv d
+                      JOIN salidas_inv s ON s.id=d.salida_id
+                      JOIN inventario i ON i.id=d.inventario_id
+                      ${where}
+                      GROUP BY i.id ORDER BY costo_total DESC LIMIT 20`, params, (e, r) => e ? reject(e) : resolve(r));
+        })
+    ]).then(([porFamilia, porAlmacen, totales, topItems]) => {
+        res.json({ porFamilia, porAlmacen, totales, topItems });
+    }).catch(err => res.status(500).json({ error: err.message }));
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');

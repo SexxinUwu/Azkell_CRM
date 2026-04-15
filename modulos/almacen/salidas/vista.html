@@ -1,0 +1,152 @@
+<!-- Módulo Almacén / Salidas — SPA Aislado -->
+<div id="mod-salidas" class="modulo-wrapper d-flex flex-column h-100">
+
+  <!-- Cabecera -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Salidas de Almacén
+      </h2>
+      <p class="text-muted small mb-0">Registro de salida de artículos</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarSalidas()" title="Actualizar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-success" onclick="window.exportarSalidasExcel()" title="Exportar Excel">
+        <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Exportar</span>
+      </button>
+      <button class="btn btn-sm btn-danger" onclick="window.abrirModalSalida()">
+        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Salida</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+    <input type="text" id="sal-buscar" class="form-control form-control-sm" style="max-width:240px;" placeholder="Código, placa, responsable…" oninput="window.filtrarSalidas()">
+    <select id="sal-fil-tipo" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarSalidas()">
+      <option value="">Todos</option>
+      <option value="Vehiculo">Vehículo</option>
+      <option value="Personal">Personal</option>
+    </select>
+    <input type="month" id="sal-fil-mes" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()">
+    <span id="sal-contador" class="text-muted small ms-auto"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
+    <table class="table table-custom table-hover m-0" id="tabla-salidas">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Placa / Destino</th>
+          <th>Responsable</th>
+          <th>Artículos</th>
+          <th class="text-end">Total</th>
+          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-salidas">
+        <tr><td colspan="8" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="sal-paginacion" class="mt-2 px-1"></div>
+</div>
+
+<!-- ═══ MODAL NUEVA SALIDA ════════════════════════════════════════ -->
+<div class="modal fade" id="modal-salida" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Nueva Salida de Artículos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- Cabecera del documento -->
+          <div class="col-md-3">
+            <label class="fw-semibold small">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="sal-f-fecha">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Tipo de Destino <span class="text-danger">*</span></label>
+            <select class="form-select" id="sal-f-tipo" onchange="window._salToggleDestino()">
+              <option value="">Seleccionar…</option>
+              <option value="Vehiculo">Vehículo</option>
+              <option value="Personal">Personal</option>
+            </select>
+          </div>
+          <div class="col-md-3" id="sal-row-placa">
+            <label class="fw-semibold small">Placa</label>
+            <select class="form-select" id="sal-f-placa">
+              <option value="">Seleccionar placa…</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Responsable</label>
+            <select class="form-select" id="sal-f-responsable">
+              <option value="">Seleccionar responsable…</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Moneda</label>
+            <select class="form-select" id="sal-f-moneda" onchange="window._salActualizarTC()">
+              <option value="PEN">PEN (S/)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Tipo de Cambio</label>
+            <input type="number" class="form-control" id="sal-f-tc" step="0.001" placeholder="3.700">
+            <div class="form-text">Solo aplica si moneda = USD</div>
+          </div>
+          <div class="col-md-6">
+            <label class="fw-semibold small">Observaciones</label>
+            <input type="text" class="form-control" id="sal-f-obs" placeholder="Referencia, motivo de salida…">
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <!-- Grid de artículos -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-1"></i>Artículos</h6>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="window._salAgregarItem()">
+            <i class="bi bi-plus"></i> Agregar artículo
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered" id="tabla-sal-items">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width:260px;">Artículo</th>
+                <th style="width:90px;">Cantidad</th>
+                <th style="width:120px;">Costo Unit.</th>
+                <th style="width:110px;">Importe</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-sal-items"></tbody>
+            <tfoot>
+              <tr class="table-light fw-bold">
+                <td colspan="3" class="text-end">Total:</td>
+                <td id="sal-total-display" class="text-end">S/ 0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" onclick="window.guardarSalida()">
+          <i class="bi bi-save me-1"></i>Registrar Salida
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

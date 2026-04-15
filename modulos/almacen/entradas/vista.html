@@ -1,0 +1,140 @@
+<!-- Módulo Almacén / Entradas — SPA Aislado -->
+<div id="mod-entradas" class="modulo-wrapper d-flex flex-column h-100">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Entradas al Almacén
+      </h2>
+      <p class="text-muted small mb-0">Registro de ingreso de artículos / compras</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarEntradas()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Excel</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" onclick="window.exportarEntradasExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
+          <li><a class="dropdown-item" onclick="window.descargarPlantillaEntradas()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><label class="dropdown-item" style="cursor:pointer;"><i class="bi bi-upload me-2 text-warning"></i>Importar Excel<input type="file" id="inputFileEntradas" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelEntradas(event)"></label></li>
+        </ul>
+      </div>
+      <button class="btn btn-sm btn-success" onclick="window.abrirModalEntrada()">
+        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Entrada</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+    <input type="text" id="ent-buscar" class="form-control form-control-sm" style="max-width:240px;" placeholder="Código, proveedor, documento…" oninput="window.filtrarEntradas()">
+    <input type="month" id="ent-fil-mes" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarEntradas()">
+    <span id="ent-contador" class="text-muted small ms-auto"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
+    <table class="table table-custom table-hover m-0" id="tabla-entradas">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Fecha</th>
+          <th>Proveedor</th>
+          <th>Doc. Referencia</th>
+          <th>Artículos</th>
+          <th class="text-end">Total</th>
+          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-entradas">
+        <tr><td colspan="7" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="ent-paginacion" class="mt-2 px-1"></div>
+</div>
+
+<!-- ═══ MODAL NUEVA ENTRADA ═══════════════════════════════════════ -->
+<div class="modal fade" id="modal-entrada" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Nueva Entrada de Artículos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="fw-semibold small">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="ent-f-fecha">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Proveedor</label>
+            <select class="form-select" id="ent-f-proveedor">
+              <option value="">Sin proveedor / libre</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Proveedor (texto libre)</label>
+            <input type="text" class="form-control" id="ent-f-prov-nombre" placeholder="Si no está en la lista…">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Doc. Referencia</label>
+            <input type="text" class="form-control" id="ent-f-doc-ref" placeholder="Factura, guía, O/C…">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Moneda</label>
+            <select class="form-select" id="ent-f-moneda" onchange="window._entActualizarTC()">
+              <option value="PEN">PEN (S/)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-semibold small">Tipo de Cambio</label>
+            <input type="number" class="form-control" id="ent-f-tc" step="0.001" placeholder="3.700">
+          </div>
+          <div class="col-md-6">
+            <label class="fw-semibold small">Observaciones</label>
+            <input type="text" class="form-control" id="ent-f-obs" placeholder="Notas, condiciones de compra…">
+          </div>
+        </div>
+        <hr class="my-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-1"></i>Artículos</h6>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="window._entAgregarItem()">
+            <i class="bi bi-plus"></i> Agregar artículo
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered" id="tabla-ent-items">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width:260px;">Artículo</th>
+                <th style="width:90px;">Cantidad</th>
+                <th style="width:120px;">Costo Unit.</th>
+                <th style="width:110px;">Importe</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ent-items"></tbody>
+            <tfoot>
+              <tr class="table-light fw-bold">
+                <td colspan="3" class="text-end">Total:</td>
+                <td id="ent-total-display" class="text-end">S/ 0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" onclick="window.guardarEntrada()">
+          <i class="bi bi-save me-1"></i>Registrar Entrada
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
