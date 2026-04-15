@@ -3,16 +3,26 @@
 // Convención: window.var = window.var || default (no let/const globales)
 // ================================================================
 
-window._invData        = window._invData        || [];
-window._invFiltrados   = window._invFiltrados   || [];
-window._invPagActual   = window._invPagActual   || 1;
-window._invProveedores = window._invProveedores || [];
-var _INV_POR_PAG = 24; // múltiplo de 4 para grids
+window._invData              = window._invData              || [];
+window._invFiltrados         = window._invFiltrados         || [];
+window._invPagActual         = window._invPagActual         || 1;
+window._invProveedores       = window._invProveedores       || [];
+window._invMarcasSeleccionadas = window._invMarcasSeleccionadas || [];
+window._invMarcasPlacas      = window._invMarcasPlacas      || [];
+var _INV_POR_PAG = 24;
+
+window._invSistemasData = window._invSistemasData || [];
+window._invUnidadesData = window._invUnidadesData || [];
+window._invFamiliasData = window._invFamiliasData || [];
 
 window.init_inventario = function() {
     window._invPagActual = 1;
     window.cargarInventario();
-    window._cargarProveedoresInv();
+    window._invCargarMarcasPlacas();
+    window._invCargarUnidades();
+    window._invCargarSistemas();
+    window._invCargarFamilias();
+    window._invCargarMarcasFabricante();
 };
 
 // ── Cargar datos ─────────────────────────────────────────────────
@@ -51,35 +61,202 @@ window._cargarProveedoresInv = function() {
         .catch(function() {});
 };
 
-window._invPoblarFiltros = function(data) {
-    var familias = {}, almacenes = {};
-    data.forEach(function(d) {
-        if (d.familia) familias[d.familia] = 1;
-        if (d.almacen) almacenes[d.almacen] = 1;
+window._invCargarMarcasPlacas = function() {
+    fetch('/api/almacen/marcas-placas')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._invMarcasPlacas = data || [];
+        })
+        .catch(function() {});
+};
+
+window._invCargarUnidades = function() {
+    fetch('/api/almacen/unidades')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._invUnidadesData = data || [];
+            var sel = document.getElementById('inv-f-unidad');
+            if (!sel) return;
+            var prev = sel.value;
+            sel.innerHTML = '<option value="">— Sin unidad —</option>' +
+                data.map(function(u) {
+                    return '<option value="' + _invEsc(u.nombre) + '">' + _invEsc(u.nombre) + '</option>';
+                }).join('');
+            if (prev) sel.value = prev;
+        })
+        .catch(function() {});
+};
+
+window._invCargarSistemas = function() {
+    fetch('/api/almacen/sistemas')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._invSistemasData = data || [];
+            var sel = document.getElementById('inv-f-sistema');
+            if (!sel) return;
+            var prev = sel.value;
+            sel.innerHTML = '<option value="">— Sin sistema —</option>' +
+                data.map(function(s) {
+                    return '<option value="' + _invEsc(s.nombre) + '">' + _invEsc(s.nombre) + '</option>';
+                }).join('');
+            if (prev) { sel.value = prev; window._invFiltrarSubSistemas(); }
+            // Poblar también el filtro en la barra
+            var filSis = document.getElementById('inv-fil-sistema');
+            if (filSis) {
+                var prevF = filSis.value;
+                filSis.innerHTML = '<option value="">Todos los sistemas</option>' +
+                    data.map(function(s) {
+                        return '<option value="' + _invEsc(s.nombre) + '"' + (s.nombre === prevF ? ' selected' : '') + '>' + _invEsc(s.nombre) + '</option>';
+                    }).join('');
+            }
+        })
+        .catch(function() {});
+};
+
+window._invFiltrarSubSistemas = function() {
+    var sis  = ((document.getElementById('inv-f-sistema') || {}).value || '');
+    var sel  = document.getElementById('inv-f-sub-sistema');
+    if (!sel) return;
+    var prev = sel.value;
+    var subs = (window._invSistemasData || []).filter(function(s) { return s.nombre === sis; });
+    var subsNombres = subs.length && subs[0].sub_sistemas ? subs[0].sub_sistemas : [];
+    sel.innerHTML = '<option value="">— Sin sub-sistema —</option>' +
+        subsNombres.map(function(n) {
+            return '<option value="' + _invEsc(n) + '">' + _invEsc(n) + '</option>';
+        }).join('');
+    if (prev) sel.value = prev;
+};
+
+window._invCargarFamilias = function() {
+    fetch('/api/almacen/familias')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._invFamiliasData = data || [];
+            var sel = document.getElementById('inv-f-familia');
+            if (sel) {
+                var prev = sel.value;
+                sel.innerHTML = '<option value="">— Sin familia —</option>' +
+                    data.map(function(f) {
+                        return '<option value="' + _invEsc(f.nombre) + '">' + _invEsc(f.nombre) + '</option>';
+                    }).join('');
+                if (prev) sel.value = prev;
+            }
+            var filFam = document.getElementById('inv-fil-familia');
+            if (filFam) {
+                var prevF = filFam.value;
+                filFam.innerHTML = '<option value="">Todas las familias</option>' +
+                    data.map(function(f) {
+                        return '<option value="' + _invEsc(f.nombre) + '"' + (f.nombre === prevF ? ' selected' : '') + '>' + _invEsc(f.nombre) + '</option>';
+                    }).join('');
+            }
+        })
+        .catch(function() {});
+};
+
+window._invCargarMarcasFabricante = function() {
+    fetch('/api/almacen/marcas')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._invMarcasFabData = data || [];
+            var sel = document.getElementById('inv-f-marca');
+            if (sel) {
+                var prev = sel.value;
+                sel.innerHTML = '<option value="">— Sin marca —</option>' +
+                    data.map(function(m) {
+                        return '<option value="' + _invEsc(m.nombre) + '">' + _invEsc(m.nombre) + '</option>';
+                    }).join('');
+                if (prev) sel.value = prev;
+            }
+        })
+        .catch(function() {});
+};
+
+// ── Multi-select chips: Marca de Unidad ──────────────────────────
+window._invRenderChips = function() {
+    var cont = document.getElementById('inv-marcas-chips');
+    if (!cont) return;
+    cont.innerHTML = (window._invMarcasSeleccionadas || []).map(function(m, i) {
+        return '<span class="badge d-inline-flex align-items-center gap-1 px-2 py-1" style="background:var(--crm-accent,#007aff);color:#fff;font-size:0.78rem;border-radius:20px;">' +
+            _invEsc(m) +
+            '<button type="button" onclick="window._invQuitarMarca(' + i + ')" style="background:none;border:none;color:#fff;padding:0;line-height:1;cursor:pointer;font-size:0.9rem;">&times;</button>' +
+        '</span>';
+    }).join('');
+};
+
+window._invAgregarMarca = function(marca) {
+    var m = (marca || '').trim();
+    if (!m) return;
+    if ((window._invMarcasSeleccionadas || []).indexOf(m) >= 0) return; // evitar duplicados
+    window._invMarcasSeleccionadas = window._invMarcasSeleccionadas || [];
+    window._invMarcasSeleccionadas.push(m);
+    window._invRenderChips();
+    window._invActualizarPreview();
+    var inp = document.getElementById('inv-marcas-input');
+    if (inp) inp.value = '';
+    var dd = document.getElementById('inv-marcas-dropdown');
+    if (dd) dd.style.display = 'none';
+};
+
+window._invQuitarMarca = function(idx) {
+    if (!window._invMarcasSeleccionadas) return;
+    window._invMarcasSeleccionadas.splice(idx, 1);
+    window._invRenderChips();
+    window._invActualizarPreview();
+};
+
+window._invFiltrarMarcas = function() {
+    var inp = document.getElementById('inv-marcas-input');
+    var dd  = document.getElementById('inv-marcas-dropdown');
+    if (!inp || !dd) return;
+    var q = inp.value.toLowerCase().trim();
+    var lista = (window._invMarcasPlacas || []).filter(function(m) {
+        return (!q || m.toLowerCase().includes(q)) &&
+               (window._invMarcasSeleccionadas || []).indexOf(m) < 0;
     });
+    if (!lista.length || !q && !inp.value) { dd.style.display = 'none'; return; }
+    dd.innerHTML = lista.slice(0, 12).map(function(m) {
+        return '<button type="button" class="list-group-item list-group-item-action py-1 px-3 small" onclick="window._invAgregarMarca(\'' + _invEsc(m) + '\')">' + _invEsc(m) + '</button>';
+    }).join('');
+    dd.style.display = '';
+};
 
-    var selF = document.getElementById('inv-fil-familia');
-    var selA = document.getElementById('inv-fil-almacen');
-    var prevF = selF ? selF.value : '';
-    var prevA = selA ? selA.value : '';
-
-    if (selF) {
-        selF.innerHTML = '<option value="">Todas las familias</option>' +
-            Object.keys(familias).sort().map(function(f) {
-                return '<option value="' + _invEsc(f) + '"' + (f === prevF ? ' selected' : '') + '>' + _invEsc(f) + '</option>';
-            }).join('');
+window._invMarcasKeydown = function(event) {
+    if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        var inp = document.getElementById('inv-marcas-input');
+        if (inp && inp.value.trim()) window._invAgregarMarca(inp.value);
     }
-    if (selA) {
-        selA.innerHTML = '<option value="">Todos los almacenes</option>' +
-            Object.keys(almacenes).sort().map(function(a) {
-                return '<option value="' + _invEsc(a) + '"' + (a === prevA ? ' selected' : '') + '>' + _invEsc(a) + '</option>';
-            }).join('');
+    if (event.key === 'Escape') {
+        var dd = document.getElementById('inv-marcas-dropdown');
+        if (dd) dd.style.display = 'none';
     }
+};
 
-    var dlF = document.getElementById('inv-list-familias');
-    if (dlF) dlF.innerHTML = Object.keys(familias).sort().map(function(f) { return '<option value="' + _invEsc(f) + '">'; }).join('');
-    var dlA = document.getElementById('inv-list-almacenes');
-    if (dlA) dlA.innerHTML = Object.keys(almacenes).sort().map(function(a) { return '<option value="' + _invEsc(a) + '">'; }).join('');
+// ── Preview nombre generado ──────────────────────────────────────
+window._invActualizarPreview = function() {
+    var articulo  = ((document.getElementById('inv-f-articulo')        || {}).value || '').trim();
+    var codigo    = ((document.getElementById('inv-f-codigo-articulo') || {}).value || '').trim();
+    var marca     = ((document.getElementById('inv-f-marca')           || {}).value || '').trim();
+    var marcasU   = (window._invMarcasSeleccionadas || []).join(', ');
+
+    var nombre = articulo;
+    if (codigo)  nombre += ' ' + codigo;
+    if (marcasU) nombre += ' - ' + marcasU;
+    if (marca)   nombre += ' / ' + marca;
+
+    var prev = document.getElementById('inv-nombre-preview');
+    if (prev) {
+        if (nombre.trim()) {
+            prev.innerHTML = '<strong>' + _invEsc(nombre) + '</strong>';
+        } else {
+            prev.innerHTML = '<span class="text-muted fst-italic" style="font-size:0.85rem;font-weight:400;">Completa los campos para generar el nombre…</span>';
+        }
+    }
+};
+
+window._invPoblarFiltros = function(data) {
+    // Familia y Sistema se cargan desde BD via _invCargarFamilias / _invCargarSistemas
+    // Esta función es un stub para mantener compatibilidad
 };
 
 // ── Filtrar ───────────────────────────────────────────────────────
@@ -87,7 +264,6 @@ window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
     var filFam  = ((document.getElementById('inv-fil-familia')  || {}).value || '');
     var filSis  = ((document.getElementById('inv-fil-sistema')  || {}).value || '');
-    var filAlm  = ((document.getElementById('inv-fil-almacen')  || {}).value || '');
     window._invFiltrados = (window._invData || []).filter(function(d) {
         var matchB = !buscar ||
             (d.id           || '').toLowerCase().includes(buscar) ||
@@ -98,8 +274,7 @@ window.filtrarInventario = function() {
             (d.codigo_barras|| '').toLowerCase().includes(buscar);
         var matchF = !filFam || d.familia === filFam;
         var matchS = !filSis || d.sistema === filSis;
-        var matchA = !filAlm || d.almacen === filAlm;
-        return matchB && matchF && matchS && matchA;
+        return matchB && matchF && matchS;
     });
     window._invPagActual = 1;
     window._invRender();
@@ -264,16 +439,22 @@ window.abrirModalInventario = function(id) {
     var editId = document.getElementById('inv-edit-id');
     if (editId) editId.value = '';
 
-    // Resetear tab a Datos Básicos
+    // Reset chips
+    window._invMarcasSeleccionadas = [];
+    window._invRenderChips();
+
+    // Resetear tab a Artículo
     var firstTab = document.querySelector('#inv-modal-tabs .nav-link');
     if (firstTab) {
         document.querySelectorAll('#inv-modal-tabs .nav-link').forEach(function(t) { t.classList.remove('active'); });
         firstTab.classList.add('active');
         document.querySelectorAll('#modal-inv-articulo .tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
-        var basico = document.getElementById('inv-tab-basico');
-        if (basico) { basico.classList.add('show', 'active'); }
+        var basico = document.getElementById('inv-tab-articulo');
+        if (basico) basico.classList.add('show', 'active');
     }
 
+    // Reset preview
+    window._invActualizarPreview();
     // Reset imagen UI
     _invResetImageUI(null);
 
@@ -283,35 +464,39 @@ window.abrirModalInventario = function(id) {
         if (titulo) titulo.innerHTML = '<i class="bi bi-pencil-fill me-1"></i>Editar Artículo — ' + id;
         if (editId) editId.value = id;
 
-        // Tab Datos
-        _invSetField('inv-f-descripcion', item.descripcion);
-        _invSetField('inv-f-familia',     item.familia);
-        _invSetField('inv-f-subfamilia',  item.sub_familia);
-        _invSetField('inv-f-almacen',     item.almacen);
-        _invSetField('inv-f-unidad',      item.unidad);
-        _invSetField('inv-f-moneda',      item.moneda || 'PEN');
-        _invSetField('inv-f-costo',       item.costo_referencial);
-        _invSetField('inv-f-marca',       item.marca);
-        _invSetField('inv-f-stock-reg',   item.stock_regularizado);
-        _invSetField('inv-f-fecha-reg',   item.fecha_regularizacion ? String(item.fecha_regularizacion).split('T')[0] : '');
-        _invSetField('inv-f-proveedor-id', item.proveedor_id);
-        _invSetField('inv-f-obs',         item.observaciones);
+        // Tab Artículo
+        _invSetField('inv-f-articulo',          item.articulo);
+        _invSetField('inv-f-codigo-articulo',   item.codigo_articulo);
+        _invSetField('inv-f-marca',             item.marca);
+        _invSetField('inv-f-familia',           item.familia);
+        _invSetField('inv-f-unidad',            item.unidad);
+        _invSetField('inv-f-moneda',            item.moneda || 'PEN');
+        _invSetField('inv-f-costo',             item.costo_referencial);
+        _invSetField('inv-f-estado-art',        item.estado_art || 'Activo');
+        _invSetField('inv-f-obs',               item.observaciones);
 
-        // Tab Clasificación
-        _invSetField('inv-f-codigo-item',   item.codigo_item);
-        _invSetField('inv-f-marca-unidad',  item.marca_unidad);
+        // Chips marca_unidad
+        try {
+            window._invMarcasSeleccionadas = JSON.parse(item.marca_unidad || '[]');
+        } catch(e) {
+            window._invMarcasSeleccionadas = item.marca_unidad ? [item.marca_unidad] : [];
+        }
+        window._invRenderChips();
+        window._invActualizarPreview();
+
+        // Clasificación
         _invSetField('inv-f-sistema',       item.sistema);
+        window._invFiltrarSubSistemas();
         _invSetField('inv-f-sub-sistema',   item.sub_sistema);
         _invSetField('inv-f-tipo',          item.tipo);
         _invSetField('inv-f-sub-tipo',      item.sub_tipo);
         _invSetField('inv-f-ubicacion',     item.ubicacion);
         _invSetField('inv-f-anaquel',       item.anaquel);
-        _invSetField('inv-f-estado-art',    item.estado_art || 'Activo');
         _invSetField('inv-f-stock-min',     item.stock_min);
         _invSetField('inv-f-stock-max',     item.stock_max);
         _invSetField('inv-f-codigo-barras', item.codigo_barras);
 
-        // Tab Imagen + QR existente
+        // Tab Imagen + QR
         _invResetImageUI(item);
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-box-fill me-1"></i>Nuevo Artículo';
@@ -437,39 +622,38 @@ window.guardarArticuloInv = function(event) {
     if (event) event.preventDefault();
     var id = (document.getElementById('inv-edit-id') || {}).value || '';
 
-    var g = function(elId) { return (document.getElementById(elId) || {}).value || ''; };
+    var g  = function(elId) { return (document.getElementById(elId) || {}).value || ''; };
     var gN = function(elId) { return parseFloat(g(elId)) || 0; };
 
+    var articulo       = g('inv-f-articulo').trim();
+    var codigoArticulo = g('inv-f-codigo-articulo').trim();
+    var marca          = g('inv-f-marca').trim();
+
+    if (!articulo) { alert('El campo "Artículo" es obligatorio.'); return; }
+
     var payload = {
-        // Básicos
-        descripcion:          g('inv-f-descripcion'),
-        familia:              g('inv-f-familia'),
-        sub_familia:          g('inv-f-subfamilia'),
-        almacen:              g('inv-f-almacen'),
-        unidad:               g('inv-f-unidad'),
-        moneda:               g('inv-f-moneda') || 'PEN',
-        costo_referencial:    gN('inv-f-costo'),
-        marca:                g('inv-f-marca'),
-        stock_regularizado:   gN('inv-f-stock-reg'),
-        fecha_regularizacion: g('inv-f-fecha-reg') || null,
-        proveedor_id:         g('inv-f-proveedor-id') || null,
-        observaciones:        g('inv-f-obs'),
+        articulo:       articulo,
+        codigo_articulo: codigoArticulo || null,
+        // descripcion se genera en el servidor a partir de los campos anteriores
+        familia:        g('inv-f-familia') || null,
+        unidad:         g('inv-f-unidad') || null,
+        moneda:         g('inv-f-moneda') || 'PEN',
+        costo_referencial: gN('inv-f-costo'),
+        marca:          marca || null,
+        marca_unidad:   JSON.stringify(window._invMarcasSeleccionadas || []),
+        estado_art:     g('inv-f-estado-art') || 'Activo',
+        observaciones:  g('inv-f-obs') || null,
         // Clasificación
-        codigo_item:   g('inv-f-codigo-item') || null,
-        marca_unidad:  g('inv-f-marca-unidad') || null,
         sistema:       g('inv-f-sistema') || null,
         sub_sistema:   g('inv-f-sub-sistema') || null,
         tipo:          g('inv-f-tipo') || null,
         sub_tipo:      g('inv-f-sub-tipo') || null,
         ubicacion:     g('inv-f-ubicacion') || null,
         anaquel:       g('inv-f-anaquel') ? gN('inv-f-anaquel') : null,
-        estado_art:    g('inv-f-estado-art') || 'Activo',
         stock_min:     gN('inv-f-stock-min'),
         stock_max:     gN('inv-f-stock-max'),
         codigo_barras: g('inv-f-codigo-barras') || null
     };
-
-    if (!payload.descripcion) { alert('La descripción es obligatoria.'); return; }
 
     var url    = id ? '/api/almacen/inventario/' + encodeURIComponent(id) : '/api/almacen/inventario';
     var method = id ? 'PUT' : 'POST';
@@ -521,15 +705,63 @@ window.exportarInventarioExcel = function() {
 
 // ── Descargar Plantilla ───────────────────────────────────────────
 window.descargarPlantillaInventario = function() {
-    var wsData = [
-        ['descripcion','familia','sub_familia','almacen','unidad','moneda','costo_referencial',
-         'stock_regularizado','fecha_regularizacion','marca','sistema','tipo','ubicacion','stock_min','stock_max','observaciones'],
-        ['FILTRO ACEITE MOTOR','FILTROS','ACEITE MOTOR','Almacén de Filtros','UND','PEN','45.00','10','2025-01-01','WIX','MOTOR','Original','Almacén de Filtros','3','30','Filtro estándar'],
-        ['ACEITE MOTOR 15W40 GL-5','LUBRICANTES','ACEITES','Almacén Principal','LT','PEN','12.50','20','','MOBIL','MOTOR','','Almacén Principal','5','50','']
+    // Hoja principal con encabezados
+    var headers = [
+        'articulo','codigo_articulo','marca','marca_unidad',
+        'familia','unidad','moneda','costo','estado_art',
+        'sistema','sub_sistema','tipo','sub_tipo',
+        'ubicacion','anaquel','stock_min','stock_max','codigo_barras','observaciones'
     ];
+    var ejemplo = [
+        'Filtro Aceite Motor','LF3000','WIX','VOLVO,SCANIA',
+        'FILTROS','UND','PEN','45.00','Activo',
+        'MOTOR','LUBRICACION','Original','Nuevo',
+        'Almacén de Filtros','2',3,30,'7501234567890','Filtro estándar'
+    ];
+    var wsData = [headers, ejemplo];
     var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Ancho de columnas
+    ws['!cols'] = headers.map(function(h) {
+        var w = {articulo:22,codigo_articulo:16,marca:12,marca_unidad:20,familia:14,unidad:8,
+                  moneda:8,costo:9,estado_art:12,sistema:14,sub_sistema:16,tipo:12,sub_tipo:10,
+                  ubicacion:20,anaquel:9,stock_min:10,stock_max:10,codigo_barras:16,observaciones:24};
+        return { wch: w[h] || 14 };
+    });
+
+    // Extraer valores para validaciones
+    var marcasList  = (window._invMarcasFabData || []).map(function(m) { return m.nombre; }).join(',');
+    var familiaList = (window._invFamiliasData  || []).map(function(f) { return f.nombre; }).join(',');
+    var unidadList  = (window._invUnidadesData  || []).map(function(u) { return u.nombre; }).join(',');
+    var sistList    = (window._invSistemasData  || []).map(function(s) { return s.nombre; }).join(',');
+
+    // Dropdowns en hoja (XLSX data validation, filas 2-500)
+    ws['!dataValidation'] = {};
+    if (marcasList)  ws['!dataValidation']['C2:C500'] = { type:'list', formula1: '"' + marcasList  + '"' };
+    if (familiaList) ws['!dataValidation']['E2:E500'] = { type:'list', formula1: '"' + familiaList + '"' };
+    if (unidadList)  ws['!dataValidation']['F2:F500'] = { type:'list', formula1: '"' + unidadList  + '"' };
+    ws['!dataValidation']['G2:G500'] = { type:'list', formula1: '"PEN,USD"' };
+    ws['!dataValidation']['I2:I500'] = { type:'list', formula1: '"Activo,Inactivo,Descontinuado"' };
+    if (sistList)    ws['!dataValidation']['J2:J500'] = { type:'list', formula1: '"' + sistList    + '"' };
+    ws['!dataValidation']['L2:L500'] = { type:'list', formula1: '"Original,Alternativo"' };
+    ws['!dataValidation']['M2:M500'] = { type:'list', formula1: '"Nuevo,Reparado"' };
+
+    // Hoja auxiliar "Listas" (referencia visual)
+    var famArr  = (window._invFamiliasData  || []).map(function(f) { return f.nombre; });
+    var undArr  = (window._invUnidadesData  || []).map(function(u) { return u.nombre; });
+    var mrcArr  = (window._invMarcasFabData || []).map(function(m) { return m.nombre; });
+    var sisArr  = (window._invSistemasData  || []).map(function(s) { return s.nombre; });
+    var maxRows = Math.max(famArr.length, undArr.length, mrcArr.length, sisArr.length, 1);
+    var listasData = [['Familia','Unidad','Marca','Sistema']];
+    for (var i = 0; i < maxRows; i++) {
+        listasData.push([famArr[i]||'', undArr[i]||'', mrcArr[i]||'', sisArr[i]||'']);
+    }
+    var wsListas = XLSX.utils.aoa_to_sheet(listasData);
+    wsListas['!cols'] = [{wch:16},{wch:10},{wch:14},{wch:16}];
+
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.utils.book_append_sheet(wb, wsListas, 'Listas');
     XLSX.writeFile(wb, 'Plantilla_Inventario.xlsx');
 };
 
@@ -551,22 +783,25 @@ window.importarExcelInventario = function(event) {
             var N = {};
             Object.keys(row).forEach(function(k) { N[k.toLowerCase().trim()] = row[k]; });
             return {
-                descripcion:          N['descripcion'] || N['descripción'] || '',
-                familia:              N['familia'] || '',
-                sub_familia:          N['sub_familia'] || N['sub-familia'] || N['subfamilia'] || '',
-                almacen:              N['almacen'] || N['almacén'] || '',
-                unidad:               N['unidad'] || '',
-                moneda:               (N['moneda'] || 'PEN').toUpperCase(),
-                costo_referencial:    parseFloat(N['costo_referencial'] || N['costo ref.'] || 0) || 0,
-                stock_regularizado:   parseFloat(N['stock_regularizado'] || N['stock'] || 0) || 0,
-                fecha_regularizacion: N['fecha_regularizacion'] || N['fecha reg.'] || null,
-                marca:                N['marca'] || '',
-                sistema:              N['sistema'] || null,
-                tipo:                 N['tipo'] || null,
-                ubicacion:            N['ubicacion'] || N['ubicación'] || null,
-                stock_min:            parseFloat(N['stock_min'] || 0) || 0,
-                stock_max:            parseFloat(N['stock_max'] || 0) || 0,
-                observaciones:        N['observaciones'] || ''
+                articulo:          (N['articulo'] || '').toString().trim(),
+                codigo_articulo:   (N['codigo_articulo'] || N['codigo articulo'] || '').toString().trim(),
+                marca:             (N['marca'] || '').toString().trim().toUpperCase(),
+                marca_unidad:      (N['marca_unidad'] || N['marca unidad'] || '').toString().trim(),
+                familia:           (N['familia'] || '').toString().trim().toUpperCase(),
+                unidad:            (N['unidad'] || '').toString().trim().toUpperCase(),
+                moneda:            ((N['moneda'] || 'PEN').toString().toUpperCase()),
+                costo_referencial: parseFloat(N['costo'] || N['costo_referencial'] || 0) || 0,
+                estado_art:        (N['estado_art'] || N['estado'] || 'Activo').toString().trim(),
+                sistema:           (N['sistema'] || null),
+                sub_sistema:       (N['sub_sistema'] || N['sub sistema'] || null),
+                tipo:              (N['tipo'] || null),
+                sub_tipo:          (N['sub_tipo'] || N['sub tipo'] || null),
+                ubicacion:         (N['ubicacion'] || N['ubicación'] || null),
+                anaquel:           parseFloat(N['anaquel'] || 0) || null,
+                stock_min:         parseFloat(N['stock_min'] || 0) || 0,
+                stock_max:         parseFloat(N['stock_max'] || 0) || 0,
+                codigo_barras:     (N['codigo_barras'] || N['codigo barras'] || null),
+                observaciones:     (N['observaciones'] || '')
             };
         });
         document.body.style.cursor = 'wait';

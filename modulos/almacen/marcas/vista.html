@@ -1,0 +1,87 @@
+<!-- Módulo Almacén / Marcas — SPA Aislado -->
+<div id="mod-marcas" class="modulo-wrapper d-flex flex-column h-100">
+
+  <!-- Cabecera -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-award-fill text-danger me-1"></i>Marcas
+      </h2>
+      <p class="text-muted small mb-0">Marcas de fabricantes para el inventario (3M, WIX, MANN, VOLVO…)</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarMarcas()" title="Actualizar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-primary" onclick="window.abrirModalMarca()">
+        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Marca</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Búsqueda -->
+  <div class="d-flex gap-2 mb-3">
+    <div class="input-group input-group-sm" style="max-width:300px;">
+      <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="mrc-buscar" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar marca…" oninput="window.filtrarMarcas()">
+    </div>
+    <span id="mrc-contador" class="text-muted small ms-auto align-self-center"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="flex-grow-1" style="overflow-y:auto;min-height:0;">
+    <div class="card p-0">
+      <table class="table table-custom m-0" id="tabla-marcas">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Descripción / Origen</th>
+            <th style="width:80px;">Estado</th>
+            <th style="width:80px;"><i class="bi bi-three-dots-vertical"></i></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-tabla-marcas">
+          <tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva / Editar Marca -->
+<div class="modal fade" id="modal-marca" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="modal-mrc-titulo"><i class="bi bi-award-fill me-1"></i>Nueva Marca</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-marca" onsubmit="window.guardarMarca(event)">
+        <input type="hidden" id="mrc-edit-id">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="fw-semibold small">Nombre <span class="text-danger">*</span></label>
+              <input type="text" class="form-control text-uppercase" id="mrc-f-nombre" required placeholder="Ej: 3M, WIX, MANN, VOLVO" maxlength="100">
+            </div>
+            <div class="col-12">
+              <label class="fw-semibold small">Descripción / Origen</label>
+              <input type="text" class="form-control" id="mrc-f-descripcion" placeholder="Ej: Marca alemana de filtros, EE.UU.">
+            </div>
+            <div class="col-12">
+              <label class="fw-semibold small">Estado</label>
+              <select class="form-select" id="mrc-f-activo">
+                <option value="1">Activo</option>
+                <option value="0">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

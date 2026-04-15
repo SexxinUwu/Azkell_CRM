@@ -201,8 +201,9 @@ window.verificarSesionGuardada = function() {
     });
 
     // --- Visibilidad por permisos ---
-    const showMant  = isAdm || p?.insp?.l  || p?.placas?.l || p?.fleet?.l;
-    const showAlm   = isAdm || p?.placas?.l;
+    const showMant  = isAdm || p?.insp?.l  || p?.fleet?.l || p?.plan?.l;
+    const showAlm   = isAdm || p?.placas?.l || p?.inv?.l  || p?.ent_inv?.l || p?.sal_inv?.l ||
+                      p?.prov_inv?.l || p?.kardex    || p?.costos_inv || p?.cfg_almacen?.l;
     const showFlota = isAdm || p?.gps?.l   || p?.status?.l || p?.cond?.l;
     const showDir   = isAdm || p?.cond?.l;
 
@@ -212,7 +213,16 @@ window.verificarSesionGuardada = function() {
     safe('btnMenuFleetrun',   isAdm || p?.fleet?.l);
 
     sec('wrap-almacen', 'menuAlmacen', showAlm);
-    safe('btnMenuInventario', isAdm || p?.placas?.l);
+    safe('nav-inventario',   isAdm || p?.inv?.l);
+    safe('nav-entradas-inv', isAdm || p?.ent_inv?.l);
+    safe('nav-salidas-inv',  isAdm || p?.sal_inv?.l);
+    safe('nav-proveedores-inv', isAdm || p?.prov_inv?.l);
+    safe('nav-kardex',       isAdm || !!(p?.kardex));
+    safe('nav-costos-inv',   isAdm || !!(p?.costos_inv));
+    safe('nav-familias-inv', isAdm || p?.cfg_almacen?.l);
+    safe('nav-unidades-inv', isAdm || p?.cfg_almacen?.l);
+    safe('nav-sistemas-inv', isAdm || p?.cfg_almacen?.l);
+    safe('nav-marcas-inv',   isAdm || p?.cfg_almacen?.l);
 
     sec('wrap-flota', 'menuFlota', showFlota);
     safe('btnMenuUbicacion',   isAdm || p?.gps?.l);
@@ -380,7 +390,7 @@ window.FleetDB = (function() {
 })();
 
 window.mostrarOfflineBadge = function(store, hora) {
-    var nombres = { placas:'Placas', fleetrun:'Fleetrun', inspecciones:'Inspecciones', conductores:'Conductores' };
+    var nombres = { placas:'Placas', fleetrun:'Fleetrun', inspecciones:'Inspecciones', conductores:'Personal' };
     var nombre = nombres[store] || store;
     var chip = document.createElement('div');
     chip.style.cssText = 'position:fixed;bottom:80px;right:12px;background:#475569;color:#fff;padding:6px 14px;border-radius:99px;font-size:0.75rem;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap;';
@@ -391,7 +401,7 @@ window.mostrarOfflineBadge = function(store, hora) {
 
 window.mostrarToastSSE = function(modulo) {
     var nombres = { fleetrun:'Fleetrun', placas:'Placas', inspecciones:'Inspecciones',
-                    conductores:'Conductores', status:'Status Flota', usuarios:'Usuarios' };
+                    conductores:'Personal', status:'Status Flota', usuarios:'Usuarios' };
     var nombre = nombres[modulo] || modulo;
     var chip = document.createElement('div');
     chip.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--crm-accent);color:#fff;padding:6px 16px;border-radius:99px;font-size:0.78rem;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;';
@@ -1836,9 +1846,13 @@ var NOMBRES_MODULOS_RECIENTES = {
     'almacen/proveedores':        'Proveedores',
     'almacen/kardex':             'Kardex',
     'almacen/costos':             'Costos',
+    'almacen/unidades':           'Unidades',
+    'almacen/sistemas':           'Sistemas',
+    'almacen/familias':           'Familias',
+    'almacen/marcas':             'Marcas',
     'flota/status':               'Status Flota',
-    'flota/ubicacion':            'GPS Flota',
-    'directorio/conductores':     'Conductores',
+    'flota/ubicacion':            'GPS',
+    'directorio/conductores':     'Personal',
     'sistema/usuarios':           'Usuarios',
     'sistema/auditoria':          'Auditoría',
     'sistema/configuracion':      'Configuración',
@@ -1857,6 +1871,10 @@ var ICONOS_MODULOS_RECIENTES = {
     'almacen/proveedores':        'bi-building-fill',
     'almacen/kardex':             'bi-journal-text',
     'almacen/costos':             'bi-graph-up-arrow',
+    'almacen/unidades':           'bi-rulers',
+    'almacen/sistemas':           'bi-diagram-3-fill',
+    'almacen/familias':           'bi-tags-fill',
+    'almacen/marcas':             'bi-award-fill',
     'flota/status':               'bi-activity',
     'flota/ubicacion':            'bi-geo-alt-fill',
     'directorio/conductores':     'bi-person-vcard-fill',
@@ -1944,9 +1962,13 @@ const TITULOS_MODULOS = {
     'mantenimiento/configuracion-mp': 'Frecuencias de Mantenimiento',
     'mantenimiento/kits-mp':          'Kits de Mantenimiento',
     'almacen/inventario':          'Inventario',
+    'almacen/unidades':            'Unidades de Medida',
+    'almacen/sistemas':            'Sistemas y Sub-Sistemas',
+    'almacen/familias':            'Familias de Artículos',
+    'almacen/marcas':              'Marcas de Fabricante',
     'flota/status':                'Status de Flota',
-    'flota/ubicacion':             'Ubicación GPS Flota',
-    'directorio/conductores':      'Directorio de Conductores',
+    'flota/ubicacion':             'GPS',
+    'directorio/conductores':      'Directorio de Personal',
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
 };
@@ -1965,6 +1987,10 @@ const MENU_IDS = {
     'almacen/proveedores':         'nav-proveedores-inv',
     'almacen/kardex':              'nav-kardex',
     'almacen/costos':              'nav-costos-inv',
+    'almacen/unidades':            'nav-unidades-inv',
+    'almacen/sistemas':            'nav-sistemas-inv',
+    'almacen/familias':            'nav-familias-inv',
+    'almacen/marcas':              'nav-marcas-inv',
     'flota/status':                'nav-status-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'directorio/conductores':      'nav-conductores',
@@ -1982,6 +2008,10 @@ const MENU_SECTION = {
     'almacen/proveedores':        'almacen',
     'almacen/kardex':             'almacen',
     'almacen/costos':             'almacen',
+    'almacen/unidades':           'almacen',
+    'almacen/sistemas':           'almacen',
+    'almacen/familias':           'almacen',
+    'almacen/marcas':             'almacen',
     'flota/status':               'flota',
     'flota/ubicacion':            'flota',
     'directorio/conductores':     'directorio',
@@ -1995,9 +2025,13 @@ const BREADCRUMB_MAP = {
     'mantenimiento/placas':       ['Mantenimiento','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
     'almacen/inventario':         ['Almacén','Inventario'],
+    'almacen/unidades':           ['Almacén','Unidades'],
+    'almacen/sistemas':           ['Almacén','Sistemas'],
+    'almacen/familias':           ['Almacén','Familias'],
+    'almacen/marcas':             ['Almacén','Marcas'],
     'flota/status':               ['Flota','Status'],
     'flota/ubicacion':            ['Flota','GPS'],
-    'directorio/conductores':     ['Directorio','Conductores'],
+    'directorio/conductores':     ['Directorio','Personal'],
     'sistema/usuarios':           ['Configuración','Usuarios'],
     'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
@@ -2915,7 +2949,7 @@ function generarMatrizUI() {
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-d" data-k="status" style="width:18px;height:18px;cursor:pointer;"></td></tr>
-        <tr data-k="cond"><td class="text-start ps-3 fw-semibold text-secondary small">Conductores</td>
+        <tr data-k="cond"><td class="text-start ps-3 fw-semibold text-secondary small">Personal</td>
             <td><input type="checkbox" class="form-check-input p-chk p-l" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-c" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
             <td><input type="checkbox" class="form-check-input p-chk p-e" data-k="cond" style="width:18px;height:18px;cursor:pointer;"></td>
@@ -3217,6 +3251,10 @@ var FAB_ACCIONES_POR_RUTA = {
     'sistema/configuracion':    null,
     'dashboard':                null,
     'almacen/inventario':       null,
+    'almacen/unidades':         null,
+    'almacen/sistemas':         null,
+    'almacen/familias':         null,
+    'almacen/marcas':           null,
 };
 
 function actualizarFAB() {
