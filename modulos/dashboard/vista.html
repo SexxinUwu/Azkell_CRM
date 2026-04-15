@@ -81,6 +81,32 @@
     <!-- ── GRÁFICOS + ACTIVIDAD RECIENTE ───────────────── -->
     <div class="row g-3 mb-4">
 
+        <!-- Widget Clima -->
+        <div class="col-12 col-md-auto d-flex align-items-stretch">
+            <div class="dash-weather-container" id="dash-weather-container">
+                <div class="dash-weather-card" id="dash-weather-card">
+                    <div class="dash-weather-city" id="dash-weather-city">
+                        <i class="bi bi-geo-alt-fill me-1" style="font-size:0.7rem"></i><span>Obteniendo...</span>
+                    </div>
+                    <div class="dash-weather-desc" id="dash-weather-desc">—</div>
+                    <div class="dash-weather-icon" id="dash-weather-icon">
+                        <i class="bi bi-cloud-sun" style="font-size:2.2rem;opacity:0.5"></i>
+                    </div>
+                    <div class="dash-weather-temp" id="dash-weather-temp">—°</div>
+                    <div class="dash-weather-minmax">
+                        <div class="dash-weather-min">
+                            <span class="dash-wlabel">Min</span>
+                            <span class="dash-wval" id="dash-weather-min">—°</span>
+                        </div>
+                        <div class="dash-weather-max">
+                            <span class="dash-wlabel">Max</span>
+                            <span class="dash-wval" id="dash-weather-max">—°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12 col-md-4 d-none d-md-block">
             <div class="kpi-card h-100 p-3 chart-card-dashboard">
                 <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="dash.maint.health">Salud Mantenimientos</span></h6>
