@@ -56,14 +56,16 @@ window._salCargarSelect = function() {
             }
         })
         .catch(function() {});
-    // Placas
+    // Placas → datalist + global array para lookup cliente
     fetch('/api/placas-lista')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            var sel = document.getElementById('sal-f-placa');
-            if (sel) {
-                sel.innerHTML = '<option value="">Seleccionar placa…</option>' +
-                    data.map(function(p) { return '<option value="' + _salEsc(p.placa) + '">' + _salEsc(p.placa) + (p.cliente ? ' — ' + _salEsc(p.cliente) : '') + '</option>'; }).join('');
+            window._salPlacas = data || [];
+            var dl = document.getElementById('sal-list-placas');
+            if (dl) {
+                dl.innerHTML = data.map(function(p) {
+                    return '<option value="' + _salEsc(p.placa) + '">' + (p.cliente ? _salEsc(p.cliente) : '') + '</option>';
+                }).join('');
             }
         })
         .catch(function() {});
@@ -75,8 +77,27 @@ window._salCargarSelect = function() {
 // ── Toggle destino ────────────────────────────────────────────────
 window._salToggleDestino = function() {
     var tipo = (document.getElementById('sal-f-tipo') || {}).value || '';
-    var rowPlaca = document.getElementById('sal-row-placa');
-    if (rowPlaca) rowPlaca.style.display = tipo === 'Vehiculo' ? '' : 'none';
+    var rowPlaca   = document.getElementById('sal-row-placa');
+    var rowCliente = document.getElementById('sal-row-cliente');
+    var esVehiculo = tipo === 'Vehiculo';
+    if (rowPlaca)   rowPlaca.style.display   = esVehiculo ? '' : 'none';
+    if (rowCliente) rowCliente.style.display = esVehiculo ? '' : 'none';
+    if (!esVehiculo) {
+        var placaEl   = document.getElementById('sal-f-placa');
+        var clienteEl = document.getElementById('sal-f-cliente');
+        if (placaEl)   placaEl.value   = '';
+        if (clienteEl) clienteEl.value = '';
+    }
+};
+
+// ── Detectar cliente al escribir/seleccionar placa ────────────────
+window._salDetectarCliente = function() {
+    var placa = ((document.getElementById('sal-f-placa') || {}).value || '').trim().toUpperCase();
+    var clienteEl = document.getElementById('sal-f-cliente');
+    if (!clienteEl) return;
+    if (!placa) { clienteEl.value = ''; return; }
+    var found = (window._salPlacas || []).find(function(p) { return (p.placa || '').toUpperCase() === placa; });
+    clienteEl.value = found && found.cliente ? found.cliente : '';
 };
 
 window._salActualizarTC = function() {

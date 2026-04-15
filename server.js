@@ -6,6 +6,8 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const ALLOWED_ORIGINS = [
@@ -221,8 +223,7 @@ db.getConnection((err, connection) => {
     }
 });
 
-// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──
-db.query(
+// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──db.query(
     `CREATE TABLE IF NOT EXISTS destinatarios_alertas (
         id           INT AUTO_INCREMENT PRIMARY KEY,
         nombre       VARCHAR(100) NOT NULL,
@@ -2979,9 +2980,27 @@ app.delete('/api/requerimientos-planificacion/:id', (req, res) => {
     });
 });
 
+// ── Multer: storage para imágenes de inventario ───────────────────
+const _uploadsDir = path.join(__dirname, 'uploads', 'inventario');
+if (!fs.existsSync(_uploadsDir)) fs.mkdirSync(_uploadsDir, { recursive: true });
+const _multerInv = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, _uploadsDir),
+        filename:    (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+            cb(null, (req.params.id || 'inv') + '_' + Date.now() + ext);
+        }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máx
+    fileFilter: (req, file, cb) => {
+        if (/^image\/(jpeg|jpg|png|webp|gif)$/.test(file.mimetype)) return cb(null, true);
+        cb(new Error('Solo imágenes (jpg, png, webp, gif)'));
+    }
+});
+
 // ── Helper endpoints para formularios de Almacén ─────────────────
 app.get('/api/conductores-lista', (req, res) => {
-    db.query("SELECT id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
+    db.query("SELECT idConductor AS id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -3061,6 +3080,26 @@ db.query(
     )`,
     (e) => { if (e) console.warn('CREATE inventario:', e.message); else console.log('✅ Tabla inventario verificada'); }
 );
+// ── Migración inventario: agregar columnas nuevas ─────────────────
+[
+    'ALTER TABLE inventario ADD COLUMN codigo_item    VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN marca_unidad   VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sistema        VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sub_sistema    VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN tipo           ENUM("Original","Alternativo") NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sub_tipo       ENUM("Nuevo","Reparado") NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN ubicacion      VARCHAR(150)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN anaquel        DECIMAL(6,2)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN stock_min      DECIMAL(14,4)    NOT NULL DEFAULT 0',
+    'ALTER TABLE inventario ADD COLUMN stock_max      DECIMAL(14,4)    NOT NULL DEFAULT 0',
+    'ALTER TABLE inventario ADD COLUMN estado_art     VARCHAR(50)      NULL DEFAULT "Activo"',
+    'ALTER TABLE inventario ADD COLUMN codigo_barras  VARCHAR(100)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN imagen_url     TEXT             NULL DEFAULT NULL',
+].forEach(sql => {
+    db.query(sql, (e) => {
+        if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER inventario:', e.message);
+    });
+});
 db.query(
     `CREATE TABLE IF NOT EXISTS entradas_inv (
         id                   VARCHAR(20) NOT NULL PRIMARY KEY,
@@ -3249,13 +3288,21 @@ app.get('/api/almacen/inventario', (req, res) => {
     });
 });
 app.post('/api/almacen/inventario', (req, res) => {
-    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones } = req.body;
+    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones,
+            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo, ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
     _generarCodigoAlmacen('INV', null, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
-        db.query('INSERT INTO inventario (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,proveedor_id,marca,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        db.query(`INSERT INTO inventario
+            (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,proveedor_id,marca,observaciones,
+             codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [id, descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
              parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
-             fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null],
+             fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null,
+             codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
+             tipo||null, sub_tipo||null, ubicacion||null,
+             anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
+             estado_art||'Activo', codigo_barras||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 res.json({ ok: true, id });
@@ -3263,12 +3310,22 @@ app.post('/api/almacen/inventario', (req, res) => {
     });
 });
 app.put('/api/almacen/inventario/:id', (req, res) => {
-    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones, activo } = req.body;
-    db.query('UPDATE inventario SET descripcion=?,familia=?,sub_familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,stock_regularizado=?,fecha_regularizacion=?,proveedor_id=?,marca=?,observaciones=?,activo=? WHERE id=?',
+    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones, activo,
+            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo, ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+    db.query(`UPDATE inventario SET
+        descripcion=?,familia=?,sub_familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,
+        stock_regularizado=?,fecha_regularizacion=?,proveedor_id=?,marca=?,observaciones=?,activo=?,
+        codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
+        anaquel=?,stock_min=?,stock_max=?,estado_art=?,codigo_barras=?
+        WHERE id=?`,
         [descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
          parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
          fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null,
-         activo != null ? activo : 1, req.params.id],
+         activo != null ? activo : 1,
+         codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
+         tipo||null, sub_tipo||null, ubicacion||null,
+         anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
+         estado_art||'Activo', codigo_barras||null, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
@@ -3278,6 +3335,32 @@ app.delete('/api/almacen/inventario/:id', (req, res) => {
     db.query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
+    });
+});
+
+// Upload imagen de artículo
+app.post('/api/almacen/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
+    const url = '/uploads/inventario/' + req.file.filename;
+    db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, url });
+    });
+});
+
+// Eliminar imagen de artículo
+app.delete('/api/almacen/inventario/:id/imagen', (req, res) => {
+    db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const imgUrl = rows[0]?.imagen_url;
+        if (imgUrl && imgUrl.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, imgUrl);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (e2) => {
+            if (e2) return res.status(500).json({ error: e2.message });
+            res.json({ ok: true });
+        });
     });
 });
 
@@ -3489,9 +3572,18 @@ app.get('/api/almacen/costos', (req, res) => {
                       JOIN inventario i ON i.id=d.inventario_id
                       ${where}
                       GROUP BY i.id ORDER BY costo_total DESC LIMIT 20`, params, (e, r) => e ? reject(e) : resolve(r));
+        }),
+        // Por cliente (salidas tipo Vehiculo → placa → cliente en tabla placas)
+        new Promise((resolve, reject) => {
+            db.query(`SELECT COALESCE(p.cliente,'Sin cliente') AS cliente, s.placa, SUM(d.importe) AS total, COUNT(*) AS movimientos
+                      FROM detalle_salidas_inv d
+                      JOIN salidas_inv s ON s.id=d.salida_id
+                      LEFT JOIN placas p ON p.placa=s.placa
+                      ${where ? where + ' AND s.tipo_destino="Vehiculo"' : 'WHERE s.tipo_destino="Vehiculo"'}
+                      GROUP BY cliente, s.placa ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
         })
-    ]).then(([porFamilia, porAlmacen, totales, topItems]) => {
-        res.json({ porFamilia, porAlmacen, totales, topItems });
+    ]).then(([porFamilia, porAlmacen, totales, topItems, porCliente]) => {
+        res.json({ porFamilia, porAlmacen, totales, topItems, porCliente });
     }).catch(err => res.status(500).json({ error: err.message }));
 });
 

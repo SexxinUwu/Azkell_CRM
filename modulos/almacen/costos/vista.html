@@ -57,6 +57,7 @@
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-almacen">Por Almacén</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-top">Top Artículos</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-chart">Gráfico</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-cliente">Por Cliente</button></li>
   </ul>
 
   <div class="tab-content flex-grow-1" style="overflow:auto;">
@@ -101,6 +102,18 @@
     <div class="tab-pane fade" id="cos-tab-chart">
       <div class="card shadow-sm p-3" style="max-height:400px;">
         <canvas id="chart-cos-familia" height="300"></canvas>
+      </div>
+    </div>
+
+    <!-- Por Cliente -->
+    <div class="tab-pane fade" id="cos-tab-cliente">
+      <div class="card p-0 shadow-sm">
+        <table class="table table-custom table-hover m-0">
+          <thead><tr><th>Cliente</th><th>Placa</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
+          <tbody id="tbody-cos-cliente">
+            <tr><td colspan="5" class="text-center py-5 text-muted">Cargando…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

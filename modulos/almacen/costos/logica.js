@@ -126,6 +126,29 @@ window._cosRender = function(data) {
         }
     }
 
+    // ── Por Cliente ──────────────────────────────────────────────────
+    var totalCli = (data.porCliente || []).reduce(function(a, d) { return a + parseFloat(d.total || 0); }, 0);
+    var tbodyCli = document.getElementById('tbody-cos-cliente');
+    if (tbodyCli) {
+        if (!data.porCliente || !data.porCliente.length) {
+            tbodyCli.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos de salidas a vehículos</td></tr>';
+        } else {
+            tbodyCli.innerHTML = data.porCliente.map(function(d) {
+                var pct = totalCli > 0 ? (parseFloat(d.total || 0) / totalCli * 100).toFixed(1) : 0;
+                return '<tr>' +
+                    '<td><i class="bi bi-building2 me-1 text-primary"></i>' + _cosEsc(d.cliente || '—') + '</td>' +
+                    '<td><span class="badge bg-secondary fw-normal">' + _cosEsc(d.placa || '—') + '</span></td>' +
+                    '<td class="text-end fw-semibold">' + fmt(parseFloat(d.total || 0)) + '</td>' +
+                    '<td class="text-center">' + d.movimientos + '</td>' +
+                    '<td><div class="d-flex align-items-center gap-2">' +
+                        '<div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar bg-primary" style="width:' + pct + '%"></div></div>' +
+                        '<small class="text-muted">' + pct + '%</small>' +
+                    '</div></td>' +
+                '</tr>';
+            }).join('');
+        }
+    }
+
     // ── Gráfico Por Familia ──────────────────────────────────────
     window._cosRenderChart(data.porFamilia || []);
 };

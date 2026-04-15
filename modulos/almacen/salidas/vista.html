@@ -82,9 +82,12 @@
           </div>
           <div class="col-md-3" id="sal-row-placa">
             <label class="fw-semibold small">Placa</label>
-            <select class="form-select" id="sal-f-placa">
-              <option value="">Seleccionar placa…</option>
-            </select>
+            <input type="text" class="form-control" id="sal-f-placa" list="sal-list-placas" placeholder="Buscar placa…" oninput="window._salDetectarCliente()" autocomplete="off">
+            <datalist id="sal-list-placas"></datalist>
+          </div>
+          <div class="col-md-3" id="sal-row-cliente" style="display:none;">
+            <label class="fw-semibold small">Cliente</label>
+            <input type="text" class="form-control" id="sal-f-cliente" readonly placeholder="Auto-detectado" style="background:var(--surface);color:var(--subtext);">
           </div>
           <div class="col-md-3">
             <label class="fw-semibold small">Responsable</label>
