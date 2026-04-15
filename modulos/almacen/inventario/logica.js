@@ -23,6 +23,11 @@ window.init_inventario = function() {
     window._invCargarSistemas();
     window._invCargarFamilias();
     window._invCargarMarcasFabricante();
+    // Inicializar comboboxes estáticos
+    window._cbInit('inv-f-tipo',     ['','Original','Alternativo'],           'Buscar tipo…');
+    window._cbInit('inv-f-sub-tipo', ['','Nuevo','Reparado'],                 'Buscar sub-tipo…');
+    // Al seleccionar sistema → actualizar opciones de sub-sistema
+    window._cbOnSelect('inv-f-sistema', function() { window._invFiltrarSubSistemas(); });
 };
 
 // ── Cargar datos ─────────────────────────────────────────────────
@@ -75,14 +80,12 @@ window._invCargarUnidades = function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._invUnidadesData = data || [];
-            var sel = document.getElementById('inv-f-unidad');
-            if (!sel) return;
-            var prev = sel.value;
-            sel.innerHTML = '<option value="">— Sin unidad —</option>' +
-                data.map(function(u) {
-                    return '<option value="' + _invEsc(u.nombre) + '">' + _invEsc(u.nombre) + '</option>';
-                }).join('');
-            if (prev) sel.value = prev;
+            var prev = window._cbGet('inv-f-unidad');
+            var items = [{ value: '', label: '— Sin unidad —' }].concat(
+                data.map(function(u) { return { value: u.nombre, label: u.nombre }; })
+            );
+            window._cbInit('inv-f-unidad', items, 'Buscar unidad…');
+            if (prev) window._cbSet('inv-f-unidad', prev, prev);
         })
         .catch(function() {});
 };
@@ -92,15 +95,13 @@ window._invCargarSistemas = function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._invSistemasData = data || [];
-            var sel = document.getElementById('inv-f-sistema');
-            if (!sel) return;
-            var prev = sel.value;
-            sel.innerHTML = '<option value="">— Sin sistema —</option>' +
-                data.map(function(s) {
-                    return '<option value="' + _invEsc(s.nombre) + '">' + _invEsc(s.nombre) + '</option>';
-                }).join('');
-            if (prev) { sel.value = prev; window._invFiltrarSubSistemas(); }
-            // Poblar también el filtro en la barra
+            var prev = window._cbGet('inv-f-sistema');
+            var items = [{ value: '', label: '— Sin sistema —' }].concat(
+                data.map(function(s) { return { value: s.nombre, label: s.nombre }; })
+            );
+            window._cbInit('inv-f-sistema', items, 'Buscar sistema…');
+            if (prev) { window._cbSet('inv-f-sistema', prev, prev); window._invFiltrarSubSistemas(); }
+            // Poblar filtro barra (select simple, no combobox)
             var filSis = document.getElementById('inv-fil-sistema');
             if (filSis) {
                 var prevF = filSis.value;
@@ -114,17 +115,16 @@ window._invCargarSistemas = function() {
 };
 
 window._invFiltrarSubSistemas = function() {
-    var sis  = ((document.getElementById('inv-f-sistema') || {}).value || '');
-    var sel  = document.getElementById('inv-f-sub-sistema');
-    if (!sel) return;
-    var prev = sel.value;
+    var sis  = window._cbGet('inv-f-sistema');
+    var prev = window._cbGet('inv-f-sub-sistema');
     var subs = (window._invSistemasData || []).filter(function(s) { return s.nombre === sis; });
     var subsNombres = subs.length && subs[0].sub_sistemas ? subs[0].sub_sistemas : [];
-    sel.innerHTML = '<option value="">— Sin sub-sistema —</option>' +
-        subsNombres.map(function(n) {
-            return '<option value="' + _invEsc(n) + '">' + _invEsc(n) + '</option>';
-        }).join('');
-    if (prev) sel.value = prev;
+    var items = [{ value: '', label: '— Sin sub-sistema —' }].concat(
+        subsNombres.map(function(n) { return { value: n, label: n }; })
+    );
+    window._cbInit('inv-f-sub-sistema', items, 'Buscar sub-sistema…');
+    if (prev && subsNombres.indexOf(prev) >= 0) window._cbSet('inv-f-sub-sistema', prev, prev);
+    else window._cbReset('inv-f-sub-sistema');
 };
 
 window._invCargarFamilias = function() {
@@ -132,15 +132,13 @@ window._invCargarFamilias = function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._invFamiliasData = data || [];
-            var sel = document.getElementById('inv-f-familia');
-            if (sel) {
-                var prev = sel.value;
-                sel.innerHTML = '<option value="">— Sin familia —</option>' +
-                    data.map(function(f) {
-                        return '<option value="' + _invEsc(f.nombre) + '">' + _invEsc(f.nombre) + '</option>';
-                    }).join('');
-                if (prev) sel.value = prev;
-            }
+            var prev = window._cbGet('inv-f-familia');
+            var items = [{ value: '', label: '— Sin familia —' }].concat(
+                data.map(function(f) { return { value: f.nombre, label: f.nombre }; })
+            );
+            window._cbInit('inv-f-familia', items, 'Buscar familia…');
+            if (prev) window._cbSet('inv-f-familia', prev, prev);
+            // Poblar filtro barra (select simple)
             var filFam = document.getElementById('inv-fil-familia');
             if (filFam) {
                 var prevF = filFam.value;
@@ -158,15 +156,12 @@ window._invCargarMarcasFabricante = function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._invMarcasFabData = data || [];
-            var sel = document.getElementById('inv-f-marca');
-            if (sel) {
-                var prev = sel.value;
-                sel.innerHTML = '<option value="">— Sin marca —</option>' +
-                    data.map(function(m) {
-                        return '<option value="' + _invEsc(m.nombre) + '">' + _invEsc(m.nombre) + '</option>';
-                    }).join('');
-                if (prev) sel.value = prev;
-            }
+            var prev = window._cbGet('inv-f-marca');
+            var items = [{ value: '', label: '— Sin marca —' }].concat(
+                data.map(function(m) { return { value: m.nombre, label: m.nombre }; })
+            );
+            window._cbInit('inv-f-marca', items, 'Buscar marca…');
+            if (prev) window._cbSet('inv-f-marca', prev, prev);
         })
         .catch(function() {});
 };
@@ -551,8 +546,12 @@ function _invResetImageUI(item) {
 }
 
 function _invSetField(id, val) {
+    var v = val != null ? val : '';
     var el = document.getElementById(id);
-    if (el) el.value = val != null ? val : '';
+    if (el) el.value = v;
+    // Si el campo tiene combobox, actualizar también el input de texto
+    var txt = document.getElementById(id + '-txt');
+    if (txt) txt.value = v;
 }
 
 // ── Image Upload ──────────────────────────────────────────────────

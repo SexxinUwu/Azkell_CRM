@@ -70,20 +70,29 @@ function _planColorPrioridad(p) {
 
 // Inicializar selectores de año
 function _planPoblarAnios(selId) {
-    var el = document.getElementById(selId);
-    if (!el) return;
     var anioAct = new Date().getFullYear();
-    el.innerHTML = '';
+    var items = [];
     for (var y = anioAct - 1; y <= anioAct + 2; y++) {
-        var opt = document.createElement('option');
-        opt.value = y; opt.textContent = y;
-        if (y === anioAct) opt.selected = true;
-        el.appendChild(opt);
+        items.push({ value: String(y), label: String(y) });
+    }
+    if (typeof window._cbInit === 'function') {
+        window._cbInit(selId, items, 'Año');
+        window._cbSet(selId, String(anioAct), String(anioAct));
     }
 }
 
 // ── ENTRY POINT ───────────────────────────────────────────────────
 window.init_planificacion = function() {
+    // Registrar callbacks de combobox para filtros
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('plan-sel-anio',      function() { window.cargarBoardPlan(); });
+        window._cbOnSelect('plan-fil-tipomp',    function() { window.filtrarBoardPlan(); });
+        window._cbOnSelect('plan-fil-mes-inicio',function() { window.filtrarBoardPlan(); });
+        window._cbOnSelect('req-fil-marca',      function() { window.filtrarRequerimientos(); });
+        window._cbOnSelect('req-fil-tipomp',     function() { window.filtrarRequerimientos(); });
+        window._cbOnSelect('proy-fil-tipomp',    function() { window.filtrarProyeccion(); });
+    }
+
     // Poblar selects de año
     _planPoblarAnios('plan-sel-anio');
     _planPoblarAnios('up-sel-anio');
@@ -166,21 +175,20 @@ window.cargarBoardPlan = function() {
             window.planDataFiltrado = window.planData.slice();
 
             // Poblar filtro de tipo MP dinámicamente
-            var selTipo = document.getElementById('plan-fil-tipomp');
-            if (selTipo) {
+            if (typeof window._cbInit === 'function') {
+                var prevT = typeof window._cbGet === 'function' ? window._cbGet('plan-fil-tipomp') : '';
                 var tipos = [];
                 window.planData.forEach(function(p) {
                     if (p.tipo_mp && !tipos.includes(p.tipo_mp)) tipos.push(p.tipo_mp);
                 });
                 tipos.sort();
-                var prevT = selTipo.value;
-                selTipo.innerHTML = '<option value="">Todos los MP</option>' +
-                    tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
+                window._cbInit('plan-fil-tipomp', tipos.map(function(t){ return { value: t, label: t }; }), 'Todos los MP');
+                if (prevT) window._cbSet('plan-fil-tipomp', prevT, prevT);
             }
 
             // Poblar filtro de mes de inicio dinámicamente
-            var selMes = document.getElementById('plan-fil-mes-inicio');
-            if (selMes) {
+            if (typeof window._cbInit === 'function') {
+                var prevM = typeof window._cbGet === 'function' ? window._cbGet('plan-fil-mes-inicio') : '';
                 var mesesMap = {};
                 var NOMBRES_MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
                 window.planData.forEach(function(p) {
@@ -191,11 +199,9 @@ window.cargarBoardPlan = function() {
                         mesesMap[key] = NOMBRES_MES[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
                     }
                 });
-                var prevM = selMes.value;
-                selMes.innerHTML = '<option value="">Todos los meses</option>' +
-                    Object.keys(mesesMap).sort().map(function(k) {
-                        return '<option value="' + k + '"' + (k === prevM ? ' selected' : '') + '>' + mesesMap[k] + '</option>';
-                    }).join('');
+                var mesItems = Object.keys(mesesMap).sort().map(function(k) { return { value: k, label: mesesMap[k] }; });
+                window._cbInit('plan-fil-mes-inicio', mesItems, 'Todos los meses');
+                if (prevM) window._cbSet('plan-fil-mes-inicio', prevM, mesesMap[prevM] || prevM);
             }
 
             _planActualizarKPIs();
@@ -1208,12 +1214,12 @@ window.cfgDataKitsFil  = window.cfgDataKitsFil  || [];
 window.cfgDataDest     = window.cfgDataDest     || [];
 
 window.cargarSubTabConfig = function() {
-    window.mostrarSubTabConfig(window.cfgSubTabActual || 'flota');
+    window.mostrarSubTabConfig(window.cfgSubTabActual || 'correos');
 };
 
 window.mostrarSubTabConfig = function(sub) {
     window.cfgSubTabActual = sub;
-    var subs = ['flota','kits','correos'];
+    var subs = ['correos'];
     subs.forEach(function(s) {
         var panel = document.getElementById('cfg-panel-' + s);
         var btn   = document.getElementById('cfg-tab-' + s);
@@ -1223,8 +1229,6 @@ window.mostrarSubTabConfig = function(sub) {
             else btn.classList.remove('active');
         }
     });
-    if (sub === 'flota')   window.cargarTablaConfigFlota();
-    if (sub === 'kits')    window.cargarTablaKits();
     if (sub === 'correos') window.cargarTablaDestinatarios();
 };
 
@@ -1720,17 +1724,13 @@ window.cargarRequerimientos = function() {
                 if (r.tipo_mp && !tipos.includes(r.tipo_mp))  tipos.push(r.tipo_mp);
             });
             marcas.sort(); tipos.sort();
-            var selM = document.getElementById('req-fil-marca');
-            if (selM) {
-                var prevM = selM.value;
-                selM.innerHTML = '<option value="">Todas las marcas</option>' +
-                    marcas.map(function(m){ return '<option value="'+m+'"'+(m===prevM?' selected':'')+'>'+m+'</option>'; }).join('');
-            }
-            var selT = document.getElementById('req-fil-tipomp');
-            if (selT) {
-                var prevT = selT.value;
-                selT.innerHTML = '<option value="">Todos los tipos</option>' +
-                    tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
+            if (typeof window._cbInit === 'function') {
+                var prevM = typeof window._cbGet === 'function' ? window._cbGet('req-fil-marca') : '';
+                var prevT = typeof window._cbGet === 'function' ? window._cbGet('req-fil-tipomp') : '';
+                window._cbInit('req-fil-marca',  marcas.map(function(m){ return { value: m, label: m }; }), 'Todas las marcas');
+                window._cbInit('req-fil-tipomp', tipos.map(function(t){ return { value: t, label: t }; }), 'Todos los tipos');
+                if (prevM) window._cbSet('req-fil-marca',  prevM, prevM);
+                if (prevT) window._cbSet('req-fil-tipomp', prevT, prevT);
             }
             window.filtrarRequerimientos();
         })
@@ -1867,16 +1867,15 @@ window.cargarProyeccion = function() {
             window.planProyData = j.data || [];
 
             // Poblar filtro de tipo MP dinámicamente
-            var selTipo = document.getElementById('proy-fil-tipomp');
-            if (selTipo) {
+            if (typeof window._cbInit === 'function') {
+                var prevT = typeof window._cbGet === 'function' ? window._cbGet('proy-fil-tipomp') : '';
                 var tipos = [];
                 window.planProyData.forEach(function(p) {
                     if (p.tipo_mp && !tipos.includes(p.tipo_mp)) tipos.push(p.tipo_mp);
                 });
                 tipos.sort();
-                var prevT = selTipo.value;
-                selTipo.innerHTML = '<option value="">Todos los tipos</option>' +
-                    tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
+                window._cbInit('proy-fil-tipomp', tipos.map(function(t){ return { value: t, label: t }; }), 'Todos los MP');
+                if (prevT) window._cbSet('proy-fil-tipomp', prevT, prevT);
             }
 
             window.filtrarProyeccion();

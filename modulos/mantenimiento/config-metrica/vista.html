@@ -1,0 +1,63 @@
+<!-- ================================================================ -->
+<!-- Módulo Config. Métrica — Azkell Fleet                            -->
+<!-- Define si cada placa se mide por KM o Horas Motor                -->
+<!-- ================================================================ -->
+<div style="display:flex;flex-direction:column;flex:1 1 0;min-height:0;padding:1rem;gap:0.75rem;">
+
+    <!-- Encabezado -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <h5 class="mb-0 fw-bold" style="color:var(--text)">
+                <i class="bi bi-speedometer2 me-2 text-primary"></i>Métrica por Placa
+            </h5>
+            <small style="color:var(--subtext)">Define si cada placa se mide por Kilómetros o Horas Motor</small>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.metricaCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+
+    <!-- Buscador + contador -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="input-group input-group-sm" style="max-width:300px;">
+            <span class="input-group-text" style="background:var(--surface);border-color:var(--border);color:var(--subtext)">
+                <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="metrica-buscar" class="form-control form-control-sm"
+                   placeholder="Buscar placa o marca..."
+                   oninput="window.metricaFiltrar()"
+                   style="background:var(--surface);border-color:var(--border);color:var(--text)">
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="badge bg-primary px-3" id="metrica-count-km">— KM</span>
+            <span class="badge bg-warning text-dark px-3" id="metrica-count-horas">— Horas</span>
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div class="alert alert-info py-2 px-3 mb-0" style="font-size:0.82rem;">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>KM</strong> — Calcula próximo preventivo por kilómetros recorridos (GPS Wialon).<br>
+        <strong>Horas Motor</strong> — Calcula próximo preventivo por horas de motor (GPS Wialon).
+        El cambio se aplica inmediatamente en el módulo Fleetrun.
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive" style="flex:1;overflow-y:auto;">
+        <table class="table table-sm table-hover align-middle" id="metrica-tabla">
+            <thead style="position:sticky;top:0;z-index:1;background:var(--surface);">
+                <tr style="color:var(--subtext);font-size:0.78rem;text-transform:uppercase;letter-spacing:.04em;">
+                    <th style="width:130px">Placa</th>
+                    <th>Marca</th>
+                    <th class="text-center" style="width:200px">Métrica Actual</th>
+                    <th class="text-center" style="width:160px">Cambiar</th>
+                </tr>
+            </thead>
+            <tbody id="metrica-tbody">
+                <tr><td colspan="4" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm"></div>
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -106,9 +106,13 @@
                 </div>
                 <div class="col-md-4">
                   <label class="fw-semibold small">Marca (fabricante)</label>
-                  <select class="form-select" id="inv-f-marca" onchange="window._invActualizarPreview()">
-                    <option value="">— Sin marca —</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-marca-txt" class="form-control" placeholder="Buscar marca…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-marca');window._invActualizarPreview()"
+                      onfocus="window._cbFiltrar('inv-f-marca')" onblur="window._cbHide('inv-f-marca')">
+                    <input type="hidden" id="inv-f-marca">
+                    <div id="inv-f-marca-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
 
                 <!-- Marca de Unidad (multi-select chips) -->
@@ -132,21 +136,23 @@
                 <!-- Familia + Unidad -->
                 <div class="col-md-6">
                   <label class="fw-semibold small">Familia</label>
-                  <select class="form-select" id="inv-f-familia">
-                    <option value="">— Sin familia —</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-familia-txt" class="form-control" placeholder="Buscar familia…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-familia')"
+                      onfocus="window._cbFiltrar('inv-f-familia')" onblur="window._cbHide('inv-f-familia')">
+                    <input type="hidden" id="inv-f-familia">
+                    <div id="inv-f-familia-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label class="fw-semibold small">Unidad</label>
-                  <select class="form-select" id="inv-f-unidad">
-                    <option value="">— Sin unidad —</option>
-                    <option value="UND">UND</option>
-                    <option value="LT">LT</option>
-                    <option value="KG">KG</option>
-                    <option value="JGO">JGO</option>
-                    <option value="GL">GL</option>
-                    <option value="PAR">PAR</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-unidad-txt" class="form-control" placeholder="Buscar unidad…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-unidad')"
+                      onfocus="window._cbFiltrar('inv-f-unidad')" onblur="window._cbHide('inv-f-unidad')">
+                    <input type="hidden" id="inv-f-unidad">
+                    <div id="inv-f-unidad-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
 
                 <!-- Moneda + Costo + Estado -->
@@ -182,33 +188,45 @@
                 <!-- Sistema + Sub-Sistema -->
                 <div class="col-md-6">
                   <label class="fw-semibold small">Sistema</label>
-                  <select class="form-select" id="inv-f-sistema" onchange="window._invFiltrarSubSistemas()">
-                    <option value="">— Sin sistema —</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-sistema-txt" class="form-control" placeholder="Buscar sistema…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sistema')"
+                      onfocus="window._cbFiltrar('inv-f-sistema')" onblur="window._cbHide('inv-f-sistema')">
+                    <input type="hidden" id="inv-f-sistema">
+                    <div id="inv-f-sistema-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label class="fw-semibold small">Sub-Sistema</label>
-                  <select class="form-select" id="inv-f-sub-sistema">
-                    <option value="">— Sin sub-sistema —</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-sub-sistema-txt" class="form-control" placeholder="Buscar sub-sistema…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sub-sistema')"
+                      onfocus="window._cbFiltrar('inv-f-sub-sistema')" onblur="window._cbHide('inv-f-sub-sistema')">
+                    <input type="hidden" id="inv-f-sub-sistema">
+                    <div id="inv-f-sub-sistema-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
 
                 <!-- Tipo + Sub-Tipo -->
                 <div class="col-md-4">
                   <label class="fw-semibold small">Tipo</label>
-                  <select class="form-select" id="inv-f-tipo">
-                    <option value="">— Sin tipo —</option>
-                    <option value="Original">Original</option>
-                    <option value="Alternativo">Alternativo</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-tipo-txt" class="form-control" placeholder="Buscar tipo…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-tipo')"
+                      onfocus="window._cbFiltrar('inv-f-tipo')" onblur="window._cbHide('inv-f-tipo')">
+                    <input type="hidden" id="inv-f-tipo">
+                    <div id="inv-f-tipo-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
                 <div class="col-md-4">
                   <label class="fw-semibold small">Sub-Tipo</label>
-                  <select class="form-select" id="inv-f-sub-tipo">
-                    <option value="">— Sin sub-tipo —</option>
-                    <option value="Nuevo">Nuevo</option>
-                    <option value="Reparado">Reparado</option>
-                  </select>
+                  <div class="position-relative">
+                    <input type="text" id="inv-f-sub-tipo-txt" class="form-control" placeholder="Buscar sub-tipo…"
+                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sub-tipo')"
+                      onfocus="window._cbFiltrar('inv-f-sub-tipo')" onblur="window._cbHide('inv-f-sub-tipo')">
+                    <input type="hidden" id="inv-f-sub-tipo">
+                    <div id="inv-f-sub-tipo-dd" class="cb-dropdown"></div>
+                  </div>
                 </div>
                 <div class="col-md-4">
                   <label class="fw-semibold small">Ubicación en Almacén</label>

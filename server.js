@@ -243,6 +243,21 @@ db.query(
         else   console.log('✅ Tabla destinatarios_alertas verificada');
     }
 );
+// ── Tabla maestra tipos de preventivo ─────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS tipos_preventivo (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion TEXT,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE tipos_preventivo:', e.message);
+        else   console.log('✅ Tabla tipos_preventivo verificada');
+    }
+);
 // ── Migración: columna frecuencia_horas en tipos_mantenimiento ────────────
 db.query(
     `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL`,
@@ -299,6 +314,11 @@ _encFixes.forEach(([bad, good]) => {
         (e) => { if (e) console.error('encoding fix error:', e.message); }
     );
 });
+// ── Migración: columna metrica en placas (km vs horas motor) ──────────────
+db.query(
+    `ALTER TABLE placas ADD COLUMN metrica ENUM('km','horas') NOT NULL DEFAULT 'km'`,
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ placas.metrica verificada'); }
+);
 // ── Nueva tabla: almacen_familias (fire-and-forget) ──────────────────────────
 db.query(
     `CREATE TABLE IF NOT EXISTS almacen_familias (
@@ -2797,6 +2817,92 @@ app.get('/api/requerimientos-resumen', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: rows });
     });
+});
+
+// ============================================================
+// CRUD TIPOS PREVENTIVO (tabla maestra de tipos de MP)
+// ============================================================
+app.get('/api/tipos-preventivo', (req, res) => {
+    db.query(
+        `SELECT id, nombre, descripcion, activo FROM tipos_preventivo WHERE activo=1 ORDER BY nombre`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ data: rows });
+        }
+    );
+});
+
+app.post('/api/tipos-preventivo', (req, res) => {
+    const { nombre, descripcion } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre es requerido' });
+    db.query(
+        `INSERT INTO tipos_preventivo (nombre, descripcion) VALUES (?, ?)`,
+        [nombre.toUpperCase(), descripcion || null],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.put('/api/tipos-preventivo/:id', (req, res) => {
+    const { nombre, descripcion } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre es requerido' });
+    db.query(
+        `UPDATE tipos_preventivo SET nombre=?, descripcion=? WHERE id=?`,
+        [nombre.toUpperCase(), descripcion || null, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+app.delete('/api/tipos-preventivo/:id', (req, res) => {
+    db.query(`DELETE FROM tipos_preventivo WHERE id=?`, [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// Sync: importa tipos distintos de tipos_mantenimiento hacia tipos_preventivo
+app.post('/api/tipos-preventivo/sync-desde-frecuencias', (req, res) => {
+    db.query(
+        `INSERT IGNORE INTO tipos_preventivo (nombre)
+         SELECT DISTINCT UPPER(TRIM(tipo_mp)) FROM tipos_mantenimiento
+         WHERE tipo_mp IS NOT NULL AND TRIM(tipo_mp) != ''`,
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, insertados: result.affectedRows });
+        }
+    );
+});
+
+// ============================================================
+// CONFIG MÉTRICA POR PLACA (km vs horas motor)
+// ============================================================
+app.get('/api/config-metrica', (req, res) => {
+    db.query(
+        `SELECT placa, marca, metrica FROM placas ORDER BY placa`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        }
+    );
+});
+
+app.put('/api/config-metrica/:placa', (req, res) => {
+    const { placa } = req.params;
+    const metrica = (req.body.metrica || 'km').toLowerCase() === 'horas' ? 'horas' : 'km';
+    db.query(
+        `UPDATE placas SET metrica = ? WHERE placa = ?`,
+        [metrica, placa],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (result.affectedRows === 0) return res.status(404).json({ error: 'Placa no encontrada' });
+            res.json({ ok: true, placa, metrica });
+        }
+    );
 });
 
 // ============================================================

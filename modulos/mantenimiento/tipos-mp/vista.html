@@ -1,0 +1,89 @@
+<div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
+
+  <!-- ── HEADER ────────────────────────────────────────────────── -->
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 flex-shrink-0"
+       style="border-bottom:1px solid var(--border); background:var(--surface)">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-card-list text-primary" style="font-size:1.1rem"></i>
+      <span class="fw-bold" style="font-size:1rem">Tipos de Preventivo</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" title="Importar tipos desde Frecuencias MP"
+              onclick="window.tiposMpSyncDesdeFrec()">
+        <i class="bi bi-arrow-repeat me-1"></i>Sync desde Frecuencias
+      </button>
+      <button class="btn btn-sm btn-reload-cache" title="Actualizar"
+              onclick="window.tiposMpCargar()">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-primary fw-bold" onclick="window.tiposMpAbrirModal()">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Tipo
+      </button>
+    </div>
+  </div>
+
+  <!-- ── BUSCADOR ──────────────────────────────────────────────── -->
+  <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
+       style="border-bottom:1px solid var(--border); background:var(--surface)">
+    <div class="input-group input-group-sm" style="max-width:260px">
+      <span class="input-group-text border-end-0 bg-transparent">
+        <i class="bi bi-search" style="color:var(--subtext)"></i>
+      </span>
+      <input type="text" class="form-control border-start-0 ps-0" id="tiposmp-buscador"
+             placeholder="Buscar tipo..." oninput="window.tiposMpFiltrar()">
+    </div>
+    <span class="ms-auto" style="font-size:0.78rem; color:var(--subtext)" id="tiposmp-count"></span>
+  </div>
+
+  <!-- ── TABLA ─────────────────────────────────────────────────── -->
+  <div class="flex-1 overflow-auto px-2 py-2">
+    <table class="table table-sm table-hover align-middle w-100" style="font-size:0.84rem">
+      <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="min-width:140px">Nombre</th>
+          <th style="min-width:240px">Descripción</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody id="tiposmp-tbody">
+        <tr><td colspan="3" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ======= MODAL TIPO PREVENTIVO ======= -->
+<div class="modal fade" id="tiposMpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content" style="background:var(--surface); color:var(--text)">
+      <div class="modal-header" style="border-bottom:1px solid var(--border)">
+        <h5 class="modal-title fw-bold" id="tiposMpModal-titulo">
+          <i class="bi bi-plus-circle me-1 text-primary"></i>Nuevo Tipo de Preventivo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="tiposmp-id">
+        <div class="mb-3">
+          <label class="form-label fw-bold" style="font-size:0.8rem">Nombre *</label>
+          <input type="text" class="form-control form-control-sm text-uppercase fw-bold"
+                 id="tiposmp-nombre" placeholder="MP1, MP2, CAMBIO ACEITE..."
+                 autocomplete="off" maxlength="100">
+          <div class="form-text" style="font-size:0.72rem">Ej: MP1, MP2, MP3, CAMBIO FILTRO AIRE</div>
+        </div>
+        <div class="mb-1">
+          <label class="form-label fw-bold" style="font-size:0.8rem">Descripción</label>
+          <textarea class="form-control form-control-sm" id="tiposmp-desc"
+                    rows="2" placeholder="Descripción opcional..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border)">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.tiposMpGuardar()">
+          <i class="bi bi-check2 me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

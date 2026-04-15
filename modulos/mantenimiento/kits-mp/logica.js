@@ -10,9 +10,25 @@ function _kitsBsModal(el) {
 
 window.kitsData    = window.kitsData    || [];
 window.kitsDataFil = window.kitsDataFil || [];
+window._kitsAlmacenItems = window._kitsAlmacenItems || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_kits-mp'] = function() {
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('kits-fil-marca', function() { window.kitsFiltrar(); });
+        window._cbOnSelect('kits-fil-tipo',  function() { window.kitsFiltrar(); });
+        // Callback al seleccionar ítem de almacén: auto-rellena unidad y costo
+        window._cbOnSelect('kits-item-nombre', function(val) {
+            var item = (window._kitsAlmacenItems || []).find(function(x) { return x.nombre === val; });
+            if (item) {
+                var unidEl  = document.getElementById('kits-unidad');
+                var costoEl = document.getElementById('kits-costo-unit');
+                if (unidEl)  unidEl.value  = item.unidad || '';
+                if (costoEl) costoEl.value = parseFloat(item.costo_referencial || 0).toFixed(2);
+                window.kitsCalcularTotal();
+            }
+        });
+    }
     window.kitsCargarTabla();
 };
 
@@ -31,20 +47,61 @@ function _kitsPopularDatalists() {
     });
     marcas.sort();
 
-    var tipos = [];
-    window.kitsData.forEach(function(k) {
-        var t = (k.tipo_mp || '').trim().toUpperCase();
-        if (t && !tipos.includes(t)) tipos.push(t);
-    });
-    tipos.sort();
-
     function _fill(id, vals) {
         var dl = document.getElementById(id);
         if (dl) dl.innerHTML = vals.map(function(v){ return '<option value="'+v+'">'; }).join('');
     }
-    _fill('kits-dl-marcas',  marcas);
-    _fill('kits-dl-tipomps', tipos);
+    _fill('kits-dl-marcas', marcas);
 }
+
+// ── Cargar combobox Tipos de Preventivo (modal) ───────────────────
+function _kitsCargarTiposMP(presetVal) {
+    fetch('/api/tipos-preventivo')
+        .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function(j) {
+            var items = (j.data || []).map(function(t) { return { value: t.nombre, label: t.nombre }; });
+            if (typeof window._cbInit === 'function') {
+                window._cbInit('kits-tipomp', items, 'Buscar tipo...');
+                if (presetVal && typeof window._cbSet === 'function') {
+                    window._cbSet('kits-tipomp', presetVal, presetVal);
+                }
+            }
+        })
+        .catch(function(e) { console.error(e); });
+}
+
+// ── Cargar combobox Ítems de Almacén (modal) ─────────────────────
+function _kitsCargarItemsAlmacen(presetVal) {
+    fetch('/api/almacen/inventario')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            window._kitsAlmacenItems = data || [];
+            var items = (data || []).map(function(x) {
+                return { value: x.nombre, label: x.nombre + (x.unidad ? ' [' + x.unidad + ']' : '') };
+            });
+            if (typeof window._cbInit === 'function') {
+                window._cbInit('kits-item-nombre', items, 'Buscar ítem...');
+                if (presetVal && typeof window._cbSet === 'function') {
+                    window._cbSet('kits-item-nombre', presetVal, presetVal);
+                }
+            }
+        })
+        .catch(function(e) { console.error(e); });
+}
+
+// ── Helper blur para combobox en formulario (sync texto→hidden) ───
+window._kitsHideCombo = function(id) {
+    setTimeout(function() {
+        var dd  = document.getElementById(id + '-dd');
+        if (dd) dd.style.display = 'none';
+        var txt = document.getElementById(id + '-txt');
+        var hid = document.getElementById(id);
+        // Si no se seleccionó opción pero hay texto escrito, guardar texto en hidden
+        if (txt && hid && !hid.value && txt.value.trim()) {
+            hid.value = txt.value.trim();
+        }
+    }, 180);
+};
 
 // ── Cargar tabla ──────────────────────────────────────────────────
 window.kitsCargarTabla = function() {
@@ -57,24 +114,20 @@ window.kitsCargarTabla = function() {
             window.kitsData = j.data || [];
             window.kitsDataFil = window.kitsData.slice();
 
-            var selMarca = document.getElementById('kits-fil-marca');
-            if (selMarca) {
-                var marcas = [];
-                window.kitsData.forEach(function(k){ var m=(k.marca_vehiculo||'').toUpperCase(); if(m && !marcas.includes(m)) marcas.push(m); });
-                marcas.sort();
-                var prevM = (selMarca.value||'').toUpperCase();
-                selMarca.innerHTML = '<option value="">Todas las marcas</option>' +
-                    marcas.map(function(m){ return '<option value="'+m+'"'+(m===prevM?' selected':'')+'>'+m+'</option>'; }).join('');
-            }
-            var selTipo = document.getElementById('kits-fil-tipo');
-            if (selTipo) {
-                var tipos = [];
-                window.kitsData.forEach(function(k){ if(k.tipo_mp && !tipos.includes(k.tipo_mp)) tipos.push(k.tipo_mp); });
-                tipos.sort();
-                var prevT = selTipo.value;
-                selTipo.innerHTML = '<option value="">Todo MP</option>' +
-                    tipos.map(function(t){ return '<option value="'+t+'"'+(t===prevT?' selected':'')+'>'+t+'</option>'; }).join('');
-            }
+            var prevMarca = typeof window._cbGet === 'function' ? window._cbGet('kits-fil-marca') : '';
+            var prevTipo  = typeof window._cbGet === 'function' ? window._cbGet('kits-fil-tipo')  : '';
+
+            var marcas = [];
+            window.kitsData.forEach(function(k){ var m=(k.marca_vehiculo||'').toUpperCase(); if(m && !marcas.includes(m)) marcas.push(m); });
+            marcas.sort();
+            var itemsMarca = marcas.map(function(m){ return { value: m, label: m }; });
+            if (typeof window._cbInit === 'function') { window._cbInit('kits-fil-marca', itemsMarca, 'Todas las marcas'); if (prevMarca) window._cbSet('kits-fil-marca', prevMarca, prevMarca); }
+
+            var tipos = [];
+            window.kitsData.forEach(function(k){ if(k.tipo_mp && !tipos.includes(k.tipo_mp)) tipos.push(k.tipo_mp); });
+            tipos.sort();
+            var itemsTipo = tipos.map(function(t){ return { value: t, label: t }; });
+            if (typeof window._cbInit === 'function') { window._cbInit('kits-fil-tipo', itemsTipo, 'Todo MP'); if (prevTipo) window._cbSet('kits-fil-tipo', prevTipo, prevTipo); }
             _kitsPopularDatalists();
             window.kitsFiltrar();
         })
@@ -92,7 +145,7 @@ window.kitsFiltrar = function() {
     var tb = document.getElementById('kits-tbody');
     if (!tb) return;
     if (!window.kitsDataFil.length) {
-        tb.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Sin ítems de kits</td></tr>';
+        tb.innerHTML = '<tr><td colspan="8" class="text-center py-4" style="color:var(--subtext)">Sin ítems de kits</td></tr>';
         return;
     }
     var html = '';
@@ -102,8 +155,7 @@ window.kitsFiltrar = function() {
         if (k.marca_vehiculo !== lastMarca) {
             html += '<tr style="background:var(--surface)">' +
                 '<td colspan="8" class="fw-bold py-1 px-2" style="font-size:0.8rem; border-top:2px solid var(--border); color:var(--text)">' +
-                '<i class="bi bi-truck me-1" style="color:var(--primary,#5865F2)"></i>' + (k.marca_vehiculo||'—') + '</td>' +
-                '<td colspan="2"></td><td></td></tr>';
+                '<i class="bi bi-truck me-1" style="color:var(--primary,#5865F2)"></i>' + (k.marca_vehiculo||'—') + '</td></tr>';
             lastMarca = k.marca_vehiculo;
             lastTipo  = null;
         }
@@ -113,18 +165,15 @@ window.kitsFiltrar = function() {
                 '<td></td>' +
                 '<td colspan="7" class="py-1 px-2" style="font-size:0.75rem; border-bottom:1px dashed var(--border)">' +
                 '<span class="badge ' + mpColor + ' me-1">' + k.tipo_mp + '</span>' +
-                '</td><td colspan="2"></td><td></td></tr>';
+                '</td></tr>';
             lastTipo = k.tipo_mp;
         }
         html += '<tr>' +
             '<td></td><td></td>' +
-            '<td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (k.nombre_kit||'—') + '</td>' +
-            '<td><code style="font-size:0.73rem">' + (k.item_codigo||'—') + '</code></td>' +
-            '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (k.item_nombre||'—') + '</td>' +
+            '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (k.item_nombre||'—') + '</td>' +
             '<td>' + (k.cantidad||0) + '</td><td>' + (k.unidad_medida||'') + '</td>' +
             '<td>S/.' + parseFloat(k.costo_unitario||0).toFixed(2) + '</td>' +
             '<td class="fw-bold">S/.' + parseFloat(k.costo_total||0).toFixed(2) + '</td>' +
-            '<td>' + (k.orden||0) + '</td>' +
             '<td class="text-end">' +
                 '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.kitsEditar('+k.id+')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
                 '<button class="btn btn-xs btn-outline-danger" onclick="window.kitsEliminar('+k.id+',\''+((k.item_nombre||'').replace(/'/g,''))+'\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
@@ -135,14 +184,18 @@ window.kitsFiltrar = function() {
 
 // ── Abrir Modal nuevo ─────────────────────────────────────────────
 window.kitsAbrirModal = function() {
-    ['kits-id','kits-marca','kits-tipomp','kits-nombre','kits-codigo','kits-item-nombre',
-     'kits-unidad','kits-cantidad','kits-costo-unit','kits-costo-total'].forEach(function(id){
+    ['kits-id','kits-marca','kits-unidad','kits-cantidad','kits-costo-unit','kits-costo-total'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.value='';
     });
-    var ord = document.getElementById('kits-orden'); if(ord) ord.value='1';
+    if (typeof window._cbReset === 'function') {
+        window._cbReset('kits-tipomp');
+        window._cbReset('kits-item-nombre');
+    }
     var t = document.getElementById('kitsModal-titulo');
     if(t) t.innerHTML='<i class="bi bi-plus-circle me-1 text-primary"></i>Nuevo Ítem de Kit';
     _kitsPopularDatalists();
+    _kitsCargarTiposMP();
+    _kitsCargarItemsAlmacen();
     _kitsBsModal(document.getElementById('kitsModal')).show();
 };
 
@@ -153,18 +206,15 @@ window.kitsEditar = function(id) {
     var set = function(elId,v){ var el=document.getElementById(elId); if(el) el.value=v||''; };
     set('kits-id',         k.id);
     set('kits-marca',      k.marca_vehiculo);
-    set('kits-tipomp',     k.tipo_mp);
-    set('kits-nombre',     k.nombre_kit);
-    set('kits-codigo',     k.item_codigo);
-    set('kits-item-nombre',k.item_nombre);
     set('kits-cantidad',   k.cantidad);
     set('kits-unidad',     k.unidad_medida);
     set('kits-costo-unit', k.costo_unitario);
     set('kits-costo-total',k.costo_total);
-    set('kits-orden',      k.orden);
     var t = document.getElementById('kitsModal-titulo');
     if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar — ' + (k.item_nombre||'').substring(0,30);
     _kitsPopularDatalists();
+    _kitsCargarTiposMP(k.tipo_mp);
+    _kitsCargarItemsAlmacen(k.item_nombre);
     _kitsBsModal(document.getElementById('kitsModal')).show();
 };
 
@@ -179,18 +229,23 @@ window.kitsCalcularTotal = function() {
 // ── Guardar ───────────────────────────────────────────────────────
 window.kitsGuardar = function() {
     var get = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
+    // Para comboboxes: leer hidden; si vacío, leer txt (entrada libre)
+    var getCombo = function(id) {
+        var hid = document.getElementById(id);
+        var hidVal = hid ? hid.value.trim() : '';
+        if (hidVal) return hidVal;
+        var txt = document.getElementById(id + '-txt');
+        return txt ? txt.value.trim() : '';
+    };
     var kitId = get('kits-id');
     var body = {
         marca_vehiculo: get('kits-marca').toUpperCase(),
-        tipo_mp:        get('kits-tipomp'),
-        nombre_kit:     get('kits-nombre')       || null,
-        item_codigo:    get('kits-codigo')        || null,
-        item_nombre:    get('kits-item-nombre'),
+        tipo_mp:        getCombo('kits-tipomp').toUpperCase(),
+        item_nombre:    getCombo('kits-item-nombre'),
         cantidad:       parseFloat(get('kits-cantidad'))     || 1,
         unidad_medida:  get('kits-unidad')        || 'UND',
         costo_unitario: parseFloat(get('kits-costo-unit'))   || 0,
-        costo_total:    parseFloat(get('kits-costo-total'))  || 0,
-        orden:          parseInt(get('kits-orden'))          || 1
+        costo_total:    parseFloat(get('kits-costo-total'))  || 0
     };
     if (!body.marca_vehiculo || !body.item_nombre) {
         return window.mostrarToast('Marca e ítem son requeridos', 'warning');

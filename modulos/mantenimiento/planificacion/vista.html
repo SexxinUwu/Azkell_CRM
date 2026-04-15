@@ -144,8 +144,13 @@
                         <option value="9">Septiembre</option><option value="10">Octubre</option>
                         <option value="11">Noviembre</option><option value="12">Diciembre</option>
                     </select>
-                    <select class="form-select form-select-sm fw-bold" id="plan-sel-anio" onchange="window.cargarBoardPlan()" style="max-width:90px">
-                    </select>
+                    <div class="position-relative" style="max-width:90px;">
+                        <input type="text" id="plan-sel-anio-txt" class="form-control form-control-sm fw-bold" placeholder="Año"
+                          autocomplete="off" oninput="window._cbFiltrarFilter('plan-sel-anio')"
+                          onfocus="window._cbFiltrar('plan-sel-anio')" onblur="window._cbHideFilter('plan-sel-anio')">
+                        <input type="hidden" id="plan-sel-anio">
+                        <div id="plan-sel-anio-dd" class="cb-dropdown"></div>
+                    </div>
                 </div>
                 <button class="btn btn-sm btn-outline-primary fw-bold" onclick="window.abrirModalNuevoPlan()">
                     <i class="bi bi-plus-circle me-1"></i>Nuevo
@@ -234,12 +239,20 @@
                 <option value="Diferida">Diferida</option>
                 <option value="Atrasada">Atrasadas</option>
             </select>
-            <select class="form-select form-select-sm" id="plan-fil-tipomp" onchange="window.filtrarBoardPlan()" style="max-width:120px">
-                <option value="">Todos los MP</option>
-            </select>
-            <select class="form-select form-select-sm" id="plan-fil-mes-inicio" onchange="window.filtrarBoardPlan()" style="max-width:160px">
-                <option value="">Todos los meses</option>
-            </select>
+            <div class="position-relative" style="max-width:120px;">
+              <input type="text" id="plan-fil-tipomp-txt" class="form-control form-control-sm" placeholder="Todos los MP"
+                autocomplete="off" oninput="window._cbFiltrarFilter('plan-fil-tipomp')"
+                onfocus="window._cbFiltrar('plan-fil-tipomp')" onblur="window._cbHideFilter('plan-fil-tipomp')">
+              <input type="hidden" id="plan-fil-tipomp">
+              <div id="plan-fil-tipomp-dd" class="cb-dropdown"></div>
+            </div>
+            <div class="position-relative" style="max-width:160px;">
+              <input type="text" id="plan-fil-mes-inicio-txt" class="form-control form-control-sm" placeholder="Todos los meses"
+                autocomplete="off" oninput="window._cbFiltrarFilter('plan-fil-mes-inicio')"
+                onfocus="window._cbFiltrar('plan-fil-mes-inicio')" onblur="window._cbHideFilter('plan-fil-mes-inicio')">
+              <input type="hidden" id="plan-fil-mes-inicio">
+              <div id="plan-fil-mes-inicio-dd" class="cb-dropdown"></div>
+            </div>
         </div>
 
         <!-- KANBAN BOARD por semanas -->
@@ -273,7 +286,13 @@
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label fw-bold" style="font-size:0.8rem">Año</label>
-                            <select class="form-select form-select-sm" id="up-sel-anio"></select>
+                            <div class="position-relative">
+                              <input type="text" id="up-sel-anio-txt" class="form-control form-control-sm" placeholder="Año"
+                                autocomplete="off" oninput="window._cbFiltrarFilter('up-sel-anio')"
+                                onfocus="window._cbFiltrar('up-sel-anio')" onblur="window._cbHideFilter('up-sel-anio')">
+                              <input type="hidden" id="up-sel-anio">
+                              <div id="up-sel-anio-dd" class="cb-dropdown"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -409,12 +428,20 @@
         </div>
         <!-- Filtros -->
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-            <select class="form-select form-select-sm" id="req-fil-marca" onchange="window.filtrarRequerimientos()" style="max-width:160px">
-                <option value="">Todas las marcas</option>
-            </select>
-            <select class="form-select form-select-sm" id="req-fil-tipomp" onchange="window.filtrarRequerimientos()" style="max-width:160px">
-                <option value="">Todos los tipos</option>
-            </select>
+            <div class="position-relative" style="max-width:160px;">
+              <input type="text" id="req-fil-marca-txt" class="form-control form-control-sm" placeholder="Todas las marcas"
+                autocomplete="off" oninput="window._cbFiltrarFilter('req-fil-marca')"
+                onfocus="window._cbFiltrar('req-fil-marca')" onblur="window._cbHideFilter('req-fil-marca')">
+              <input type="hidden" id="req-fil-marca">
+              <div id="req-fil-marca-dd" class="cb-dropdown"></div>
+            </div>
+            <div class="position-relative" style="max-width:160px;">
+              <input type="text" id="req-fil-tipomp-txt" class="form-control form-control-sm" placeholder="Todos los tipos"
+                autocomplete="off" oninput="window._cbFiltrarFilter('req-fil-tipomp')"
+                onfocus="window._cbFiltrar('req-fil-tipomp')" onblur="window._cbHideFilter('req-fil-tipomp')">
+              <input type="hidden" id="req-fil-tipomp">
+              <div id="req-fil-tipomp-dd" class="cb-dropdown"></div>
+            </div>
             <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.exportarRequerimientos()">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </button>
@@ -446,9 +473,13 @@
                     <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search" style="color:var(--subtext)"></i></span>
                     <input type="text" class="form-control border-start-0 ps-0" id="proy-buscador" placeholder="Placa..." oninput="window.filtrarProyeccion()">
                 </div>
-                <select class="form-select form-select-sm" id="proy-fil-tipomp" onchange="window.filtrarProyeccion()" style="max-width:140px">
-                    <option value="">Todos los MP</option>
-                </select>
+                <div class="position-relative" style="max-width:140px;">
+                    <input type="text" id="proy-fil-tipomp-txt" class="form-control form-control-sm" placeholder="Todos los MP"
+                      autocomplete="off" oninput="window._cbFiltrarFilter('proy-fil-tipomp')"
+                      onfocus="window._cbFiltrar('proy-fil-tipomp')" onblur="window._cbHideFilter('proy-fil-tipomp')">
+                    <input type="hidden" id="proy-fil-tipomp">
+                    <div id="proy-fil-tipomp-dd" class="cb-dropdown"></div>
+                </div>
                 <select class="form-select form-select-sm" id="proy-fil-estado" onchange="window.filtrarProyeccion()" style="max-width:150px">
                     <option value="">Todos los estados</option>
                     <option value="vencida">Vencidos</option>
@@ -500,109 +531,14 @@
         <!-- Sub-tabs -->
         <ul class="nav nav-pills mb-3 gap-1" id="cfg-subtabs">
             <li class="nav-item">
-                <button class="nav-link active btn-sm" id="cfg-tab-flota" onclick="window.mostrarSubTabConfig('flota')" style="font-size:0.8rem">
-                    <i class="bi bi-list-check me-1"></i>Tipos de Mantenimiento
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link btn-sm" id="cfg-tab-kits" onclick="window.mostrarSubTabConfig('kits')" style="font-size:0.8rem">
-                    <i class="bi bi-tools me-1"></i>Kits de Mantenimiento
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link btn-sm" id="cfg-tab-correos" onclick="window.mostrarSubTabConfig('correos')" style="font-size:0.8rem">
+                <button class="nav-link active btn-sm" id="cfg-tab-correos" onclick="window.mostrarSubTabConfig('correos')" style="font-size:0.8rem">
                     <i class="bi bi-envelope me-1"></i>Correos de Alerta
                 </button>
             </li>
         </ul>
 
-        <!-- ── SUB-PANEL: Tipos de Mantenimiento ── -->
-        <div id="cfg-panel-flota">
-            <div class="kpi-card p-0 overflow-hidden">
-                <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
-                    <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-list-check me-1"></i>Tipos de Mantenimiento por Marca</span>
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" id="cfg-flota-fil-marca" onchange="window.filtrarTablaConfigFlota()" style="max-width:140px">
-                            <option value="">Todas las marcas</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="cfg-flota-fil-uts" onchange="window.filtrarTablaConfigFlota()" style="max-width:110px">
-                            <option value="">Toda UTS</option>
-                            <option value="LOCAL">LOCAL</option>
-                            <option value="NACIONAL">NACIONAL</option>
-                        </select>
-                        <button class="btn btn-sm btn-primary" onclick="window.abrirModalConfigFlota()">
-                            <i class="bi bi-plus me-1"></i>Nuevo Tipo MP
-                        </button>
-                    </div>
-                </div>
-                <div class="table-responsive" style="max-height:calc(100vh - 320px); overflow-y:auto">
-                    <table class="table table-sm table-hover mb-0 comp-table">
-                        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
-                            <tr>
-                                <th>Marca</th><th>Tipo MP</th><th>UTS</th>
-                                <th>Frec. KM</th><th>Frec. Horas</th><th>Frec. Días</th>
-                                <th>Tipo</th><th>Sistema</th><th>Descripción</th><th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="cfg-flota-tbody">
-                            <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Panel herramientas admin (migración de códigos) ── -->
-        <div class="mt-3 p-3 rounded" style="background:var(--surface);border:1px dashed var(--border)">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div>
-                    <span class="fw-bold" style="font-size:0.8rem"><i class="bi bi-tools me-1 text-warning"></i>Herramientas de Datos</span>
-                    <p class="mb-0" style="font-size:0.75rem; color:var(--subtext)">Actualiza los IDs antiguos de Fleetrun al formato legible (FL-PLACA-TIPO-FECHA). Ejecutar solo una vez.</p>
-                </div>
-                <button class="btn btn-sm btn-outline-warning fw-bold" onclick="window.migrarCodigosFleetrun()">
-                    <i class="bi bi-arrow-repeat me-1"></i>Migrar códigos Fleetrun
-                </button>
-            </div>
-            <div id="migrar-resultado" class="mt-2" style="display:none"></div>
-        </div>
-
-        <!-- ── SUB-PANEL: Kits MP ── -->
-        <div id="cfg-panel-kits" style="display:none">
-            <div class="kpi-card p-0 overflow-hidden">
-                <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--border)">
-                    <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-tools me-1"></i>Kits de Mantenimiento por Marca</span>
-                    <div class="d-flex gap-2 align-items-center">
-                        <!-- Filtros rápidos -->
-                        <select class="form-select form-select-sm" id="cfg-kit-fil-marca" onchange="window.filtrarTablaKits()" style="max-width:130px">
-                            <option value="">Todas las marcas</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="cfg-kit-fil-tipo" onchange="window.filtrarTablaKits()" style="max-width:140px">
-                            <option value="">Todo MP</option>
-                        </select>
-                        <button class="btn btn-sm btn-primary" onclick="window.abrirModalKit()">
-                            <i class="bi bi-plus me-1"></i>Nuevo Item
-                        </button>
-                    </div>
-                </div>
-                <div class="table-responsive" style="max-height:calc(100vh - 320px); overflow-y:auto">
-                    <table class="table table-sm table-hover mb-0 comp-table">
-                        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
-                            <tr>
-                                <th>Marca</th><th>MP</th><th>Kit</th><th>Código</th>
-                                <th>Ítem</th><th>Cant.</th><th>Unidad</th>
-                                <th>C.Unit.</th><th>C.Total</th><th>Ord.</th><th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="cfg-kits-tbody">
-                            <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
         <!-- ── SUB-PANEL: Correos de Alerta ── -->
-        <div id="cfg-panel-correos" style="display:none">
+        <div id="cfg-panel-correos">
             <div class="row g-3">
                 <div class="col-12 col-lg-7">
                     <div class="kpi-card p-0 overflow-hidden">

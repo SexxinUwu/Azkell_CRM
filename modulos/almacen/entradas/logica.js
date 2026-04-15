@@ -47,11 +47,13 @@ window._entCargarProveedores = function() {
     fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            var sel = document.getElementById('ent-f-proveedor');
-            if (sel) {
-                sel.innerHTML = '<option value="" disabled selected>Seleccionar proveedor…</option>' +
-                    data.map(function(p) { return '<option value="'+_entEsc(p.id)+'" data-nombre="'+_entEsc(p.nombre)+'">'+_entEsc(p.nombre)+(p.numero_documento?' ('+p.numero_documento+')':'')+'</option>'; }).join('');
-            }
+            var items = data.map(function(p) {
+                return {
+                    value: p.id,
+                    label: p.nombre + (p.numero_documento ? ' (' + p.numero_documento + ')' : '')
+                };
+            });
+            window._cbInit('ent-f-proveedor', items, 'Buscar proveedor…');
         }).catch(function() {});
     var fechaEl = document.getElementById('ent-f-fecha');
     if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
@@ -145,10 +147,9 @@ window._entActualizarTotal = function() {
 
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarEntrada = function() {
-    var fecha  = (document.getElementById('ent-f-fecha')      || {}).value || '';
-    var provSel = document.getElementById('ent-f-proveedor');
-    var provId = provSel ? provSel.value : '';
-    var provNombre = provSel && provSel.value ? ((provSel.selectedOptions[0]||{}).getAttribute('data-nombre')||'') : '';
+    var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
+    var provId     = window._cbGet('ent-f-proveedor');
+    var provNombre = window._cbGetText('ent-f-proveedor');
     var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
     var tc     = parseFloat((document.getElementById('ent-f-tc') || {}).value) || 1;
@@ -197,9 +198,10 @@ window.abrirModalEntrada = function() {
     var totalEl = document.getElementById('ent-total-display');
     if (totalEl) totalEl.textContent = 'S/ 0.00';
 
-    ['ent-f-proveedor','ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
+    ['ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
+    window._cbReset('ent-f-proveedor');
     var fecha = document.getElementById('ent-f-fecha');
     if (fecha) fecha.value = new Date().toISOString().split('T')[0];
     var mon = document.getElementById('ent-f-moneda');

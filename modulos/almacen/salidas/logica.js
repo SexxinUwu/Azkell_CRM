@@ -44,16 +44,11 @@ window._salCargarConfig = function() {
 };
 
 window._salCargarSelect = function() {
-    // Conductores
+    // Conductores → array global para el combobox
     fetch('/api/conductores-lista')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._salConductores = data || [];
-            var sel = document.getElementById('sal-f-responsable');
-            if (sel) {
-                sel.innerHTML = '<option value="">Seleccionar responsable…</option>' +
-                    data.map(function(c) { return '<option value="' + c.id + '" data-nombre="' + _salEsc(c.nombre) + '">' + _salEsc(c.nombre) + '</option>'; }).join('');
-            }
         })
         .catch(function() {});
     // Placas → datalist + global array para lookup cliente
@@ -72,6 +67,46 @@ window._salCargarSelect = function() {
     // set default fecha hoy
     var fechaEl = document.getElementById('sal-f-fecha');
     if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
+};
+
+// ── Combobox Responsable ──────────────────────────────────────────
+window._salFiltrarResp = function() {
+    var q  = ((document.getElementById('sal-f-responsable-texto') || {}).value || '').toLowerCase().trim();
+    var dd = document.getElementById('sal-resp-dropdown');
+    if (!dd) return;
+    var lista = (window._salConductores || []).filter(function(c) {
+        return !q || (c.nombre || '').toLowerCase().includes(q);
+    });
+    if (!lista.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = lista.map(function(c) {
+        return '<div class="sal-resp-opt" ' +
+            'data-id="' + c.id + '" data-nombre="' + _salEsc(c.nombre) + '" ' +
+            'style="padding:7px 12px;cursor:pointer;font-size:0.875rem;" ' +
+            'onmouseover="this.style.background=\'var(--hover,#f0f4ff)\'" ' +
+            'onmouseout="this.style.background=\'\'" ' +
+            'onmousedown="window._salSeleccionarResp(this)">' +
+            _salEsc(c.nombre) +
+        '</div>';
+    }).join('');
+};
+
+window._salSeleccionarResp = function(el) {
+    var id     = el.getAttribute('data-id');
+    var nombre = el.getAttribute('data-nombre');
+    var txt = document.getElementById('sal-f-responsable-texto');
+    var hid = document.getElementById('sal-f-responsable-id');
+    if (txt) txt.value = nombre;
+    if (hid) hid.value = id || '';
+    var dd = document.getElementById('sal-resp-dropdown');
+    if (dd) dd.style.display = 'none';
+};
+
+window._salOcultarRespDD = function() {
+    setTimeout(function() {
+        var dd = document.getElementById('sal-resp-dropdown');
+        if (dd) dd.style.display = 'none';
+    }, 180);
 };
 
 // ── Toggle destino ────────────────────────────────────────────────
@@ -183,9 +218,8 @@ window.guardarSalida = function() {
     var fecha      = (document.getElementById('sal-f-fecha')        || {}).value || '';
     var tipo       = (document.getElementById('sal-f-tipo')         || {}).value || '';
     var placa      = (document.getElementById('sal-f-placa')        || {}).value || null;
-    var respSel    = document.getElementById('sal-f-responsable');
-    var respId     = respSel ? (parseInt(respSel.value) || null) : null;
-    var respNombre = respSel ? ((respSel.selectedOptions[0] || {}).getAttribute('data-nombre') || '') : '';
+    var respNombre = ((document.getElementById('sal-f-responsable-texto') || {}).value || '').trim();
+    var respId     = parseInt((document.getElementById('sal-f-responsable-id') || {}).value || '') || null;
     var moneda     = (document.getElementById('sal-f-moneda')       || {}).value || 'PEN';
     var tc         = parseFloat((document.getElementById('sal-f-tc') || {}).value) || 1;
     var obs        = (document.getElementById('sal-f-obs')          || {}).value || '';
@@ -242,8 +276,10 @@ window.abrirModalSalida = function() {
     if (tipo) tipo.value = '';
     var placa = document.getElementById('sal-f-placa');
     if (placa) placa.value = '';
-    var resp = document.getElementById('sal-f-responsable');
-    if (resp) resp.value = '';
+    var respTxt = document.getElementById('sal-f-responsable-texto');
+    if (respTxt) respTxt.value = '';
+    var respHid = document.getElementById('sal-f-responsable-id');
+    if (respHid) respHid.value = '';
     var obs = document.getElementById('sal-f-obs');
     if (obs) obs.value = '';
     var mon = document.getElementById('sal-f-moneda');
