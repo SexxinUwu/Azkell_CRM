@@ -1,4 +1,4 @@
-<!-- Módulo Almacén / Inventario — SPA Aislado -->
+<!-- Módulo Almacén / Inventario — SPA Aislado v2 (Cards) -->
 <div id="mod-inventario" class="modulo-wrapper d-flex flex-column h-100">
 
   <!-- Cabecera + controles -->
@@ -13,7 +13,6 @@
       <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarInventario()" title="Actualizar">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
-      <!-- Import -->
       <div class="dropdown">
         <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
           <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
@@ -22,7 +21,12 @@
           <li><a class="dropdown-item" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
           <li><a class="dropdown-item" onclick="window.descargarPlantillaInventario()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Descargar plantilla</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><label class="dropdown-item" style="cursor:pointer;"><i class="bi bi-upload me-2 text-warning"></i>Importar Excel<input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)"></label></li>
+          <li>
+            <label class="dropdown-item" style="cursor:pointer;">
+              <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+              <input type="file" id="inputFileInventario" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelInventario(event)">
+            </label>
+          </li>
         </ul>
       </div>
       <button class="btn btn-sm btn-primary" onclick="window.abrirModalInventario()">
@@ -33,38 +37,47 @@
 
   <!-- Filtros -->
   <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <div class="input-group input-group-sm" style="max-width:280px;">
+    <div class="input-group input-group-sm" style="max-width:260px;">
       <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
       <input type="text" id="inv-buscar" class="form-control border-0 bg-transparent shadow-none" placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
     </div>
-    <select id="inv-fil-familia" class="form-select form-select-sm" style="max-width:160px;" onchange="window.filtrarInventario()">
+    <select id="inv-fil-familia" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarInventario()">
       <option value="">Todas las familias</option>
     </select>
-    <select id="inv-fil-almacen" class="form-select form-select-sm" style="max-width:160px;" onchange="window.filtrarInventario()">
+    <select id="inv-fil-sistema" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarInventario()">
+      <option value="">Todos los sistemas</option>
+      <option>MOTOR</option>
+      <option>TRANSMISION</option>
+      <option>FRENOS</option>
+      <option>DIRECCION</option>
+      <option>SUSPENSION</option>
+      <option>ELECTRICIDAD</option>
+      <option>NEUMATICO</option>
+      <option>LLANTAS</option>
+      <option>CARROCERIA</option>
+      <option>LIMPIEZA</option>
+      <option>CONSUMIBLES</option>
+      <option>LUBRICANTES</option>
+      <option>HERRAMIENTAS</option>
+      <option>SSOMA</option>
+      <option>EPP</option>
+      <option>UTILES</option>
+      <option>PINTURA</option>
+    </select>
+    <select id="inv-fil-almacen" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarInventario()">
       <option value="">Todos los almacenes</option>
     </select>
     <span id="inv-contador" class="text-muted small ms-auto"></span>
   </div>
 
-  <!-- Tabla -->
-  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
-    <table class="table table-custom table-hover m-0" id="tabla-inventario">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Descripción</th>
-          <th>Familia</th>
-          <th>Almacén</th>
-          <th>Unidad</th>
-          <th class="text-end">Costo Ref.</th>
-          <th class="text-center">Stock</th>
-          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-inventario">
-        <tr><td colspan="8" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
-      </tbody>
-    </table>
+  <!-- Grid de Cards (scrollable) -->
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0;">
+    <div id="inv-grid" class="row g-3 pb-3 px-1">
+      <!-- spinner inicial -->
+      <div class="col-12 text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
+      </div>
+    </div>
   </div>
 
   <!-- Paginación -->
@@ -73,80 +86,248 @@
 
 <!-- ═══ MODAL ADD / EDIT ═══════════════════════════════════════════ -->
 <div class="modal fade" id="modal-inv-articulo" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title fw-bold" id="modal-inv-titulo"><i class="bi bi-box-fill me-1"></i>Nuevo Artículo</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+
+      <!-- Tabs dentro del modal -->
+      <ul class="nav nav-tabs px-3 pt-2 border-bottom-0" id="inv-modal-tabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#inv-tab-basico"><i class="bi bi-card-text me-1"></i>Datos</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-tab-clasif"><i class="bi bi-tags me-1"></i>Clasificación</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-tab-imagen"><i class="bi bi-image me-1"></i>Imagen &amp; QR</button></li>
+      </ul>
+
       <form id="form-inv-articulo" onsubmit="window.guardarArticuloInv(event)">
         <input type="hidden" id="inv-edit-id">
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-12">
-              <label class="fw-semibold small">Descripción <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="inv-f-descripcion" required placeholder="Nombre completo del artículo">
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Familia</label>
-              <input type="text" class="form-control" id="inv-f-familia" list="inv-list-familias" placeholder="Ej: FILTROS">
-              <datalist id="inv-list-familias"></datalist>
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Sub-familia</label>
-              <input type="text" class="form-control" id="inv-f-subfamilia" placeholder="Ej: ACEITE MOTOR">
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Almacén</label>
-              <input type="text" class="form-control" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: ALMACÉN PRINCIPAL">
-              <datalist id="inv-list-almacenes"></datalist>
-            </div>
-            <div class="col-md-3">
-              <label class="fw-semibold small">Unidad</label>
-              <input type="text" class="form-control" id="inv-f-unidad" placeholder="UND, LT, KG…">
-            </div>
-            <div class="col-md-3">
-              <label class="fw-semibold small">Moneda</label>
-              <select class="form-select" id="inv-f-moneda">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USD">USD ($)</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="fw-semibold small">Costo Referencial</label>
-              <input type="number" class="form-control" id="inv-f-costo" step="0.0001" placeholder="0.00">
-            </div>
-            <div class="col-md-3">
-              <label class="fw-semibold small">Marca</label>
-              <input type="text" class="form-control" id="inv-f-marca" placeholder="Ej: WIX, MANN">
-            </div>
-            <div class="col-md-12"><hr class="my-1"></div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Stock Regularizado</label>
-              <input type="number" class="form-control" id="inv-f-stock-reg" step="0.0001" placeholder="0">
-              <div class="form-text">Cantidad de inicio / snapshot</div>
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Fecha Regularización</label>
-              <input type="date" class="form-control" id="inv-f-fecha-reg">
-              <div class="form-text">Movimientos desde esta fecha</div>
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Proveedor (ID)</label>
-              <input type="text" class="form-control" id="inv-f-proveedor-id" list="inv-list-proveedores" placeholder="PROV-0001">
-              <datalist id="inv-list-proveedores"></datalist>
-            </div>
-            <div class="col-md-12">
-              <label class="fw-semibold small">Observaciones</label>
-              <textarea class="form-control" id="inv-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
-            </div>
-          </div>
-        </div>
+        <div class="modal-body pt-2">
+          <div class="tab-content">
+
+            <!-- ── TAB 1: Datos Básicos ─── -->
+            <div class="tab-pane fade show active" id="inv-tab-basico">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="fw-semibold small">Descripción <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="inv-f-descripcion" required placeholder="Nombre completo del artículo">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Familia</label>
+                  <input type="text" class="form-control" id="inv-f-familia" list="inv-list-familias" placeholder="Ej: FILTROS">
+                  <datalist id="inv-list-familias"></datalist>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Sub-familia</label>
+                  <input type="text" class="form-control" id="inv-f-subfamilia" placeholder="Ej: ACEITE MOTOR">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Almacén</label>
+                  <input type="text" class="form-control" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: ALMACÉN PRINCIPAL">
+                  <datalist id="inv-list-almacenes"></datalist>
+                </div>
+                <div class="col-md-3">
+                  <label class="fw-semibold small">Unidad</label>
+                  <input type="text" class="form-control" id="inv-f-unidad" placeholder="UND, LT, KG…">
+                </div>
+                <div class="col-md-3">
+                  <label class="fw-semibold small">Moneda</label>
+                  <select class="form-select" id="inv-f-moneda">
+                    <option value="PEN">PEN (S/)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="fw-semibold small">Costo Referencial</label>
+                  <input type="number" class="form-control" id="inv-f-costo" step="0.0001" placeholder="0.00">
+                </div>
+                <div class="col-md-3">
+                  <label class="fw-semibold small">Marca</label>
+                  <input type="text" class="form-control" id="inv-f-marca" placeholder="Ej: WIX, MANN">
+                </div>
+                <div class="col-12"><hr class="my-1"></div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Stock Regularizado</label>
+                  <input type="number" class="form-control" id="inv-f-stock-reg" step="0.0001" placeholder="0">
+                  <div class="form-text">Cantidad inicial / snapshot</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Fecha Regularización</label>
+                  <input type="date" class="form-control" id="inv-f-fecha-reg">
+                  <div class="form-text">Movimientos desde esta fecha</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Proveedor (ID)</label>
+                  <input type="text" class="form-control" id="inv-f-proveedor-id" list="inv-list-proveedores" placeholder="PROV-0001">
+                  <datalist id="inv-list-proveedores"></datalist>
+                </div>
+                <div class="col-12">
+                  <label class="fw-semibold small">Observaciones</label>
+                  <textarea class="form-control" id="inv-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
+                </div>
+              </div>
+            </div><!-- /tab-basico -->
+
+            <!-- ── TAB 2: Clasificación AppSheet ─── -->
+            <div class="tab-pane fade" id="inv-tab-clasif">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Código Item (AppSheet)</label>
+                  <input type="text" class="form-control" id="inv-f-codigo-item" placeholder="Ej: IT-00123">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Marca Unidad</label>
+                  <input type="text" class="form-control" id="inv-f-marca-unidad" placeholder="Ej: WIX">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Sistema</label>
+                  <select class="form-select" id="inv-f-sistema">
+                    <option value="">— Sin sistema —</option>
+                    <option>MOTOR</option>
+                    <option>TRANSMISION</option>
+                    <option>FRENOS</option>
+                    <option>DIRECCION</option>
+                    <option>SUSPENSION</option>
+                    <option>ELECTRICIDAD</option>
+                    <option>NEUMATICO</option>
+                    <option>LLANTAS</option>
+                    <option>CARROCERIA</option>
+                    <option>LIMPIEZA</option>
+                    <option>CONSUMIBLES</option>
+                    <option>LUBRICANTES</option>
+                    <option>HERRAMIENTAS</option>
+                    <option>SSOMA</option>
+                    <option>EPP</option>
+                    <option>UTILES</option>
+                    <option>PINTURA</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Sub-Sistema</label>
+                  <input type="text" class="form-control" id="inv-f-sub-sistema" placeholder="Ej: ACEITE MOTOR">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Tipo</label>
+                  <select class="form-select" id="inv-f-tipo">
+                    <option value="">— Sin tipo —</option>
+                    <option value="Original">Original</option>
+                    <option value="Alternativo">Alternativo</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Sub-Tipo</label>
+                  <select class="form-select" id="inv-f-sub-tipo">
+                    <option value="">— Sin sub-tipo —</option>
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="Reparado">Reparado</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Ubicación en Almacén</label>
+                  <input type="text" class="form-control" id="inv-f-ubicacion" list="inv-list-ubicaciones" placeholder="Ej: Almacén Principal">
+                  <datalist id="inv-list-ubicaciones">
+                    <option value="Almacén Principal">
+                    <option value="Almacén de Filtros">
+                    <option value="Almacén de Neumáticos">
+                    <option value="Almacén de Lubricantes">
+                  </datalist>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Anaquel / Estante</label>
+                  <input type="number" class="form-control" id="inv-f-anaquel" step="0.01" placeholder="Ej: 3.5">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Estado</label>
+                  <select class="form-select" id="inv-f-estado-art">
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="Descontinuado">Descontinuado</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Stock Mínimo</label>
+                  <input type="number" class="form-control" id="inv-f-stock-min" step="0.0001" placeholder="0">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Stock Máximo</label>
+                  <input type="number" class="form-control" id="inv-f-stock-max" step="0.0001" placeholder="0">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-semibold small">Código de Barras</label>
+                  <input type="text" class="form-control" id="inv-f-codigo-barras" placeholder="EAN-13 / QR...">
+                </div>
+              </div>
+            </div><!-- /tab-clasif -->
+
+            <!-- ── TAB 3: Imagen & QR ─── -->
+            <div class="tab-pane fade" id="inv-tab-imagen">
+              <div id="inv-img-nuevo-aviso" class="alert alert-info py-2 small" style="display:none;">
+                <i class="bi bi-info-circle me-1"></i>Guarda el artículo primero para poder subir una imagen.
+              </div>
+              <div id="inv-img-section" class="row g-3 align-items-start">
+                <!-- Imagen -->
+                <div class="col-md-6">
+                  <p class="fw-semibold small mb-2">Imagen del Artículo</p>
+                  <div class="border rounded d-flex align-items-center justify-content-center mb-2 overflow-hidden bg-light" style="height:200px;">
+                    <img id="inv-img-preview" src="" alt="" style="max-height:200px;max-width:100%;object-fit:contain;display:none;">
+                    <div id="inv-img-placeholder" class="text-center text-muted">
+                      <i class="bi bi-image fs-1"></i><br><small>Sin imagen</small>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <label class="btn btn-sm btn-outline-primary flex-grow-1" style="cursor:pointer;">
+                      <i class="bi bi-upload me-1"></i>Subir imagen
+                      <input type="file" id="inv-img-input" accept="image/*" style="display:none" onchange="window._invSubirImagen(event)">
+                    </label>
+                    <button type="button" id="inv-img-btn-quitar" class="btn btn-sm btn-outline-danger" onclick="window._invQuitarImagen()" style="display:none;">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <!-- QR -->
+                <div class="col-md-6 text-center">
+                  <p class="fw-semibold small mb-2">Código QR del Artículo</p>
+                  <div id="inv-qr-wrap" class="border rounded p-3 d-inline-flex flex-column align-items-center gap-2" style="display:none!important;">
+                    <img id="inv-qr-img" src="" alt="QR" style="width:160px;height:160px;">
+                    <small class="text-muted" id="inv-qr-label"></small>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" onclick="window._invDescargarQR()">
+                      <i class="bi bi-download me-1"></i>Descargar QR
+                    </button>
+                  </div>
+                  <div id="inv-qr-placeholder" class="text-muted small">
+                    <i class="bi bi-qr-code fs-1 d-block mb-1"></i>El QR se genera automáticamente al guardar
+                  </div>
+                </div>
+              </div>
+            </div><!-- /tab-imagen -->
+
+          </div><!-- /tab-content -->
+        </div><!-- /modal-body -->
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL DETALLE (Vista Rápida) ════════════════════════════════ -->
+<div class="modal fade" id="modal-inv-detalle" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="modal-det-titulo">Detalle de Artículo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-det-body">
+        <!-- Renderizado por JS -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" id="modal-det-btn-editar" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>Editar</button>
+      </div>
     </div>
   </div>
 </div>

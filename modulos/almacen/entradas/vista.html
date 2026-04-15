@@ -71,14 +71,10 @@
             <input type="date" class="form-control" id="ent-f-fecha">
           </div>
           <div class="col-md-3">
-            <label class="fw-semibold small">Proveedor</label>
-            <select class="form-select" id="ent-f-proveedor">
-              <option value="">Sin proveedor / libre</option>
+            <label class="fw-semibold small">Proveedor <span class="text-danger">*</span></label>
+            <select class="form-select" id="ent-f-proveedor" required>
+              <option value="" disabled selected>Seleccionar proveedor…</option>
             </select>
-          </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small">Proveedor (texto libre)</label>
-            <input type="text" class="form-control" id="ent-f-prov-nombre" placeholder="Si no está en la lista…">
           </div>
           <div class="col-md-3">
             <label class="fw-semibold small">Doc. Referencia</label>

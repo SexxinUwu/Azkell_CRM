@@ -49,7 +49,7 @@ window._entCargarProveedores = function() {
         .then(function(data) {
             var sel = document.getElementById('ent-f-proveedor');
             if (sel) {
-                sel.innerHTML = '<option value="">Sin proveedor / libre</option>' +
+                sel.innerHTML = '<option value="" disabled selected>Seleccionar proveedor…</option>' +
                     data.map(function(p) { return '<option value="'+_entEsc(p.id)+'" data-nombre="'+_entEsc(p.nombre)+'">'+_entEsc(p.nombre)+(p.numero_documento?' ('+p.numero_documento+')':'')+'</option>'; }).join('');
             }
         }).catch(function() {});
@@ -148,15 +148,14 @@ window.guardarEntrada = function() {
     var fecha  = (document.getElementById('ent-f-fecha')      || {}).value || '';
     var provSel = document.getElementById('ent-f-proveedor');
     var provId = provSel ? provSel.value : '';
-    var provNombreOpts = provSel && provSel.value ? ((provSel.selectedOptions[0]||{}).getAttribute('data-nombre')||'') : '';
-    var provNombreLib = (document.getElementById('ent-f-prov-nombre') || {}).value || '';
-    var provNombre = provNombreLib || provNombreOpts;
+    var provNombre = provSel && provSel.value ? ((provSel.selectedOptions[0]||{}).getAttribute('data-nombre')||'') : '';
     var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
     var tc     = parseFloat((document.getElementById('ent-f-tc') || {}).value) || 1;
     var obs    = (document.getElementById('ent-f-obs')     || {}).value || '';
 
-    if (!fecha) { alert('Falta la fecha.'); return; }
+    if (!fecha)  { alert('Falta la fecha.'); return; }
+    if (!provId) { alert('Selecciona un proveedor.'); return; }
 
     var invIds = document.querySelectorAll('.ent-item-inv-id');
     var descs  = document.querySelectorAll('.ent-item-desc');
@@ -198,7 +197,7 @@ window.abrirModalEntrada = function() {
     var totalEl = document.getElementById('ent-total-display');
     if (totalEl) totalEl.textContent = 'S/ 0.00';
 
-    ['ent-f-proveedor','ent-f-prov-nombre','ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
+    ['ent-f-proveedor','ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
     var fecha = document.getElementById('ent-f-fecha');
