@@ -7,6 +7,7 @@ window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 window.chartInspDashInst     = window.chartInspDashInst     || null;
 window.mapaDashInst          = window.mapaDashInst          || null;
 window.chartPrediccion90dInst = window.chartPrediccion90dInst || null;
+window._dashWeatherLoaded    = window._dashWeatherLoaded    || false;
 
 // ============================================================
 // 📊 GRÁFICO FLEETRUN (Salud de Mantenimientos)
@@ -648,8 +649,113 @@ window.init_dashboard = function() {
     if (!window.chartDashFleetrunInst) window.chartDashFleetrunInst = initGraficoDashFleetrun();
     if (!window.chartInspDashInst)     window.chartInspDashInst     = initGraficoInspDash();
 
+    // Widget de clima
+    cargarWidgetClima();
+
     // Cargar datos con pequeño delay para que el DOM esté pintado
     setTimeout(() => {
         recargarDashboard();
     }, 150);
 };
+
+// ============================================================
+// 🌤️ WIDGET CLIMA — Open-Meteo (sin API key) + Nominatim
+// ============================================================
+
+// Mapeo WMO weathercode → { desc, icon BootstrapIcon }
+var _wmoMap = {
+    0:  { d: 'Despejado',         i: 'bi-sun' },
+    1:  { d: 'Mayormente despejado', i: 'bi-sun' },
+    2:  { d: 'Parcialmente nublado', i: 'bi-cloud-sun' },
+    3:  { d: 'Nublado',           i: 'bi-cloud' },
+    45: { d: 'Niebla',            i: 'bi-cloud-fog2' },
+    48: { d: 'Niebla con escarcha', i: 'bi-cloud-fog2' },
+    51: { d: 'Llovizna ligera',   i: 'bi-cloud-drizzle' },
+    53: { d: 'Llovizna moderada', i: 'bi-cloud-drizzle' },
+    55: { d: 'Llovizna intensa',  i: 'bi-cloud-drizzle' },
+    61: { d: 'Lluvia ligera',     i: 'bi-cloud-rain' },
+    63: { d: 'Lluvia moderada',   i: 'bi-cloud-rain' },
+    65: { d: 'Lluvia intensa',    i: 'bi-cloud-rain-heavy' },
+    71: { d: 'Nieve ligera',      i: 'bi-cloud-snow' },
+    73: { d: 'Nieve moderada',    i: 'bi-cloud-snow' },
+    75: { d: 'Nieve intensa',     i: 'bi-cloud-snow' },
+    80: { d: 'Chubascos ligeros', i: 'bi-cloud-rain' },
+    81: { d: 'Chubascos moderados', i: 'bi-cloud-rain-heavy' },
+    82: { d: 'Chubascos violentos', i: 'bi-cloud-lightning-rain' },
+    95: { d: 'Tormenta eléctrica', i: 'bi-lightning-rain' },
+    99: { d: 'Tormenta con granizo', i: 'bi-cloud-hail' }
+};
+
+function cargarWidgetClima() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            var lat = pos.coords.latitude.toFixed(4);
+            var lon = pos.coords.longitude.toFixed(4);
+            // Obtener nombre de ciudad con Nominatim
+            fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json', {
+                headers: { 'Accept-Language': 'es' }
+            })
+            .then(function(r) { return r.ok ? r.json() : {}; })
+            .then(function(geo) {
+                var addr = geo.address || {};
+                var ciudad = addr.city || addr.town || addr.village || addr.county || addr.state || 'Mi ubicación';
+                var elCity = document.getElementById('dash-weather-city');
+                if (elCity) elCity.innerHTML = '<i class="bi bi-geo-alt-fill me-1" style="font-size:0.7rem"></i>' + ciudad.toUpperCase();
+            })
+            .catch(function() {});
+
+            // Obtener clima con Open-Meteo
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+                  '&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) {
+                if (!data || !data.current_weather) return;
+                var cw   = data.current_weather;
+                var code = cw.weathercode;
+                var info = _wmoMap[code] || _wmoMap[2];
+                var temp = Math.round(cw.temperature);
+                var tmax = data.daily && data.daily.temperature_2m_max ? Math.round(data.daily.temperature_2m_max[0]) : '—';
+                var tmin = data.daily && data.daily.temperature_2m_min ? Math.round(data.daily.temperature_2m_min[0]) : '—';
+
+                var elDesc = document.getElementById('dash-weather-desc');
+                var elIcon = document.getElementById('dash-weather-icon');
+                var elTemp = document.getElementById('dash-weather-temp');
+                var elMin  = document.getElementById('dash-weather-min');
+                var elMax  = document.getElementById('dash-weather-max');
+
+                if (elDesc) elDesc.textContent = info.d;
+                if (elIcon) elIcon.innerHTML   = '<i class="bi ' + info.i + '" style="font-size:2.4rem"></i>';
+                if (elTemp) elTemp.textContent = temp + '°';
+                if (elMin)  elMin.textContent  = tmin + '°';
+                if (elMax)  elMax.textContent  = tmax + '°';
+            })
+            .catch(function() {});
+        },
+        function() {
+            // Sin permiso de ubicación — mostrar ciudad por defecto (Lima)
+            var elCity = document.getElementById('dash-weather-city');
+            if (elCity) elCity.innerHTML = '<i class="bi bi-geo-alt-fill me-1" style="font-size:0.7rem"></i>LIMA';
+            fetch('https://api.open-meteo.com/v1/forecast?latitude=-12.0464&longitude=-77.0428' +
+                  '&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) {
+                if (!data || !data.current_weather) return;
+                var cw   = data.current_weather;
+                var info = _wmoMap[cw.weathercode] || _wmoMap[2];
+                var elDesc = document.getElementById('dash-weather-desc');
+                var elIcon = document.getElementById('dash-weather-icon');
+                var elTemp = document.getElementById('dash-weather-temp');
+                var elMin  = document.getElementById('dash-weather-min');
+                var elMax  = document.getElementById('dash-weather-max');
+                if (elDesc) elDesc.textContent = info.d;
+                if (elIcon) elIcon.innerHTML   = '<i class="bi ' + info.i + '" style="font-size:2.4rem"></i>';
+                if (elTemp) elTemp.textContent = Math.round(cw.temperature) + '°';
+                if (elMin && data.daily) elMin.textContent = Math.round(data.daily.temperature_2m_min[0]) + '°';
+                if (elMax && data.daily) elMax.textContent = Math.round(data.daily.temperature_2m_max[0]) + '°';
+            })
+            .catch(function() {});
+        },
+        { timeout: 6000 }
+    );
+}

@@ -2701,6 +2701,115 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
 }
 
 /* ================================================================
+   WIDGET CLIMA — Dashboard
+   ================================================================ */
+.dash-weather-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 210px;
+}
+.dash-weather-container::before {
+    width: 90px;
+    height: 90px;
+    content: "";
+    position: absolute;
+    background-color: rgba(144, 161, 255, 0.45);
+    z-index: 0;
+    border-radius: 50%;
+    left: 90px;
+    top: 40px;
+    transition: transform 0.9s ease;
+    pointer-events: none;
+}
+.dash-weather-container:hover::before {
+    transform: translate(-45px, 45px);
+}
+.dash-weather-card {
+    position: relative;
+    z-index: 1;
+    width: 210px;
+    min-height: 230px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 12px;
+    border-radius: 14px;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    background: rgba(65, 65, 65, 0.22);
+    border: 1px solid rgba(255,255,255,0.09);
+    cursor: default;
+    gap: 4px;
+}
+/* Modo claro: fondo más visible */
+[data-theme="light"] .dash-weather-card,
+body.light-mode .dash-weather-card {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+}
+.dash-weather-city {
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 1.2px;
+    color: var(--text);
+    text-transform: uppercase;
+    text-align: center;
+}
+.dash-weather-desc {
+    font-weight: 500;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    color: var(--subtext);
+    text-transform: uppercase;
+    text-align: center;
+    min-height: 14px;
+}
+.dash-weather-icon {
+    color: var(--text);
+    line-height: 1;
+}
+.dash-weather-temp {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+.dash-weather-minmax {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+.dash-weather-min,
+.dash-weather-max {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 16px;
+    gap: 2px;
+}
+.dash-weather-max {
+    align-items: flex-start;
+    border-left: 1.5px solid var(--border);
+}
+.dash-wlabel {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.dash-wval {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--subtext);
+}
+
+/* ================================================================
    AVATAR GENERADO DE USUARIO
    ================================================================ */
 .user-avatar {
