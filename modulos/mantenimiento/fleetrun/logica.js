@@ -9,6 +9,7 @@ window.isHistorialFleetrun  = window.isHistorialFleetrun  || false;
 window.expandAllState       = window.expandAllState       || false;
 window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
 window._metricaMap          = window._metricaMap          || {}; // placa.toUpperCase() → 'km' | 'horas'
+window._kmDiaMap            = window._kmDiaMap            || {}; // placa.toUpperCase() → km/día promedio
 
 function cargarTablaFleetrun(forzarRefresh = false) {
     if (!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; }
@@ -80,8 +81,18 @@ function mostrarFleetrun(datos) {
           let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
           let isActive = infoP && infoP[18] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
+          let kmDiaInfo = window._kmDiaMap[(placaRaw||'').toUpperCase()];
+          let esHorasGrp = (window._metricaMap[(placaRaw||'').toUpperCase()] === 'horas');
+          let kmDiaBadge = '';
+          if (kmDiaInfo) {
+              let val = esHorasGrp ? kmDiaInfo.horas_dia : kmDiaInfo.km_dia;
+              let unit = esHorasGrp ? 'h/día' : 'km/día';
+              if (val != null && val > 0) {
+                  kmDiaBadge = `<span class="badge bg-dark ms-2" style="font-size:0.65rem;opacity:0.75"><i class="bi bi-graph-up me-1"></i>${Number(val).toLocaleString()} ${unit}</span>`;
+              }
+          }
           html += `<tr class="group-header data-row-fleetrun" style="cursor:pointer;" onclick="toggleGroupRow('child-${classPlaca}', this)" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}">
-              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span><span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
+              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span>${kmDiaBadge}<span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[12] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
 
@@ -805,6 +816,20 @@ window.init_fleetrun = function() {
             window._metricaMap = {};
             (data || []).forEach(function(row) {
                 if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
+            });
+        })
+        .catch(function() {});
+
+    // Cargar mapa de km/día (histórico GPS últimos 30 días)
+    fetch('/api/km-historico')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            window._kmDiaMap = {};
+            (data || []).forEach(function(row) {
+                if (row.placa) window._kmDiaMap[row.placa.toUpperCase()] = {
+                    km_dia:    row.km_dia,
+                    horas_dia: row.horas_dia
+                };
             });
         })
         .catch(function() {});

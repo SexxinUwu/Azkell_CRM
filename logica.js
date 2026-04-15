@@ -3774,6 +3774,18 @@ window.buscarSpotlight = function(query) {
 // 🛠️ LÓGICA DE SELECCIÓN Y EXCEL PARA FLEETRUN
 // ============================================================
 
+// Habilita/deshabilita el botón de acción masiva según checkboxes marcados
+window.toggleBulkBtn = function(modulo) {
+    var checked = document.querySelectorAll('.chk-bulk-' + modulo + ':checked').length;
+    var btnBulk = document.getElementById('btn-bulk-' + modulo);
+    if (btnBulk) {
+        btnBulk.disabled = checked === 0;
+        btnBulk.innerHTML = checked > 0
+            ? '<i class="bi bi-trash-fill me-1"></i>Eliminar (' + checked + ')'
+            : '<i class="bi bi-trash me-1"></i>Eliminar sel.';
+    }
+};
+
 window.activarModoSeleccionFleetrun = function() {
     window.modoSeleccion = window.modoSeleccion || {};
     window.modoSeleccion['fleetrun'] = !window.modoSeleccion['fleetrun'];
