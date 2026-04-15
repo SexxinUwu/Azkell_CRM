@@ -384,6 +384,14 @@ window.abrirDetalleInv = function(id) {
         };
     }
 
+    var btnReg = document.getElementById('modal-det-btn-regularizar');
+    if (btnReg) {
+        btnReg.onclick = function() {
+            bootstrap.Modal.getInstance(el).hide();
+            setTimeout(function() { window.abrirRegularizarStock(id); }, 300);
+        };
+    }
+
     var hasImg = item.imagen_url && item.imagen_url.length > 0;
     var stock = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
     var stockCls = stock <= 0 ? 'danger' : (item.stock_min > 0 && stock <= parseFloat(item.stock_min || 0) ? 'warning' : 'success');
@@ -485,6 +493,7 @@ window.abrirModalInventario = function(id) {
         _invSetField('inv-f-sub-sistema',   item.sub_sistema);
         _invSetField('inv-f-tipo',          item.tipo);
         _invSetField('inv-f-sub-tipo',      item.sub_tipo);
+        _invSetField('inv-f-almacen',       item.almacen);
         _invSetField('inv-f-ubicacion',     item.ubicacion);
         _invSetField('inv-f-anaquel',       item.anaquel);
         _invSetField('inv-f-stock-min',     item.stock_min);
@@ -575,8 +584,7 @@ window._invSubirImagen = function(event) {
         var preview     = document.getElementById('inv-img-preview');
         var placeholder = document.getElementById('inv-img-placeholder');
         var btnQuitar   = document.getElementById('inv-img-btn-quitar');
-        if (preview)     { preview.src = data.imagen_url + '?t=' + Date.now(); preview.style.display = ''; }
-        if (placeholder) { placeholder.style.display = 'none'; }
+        if (preview)     { preview.src = data.imagen_url + '?t=' + Date.now(); preview.style.display = ''; }        if (placeholder) { placeholder.style.display = 'none'; }
         if (btnQuitar)   { btnQuitar.style.display = ''; }
         // Actualizar card en grid sin full reload
         window._invRender();
@@ -647,6 +655,7 @@ window.guardarArticuloInv = function(event) {
         sub_sistema:   g('inv-f-sub-sistema') || null,
         tipo:          g('inv-f-tipo') || null,
         sub_tipo:      g('inv-f-sub-tipo') || null,
+        almacen:       g('inv-f-almacen') || null,
         ubicacion:     g('inv-f-ubicacion') || null,
         anaquel:       g('inv-f-anaquel') ? gN('inv-f-anaquel') : null,
         stock_min:     gN('inv-f-stock-min'),
@@ -704,64 +713,136 @@ window.exportarInventarioExcel = function() {
 
 // ── Descargar Plantilla ───────────────────────────────────────────
 window.descargarPlantillaInventario = function() {
-    // Hoja principal con encabezados
     var headers = [
         'articulo','codigo_articulo','marca','marca_unidad',
         'familia','unidad','moneda','costo','estado_art',
-        'sistema','sub_sistema','tipo','sub_tipo',
-        'ubicacion','anaquel','stock_min','stock_max','codigo_barras','observaciones'
+        'almacen','sistema','sub_sistema','tipo','sub_tipo',
+        'ubicacion','anaquel','stock_min','stock_max',
+        'cantidad_inicial','codigo_barras','observaciones'
     ];
     var ejemplo = [
         'Filtro Aceite Motor','LF3000','WIX','VOLVO,SCANIA',
         'FILTROS','UND','PEN','45.00','Activo',
-        'MOTOR','LUBRICACION','Original','Nuevo',
-        'Almacén de Filtros','2',3,30,'7501234567890','Filtro estándar'
+        'Principal','MOTOR','LUBRICACION','Original','Nuevo',
+        'Estante B3','2',3,30,
+        10,'7501234567890','Stock apertura'
     ];
     var wsData = [headers, ejemplo];
     var ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Ancho de columnas
     ws['!cols'] = headers.map(function(h) {
         var w = {articulo:22,codigo_articulo:16,marca:12,marca_unidad:20,familia:14,unidad:8,
-                  moneda:8,costo:9,estado_art:12,sistema:14,sub_sistema:16,tipo:12,sub_tipo:10,
-                  ubicacion:20,anaquel:9,stock_min:10,stock_max:10,codigo_barras:16,observaciones:24};
+                  moneda:8,costo:9,estado_art:12,almacen:14,sistema:14,sub_sistema:16,tipo:12,
+                  sub_tipo:10,ubicacion:16,anaquel:9,stock_min:10,stock_max:10,
+                  cantidad_inicial:14,codigo_barras:16,observaciones:24};
         return { wch: w[h] || 14 };
     });
 
-    // Extraer valores para validaciones
     var marcasList  = (window._invMarcasFabData || []).map(function(m) { return m.nombre; }).join(',');
     var familiaList = (window._invFamiliasData  || []).map(function(f) { return f.nombre; }).join(',');
     var unidadList  = (window._invUnidadesData  || []).map(function(u) { return u.nombre; }).join(',');
     var sistList    = (window._invSistemasData  || []).map(function(s) { return s.nombre; }).join(',');
 
-    // Dropdowns en hoja (XLSX data validation, filas 2-500)
     ws['!dataValidation'] = {};
     if (marcasList)  ws['!dataValidation']['C2:C500'] = { type:'list', formula1: '"' + marcasList  + '"' };
     if (familiaList) ws['!dataValidation']['E2:E500'] = { type:'list', formula1: '"' + familiaList + '"' };
     if (unidadList)  ws['!dataValidation']['F2:F500'] = { type:'list', formula1: '"' + unidadList  + '"' };
     ws['!dataValidation']['G2:G500'] = { type:'list', formula1: '"PEN,USD"' };
     ws['!dataValidation']['I2:I500'] = { type:'list', formula1: '"Activo,Inactivo,Descontinuado"' };
-    if (sistList)    ws['!dataValidation']['J2:J500'] = { type:'list', formula1: '"' + sistList    + '"' };
-    ws['!dataValidation']['L2:L500'] = { type:'list', formula1: '"Original,Alternativo"' };
-    ws['!dataValidation']['M2:M500'] = { type:'list', formula1: '"Nuevo,Reparado"' };
+    ws['!dataValidation']['J2:J500'] = { type:'list', formula1: '"Principal,Neumáticos,Llantas,Lubricantes,Filtros"' };
+    if (sistList)    ws['!dataValidation']['K2:K500'] = { type:'list', formula1: '"' + sistList    + '"' };
+    ws['!dataValidation']['M2:M500'] = { type:'list', formula1: '"Original,Alternativo"' };
+    ws['!dataValidation']['N2:N500'] = { type:'list', formula1: '"Nuevo,Reparado"' };
 
-    // Hoja auxiliar "Listas" (referencia visual)
     var famArr  = (window._invFamiliasData  || []).map(function(f) { return f.nombre; });
     var undArr  = (window._invUnidadesData  || []).map(function(u) { return u.nombre; });
     var mrcArr  = (window._invMarcasFabData || []).map(function(m) { return m.nombre; });
     var sisArr  = (window._invSistemasData  || []).map(function(s) { return s.nombre; });
     var maxRows = Math.max(famArr.length, undArr.length, mrcArr.length, sisArr.length, 1);
-    var listasData = [['Familia','Unidad','Marca','Sistema']];
+    var listasData = [['Familia','Unidad','Marca','Sistema','Almacén','Instrucciones']];
+    var instrucciones = [
+        'cantidad_inicial: stock al inicio (0 si es nuevo)',
+        'almacen: Principal / Neumáticos / Llantas',
+        'ubicacion: Estante, anaquel, zona',
+        'marca_unidad: marcas separadas por coma',
+        'Si cantidad_inicial > 0 → se crea regularización automática'
+    ];
     for (var i = 0; i < maxRows; i++) {
-        listasData.push([famArr[i]||'', undArr[i]||'', mrcArr[i]||'', sisArr[i]||'']);
+        listasData.push([famArr[i]||'', undArr[i]||'', mrcArr[i]||'', sisArr[i]||'',
+            i===0?'Principal':i===1?'Neumáticos':i===2?'Llantas':'',
+            instrucciones[i]||'']);
     }
     var wsListas = XLSX.utils.aoa_to_sheet(listasData);
-    wsListas['!cols'] = [{wch:16},{wch:10},{wch:14},{wch:16}];
+    wsListas['!cols'] = [{wch:16},{wch:10},{wch:14},{wch:16},{wch:14},{wch:40}];
 
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
     XLSX.utils.book_append_sheet(wb, wsListas, 'Listas');
     XLSX.writeFile(wb, 'Plantilla_Inventario.xlsx');
+};
+
+// ── Regularizador de Stock ────────────────────────────────────────
+window.abrirRegularizarStock = function(id) {
+    var item = (window._invData || []).find(function(d) { return d.id === id; });
+    if (!item) return;
+    var modal = document.getElementById('modal-inv-regularizar');
+    if (!modal) return;
+
+    var elId   = document.getElementById('reg-item-id');
+    var elDesc = document.getElementById('reg-item-desc');
+    var elVirt = document.getElementById('reg-stock-virtual');
+    var elFis  = document.getElementById('reg-stock-fisico');
+    var elMot  = document.getElementById('reg-motivo');
+
+    if (elId)   elId.value   = id;
+    if (elDesc) elDesc.textContent = item.descripcion || id;
+    if (elVirt) {
+        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
+        elVirt.textContent = stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) + ' ' + (item.unidad || '');
+        elVirt.style.color = stock <= 0 ? 'var(--bs-danger)' : 'var(--bs-success)';
+    }
+    if (elFis)  { elFis.value = ''; }
+    if (elMot)  { elMot.value = ''; }
+
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+};
+
+window.guardarRegularizacion = function(event) {
+    if (event) event.preventDefault();
+    var id        = (document.getElementById('reg-item-id')      || {}).value || '';
+    var stockFis  = parseFloat((document.getElementById('reg-stock-fisico') || {}).value);
+    var motivo    = ((document.getElementById('reg-motivo')       || {}).value || '').trim();
+
+    if (!id || isNaN(stockFis) || stockFis < 0) {
+        alert('Ingresa un stock físico válido (número ≥ 0).');
+        return;
+    }
+
+    var usuario = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || 'sistema';
+
+    fetch('/api/almacen/inventario/' + encodeURIComponent(id) + '/regularizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock_fisico: stockFis, motivo: motivo, usuario: usuario })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(res) {
+        var modal = bootstrap.Modal.getInstance(document.getElementById('modal-inv-regularizar'));
+        if (modal) modal.hide();
+        var item = (window._invData || []).find(function(d) { return d.id === id; });
+        if (item) {
+            item.stock_regularizado   = stockFis;
+            item.fecha_regularizacion = res.fecha_regularizacion;
+            item.stock_actual         = stockFis;
+        }
+        window._invRender();
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Stock regularizado a ' + stockFis + ' unidades', 'success');
+        } else {
+            alert('✅ Stock regularizado correctamente a ' + stockFis + ' unidades.');
+        }
+    })
+    .catch(function(err) { alert('Error al regularizar: ' + err.message); });
 };
 
 // ── Importar Excel ────────────────────────────────────────────────
@@ -791,6 +872,7 @@ window.importarExcelInventario = function(event) {
                 moneda:            ((N['moneda'] || 'PEN').toString().toUpperCase()),
                 costo_referencial: parseFloat(N['costo'] || N['costo_referencial'] || 0) || 0,
                 estado_art:        (N['estado_art'] || N['estado'] || 'Activo').toString().trim(),
+                almacen:           (N['almacen'] || N['almacén'] || null),
                 sistema:           (N['sistema'] || null),
                 sub_sistema:       (N['sub_sistema'] || N['sub sistema'] || null),
                 tipo:              (N['tipo'] || null),
@@ -799,6 +881,7 @@ window.importarExcelInventario = function(event) {
                 anaquel:           parseFloat(N['anaquel'] || 0) || null,
                 stock_min:         parseFloat(N['stock_min'] || 0) || 0,
                 stock_max:         parseFloat(N['stock_max'] || 0) || 0,
+                cantidad_inicial:  parseFloat(N['cantidad_inicial'] || N['cantidad inicial'] || 0) || 0,
                 codigo_barras:     (N['codigo_barras'] || N['codigo barras'] || null),
                 observaciones:     (N['observaciones'] || '')
             };

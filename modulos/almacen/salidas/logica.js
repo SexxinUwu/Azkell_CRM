@@ -305,20 +305,33 @@ window.eliminarSalida = function(id) {
 
 // ── Filtrar ───────────────────────────────────────────────────────
 window.filtrarSalidas = function() {
-    var buscar = ((document.getElementById('sal-buscar') || {}).value || '').toLowerCase();
-    var filTipo = ((document.getElementById('sal-fil-tipo') || {}).value || '');
-    var filMes  = ((document.getElementById('sal-fil-mes')  || {}).value || '');
-    window._salFiltrados = (window._salData || []).filter(function(d) {
+    var buscar  = ((document.getElementById('sal-buscar')     ||{}).value||'').toLowerCase();
+    var filTipo = ((document.getElementById('sal-fil-tipo')   ||{}).value||'');
+    var desde   = ((document.getElementById('sal-fil-desde')  ||{}).value||'');
+    var hasta   = ((document.getElementById('sal-fil-hasta')  ||{}).value||'');
+    window._salFiltrados = (window._salData||[]).filter(function(d) {
         var matchB = !buscar ||
-            (d.id || '').toLowerCase().includes(buscar) ||
-            (d.placa || '').toLowerCase().includes(buscar) ||
-            (d.responsable || '').toLowerCase().includes(buscar);
+            (d.id||'').toLowerCase().includes(buscar) ||
+            (d.placa||'').toLowerCase().includes(buscar) ||
+            (d.responsable||'').toLowerCase().includes(buscar);
         var matchT = !filTipo || d.tipo_destino === filTipo;
-        var matchM = !filMes  || (d.fecha ? String(d.fecha).split('T')[0].substring(0,7) === filMes : false);
-        return matchB && matchT && matchM;
+        var fecha = d.fecha ? String(d.fecha).split('T')[0] : '';
+        var matchD = !desde || fecha >= desde;
+        var matchH = !hasta || fecha <= hasta;
+        if (desde && !hasta) { matchD = fecha === desde; matchH = true; }
+        if (!desde && hasta) { matchD = true; matchH = fecha === hasta; }
+        return matchB && matchT && matchD && matchH;
     });
     window._salPagActual = 1;
     window._salRender();
+};
+
+window._salLimpiarFechas = function() {
+    var d = document.getElementById('sal-fil-desde');
+    var h = document.getElementById('sal-fil-hasta');
+    if (d) d.value = '';
+    if (h) h.value = '';
+    window.filtrarSalidas();
 };
 
 // ── Render tabla ──────────────────────────────────────────────────
@@ -353,9 +366,19 @@ window._salRender = function() {
                 '<td>' + tipoBadge + '</td>' +
                 '<td>' + destino + '</td>' +
                 '<td><small>' + _salEsc(d.responsable || '—') + '</small></td>' +
-                '<td class="text-center"><span class="badge bg-light text-dark border">' + nitems + ' art.</span></td>' +
+                '<td class="text-center">'+
+                    '<button class="btn btn-xs btn-outline-secondary sal-btn-det" onclick="window._salToggleDetalle(this,\'' + _salEsc(d.id) + '\')" title="Ver artículos">'+
+                        '<i class="bi bi-list-ul me-1"></i>' + nitems + ' art. <i class="bi bi-chevron-down" style="font-size:0.6rem"></i>'+
+                    '</button>'+
+                '</td>' +
                 '<td class="text-end fw-semibold">' + totalFmt + '</td>' +
-                '<td class="text-center"><button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button></td>' +
+                '<td class="text-center" style="white-space:nowrap;">' +
+                    '<div class="d-flex gap-1 justify-content-center">' +
+                        '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Descargar PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                    '</div>' +
+                '</td>' +
             '</tr>';
         }).join('');
     }
@@ -372,19 +395,276 @@ window._salRender = function() {
 };
 
 window._salIrPag = function(n) { window._salPagActual = n; window._salRender(); };
+
+window._salToggleDetalle = function(btn, id) {
+    var tr = btn.closest('tr');
+    var nextTr = tr.nextElementSibling;
+    if (nextTr && nextTr.classList.contains('sal-detalle-row')) {
+        nextTr.remove();
+        var ic = btn.querySelector('.bi-chevron-up');
+        if (ic) ic.classList.replace('bi-chevron-up', 'bi-chevron-down');
+        return;
+    }
+    document.querySelectorAll('.sal-detalle-row').forEach(function(r) { r.remove(); });
+    document.querySelectorAll('.sal-btn-det .bi-chevron-up').forEach(function(i) { i.classList.replace('bi-chevron-up', 'bi-chevron-down'); });
+
+    var d = (window._salData || []).find(function(e) { return e.id === id; });
+    if (!d) return;
+    var items = d.items || [];
+
+    var filas = items.map(function(it) {
+        var cant = parseFloat(it.cantidad || 0);
+        var cu   = parseFloat(it.costo_unitario || 0);
+        var imp  = parseFloat(it.importe || cant * cu || 0);
+        var mon  = d.moneda === 'USD' ? '$' : 'S/';
+        return '<tr>'+
+            '<td>'+ _salEsc(it.descripcion || it.inventario_id || '—') +
+                (it.inventario_id ? ' <span class="badge bg-secondary fw-normal ms-1" style="font-size:0.65rem">'+ _salEsc(it.inventario_id) +'</span>' : '') +
+            '</td>'+
+            '<td class="text-center">'+ cant.toLocaleString('es-PE',{maximumFractionDigits:3}) +'</td>'+
+            '<td class="text-end">'+ mon +' '+ cu.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4}) +'</td>'+
+            '<td class="text-end fw-semibold">'+ mon +' '+ imp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +'</td>'+
+        '</tr>';
+    }).join('');
+
+    var detTr = document.createElement('tr');
+    detTr.className = 'sal-detalle-row';
+    detTr.innerHTML =
+        '<td colspan="8" style="padding:0;background:var(--surface);border-top:none;">'+
+            '<div style="padding:0 16px 10px 16px;">'+
+                '<table class="table table-sm table-bordered mb-0 small">'+
+                    '<thead><tr style="background:#7c3aed;color:#fff;">'+
+                        '<th style="padding:6px 10px;">Artículo / Código</th>'+
+                        '<th class="text-center" style="padding:6px 10px;width:80px">Cantidad</th>'+
+                        '<th class="text-end" style="padding:6px 10px;width:120px">Costo Unit.</th>'+
+                        '<th class="text-end" style="padding:6px 10px;width:110px">Importe</th>'+
+                    '</tr></thead>'+
+                    '<tbody>'+ (filas || '<tr><td colspan="4" class="text-center text-muted py-2">Sin artículos</td></tr>') +'</tbody>'+
+                '</table>'+
+            '</div>'+
+        '</td>';
+    tr.insertAdjacentElement('afterend', detTr);
+    var ic = btn.querySelector('.bi-chevron-down');
+    if (ic) ic.classList.replace('bi-chevron-down', 'bi-chevron-up');
+};
 function _salEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Comprobante PDF ───────────────────────────────────────────────
+window.generarComprobanteSalida = function(id) {
+    var d = (window._salData || []).find(function(e) { return e.id === id; });
+    if (!d) { alert('No se encontró la salida ' + id); return; }
+
+    var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+    var totalPen = parseFloat(d.total_pen || 0);
+    var monSimbolo = d.moneda === 'USD' ? 'USD' : 'PEN';
+    var esVehiculo = d.tipo_destino === 'Vehiculo';
+
+    var itemsHTML = (d.items || []).map(function(it, i) {
+        var cant = parseFloat(it.cantidad || 0);
+        var cu   = parseFloat(it.costo_unitario || 0);
+        var imp  = parseFloat(it.importe || cant * cu || 0);
+        var bgRow = i % 2 === 0 ? '#f9fafb' : '#ffffff';
+        return '<tr style="background:' + bgRow + '">' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px">' + (it.descripcion || it.inventario_id || '—') + '</td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:center">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right">' + monSimbolo + ' ' + cu.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</td>' +
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right;font-weight:600">' + monSimbolo + ' ' + imp.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var html = '' +
+    '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:32px;color:#1e293b">' +
+
+        // Encabezado
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #7c3aed">' +
+            '<div>' +
+                '<div style="font-size:22px;font-weight:700;color:#7c3aed;letter-spacing:-0.5px">AZKELL FLEET</div>' +
+                '<div style="font-size:11px;color:#64748b;margin-top:2px">Sistema de Gestión de Flotas</div>' +
+            '</div>' +
+            '<div style="text-align:right">' +
+                '<div style="font-size:18px;font-weight:700;color:#1e293b">COMPROBANTE DE SALIDA</div>' +
+                '<div style="font-size:13px;color:#7c3aed;font-weight:600;margin-top:4px">' + id + '</div>' +
+                '<div style="font-size:11px;color:#64748b;margin-top:2px">Fecha: ' + fecha + '</div>' +
+            '</div>' +
+        '</div>' +
+
+        // Datos destino
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:14px 16px;background:#f5f3ff;border-radius:8px">' +
+            '<div>' +
+                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Tipo de Destino</div>' +
+                '<div style="font-size:13px;font-weight:600">' + (esVehiculo ? 'Vehículo' : 'Personal') + '</div>' +
+            '</div>' +
+            (esVehiculo ? '<div>' +
+                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Placa</div>' +
+                '<div style="font-size:13px;font-weight:700;color:#7c3aed">' + (d.placa || '—') + '</div>' +
+            '</div>' : '<div></div>') +
+            '<div>' +
+                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Responsable</div>' +
+                '<div style="font-size:13px;font-weight:600">' + (d.responsable || '—') + '</div>' +
+            '</div>' +
+            '<div>' +
+                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Moneda</div>' +
+                '<div style="font-size:13px;font-weight:600">' + monSimbolo + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div>' +
+            '</div>' +
+        '</div>' +
+
+        // Tabla de artículos
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">' +
+            '<thead>' +
+                '<tr style="background:#7c3aed;color:#fff">' +
+                    '<th style="padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Artículo / Descripción</th>' +
+                    '<th style="padding:9px 10px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Cantidad</th>' +
+                    '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Costo Unit.</th>' +
+                    '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Importe</th>' +
+                '</tr>' +
+            '</thead>' +
+            '<tbody>' + itemsHTML + '</tbody>' +
+        '</table>' +
+
+        // Total
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">' +
+            '<div style="min-width:220px">' +
+                '<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px;color:#64748b">' +
+                    '<span>Subtotal (' + (d.items||[]).length + ' art.)</span>' +
+                    '<span>' + monSimbolo + ' ' + totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:14px;font-weight:700">' +
+                    '<span>TOTAL PEN</span>' +
+                    '<span>S/ ' + totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        // Observaciones
+        (d.observaciones ? '<div style="padding:10px 14px;background:#fef9c3;border-radius:6px;border-left:3px solid #eab308;font-size:12px;margin-bottom:20px"><span style="font-weight:600;color:#854d0e">Observaciones: </span>' + d.observaciones + '</div>' : '') +
+
+        // Footer
+        '<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">' +
+            '<span>Generado: ' + new Date().toLocaleString('es-PE') + '</span>' +
+            '<span>Azkell Fleet — Sistema de Gestión de Flotas</span>' +
+        '</div>' +
+
+    '</div>';
+
+    var opt = {
+        margin: [8, 8, 8, 8],
+        filename: 'Salida_' + id + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px';
+    document.body.appendChild(wrapper);
+
+    html2pdf().set(opt).from(wrapper.firstChild).save().then(function() {
+        document.body.removeChild(wrapper);
+    });
+};
+
+// ── Previsualizar comprobante (nueva pestaña) ─────────────────────
+window.previsualizarComprobanteSalida = function(id) {
+    var d = (window._salData || []).find(function(e) { return e.id === id; });
+    if (!d) { alert('No se encontró la salida ' + id); return; }
+    var opt = { margin:[8,8,8,8], filename:'Salida_'+id+'.pdf',
+        image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
+    var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+    var totalPen = parseFloat(d.total_pen || 0);
+    var monSimbolo = d.moneda === 'USD' ? 'USD' : 'PEN';
+    var esVehiculo = d.tipo_destino === 'Vehiculo';
+    var itemsHTML = (d.items || []).map(function(it, i) {
+        var cant = parseFloat(it.cantidad || 0);
+        var cu   = parseFloat(it.costo_unitario || 0);
+        var imp  = parseFloat(it.importe || cant * cu || 0);
+        var bgRow = i % 2 === 0 ? '#f9fafb' : '#ffffff';
+        return '<tr style="background:'+bgRow+'">'+
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px">'+(it.descripcion||it.inventario_id||'—')+'</td>'+
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:center">'+cant.toLocaleString('es-PE',{maximumFractionDigits:3})+'</td>'+
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right">'+monSimbolo+' '+cu.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4})+'</td>'+
+            '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right;font-weight:600">'+monSimbolo+' '+imp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+        '</tr>';
+    }).join('');
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px';
+    wrapper.innerHTML = '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:32px;color:#1e293b">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #7c3aed">'+
+            '<div><div style="font-size:22px;font-weight:700;color:#7c3aed">AZKELL FLEET</div><div style="font-size:11px;color:#64748b;margin-top:2px">Sistema de Gestión de Flotas</div></div>'+
+            '<div style="text-align:right"><div style="font-size:18px;font-weight:700">COMPROBANTE DE SALIDA</div>'+
+            '<div style="font-size:13px;color:#7c3aed;font-weight:600;margin-top:4px">'+id+'</div>'+
+            '<div style="font-size:11px;color:#64748b;margin-top:2px">Fecha: '+fecha+'</div></div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:14px 16px;background:#f5f3ff;border-radius:8px">'+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Tipo Destino</div><div style="font-size:13px;font-weight:600">'+(esVehiculo?'Vehículo':'Personal')+'</div></div>'+
+            (esVehiculo ? '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Placa</div><div style="font-size:13px;font-weight:700;color:#7c3aed">'+(d.placa||'—')+'</div></div>' : '<div></div>')+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Responsable</div><div style="font-size:13px;font-weight:600">'+(d.responsable||'—')+'</div></div>'+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Moneda</div><div style="font-size:13px;font-weight:600">'+monSimbolo+'</div></div>'+
+        '</div>'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'+
+            '<thead><tr style="background:#7c3aed;color:#fff">'+
+                '<th style="padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase">Artículo</th>'+
+                '<th style="padding:9px 10px;text-align:center;font-size:11px;text-transform:uppercase">Cantidad</th>'+
+                '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase">Costo Unit.</th>'+
+                '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase">Importe</th>'+
+            '</tr></thead>'+
+            '<tbody>'+itemsHTML+'</tbody>'+
+        '</table>'+
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">'+
+            '<div style="min-width:220px">'+
+                '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:#7c3aed;color:#fff;border-radius:6px;font-size:14px;font-weight:700">'+
+                    '<span>TOTAL PEN</span><span>S/ '+totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>'+
+                '</div>'+
+            '</div>'+
+        '</div>'+
+        (d.observaciones ? '<div style="padding:10px 14px;background:#fef9c3;border-radius:6px;border-left:3px solid #eab308;font-size:12px"><b>Obs.: </b>'+d.observaciones+'</div>' : '')+
+    '</div>';
+    document.body.appendChild(wrapper);
+    html2pdf().set(opt).from(wrapper.firstChild).outputPdf('bloburl').then(function(url) {
+        document.body.removeChild(wrapper);
+        window.open(url, '_blank');
+    });
+};
 
 // ── Export Excel ──────────────────────────────────────────────────
 window.exportarSalidasExcel = function() {
-    var datos = window._salData || [];
+    var datos = window._salFiltrados || window._salData || [];
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
-    var cab = ['Código','Fecha','Tipo Destino','Placa','Responsable','N° Artículos','Total PEN','Observaciones'];
-    var filas = datos.map(function(d) {
-        return [d.id, d.fecha ? String(d.fecha).split('T')[0] : '',
-                d.tipo_destino, d.placa||'', d.responsable||'',
-                (d.items||[]).length, parseFloat(d.total_pen||0), d.observaciones||''];
+
+    // Una fila por artículo (detalle completo)
+    var cab = ['Código Salida','Fecha','Tipo Destino','Placa','Responsable','Moneda',
+               'Código Artículo','Descripción Artículo','Cantidad','Costo Unit.','Importe','Total Salida PEN','Observaciones'];
+    var filas = [];
+    datos.forEach(function(d) {
+        var items = d.items || [];
+        if (!items.length) {
+            filas.push([d.id, d.fecha?String(d.fecha).split('T')[0]:'',
+                d.tipo_destino||'', d.placa||'', d.responsable||'', d.moneda||'PEN',
+                '','', 0, 0, 0, parseFloat(d.total_pen||0), d.observaciones||'']);
+        } else {
+            items.forEach(function(it, i) {
+                filas.push([
+                    i===0 ? d.id : '',
+                    i===0 ? (d.fecha?String(d.fecha).split('T')[0]:'') : '',
+                    i===0 ? (d.tipo_destino||'') : '',
+                    i===0 ? (d.placa||'') : '',
+                    i===0 ? (d.responsable||'') : '',
+                    d.moneda||'PEN',
+                    it.inventario_id||'',
+                    it.descripcion||'',
+                    parseFloat(it.cantidad||0),
+                    parseFloat(it.costo_unitario||0),
+                    parseFloat(it.importe||0),
+                    i===0 ? parseFloat(d.total_pen||0) : '',
+                    i===0 ? (d.observaciones||'') : ''
+                ]);
+            });
+        }
     });
+
     var ws = XLSX.utils.aoa_to_sheet([cab].concat(filas));
+    ws['!cols'] = [12,12,14,10,22,8,14,28,10,12,12,14,24].map(function(w){return{wch:w};});
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Salidas');
     XLSX.writeFile(wb, 'Salidas_Almacen.xlsx');

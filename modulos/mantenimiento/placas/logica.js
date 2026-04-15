@@ -658,10 +658,90 @@ window.abrirDetallePlaca = function(event, index) {
     const tabGenBtn = document.getElementById('tab-general-btn');
     if (tabGenBtn) bootstrap.Tab.getOrCreateInstance(tabGenBtn).show();
 
+    // Guardar placa activa para historial
+    window._placaDetalleActual = placaActual;
+
     new bootstrap.Offcanvas(document.getElementById('offcanvasDetallePlaca')).show();
 }
 
-// ── Modal editar ────────────────────────────────────────────────
+// ── Historial de cambios por placa ──────────────────────────────
+window._cargarHistorialPlaca = function() {
+    var placa = window._placaDetalleActual;
+    var body  = document.getElementById('tab-historial-body');
+    if (!body || !placa) return;
+
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial...</div>';
+
+    fetch('/api/placas/' + encodeURIComponent(placa) + '/historial')
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(rows) {
+            if (!rows.length) {
+                body.innerHTML = '<div class="text-muted text-center py-5"><i class="bi bi-clock-history fs-3 opacity-40"></i><div class="mt-2 small">Sin cambios registrados aún.</div><div class="text-muted" style="font-size:0.72rem;margin-top:4px">Los cambios aparecerán aquí al editar la placa.</div></div>';
+                return;
+            }
+
+            var _nombreCampo = {
+                cliente:'Cliente', ruc_dni:'RUC/DNI', marca:'Marca', modelo_uts:'Modelo',
+                tipo:'Tipo', sub_tipo:'Sub Tipo', color:'Color', nro_motor:'Nº Motor',
+                nro_caja:'Nº Caja', nro_corona:'Nº Corona', nro_vin:'Nº VIN',
+                configuracion:'Configuración', anio:'Año', combustible:'Combustible',
+                carga_util:'Carga Útil', peso_neto:'Peso Neto', peso_bruto:'Peso Bruto',
+                estado:'Estado', uts:'Zona UTS', motora:'Motora', llantas:'Llantas', en_uso:'En Uso'
+            };
+
+            // Agrupar entradas por fecha+usuario (misma edición)
+            var grupos = [];
+            var mapaGrupo = {};
+            rows.forEach(function(r) {
+                var d  = new Date(r.fecha);
+                var ts = d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+                var hr = d.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
+                var key = r.usuario + '|' + ts + '|' + hr;
+                if (!mapaGrupo[key]) {
+                    mapaGrupo[key] = { ts: ts, hr: hr, usuario: r.usuario || 'Sistema', items: [] };
+                    grupos.push(mapaGrupo[key]);
+                }
+                mapaGrupo[key].items.push(r);
+            });
+
+            body.innerHTML = grupos.map(function(g, gi) {
+                var isLast = gi === grupos.length - 1;
+                var itemsHtml = g.items.map(function(it) {
+                    var isEstado = it.campo === 'estado';
+                    var badgeAnt = it.valor_ant
+                        ? '<span class="badge" style="background:#fee2e2;color:#991b1b;font-weight:500;font-size:0.68rem">' + (it.valor_ant || '—') + '</span>'
+                        : '<span class="text-muted" style="font-size:0.72rem">vacío</span>';
+                    var badgeNue = it.valor_nuevo
+                        ? '<span class="badge" style="background:#dcfce7;color:#166534;font-weight:500;font-size:0.68rem">' + it.valor_nuevo + '</span>'
+                        : '<span class="text-muted" style="font-size:0.72rem">vacío</span>';
+                    return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:0.78rem;flex-wrap:wrap">'
+                        + '<span style="color:var(--subtext);min-width:80px;font-size:0.72rem">' + (_nombreCampo[it.campo] || it.campo) + '</span>'
+                        + badgeAnt
+                        + '<i class="bi bi-arrow-right" style="color:#94a3b8;font-size:0.65rem"></i>'
+                        + badgeNue
+                        + '</div>';
+                }).join('');
+
+                var lineH = !isLast ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:12px;"></div>' : '';
+
+                return '<div class="d-flex gap-2 mb-2">'
+                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center" style="width:1.6rem;height:1.6rem;flex-shrink:0;background:var(--crm-accent, #2563eb)">'
+                    + '<i class="bi bi-pencil text-white" style="font-size:0.55rem"></i></div>'
+                    + lineH + '</div>'
+                    + '<div class="flex-grow-1 pb-2" style="border-bottom:' + (!isLast ? '1px solid var(--border)' : 'none') + '">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-1">'
+                    + '<span style="font-size:0.75rem;font-weight:600;color:var(--crm-accent)">' + (g.usuario) + '</span>'
+                    + '<span style="font-size:0.68rem;color:var(--subtext)">' + g.ts + ' · ' + g.hr + '</span>'
+                    + '</div>'
+                    + itemsHtml
+                    + '</div></div>';
+            }).join('');
+        })
+        .catch(function(err) {
+            if (body) body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Error: ' + err.message + '</div>';
+        });
+};
 window.abrirModalEditarPlaca = function(index) {
     const p = dataGlobalPlacas[index];
     if (!p) return;
@@ -719,7 +799,59 @@ window.abrirModalEditarPlaca = function(index) {
 };
 
 function enviarPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
-function enviarEdicionPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).actualizarPlaca(formObj); }
+
+function enviarEdicionPlaca(event, formObj) {
+    event.preventDefault();
+    var btn = document.getElementById('btnActualizarPlaca');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; }
+
+    var get = function(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+    var cb  = function(id) { return typeof window._cbGet === 'function' ? (window._cbGet(id) || '') : get(id + '-txt') || get(id); };
+
+    var placa = get('e_placa');
+    var payload = {
+        cliente:      cb('e_cliente'),
+        ruc_dni:      get('e_ruc'),
+        marca:        cb('e_marca'),
+        modelo_uts:   get('e_modelo'),
+        tipo:         cb('e_tipo'),
+        sub_tipo:     cb('e_sub_tipo'),
+        color:        cb('e_color'),
+        nro_motor:    get('e_nro_motor'),
+        nro_caja:     get('e_nro_caja'),
+        nro_corona:   get('e_nro_corona'),
+        nro_vin:      get('e_nro_vin'),
+        configuracion: cb('e_conf'),
+        anio:         get('e_anio'),
+        combustible:  cb('e_comb'),
+        carga_util:   get('e_carga_util'),
+        peso_neto:    get('e_peso_neto'),
+        peso_bruto:   get('e_peso_bruto'),
+        estado:       get('e_estado'),
+        uts:          get('e_uts'),
+        motora:       get('e_motora'),
+        llantas:      get('e_llantas'),
+        en_uso:       get('e_enuso'),
+        usuario_autor: localStorage.getItem('fleet_user') || ''
+    };
+
+    fetch('/api/placas/' + encodeURIComponent(placa), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        var modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPlaca'));
+        if (modal) modal.hide();
+        recargarModulo('placas');
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Placa actualizada (' + (r.cambios || 0) + ' cambio' + (r.cambios !== 1 ? 's' : '') + ')', 'success');
+    })
+    .catch(function(err) {
+        alert('Error al actualizar: ' + err.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-pencil-square"></i> Actualizar Ficha'; }
+    });
+}
 
 // ── Importación Excel ────────────────────────────────────────────
 window.descargarPlantillaPlacas = function() {
