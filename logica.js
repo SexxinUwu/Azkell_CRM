@@ -1054,6 +1054,111 @@ function parseDateToDDMMYYYY(dateStr) {
     let year = d.getFullYear();
     return `${day}/${month}/${year}`;
 }
+// ================================================================
+// COMBOBOX GLOBAL — Searchable dropdown reutilizable (v1)
+// Uso en HTML:
+//   <div class="position-relative">
+//     <input type="text" id="XXXX-txt" class="form-control" placeholder="…"
+//            autocomplete="off" oninput="window._cbFiltrar('XXXX')"
+//            onfocus="window._cbFiltrar('XXXX')" onblur="window._cbHide('XXXX')">
+//     <input type="hidden" id="XXXX">
+//     <div id="XXXX-dd" class="cb-dropdown"></div>
+//   </div>
+// ================================================================
+window._cbData      = window._cbData      || {};
+window._cbCallbacks = window._cbCallbacks || {};
+
+window._cbInit = function(id, items, placeholder) {
+    window._cbData[id] = (items || []).map(function(it) {
+        if (typeof it === 'string') return { value: it, label: it };
+        return { value: String(it.value != null ? it.value : (it.label || '')), label: String(it.label || it.value || '') };
+    });
+    var txt = document.getElementById(id + '-txt');
+    if (txt && placeholder) txt.placeholder = placeholder;
+};
+
+window._cbOnSelect = function(id, fn) {
+    window._cbCallbacks[id] = fn;
+};
+
+window._cbFiltrar = function(id) {
+    var q  = ((document.getElementById(id + '-txt') || {}).value || '').toLowerCase().trim();
+    var dd = document.getElementById(id + '-dd');
+    if (!dd) return;
+    var lista = (window._cbData[id] || []).filter(function(it) {
+        return !q || it.label.toLowerCase().includes(q);
+    });
+    if (!lista.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = lista.map(function(it) {
+        var vs = _escCbA(it.value), ls = _escCbA(it.label);
+        return '<div class="cb-opt" data-cb="' + id + '" data-v="' + vs + '" data-l="' + ls + '"' +
+            ' onmouseover="this.style.background=\'var(--hover,#e8eeff)\'"' +
+            ' onmouseout="this.style.background=\'\'"' +
+            ' onmousedown="window._cbPick(this)">' + _escCbH(it.label) + '</div>';
+    }).join('');
+};
+
+window._cbPick = function(el) {
+    var id  = el.getAttribute('data-cb');
+    var val = el.getAttribute('data-v');
+    var lbl = el.getAttribute('data-l');
+    window._cbSet(id, val, lbl);
+    var dd = document.getElementById(id + '-dd');
+    if (dd) dd.style.display = 'none';
+    if (window._cbCallbacks && window._cbCallbacks[id]) window._cbCallbacks[id](val, lbl);
+};
+
+window._cbHide = function(id) {
+    setTimeout(function() {
+        var dd  = document.getElementById(id + '-dd');
+        if (dd) dd.style.display = 'none';
+        // Free-text fallback: si escribió algo pero no seleccionó opción, preservar texto
+        var txt = document.getElementById(id + '-txt');
+        var hid = document.getElementById(id);
+        if (txt && hid && txt !== hid && txt.value.trim() && !hid.value) {
+            hid.value = txt.value.trim().toUpperCase();
+        }
+    }, 180);
+};
+
+window._cbSet = function(id, val, lbl) {
+    var txt = document.getElementById(id + '-txt');
+    var hid = document.getElementById(id);
+    if (txt) txt.value = (lbl !== undefined && lbl !== null) ? lbl : (val || '');
+    if (hid && hid !== txt) hid.value = val || '';
+};
+
+window._cbGet     = function(id) { return ((document.getElementById(id) || {}).value || '').trim(); };
+window._cbGetText = function(id) { return ((document.getElementById(id + '-txt') || {}).value || '').trim(); };
+window._cbReset   = function(id) { window._cbSet(id, '', ''); };
+
+// Variante para selects de filtro (barras de búsqueda):
+// oninput → filtra opciones; si texto vacío, limpia hidden y dispara callback
+window._cbFiltrarFilter = function(id) {
+    window._cbFiltrar(id);
+    var txt = document.getElementById(id + '-txt');
+    var hid = document.getElementById(id);
+    if (txt && hid && !txt.value.trim()) {
+        hid.value = '';
+        if (window._cbCallbacks && window._cbCallbacks[id]) window._cbCallbacks[id]('', '');
+    }
+};
+// onblur para filtros: si texto no coincide con selección, limpiar (no free-text fallback)
+window._cbHideFilter = function(id) {
+    setTimeout(function() {
+        var dd  = document.getElementById(id + '-dd');
+        if (dd) dd.style.display = 'none';
+        var txt = document.getElementById(id + '-txt');
+        var hid = document.getElementById(id);
+        if (txt && hid) txt.value = hid.value || '';
+    }, 180);
+};
+
+function _escCbA(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function _escCbH(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// ================================================================
+
 function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
 
 // =======================================================
@@ -1840,6 +1945,8 @@ var NOMBRES_MODULOS_RECIENTES = {
     'mantenimiento/planificacion':'Planificación',
     'mantenimiento/configuracion-mp': 'Frecuencias MP',
     'mantenimiento/kits-mp':          'Kits MP',
+    'mantenimiento/tipos-mp':         'Tipos MP',
+    'mantenimiento/config-metrica':   'Config. Métrica',
     'almacen/inventario':         'Inventario',
     'almacen/entradas':           'Entradas',
     'almacen/salidas':            'Salidas',
@@ -1865,6 +1972,8 @@ var ICONOS_MODULOS_RECIENTES = {
     'mantenimiento/planificacion':'bi-calendar2-check',
     'mantenimiento/configuracion-mp': 'bi-sliders',
     'mantenimiento/kits-mp':          'bi-tools',
+    'mantenimiento/tipos-mp':         'bi-card-list',
+    'mantenimiento/config-metrica':   'bi-speedometer2',
     'almacen/inventario':         'bi-box-fill',
     'almacen/entradas':           'bi-arrow-down-circle-fill',
     'almacen/salidas':            'bi-arrow-up-circle-fill',
@@ -1961,6 +2070,8 @@ const TITULOS_MODULOS = {
     'mantenimiento/planificacion': 'Planificación de Mantenimientos',
     'mantenimiento/configuracion-mp': 'Frecuencias de Mantenimiento',
     'mantenimiento/kits-mp':          'Kits de Mantenimiento',
+    'mantenimiento/tipos-mp':         'Tipos de Preventivo',
+    'mantenimiento/config-metrica':   'Config. Métrica por Placa',
     'almacen/inventario':          'Inventario',
     'almacen/unidades':            'Unidades de Medida',
     'almacen/sistemas':            'Sistemas y Sub-Sistemas',
@@ -1981,6 +2092,8 @@ const MENU_IDS = {
     'mantenimiento/planificacion': 'nav-planificacion',
     'mantenimiento/configuracion-mp': 'nav-configuracion-mp',
     'mantenimiento/kits-mp':          'nav-kits-mp',
+    'mantenimiento/tipos-mp':         'nav-tipos-mp',
+    'mantenimiento/config-metrica':   'nav-config-metrica',
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/salidas':             'nav-salidas-inv',

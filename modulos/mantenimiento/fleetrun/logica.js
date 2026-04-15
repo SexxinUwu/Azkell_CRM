@@ -8,6 +8,7 @@ window.dataGlobalFleetrun   = window.dataGlobalFleetrun   || [];
 window.isHistorialFleetrun  = window.isHistorialFleetrun  || false;
 window.expandAllState       = window.expandAllState       || false;
 window.chartDashFleetrunInst = window.chartDashFleetrunInst || null;
+window._metricaMap          = window._metricaMap          || {}; // placa.toUpperCase() → 'km' | 'horas'
 
 function cargarTablaFleetrun(forzarRefresh = false) {
     if (!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; }
@@ -87,8 +88,9 @@ function mostrarFleetrun(datos) {
               let km_gps = parseFloat(fila[14]) || 0;
               let isLive = false;
               let wialonData = buscarWialonPorPlaca(placaRaw);
+              let esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
               if (wialonData) {
-                  km_gps = wialonData.km;
+                  km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
                   isLive = true;
               }
 
@@ -98,7 +100,12 @@ function mostrarFleetrun(datos) {
               } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; cntVig++; }
               let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`; let fmtFrec = `<span style="color: orange; font-weight: bold;">${frecuencia.toLocaleString()}</span>`;
 
-              let fmtKmGps = isLive ? `<span class="badge bg-primary shadow-sm px-2"><i class="bi bi-broadcast"></i> ${km_gps.toLocaleString()}</span>` : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}</span>`;
+              let gpsBadgeColor = esHoras ? 'bg-warning text-dark' : 'bg-primary';
+              let gpsIcon       = esHoras ? 'bi-clock' : 'bi-broadcast';
+              let gpsUnit       = esHoras ? ' h' : '';
+              let fmtKmGps = isLive
+                  ? `<span class="badge ${gpsBadgeColor} shadow-sm px-2"><i class="bi ${gpsIcon}"></i> ${km_gps.toLocaleString()}${gpsUnit}</span>`
+                  : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}${gpsUnit}</span>`;
               let fmtFalta = `<span class="badge ${badgeClass} shadow-sm" style="font-size: 0.8rem; padding: 0.4em 0.6em;">${iconFalta} ${falta_km.toLocaleString()}</span>`;
 
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
@@ -333,7 +340,8 @@ window.autocompletarFleetrun = function(prefix) {
 
     let wialonData = buscarWialonPorPlaca(placaInput);
     if(wialonData) {
-        document.getElementById(prefix + '_kmgps').value = wialonData.km;
+        let esHorasForm = (window._metricaMap[(placaInput || '').toUpperCase()] === 'horas');
+        document.getElementById(prefix + '_kmgps').value = esHorasForm ? (wialonData.horas || '') : wialonData.km;
     } else { document.getElementById(prefix + '_kmgps').value = ''; }
 };
 
@@ -789,6 +797,17 @@ window.init_fleetrun = function() {
         window.chartFleetrunInst.destroy();
         window.chartFleetrunInst = null;
     }
+
+    // Cargar mapa de métricas (km vs horas motor) por placa
+    fetch('/api/config-metrica')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            window._metricaMap = {};
+            (data || []).forEach(function(row) {
+                if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
+            });
+        })
+        .catch(function() {});
 
     // Si hay datos en memoria → mostrar inmediatamente para UX rápido
     // Luego SIEMPRE hacer fetch fresco (puede haber registros nuevos desde la última visita)

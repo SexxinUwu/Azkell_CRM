@@ -21,14 +21,20 @@
   <!-- ── FILTROS ───────────────────────────────────────────────── -->
   <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
        style="border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap">
-    <select class="form-select form-select-sm" id="kits-fil-marca"
-            onchange="window.kitsFiltrar()" style="max-width:150px">
-      <option value="">Todas las marcas</option>
-    </select>
-    <select class="form-select form-select-sm" id="kits-fil-tipo"
-            onchange="window.kitsFiltrar()" style="max-width:150px">
-      <option value="">Todo MP</option>
-    </select>
+    <div class="position-relative" style="max-width:150px;">
+      <input type="text" id="kits-fil-marca-txt" class="form-control form-control-sm" placeholder="Todas las marcas"
+        autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-marca')"
+        onfocus="window._cbFiltrar('kits-fil-marca')" onblur="window._cbHideFilter('kits-fil-marca')">
+      <input type="hidden" id="kits-fil-marca">
+      <div id="kits-fil-marca-dd" class="cb-dropdown"></div>
+    </div>
+    <div class="position-relative" style="max-width:150px;">
+      <input type="text" id="kits-fil-tipo-txt" class="form-control form-control-sm" placeholder="Todo MP"
+        autocomplete="off" oninput="window._cbFiltrarFilter('kits-fil-tipo')"
+        onfocus="window._cbFiltrar('kits-fil-tipo')" onblur="window._cbHideFilter('kits-fil-tipo')">
+      <input type="hidden" id="kits-fil-tipo">
+      <div id="kits-fil-tipo-dd" class="cb-dropdown"></div>
+    </div>
   </div>
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
@@ -36,14 +42,14 @@
     <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
       <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
         <tr style="border-bottom:2px solid var(--border)">
-          <th></th><th></th><th>Kit</th><th>Código</th>
+          <th></th><th></th>
           <th style="min-width:160px">Ítem</th>
           <th>Cant.</th><th>Unidad</th>
-          <th>C.Unit.</th><th>C.Total</th><th>Ord.</th><th></th>
+          <th>C.Unit.</th><th>C.Total</th><th></th>
         </tr>
       </thead>
       <tbody id="kits-tbody">
-        <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+        <tr><td colspan="8" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -52,7 +58,7 @@
 
 <!-- ======= MODAL KIT MP ======= -->
 <div class="modal fade" id="kitsModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog">
     <div class="modal-content" style="background:var(--surface); color:var(--text)">
       <div class="modal-header" style="border-bottom:1px solid var(--border)">
         <h5 class="modal-title fw-bold" id="kitsModal-titulo">
@@ -63,40 +69,45 @@
       <div class="modal-body">
         <input type="hidden" id="kits-id">
         <datalist id="kits-dl-marcas"></datalist>
-        <datalist id="kits-dl-tipomps"></datalist>
         <div class="row g-3">
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
             <input type="text" class="form-control form-control-sm text-uppercase" id="kits-marca"
                    placeholder="VOLVO" list="kits-dl-marcas" autocomplete="off">
           </div>
-          <div class="col-sm-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo MP *</label>
-            <input type="text" class="form-control form-control-sm text-uppercase" id="kits-tipomp"
-                   placeholder="MP1..." list="kits-dl-tipomps" autocomplete="off">
-          </div>
-          <div class="col-sm-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Nombre Kit</label>
-            <input type="text" class="form-control form-control-sm" id="kits-nombre"
-                   placeholder="Cambio aceite y filtros">
-          </div>
-          <div class="col-sm-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Código Inventario</label>
-            <input type="text" class="form-control form-control-sm" id="kits-codigo" placeholder="INV-0001">
-          </div>
           <div class="col-sm-8">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo de Preventivo *</label>
+            <div class="position-relative">
+              <input type="text" id="kits-tipomp-txt" class="form-control form-control-sm text-uppercase"
+                     placeholder="MP1, FILTRO DE AIRE..." autocomplete="off"
+                     oninput="window._cbFiltrar('kits-tipomp')"
+                     onfocus="window._cbFiltrar('kits-tipomp')"
+                     onblur="window._kitsHideCombo('kits-tipomp')">
+              <input type="hidden" id="kits-tipomp">
+              <div id="kits-tipomp-dd" class="cb-dropdown"></div>
+            </div>
+          </div>
+          <div class="col-12">
             <label class="form-label fw-bold" style="font-size:0.8rem">Nombre del Ítem *</label>
-            <input type="text" class="form-control form-control-sm" id="kits-item-nombre"
-                   placeholder="Aceite Motor 15W40...">
+            <div class="position-relative">
+              <input type="text" id="kits-item-nombre-txt" class="form-control form-control-sm"
+                     placeholder="Buscar ítem en almacén..." autocomplete="off"
+                     oninput="window._cbFiltrar('kits-item-nombre')"
+                     onfocus="window._cbFiltrar('kits-item-nombre')"
+                     onblur="window._kitsHideCombo('kits-item-nombre')">
+              <input type="hidden" id="kits-item-nombre">
+              <div id="kits-item-nombre-dd" class="cb-dropdown"></div>
+            </div>
           </div>
           <div class="col-sm-3">
             <label class="form-label fw-bold" style="font-size:0.8rem">Cantidad</label>
             <input type="number" class="form-control form-control-sm" id="kits-cantidad"
-                   placeholder="1" step="0.01">
+                   placeholder="1" step="0.01" oninput="window.kitsCalcularTotal()">
           </div>
           <div class="col-sm-3">
             <label class="form-label fw-bold" style="font-size:0.8rem">Unidad</label>
-            <input type="text" class="form-control form-control-sm" id="kits-unidad" placeholder="LT, UND, GAL...">
+            <input type="text" class="form-control form-control-sm" id="kits-unidad" placeholder="—"
+                   readonly style="background:rgba(88,101,242,0.06); cursor:default; color:var(--subtext)">
           </div>
           <div class="col-sm-3">
             <label class="form-label fw-bold" style="font-size:0.8rem">Costo Unit. (S/.)</label>
@@ -106,11 +117,8 @@
           <div class="col-sm-3">
             <label class="form-label fw-bold" style="font-size:0.8rem">Costo Total (S/.)</label>
             <input type="number" class="form-control form-control-sm" id="kits-costo-total"
-                   placeholder="0.00" step="0.01">
-          </div>
-          <div class="col-sm-2">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Orden</label>
-            <input type="number" class="form-control form-control-sm" id="kits-orden" placeholder="1">
+                   placeholder="0.00" step="0.01" readonly
+                   style="background:rgba(88,101,242,0.06); cursor:default; color:var(--subtext)">
           </div>
         </div>
       </div>

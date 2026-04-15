@@ -23,23 +23,17 @@ window.poblarSelectsFormularios = function(datos) {
     }
 
     function poblar(id, valores) {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const valorActual = sel.value;
-        sel.innerHTML = '<option value="">Seleccione...</option>';
-        valores.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
-        if (valorActual) sel.value = valorActual;
+        if (typeof window._cbInit !== 'function') return;
+        var items = valores.map(function(v) { return { value: v, label: v }; });
+        window._cbInit(id, items, 'Buscar…');
     }
 
     function poblarClientes(id) {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const valorActual = sel.value;
+        if (typeof window._cbInit !== 'function') return;
         const mapaClientes = new Map();
         filas.forEach(f => { const n = (f[1]||'').toString().trim(); if (n && !mapaClientes.has(n)) mapaClientes.set(n, (f[2]||'').toString().trim()); });
-        sel.innerHTML = '<option value="">Seleccione Cliente...</option>';
-        [...mapaClientes.keys()].sort().forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
-        if (valorActual) sel.value = valorActual;
+        var items = [...mapaClientes.keys()].sort().map(function(n) { return { value: n, label: n }; });
+        window._cbInit(id, items, 'Buscar cliente…');
     }
 
     const marcas   = unicos(3);
@@ -124,17 +118,25 @@ window.guardarNuevoCliente = function() {
     const targetSelectId = document.getElementById('nc_target_select')?.value || '';
     const targetRucId    = document.getElementById('nc_target_ruc')?.value    || '';
 
-    // Añadir opción al select destino si no existe ya
-    const sel = document.getElementById(targetSelectId);
-    if (sel) {
-        const existe = [...sel.options].some(o => o.value === nombre);
-        if (!existe) {
-            const opt = document.createElement('option');
-            opt.value = nombre; opt.textContent = nombre;
-            sel.appendChild(opt);
+    // Añadir al dataset del combobox (si no existe) y seleccionar
+    if (typeof window._cbSet === 'function' && document.getElementById(targetSelectId + '-txt')) {
+        if (window._cbData && window._cbData[targetSelectId]) {
+            var existe = window._cbData[targetSelectId].some(function(it) { return it.value === nombre; });
+            if (!existe) window._cbData[targetSelectId].push({ value: nombre, label: nombre });
         }
-        sel.value = nombre;
+        window._cbSet(targetSelectId, nombre, nombre);
+        if (typeof window._cbCallbacks !== 'undefined' && window._cbCallbacks[targetSelectId]) {
+            window._cbCallbacks[targetSelectId](nombre, nombre);
+        }
+    } else {
+        const sel = document.getElementById(targetSelectId);
+        if (sel) {
+            const existe = [...sel.options].some(o => o.value === nombre);
+            if (!existe) { const opt = document.createElement('option'); opt.value = nombre; opt.textContent = nombre; sel.appendChild(opt); }
+            sel.value = nombre;
+        }
     }
+
     // Rellenar RUC
     const rucEl = document.getElementById(targetRucId);
     if (rucEl) rucEl.value = ruc;
@@ -677,9 +679,14 @@ window.abrirModalEditarPlaca = function(index) {
     ];
 
     ids.forEach((id, i) => {
+        const valorLimpio = p[i] ? p[i].toString().trim() : '';
+        // Si el campo usa combobox, actualizar con _cbSet
+        if (typeof window._cbSet === 'function' && document.getElementById(id + '-txt')) {
+            window._cbSet(id, valorLimpio.toUpperCase(), valorLimpio.toUpperCase());
+            return;
+        }
         const el = document.getElementById(id);
         if (el) {
-            const valorLimpio = p[i] ? p[i].toString().trim() : '';
             if (el.tagName === 'SELECT' && valorLimpio !== '') {
                 let options = Array.from(el.options);
                 let match = options.find(opt => opt.value.toUpperCase() === valorLimpio.toUpperCase());
@@ -697,6 +704,10 @@ window.abrirModalEditarPlaca = function(index) {
             }
         }
     });
+
+    // Autocompletar RUC tras setear cliente en modo edición
+    const editCliente = typeof window._cbGet === 'function' ? window._cbGet('e_cliente') : '';
+    if (editCliente) window.autocompletarRucSelect(editCliente, 'e_ruc');
 
     const btn = document.getElementById('btnActualizarPlaca');
     if (btn) {
@@ -905,6 +916,12 @@ window.limpiarFiltrosPlacas = function() {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router al (re)cargar
 // ================================================================
 window.init_placas = function() {
+    // Registrar callbacks de autocompletado RUC al seleccionar cliente
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('p_cliente', function(val) { window.autocompletarRucSelect(val, 'p_ruc'); });
+        window._cbOnSelect('e_cliente', function(val) { window.autocompletarRucSelect(val, 'e_ruc'); });
+    }
+
     // Restaurar preferencia de columnas guardada
     const savedCols = parseInt(localStorage.getItem('fleet_pref_placas_cols') || '4');
     colActualesPlacas = savedCols;

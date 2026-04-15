@@ -968,6 +968,29 @@ body {
     transition: background-color 0.3s ease, border-color 0.3s ease !important;
 }
 
+/* ── Combobox Searchable Global ── */
+.cb-dropdown {
+    display: none;
+    position: absolute;
+    z-index: 9999;
+    width: 100%;
+    max-height: 230px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border, #dee2e6);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    top: calc(100% + 2px);
+    left: 0;
+}
+.cb-opt {
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.4;
+}
+
 /* 5. MODALES LIMPIOS */
 .modal-header {
     background-color: var(--surface) !important;
@@ -2576,43 +2599,100 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     border-top: 1px solid var(--border);
     box-shadow: 0 -4px 24px rgba(0,0,0,0.14);
     z-index: 1040;
-    align-items: center;
-    padding: 5px 6px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    gap: 2px;
-}
-.bottom-nav-item {
-    flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    color: var(--subtext) !important;
+    padding: 8px 10px;
+    gap: 4px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+.bottom-nav-item {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    height: 48px;
+    width: 52px;
+    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transition: width 0.22s ease-in, color 0.2s;
     text-decoration: none !important;
+    color: var(--subtext) !important;
     cursor: pointer;
-    border-radius: 14px;
-    padding: 7px 4px;
-    transition: color 0.2s, background 0.2s, transform 0.18s, box-shadow 0.18s;
-    font-size: 0.64rem;
-    font-weight: 600;
-    border: none;
     background: none;
-    min-width: 0;
-    letter-spacing: 0.01em;
+    border: none;
+    flex-shrink: 0;
 }
-.bottom-nav-item i { font-size: 1.3rem; line-height: 1; }
-.bottom-nav-item span { line-height: 1; }
+/* Fondo deslizante en hover/active */
+.bottom-nav-item::before {
+    position: absolute;
+    z-index: -1;
+    content: "";
+    display: block;
+    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    transform: translateX(100%);
+    transition: transform 0.22s ease-in;
+    transform-origin: center right;
+    background: rgba(37,99,235,0.12);
+}
+/* Ítem activo: expandido permanentemente */
 .bottom-nav-item.active {
-    color: #fff !important;
-    background: var(--crm-accent) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(37,99,235,0.38);
-}
-.bottom-nav-item:not(.active):hover {
+    width: 112px;
     color: var(--crm-accent) !important;
-    background: rgba(37,99,235,0.08) !important;
+}
+.bottom-nav-item.active::before {
+    transform: translateX(0);
+    background: rgba(37,99,235,0.15);
+}
+.bottom-nav-item.active span {
+    transform: translateX(0);
+    opacity: 1;
+}
+/* Hover expande (útil en tablet con stylus) */
+.bottom-nav-item:not(.active):hover,
+.bottom-nav-item:not(.active):focus {
+    outline: 0;
+    width: 112px;
+    color: var(--crm-accent) !important;
+}
+.bottom-nav-item:not(.active):hover::before,
+.bottom-nav-item:not(.active):focus::before {
+    transform: translateX(0);
+}
+.bottom-nav-item:not(.active):hover span,
+.bottom-nav-item:not(.active):focus span {
+    transform: translateX(0);
+    opacity: 1;
+}
+/* Ícono: posicionado a la izquierda, fijo */
+.bottom-nav-item i {
+    font-size: 1.3rem;
+    width: 24px;
+    height: 24px;
+    display: block;
+    flex-shrink: 0;
+    position: absolute;
+    left: 14px;
+    line-height: 1;
+}
+/* Texto: oculto por defecto, se desliza */
+.bottom-nav-item span {
+    transform: translateX(100%);
+    transition: transform 0.22s ease-in, opacity 0.18s ease-in;
+    opacity: 0;
+    display: block;
+    text-align: center;
+    text-indent: 22px;
+    width: 100%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 /* Cuando el bottom nav está visible, añadir padding al área de contenido */
 @media (max-width: 767px) {

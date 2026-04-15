@@ -91,9 +91,19 @@
           </div>
           <div class="col-md-3">
             <label class="fw-semibold small">Responsable</label>
-            <select class="form-select" id="sal-f-responsable">
-              <option value="">Seleccionar responsable…</option>
-            </select>
+            <div class="position-relative">
+              <input type="text" class="form-control" id="sal-f-responsable-texto"
+                placeholder="Buscar responsable…" autocomplete="off"
+                oninput="window._salFiltrarResp()"
+                onfocus="window._salFiltrarResp()"
+                onblur="window._salOcultarRespDD()">
+              <input type="hidden" id="sal-f-responsable-id">
+              <div id="sal-resp-dropdown"
+                style="display:none;position:absolute;z-index:9999;width:100%;max-height:230px;overflow-y:auto;
+                       background:var(--surface);border:1px solid var(--border,#dee2e6);
+                       border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);top:calc(100% + 2px);left:0;">
+              </div>
+            </div>
           </div>
           <div class="col-md-3">
             <label class="fw-semibold small">Moneda</label>

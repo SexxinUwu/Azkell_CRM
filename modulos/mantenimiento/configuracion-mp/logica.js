@@ -14,6 +14,10 @@ window.cmpImportRows   = window.cmpImportRows   || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_configuracion-mp'] = function() {
+    // Registrar callback: al seleccionar una marca en el filtro, disparar filtrado
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('cfg-flota-fil-marca', function() { window.filtrarTablaConfigFlota(); });
+    }
     window.cargarTablaConfigFlota();
 };
 
@@ -32,13 +36,6 @@ function _cfPopularDatalists() {
     });
     marcas.sort();
 
-    var tipos = [];
-    (window.cfgDataFlota || []).forEach(function(r) {
-        var t = (r.tipo_mp || '').trim().toUpperCase();
-        if (t && !tipos.includes(t)) tipos.push(t);
-    });
-    tipos.sort();
-
     var sistemas = [];
     (window.cfgDataFlota || []).forEach(function(r) {
         var s = (r.sistema || '').trim();
@@ -51,8 +48,13 @@ function _cfPopularDatalists() {
         if (dl) dl.innerHTML = vals.map(function(v){ return '<option value="'+v+'">'; }).join('');
     }
     _fill('cf-dl-marcas',   marcas);
-    _fill('cf-dl-tipomps',  tipos);
     _fill('cf-dl-sistemas', sistemas);
+
+    // Tipos de Preventivo: desde tabla maestra
+    fetch('/api/tipos-preventivo')
+        .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function(j) { _fill('cf-dl-tipomps', (j.data || []).map(function(t) { return t.nombre; })); })
+        .catch(function() {});
 }
 
 // ── TIPOS DE MANTENIMIENTO ────────────────────────────────────────
@@ -64,18 +66,16 @@ window.cargarTablaConfigFlota = function() {
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
         .then(function(j) {
             window.cfgDataFlota = j.data || [];
-            var selMarca = document.getElementById('cfg-flota-fil-marca');
-            if (selMarca) {
-                var marcasMap = {};
-                window.cfgDataFlota.forEach(function(r) {
-                    var up = (r.marca||'').trim().toUpperCase();
-                    if (up) marcasMap[up] = true;
-                });
-                var marcas = Object.keys(marcasMap).sort();
-                var prev = (selMarca.value||'').toUpperCase();
-                selMarca.innerHTML = '<option value="">Todas las marcas</option>' +
-                    marcas.map(function(m){ return '<option value="'+m+'"'+(m===prev?' selected':'')+'>'+m+'</option>'; }).join('');
-            }
+            var prev = typeof window._cbGet === 'function' ? window._cbGet('cfg-flota-fil-marca') : '';
+            var marcasMap = {};
+            window.cfgDataFlota.forEach(function(r) {
+                var up = (r.marca||'').trim().toUpperCase();
+                if (up) marcasMap[up] = true;
+            });
+            var marcas = Object.keys(marcasMap).sort();
+            var items = marcas.map(function(m) { return { value: m, label: m }; });
+            if (typeof window._cbInit === 'function') window._cbInit('cfg-flota-fil-marca', items, 'Todas las marcas');
+            if (prev && typeof window._cbSet === 'function') window._cbSet('cfg-flota-fil-marca', prev, prev);
             window.filtrarTablaConfigFlota();
         })
         .catch(function(e) { console.error(e); });
