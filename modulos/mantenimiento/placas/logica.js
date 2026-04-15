@@ -999,3 +999,52 @@ window.init_placas = function() {
     }
 };
 // NOTA: cargarTablaPlacas es function declaration — va a window automáticamente al cargar el script.
+
+// ============================================================
+// 📱 QR POR PLACA
+// ============================================================
+window._qrPlacaActual = window._qrPlacaActual || '';
+
+window.abrirQRPlaca = function(placa) {
+    if (!placa) return;
+    window._qrPlacaActual = placa;
+
+    var label = document.getElementById('qr-placa-label');
+    if (label) label.textContent = placa;
+
+    // URL que abrirá directamente la ficha de esa placa en la app
+    var appUrl = (window.location.origin || 'https://azkell-crm.onrender.com') +
+                 '/?placa=' + encodeURIComponent(placa);
+    var urlLabel = document.getElementById('qr-url-label');
+    if (urlLabel) urlLabel.textContent = appUrl;
+
+    // Limpiar canvas anterior y generar nuevo QR
+    var wrap = document.getElementById('qr-canvas-wrap');
+    if (wrap) wrap.innerHTML = '<div id="qr-canvas"></div>';
+
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(document.getElementById('qr-canvas'), {
+            text: appUrl,
+            width: 200,
+            height: 200,
+            colorDark: '#1e293b',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
+
+    var modal = document.getElementById('modalQRPlaca');
+    if (modal) (bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal)).show();
+};
+
+window.descargarQRPlaca = function() {
+    var wrap = document.getElementById('qr-canvas-wrap');
+    if (!wrap) return;
+    var canvas = wrap.querySelector('canvas');
+    if (!canvas) return;
+    var link = document.createElement('a');
+    link.download = 'QR_' + (window._qrPlacaActual || 'placa') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    window.mostrarToast('QR descargado', 'success');
+};

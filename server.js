@@ -8,8 +8,31 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const fs = require('fs');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+// ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
+app.use(compression());
+
+// ── Rate Limiting (protección contra bots y abuso de API) ─────────
+const limiterGeneral = rateLimit({
+    windowMs: 60 * 1000,       // ventana: 1 minuto
+    max: 200,                   // máximo 200 requests por IP por minuto
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas solicitudes. Intenta en un momento.' }
+});
+const limiterLogin = rateLimit({
+    windowMs: 15 * 60 * 1000,  // ventana: 15 minutos
+    max: 20,                    // máximo 20 intentos de login por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos de acceso. Espera 15 minutos.' }
+});
+app.use('/api/', limiterGeneral);
+app.use('/api/login', limiterLogin);
 const ALLOWED_ORIGINS = [
     'https://azkell-crm.onrender.com',
     process.env.APP_URL,
@@ -241,6 +264,24 @@ db.query(
     (e) => {
         if (e) console.warn('CREATE destinatarios_alertas:', e.message);
         else   console.log('✅ Tabla destinatarios_alertas verificada');
+    }
+);
+// ── Tabla histórico KM GPS (snapshot diario por placa) ────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS km_snapshots (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        placa        VARCHAR(20)    NOT NULL,
+        fecha        DATE           NOT NULL,
+        km_gps       INT            NOT NULL DEFAULT 0,
+        horas_motor  DECIMAL(10,1)  NOT NULL DEFAULT 0,
+        created_at   TIMESTAMP      NOT NULL DEFAULT NOW(),
+        UNIQUE KEY uq_placa_fecha (placa, fecha),
+        INDEX idx_placa (placa),
+        INDEX idx_fecha (fecha)
+    ) COMMENT 'Snapshot diario de KM GPS y horas motor por placa (Wialon)'`,
+    (e) => {
+        if (e) console.warn('CREATE km_snapshots:', e.message);
+        else   console.log('✅ Tabla km_snapshots verificada');
     }
 );
 // ── Tabla maestra tipos de preventivo ─────────────────────────────
@@ -1209,7 +1250,7 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'consultarGemini') {
         const prompt = req.body.args[0];
         const resumenContexto = req.body.args[1];
-        const apiKey = "AIzaSyAOloEWep_cl3_5fwfJdLJqE1elj_Kd_qU";
+        const apiKey = process.env.GEMINI_API_KEY;
         const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
 
         try {
@@ -1226,7 +1267,7 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosWialon') {
-        const token = "b0a4947147e59c66f42703bca5df48a1B33E01E58063AD32AF788F04F09F24F4F88692AC";
+        const token = process.env.WIALON_TOKEN;
         const baseUrl = "https://hst-api.wialon.us/wialon/ajax.html";
         try {
             const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token: token}))}`);
@@ -1258,6 +1299,19 @@ app.post('/api/script/:metodo', async (req, res) => {
             });
 
             fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
+
+            // ── Snapshot automático de KM GPS (una vez por día por placa) ──
+            const hoy = new Date().toISOString().split('T')[0];
+            vehiculosLive.forEach(v => {
+                if (!v.placa || (!v.km && !v.horas)) return;
+                db.query(
+                    `INSERT IGNORE INTO km_snapshots (placa, fecha, km_gps, horas_motor)
+                     VALUES (?, ?, ?, ?)`,
+                    [v.placa, hoy, v.km || 0, v.horas || 0],
+                    () => {}
+                );
+            });
+
             return res.json({ data: vehiculosLive });
         } catch (error) {
             console.error("Error Wialon:", error);
@@ -2874,6 +2928,63 @@ app.post('/api/tipos-preventivo/sync-desde-frecuencias', (req, res) => {
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, insertados: result.affectedRows });
+        }
+    );
+});
+
+// ============================================================
+// HISTÓRICO KM GPS — Snapshots diarios por placa
+// ============================================================
+
+// Últimos N días de snapshots + km/día promedio
+app.get('/api/km-historico/:placa', (req, res) => {
+    const placa = (req.params.placa || '').toUpperCase().trim();
+    const dias  = Math.min(parseInt(req.query.dias) || 30, 90);
+    if (!placa) return res.status(400).json({ error: 'Placa requerida' });
+
+    db.query(
+        `SELECT fecha, km_gps, horas_motor
+         FROM km_snapshots
+         WHERE placa = ?
+           AND fecha >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+         ORDER BY fecha ASC`,
+        [placa, dias],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows || rows.length < 2) return res.json({ data: rows || [], km_dia: null, horas_dia: null });
+
+            // Calcular km/día promedio entre primer y último snapshot
+            const primero = rows[0];
+            const ultimo  = rows[rows.length - 1];
+            const diasDiff = Math.max(1,
+                (new Date(ultimo.fecha) - new Date(primero.fecha)) / (1000 * 60 * 60 * 24)
+            );
+            const km_dia    = ((ultimo.km_gps    - primero.km_gps)    / diasDiff).toFixed(0);
+            const horas_dia = ((ultimo.horas_motor - primero.horas_motor) / diasDiff).toFixed(1);
+
+            res.json({ data: rows, km_dia: Number(km_dia), horas_dia: Number(horas_dia), dias_muestra: diasDiff });
+        }
+    );
+});
+
+// Resumen general: km/día de todas las placas (últimos 30 días)
+app.get('/api/km-historico', (req, res) => {
+    db.query(
+        `SELECT
+            s1.placa,
+            ROUND((MAX(s1.km_gps) - MIN(s1.km_gps)) / GREATEST(DATEDIFF(MAX(s1.fecha), MIN(s1.fecha)), 1), 0) AS km_dia,
+            ROUND((MAX(s1.horas_motor) - MIN(s1.horas_motor)) / GREATEST(DATEDIFF(MAX(s1.fecha), MIN(s1.fecha)), 1), 1) AS horas_dia,
+            COUNT(*) AS snapshots,
+            MAX(s1.km_gps) AS km_actual,
+            MAX(s1.fecha)  AS ultima_fecha
+         FROM km_snapshots s1
+         WHERE s1.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+         GROUP BY s1.placa
+         HAVING snapshots >= 2
+         ORDER BY s1.placa`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
         }
     );
 });
