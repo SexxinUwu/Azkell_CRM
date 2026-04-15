@@ -36,7 +36,7 @@ function mostrarConductores(datos) {
     };
 
     if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="7" class="text-center py-4">No hay conductores registrados.</td></tr>';
+        html = '<tr><td colspan="7" class="text-center py-4">No hay personal registrado.</td></tr>';
     } else {
         let mapEstados = new Map();
 
@@ -117,7 +117,7 @@ function abrirModalConductor(f = null) {
     const camposSelect = ['c_estado'];
 
     if (f) {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Conductor';
+        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Personal';
 
         const limpiar = t => t ? t.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
 
@@ -141,7 +141,7 @@ function abrirModalConductor(f = null) {
         document.getElementById('btnGuardarConductor').style.display = 'none';
 
     } else {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Conductor';
+        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Personal';
         document.getElementById('c_id').value = "";
 
         camposText.forEach(id => document.getElementById(id).readOnly = false);
@@ -209,11 +209,11 @@ function guardarConductor(event, formObj) {
             alert("Error: " + r.data);
         }
         btn.disabled = false;
-        btn.innerHTML = 'Guardar Conductor';
+        btn.innerHTML = 'Guardar Personal';
     }).catch(e => {
         alert("Error: " + e.message);
         btn.disabled = false;
-        btn.innerHTML = 'Guardar Conductor';
+        btn.innerHTML = 'Guardar Personal';
     });
 }
 
@@ -222,8 +222,22 @@ function guardarConductor(event, formObj) {
 // ================================================================
 window.dataGlobalConductores = dataGlobalConductores;
 
+function _cargarClientesCond() {
+    fetch('/api/almacen/clientes-placas')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var dl = document.getElementById('dl-clientes');
+            if (!dl) return;
+            dl.innerHTML = (data || []).map(function(c) {
+                return '<option value="' + (c || '').replace(/"/g, '&quot;') + '">';
+            }).join('');
+        })
+        .catch(function() {});
+}
+
 window.init_conductores = function() {
     if(typeof cargarModulo === 'function') {
         cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores');
     }
+    _cargarClientesCond();
 };

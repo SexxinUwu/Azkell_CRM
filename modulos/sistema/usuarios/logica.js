@@ -9,14 +9,26 @@ window._guEsNuevo         = window._guEsNuevo         || false;
 
 // ── Módulos de permisos ──────────────────────────────────────────
 window._GU_MODULOS = window._GU_MODULOS || [
-    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones', lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',        lcad:true  },
-    { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',        lcad:true  },
-    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades',     lcad:true  },
-    { grupo:'FLOTA',         key:'cond',          nombre:'Conductores',      desc:'Directorio de personal operativo',    lcad:true  },
-    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',        lcad:false },
-    { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',           lcad:true  },
-    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',   lcad:true  },
+    // MANTENIMIENTO
+    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones',    lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',           lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificación',    desc:'MPs planificadas vs ejecutadas',          lcad:true  },
+    // ALMACÉN
+    { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',           lcad:true  },
+    { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos y stock',          lcad:true  },
+    { grupo:'ALMACÉN',       key:'ent_inv',       nombre:'Entradas',         desc:'Registro de ingresos al almacén',        lcad:true  },
+    { grupo:'ALMACÉN',       key:'sal_inv',       nombre:'Salidas',          desc:'Registro de egresos del almacén',        lcad:true  },
+    { grupo:'ALMACÉN',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',              lcad:true  },
+    { grupo:'ALMACÉN',       key:'kardex',        nombre:'Kardex',           desc:'Historial de movimientos por artículo',  lcad:false },
+    { grupo:'ALMACÉN',       key:'costos_inv',    nombre:'Costos',           desc:'Análisis de costos e índices',           lcad:false },
+    { grupo:'ALMACÉN',       key:'cfg_almacen',   nombre:'Config. Almacén',  desc:'Familias, Unidades, Sistemas y Marcas',  lcad:true  },
+    // FLOTA
+    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades',        lcad:true  },
+    { grupo:'FLOTA',         key:'cond',          nombre:'Personal',         desc:'Directorio de personal operativo',       lcad:true  },
+    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',           lcad:false },
+    // SISTEMA
+    { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',              lcad:true  },
+    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',      lcad:true  },
 ];
 
 window._GU_COLORS = window._GU_COLORS || [

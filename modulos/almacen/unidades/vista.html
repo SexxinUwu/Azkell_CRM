@@ -1,0 +1,89 @@
+<!-- Módulo Almacén / Unidades de Medida — SPA Aislado -->
+<div id="mod-unidades" class="modulo-wrapper d-flex flex-column h-100">
+
+  <!-- Cabecera -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-rulers text-info me-1"></i>Unidades de Medida
+      </h2>
+      <p class="text-muted small mb-0">Gestión de unidades para el inventario (UND, LT, KG…)</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarUnidades()" title="Actualizar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-sm btn-primary" onclick="window.abrirModalUnidad()">
+        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Unidad</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Búsqueda -->
+  <div class="d-flex gap-2 mb-3">
+    <div class="input-group input-group-sm" style="max-width:300px;">
+      <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="und-buscar" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar unidad…" oninput="window.filtrarUnidades()">
+    </div>
+    <span id="und-contador" class="text-muted small ms-auto align-self-center"></span>
+  </div>
+
+  <!-- Tabla -->
+  <div class="flex-grow-1" style="overflow-y:auto;min-height:0;">
+    <div class="card p-0">
+      <table class="table table-custom m-0" id="tabla-unidades">
+        <thead>
+          <tr>
+            <th style="width:80px;">Código</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th style="width:80px;">Estado</th>
+            <th style="width:80px;"><i class="bi bi-three-dots-vertical"></i></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-tabla-unidades">
+          <tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva / Editar Unidad -->
+<div class="modal fade" id="modal-unidad" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="modal-und-titulo"><i class="bi bi-rulers me-1"></i>Nueva Unidad</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-unidad" onsubmit="window.guardarUnidad(event)">
+        <input type="hidden" id="und-edit-id">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="fw-semibold small">Código <span class="text-danger">*</span></label>
+              <input type="text" class="form-control text-uppercase" id="und-f-nombre" required placeholder="UND, LT, KG…" maxlength="20">
+              <small class="text-muted">Abreviatura corta (ej: UND, LT)</small>
+            </div>
+            <div class="col-md-8">
+              <label class="fw-semibold small">Descripción</label>
+              <input type="text" class="form-control" id="und-f-descripcion" placeholder="Ej: Unidades, Litros, Kilogramos…">
+            </div>
+            <div class="col-12">
+              <label class="fw-semibold small">Estado</label>
+              <select class="form-select" id="und-f-activo">
+                <option value="1">Activo</option>
+                <option value="0">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -223,7 +223,8 @@ db.getConnection((err, connection) => {
     }
 });
 
-// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──db.query(
+// ── Migración adicional: tabla destinatarios_alertas  (fire-and-forget) ──
+db.query(
     `CREATE TABLE IF NOT EXISTS destinatarios_alertas (
         id           INT AUTO_INCREMENT PRIMARY KEY,
         nombre       VARCHAR(100) NOT NULL,
@@ -298,6 +299,112 @@ _encFixes.forEach(([bad, good]) => {
         (e) => { if (e) console.error('encoding fix error:', e.message); }
     );
 });
+// ── Nueva tabla: almacen_familias (fire-and-forget) ──────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_familias (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_familias:', e.message);
+        else {
+            console.log('✅ Tabla almacen_familias verificada');
+            db.query(`SELECT COUNT(*) AS n FROM almacen_familias`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defs = [['FILTROS',1],['LUBRICANTES',2],['NEUMATICOS',3],['HERRAMIENTAS',4],['REPUESTOS',5],['ELECTRICO',6],['CONSUMIBLES',7],['EPP',8],['QUIMICOS',9],['LIMPIEZA',10]];
+                    db.query(`INSERT IGNORE INTO almacen_familias (nombre, orden) VALUES ?`, [defs], () => {});
+                }
+            });
+        }
+    }
+);
+// ── Nueva tabla: almacen_marcas (fire-and-forget) ─────────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_marcas (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_marcas:', e.message);
+        else {
+            console.log('✅ Tabla almacen_marcas verificada');
+            db.query(`SELECT COUNT(*) AS n FROM almacen_marcas`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defs = [['3M',1],['WIX',2],['MANN',3],['VOLVO',4],['FLEETGUARD',5],['DONALDSON',6],['MAHLE',7],['BOSCH',8],['CASTROL',9],['MOBIL',10]];
+                    db.query(`INSERT IGNORE INTO almacen_marcas (nombre, orden) VALUES ?`, [defs], () => {});
+                }
+            });
+        }
+    }
+);
+// ── Nuevas tablas: almacen_unidades y almacen_sistemas (fire-and-forget) ──────
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_unidades (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(20) NOT NULL UNIQUE,
+        descripcion VARCHAR(200) NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_unidades:', e.message);
+        else {
+            console.log('✅ Tabla almacen_unidades verificada');
+            // Insertar unidades por defecto si la tabla está vacía
+            db.query(`SELECT COUNT(*) AS n FROM almacen_unidades`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defaults = [['UND','Unidades',1],['LT','Litros',2],['KG','Kilogramos',3],['GL','Galones',4],['JGO','Juego',5],['PAR','Par',6],['MT','Metros',7],['M2','Metro cuadrado',8],['M3','Metro cúbico',9]];
+                    db.query(`INSERT IGNORE INTO almacen_unidades (nombre, descripcion, orden) VALUES ?`, [defaults], () => {});
+                }
+            });
+        }
+    }
+);
+db.query(
+    `CREATE TABLE IF NOT EXISTS almacen_sistemas (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(100) NOT NULL UNIQUE,
+        sub_sistemas JSON NULL,
+        activo      TINYINT(1) NOT NULL DEFAULT 1,
+        orden       INT NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE almacen_sistemas:', e.message);
+        else {
+            console.log('✅ Tabla almacen_sistemas verificada');
+            // Insertar sistemas por defecto
+            db.query(`SELECT COUNT(*) AS n FROM almacen_sistemas`, (e2, rows) => {
+                if (!e2 && rows[0].n === 0) {
+                    const defaults = [
+                        ['MOTOR',      JSON.stringify(['ACEITE MOTOR','REFRIGERACIÓN','TURBO','INYECCION','DISTRIBUCION']),    1],
+                        ['TRANSMISION',JSON.stringify(['CAJA DE CAMBIOS','EMBRAGUE','EJE CARDAN','DIFERENCIAL']),              2],
+                        ['FRENOS',     JSON.stringify(['PASTILLAS','DISCOS','TAMBORES','LIQUIDO FRENOS']),                     3],
+                        ['DIRECCION',  JSON.stringify(['CREMALLERA','TERMINALES','BOMBA DIRECCION']),                          4],
+                        ['SUSPENSION', JSON.stringify(['AMORTIGUADORES','RESORTES','BUJES']),                                  5],
+                        ['ELECTRICIDAD',JSON.stringify(['BATERIA','ALTERNADOR','ARRANQUE','FUSIBLES']),                       6],
+                        ['NEUMATICO',  JSON.stringify(['LLANTA','ARO','VALVULA']),                                             7],
+                        ['CARROCERIA', JSON.stringify(['PARACHOQUE','ESPEJO','LUNA','PUERTA']),                                8],
+                        ['LUBRICANTES',JSON.stringify(['ACEITE MOTOR','ACEITE CAJA','GRASA']),                                 9],
+                        ['HERRAMIENTAS',JSON.stringify(['HERRAMIENTA MANUAL','HERRAMIENTA ELECTRICA']),                      10],
+                        ['SSOMA',      JSON.stringify(['EPP','SEÑALIZACION','EXTINTOR']),                                     11],
+                        ['CONSUMIBLES',JSON.stringify(['LIMPIEZA','ADHESIVOS','SELLANTES']),                                  12],
+                    ];
+                    db.query(`INSERT IGNORE INTO almacen_sistemas (nombre, sub_sistemas, orden) VALUES ?`, [defaults], () => {});
+                }
+            });
+        }
+    }
+);
 // ── Nodemailer: transporter de correo ─────────────────────────────────────
 const mailTransporter = nodemailer.createTransport({
     host:   process.env.EMAIL_HOST       || 'smtp.gmail.com',
@@ -3095,11 +3202,15 @@ db.query(
     'ALTER TABLE inventario ADD COLUMN estado_art     VARCHAR(50)      NULL DEFAULT "Activo"',
     'ALTER TABLE inventario ADD COLUMN codigo_barras  VARCHAR(100)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN imagen_url     TEXT             NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN articulo       VARCHAR(300)     NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN codigo_articulo VARCHAR(100)    NULL DEFAULT NULL',
 ].forEach(sql => {
     db.query(sql, (e) => {
         if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER inventario:', e.message);
     });
 });
+// Ampliar marca_unidad a TEXT para soportar JSON de múltiples marcas
+db.query('ALTER TABLE inventario MODIFY COLUMN marca_unidad TEXT NULL DEFAULT NULL', () => {});
 db.query(
     `CREATE TABLE IF NOT EXISTS entradas_inv (
         id                   VARCHAR(20) NOT NULL PRIMARY KEY,
@@ -3287,18 +3398,41 @@ app.get('/api/almacen/inventario', (req, res) => {
         res.json(rows);
     });
 });
+
+// ─── Marcas de placas para multi-select inventario ───────────────
+app.get('/api/almacen/marcas-placas', (req, res) => {
+    db.query(`SELECT DISTINCT marca FROM placas WHERE marca IS NOT NULL AND marca <> '' ORDER BY marca`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows.map(r => r.marca));
+    });
+});
+
 app.post('/api/almacen/inventario', (req, res) => {
-    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones,
-            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo, ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+    const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
+            proveedor_id, marca, observaciones,
+            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo,
+            ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+
+    // Generar descripcion concatenada desde los campos individuales
+    let marcasArr = [];
+    try { marcasArr = JSON.parse(marca_unidad || '[]'); } catch(e) { marcasArr = marca_unidad ? [marca_unidad] : []; }
+    let descGenerada = (articulo || '').trim();
+    if (codigo_articulo) descGenerada += ' ' + String(codigo_articulo).trim();
+    if (marcasArr.length) descGenerada += ' - ' + marcasArr.join(', ');
+    if (marca) descGenerada += ' / ' + String(marca).trim();
+    const descFinal = descGenerada || descripcion || 'Sin nombre';
+
     _generarCodigoAlmacen('INV', null, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query(`INSERT INTO inventario
-            (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,proveedor_id,marca,observaciones,
-             codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
+            (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,
+             proveedor_id,marca,observaciones,
+             codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
+             ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [id, descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
-             parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
-             fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null,
+            [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, moneda||'PEN',
+             parseFloat(costo_referencial)||0,
+             proveedor_id||null, marca||null, observaciones||null,
              codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
              tipo||null, sub_tipo||null, ubicacion||null,
              anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
@@ -3310,17 +3444,28 @@ app.post('/api/almacen/inventario', (req, res) => {
     });
 });
 app.put('/api/almacen/inventario/:id', (req, res) => {
-    const { descripcion, familia, sub_familia, almacen, unidad, moneda, costo_referencial, stock_regularizado, fecha_regularizacion, proveedor_id, marca, observaciones, activo,
-            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo, ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+    const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
+            proveedor_id, marca, observaciones, activo,
+            codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo,
+            ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+
+    let marcasArr = [];
+    try { marcasArr = JSON.parse(marca_unidad || '[]'); } catch(e) { marcasArr = marca_unidad ? [marca_unidad] : []; }
+    let descGenerada = (articulo || '').trim();
+    if (codigo_articulo) descGenerada += ' ' + String(codigo_articulo).trim();
+    if (marcasArr.length) descGenerada += ' - ' + marcasArr.join(', ');
+    if (marca) descGenerada += ' / ' + String(marca).trim();
+    const descFinal = descGenerada || descripcion || 'Sin nombre';
+
     db.query(`UPDATE inventario SET
-        descripcion=?,familia=?,sub_familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,
-        stock_regularizado=?,fecha_regularizacion=?,proveedor_id=?,marca=?,observaciones=?,activo=?,
+        descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,
+        proveedor_id=?,marca=?,observaciones=?,activo=?,
         codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
         anaquel=?,stock_min=?,stock_max=?,estado_art=?,codigo_barras=?
         WHERE id=?`,
-        [descripcion, familia||null, sub_familia||null, almacen||null, unidad||null, moneda||'PEN',
-         parseFloat(costo_referencial)||0, parseFloat(stock_regularizado)||0,
-         fecha_regularizacion||null, proveedor_id||null, marca||null, observaciones||null,
+        [descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, moneda||'PEN',
+         parseFloat(costo_referencial)||0,
+         proveedor_id||null, marca||null, observaciones||null,
          activo != null ? activo : 1,
          codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
          tipo||null, sub_tipo||null, ubicacion||null,
@@ -3366,27 +3511,208 @@ app.delete('/api/almacen/inventario/:id/imagen', (req, res) => {
 
 // Import masivo desde Excel
 app.post('/api/almacen/inventario/importar', async (req, res) => {
-    const { filas } = req.body; // [{descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,marca,observaciones}]
+    const { filas } = req.body;
     if (!filas || !filas.length) return res.json({ ok: true, insertados: 0 });
     let insertados = 0;
     const errors = [];
     for (let i = 0; i < filas.length; i++) {
         const f = filas[i];
-        if (!f.descripcion) { errors.push(`Fila ${i+2}: falta descripción`); continue; }
+        if (!f.articulo) { errors.push(`Fila ${i+2}: falta el campo 'articulo'`); continue; }
         try {
+            // Generar descripcion concatenada igual que el POST individual
+            let marcasArr = [];
+            try { marcasArr = JSON.parse(f.marca_unidad || '[]'); } catch(e) {
+                marcasArr = f.marca_unidad ? String(f.marca_unidad).split(',').map(s=>s.trim()).filter(Boolean) : [];
+            }
+            let descGenerada = String(f.articulo).trim();
+            if (f.codigo_articulo) descGenerada += ' ' + String(f.codigo_articulo).trim();
+            if (marcasArr.length)  descGenerada += ' - ' + marcasArr.join(', ');
+            if (f.marca)           descGenerada += ' / ' + String(f.marca).trim();
+            const marcaUnidadJson = marcasArr.length ? JSON.stringify(marcasArr) : null;
+
             await new Promise((resolve, reject) => {
                 _generarCodigoAlmacen('INV', null, (err, id) => {
                     if (err) return reject(err);
-                    db.query('INSERT INTO inventario (id,descripcion,familia,sub_familia,almacen,unidad,moneda,costo_referencial,stock_regularizado,fecha_regularizacion,marca,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-                        [id, f.descripcion, f.familia||null, f.sub_familia||null, f.almacen||null, f.unidad||null,
-                         f.moneda||'PEN', parseFloat(f.costo_referencial)||0, parseFloat(f.stock_regularizado)||0,
-                         f.fecha_regularizacion||null, f.marca||null, f.observaciones||null],
+                    db.query(`INSERT INTO inventario
+                        (id,descripcion,articulo,codigo_articulo,familia,unidad,moneda,costo_referencial,
+                         marca,observaciones,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
+                         ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                        [id, descGenerada||'Sin nombre',
+                         f.articulo||null, f.codigo_articulo||null, f.familia||null, f.unidad||null,
+                         f.moneda||'PEN', parseFloat(f.costo_referencial)||0,
+                         f.marca||null, f.observaciones||null,
+                         marcaUnidadJson, f.sistema||null, f.sub_sistema||null,
+                         f.tipo||null, f.sub_tipo||null, f.ubicacion||null,
+                         f.anaquel!=null?parseFloat(f.anaquel):null,
+                         parseFloat(f.stock_min)||0, parseFloat(f.stock_max)||0,
+                         f.estado_art||'Activo', f.codigo_barras||null],
                         (err2) => { if (err2) return reject(err2); insertados++; resolve(); });
                 });
             });
         } catch(e) { errors.push(`Fila ${i+2}: ${e.message}`); }
     }
     res.json({ ok: true, insertados, errores: errors });
+});
+
+// ── Clientes de placas (para Empresa en conductores) ──────────────────────
+app.get('/api/almacen/clientes-placas', (req, res) => {
+    db.query(`SELECT DISTINCT cliente FROM placas WHERE cliente IS NOT NULL AND cliente <> '' ORDER BY cliente`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows.map(r => r.cliente));
+    });
+});
+
+// ============================================================
+// ALMACÉN — Unidades de Medida
+// ============================================================
+app.get('/api/almacen/unidades', (req, res) => {
+    db.query(`SELECT * FROM almacen_unidades ORDER BY orden, nombre`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/almacen/unidades', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    db.query('INSERT INTO almacen_unidades (nombre, descripcion, activo) VALUES (?,?,?)',
+        [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        });
+});
+
+app.put('/api/almacen/unidades/:id', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    db.query('UPDATE almacen_unidades SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+
+app.delete('/api/almacen/unidades/:id', (req, res) => {
+    db.query('DELETE FROM almacen_unidades WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Sistemas y Sub-Sistemas
+// ============================================================
+app.get('/api/almacen/sistemas', (req, res) => {
+    db.query(`SELECT * FROM almacen_sistemas ORDER BY orden, nombre`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Parse sub_sistemas JSON
+        rows.forEach(r => {
+            try { r.sub_sistemas = r.sub_sistemas ? JSON.parse(r.sub_sistemas) : []; }
+            catch(e) { r.sub_sistemas = []; }
+        });
+        res.json(rows);
+    });
+});
+
+app.post('/api/almacen/sistemas', (req, res) => {
+    const { nombre, sub_sistemas, activo, orden } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    db.query('INSERT INTO almacen_sistemas (nombre, sub_sistemas, activo, orden) VALUES (?,?,?,?)',
+        [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        });
+});
+
+app.put('/api/almacen/sistemas/:id', (req, res) => {
+    const { nombre, sub_sistemas, activo, orden } = req.body;
+    db.query('UPDATE almacen_sistemas SET nombre=?, sub_sistemas=?, activo=?, orden=? WHERE id=?',
+        [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+
+app.delete('/api/almacen/sistemas/:id', (req, res) => {
+    db.query('DELETE FROM almacen_sistemas WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Familias
+// ============================================================
+app.get('/api/almacen/familias', (req, res) => {
+    db.query(`SELECT * FROM almacen_familias ORDER BY orden, nombre`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/almacen/familias', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    db.query('INSERT INTO almacen_familias (nombre, descripcion, activo) VALUES (?,?,?)',
+        [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        });
+});
+
+app.put('/api/almacen/familias/:id', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    db.query('UPDATE almacen_familias SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+});
+
+app.delete('/api/almacen/familias/:id', (req, res) => {
+    db.query('DELETE FROM almacen_familias WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ============================================================
+// ALMACÉN — Marcas de Fabricante
+// ============================================================
+app.get('/api/almacen/marcas', (req, res) => {
+    db.query(`SELECT * FROM almacen_marcas ORDER BY orden, nombre`, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+app.post('/api/almacen/marcas', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    db.query('INSERT INTO almacen_marcas (nombre, descripcion, activo) VALUES (?,?,?)',
+        [nombre.toUpperCase(), descripcion || null, activo ?? 1], (err, r) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id: r.insertId });
+    });
+});
+app.put('/api/almacen/marcas/:id', (req, res) => {
+    const { nombre, descripcion, activo } = req.body;
+    db.query('UPDATE almacen_marcas SET nombre=?, descripcion=?, activo=? WHERE id=?',
+        [nombre.toUpperCase(), descripcion || null, activo ?? 1, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+app.delete('/api/almacen/marcas/:id', (req, res) => {
+    db.query('DELETE FROM almacen_marcas WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
 });
 
 // ============================================================
