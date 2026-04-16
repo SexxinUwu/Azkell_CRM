@@ -11,6 +11,12 @@ window._entInvData   = window._entInvData   || [];
 var _ENT_POR_PAG = 20;
 
 window.init_entradas = function() {
+    if (!window.checkPerm('ent_inv', 'l')) {
+        window.showNoPermMsg('mod-entradas');
+        return;
+    }
+    var btnNuevo = document.querySelector('#mod-entradas .btn-primary[onclick*="abrirModalEntrada"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('ent_inv','c') ? '' : 'none';
     window._entPagActual = 1;
     window.cargarEntradas();
     window._entCargarProveedores();
@@ -118,7 +124,7 @@ window._entBuscarArt = function(input, idx) {
         var hiddenId = document.querySelector('.ent-item-inv-id[data-idx="'+idx+'"]');
         if (hiddenId) hiddenId.value = item.id;
         var cuEl = document.querySelector('.ent-item-cu[data-idx="'+idx+'"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial||0).toFixed(4); window._entCalcImporte(idx); }
+        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial||0).toFixed(2); window._entCalcImporte(idx); }
     }
 };
 
@@ -126,7 +132,7 @@ window._entCalcImporte = function(idx) {
     var cant = parseFloat((document.querySelector('.ent-item-cant[data-idx="'+idx+'"]') || {}).value) || 0;
     var cu   = parseFloat((document.querySelector('.ent-item-cu[data-idx="'+idx+'"]')   || {}).value) || 0;
     var impEl = document.querySelector('.ent-item-imp[data-idx="'+idx+'"]');
-    if (impEl) impEl.value = (cant * cu).toFixed(4);
+    if (impEl) impEl.value = (cant * cu).toFixed(2);
     window._entActualizarTotal();
 };
 
@@ -147,6 +153,7 @@ window._entActualizarTotal = function() {
 
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarEntrada = function() {
+    if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
     var provId     = window._cbGet('ent-f-proveedor');
     var provNombre = window._cbGetText('ent-f-proveedor');
@@ -216,6 +223,7 @@ window.abrirModalEntrada = function() {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.eliminarEntrada = function(id) {
+    if (!window.guardAction('ent_inv', 'd')) return;
     if (!confirm('¿Eliminar entrada '+id+'? Se eliminarán sus detalles.')) return;
     fetch('/api/almacen/entradas/'+encodeURIComponent(id), {method:'DELETE'})
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -328,7 +336,7 @@ window._entRender = function() {
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                            '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                            (window.checkPerm('ent_inv','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                         '</div>' +
                     '</td></tr>';
             }).join('');

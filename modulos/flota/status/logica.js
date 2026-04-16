@@ -14,7 +14,8 @@ function resetearYRecargarStatusFlota() {
     let hoyISO = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
     document.getElementById('filtroStatusFecha').value = hoyISO;
     document.getElementById('filtroStatusCorte').value = "";
-    recargarModulo('statusFlota');
+    CACHE['statusFlota'] = null;
+    cargarStatusFlota();
 }
 
 function cargarStatusFlota() {
@@ -45,19 +46,13 @@ function abrirModalNuevoStatusFlota() {
     // 🧠 Jalar conductores al abrir el modal
     const dlConductores = document.getElementById('dl-conductores-status');
     if (dlConductores) {
-        fetch('/api/script/obtenerDatosConductores', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: [] })
-        })
+        fetch('/api/conductores-lista')
         .then(res => res.json())
-        .then(r => {
+        .then(data => {
             let htmlOptions = '';
-            let dataArray = r.data && Array.isArray(r.data) ? r.data : (r.data && r.data.data ? r.data.data : []);
-            if (Array.isArray(dataArray)) {
-                dataArray.forEach(fila => {
-                    let nombre = fila.nombre || fila[1];
-                    if (nombre) htmlOptions += `<option value="${nombre}">`;
+            if (Array.isArray(data)) {
+                data.forEach(c => {
+                    if (c.nombre) htmlOptions += `<option value="${c.nombre}">`;
                 });
             }
             dlConductores.innerHTML = htmlOptions;
@@ -197,33 +192,38 @@ function mostrarStatusFlota(datos) {
 
                     let parseD = (str) => {
                         if (!str) return 0;
-                        if (str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1] - 1, p[0]).getTime(); }
-                        return new Date(str + "T00:00:00").getTime() || 0;
+                        if (String(str).includes('/')) { let p = String(str).split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
+                        return new Date(String(str).split('T')[0]).getTime() || 0;
                     };
 
                     inspList.sort((a, b) => parseD(b.fecha_ingreso || b[1]) - parseD(a.fecha_ingreso || a[1]));
                     let insp = inspList[0];
-                    let fIngreso = insp.fecha_ingreso || insp[1];
+                    let fIngreso = String(insp.fecha_ingreso || insp[1] || '');
                     let dProp = parseInt(insp.dias_propuestos || insp[6]) || 30;
 
-                    let fIng = fIngreso.includes('/') ? new Date(fIngreso.split('/')[2], fIngreso.split('/')[1] - 1, fIngreso.split('/')[0]) : new Date(fIngreso + "T00:00:00");
+                    let fIng;
+                    if (fIngreso.includes('/')) {
+                        const p = fIngreso.split('/');
+                        fIng = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+                    } else {
+                        fIng = new Date(fIngreso.split('T')[0]);
+                    }
+                    if (isNaN(fIng.getTime())) return `<span class="badge bg-secondary">S/F</span>`;
                     fIng.setDate(fIng.getDate() + dProp);
 
                     let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
                     let dias = Math.ceil((fIng - hoy) / (1000 * 60 * 60 * 24));
 
-                    if (dias < 0) return `<span class="badge bg-danger text-white shadow-sm">Vencido ${Math.abs(dias)}d</span>`;
-                    else if (dias <= 7) return `<span class="badge bg-warning text-dark shadow-sm">Faltan ${dias}d</span>`;
-                    else return `<span class="badge bg-success text-white shadow-sm">Faltan ${dias}d</span>`;
+                    if (dias < 0) return `<span class="badge bg-danger text-white shadow-sm" title="Vencido hace ${Math.abs(dias)} días">${Math.abs(dias)}d</span>`;
+                    else if (dias <= 7) return `<span class="badge bg-warning text-dark shadow-sm" title="Faltan ${dias} días">${dias}d</span>`;
+                    else return `<span class="badge bg-success text-white shadow-sm" title="Faltan ${dias} días">${dias}d</span>`;
                 };
 
                 let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
                 let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
 
-                let pSF = permisosUsuario || {};
-                let isAdmSF = pSF.admin === true || (localStorage.getItem('fleet_correo') || '').toLowerCase() === 'admin@azkell.com';
-                let canEditSF = isAdmSF || pSF.status?.e === true;
-                let canDeleteSF = isAdmSF || pSF.status?.d === true;
+                let canEditSF = window.checkPerm('status','e');
+                let canDeleteSF = window.checkPerm('status','d');
                 let itemsSF = '';
                 if(canEditSF) itemsSF += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarStatusFlota('${id}')"><i class="bi bi-pencil text-warning"></i> Editar</a></li>`;
                 if(canEditSF && canDeleteSF) itemsSF += `<li><hr class="dropdown-divider"></li>`;
@@ -320,6 +320,8 @@ window.autocompletarStatus = function(tipo) {
 // ================================================================
 function enviarStatusFlota(event, formObj) {
     event.preventDefault();
+    var isNew = !formObj.sf_id.value;
+    if (!window.guardAction('status', isNew ? 'c' : 'e')) return;
     const btn = document.getElementById('btnGuardarSF');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
@@ -375,7 +377,8 @@ function enviarStatusFlota(event, formObj) {
                 document.getElementById('sf_motora').focus();
             }, 1000);
 
-            recargarModulo('statusFlota');
+            CACHE['statusFlota'] = null;
+            cargarStatusFlota();
         } else {
             alert(r.data);
             btn.disabled = false;
@@ -496,6 +499,13 @@ window.generarPDFStatusFlota = function(event) {
 // 🎯 MÓDULO INIT (con fix Leaflet)
 // ================================================================
 window.init_status = function() {
+    if (!window.checkPerm('status', 'l')) {
+        window.showNoPermMsg('mod-status-flota');
+        return;
+    }
+    // Ocultar botón nuevo si no tiene permiso crear
+    var btnNuevo = document.querySelector('[onclick*="abrirModalNuevoStatusFlota"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('status','c') ? '' : 'none';
     if(typeof cargarStatusFlota === 'function') cargarStatusFlota();
 
     // FIX LEAFLET: Esperar a que el DOM se pinte para inicializar el mapa correctamente

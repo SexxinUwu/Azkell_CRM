@@ -652,19 +652,15 @@ window._guShowCredsPopup = function(nombre, correo, password, esReset) {
 // ── Init ──────────────────────────────────────────────────────
 window.init_usuarios = function() {
     // Solo administradores pueden acceder a este módulo
-    try {
-        var p = JSON.parse(localStorage.getItem('fleet_permisos')||'{}');
-        if (!p || p.admin !== true) {
-            var list = document.getElementById('guList');
-            var panel = document.getElementById('guPanel');
-            var tabs  = document.querySelector('.gu-tabs');
-            if (list)  list.innerHTML = '<div class="text-center py-5" style="color:var(--subtext);"><i class="bi bi-lock-fill d-block mb-2" style="font-size:2rem;opacity:.3;"></i><div style="font-size:.85rem;font-weight:600;">Acceso restringido</div><div style="font-size:.75rem;margin-top:4px;">Solo los administradores pueden gestionar usuarios y roles.</div></div>';
-            if (panel) panel.style.display = 'none';
-            if (tabs)  tabs.style.display = 'none';
-            return;
-        }
-    } catch(e) {}
-    window.dataGlobalRoles    = [];
+    if (!window.checkPerm('seg', 'l')) {
+        var list = document.getElementById('guList');
+        if (list) window.showNoPermMsg(list);
+        var panel = document.getElementById('guPanel');
+        if (panel) panel.style.display = 'none';
+        var tabs = document.querySelector('.gu-tabs');
+        if (tabs) tabs.style.display = 'none';
+        return;
+    }
     window.dataGlobalUsuarios = [];
     window._guSeleccionado    = null;
     window._guEsNuevo         = false;

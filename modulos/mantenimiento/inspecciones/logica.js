@@ -129,7 +129,9 @@ function mostrarStatusInspecciones(inspecciones) {
                   if (insp.fecha_ingreso.includes('/')) {
                       let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1]-1, px[0]);
                   } else {
-                      fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
+                      // ISO "2026-02-20" o "2026-02-20T00:00:00.000Z" — tomar solo la parte de fecha
+                      let ds = insp.fecha_ingreso.split('T')[0].split('-');
+                      fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
                   }
 
                   let dProp = parseInt(insp.dias_propuestos) || 30;
@@ -176,9 +178,13 @@ function mostrarStatusInspecciones(inspecciones) {
               if (insp && insp.id) {
                   let items = `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye text-primary"></i> Ver Resumen</a></li>`;
                   items += `<li><a class="dropdown-item fw-bold" href="#" onclick="verDetalleInspeccion('${insp.id}', true)"><i class="bi bi-file-pdf text-danger"></i> Exportar a PDF</a></li>`;
-                  items += `<li><hr class="dropdown-divider"></li>`;
-                  items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
-                  items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
+                  if (window.checkPerm('insp','e')) {
+                      items += `<li><hr class="dropdown-divider"></li>`;
+                      items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarInspeccion('${insp.id}')"><i class="bi bi-pencil text-warning"></i> Editar / Re-Firmar</a></li>`;
+                  }
+                  if (window.checkPerm('insp','d')) {
+                      items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
+                  }
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
               } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
 
@@ -448,6 +454,8 @@ function generarPDFInspeccion() {
 // ==========================================
 
 async function procesarGuardadoInspeccion() {
+    var isNew = !document.getElementById('i_id_inspeccion').value;
+    if (!window.guardAction('insp', isNew ? 'c' : 'e')) return;
     const btn = document.getElementById('btnWizGuardar');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
@@ -994,6 +1002,13 @@ window.importarExcelInspecciones = function(event) {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
 // ================================================================
 window.init_inspecciones = function() {
+    if (!window.checkPerm('insp', 'l')) {
+        window.showNoPermMsg('mod-inspecciones');
+        return;
+    }
+    // Ocultar botones sin permiso crear
+    var btnNuevo = document.querySelector('#mod-inspecciones [onclick*="abrirModalInspeccion"], [onclick*="abrirWizard"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('insp','c') ? '' : 'none';
     // Leer filtro pendiente desde navegación por dashboard
     var navFilter = localStorage.getItem('fleet_insp_nav_filter');
     if (navFilter) {

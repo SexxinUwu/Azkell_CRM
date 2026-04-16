@@ -7,7 +7,18 @@ window._provFiltrados = window._provFiltrados || [];
 window._provMarcas    = window._provMarcas    || [];
 
 window.init_proveedores = function() {
+    if (!window.checkPerm('prov_inv', 'l')) {
+        window.showNoPermMsg('mod-proveedores');
+        return;
+    }
     window.cargarProveedores();
+    // Ocultar botones sin permiso
+    var btnNuevo = document.querySelector('#mod-proveedores .btn-primary[onclick*="abrirModalProveedor"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('prov_inv','c') ? '' : 'none';
+    var btnImportar = document.querySelector('#mod-proveedores .btn-outline-info');
+    if (btnImportar) btnImportar.style.display = window.checkPerm('prov_inv','c') ? '' : 'none';
+    var btnExportar = document.querySelector('#mod-proveedores .btn-outline-success');
+    if (btnExportar) btnExportar.style.display = window.checkPerm('prov_inv','l') ? '' : 'none';
 };
 
 window.cargarProveedores = function() {
@@ -67,8 +78,8 @@ window._provRender = function() {
             '<td>'+marcasBadges+'</td>'+
             '<td>'+estadoBadge+'</td>'+
             '<td class="text-center"><div class="d-flex gap-1 justify-content-center">'+
-                '<button class="btn btn-xs btn-outline-primary" onclick="window.abrirModalProveedor(\''+_provEsc(d.id)+'\')" title="Editar"><i class="bi bi-pencil"></i></button>'+
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarProveedor(\''+_provEsc(d.id)+'\')" title="Eliminar"><i class="bi bi-trash"></i></button>'+
+                (window.checkPerm('prov_inv','e') ? '<button class="btn btn-xs btn-outline-primary" onclick="window.abrirModalProveedor(\''+_provEsc(d.id)+'\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '')+
+                (window.checkPerm('prov_inv','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarProveedor(\''+_provEsc(d.id)+'\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '')+
             '</div></td>'+
         '</tr>';
     }).join('');
@@ -141,6 +152,7 @@ function _provEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'
 window.guardarProveedor = function(event) {
     if (event) event.preventDefault();
     var id = (document.getElementById('prov-edit-id')||{}).value || '';
+    if (!window.guardAction('prov_inv', id ? 'e' : 'c')) return;
     var payload = {
         nombre:          (document.getElementById('prov-f-nombre')   ||{}).value || '',
         razon_social:    (document.getElementById('prov-f-razon')    ||{}).value || '',
@@ -167,9 +179,82 @@ window.guardarProveedor = function(event) {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.eliminarProveedor = function(id) {
+    if (!window.guardAction('prov_inv', 'd')) return;
     if (!confirm('¿Eliminar proveedor '+id+'?')) return;
     fetch('/api/almacen/proveedores/'+encodeURIComponent(id), { method: 'DELETE' })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function() { window.cargarProveedores(); })
         .catch(function(err) { alert('Error: '+err.message); });
+};
+
+// ── Exportar Excel ────────────────────────────────────────────────
+window.exportarExcelProveedores = function() {
+    var datos = window._provData || [];
+    if (!datos.length) { alert('No hay proveedores para exportar.'); return; }
+    var wb = XLSX.utils.book_new();
+    var filas = [['ID','Nombre','Razón Social','Tipo Doc.','N° Documento','Teléfono','Email','Dirección','Marcas','Estado','Observaciones']];
+    datos.forEach(function(d) {
+        filas.push([d.id||'', d.nombre||'', d.razon_social||'', d.tipo_documento||'', d.numero_documento||'',
+            d.telefono||'', d.email||'', d.direccion||'', d.marcas||'', d.estado||'', d.observaciones||'']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
+    XLSX.writeFile(wb, 'Proveedores_'+new Date().toISOString().slice(0,10)+'.xlsx');
+};
+
+// ── Descargar Plantilla ───────────────────────────────────────────
+window.descargarPlantillaProveedores = function() {
+    var wb = XLSX.utils.book_new();
+    var filas = [
+        ['Nombre','Razón Social','Tipo Doc.','N° Documento','Teléfono','Email','Dirección','Marcas','Estado','Observaciones'],
+        ['Ejemplo Proveedor SAC','Ejemplo Proveedor S.A.C.','RUC','20123456789','+51 999 999 999','proveedor@email.com','Av. Ejemplo 123','WIX, MOBIL','Activo','Notas opcionales']
+    ];
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [18,24,10,14,16,24,24,18,10,20].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.writeFile(wb, 'Plantilla_Proveedores.xlsx');
+};
+
+// ── Importar Excel ────────────────────────────────────────────────
+window.importarExcelProveedores = function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var wb = XLSX.read(e.target.result, { type: 'array' });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!rows.length) { alert('El archivo está vacío.'); return; }
+            var payload = rows.map(function(r) {
+                return {
+                    nombre:           String(r['Nombre']           || r.nombre           || '').trim(),
+                    razon_social:     String(r['Razón Social']     || r['Razon Social']  || r.razon_social     || '').trim(),
+                    tipo_documento:   String(r['Tipo Doc.']        || r.tipo_documento   || 'RUC').trim(),
+                    numero_documento: String(r['N° Documento']     || r.numero_documento || '').trim(),
+                    telefono:         String(r['Teléfono']         || r['Telefono']      || r.telefono         || '').trim(),
+                    email:            String(r['Email']            || r.email            || '').trim(),
+                    direccion:        String(r['Dirección']        || r['Direccion']     || r.direccion        || '').trim(),
+                    marcas:           String(r['Marcas']           || r.marcas           || '').trim(),
+                    estado:           String(r['Estado']           || r.estado           || 'Activo').trim(),
+                    observaciones:    String(r['Observaciones']    || r.observaciones    || '').trim()
+                };
+            }).filter(function(r) { return r.nombre; });
+            if (!payload.length) { alert('No se encontraron filas con Nombre válido.'); return; }
+            if (!confirm('Se importarán '+payload.length+' proveedores. ¿Continuar?')) return;
+            fetch('/api/almacen/importarProveedoresMasivo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proveedores: payload })
+            })
+            .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+            .then(function(res) {
+                alert('Importados: '+res.insertados+' nuevos, '+res.actualizados+' actualizados.');
+                window.cargarProveedores();
+            })
+            .catch(function(err) { alert('Error: '+err.message); });
+        } catch(ex) { alert('Error leyendo Excel: '+ex.message); }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
 };
