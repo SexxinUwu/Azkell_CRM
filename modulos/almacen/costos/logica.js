@@ -15,6 +15,7 @@ window.init_costos = function() {
     var hastaEl   = document.getElementById('cos-hasta');
     if (desdeEl && !desdeEl.value) desdeEl.value = primerDia;
     if (hastaEl && !hastaEl.value) hastaEl.value = hoyStr;
+    window._cosValCargado = false;
     window.cargarCostos();
 };
 
@@ -210,3 +211,95 @@ window._cosRenderChart = function(porFamilia) {
 
 function _cosSetText(id, val) { var el = document.getElementById(id); if(el) el.textContent = val; }
 function _cosEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Valorizado ────────────────────────────────────────────────────
+window._cosValCargado = window._cosValCargado || false;
+
+window.cargarValorizado = function() {
+    if (window._cosValCargado) return; // Ya cargado, no repetir
+    var tbArt = document.getElementById('tbody-cos-val-art');
+    var tbFam = document.getElementById('tbody-cos-val-fam');
+    if (tbArt) tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Calculando...</td></tr>';
+    if (tbFam) tbFam.innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div></td></tr>';
+
+    fetch('/api/almacen/valorizado')
+        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(function(data) {
+            window._cosValCargado = true;
+            var fmtPen = function(n) { return 'S/ '+parseFloat(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+            var fmtUsd = function(n) { return 'US$ '+parseFloat(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+            // KPIs
+            _cosSetText('cos-val-total-pen',  fmtPen(data.totalPEN));
+            _cosSetText('cos-val-total-usd',  fmtUsd(data.totalUSD));
+            _cosSetText('cos-kpi-val-pen',    fmtPen(data.totalPEN));
+            _cosSetText('cos-kpi-val-usd',    fmtUsd(data.totalUSD));
+            var topFam = (data.porFamilia||[])[0];
+            _cosSetText('cos-val-top-fam', topFam ? topFam.familia : '—');
+            var conStock = (data.items||[]).filter(function(it) { return it.stock_actual > 0; }).length;
+            _cosSetText('cos-val-art-count', conStock);
+
+            // Tabla por artículo
+            var items = data.items || [];
+            if (tbArt) {
+                if (!items.length) {
+                    tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin artículos en inventario</td></tr>';
+                } else {
+                    tbArt.innerHTML = items.map(function(it) {
+                        var stockCls = it.stock_actual <= 0 ? 'text-danger' : it.stock_actual < 3 ? 'text-warning' : 'text-success';
+                        var valFmt = it.moneda === 'USD' ? fmtUsd(it.valor_total) : fmtPen(it.valor_total);
+                        var costoFmt = it.moneda === 'USD' ? fmtUsd(it.costo_referencial) : fmtPen(it.costo_referencial);
+                        return '<tr>'+
+                            '<td><span class="badge bg-secondary fw-normal">'+_cosEsc(it.id||'')+'</span></td>'+
+                            '<td>'+_cosEsc(it.descripcion||'')+'</td>'+
+                            '<td><span class="badge bg-warning-subtle text-warning border" style="font-size:.7rem">'+_cosEsc(it.familia||'—')+'</span></td>'+
+                            '<td><small class="text-muted">'+_cosEsc(it.almacen||'—')+'</small></td>'+
+                            '<td class="text-end fw-semibold '+stockCls+'">'+parseFloat(it.stock_actual||0).toLocaleString('es-PE',{maximumFractionDigits:3})+'</td>'+
+                            '<td><small>'+_cosEsc(it.unidad||'')+'</small></td>'+
+                            '<td class="text-end">'+costoFmt+'</td>'+
+                            '<td><span class="badge '+(it.moneda==='USD'?'bg-info-subtle text-info':'bg-success-subtle text-success')+' border">'+_cosEsc(it.moneda||'PEN')+'</span></td>'+
+                            '<td class="text-end fw-bold">'+valFmt+'</td>'+
+                        '</tr>';
+                    }).join('');
+                }
+            }
+
+            // Tabla por familia
+            var famArr = data.porFamilia || [];
+            if (tbFam) {
+                if (!famArr.length) {
+                    tbFam.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
+                } else {
+                    tbFam.innerHTML = famArr.map(function(f) {
+                        return '<tr>'+
+                            '<td><i class="bi bi-tag-fill me-1 text-warning"></i>'+_cosEsc(f.familia||'—')+'</td>'+
+                            '<td class="text-end fw-semibold">'+fmtPen(f.valor_pen)+'</td>'+
+                            '<td class="text-end fw-semibold text-info">'+fmtUsd(f.valor_usd)+'</td>'+
+                            '<td class="text-center">'+f.articulos+'</td>'+
+                        '</tr>';
+                    }).join('');
+                }
+            }
+        })
+        .catch(function(err) {
+            if (tbArt) tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error: '+_cosEsc(err.message)+'</td></tr>';
+        });
+};
+
+window._cosValTab = function(tab) {
+    var artDiv = document.getElementById('cos-val-art');
+    var famDiv = document.getElementById('cos-val-fam');
+    var artBtn = document.getElementById('val-tab-art-btn');
+    var famBtn = document.getElementById('val-tab-fam-btn');
+    if (tab === 'art') {
+        if (artDiv) artDiv.style.display = '';
+        if (famDiv) famDiv.style.display = 'none';
+        if (artBtn) artBtn.classList.add('active');
+        if (famBtn) famBtn.classList.remove('active');
+    } else {
+        if (artDiv) artDiv.style.display = 'none';
+        if (famDiv) famDiv.style.display = '';
+        if (artBtn) artBtn.classList.remove('active');
+        if (famBtn) famBtn.classList.add('active');
+    }
+};

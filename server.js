@@ -1503,7 +1503,7 @@ app.post('/api/eliminarMasivo', (req, res) => {
 
     if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
     else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
-    else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; }
+    else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; campoId = 'id'; }
     else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
     else return res.status(400).json({ error: "Colección no válida" });
 
@@ -3620,7 +3620,7 @@ app.put('/api/almacen/configuracion', (req, res) => {
 // ALMACÉN — Proveedores
 // ============================================================
 app.get('/api/almacen/proveedores', (req, res) => {
-    db.query('SELECT p.*, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR ", ") AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id ORDER BY p.nombre', (err, rows) => {
+    db.query('SELECT p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR ", ") AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at ORDER BY p.nombre', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -4221,7 +4221,7 @@ app.get('/api/almacen/costos', (req, res) => {
                       JOIN salidas_inv s ON s.id=d.salida_id
                       JOIN inventario i ON i.id=d.inventario_id
                       ${where}
-                      GROUP BY familia ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
+                      GROUP BY COALESCE(i.familia,'Sin familia') ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
         }),
         // Por almacen
         new Promise((resolve, reject) => {
@@ -4230,7 +4230,7 @@ app.get('/api/almacen/costos', (req, res) => {
                       JOIN salidas_inv s ON s.id=d.salida_id
                       JOIN inventario i ON i.id=d.inventario_id
                       ${where}
-                      GROUP BY almacen ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
+                      GROUP BY COALESCE(i.almacen,'Sin almacén') ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
         }),
         // Totales (entradas vs salidas)
         new Promise((resolve, reject) => {
@@ -4256,11 +4256,65 @@ app.get('/api/almacen/costos', (req, res) => {
                       JOIN salidas_inv s ON s.id=d.salida_id
                       LEFT JOIN placas p ON p.placa=s.placa
                       ${where ? where + ' AND s.tipo_destino="Vehiculo"' : 'WHERE s.tipo_destino="Vehiculo"'}
-                      GROUP BY cliente, s.placa ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
+                      GROUP BY COALESCE(p.cliente,'Sin cliente'), s.placa ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
         })
     ]).then(([porFamilia, porAlmacen, totales, topItems, porCliente]) => {
         res.json({ porFamilia, porAlmacen, totales, topItems, porCliente });
     }).catch(err => res.status(500).json({ error: err.message }));
+});
+
+// ============================================================
+// ALMACÉN — Valorizado (stock actual × costo referencial)
+// ============================================================
+app.get('/api/almacen/valorizado', (req, res) => {
+    const sql = `
+        SELECT
+            i.id, i.descripcion, i.familia, i.almacen, i.unidad, i.moneda, i.costo_referencial,
+            ROUND(
+                COALESCE(i.stock_regularizado, 0)
+                + COALESCE((
+                    SELECT SUM(de.cantidad)
+                    FROM detalle_entradas_inv de
+                    JOIN entradas_inv e ON e.id = de.entrada_id
+                    WHERE de.inventario_id = i.id
+                      AND (i.fecha_regularizacion IS NULL OR e.fecha >= i.fecha_regularizacion)
+                ), 0)
+                - COALESCE((
+                    SELECT SUM(ds.cantidad)
+                    FROM detalle_salidas_inv ds
+                    JOIN salidas_inv s ON s.id = ds.salida_id
+                    WHERE ds.inventario_id = i.id
+                      AND (i.fecha_regularizacion IS NULL OR s.fecha >= i.fecha_regularizacion)
+                ), 0)
+            , 4) AS stock_actual
+        FROM inventario i
+        WHERE i.activo = 1
+        ORDER BY i.familia, i.descripcion
+    `;
+    db.query(sql, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Calcular valor = stock_actual * costo_referencial por moneda
+        let totalPEN = 0, totalUSD = 0;
+        const items = rows.map(r => {
+            const stock = parseFloat(r.stock_actual || 0);
+            const costo = parseFloat(r.costo_referencial || 0);
+            const valor = stock * costo;
+            if (r.moneda === 'USD') totalUSD += valor;
+            else totalPEN += valor;
+            return { ...r, stock_actual: stock, valor_total: valor };
+        });
+        // Resumen por familia
+        const porFamilia = {};
+        items.forEach(it => {
+            const fam = it.familia || 'Sin familia';
+            if (!porFamilia[fam]) porFamilia[fam] = { familia: fam, valor_pen: 0, valor_usd: 0, articulos: 0 };
+            if (it.moneda === 'USD') porFamilia[fam].valor_usd += it.valor_total;
+            else porFamilia[fam].valor_pen += it.valor_total;
+            porFamilia[fam].articulos++;
+        });
+        const famArray = Object.values(porFamilia).sort((a, b) => (b.valor_pen + b.valor_usd * 3.7) - (a.valor_pen + a.valor_usd * 3.7));
+        res.json({ items, totalPEN, totalUSD, porFamilia: famArray });
+    });
 });
 
 // 4. Encender Servidor

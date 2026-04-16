@@ -8,6 +8,40 @@ window.dataFinalInspGlobal  = window.dataFinalInspGlobal  || [];
 window.inspPorPagina        = window.inspPorPagina        || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual     = window.inspPaginaActual     || 1;
 
+// ── Lightbox para evidencias fotográficas ─────────────────────────
+window.verFotoEvidencia = function(urlFoto, titulo) {
+    var modalId = 'modal-foto-evidencia';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    var div = document.createElement('div');
+    div.id = modalId;
+    div.className = 'modal fade';
+    div.tabIndex = -1;
+    div.innerHTML =
+        '<div class="modal-dialog modal-lg modal-dialog-centered">' +
+            '<div class="modal-content" style="background:var(--surface);color:var(--text);">' +
+                '<div class="modal-header border-0 pb-1">' +
+                    '<h6 class="modal-title fw-semibold"><i class="bi bi-camera-fill me-2 text-secondary"></i>' +
+                    (titulo||'Evidencia fotográfica').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</h6>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                '</div>' +
+                '<div class="modal-body text-center p-2">' +
+                    '<img src="' + urlFoto + '" class="img-fluid rounded" style="max-height:70vh;object-fit:contain;" ' +
+                    'onerror="this.src=\'\';this.alt=\'No se pudo cargar la imagen\';">' +
+                '</div>' +
+                '<div class="modal-footer border-0 pt-1">' +
+                    '<a href="' + urlFoto + '" target="_blank" class="btn btn-sm btn-outline-secondary">' +
+                    '<i class="bi bi-box-arrow-up-right me-1"></i>Abrir original</a>' +
+                    '<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(div);
+    var modal = bootstrap.Modal.getOrCreateInstance(div);
+    modal.show();
+    div.addEventListener('hidden.bs.modal', function() { div.remove(); });
+};
+
 // ==========================================
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
@@ -652,16 +686,23 @@ window.activarModoSeleccionStatusMant = function() {
     window.modoSeleccion = window.modoSeleccion || {};
     window.modoSeleccion['statusMant'] = !window.modoSeleccion['statusMant'];
 
-    const btnAll = document.getElementById('btn-select-all-statusMant');
-    const btnBulk = document.getElementById('btn-bulk-statusMant');
+    const btnActivar = document.getElementById('btn-activar-sel-statusMant');
+    const btnAll     = document.getElementById('btn-select-all-statusMant');
+    const btnBulk    = document.getElementById('btn-bulk-statusMant');
 
     if (window.modoSeleccion['statusMant']) {
-        btnAll.classList.remove('d-none');
-        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
-        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+        if (btnActivar) {
+            btnActivar.innerHTML = '<i class="bi bi-x-circle"></i> <span>Cancelar Selección</span>';
+            btnActivar.classList.replace('btn-outline-secondary', 'btn-outline-danger');
+        }
+        if (btnAll) { btnAll.classList.remove('d-none'); btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo'; btnAll.classList.replace('btn-primary', 'btn-outline-primary'); }
     } else {
-        btnAll.classList.add('d-none');
-        btnBulk.classList.add('d-none');
+        if (btnActivar) {
+            btnActivar.innerHTML = '<i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span>';
+            btnActivar.classList.replace('btn-outline-danger', 'btn-outline-secondary');
+        }
+        if (btnAll)  { btnAll.classList.add('d-none'); }
+        if (btnBulk) { btnBulk.classList.add('d-none'); }
         document.querySelectorAll('.chk-bulk-statusMant').forEach(c => c.checked = false);
         document.querySelectorAll('.child-row-status').forEach(c => c.classList.remove('row-selected'));
     }
@@ -707,6 +748,53 @@ window.seleccionarTodasLasStatusMant = function() {
     }
 
     toggleBulkBtn('statusMant');
+};
+
+// Actualiza contador y visibilidad del botón trash
+window.toggleBulkBtn = function(contexto) {
+    var checkboxes = document.querySelectorAll('.chk-bulk-' + contexto);
+    var checked = Array.from(checkboxes).filter(function(c) { return c.checked; }).length;
+    var btn = document.getElementById('btn-bulk-' + contexto);
+    var cnt = document.getElementById('cnt-bulk-' + contexto);
+    if (cnt) cnt.textContent = checked;
+    if (btn) {
+        if (checked > 0) btn.classList.remove('d-none');
+        else btn.classList.add('d-none');
+    }
+};
+
+// Elimina los registros seleccionados
+window.eliminarMasivo = function(coleccion, contexto) {
+    var checkboxes = document.querySelectorAll('.chk-bulk-' + contexto + ':checked');
+    var ids = Array.from(checkboxes).map(function(c) { return c.value; });
+    if (!ids.length) return;
+    if (!confirm('¿Eliminar ' + ids.length + ' registro(s) seleccionado(s)? Esta acción no se puede deshacer.')) return;
+
+    fetch('/api/eliminarMasivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, coleccion: coleccion })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        alert('✅ ' + (r.afectados || ids.length) + ' registro(s) eliminado(s).');
+        window.modoSeleccion = window.modoSeleccion || {};
+        window.modoSeleccion[contexto] = true; // para que activar lo desactive
+        window.activarModoSeleccionStatusMant();
+        // Recargar datos
+        if (typeof cargarModulosMant === 'function') cargarModulosMant();
+        else {
+            fetch('/api/script/obtenerDatosInspecciones', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({args:[]}) })
+                .then(function(r) { return r.json(); })
+                .then(function(r) {
+                    dataGlobalInspecciones = r.data || [];
+                    window.dataGlobalInspecciones = dataGlobalInspecciones;
+                    mostrarStatusInspecciones(dataGlobalInspecciones);
+                });
+        }
+    })
+    .catch(function(err) { alert('Error al eliminar: ' + err.message); });
 };
 
 // ============================================================
