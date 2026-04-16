@@ -270,10 +270,19 @@ window._entRender = function() {
         datos.forEach(function(d) {
             var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
             var items = d.items || [];
-            if (!items.length) {
-                filas.push({ d: d, fecha: fecha, it: null });
+            // Si el match fue por campos de cabecera → mostrar todos los ítems
+            var matchCabecera = (d.id||'').toLowerCase().includes(buscar) ||
+                (d.proveedor_nombre||'').toLowerCase().includes(buscar) ||
+                (d.documento_referencia||'').toLowerCase().includes(buscar) ||
+                (d.creado_por||'').toLowerCase().includes(buscar);
+            var itemsMostrar = matchCabecera ? items : items.filter(function(it) {
+                return (it.inventario_id||'').toLowerCase().includes(buscar) ||
+                       (it.descripcion||'').toLowerCase().includes(buscar);
+            });
+            if (!itemsMostrar.length) {
+                if (matchCabecera) filas.push({ d: d, fecha: fecha, it: null });
             } else {
-                items.forEach(function(it) { filas.push({ d: d, fecha: fecha, it: it }); });
+                itemsMostrar.forEach(function(it) { filas.push({ d: d, fecha: fecha, it: it }); });
             }
         });
         var totalFilas = filas.length;
