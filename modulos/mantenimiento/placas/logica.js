@@ -448,6 +448,17 @@ function renderizarPaginaPlacas() {
     btnHtml += `<span class="px-3 fw-bold text-primary" style="font-size:0.9rem;">Pág. ${paginaActualPlacas} / ${totalPaginas}</span>`;
     btnHtml += `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(1)" ${paginaActualPlacas >= totalPaginas ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
     if(ctrlPag) ctrlPag.innerHTML = btnHtml;
+
+    // Sincronizar estado de checkboxes con la selección global (para páginas distintas)
+    if (window.modoSeleccion && window.modoSeleccion['placas'] && window.placasSeleccionadasGlobalmente) {
+        const selSet = new Set(window.placasSeleccionadasGlobalmente);
+        document.querySelectorAll('.chk-bulk-placas').forEach(function(chk) {
+            const marcada = selSet.has(chk.value);
+            chk.checked = marcada;
+            const tarjeta = chk.closest('.card-premium');
+            if (tarjeta) tarjeta.classList.toggle('card-selected', marcada);
+        });
+    }
 }
 
 window.cambiarPaginaPlacas = function(direccion) {
@@ -466,9 +477,12 @@ window.abrirDetallePlaca = function(event, index) {
         const checkbox = tarjeta.querySelector('.chk-bulk-placas');
         if (checkbox) {
             checkbox.checked = !checkbox.checked;
-            if (checkbox.checked) tarjeta.classList.add('card-selected');
-            else tarjeta.classList.remove('card-selected');
-            if (typeof toggleBulkBtn === 'function') toggleBulkBtn('placas');
+            if (typeof window.toggleSeleccionPlaca === 'function') {
+                window.toggleSeleccionPlaca(checkbox, checkbox.value);
+            } else {
+                if (checkbox.checked) tarjeta.classList.add('card-selected');
+                else tarjeta.classList.remove('card-selected');
+            }
         }
         return;
     }
@@ -916,16 +930,30 @@ window.activarModoSeleccionPlacas = function() {
     window.modoSeleccion = window.modoSeleccion || {};
     window.modoSeleccion['placas'] = !window.modoSeleccion['placas'];
 
-    const btnAll = document.getElementById('btn-select-all-placas');
-    const btnBulk = document.getElementById('btn-bulk-placas');
+    const btnActivar = document.getElementById('btn-activar-sel-placas');
+    const btnAll     = document.getElementById('btn-select-all-placas');
+    const btnBulk    = document.getElementById('btn-bulk-placas');
 
     if (window.modoSeleccion['placas']) {
-        btnAll.classList.remove('d-none');
-        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
-        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+        if (btnActivar) {
+            btnActivar.classList.replace('btn-outline-secondary', 'btn-secondary');
+            btnActivar.classList.add('text-white');
+            btnActivar.innerHTML = '<i class="bi bi-x-circle"></i> Cancelar Selección';
+        }
+        if (btnAll) {
+            btnAll.classList.remove('d-none');
+            btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+            btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+        }
     } else {
-        btnAll.classList.add('d-none');
-        btnBulk.classList.add('d-none');
+        if (btnActivar) {
+            btnActivar.classList.replace('btn-secondary', 'btn-outline-secondary');
+            btnActivar.classList.remove('text-white');
+            btnActivar.innerHTML = '<i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span>';
+        }
+        if (btnAll) btnAll.classList.add('d-none');
+        if (btnBulk) btnBulk.classList.add('d-none');
+        window.placasSeleccionadasGlobalmente = [];
         document.querySelectorAll('.chk-bulk-placas').forEach(c => c.checked = false);
         document.querySelectorAll('.card-premium').forEach(c => c.classList.remove('card-selected'));
     }
@@ -933,45 +961,91 @@ window.activarModoSeleccionPlacas = function() {
     renderizarPaginaPlacas();
 };
 
+// Actualiza contador y visibilidad del botón Eliminar
+window._actualizarContadorBulkPlacas = function() {
+    const btnBulk  = document.getElementById('btn-bulk-placas');
+    const cntSpan  = document.getElementById('cnt-bulk-placas');
+    const cantidad = (window.placasSeleccionadasGlobalmente || []).length;
+    if (cntSpan) cntSpan.innerText = cantidad;
+    if (btnBulk) {
+        if (cantidad > 0) btnBulk.classList.remove('d-none');
+        else btnBulk.classList.add('d-none');
+    }
+    // Sincronizar botón "Seleccionar Todo" / "Desmarcar Todo"
+    const btnAll = document.getElementById('btn-select-all-placas');
+    const totalFiltrados = (datosFiltradosPlacas || []).length;
+    if (btnAll && totalFiltrados > 0 && cantidad >= totalFiltrados) {
+        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
+        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
+    } else if (btnAll) {
+        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
+        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
+    }
+};
+
 window.seleccionarTodasLasPlacas = function() {
     const btnAll = document.getElementById('btn-select-all-placas');
-    const checkboxes = document.querySelectorAll('.chk-bulk-placas');
-
+    if (!btnAll) return;
     const accionEsMarcar = btnAll.innerText.includes('Seleccionar Todo');
 
-    checkboxes.forEach(chk => {
-        chk.checked = accionEsMarcar;
-        const tarjeta = chk.closest('.card-premium');
-        if (tarjeta) {
-            if (accionEsMarcar) tarjeta.classList.add('card-selected');
-            else tarjeta.classList.remove('card-selected');
-        }
-    });
-
     if (accionEsMarcar) {
-        window.placasSeleccionadasGlobalmente = dataGlobalPlacas
+        // Seleccionar TODAS las filtradas (todas las páginas)
+        window.placasSeleccionadasGlobalmente = (datosFiltradosPlacas || [])
             .filter(f => (f[0] || '').toUpperCase() !== 'PLACA')
             .map(f => f[0]);
     } else {
         window.placasSeleccionadasGlobalmente = [];
     }
 
-    if (accionEsMarcar) {
-        btnAll.innerHTML = '<i class="bi bi-check-square-fill"></i> Desmarcar Todo';
-        btnAll.classList.replace('btn-outline-primary', 'btn-primary');
-    } else {
-        btnAll.innerHTML = '<i class="bi bi-check-square"></i> Seleccionar Todo';
-        btnAll.classList.replace('btn-primary', 'btn-outline-primary');
-    }
+    // Marcar/desmarcar los checkboxes visibles en la página actual
+    document.querySelectorAll('.chk-bulk-placas').forEach(chk => {
+        chk.checked = accionEsMarcar;
+        const tarjeta = chk.closest('.card-premium');
+        if (tarjeta) tarjeta.classList.toggle('card-selected', accionEsMarcar);
+    });
 
-    const btnEliminar = document.getElementById('btn-bulk-placas');
-    const countSpan = document.getElementById('cnt-bulk-placas');
-    if (btnEliminar && countSpan) {
-        const cantidad = window.placasSeleccionadasGlobalmente ? window.placasSeleccionadasGlobalmente.length : 0;
-        countSpan.innerText = cantidad;
-        if (cantidad > 0) btnEliminar.classList.remove('d-none');
-        else btnEliminar.classList.add('d-none');
+    window._actualizarContadorBulkPlacas();
+};
+
+// Al hacer click en checkbox individual de una tarjeta
+window.toggleSeleccionPlaca = function(chk, plc) {
+    window.placasSeleccionadasGlobalmente = window.placasSeleccionadasGlobalmente || [];
+    if (chk.checked) {
+        if (!window.placasSeleccionadasGlobalmente.includes(plc))
+            window.placasSeleccionadasGlobalmente.push(plc);
+        chk.closest('.card-premium')?.classList.add('card-selected');
+    } else {
+        window.placasSeleccionadasGlobalmente = window.placasSeleccionadasGlobalmente.filter(p => p !== plc);
+        chk.closest('.card-premium')?.classList.remove('card-selected');
     }
+    window._actualizarContadorBulkPlacas();
+};
+
+// ── Eliminar masivo de placas ────────────────────────────────────────────────
+window.eliminarMasivo = function(coleccion, contexto) {
+    // Preferir selección global (todas las páginas) sobre DOM visible
+    var ids = (window.placasSeleccionadasGlobalmente && window.placasSeleccionadasGlobalmente.length > 0)
+        ? window.placasSeleccionadasGlobalmente.slice()
+        : Array.from(document.querySelectorAll('.chk-bulk-' + contexto + ':checked')).map(function(c) { return c.value; });
+
+    if (!ids.length) { alert('Selecciona al menos una placa.'); return; }
+    if (!confirm('¿Eliminar ' + ids.length + ' placa(s) seleccionada(s)?\nEsta acción no se puede deshacer.')) return;
+
+    fetch('/api/eliminarMasivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, coleccion: coleccion })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        alert('✅ ' + (r.afectados || ids.length) + ' placa(s) eliminada(s).');
+        window.modoSeleccion = window.modoSeleccion || {};
+        window.modoSeleccion['placas'] = true;
+        if (typeof window.activarModoSeleccionPlacas === 'function') window.activarModoSeleccionPlacas();
+        cargarTablaPlacas(true);
+    })
+    .catch(function(err) { alert('Error al eliminar: ' + err.message); });
 };
 
 // ── Eliminar placa desde tarjeta (confirm elegante) ─────────────────────────

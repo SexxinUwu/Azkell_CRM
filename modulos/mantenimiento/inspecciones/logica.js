@@ -191,9 +191,24 @@ function mostrarStatusInspecciones(inspecciones) {
       });
       rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
   }
-  document.getElementById('cuerpoTablaStatus').innerHTML = html;
+  const _tablaBody = document.getElementById('cuerpoTablaStatus');
+  if (!_tablaBody) return;
+  _tablaBody.innerHTML = html;
   filtrarStatusAvanzado();
   _renderInspPaginacion(window.dataFinalInspGlobal.length);
+  // Aplicar filtro pendiente desde navegación (ej: click en card del dashboard)
+  if (window._pendingInspFilter) {
+      var _pf = window._pendingInspFilter;
+      window._pendingInspFilter = null;
+      var _chks = document.querySelectorAll('#filtroStatusEstado input[type="checkbox"]');
+      if (_chks.length > 0) {
+          _chks.forEach(function(c) { c.checked = (c.value === _pf); });
+          filtrarStatusAvanzado();
+          // Mostrar badge visual de filtro activo
+          var _buscador = document.getElementById('buscadorStatus');
+          if (_buscador) _buscador.placeholder = 'Filtrado: ' + _pf;
+      }
+  }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-insp', 'tablaStatus', [
           {label: 'Tipo',        idx: 2, visible: true},
@@ -979,6 +994,12 @@ window.importarExcelInspecciones = function(event) {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
 // ================================================================
 window.init_inspecciones = function() {
+    // Leer filtro pendiente desde navegación por dashboard
+    var navFilter = localStorage.getItem('fleet_insp_nav_filter');
+    if (navFilter) {
+        localStorage.removeItem('fleet_insp_nav_filter');
+        window._pendingInspFilter = navFilter;
+    }
     if (typeof generarWizardFase3 === 'function') generarWizardFase3();
     // En móvil: gráficos ocultos por defecto para no ocupar espacio al entrar
     if (window.innerWidth < 768) {

@@ -75,8 +75,14 @@ function _kitsCargarItemsAlmacen(presetVal) {
     fetch('/api/almacen/inventario')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
-            window._kitsAlmacenItems = data || [];
-            var items = (data || []).map(function(x) {
+            window._kitsAlmacenItems = (data || []).map(function(x) {
+                return {
+                    nombre: x.articulo || x.nombre || x.descripcion || '',
+                    unidad: x.unidad || '',
+                    costo_referencial: x.costo_referencial || 0
+                };
+            });
+            var items = window._kitsAlmacenItems.map(function(x) {
                 return { value: x.nombre, label: x.nombre + (x.unidad ? ' [' + x.unidad + ']' : '') };
             });
             if (typeof window._cbInit === 'function') {

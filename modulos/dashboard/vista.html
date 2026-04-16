@@ -26,7 +26,7 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-metric-card success">
+            <div class="kpi-metric-card success" style="cursor:pointer;" title="Ver inspecciones vigentes" onclick="localStorage.setItem('fleet_insp_nav_filter','VIGENTE');cargarModuloAislado('Mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
                     <div class="kpi-metric-icon-wrap success"><i class="bi bi-shield-check"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-vigentes"></div>
@@ -37,7 +37,7 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-metric-card warning">
+            <div class="kpi-metric-card warning" style="cursor:pointer;" title="Ver inspecciones por vencer" onclick="localStorage.setItem('fleet_insp_nav_filter','PRÓXIMO A VENCER');cargarModuloAislado('Mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
                     <div class="kpi-metric-icon-wrap warning"><i class="bi bi-clock-history"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-porvencer"></div>
@@ -48,7 +48,7 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-metric-card danger">
+            <div class="kpi-metric-card danger" style="cursor:pointer;" title="Ver inspecciones vencidas" onclick="localStorage.setItem('fleet_insp_nav_filter','NO VIGENTE');cargarModuloAislado('Mantenimiento/inspecciones')">
                 <div class="kpi-metric-top">
                     <div class="kpi-metric-icon-wrap danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
                     <div class="kpi-metric-trend-wrap" id="kpi-trend-vencidas"></div>

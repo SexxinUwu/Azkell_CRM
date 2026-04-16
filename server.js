@@ -303,6 +303,28 @@ db.query(
         else   console.log('✅ Tabla tipos_preventivo verificada');
     }
 );
+// ── Crear tabla tipos_mantenimiento si no existe ──────────────────────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS tipos_mantenimiento (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        marca           VARCHAR(100) NOT NULL DEFAULT '',
+        tipo_mp         VARCHAR(100) NOT NULL DEFAULT '',
+        uts             VARCHAR(50)  NOT NULL DEFAULT '',
+        frecuencia_km   DECIMAL(10,2) NULL DEFAULT NULL,
+        frecuencia_horas VARCHAR(50) NULL DEFAULT NULL,
+        frecuencia_dias INT          NULL DEFAULT NULL,
+        tipo            VARCHAR(100) NULL DEFAULT NULL,
+        sistema         VARCHAR(100) NULL DEFAULT NULL,
+        descripcion     TEXT         NULL DEFAULT NULL,
+        created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_marca_tipo_uts (marca, tipo_mp, uts)
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE tipos_mantenimiento:', e.message);
+        else   console.log('✅ Tabla tipos_mantenimiento verificada');
+    }
+);
 // ── Migración: columna frecuencia_horas en tipos_mantenimiento ────────────
 db.query(
     `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL`,
@@ -312,6 +334,52 @@ db.query(
 db.query(
     `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_dias INT NULL DEFAULT NULL`,
     (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.frecuencia_dias verificada'); }
+);
+// ── Migración: columnas marca, tipo_mp, uts, frecuencia_km, tipo, sistema ────
+['marca VARCHAR(100) NOT NULL DEFAULT \'\'',
+ 'tipo_mp VARCHAR(100) NOT NULL DEFAULT \'\'',
+ 'uts VARCHAR(50) NOT NULL DEFAULT \'\'',
+ 'frecuencia_km DECIMAL(10,2) NULL DEFAULT NULL',
+ 'tipo VARCHAR(100) NULL DEFAULT NULL',
+ 'sistema VARCHAR(100) NULL DEFAULT NULL'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE tipos_mantenimiento ADD COLUMN ' + colDef, function(e) {
+        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.' + colName + ' verificada');
+        else console.warn('ALTER tipos_mantenimiento.' + colName + ':', e.message);
+    });
+});
+// ── Migración: índice único para upsert en tipos_mantenimiento ────────────
+db.query(
+    'ALTER TABLE tipos_mantenimiento ADD UNIQUE INDEX uq_marca_tipo_uts (marca, tipo_mp, uts)',
+    (e) => { if (!e || e.code === 'ER_DUP_KEYNAME') console.log('✅ tipos_mantenimiento.uq_marca_tipo_uts verificado'); }
+);
+// ── Migración: columnas faltantes en fleetrun (nuevo esquema) ─────────────
+['idRegistro VARCHAR(50) NULL',
+ 'mes VARCHAR(10) NULL',
+ 'anio VARCHAR(10) NULL',
+ 'fecha VARCHAR(20) NULL',
+ 'marca VARCHAR(100) NULL DEFAULT \'\'',
+ 'dueno VARCHAR(100) NULL DEFAULT \'\'',
+ 'uts VARCHAR(50) NULL DEFAULT \'\'',
+ 'tipo_mp VARCHAR(100) NULL DEFAULT \'\'',
+ 'km_actual DECIMAL(15,2) NULL',
+ 'frecuencia_km DECIMAL(15,2) NULL',
+ 'km_proximo DECIMAL(15,2) NULL',
+ 'km_gps VARCHAR(100) NULL DEFAULT \'\'',
+ 'tecnico VARCHAR(100) NULL DEFAULT \'\'',
+ 'observacion TEXT NULL'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE fleetrun ADD COLUMN ' + colDef, function(e) {
+        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ fleetrun.' + colName + ' verificada');
+        else console.warn('ALTER fleetrun.' + colName + ':', e.message);
+    });
+});
+// ── Migración: índice único idRegistro en fleetrun ────────────────────────
+db.query(
+    'ALTER TABLE fleetrun ADD UNIQUE INDEX uq_idregistro (idRegistro)',
+    (e) => { if (!e || e.code === 'ER_DUP_KEYNAME') console.log('✅ fleetrun.uq_idregistro verificado'); }
 );
 // ── Fix: normalizar marca a UPPERCASE en tipos_mantenimiento ──────────────
 db.query(
@@ -1478,11 +1546,11 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
 
             const sql = `
                 INSERT INTO fleetrun
-                (id, mes, anio, fecha, placa, marca, dueno, uts, tipomp, kmact, freckm, kmprox, kmgps, tec, obs)
+                (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
-                fecha=VALUES(fecha), placa=VALUES(placa), tipomp=VALUES(tipomp), kmact=VALUES(kmact),
-                freckm=VALUES(freckm), kmprox=VALUES(kmprox), tec=VALUES(tec), obs=VALUES(obs),
+                fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
+                frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
                 mes=VALUES(mes), anio=VALUES(anio)
             `;
             await promesaQuery(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs]);
