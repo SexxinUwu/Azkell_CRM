@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { initDB } = require('./init_db');
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -72,6 +73,9 @@ const db = mysql.createPool({
     enableKeepAlive: true,
     keepAliveInitialDelay: 0
 });
+
+// ── Crear tablas faltantes al arrancar ───────────────────────────
+initDB(db);
 
 db.getConnection((err, connection) => {
     if (err) {
@@ -3822,12 +3826,12 @@ app.post('/api/almacen/inventario/:id/regularizar', (req, res) => {
     // Obtener stock virtual actual para registrar en observaciones
     db.query(`SELECT
         COALESCE(i.stock_regularizado,0)
-        + COALESCE((SELECT SUM(d.cantidad) FROM almacen_entradas_det d
-                    JOIN almacen_entradas e ON e.id=d.entrada_id
+        + COALESCE((SELECT SUM(d.cantidad) FROM detalle_entradas_inv d
+                    JOIN entradas_inv e ON e.id=d.entrada_id
                     WHERE d.inventario_id=i.id
                     AND (i.fecha_regularizacion IS NULL OR e.fecha >= i.fecha_regularizacion)),0)
-        - COALESCE((SELECT SUM(d.cantidad) FROM almacen_salidas_det d
-                    JOIN almacen_salidas s ON s.id=d.salida_id
+        - COALESCE((SELECT SUM(d.cantidad) FROM detalle_salidas_inv d
+                    JOIN salidas_inv s ON s.id=d.salida_id
                     WHERE d.inventario_id=i.id
                     AND (i.fecha_regularizacion IS NULL OR s.fecha >= i.fecha_regularizacion)),0)
         AS stock_virtual,
