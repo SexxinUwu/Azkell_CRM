@@ -25,7 +25,8 @@ function cargarStatusFlota() {
 // 🔲 MODAL NUEVO STATUS
 // ================================================================
 function abrirModalNuevoStatusFlota() {
-    document.getElementById('formStatusFlota').reset();
+    const _fSF = document.getElementById('formStatusFlota');
+    if (_fSF) _fSF.reset();
     document.getElementById('sf_id').value = '';
     document.getElementById('sf_cliente_motora').value = '';
     document.getElementById('sf_cliente_nomotora').value = '';
@@ -126,9 +127,18 @@ function mostrarStatusFlota(datos) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ args: [] })
         })
-        .then(r => r.json())
         .then(r => {
-            dataGlobalInspecciones = r.data || [];
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(r => {
+            dataGlobalInspecciones = (r.data && r.data.length > 0) ? r.data : ['__CARGADO__'];
+            window.dataGlobalInspecciones = dataGlobalInspecciones;
+            mostrarStatusFlota(datos);
+        })
+        .catch(err => {
+            console.error('Error cargando inspecciones:', err);
+            dataGlobalInspecciones = ['__CARGADO__'];
             window.dataGlobalInspecciones = dataGlobalInspecciones;
             mostrarStatusFlota(datos);
         });
@@ -388,7 +398,7 @@ function abrirModalEditarStatusFlota(id) {
     let fila = dataGlobalStatusFlota.find(f => f[0] === id);
     if (!fila) { alert("No se encontró el registro para editar."); return; }
 
-    document.getElementById('formStatusFlota').reset();
+    document.getElementById('formStatusFlota')?.reset();
     document.getElementById('sf_id').value = fila[0];
 
     let dDate = new Date(fila[1] + "T00:00:00");
