@@ -186,12 +186,11 @@ window.procesarInspeccionesParaDashboard = async function() {
     let vigentes = 0, vencidas = 0;
     let inspecciones = inspData.filter(i => i.estado !== 'Eliminada');
 
-    // Mismo filtro que el módulo de inspecciones (Activa + en uso)
+    // Todas las placas ACTIVAS (sin filtro de en_uso)
     let placasActivas = window.dataGlobalPlacas.filter(p => {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         let estado = normalizeStr(p[18] || p[8] || '');
-        let enUso  = normalizeStr(p[22] || p[13] || '');
-        return estado === "ACTIVA" && (enUso === "SI" || enUso === "SÍ");
+        return estado === "ACTIVA";
     });
 
     placasActivas.forEach(p => {
@@ -331,8 +330,7 @@ window.renderKpiMetrics = async function() {
     var placasActivas = (window.dataGlobalPlacas || []).filter(function(p) {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         var estado = normalizeStr(p[18] || p[8] || '');
-        var enUso  = normalizeStr(p[22] || p[13] || '');
-        return estado === 'ACTIVA' && (enUso === 'SI' || enUso === 'SÍ');
+        return estado === 'ACTIVA';
     });
     var flotaTotal = placasActivas.length;
 

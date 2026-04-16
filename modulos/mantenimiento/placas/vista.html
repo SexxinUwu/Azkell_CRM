@@ -582,15 +582,15 @@
 <div class="modal fade" id="modalKPIsCliente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);">
-            <div class="modal-header border-bottom" style="background:var(--crm-sidebar);border-radius:0.375rem 0.375rem 0 0;">
+            <div class="modal-header border-bottom" style="background:var(--surface);border-radius:0.375rem 0.375rem 0 0;">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-building-fill text-white fs-5"></i>
+                    <i class="bi bi-building-fill fs-5" style="color:var(--crm-accent)"></i>
                     <div>
-                        <div class="fw-bold text-white" style="font-size:0.85rem;">Panel de Cliente</div>
-                        <div class="fw-bold text-white" id="kpi-cli-nombre" style="font-size:1rem;"></div>
+                        <div class="fw-semibold" style="font-size:0.8rem;color:var(--subtext);">Panel de Cliente</div>
+                        <div class="fw-bold" id="kpi-cli-nombre" style="font-size:1rem;color:var(--text);"></div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-3 pb-2" id="kpi-cli-body"></div>
         </div>

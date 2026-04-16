@@ -12,7 +12,7 @@ window.init_unidades = function() {
 // ── Cargar ─────────────────────────────────────────────────────
 window.cargarUnidades = function() {
     var tb = document.getElementById('cuerpo-tabla-unidades');
-    if (tb) tb.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando…</td></tr>';
+    if (tb) tb.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando…</td></tr>';
     fetch('/api/almacen/unidades')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function(data) {
@@ -44,15 +44,13 @@ window._undRender = function() {
     if (cnt) cnt.textContent = datos.length + ' unidad' + (datos.length !== 1 ? 'es' : '');
     if (!tb) return;
     if (!datos.length) {
-        tb.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin unidades</td></tr>';
+        tb.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin unidades</td></tr>';
         return;
     }
     tb.innerHTML = datos.map(function(u) {
         return '<tr>' +
-            '<td><span class="badge bg-secondary fw-bold">' + _undEsc(u.nombre) + '</span></td>' +
-            '<td>' + _undEsc(u.descripcion || '—') + '</td>' +
-            '<td><small class="text-muted">' + (u.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</small></td>' +
-            '<td><small class="text-muted">—</small></td>' +
+            '<td>' + _undEsc(u.nombre || '—') + (u.descripcion ? '<br><small class="text-muted">' + _undEsc(u.descripcion) + '</small>' : '') + '</td>' +
+            '<td>' + (u.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
                 '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
                 '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarUnidad(' + u.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' +

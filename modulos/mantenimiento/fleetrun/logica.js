@@ -799,6 +799,30 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
     chartDashFleetrunInst.update();
 };
 
+// ── Eliminar masivo de fleetrun ──────────────────────────────────────────────
+window.eliminarMasivo = function(coleccion, contexto) {
+    var checkboxes = document.querySelectorAll('.chk-bulk-' + contexto + ':checked');
+    var ids = Array.from(checkboxes).map(function(c) { return c.value; });
+    if (!ids.length) { alert('Selecciona al menos un registro.'); return; }
+    if (!confirm('¿Eliminar ' + ids.length + ' registro(s) seleccionado(s)?\nEsta acción no se puede deshacer.')) return;
+
+    fetch('/api/eliminarMasivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, coleccion: coleccion })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        alert('✅ ' + (r.afectados || ids.length) + ' registro(s) eliminado(s).');
+        window.modoSeleccion = window.modoSeleccion || {};
+        window.modoSeleccion['fleetrun'] = true;
+        if (typeof window.activarModoSeleccionFleetrun === 'function') window.activarModoSeleccionFleetrun();
+        cargarTablaFleetrun(true);
+    })
+    .catch(function(err) { alert('Error al eliminar: ' + err.message); });
+};
+
 // ================================================================
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
 // ================================================================
