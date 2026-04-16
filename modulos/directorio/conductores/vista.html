@@ -8,8 +8,20 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <span id="cache-badge-conductores" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-conductores" data-i18n="common.sinCargar">Sin cargar</span></span>
-            <button class="btn-reload-cache" onclick="recargarModulo('conductores')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn-reload-cache" onclick="window.init_conductores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllCondGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
+            <!-- Importar -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
+                </button>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.descargarPlantillaConductores()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileConductores').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
+                </ul>
+            </div>
+            <input type="file" id="inputFileConductores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelConductores(event)">
             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> <span data-i18n="common.excel">Excel</span></button>
             <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()" data-perm-crear="flota"><i class="bi bi-person-plus-fill"></i> <span data-i18n="drivers.new">Nuevo Personal</span></button>
         </div>

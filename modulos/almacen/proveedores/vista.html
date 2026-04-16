@@ -10,6 +10,22 @@
     </div>
     <div class="d-flex gap-2">
       <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarProveedores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+      <!-- Importar -->
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
+        </button>
+        <ul class="dropdown-menu shadow">
+          <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
+        </ul>
+      </div>
+      <input type="file" id="inputFileProveedores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelProveedores(event)">
+      <!-- Exportar -->
+      <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.exportarExcelProveedores()">
+        <i class="bi bi-download"></i> <span class="d-none d-md-inline">Exportar</span>
+      </button>
       <button class="btn btn-sm btn-primary" onclick="window.abrirModalProveedor()">
         <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nuevo Proveedor</span>
       </button>

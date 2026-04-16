@@ -180,6 +180,9 @@ function previsualizarFotoConductor(input) {
 
 function guardarConductor(event, formObj) {
     event.preventDefault();
+    var isNew = !document.getElementById('c_id').value;
+    var reqPerm = isNew ? 'c' : 'e';
+    if (!window.guardAction('cond', reqPerm)) return;
     const btn = document.getElementById('btnGuardarConductor');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
@@ -236,8 +239,78 @@ function _cargarClientesCond() {
 }
 
 window.init_conductores = function() {
-    if(typeof cargarModulo === 'function') {
-        cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores');
+    if (!window.checkPerm('cond', 'l')) {
+        window.showNoPermMsg('moduloConductores');
+        return;
     }
+    var btnNuevo = document.querySelector('#moduloConductores .btn-primary[onclick*="abrirModalConductor"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('cond','c') ? '' : 'none';
+    var btnImportar = document.querySelector('#moduloConductores .btn-outline-info');
+    if (btnImportar) btnImportar.style.display = window.checkPerm('cond','c') ? '' : 'none';
+    // Carga directa vía REST (evita race condition con GoogleRunner en primera visita)
+    var tbody = document.getElementById('cuerpoTablaConductores');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</td></tr>';
+    fetch('/api/conductores')
+        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(function(data) {
+            CACHE['conductores'] = data;
+            mostrarConductores(data);
+        })
+        .catch(function(err) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
+        });
     _cargarClientesCond();
+};
+
+// ── Importación masiva ────────────────────────────────────────────
+window.descargarPlantillaConductores = function() {
+    var wb = XLSX.utils.book_new();
+    var filas = [
+        ['Nombre Completo','Empresa','Teléfono','DNI','Licencia','Estado'],
+        ['JUAN PEREZ GARCIA','EMPRESA SAC','+51 999 000 111','12345678','B-IIb','Activo']
+    ];
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [28,22,16,10,10,10].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.writeFile(wb, 'Plantilla_Personal.xlsx');
+};
+
+window.importarExcelConductores = function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var wb = XLSX.read(e.target.result, { type: 'array' });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!rows.length) { alert('El archivo está vacío.'); return; }
+            var payload = rows.map(function(r) {
+                return {
+                    nombre:   String(r['Nombre Completo'] || r.nombre   || '').trim().toUpperCase(),
+                    empresa:  String(r['Empresa']         || r.empresa  || '').trim().toUpperCase(),
+                    telefono: String(r['Teléfono']        || r['Telefono'] || r.telefono || '').trim(),
+                    dni:      String(r['DNI']             || r.dni      || '').trim(),
+                    licencia: String(r['Licencia']        || r.licencia || '').trim().toUpperCase(),
+                    estado:   String(r['Estado']          || r.estado   || 'Activo').trim()
+                };
+            }).filter(function(r) { return r.nombre; });
+            if (!payload.length) { alert('No se encontraron filas con Nombre válido.'); return; }
+            if (!confirm('Se importarán '+payload.length+' personas. ¿Continuar?')) return;
+            fetch('/api/conductores/importarMasivo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conductores: payload })
+            })
+            .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+            .then(function(res) {
+                alert('Importados: '+res.insertados+' nuevos'+(res.errores?' ('+res.errores+' con error)':'')+'.');
+                CACHE['conductores'] = null;
+                if (typeof cargarModulo === 'function') cargarModulo('conductores', mostrarConductores, 'obtenerDatosConductores');
+            })
+            .catch(function(err) { alert('Error: '+err.message); });
+        } catch(ex) { alert('Error leyendo Excel: '+ex.message); }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
 };

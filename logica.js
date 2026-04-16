@@ -791,8 +791,53 @@ window.verificarNotificacionesPWA = function() {
 // Programar chequeo a los 8 segundos de cargar (espera que cargue dataGlobalInspecciones)
 setTimeout(function(){ if(typeof window.verificarNotificacionesPWA==='function') window.verificarNotificacionesPWA(); }, 8000);
 
-// ── PDF Ficha Individual de Placa ────────────────────────────────
-window.exportarFichaPlacaPDF = function(placaArg) {
+// ================================================================
+// 🔒 RBAC — Helpers de permisos (usados por todos los módulos)
+// ================================================================
+window.checkPerm = function(modKey, action) {
+    try {
+        var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+        if (p.admin === true) return true;
+        var m = p[modKey];
+        if (m === undefined || m === null) return false;
+        if (typeof m === 'boolean') return action === 'l' ? m : false;
+        if (action === 'l') return m.l === 1 || m.l === true;
+        return m[action] === 1 || m[action] === true;
+    } catch(e) { return false; }
+};
+
+window.showNoPermMsg = function(containerIdOrEl) {
+    var el = typeof containerIdOrEl === 'string' ? document.getElementById(containerIdOrEl) : containerIdOrEl;
+    if (!el) return;
+    el.innerHTML = '<div class="text-center py-5" style="color:var(--subtext);">'
+        + '<i class="bi bi-shield-lock-fill fs-1 d-block mb-3" style="color:#f59e0b;"></i>'
+        + '<div class="fw-bold mb-1" style="color:var(--text);">Acceso Restringido</div>'
+        + '<div class="small">No cuentas con los permisos necesarios.<br>Contáctate con el administrador.</div>'
+        + '</div>';
+};
+
+window.guardAction = function(modKey, action) {
+    if (!window.checkPerm(modKey, action)) {
+        var modal = document.getElementById('modalNoPermiso');
+        if (modal) { (bootstrap.Modal.getInstance(modal)||new bootstrap.Modal(modal)).show(); }
+        else { alert('No cuentas con los permisos necesarios. Contáctate con el administrador.'); }
+        return false;
+    }
+    return true;
+};
+
+// Oculta botones/elementos sin permiso en el módulo activo
+window.enforceModuleUI = function(modKey) {
+    var pL = window.checkPerm(modKey,'l');
+    var pC = window.checkPerm(modKey,'c');
+    var pE = window.checkPerm(modKey,'e');
+    var pD = window.checkPerm(modKey,'d');
+    document.querySelectorAll('[data-perm-c]').forEach(function(el){ if(el.dataset.permC===modKey){ el.style.display=pC?'':'none'; } });
+    document.querySelectorAll('[data-perm-e]').forEach(function(el){ if(el.dataset.permE===modKey){ el.style.display=pE?'':'none'; } });
+    document.querySelectorAll('[data-perm-d]').forEach(function(el){ if(el.dataset.permD===modKey){ el.style.display=pD?'':'none'; } });
+};
+
+// ── PDF Ficha Individual de Placa ────────────────────────────────window.exportarFichaPlacaPDF = function(placaArg) {
     var placa = (placaArg || (document.getElementById('det-placa-titulo')||{}).innerText || window._odpPlacaActual || '').toString().toUpperCase().trim();
     if (!placa) return;
     var p = (window.dataGlobalPlacas||[]).find(function(x){ return (x[0]||'').toUpperCase()===placa; });
@@ -824,9 +869,7 @@ window.exportarFichaPlacaPDF = function(placaArg) {
         +mps.map(function(r){ return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;font-weight:600">'+(r[8]||'—')+'</td><td style="padding:3px 8px">'+(parseDateToDDMMYYYY(r[3]))+'</td><td style="padding:3px 8px">'+(parseFloat(r[11])||0).toLocaleString()+' km</td><td style="padding:3px 8px;color:#64748b">'+(r[13]||'—')+'</td></tr>'; }).join('')+'</table></div>';
     }
     html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
-    var c=document.createElement('div'); c.innerHTML=html; c.style.cssText='position:fixed;left:-9999px;top:0;width:800px;background:#fff;';
-    document.body.appendChild(c);
-    html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(c).save().then(function(){ document.body.removeChild(c); });
+    html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,logging:false,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(html).save();
 };
 
 // Aplica color de acento guardado (accesible desde módulo configuración)

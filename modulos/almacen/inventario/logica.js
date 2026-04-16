@@ -16,6 +16,12 @@ window._invUnidadesData = window._invUnidadesData || [];
 window._invFamiliasData = window._invFamiliasData || [];
 
 window.init_inventario = function() {
+    if (!window.checkPerm('inv', 'l')) {
+        window.showNoPermMsg('mod-inventario');
+        return;
+    }
+    var btnNuevo = document.querySelector('#mod-inventario .btn-primary[onclick*="abrirModalArticulo"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('inv','c') ? '' : 'none';
     window._invPagActual = 1;
     window.cargarInventario();
     window._invCargarMarcasPlacas();
@@ -628,6 +634,7 @@ window._invDescargarQR = function() {
 window.guardarArticuloInv = function(event) {
     if (event) event.preventDefault();
     var id = (document.getElementById('inv-edit-id') || {}).value || '';
+    if (!window.guardAction('inv', id ? 'e' : 'c')) return;
 
     var g  = function(elId) { return (document.getElementById(elId) || {}).value || ''; };
     var gN = function(elId) { return parseFloat(g(elId)) || 0; };
@@ -678,6 +685,7 @@ window.guardarArticuloInv = function(event) {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.eliminarArticuloInv = function(id) {
+    if (!window.guardAction('inv', 'd')) return;
     if (!confirm('¿Eliminar artículo ' + id + '?\n(Se desactivará — no se borrará físicamente)')) return;
     fetch('/api/almacen/inventario/' + encodeURIComponent(id), { method: 'DELETE' })
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })

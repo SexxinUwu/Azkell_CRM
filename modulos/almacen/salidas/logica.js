@@ -10,6 +10,12 @@ window._salItemIdx   = window._salItemIdx   || 0;
 var _SAL_POR_PAG = 20;
 
 window.init_salidas = function() {
+    if (!window.checkPerm('sal_inv', 'l')) {
+        window.showNoPermMsg('mod-salidas');
+        return;
+    }
+    var btnNuevo = document.querySelector('#mod-salidas .btn-primary[onclick*="abrirModalSalida"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('sal_inv','c') ? '' : 'none';
     window._salPagActual = 1;
     window.cargarSalidas();
     window._salCargarSelect();
@@ -186,7 +192,7 @@ window._salBuscarArt = function(input, idx) {
         var hiddenId = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
         if (hiddenId) hiddenId.value = item.id;
         var cuEl = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial||0).toFixed(4); window._salCalcItemImporte(idx); }
+        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial||0).toFixed(2); window._salCalcItemImporte(idx); }
     }
 };
 
@@ -194,7 +200,7 @@ window._salCalcItemImporte = function(idx) {
     var cant = parseFloat((document.querySelector('.sal-item-cant[data-idx="' + idx + '"]') || {}).value) || 0;
     var cu   = parseFloat((document.querySelector('.sal-item-cu[data-idx="' + idx + '"]')   || {}).value) || 0;
     var impEl = document.querySelector('.sal-item-imp[data-idx="' + idx + '"]');
-    if (impEl) impEl.value = (cant * cu).toFixed(4);
+    if (impEl) impEl.value = (cant * cu).toFixed(2);
     window._salActualizarTotal();
 };
 
@@ -215,6 +221,7 @@ window._salActualizarTotal = function() {
 
 // ── Guardar Salida ────────────────────────────────────────────────
 window.guardarSalida = function() {
+    if (!window.guardAction('sal_inv', 'c')) return;
     var fecha      = (document.getElementById('sal-f-fecha')        || {}).value || '';
     var tipo       = (document.getElementById('sal-f-tipo')         || {}).value || '';
     var placa      = (document.getElementById('sal-f-placa')        || {}).value || null;
@@ -296,6 +303,7 @@ window.abrirModalSalida = function() {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.eliminarSalida = function(id) {
+    if (!window.guardAction('sal_inv', 'd')) return;
     if (!confirm('¿Eliminar salida ' + id + '? Esta acción eliminará el registro y sus detalles.')) return;
     fetch('/api/almacen/salidas/' + encodeURIComponent(id), { method: 'DELETE' })
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -415,7 +423,7 @@ window._salRender = function() {
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteSalida(\'' + _salEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                            '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                            (window.checkPerm('sal_inv','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSalida(\'' + _salEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                         '</div>' +
                     '</td></tr>';
             }).join('');

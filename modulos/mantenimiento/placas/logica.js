@@ -349,10 +349,8 @@ function renderizarPaginaPlacas() {
         if(infoPag) infoPag.innerText = '0 resultados'; if(ctrlPag) ctrlPag.innerHTML = ''; return;
     }
 
-    let perms = permisosUsuario || {};
-    let isAdmP = perms.admin === true || (localStorage.getItem('fleet_correo') || '').toLowerCase() === 'admin@azkell.com';
-    const canEditP = isAdmP || perms.placas?.e === true;
-    const canDeleteP = isAdmP || perms.placas?.d === true;
+    const canEditP = window.checkPerm('placas','e');
+    const canDeleteP = window.checkPerm('placas','d');
 
     const totalPaginas = Math.ceil(datosFiltradosPlacas.length / ITEMS_POR_PAGINA);
     if(paginaActualPlacas > totalPaginas) paginaActualPlacas = totalPaginas;
@@ -1050,6 +1048,7 @@ window.eliminarMasivo = function(coleccion, contexto) {
 
 // ── Eliminar placa desde tarjeta (confirm elegante) ─────────────────────────
 window.eliminarPlacaDesdeTarjeta = function(plc) {
+    if (!window.guardAction('placas', 'd')) return;
     var doDelete = function() {
         fetch('/api/script/eliminarDocumento', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1122,6 +1121,10 @@ window.limpiarFiltrosPlacas = function() {
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router al (re)cargar
 // ================================================================
 window.init_placas = function() {
+    if (!window.checkPerm('placas', 'l')) {
+        window.showNoPermMsg('contenedorPlacasDinamico');
+        return;
+    }
     // Registrar callbacks de autocompletado RUC al seleccionar cliente
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('p_cliente', function(val) { window.autocompletarRucSelect(val, 'p_ruc'); });

@@ -381,6 +381,36 @@ db.query(
     'ALTER TABLE fleetrun ADD UNIQUE INDEX uq_idregistro (idRegistro)',
     (e) => { if (!e || e.code === 'ER_DUP_KEYNAME') console.log('✅ fleetrun.uq_idregistro verificado'); }
 );
+// ── Fix: tipos_mantenimiento — eliminar índice único de codigo (legacy) ───
+db.query(
+    'ALTER TABLE tipos_mantenimiento DROP INDEX codigo',
+    (e) => { if (!e || e.code === 'ER_CANT_DROP_FIELD_OR_KEY') console.log('✅ tipos_mantenimiento.codigo unique index removido'); }
+);
+// ── Fix: tipos_mantenimiento — permitir NULL en columnas legacy NOT NULL ──
+['ALTER TABLE tipos_mantenimiento MODIFY COLUMN codigo VARCHAR(20) NULL DEFAULT \'\'',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN descripcion VARCHAR(100) NULL DEFAULT \'\'',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN km_intervalo INT NULL DEFAULT NULL'
+].forEach(function(sql) {
+    db.query(sql, function(e) {
+        if (!e) console.log('✅ tipos_mantenimiento nullable fix: ' + sql.substring(0,60));
+    });
+});
+// ── Fix: fleetrun — permitir NULL en columnas legacy NOT NULL ─────────────
+['ALTER TABLE fleetrun MODIFY COLUMN kilometraje_ejecucion INT NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN fecha_ejecucion DATE NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\''
+].forEach(function(sql) {
+    db.query(sql, function(e) {
+        if (!e) console.log('✅ fleetrun nullable fix: ' + sql.substring(0,60));
+        else if (e.code !== 'ER_DUP_FIELDNAME') console.warn('WARN:', e.message);
+    });
+});
+
+// ── Fix: inspecciones — km_tablero nullable para importación ─────────────
+db.query('ALTER TABLE inspecciones MODIFY COLUMN km_tablero INT NULL DEFAULT NULL', function(e) {
+    if (!e) console.log('✅ inspecciones km_tablero nullable');
+    else if (e.code !== 'ER_NO_SUCH_TABLE') console.warn('WARN km_tablero:', e.message);
+});
 // ── Fix: normalizar marca a UPPERCASE en tipos_mantenimiento ──────────────
 db.query(
     `UPDATE tipos_mantenimiento SET marca = UPPER(TRIM(marca)) WHERE marca != UPPER(TRIM(marca)) OR marca != TRIM(marca)`,
@@ -895,7 +925,8 @@ app.post('/api/script/:metodo', async (req, res) => {
                 r.km_proximo || r.KM_PROXIMO || '',
                 r.observacion || r.OBSERVACION || '',
                 r.tecnico || r.TECNICO || '',
-                r.km_gps || r.KM_GPS || ''
+                r.km_gps || r.KM_GPS || '',
+                r.id || 0                                                   // [15] DB auto-increment (tiebreaker de orden de inserción)
             ]);
             return res.json({ data });
         });
@@ -944,7 +975,18 @@ app.post('/api/script/:metodo', async (req, res) => {
     if (metodo === 'obtenerDatosInspecciones') {
         db.query('SELECT * FROM inspecciones', (err, results) => {
             if (err) return res.json({ data: [] });
-            return res.json({ data: results });
+            const _fmtFechaInsp = (f) => {
+                if (!f) return '';
+                const d = f instanceof Date ? f : new Date(String(f).split('T')[0]);
+                if (!isNaN(d.getTime())) {
+                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                }
+                return String(f);
+            };
+            const data = results.map(r => Object.assign({}, r, {
+                fecha_ingreso: _fmtFechaInsp(r.fecha_ingreso)
+            }));
+            return res.json({ data });
         });
         return;
     }
@@ -1499,7 +1541,8 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
             const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
             const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
             const placa = r.PLACA || r.placa || '';
-            const km = r['KM TABLERO'] || r.KM || r.km_tablero || '';
+            const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
+            const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
             const cliente = r.CLIENTE || r.cliente || '';
             const tec = r.TECNICO || r.tecnico || '';
             const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
@@ -3412,11 +3455,38 @@ const _multerInv = multer({
 });
 
 // ── Helper endpoints para formularios de Almacén ─────────────────
+app.get('/api/conductores', (req, res) => {
+    db.query("SELECT * FROM conductores ORDER BY estado, nombre", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 app.get('/api/conductores-lista', (req, res) => {
     db.query("SELECT idConductor AS id, nombre, dni FROM conductores ORDER BY nombre", (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
+});
+
+app.post('/api/conductores/importarMasivo', (req, res) => {
+    const lista = req.body.conductores || [];
+    if (!lista.length) return res.status(400).json({ error: 'Sin datos' });
+    let insertados = 0, errores = 0;
+    const procesar = (i) => {
+        if (i >= lista.length) return res.json({ insertados, errores });
+        const c = lista[i];
+        if (!c.nombre) { errores++; return procesar(i + 1); }
+        db.query(
+            'INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado) VALUES (?,?,?,?,?,?)',
+            [c.nombre, c.empresa||'', c.telefono||'', c.dni||'', c.licencia||'', c.estado||'Activo'],
+            (err) => {
+                if (err) { errores++; } else { insertados++; }
+                procesar(i + 1);
+            }
+        );
+    };
+    procesar(0);
 });
 app.get('/api/placas-lista', (req, res) => {
     db.query("SELECT placa, cliente FROM placas ORDER BY placa", (err, rows) => {
@@ -3735,6 +3805,36 @@ app.delete('/api/almacen/proveedores/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
     });
+});
+
+app.post('/api/almacen/importarProveedoresMasivo', (req, res) => {
+    const lista = req.body.proveedores || [];
+    if (!lista.length) return res.status(400).json({ error: 'Sin datos' });
+    let insertados = 0, actualizados = 0, errores = 0;
+    const procesar = (i) => {
+        if (i >= lista.length) return res.json({ insertados, actualizados, errores });
+        const p = lista[i];
+        if (!p.nombre) { errores++; return procesar(i + 1); }
+        const marcas = Array.isArray(p.marcas) ? p.marcas.join(', ') : (p.marcas || '');
+        db.query(
+            `INSERT INTO proveedores_inv (nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, marcas, estado, observaciones)
+             VALUES (?,?,?,?,?,?,?,?,?,?)
+             ON DUPLICATE KEY UPDATE
+               razon_social=VALUES(razon_social), tipo_documento=VALUES(tipo_documento),
+               numero_documento=VALUES(numero_documento), telefono=VALUES(telefono),
+               email=VALUES(email), direccion=VALUES(direccion),
+               marcas=VALUES(marcas), estado=VALUES(estado), observaciones=VALUES(observaciones)`,
+            [p.nombre, p.razon_social||'', p.tipo_documento||'RUC', p.numero_documento||'',
+             p.telefono||'', p.email||'', p.direccion||'', marcas, p.estado||'Activo', p.observaciones||''],
+            (err, result) => {
+                if (err) { errores++; }
+                else if (result.insertId > 0 && result.affectedRows === 1) { insertados++; }
+                else { actualizados++; }
+                procesar(i + 1);
+            }
+        );
+    };
+    procesar(0);
 });
 
 // ============================================================
