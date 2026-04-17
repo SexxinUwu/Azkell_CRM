@@ -810,10 +810,11 @@ window.abrirModalEditarPlaca = function(index) {
     new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show();
 };
 
-function enviarPlaca(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
+function enviarPlaca(event, formObj) { event.preventDefault(); if (!window.guardAction('placas', 'c')) return; const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
 
 function enviarEdicionPlaca(event, formObj) {
     event.preventDefault();
+    if (!window.guardAction('placas', 'e')) return;
     var btn = document.getElementById('btnActualizarPlaca');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; }
 

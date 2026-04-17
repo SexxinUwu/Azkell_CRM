@@ -83,6 +83,16 @@ function _planPoblarAnios(selId) {
 
 // ── ENTRY POINT ───────────────────────────────────────────────────
 window.init_planificacion = function() {
+    if (!window.checkPerm('plan', 'l')) {
+        window.showNoPermMsg('root-dinamico');
+        return;
+    }
+    // Ocultar acciones de escritura si solo lectura
+    var canCreate = window.checkPerm('plan', 'c');
+    var btnNuevo = document.querySelector('[onclick*="abrirModalNuevoPlan"]');
+    if (btnNuevo) btnNuevo.style.display = canCreate ? '' : 'none';
+    var btnAgrDest = document.querySelector('[onclick*="abrirModalDestinatario"]');
+    if (btnAgrDest) btnAgrDest.style.display = canCreate ? '' : 'none';
     // Registrar callbacks de combobox para filtros
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('plan-sel-anio',      function() { window.cargarBoardPlan(); });
@@ -291,11 +301,13 @@ function _planRenderTablaVista(data, cont) {
 
         var acciones = '';
         if (['Programada','Confirmada','En Progreso'].includes(plan.estado)) {
-            acciones =
+            var canEditPlan = window.checkPerm('plan', 'e');
+            acciones = canEditPlan ? (
                 '<button class="btn btn-xs btn-success py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirCompletarPlan(\'' + plan.id + '\')" title="Completar"><i class="bi bi-check2"></i></button>' +
                 '<button class="btn btn-xs btn-warning py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirPosponerPlan(\'' + plan.id + '\')" title="Posponer"><i class="bi bi-calendar-plus"></i></button>' +
                 '<button class="btn btn-xs btn-outline-secondary py-0 px-1 me-1" style="font-size:0.7rem" onclick="window.abrirEditarPlan(\'' + plan.id + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:0.7rem" onclick="window.cancelarPlan(\'' + plan.id + '\')" title="Cancelar"><i class="bi bi-x"></i></button>';
+                '<button class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:0.7rem" onclick="window.cancelarPlan(\'' + plan.id + '\')" title="Cancelar"><i class="bi bi-x"></i></button>'
+            ) : '';
         } else if (plan.estado === 'Completada') {
             acciones = '<span style="font-size:0.72rem;color:#16a34a"><i class="bi bi-check-circle me-1"></i>' + (plan.fleetrun_id_ejecutado || '') + '</span>';
         }
@@ -406,13 +418,15 @@ function _planRenderCard(plan) {
 
     var botonesAccion = '';
     if (['Programada','Confirmada','En Progreso'].includes(plan.estado)) {
-        botonesAccion =
-            '<div class="d-flex gap-1 mt-2 flex-wrap">' +
-            '<button class="btn btn-xs btn-success py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirCompletarPlan(\'' + plan.id + '\')" title="Completar"><i class="bi bi-check2"></i> Completar</button>' +
-            '<button class="btn btn-xs btn-warning py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirPosponerPlan(\'' + plan.id + '\')" title="Posponer"><i class="bi bi-calendar-plus"></i></button>' +
-            '<button class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirEditarPlan(\'' + plan.id + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-            '<button class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.cancelarPlan(\'' + plan.id + '\')" title="Cancelar"><i class="bi bi-x"></i></button>' +
-            '</div>';
+        if (window.checkPerm('plan', 'e')) {
+            botonesAccion =
+                '<div class="d-flex gap-1 mt-2 flex-wrap">' +
+                '<button class="btn btn-xs btn-success py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirCompletarPlan(\'' + plan.id + '\')" title="Completar"><i class="bi bi-check2"></i> Completar</button>' +
+                '<button class="btn btn-xs btn-warning py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirPosponerPlan(\'' + plan.id + '\')" title="Posponer"><i class="bi bi-calendar-plus"></i></button>' +
+                '<button class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.abrirEditarPlan(\'' + plan.id + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+                '<button class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size:0.72rem" onclick="event.stopPropagation();window.cancelarPlan(\'' + plan.id + '\')" title="Cancelar"><i class="bi bi-x"></i></button>' +
+                '</div>';
+        }
     } else if (plan.estado === 'Completada') {
         botonesAccion = '<div class="mt-1" style="font-size:0.73rem; color:#16a34a"><i class="bi bi-check-circle me-1"></i>Completada' + (plan.fleetrun_id_ejecutado ? ' · ' + plan.fleetrun_id_ejecutado : '') + '</div>';
     }
@@ -655,6 +669,7 @@ window.abrirEditarPlan = function(planId) {
 window.guardarNuevoPlan = function() {
     var get = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
     var planId = get('np-id');
+    if (!window.guardAction('plan', planId ? 'e' : 'c')) return;
     var placa  = get('np-placa').toUpperCase();
     var tipoMp = get('np-tipomp');
     var fIni   = get('np-fecha-ini');
@@ -789,6 +804,7 @@ window.compRecalcKmProx = function() {
 };
 
 window.confirmarCompletarPlan = function() {
+    if (!window.guardAction('plan', 'e')) return;
     var planId  = ((document.getElementById('comp-plan-id')       || {}).value || '').trim();
     var placa   = ((document.getElementById('comp-hidden-placa')  || {}).value || '').trim().toUpperCase();
     var tipoMp  = ((document.getElementById('comp-hidden-tipomp') || {}).value || '').trim();
@@ -892,6 +908,7 @@ window.abrirPosponerPlan = function(planId) {
 };
 
 window.confirmarPosponerPlan = function() {
+    if (!window.guardAction('plan', 'e')) return;
     var planId = (document.getElementById('posp-plan-id')  || {}).value;
     var fIni   = (document.getElementById('posp-fecha-ini') || {}).value;
     var fFin   = (document.getElementById('posp-fecha-fin') || {}).value;
@@ -928,6 +945,7 @@ window.confirmarPosponerPlan = function() {
 
 // ── CANCELAR PLAN ─────────────────────────────────────────────────
 window.cancelarPlan = function(planId) {
+    if (!window.guardAction('plan', 'e')) return;
     var plan = window.planData.find(function(p){ return p.id === planId; });
     if (!plan) return;
     var motivo = prompt('¿Motivo de cancelación para ' + plan.placa + ' · ' + plan.tipo_mp + '?\n(Requerido)');
@@ -1013,6 +1031,7 @@ window.cancelarUploadPlan = function() {
 };
 
 window.confirmarUploadPlan = function() {
+    if (!window.guardAction('plan', 'c')) return;
     if (!window.planUpRows || !window.planUpRows.length)
         return window.mostrarToast('Sin datos para importar', 'warning');
 
@@ -1331,8 +1350,8 @@ window.filtrarTablaConfigFlota = function() {
             '<td style="font-size:0.78rem; color:var(--subtext)">' + (r.sistema || '—') + '</td>' +
             '<td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.78rem">' + (r.descripcion || '—') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarConfigFlota(' + r.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarConfigFlota(' + r.id + ',\'' + (r.marca + ' ' + r.tipo_mp).replace(/'/g,"") + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_mant','e') ? '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarConfigFlota(' + r.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_mant','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarConfigFlota(' + r.id + ',\'' + (r.marca + ' ' + r.tipo_mp).replace(/'/g,"") + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' : '') +
             '</td></tr>';
     }).join('');
 };
@@ -1380,6 +1399,7 @@ window.editarConfigFlota = function(id) {
 window.guardarConfigFlota = function() {
     var get = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
     var cfId = get('cf-id');
+    if (!window.guardAction('cfg_mant', cfId ? 'e' : 'c')) return;
     var body = {
         marca:           get('cf-marca').toUpperCase(),
         tipo_mp:         get('cf-tipo-mp').toUpperCase(),
@@ -1406,6 +1426,7 @@ window.guardarConfigFlota = function() {
 };
 
 window.eliminarConfigFlota = function(id, label) {
+    if (!window.guardAction('cfg_mant', 'd')) return;
     if (!confirm('¿Eliminar "' + label + '"?')) return;
     fetch('/api/tipos-mantenimiento/' + id, { method:'DELETE' })
         .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
@@ -1495,8 +1516,8 @@ window.filtrarTablaKits = function() {
             '<td class="fw-bold">S/.' + parseFloat(k.costo_total||0).toFixed(2) + '</td>' +
             '<td>' + k.orden + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarKit(' + k.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarKit(' + k.id + ',\'' + k.item_nombre.replace(/'/g,'') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_mant','e') ? '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarKit(' + k.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_mant','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarKit(' + k.id + ',\'' + k.item_nombre.replace(/'/g,'') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' : '') +
             '</td></tr>';
     });
     tb.innerHTML = html;
@@ -1545,6 +1566,7 @@ window.calcularCostoTotalKit = function() {
 window.guardarKit = function() {
     var get = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
     var kitId = get('kit-id');
+    if (!window.guardAction('cfg_mant', kitId ? 'e' : 'c')) return;
     var body = {
         marca_vehiculo: get('kit-marca').toUpperCase(),
         tipo_mp:        get('kit-tipomp'),
@@ -1572,6 +1594,7 @@ window.guardarKit = function() {
 };
 
 window.eliminarKit = function(id, label) {
+    if (!window.guardAction('cfg_mant', 'd')) return;
     if (!confirm('¿Eliminar ítem "' + label + '"?')) return;
     fetch('/api/mantenimiento-kits/' + id, { method:'DELETE' })
         .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
@@ -1602,8 +1625,8 @@ window.cargarTablaDestinatarios = function() {
                     '<td class="text-center">' + check(d.notif_7d) + '</td>' +
                     '<td><span class="badge ' + (d.activo?'bg-success':'bg-secondary') + '">' + (d.activo?'Activo':'Inactivo') + '</span></td>' +
                     '<td class="text-end">' +
-                        '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarDestinatario(' + d.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarDestinatario(' + d.id + ',\'' + d.nombre + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+                        (window.checkPerm('plan','e') ? '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarDestinatario(' + d.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' : '') +
+                        (window.checkPerm('plan','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarDestinatario(' + d.id + ',\'' + d.nombre + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' : '') +
                     '</td></tr>';
             }).join('');
         });
@@ -1648,6 +1671,7 @@ window.guardarDestinatario = function() {
     var get = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
     var chk = function(id){ var el=document.getElementById(id); return el?el.checked:false; };
     var destId = get('dest-id');
+    if (!window.guardAction('plan', destId ? 'e' : 'c')) return;
     var body = {
         nombre:          get('dest-nombre'),
         correo:          get('dest-correo'),
@@ -1672,6 +1696,7 @@ window.guardarDestinatario = function() {
 };
 
 window.eliminarDestinatario = function(id, nombre) {
+    if (!window.guardAction('plan', 'd')) return;
     if (!confirm('¿Eliminar a "' + nombre + '" de las alertas?')) return;
     fetch('/api/destinatarios-alertas/' + id, { method:'DELETE' })
         .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
