@@ -69,12 +69,13 @@ window.metricaRenderizar = function() {
             ? '<span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-clock me-1"></i>Horas Motor</span>'
             : '<span class="badge bg-secondary px-3 py-2" style="opacity:.45"><i class="bi bi-clock me-1"></i>Horas Motor</span>';
 
+        var canEdit = window.checkPerm('cfg_mant', 'e');
         var btnKm    = !esHoras
             ? '<button class="btn btn-xs btn-primary disabled" style="font-size:0.72rem;padding:2px 8px" disabled><i class="bi bi-check2"></i> KM activo</button>'
-            : '<button class="btn btn-xs btn-outline-primary" style="font-size:0.72rem;padding:2px 8px" onclick="window.metricaCambiar(\'' + r.placa + '\',\'km\')"><i class="bi bi-speedometer2"></i> Usar KM</button>';
+            : (canEdit ? '<button class="btn btn-xs btn-outline-primary" style="font-size:0.72rem;padding:2px 8px" onclick="window.metricaCambiar(\'' + r.placa + '\',\'km\')"><i class="bi bi-speedometer2"></i> Usar KM</button>' : '');
         var btnH     = esHoras
             ? '<button class="btn btn-xs btn-warning disabled text-dark" style="font-size:0.72rem;padding:2px 8px" disabled><i class="bi bi-check2"></i> Horas activo</button>'
-            : '<button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px" onclick="window.metricaCambiar(\'' + r.placa + '\',\'horas\')"><i class="bi bi-clock"></i> Usar Horas</button>';
+            : (canEdit ? '<button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px" onclick="window.metricaCambiar(\'' + r.placa + '\',\'horas\')"><i class="bi bi-clock"></i> Usar Horas</button>' : '');
 
         return '<tr>' +
             '<td class="fw-bold" style="font-family:monospace">' + (r.placa || '—') + '</td>' +
@@ -87,6 +88,7 @@ window.metricaRenderizar = function() {
 
 // ── Cambiar métrica ───────────────────────────────────────────────
 window.metricaCambiar = function(placa, metrica) {
+    if (!window.guardAction('cfg_mant', 'e')) return;
     fetch('/api/config-metrica/' + encodeURIComponent(placa), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

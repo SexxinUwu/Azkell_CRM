@@ -17,6 +17,8 @@ window['init_tipos-mp'] = function() {
         window.showNoPermMsg('root-dinamico');
         return;
     }
+    var btnNuevo = document.querySelector('[onclick*="tiposMpAbrirModal"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('cfg_mant','c') ? '' : 'none';
     window.tiposMpCargar();
 };
 
@@ -59,8 +61,8 @@ window.tiposMpFiltrar = function() {
             '<td><span class="badge bg-primary" style="font-size:0.78rem;letter-spacing:0.3px">' + _escHtml(t.nombre) + '</span></td>' +
             '<td style="color:var(--subtext); font-size:0.8rem">' + _escHtml(t.descripcion || '—') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.tiposMpEditar(' + t.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.tiposMpEliminar(' + t.id + ',\'' + (t.nombre || '').replace(/'/g, '') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_mant','e') ? '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.tiposMpEditar(' + t.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_mant','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.tiposMpEliminar(' + t.id + ',\'' + (t.nombre || '').replace(/'/g, '') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' : '') +
             '</td></tr>';
     }).join('');
 };
@@ -101,6 +103,7 @@ window.tiposMpEditar = function(id) {
 // ── Guardar ───────────────────────────────────────────────────────
 window.tiposMpGuardar = function() {
     var id     = (document.getElementById('tiposmp-id')     || {}).value || '';
+    if (!window.guardAction('cfg_mant', id ? 'e' : 'c')) return;
     var nombre = ((document.getElementById('tiposmp-nombre') || {}).value || '').trim().toUpperCase();
     var desc   = ((document.getElementById('tiposmp-desc')   || {}).value || '').trim();
     if (!nombre) return window.mostrarToast('El nombre es requerido', 'warning');
@@ -123,6 +126,7 @@ window.tiposMpGuardar = function() {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.tiposMpEliminar = function(id, nombre) {
+    if (!window.guardAction('cfg_mant', 'd')) return;
     if (!confirm('¿Eliminar el tipo "' + nombre + '"?\nSe mantendrán los registros históricos.')) return;
     fetch('/api/tipos-preventivo/' + id, { method: 'DELETE' })
         .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error); }); })

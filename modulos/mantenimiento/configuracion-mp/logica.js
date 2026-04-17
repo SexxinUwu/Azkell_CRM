@@ -18,6 +18,8 @@ window['init_configuracion-mp'] = function() {
         window.showNoPermMsg('root-dinamico');
         return;
     }
+    var btnNuevo = document.querySelector('[onclick*="abrirModalConfigFlota"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('cfg_mant','c') ? '' : 'none';
     // Registrar callback: al seleccionar una marca en el filtro, disparar filtrado
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('cfg-flota-fil-marca', function() { window.filtrarTablaConfigFlota(); });

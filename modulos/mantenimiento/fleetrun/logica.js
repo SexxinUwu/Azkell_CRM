@@ -895,7 +895,8 @@ window.init_fleetrun = function() {
         window.showNoPermMsg('mod-fleetrun');
         return;
     }
-    // El router re-inyecta el HTML → el canvas es nuevo → destruir instancia anterior del gráfico
+    var btnNuevoFR = document.getElementById('btnNuevoFleetrun');
+    if (btnNuevoFR) btnNuevoFR.style.display = window.checkPerm('fleet','c') ? '' : 'none';
     if (window.chartFleetrunInst) {
         window.chartFleetrunInst.destroy();
         window.chartFleetrunInst = null;

@@ -362,8 +362,8 @@ function _invRenderCard(d) {
                 '</div>' +
             '</div>' +
             '<div class="card-footer p-1 bg-transparent border-top d-flex gap-1 justify-content-end">' +
-                '<button class="btn btn-xs btn-outline-primary" title="Editar" onclick="window.abrirModalInventario(\'' + id + '\')"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" title="Eliminar" onclick="window.eliminarArticuloInv(\'' + id + '\')"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('inv','e') ? '<button class="btn btn-xs btn-outline-primary" title="Editar" onclick="window.abrirModalInventario(\'' + id + '\')"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('inv','d') ? '<button class="btn btn-xs btn-outline-danger" title="Eliminar" onclick="window.eliminarArticuloInv(\'' + id + '\')"><i class="bi bi-trash"></i></button>' : '') +
             '</div>' +
         '</div>' +
     '</div>';

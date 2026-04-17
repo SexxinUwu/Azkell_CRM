@@ -347,6 +347,7 @@ function _guCollectPermisos() {
 }
 
 window.guGuardarRol = async function() {
+    if (!window.guardAction('seg', window._guEsNuevo ? 'c' : 'e')) return;
     var nombreEl = document.getElementById('guRolNombre');
     var colorEl  = document.getElementById('guRolColor');
     var adminEl  = document.getElementById('pt-admin');
@@ -378,6 +379,7 @@ window.guGuardarRol = async function() {
 };
 
 window.guEliminarRol = async function(id) {
+    if (!window.guardAction('seg', 'd')) return;
     if (!confirm('¿Eliminar este rol?')) return;
     try {
         var res = await fetch('/api/roles/'+id, { method:'DELETE' });
@@ -534,6 +536,8 @@ window.guNuevoMiembro = function() {
 };
 
 window.guGuardarUsuario = async function() {
+    var esNuevoUser = !(window._guSeleccionado && window._guSeleccionado.id !== 'nuevo');
+    if (!window.guardAction('seg', esNuevoUser ? 'c' : 'e')) return;
     var nombre   = (document.getElementById('guUserNombre')  ||{}).value || '';
     var cargo    = (document.getElementById('guUserCargo')   ||{}).value || '';
     var correo   = (document.getElementById('guUserCorreo')  ||{}).value || '';
@@ -571,6 +575,7 @@ window.guGuardarUsuario = async function() {
 };
 
 window.guEliminarUsuario = async function(id) {
+    if (!window.guardAction('seg', 'd')) return;
     if (!confirm('¿Eliminar este usuario permanentemente?')) return;
     try {
         await fetch('/api/script/eliminarDocumento', {
