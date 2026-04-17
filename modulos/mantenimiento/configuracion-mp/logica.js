@@ -14,6 +14,10 @@ window.cmpImportRows   = window.cmpImportRows   || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_configuracion-mp'] = function() {
+    if (!window.checkPerm('cfg_mant', 'l')) {
+        window.showNoPermMsg('root-dinamico');
+        return;
+    }
     // Registrar callback: al seleccionar una marca en el filtro, disparar filtrado
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('cfg-flota-fil-marca', function() { window.filtrarTablaConfigFlota(); });

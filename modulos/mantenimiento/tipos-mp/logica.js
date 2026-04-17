@@ -13,6 +13,10 @@ function _tiposBsModal(el) {
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_tipos-mp'] = function() {
+    if (!window.checkPerm('cfg_mant', 'l')) {
+        window.showNoPermMsg('root-dinamico');
+        return;
+    }
     window.tiposMpCargar();
 };
 

@@ -14,6 +14,12 @@ window._kitsAlmacenItems = window._kitsAlmacenItems || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_kits-mp'] = function() {
+    if (!window.checkPerm('cfg_mant', 'l')) {
+        window.showNoPermMsg('mod-kits-mp');
+        return;
+    }
+    var btnNuevo = document.querySelector('#mod-kits-mp .btn-primary[onclick*="kitsAbrirModal"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('cfg_mant','c') ? '' : 'none';
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('kits-fil-marca', function() { window.kitsFiltrar(); });
         window._cbOnSelect('kits-fil-tipo',  function() { window.kitsFiltrar(); });
@@ -181,8 +187,8 @@ window.kitsFiltrar = function() {
             '<td>S/.' + parseFloat(k.costo_unitario||0).toFixed(2) + '</td>' +
             '<td class="fw-bold">S/.' + parseFloat(k.costo_total||0).toFixed(2) + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.kitsEditar('+k.id+')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.kitsEliminar('+k.id+',\''+((k.item_nombre||'').replace(/'/g,''))+'\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_mant','e') ? '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.kitsEditar('+k.id+')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_mant','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.kitsEliminar('+k.id+',\''+((k.item_nombre||'').replace(/'/g,''))+'\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' : '') +
             '</td></tr>';
     });
     tb.innerHTML = html;
@@ -235,6 +241,8 @@ window.kitsCalcularTotal = function() {
 // ── Guardar ───────────────────────────────────────────────────────
 window.kitsGuardar = function() {
     var get = function(id){ var el=document.getElementById(id); return el?el.value.trim():''; };
+    var id = get('kits-edit-id');
+    if (!window.guardAction('cfg_mant', id ? 'e' : 'c')) return;
     // Para comboboxes: leer hidden; si vacío, leer txt (entrada libre)
     var getCombo = function(id) {
         var hid = document.getElementById(id);
@@ -270,9 +278,82 @@ window.kitsGuardar = function() {
 
 // ── Eliminar ──────────────────────────────────────────────────────
 window.kitsEliminar = function(id, label) {
+    if (!window.guardAction('cfg_mant', 'd')) return;
     if (!confirm('¿Eliminar "' + label + '"?')) return;
     fetch('/api/mantenimiento-kits/'+id, { method:'DELETE' })
         .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
         .then(function(){ window.mostrarToast('Ítem eliminado', 'success'); window.kitsCargarTabla(); })
         .catch(function(e){ window.mostrarToast('Error: ' + e.message, 'error'); });
+};
+
+// ── Exportar Excel ────────────────────────────────────────────────
+window.kitsExportarExcel = function() {
+    var datos = window.kitsData || [];
+    if (!datos.length) { alert('No hay kits para exportar.'); return; }
+    var wb = XLSX.utils.book_new();
+    var filas = [['ID','Marca Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.','Costo Total']];
+    datos.forEach(function(k) {
+        filas.push([k.id||'', k.marca_vehiculo||'', k.tipo_mp||'', k.nombre_kit||'',
+            k.item_nombre||'', k.cantidad||0, k.unidad_medida||'',
+            parseFloat(k.costo_unitario||0).toFixed(2), parseFloat(k.costo_total||0).toFixed(2)]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [6,16,8,20,28,8,10,10,10].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, 'Kits MP');
+    XLSX.writeFile(wb, 'KitsMP_'+new Date().toISOString().slice(0,10)+'.xlsx');
+};
+
+// ── Descargar Plantilla ───────────────────────────────────────────
+window.kitsDescargarPlantilla = function() {
+    var wb = XLSX.utils.book_new();
+    var filas = [
+        ['Marca Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.'],
+        ['VOLVO','MP1','Kit 15K','Filtro de Aceite',1,'UND',25.00],
+        ['VOLVO','MP1','Kit 15K','Aceite Motor 15W40',12,'LT',18.50]
+    ];
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [16,8,20,28,8,10,10].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+    XLSX.writeFile(wb, 'Plantilla_KitsMP.xlsx');
+};
+
+// ── Importar Excel ────────────────────────────────────────────────
+window.kitsImportarExcel = function(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var wb = XLSX.read(e.target.result, { type: 'array' });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!rows.length) { alert('El archivo está vacío.'); return; }
+            var payload = rows.map(function(r) {
+                return {
+                    marca_vehiculo: String(r['Marca Vehículo'] || r.marca_vehiculo || '').trim().toUpperCase(),
+                    tipo_mp:        String(r['Tipo MP']         || r.tipo_mp        || '').trim().toUpperCase(),
+                    nombre_kit:     String(r['Nombre Kit']      || r.nombre_kit     || '').trim(),
+                    item_nombre:    String(r['Ítem (Artículo)'] || r['Item (Articulo)'] || r.item_nombre || '').trim(),
+                    cantidad:       parseFloat(r['Cantidad']    || r.cantidad       || 0),
+                    unidad_medida:  String(r['Unidad']          || r.unidad_medida  || '').trim(),
+                    costo_unitario: parseFloat(r['Costo Unit.'] || r.costo_unitario || 0)
+                };
+            }).filter(function(r) { return r.marca_vehiculo && r.nombre_kit; });
+            if (!payload.length) { alert('No se encontraron filas válidas.'); return; }
+            if (!confirm('Se importarán ' + payload.length + ' ítems de kit. ¿Continuar?')) return;
+            fetch('/api/mantenimiento-kits/importarMasivo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: payload })
+            })
+            .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+            .then(function(res) {
+                alert('Importados: ' + res.insertados + ' nuevos, ' + (res.actualizados||0) + ' actualizados.');
+                window.kitsCargarTabla();
+            })
+            .catch(function(err) { alert('Error: ' + err.message); });
+        } catch(ex) { alert('Error leyendo Excel: ' + ex.message); }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
 };

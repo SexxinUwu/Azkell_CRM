@@ -699,10 +699,24 @@ window.initGraficoFleetrun = function() {
         },
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '65%',
-            layout: { padding: { top: 20, left: 20, right: 20, bottom: 5 } },
+            layout: { padding: 6 },
             plugins: {
-                legend: { position: 'bottom', labels: { font: { family: 'Inter', weight: 'bold' } } },
-                datalabels: { display: false }
+                legend: { position: 'right', labels: { font: { family: 'Inter', weight: 'bold', size: 11 }, boxWidth: 12, padding: 8 } },
+                datalabels: {
+                    display: function(ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
+                        return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
+                    },
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 11, family: 'Inter' },
+                    formatter: function(value, ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
+                        return Math.round(value/total*100)+'%';
+                    },
+                    anchor: 'center', align: 'center'
+                }
             },
             onClick: (e, elements, chart) => {
                 if (elements.length > 0 && chart.data.labels[0] !== 'Sin Datos') {
@@ -714,40 +728,7 @@ window.initGraficoFleetrun = function() {
                     filtrarFleetrunAvanzado();
                 }
             }
-        },
-        plugins: [{
-            id: 'externalPctFR',
-            afterDraw(chart) {
-                const ctx2 = chart.ctx, meta = chart.getDatasetMeta(0);
-                const total = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                if (!total || chart.data.labels[0]==='Sin Datos') return;
-                const ca = chart.chartArea;
-                const cx = (ca.left+ca.right)/2, cy = (ca.top+ca.bottom)/2;
-                ctx2.save(); ctx2.font = 'bold 10px Inter,sans-serif';
-                const items = [];
-                meta.data.forEach((arc,i) => {
-                    const val = chart.data.datasets[0].data[i]; if (!val) return;
-                    const mid = (arc.startAngle+arc.endAngle)/2, r = arc.outerRadius;
-                    items.push({ arc,i,val,mid,r, px:cx+Math.cos(mid)*(r+18), py:cy+Math.sin(mid)*(r+18),
-                        right:Math.cos(mid)>=0, color:chart.data.datasets[0].backgroundColor[i],
-                        pct:Math.round(val/total*100)+'%' });
-                });
-                ['right','left'].forEach(side => {
-                    const grp = items.filter(it=>it.right===(side==='right')).sort((a,b)=>a.py-b.py);
-                    for (let k=1;k<grp.length;k++) { if(grp[k].py-grp[k-1].py<16) grp[k].py=grp[k-1].py+16; }
-                });
-                items.forEach(it => {
-                    const ox=cx+Math.cos(it.mid)*it.r, oy=cy+Math.sin(it.mid)*it.r;
-                    const ex=cx+Math.cos(it.mid)*(it.r+10), ey=cy+Math.sin(it.mid)*(it.r+10);
-                    const endX = it.right ? Math.min(ca.right-4,it.px+14) : Math.max(ca.left+4,it.px-14);
-                    ctx2.strokeStyle=it.color; ctx2.lineWidth=1.5;
-                    ctx2.beginPath(); ctx2.moveTo(ox,oy); ctx2.lineTo(ex,ey); ctx2.lineTo(endX,it.py); ctx2.stroke();
-                    ctx2.fillStyle=it.color; ctx2.textAlign=it.right?'left':'right'; ctx2.textBaseline='middle';
-                    ctx2.fillText(it.pct, endX+(it.right?3:-3), it.py);
-                });
-                ctx2.restore();
-            }
-        }]
+        }
     });
 };
 
@@ -841,45 +822,26 @@ window.initGraficoDashFleetrun = function() {
         },
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '65%',
-            layout: { padding: { top: 20, left: 20, right: 20, bottom: 5 } },
+            layout: { padding: 6 },
             plugins: {
-                legend: { position: 'bottom', labels: { font: { weight: 'bold' } } },
-                datalabels: { display: false }
+                legend: { position: 'right', labels: { font: { weight: 'bold', size: 11 }, boxWidth: 12, padding: 8 } },
+                datalabels: {
+                    display: function(ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
+                        return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
+                    },
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 11, family: 'Inter' },
+                    formatter: function(value, ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
+                        return Math.round(value/total*100)+'%';
+                    },
+                    anchor: 'center', align: 'center'
+                }
             }
-        },
-        plugins: [{
-            id: 'externalPctFRDash',
-            afterDraw(chart) {
-                const ctx2 = chart.ctx, meta = chart.getDatasetMeta(0);
-                const total = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                if (!total || chart.data.labels[0]==='Sin Datos') return;
-                const ca = chart.chartArea;
-                const cx = (ca.left+ca.right)/2, cy = (ca.top+ca.bottom)/2;
-                ctx2.save(); ctx2.font = 'bold 10px Inter,sans-serif';
-                const items = [];
-                meta.data.forEach((arc,i) => {
-                    const val = chart.data.datasets[0].data[i]; if (!val) return;
-                    const mid = (arc.startAngle+arc.endAngle)/2, r = arc.outerRadius;
-                    items.push({ arc,i,val,mid,r, px:cx+Math.cos(mid)*(r+18), py:cy+Math.sin(mid)*(r+18),
-                        right:Math.cos(mid)>=0, color:chart.data.datasets[0].backgroundColor[i],
-                        pct:Math.round(val/total*100)+'%' });
-                });
-                ['right','left'].forEach(side => {
-                    const grp = items.filter(it=>it.right===(side==='right')).sort((a,b)=>a.py-b.py);
-                    for (let k=1;k<grp.length;k++) { if(grp[k].py-grp[k-1].py<16) grp[k].py=grp[k-1].py+16; }
-                });
-                items.forEach(it => {
-                    const ox=cx+Math.cos(it.mid)*it.r, oy=cy+Math.sin(it.mid)*it.r;
-                    const ex=cx+Math.cos(it.mid)*(it.r+10), ey=cy+Math.sin(it.mid)*(it.r+10);
-                    const endX = it.right ? Math.min(ca.right-4,it.px+14) : Math.max(ca.left+4,it.px-14);
-                    ctx2.strokeStyle=it.color; ctx2.lineWidth=1.5;
-                    ctx2.beginPath(); ctx2.moveTo(ox,oy); ctx2.lineTo(ex,ey); ctx2.lineTo(endX,it.py); ctx2.stroke();
-                    ctx2.fillStyle=it.color; ctx2.textAlign=it.right?'left':'right'; ctx2.textBaseline='middle';
-                    ctx2.fillText(it.pct, endX+(it.right?3:-3), it.py);
-                });
-                ctx2.restore();
-            }
-        }]
+        }
     });
 };
 
