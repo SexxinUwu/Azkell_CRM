@@ -13,6 +13,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones',    lcad:true  },
     { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',           lcad:true  },
     { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificación',    desc:'MPs planificadas vs ejecutadas',          lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'cfg_mant',      nombre:'Config. Preventivos', desc:'Frecuencias MP, Kits, Tipos, Métrica (solo admin)', lcad:true  },
     // ALMACÉN
     { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',           lcad:true  },
     { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos y stock',          lcad:true  },

@@ -8,6 +8,10 @@ window.metricaDataFil = window.metricaDataFil || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_config-metrica'] = function() {
+    if (!window.checkPerm('cfg_mant', 'l')) {
+        window.showNoPermMsg('root-dinamico');
+        return;
+    }
     window.metricaCargar();
 };
 

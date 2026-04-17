@@ -12,6 +12,22 @@
               onclick="window.kitsCargarTabla()">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
+      <!-- Importar -->
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
+        </button>
+        <ul class="dropdown-menu shadow">
+          <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.kitsDescargarPlantilla()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileKits').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
+        </ul>
+      </div>
+      <input type="file" id="inputFileKits" accept=".xlsx,.xls" style="display:none;" onchange="window.kitsImportarExcel(event)">
+      <!-- Exportar -->
+      <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.kitsExportarExcel()">
+        <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
+      </button>
       <button class="btn btn-sm btn-primary fw-bold" onclick="window.kitsAbrirModal()">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Ítem de Kit
       </button>

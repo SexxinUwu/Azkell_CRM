@@ -184,7 +184,12 @@ window.verificarSesionGuardada = function() {
     let perfilBadge = document.getElementById('perfil-rol-badge'); if (perfilBadge) perfilBadge.innerHTML = rolHtml;
 
     // --- Helpers de visibilidad ---
-    const safe = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    const safe = (id, show) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (show) { el.style.removeProperty('display'); }
+        else { el.style.setProperty('display', 'none', 'important'); }
+    };
     const sec = (wrapId, collapseId, show) => {
         const w = document.getElementById(wrapId);
         const c = collapseId ? document.getElementById(collapseId) : null;
@@ -192,46 +197,86 @@ window.verificarSesionGuardada = function() {
         if (c) { if (show) c.style.removeProperty('display'); else { c.classList.remove('show'); c.style.display = 'none'; } }
     };
 
-    // --- Ocultar todo primero ---
-    ['wrap-mantenimiento', 'wrap-almacen', 'wrap-flota', 'wrap-directorio', 'wrap-usuarios', 'wrap-auditoria']
-        .forEach(id => safe(id, false));
-    ['menuMantenimiento', 'menuAlmacen', 'menuFlota'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.classList.remove('show'); el.style.display = 'none'; }
-    });
+    // ── VISIBILIDAD DEL MENÚ (nivel Google/Microsoft) ─────────────────
+    // Regla: cada nav-item se oculta si checkPerm(key,'l') === false.
+    // La sección entera se oculta si NINGÚN ítem de ella es visible.
 
-    // --- Visibilidad por permisos ---
-    const showMant  = isAdm || p?.insp?.l  || p?.fleet?.l || p?.plan?.l;
-    const showAlm   = isAdm || p?.placas?.l || p?.inv?.l  || p?.ent_inv?.l || p?.sal_inv?.l ||
-                      p?.prov_inv?.l || p?.kardex    || p?.costos_inv || p?.cfg_almacen?.l;
-    const showFlota = isAdm || p?.gps?.l   || p?.status?.l || p?.cond?.l;
-    const showDir   = isAdm || p?.cond?.l;
+    var _cL = function(key) { return isAdm || window.checkPerm(key, 'l'); };
 
-    sec('wrap-mantenimiento', 'menuMantenimiento', showMant);
-    safe('btnMenuStatusMant', isAdm || p?.insp?.l);
-    safe('btnMenuPlacasMant', isAdm || p?.placas?.l);
-    safe('btnMenuFleetrun',   isAdm || p?.fleet?.l);
+    // MANTENIMIENTO — ítems individuales
+    var vInsp    = _cL('insp');
+    var vPlacas  = _cL('placas');
+    var vFleet   = _cL('fleet');
+    var vPlan    = _cL('plan');
+    var vCfgMant = _cL('cfg_mant'); // Config. Preventivos: clave propia, admin-only por defecto
 
-    sec('wrap-almacen', 'menuAlmacen', showAlm);
-    safe('nav-inventario',   isAdm || p?.inv?.l);
-    safe('nav-entradas-inv', isAdm || p?.ent_inv?.l);
-    safe('nav-salidas-inv',  isAdm || p?.sal_inv?.l);
-    safe('nav-proveedores-inv', isAdm || p?.prov_inv?.l);
-    safe('nav-kardex',       isAdm || !!(p?.kardex));
-    safe('nav-costos-inv',   isAdm || !!(p?.costos_inv));
-    safe('nav-familias-inv', isAdm || p?.cfg_almacen?.l);
-    safe('nav-unidades-inv', isAdm || p?.cfg_almacen?.l);
-    safe('nav-sistemas-inv', isAdm || p?.cfg_almacen?.l);
-    safe('nav-marcas-inv',   isAdm || p?.cfg_almacen?.l);
+    safe('nav-inspecciones',     vInsp);
+    safe('nav-placas',           vPlacas);
+    safe('nav-fleetrun',         vFleet);
+    safe('nav-planificacion',    vPlan);
+    safe('nav-configuracion-mp', vCfgMant);
+    safe('nav-kits-mp',          vCfgMant);
+    safe('nav-tipos-mp',         vCfgMant);
+    safe('nav-config-metrica',   vCfgMant);
 
-    sec('wrap-flota', 'menuFlota', showFlota);
-    safe('btnMenuUbicacion',   isAdm || p?.gps?.l);
-    safe('btnMenuStatusFlota', isAdm || p?.status?.l);
-    safe('btnMenuConductores', isAdm || p?.cond?.l);
+    // Sub-labels del grupo Mantenimiento
+    var subsMant = document.querySelectorAll('#section-items-mantenimiento .nav-sub-label');
+    if (subsMant[0]) subsMant[0].style.display = (vInsp || vPlacas) ? '' : 'none'; // "Preventivo"
+    if (subsMant[1]) subsMant[1].style.display = vCfgMant ? '' : 'none'; // "Config. Preventivos"
 
-    sec('wrap-directorio', null, showDir);
-    safe('wrap-usuarios',  isAdm || !!(p?.seg?.l));
-    safe('wrap-auditoria', isAdm || !!(p?.mod_auditoria?.l));
+    var showMant = vInsp || vPlacas || vFleet || vPlan || vCfgMant;
+    safe('wrap-mantenimiento', showMant);
+
+    // ALMACÉN — ítems individuales
+    var vInv     = _cL('inv');
+    var vEnt     = _cL('ent_inv');
+    var vSal     = _cL('sal_inv');
+    var vProv    = _cL('prov_inv');
+    var vKardex  = _cL('kardex');
+    var vCostos  = _cL('costos_inv');
+    var vCfgAlm  = _cL('cfg_almacen');
+
+    safe('nav-inventario',      vInv);
+    safe('nav-entradas-inv',    vEnt);
+    safe('nav-salidas-inv',     vSal);
+    safe('nav-proveedores-inv', vProv);
+    safe('nav-kardex',          vKardex);
+    safe('nav-costos-inv',      vCostos);
+    safe('nav-familias-inv',    vCfgAlm);
+    safe('nav-unidades-inv',    vCfgAlm);
+    safe('nav-sistemas-inv',    vCfgAlm);
+    safe('nav-marcas-inv',      vCfgAlm);
+
+    // Sub-label "Config. Almacén"
+    var subsAlm = document.querySelectorAll('#section-items-almacen .nav-sub-label');
+    if (subsAlm[0]) subsAlm[0].style.display = vCfgAlm ? '' : 'none';
+
+    var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos || vCfgAlm;
+    safe('wrap-almacen', showAlm);
+
+    // FLOTA — ítems individuales
+    var vGps    = _cL('gps');
+    var vStatus = _cL('status');
+    var vCond   = _cL('cond');
+
+    safe('nav-ubicacion',    vGps);
+    safe('nav-status-flota', vStatus);
+    safe('nav-conductores',  vCond);
+    safe('nav-talleres',     false); // no implementado aún
+
+    var showFlota = vGps || vStatus || vCond;
+    safe('wrap-flota', showFlota);
+    safe('wrap-directorio', vCond);
+
+    // SISTEMA — solo admin ve usuarios; auditoria puede tener permiso propio
+    var vSeg   = isAdm;
+    var vAudit = isAdm || window.checkPerm('mod_auditoria', 'l');
+
+    safe('nav-usuarios',  vSeg);
+    safe('nav-auditoria', vAudit);
+    safe('wrap-usuarios',  vSeg);
+    safe('wrap-auditoria', vAudit);
+    // ─────────────────────────────────────────────────────────────────
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---
     let rootDinamico = document.getElementById('root-dinamico');
@@ -837,7 +882,8 @@ window.enforceModuleUI = function(modKey) {
     document.querySelectorAll('[data-perm-d]').forEach(function(el){ if(el.dataset.permD===modKey){ el.style.display=pD?'':'none'; } });
 };
 
-// ── PDF Ficha Individual de Placa ────────────────────────────────window.exportarFichaPlacaPDF = function(placaArg) {
+// ── PDF Ficha Individual de Placa ────────────────────────────────
+window.exportarFichaPlacaPDF = function(placaArg) {
     var placa = (placaArg || (document.getElementById('det-placa-titulo')||{}).innerText || window._odpPlacaActual || '').toString().toUpperCase().trim();
     if (!placa) return;
     var p = (window.dataGlobalPlacas||[]).find(function(x){ return (x[0]||'').toUpperCase()===placa; });
@@ -2375,17 +2421,23 @@ function initGrafico(canvasId) {
         data: { labels: ['Vigentes', 'Vencidas'], datasets: [{ data: [1], backgroundColor: ['#475569'], borderWidth: 2, hoverOffset: 4 }] },
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '65%',
-            layout: { padding: { left: 10, right: 10, top: 10, bottom: 10 } },
+            layout: { padding: 6 },
             plugins: {
-                legend: { position: 'bottom', labels: { font: {family: 'Inter', weight: 'bold'} } },
+                legend: { position: 'right', labels: { font: {family: 'Inter', weight: 'bold', size: 11}, boxWidth: 12, padding: 8 } },
                 datalabels: {
-                    color: '#000000',
-                    font: { weight: 'bold', size: 12, family: 'Inter' },
-                    formatter: (value, context) => {
-                        let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                        if (total === 0 || value === 0 || context.chart.data.labels[0]==='Sin Datos') return "";
-                        return Math.round((value / total) * 100) + "%";
-                    }
+                    display: function(ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
+                        return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
+                    },
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 11, family: 'Inter' },
+                    formatter: function(value, ctx) {
+                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
+                        return Math.round(value/total*100)+'%';
+                    },
+                    anchor: 'center', align: 'center'
                 }
             }
         }

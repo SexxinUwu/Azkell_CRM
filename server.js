@@ -3411,8 +3411,25 @@ app.delete('/api/mantenimiento-kits/:id', (req, res) => {
     });
 });
 
-// ============================================================
-// CRUD REQUERIMIENTOS PLANIFICACION (ya tiene GET, agregar PUT y DELETE manual)
+// POST /api/mantenimiento-kits/importarMasivo
+app.post('/api/mantenimiento-kits/importarMasivo', (req, res) => {
+    const items = req.body.items;
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'Sin datos' });
+    let insertados = 0, errores = 0;
+    const done = () => { if (insertados + errores === items.length) res.json({ insertados, errores }); };
+    items.forEach(function(k) {
+        const costo_total = (parseFloat(k.cantidad)||0) * (parseFloat(k.costo_unitario)||0);
+        db.query(
+            `INSERT INTO mantenimiento_kits (marca_vehiculo, tipo_mp, nombre_kit, item_nombre, cantidad, unidad_medida, costo_unitario, costo_total)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [k.marca_vehiculo||'', k.tipo_mp||'', k.nombre_kit||'', k.item_nombre||'',
+             parseFloat(k.cantidad)||0, k.unidad_medida||'', parseFloat(k.costo_unitario)||0, costo_total],
+            (err) => { if (err) errores++; else insertados++; done(); }
+        );
+    });
+});
+
+
 // ============================================================
 app.put('/api/requerimientos-planificacion/:id', (req, res) => {
     const { id } = req.params;
