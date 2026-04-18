@@ -217,6 +217,22 @@
     background: rgba(88,101,242,0.05);
 }
 
+/* ── OT Detalle — clases compartidas con Reportes OT ────────── */
+.rot-sec { border:1px solid var(--border); border-radius:8px; margin-top:1rem; overflow:hidden; }
+.rot-sec-hd { background:var(--bg); padding:7px 12px; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--subtext); border-bottom:1px solid var(--border); }
+.rot-field { display:flex; padding:8px 12px; border-bottom:1px solid var(--border); font-size:0.82rem; }
+.rot-field:last-child { border-bottom:none; }
+.rot-field-lbl { width:40%; color:var(--subtext); font-weight:600; font-size:0.77rem; padding-right:6px; flex-shrink:0; }
+.rot-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
+.rot-id-bar { background:rgba(88,101,242,0.06); border:1px solid rgba(88,101,242,0.2); border-radius:8px; padding:10px 14px; margin-bottom:1.25rem; display:flex; align-items:center; justify-content:space-between; }
+.rot-id-num { font-size:1.1rem; font-weight:800; color:var(--primary,#5865F2); }
+.rot-id-lbl { font-size:0.7rem; font-weight:700; color:var(--primary,#5865F2); text-transform:uppercase; }
+.rot-badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; }
+.rot-b-pendiente { background:rgba(217,119,6,0.12);  color:#d97706; }
+.rot-b-aprobada  { background:rgba(22,163,74,0.12);   color:#16a34a; }
+.rot-b-cerrada   { background:rgba(88,101,242,0.12);  color:var(--primary,#5865F2); }
+.rot-b-anulado   { background:rgba(220,38,38,0.12);   color:#dc2626; }
+
 /* Drawer modal de registro */
 #srDrawerBackdrop {
     display: none;
@@ -294,8 +310,8 @@
                         <th>Hora</th>
                         <th>Placa</th>
                         <th>Situación</th>
-                        <th>Semaforización</th>
-                        <th>Fecha Salida</th>
+                        <th>Observaciones</th>
+                        <th>Fecha Salida (Est.)</th>
                         <th>Hora</th>
                         <th>OT Relacionadas</th>
                         <th style="width:90px"></th>
@@ -355,8 +371,9 @@
         <div class="mb-3">
             <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa *</label>
             <input type="text" class="form-control form-control-sm" id="sr-f-placa"
-                placeholder="Ej. ATP-999" maxlength="15" style="text-transform:uppercase;"
-                oninput="this.value=this.value.toUpperCase()">
+                list="sr-placas-dl" placeholder="Buscar placa..." autocomplete="off"
+                oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase;">
+            <datalist id="sr-placas-dl"></datalist>
         </div>
 
         <div class="mb-3">
@@ -372,6 +389,17 @@
             <div class="col-6">
                 <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Ingreso</label>
                 <input type="time" class="form-control form-control-sm" id="sr-f-hora-ing">
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Salida (Est.)</label>
+                <input type="date" class="form-control form-control-sm" id="sr-f-fecha-sal">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Salida (Est.)</label>
+                <input type="time" class="form-control form-control-sm" id="sr-f-hora-sal">
             </div>
         </div>
 
@@ -404,15 +432,16 @@
         </button>
     </div>
     <div class="sr-drawer-body">
-        <div style="background:rgba(88,101,242,0.06); border:1px solid rgba(88,101,242,0.2); border-radius:8px; padding:10px 14px; margin-bottom:1.25rem; display:flex; align-items:center; gap:10px;">
-            <i class="bi bi-geo-alt-fill" style="color:var(--primary,#5865F2); font-size:1.1rem;"></i>
+        <!-- Mini header placa / rampa -->
+        <div style="background:rgba(88,101,242,0.06);border:1px solid rgba(88,101,242,0.2);border-radius:8px;padding:10px 14px;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px;">
+            <i class="bi bi-geo-alt-fill" style="color:var(--primary,#5865F2);font-size:1.1rem;"></i>
             <div>
-                <div style="font-size:0.7rem; font-weight:700; color:var(--primary,#5865F2); text-transform:uppercase; letter-spacing:0.04em;">Placa</div>
-                <div style="font-size:1.05rem; font-weight:800; color:var(--text);" id="sr-ot-placa-disp">—</div>
+                <div style="font-size:0.68rem;font-weight:700;color:var(--primary,#5865F2);text-transform:uppercase;letter-spacing:0.04em;">Placa</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);" id="sr-ot-placa-disp">—</div>
             </div>
-            <div style="margin-left:auto; text-align:right;">
-                <div style="font-size:0.7rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Rampa</div>
-                <div style="font-size:1rem; font-weight:800; color:var(--text);" id="sr-ot-rampa-disp">—</div>
+            <div style="margin-left:auto;text-align:right;">
+                <div style="font-size:0.68rem;font-weight:700;color:var(--subtext);text-transform:uppercase;">Rampa</div>
+                <div style="font-size:1rem;font-weight:800;color:var(--text);" id="sr-ot-rampa-disp">—</div>
             </div>
         </div>
 
@@ -420,42 +449,187 @@
         <input type="hidden" id="sr-ot-rampa-hid">
 
         <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tipo OT *</label>
-                <select class="form-select form-select-sm" id="sr-ot-tipo">
-                    <option value="">— Seleccionar —</option>
-                    <option value="Preventivo">Preventivo</option>
-                    <option value="Correctivo">Correctivo</option>
-                </select>
+            <div class="col-7">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Ingreso</label>
+                <input type="text" class="form-control form-control-sm" id="sr-ot-fecha-ing" readonly style="background:var(--bg);">
             </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Sub Tipo *</label>
-                <select class="form-select form-select-sm" id="sr-ot-subtipo">
-                    <option value="">— Seleccionar —</option>
-                    <option value="Inspección">Inspección</option>
-                    <option value="Rutina">Rutina</option>
-                    <option value="Cambio de aceite">Cambio de aceite</option>
-                    <option value="Falla mecánica">Falla mecánica</option>
-                    <option value="Falla eléctrica">Falla eléctrica</option>
-                    <option value="Neumáticos">Neumáticos</option>
-                    <option value="Carrocería">Carrocería</option>
-                    <option value="Otro">Otro</option>
-                </select>
+            <div class="col-5">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Kilometraje</label>
+                <input type="number" class="form-control form-control-sm" id="sr-ot-km" placeholder="0" min="0">
             </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Supervisor</label>
-            <input type="text" class="form-control form-control-sm" id="sr-ot-supervisor" placeholder="Nombre del supervisor">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Motivo de Ingreso / Observaciones</label>
+            <textarea class="form-control form-control-sm" id="sr-ot-motivo" rows="2" placeholder="Describe el motivo..."></textarea>
         </div>
 
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Motivo / Observaciones</label>
-            <textarea class="form-control form-control-sm" id="sr-ot-motivo" rows="3" placeholder="Describe el motivo del trabajo..."></textarea>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo OT *</label>
+                <select class="form-select form-select-sm" id="sr-ot-tipo" onchange="window.srCambiarTipoOT()">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                    <option value="Predictivo">Predictivo</option>
+                    <option value="Proactivo">Proactivo</option>
+                    <option value="Servicio">Servicio</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Sub Tipo OT *</label>
+                <select class="form-select form-select-sm" id="sr-ot-subtipo" disabled>
+                    <option value="">— Seleccionar tipo primero —</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-4">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Supervisor Responsable</label>
+                <select class="form-select form-select-sm" id="sr-ot-supervisor">
+                    <option value="">— Seleccionar —</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Situación Inicial</label>
+                <select class="form-select form-select-sm" id="sr-ot-situacion">
+                    <option value="">— Seleccionar —</option>
+                </select>
+            </div>
         </div>
 
         <button class="btn btn-success w-100 fw-bold" onclick="window.srEnviarOT()">
-            <i class="bi bi-file-earmark-plus me-1"></i>Generar OT
+            <i class="bi bi-file-earmark-plus me-1"></i>Generar Orden de Trabajo
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ DRAWER: Detalle OT ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-ot-det">
+    <div class="sr-drawer-hd">
+        <div>
+            <div class="sr-drawer-title" id="sr-ot-det-titulo">OT-2026-0001</div>
+            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-ot-det-placa"></div>
+        </div>
+        <button class="btn btn-sm" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body" id="sr-ot-det-scroll"></div>
+    <div style="padding:0.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0;" id="sr-ot-det-footer"></div>
+</div>
+
+<!-- ═══════════════ DRAWER: Agregar Trabajo ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-trabajo">
+    <div class="sr-drawer-hd">
+        <div>
+            <div class="sr-drawer-title">Agregar Trabajo</div>
+            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-tr-ot-lbl"></div>
+        </div>
+        <button class="btn btn-sm" onclick="window.srCerrarSubDrawer('sr-drawer-trabajo')" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <input type="hidden" id="sr-tr-ot-id">
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Descripción del Trabajo *</label>
+            <textarea class="form-control form-control-sm" id="sr-tr-desc" rows="3" placeholder="Detalla el trabajo a realizar..."></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Personal / Técnico</label>
+            <select class="form-select form-select-sm" id="sr-tr-personal">
+                <option value="">— Seleccionar técnico —</option>
+            </select>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Inicio</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="sr-tr-fecha-ini">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Fin</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="sr-tr-fecha-fin">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo del Trabajo (S/)</label>
+            <input type="number" class="form-control form-control-sm" id="sr-tr-costo" value="0" min="0" step="0.01" placeholder="0.00">
+        </div>
+
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.srGuardarTrabajo()">
+            <i class="bi bi-check-lg me-1"></i>Guardar Trabajo
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ DRAWER: Agregar Material/Salida ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-material">
+    <div class="sr-drawer-hd">
+        <div>
+            <div class="sr-drawer-title">Salida de Almacén</div>
+            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-mat-ot-lbl"></div>
+        </div>
+        <button class="btn btn-sm" onclick="window.srCerrarSubDrawer('sr-drawer-material')" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <input type="hidden" id="sr-mat-ot-id">
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Producto / Material *</label>
+            <input type="text" class="form-control form-control-sm" id="sr-mat-producto" placeholder="Nombre del producto o material">
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-5">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Cantidad</label>
+                <input type="number" class="form-control form-control-sm" id="sr-mat-cant" value="1" min="0.01" step="0.01" oninput="window.srCalcTotal()">
+            </div>
+            <div class="col-7">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Unidad</label>
+                <select class="form-select form-select-sm" id="sr-mat-um">
+                    <option value="Pza">Pza — Pieza</option>
+                    <option value="Lt">Lt — Litros</option>
+                    <option value="Kg">Kg — Kilogramos</option>
+                    <option value="m">m — Metros</option>
+                    <option value="Gl">Gl — Galones</option>
+                    <option value="Jgo">Jgo — Juego</option>
+                    <option value="Srv">Srv — Servicio</option>
+                    <option value="Un">Un — Unidad</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo Unit. (S/)</label>
+                <input type="number" class="form-control form-control-sm" id="sr-mat-costo-unit" value="0" min="0" step="0.01" oninput="window.srCalcTotal()">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo Total (S/)</label>
+                <input type="number" class="form-control form-control-sm" id="sr-mat-costo-total" value="0" readonly style="background:var(--bg);font-weight:700;">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Solicitante</label>
+            <input type="text" class="form-control form-control-sm" id="sr-mat-solicitante" placeholder="Nombre del solicitante">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Observación</label>
+            <textarea class="form-control form-control-sm" id="sr-mat-obs" rows="2" placeholder="Notas adicionales..."></textarea>
+        </div>
+
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.srGuardarMaterial()">
+            <i class="bi bi-check-lg me-1"></i>Guardar Solicitud
         </button>
     </div>
 </div>
