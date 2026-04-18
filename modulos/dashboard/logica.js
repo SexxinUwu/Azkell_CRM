@@ -629,14 +629,16 @@ window.recargarDashboard = function() {
 // 📍 INICIALIZACIÓN DEL MÓDULO DASHBOARD
 // ============================================================
 
-window.init_dashboard = function() {
+window.init_dashboard = function(retries) {
     console.log('🎯 Inicializando módulo Dashboard...');
+    retries = retries || 0;
 
     let ctx1 = document.getElementById('chartDashFleetrunStatus');
     let ctx2 = document.getElementById('chartGeneralInspecciones');
 
     if (!ctx1 || !ctx2) {
-        setTimeout(window.init_dashboard, 200);
+        if (retries >= 10) { console.warn('Dashboard: canvas no encontrado después de 10 intentos, abortando.'); return; }
+        setTimeout(function() { window.init_dashboard(retries + 1); }, 200);
         return;
     }
 

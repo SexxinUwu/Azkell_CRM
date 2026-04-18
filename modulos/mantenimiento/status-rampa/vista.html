@@ -1,0 +1,461 @@
+<!-- Módulo Status Rampa — Azkell Fleet -->
+<style>
+#moduloStatusRampa {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── Barra de controles ──────────────────────────────────────── */
+#moduloStatusRampa .sr-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* ── Tabla ────────────────────────────────────────────────────── */
+#moduloStatusRampa .sr-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloStatusRampa table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+#moduloStatusRampa thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloStatusRampa tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+#moduloStatusRampa tbody tr.sr-ocupada { cursor: pointer; }
+#moduloStatusRampa tbody tr.sr-ocupada:hover { background: var(--bg); }
+#moduloStatusRampa tbody tr.sr-activa  { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloStatusRampa tbody td { padding: 10px 12px; color: var(--text); }
+
+/* ── Badge rampa (círculos únicos) ───────────────────────────── */
+#moduloStatusRampa .sr-badge-rampa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+/* ── Semáforo ────────────────────────────────────────────────── */
+#moduloStatusRampa .sr-semaforo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+#moduloStatusRampa .sr-sem-vacio   { background: rgba(148,163,184,0.12); color: #94a3b8; }
+#moduloStatusRampa .sr-sem-espera  { background: rgba(220,38,38,0.1);    color: #dc2626; }
+#moduloStatusRampa .sr-sem-proceso { background: rgba(217,119,6,0.12);   color: #d97706; }
+#moduloStatusRampa .sr-sem-listo   { background: rgba(22,163,74,0.12);   color: #16a34a; }
+#moduloStatusRampa .sr-sem-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+/* Badge situación */
+#moduloStatusRampa .sr-sit {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+#moduloStatusRampa .sr-sit-vacia   { color: var(--subtext); background: transparent; }
+#moduloStatusRampa .sr-sit-espera  { color: #dc2626; background: rgba(220,38,38,0.09); }
+#moduloStatusRampa .sr-sit-proceso { color: #d97706; background: rgba(217,119,6,0.1); }
+#moduloStatusRampa .sr-sit-listo   { color: #16a34a; background: rgba(22,163,74,0.1); }
+
+/* ── Panel detalle lateral ─────────────────────────────────────── */
+#moduloStatusRampa .sr-detail-panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s;
+    max-width: 400px;
+}
+#moduloStatusRampa .sr-detail-panel.open { width: 400px; }
+#moduloStatusRampa .sr-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloStatusRampa .sr-detail-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Secciones panel */
+#moduloStatusRampa .sr-sec {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+#moduloStatusRampa .sr-sec-hd {
+    background: var(--bg);
+    padding: 7px 12px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtext);
+    border-bottom: 1px solid var(--border);
+}
+#moduloStatusRampa .sr-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloStatusRampa .sr-field:last-child { border-bottom: none; }
+#moduloStatusRampa .sr-field-lbl { width: 42%; color: var(--subtext); font-weight: 600; font-size: 0.77rem; padding-right: 6px; }
+#moduloStatusRampa .sr-field-val { width: 58%; color: var(--text); font-weight: 600; word-break: break-word; }
+#moduloStatusRampa .sr-empty { padding: 1rem; text-align: center; color: var(--subtext); font-size: 0.82rem; }
+
+/* Rampa placa hero */
+#moduloStatusRampa .sr-hero {
+    background: rgba(88,101,242,0.06);
+    border: 1px solid rgba(88,101,242,0.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 1.25rem;
+}
+#moduloStatusRampa .sr-hero-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+#moduloStatusRampa .sr-hero-placa {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+}
+#moduloStatusRampa .sr-hero-sub {
+    font-size: 0.73rem;
+    color: var(--subtext);
+    margin-top: 2px;
+}
+
+/* Tabla mini OTs relacionadas */
+#moduloStatusRampa .sr-mini-table { width: 100%; border-collapse: collapse; font-size: 0.79rem; }
+#moduloStatusRampa .sr-mini-table th {
+    color: var(--subtext);
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+#moduloStatusRampa .sr-mini-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+#moduloStatusRampa .sr-mini-table tr:last-child td { border-bottom: none; }
+
+/* Fila vacía "registrar" */
+#moduloStatusRampa .sr-row-vacia td { color: var(--subtext); font-style: italic; }
+#moduloStatusRampa .btn-sr-reg {
+    padding: 2px 9px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--subtext);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+#moduloStatusRampa .btn-sr-reg:hover {
+    border-color: var(--primary, #5865F2);
+    color: var(--primary, #5865F2);
+    background: rgba(88,101,242,0.05);
+}
+
+/* Drawer modal de registro */
+#srDrawerBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1059;
+}
+#srDrawerBackdrop.open { display: block; }
+#moduloStatusRampa .sr-drawer,
+.sr-drawer-global {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 440px;
+    max-width: 96vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
+    transform: translateX(100%);
+    transition: transform 0.28s ease;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+}
+.sr-drawer-global.open { transform: translateX(0); }
+.sr-drawer-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.sr-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.sr-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+</style>
+
+<!-- Backdrop drawers -->
+<div id="srDrawerBackdrop" onclick="window.srCerrarDrawers()"></div>
+
+<div id="moduloStatusRampa">
+
+    <!-- BARRA DE CONTROLES -->
+    <div class="sr-controls">
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0" id="sr-buscador"
+                placeholder="Buscar por placa, rampa, situación..."
+                oninput="window.srBuscar()">
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="window.srRegistrar()">
+            <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
+        </button>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL (tabla + panel detalle) -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA -->
+        <div class="sr-table-wrap" id="sr-tabla-wrap">
+            <table id="sr-tabla">
+                <thead>
+                    <tr>
+                        <th style="width:64px">Rampa</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Hora</th>
+                        <th>Placa</th>
+                        <th>Situación</th>
+                        <th>Semaforización</th>
+                        <th>Fecha Salida</th>
+                        <th>Hora</th>
+                        <th>OT Relacionadas</th>
+                        <th style="width:90px"></th>
+                    </tr>
+                </thead>
+                <tbody id="sr-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="sr-detail-panel" id="sr-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle de Rampa</span>
+                <button class="btn btn-sm" onclick="window.srCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="sr-detail-scroll" id="sr-detalle-scroll"></div>
+            <div class="sr-detail-footer" id="sr-detalle-footer"></div>
+        </div>
+
+    </div><!-- fin contenedor -->
+
+</div><!-- fin moduloStatusRampa -->
+
+
+<!-- ═══════════════ DRAWER: Registrar / Editar Unidad ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-registro">
+    <div class="sr-drawer-hd">
+        <span class="sr-drawer-title" id="sr-drawer-titulo">Registrar Unidad en Rampa</span>
+        <button class="btn btn-sm" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <input type="hidden" id="sr-f-idx">
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Rampa *</label>
+            <select class="form-select form-select-sm" id="sr-f-rampa">
+                <option value="">— Seleccionar —</option>
+                <option value="1">Rampa 1</option>
+                <option value="2">Rampa 2</option>
+                <option value="3">Rampa 3</option>
+                <option value="4">Rampa 4</option>
+                <option value="5">Rampa 5</option>
+                <option value="6">Rampa 6</option>
+                <option value="7">Rampa 7</option>
+                <option value="8">Rampa 8</option>
+                <option value="9">Rampa 9</option>
+                <option value="10">Rampa 10</option>
+                <option value="11">Rampa 11</option>
+                <option value="12">Rampa 12</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa *</label>
+            <input type="text" class="form-control form-control-sm" id="sr-f-placa"
+                placeholder="Ej. ATP-999" maxlength="15" style="text-transform:uppercase;"
+                oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Kilometraje</label>
+            <input type="number" class="form-control form-control-sm" id="sr-f-km" placeholder="0" min="0">
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Ingreso</label>
+                <input type="date" class="form-control form-control-sm" id="sr-f-fecha-ing">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Ingreso</label>
+                <input type="time" class="form-control form-control-sm" id="sr-f-hora-ing">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Situación *</label>
+            <select class="form-select form-select-sm" id="sr-f-situacion">
+                <option value="En espera">En espera</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Listo">Listo</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Observaciones</label>
+            <textarea class="form-control form-control-sm" id="sr-f-obs" rows="2" placeholder="Motivo del ingreso, notas..."></textarea>
+        </div>
+
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.srGuardarRegistro()">
+            <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ DRAWER: Generar OT desde Rampa ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-ot">
+    <div class="sr-drawer-hd">
+        <span class="sr-drawer-title">Generar Orden de Trabajo</span>
+        <button class="btn btn-sm" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <div style="background:rgba(88,101,242,0.06); border:1px solid rgba(88,101,242,0.2); border-radius:8px; padding:10px 14px; margin-bottom:1.25rem; display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-geo-alt-fill" style="color:var(--primary,#5865F2); font-size:1.1rem;"></i>
+            <div>
+                <div style="font-size:0.7rem; font-weight:700; color:var(--primary,#5865F2); text-transform:uppercase; letter-spacing:0.04em;">Placa</div>
+                <div style="font-size:1.05rem; font-weight:800; color:var(--text);" id="sr-ot-placa-disp">—</div>
+            </div>
+            <div style="margin-left:auto; text-align:right;">
+                <div style="font-size:0.7rem; font-weight:700; color:var(--subtext); text-transform:uppercase;">Rampa</div>
+                <div style="font-size:1rem; font-weight:800; color:var(--text);" id="sr-ot-rampa-disp">—</div>
+            </div>
+        </div>
+
+        <input type="hidden" id="sr-ot-placa-hid">
+        <input type="hidden" id="sr-ot-rampa-hid">
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tipo OT *</label>
+                <select class="form-select form-select-sm" id="sr-ot-tipo">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Sub Tipo *</label>
+                <select class="form-select form-select-sm" id="sr-ot-subtipo">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Inspección">Inspección</option>
+                    <option value="Rutina">Rutina</option>
+                    <option value="Cambio de aceite">Cambio de aceite</option>
+                    <option value="Falla mecánica">Falla mecánica</option>
+                    <option value="Falla eléctrica">Falla eléctrica</option>
+                    <option value="Neumáticos">Neumáticos</option>
+                    <option value="Carrocería">Carrocería</option>
+                    <option value="Otro">Otro</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Supervisor</label>
+            <input type="text" class="form-control form-control-sm" id="sr-ot-supervisor" placeholder="Nombre del supervisor">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Motivo / Observaciones</label>
+            <textarea class="form-control form-control-sm" id="sr-ot-motivo" rows="3" placeholder="Describe el motivo del trabajo..."></textarea>
+        </div>
+
+        <button class="btn btn-success w-100 fw-bold" onclick="window.srEnviarOT()">
+            <i class="bi bi-file-earmark-plus me-1"></i>Generar OT
+        </button>
+    </div>
+</div>

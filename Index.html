@@ -58,7 +58,7 @@
                 <div id="wrap-mantenimiento">
                     <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="false" onclick="window.toggleNavSection('mantenimiento')">
                         <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
-                        <span class="section-badge">6</span>
+                        <span class="section-badge">13</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
@@ -82,23 +82,47 @@
                             <i class="bi bi-calendar2-check nav-icon"></i>
                             <span class="link-text">Planificación</span>
                         </a>
-                        <!-- Sub-grupo Config. Preventivos -->
-                        <div class="nav-sub-label"><i class="bi bi-sliders me-1"></i>Config. Preventivos</div>
-                        <a id="nav-configuracion-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
-                            <i class="bi bi-sliders nav-icon"></i>
-                            <span class="link-text">Frecuencias MP</span>
+                        <!-- Sub-grupo Operativa Taller -->
+                        <div class="nav-sub-label" id="nav-sub-operativa"><i class="bi bi-grid-3x3-gap me-1"></i>Operativa</div>
+                        <a id="nav-status-rampa" class="nav-item" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
+                            <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
+                            <span class="link-text">Status Rampa</span>
                         </a>
-                        <a id="nav-kits-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/kits-mp')">
-                            <i class="bi bi-tools nav-icon"></i>
-                            <span class="link-text">Kits MP</span>
+                        <a id="nav-reportes-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/reportes-ot')">
+                            <i class="bi bi-file-earmark-text nav-icon"></i>
+                            <span class="link-text">Reportes OT</span>
                         </a>
-                        <a id="nav-tipos-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/tipos-mp')">
-                            <i class="bi bi-card-list nav-icon"></i>
-                            <span class="link-text">Tipos MP</span>
+                        <a id="nav-trabajos-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/trabajos-ot')">
+                            <i class="bi bi-person-gear nav-icon"></i>
+                            <span class="link-text">Trabajos Anexos</span>
                         </a>
-                        <a id="nav-config-metrica" class="nav-item" onclick="cargarModuloAislado('mantenimiento/config-metrica')">
-                            <i class="bi bi-speedometer2 nav-icon"></i>
-                            <span class="link-text">Config. Métrica</span>
+                        <a id="nav-almacen-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/almacen-ot')">
+                            <i class="bi bi-box-seam nav-icon"></i>
+                            <span class="link-text">Almacén (Req/Salidas)</span>
+                        </a>
+                        <a id="nav-backlog-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/backlog-taller')">
+                            <i class="bi bi-hourglass-split nav-icon"></i>
+                            <span class="link-text">Backlog Pendientes</span>
+                        </a>
+                        <!-- Sub-grupo Gestión e Informes -->
+                        <div class="nav-sub-label" id="nav-sub-gestion"><i class="bi bi-bar-chart me-1"></i>Gestión e Informes</div>
+                        <a id="nav-kpis-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/kpis-taller')">
+                            <i class="bi bi-activity nav-icon"></i>
+                            <span class="link-text">Métricas y KPIs</span>
+                        </a>
+                        <a id="nav-productividad" class="nav-item" onclick="cargarModuloAislado('mantenimiento/productividad')">
+                            <i class="bi bi-person-lines-fill nav-icon"></i>
+                            <span class="link-text">Productividad Personal</span>
+                        </a>
+                        <a id="nav-finanzas-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')">
+                            <i class="bi bi-cash-coin nav-icon"></i>
+                            <span class="link-text">Reporte Financiero</span>
+                        </a>
+                        <!-- Sub-grupo Correctivo -->
+                        <div class="nav-sub-label" id="nav-sub-correctivo"><i class="bi bi-wrench me-1"></i>Correctivo</div>
+                        <a id="nav-ordenes" class="nav-item" onclick="cargarModuloAislado('mantenimiento/ordenes')">
+                            <i class="bi bi-file-earmark-text-fill nav-icon"></i>
+                            <span class="link-text">Órdenes de Mto.</span>
                         </a>
                     </div>
                 </div>
@@ -107,7 +131,7 @@
                 <div id="wrap-almacen">
                     <button class="nav-section-toggle" data-section="almacen" aria-expanded="false" onclick="window.toggleNavSection('almacen')">
                         <span class="link-text" data-i18n="nav.almacen">Almacén</span>
-                        <span class="section-badge">10</span>
+                        <span class="section-badge">6</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
@@ -135,8 +159,37 @@
                             <i class="bi bi-graph-up-arrow nav-icon"></i>
                             <span class="link-text">Costos</span>
                         </a>
-                        <!-- Sub-grupo Config. Almacén -->
-                        <div class="nav-sub-label"><i class="bi bi-sliders me-1"></i>Config. Almacén</div>
+                    </div>
+                </div>
+
+                <!-- PREFERENCIAS -->
+                <div id="wrap-preferencias">
+                    <button class="nav-section-toggle" data-section="preferencias" aria-expanded="false" onclick="window.toggleNavSection('preferencias')">
+                        <span class="link-text">Preferencias</span>
+                        <span class="section-badge">8</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-preferencias">
+                        <!-- Config. Preventivos -->
+                        <div class="nav-sub-label" id="nav-sub-cfg-prev"><i class="bi bi-sliders me-1"></i>Config. Preventivos</div>
+                        <a id="nav-configuracion-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
+                            <i class="bi bi-sliders nav-icon"></i>
+                            <span class="link-text">Frecuencias MP</span>
+                        </a>
+                        <a id="nav-kits-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/kits-mp')">
+                            <i class="bi bi-tools nav-icon"></i>
+                            <span class="link-text">Kits MP</span>
+                        </a>
+                        <a id="nav-tipos-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/tipos-mp')">
+                            <i class="bi bi-card-list nav-icon"></i>
+                            <span class="link-text">Tipos MP</span>
+                        </a>
+                        <a id="nav-config-metrica" class="nav-item" onclick="cargarModuloAislado('mantenimiento/config-metrica')">
+                            <i class="bi bi-speedometer2 nav-icon"></i>
+                            <span class="link-text">Config. Métrica</span>
+                        </a>
+                        <!-- Config. Almacén -->
+                        <div class="nav-sub-label" id="nav-sub-cfg-alm"><i class="bi bi-box me-1"></i>Config. Almacén</div>
                         <a id="nav-familias-inv" class="nav-item" onclick="cargarModuloAislado('almacen/familias')">
                             <i class="bi bi-tags-fill nav-icon"></i>
                             <span class="link-text">Familias</span>

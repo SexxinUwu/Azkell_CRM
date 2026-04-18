@@ -1,0 +1,200 @@
+<!-- ================================================================ -->
+<!-- MÓDULO: KPIs TALLER — Azkell Fleet                              -->
+<!-- Ruta: mantenimiento/kpis-taller                                  -->
+<!-- ================================================================ -->
+<style>
+#moduloKpisTaller {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.25rem;
+    gap: 1.25rem;
+}
+
+/* ── Cabecera ── */
+#moduloKpisTaller .kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+#moduloKpisTaller .kpi-header h5 {
+    margin: 0;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text);
+}
+
+/* ── Grid de cards ── */
+#moduloKpisTaller .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+#moduloKpisTaller .kpi-grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+@media (max-width: 991.98px) {
+    #moduloKpisTaller .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    #moduloKpisTaller .kpi-grid-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 575.98px) {
+    #moduloKpisTaller .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Card KPI ── */
+#moduloKpisTaller .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    position: relative;
+    overflow: hidden;
+}
+#moduloKpisTaller .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    background: var(--kpi-accent, var(--primary, #5865F2));
+}
+#moduloKpisTaller .kpi-card .kpi-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--subtext);
+}
+#moduloKpisTaller .kpi-card .kpi-value {
+    font-size: 2.6rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--kpi-accent, var(--primary, #5865F2));
+    letter-spacing: -0.02em;
+}
+#moduloKpisTaller .kpi-card .kpi-unit {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-left: 2px;
+    opacity: 0.7;
+}
+#moduloKpisTaller .kpi-card .kpi-meta {
+    font-size: 0.73rem;
+    color: var(--subtext);
+    margin-top: 0.35rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    line-height: 1.4;
+}
+#moduloKpisTaller .kpi-card .kpi-icon {
+    position: absolute;
+    top: 1.1rem; right: 1.1rem;
+    font-size: 1.6rem;
+    opacity: 0.10;
+}
+
+/* ── Accent por card ── */
+#moduloKpisTaller .kpi-card.kpi-blue  { --kpi-accent: #5865F2; }
+#moduloKpisTaller .kpi-card.kpi-orange{ --kpi-accent: #F97316; }
+#moduloKpisTaller .kpi-card.kpi-green { --kpi-accent: #22C55E; }
+#moduloKpisTaller .kpi-card.kpi-red   { --kpi-accent: #EF4444; }
+
+/* ── Spinner ── */
+#moduloKpisTaller .kpi-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-height: 180px;
+    color: var(--subtext);
+    font-size: 0.85rem;
+    gap: 0.6rem;
+}
+</style>
+
+<div id="moduloKpisTaller">
+
+    <!-- Cabecera -->
+    <div class="kpi-header">
+        <h5><i class="bi bi-graph-up-arrow me-2" style="color:var(--primary,#5865F2);"></i>Panel Gerencial: KPIs de Mantenimiento</h5>
+        <button class="btn btn-sm btn-outline-secondary" id="kpiBtnActualizar" onclick="kpiCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+        </button>
+    </div>
+
+    <!-- Estado de carga -->
+    <div class="kpi-loading" id="kpiLoadingMsg">
+        <span class="spinner-border spinner-border-sm"></span>
+        Calculando indicadores…
+    </div>
+
+    <!-- Grid 3 cards superiores -->
+    <div class="kpi-grid" id="kpiGridTop" style="display:none;">
+
+        <!-- MTBF -->
+        <div class="kpi-card kpi-blue">
+            <i class="bi bi-clock-history kpi-icon"></i>
+            <div class="kpi-label">MTBF (Tiempo Medio entre Fallos)</div>
+            <div class="kpi-value" id="kpiValMtbf">—<span class="kpi-unit">hrs</span></div>
+            <div class="kpi-meta">
+                <i class="bi bi-bullseye me-1"></i>Meta: &gt; 500 hrs. <span style="color:var(--subtext);">(Confiabilidad)</span>
+            </div>
+        </div>
+
+        <!-- MTTR -->
+        <div class="kpi-card kpi-orange">
+            <i class="bi bi-tools kpi-icon"></i>
+            <div class="kpi-label">MTTR (Tiempo Medio Reparación)</div>
+            <div class="kpi-value" id="kpiValMttr">—<span class="kpi-unit">hrs</span></div>
+            <div class="kpi-meta">
+                <i class="bi bi-bullseye me-1"></i>Meta: &lt; 4 hrs. <span style="color:var(--subtext);">(Rapidez de respuesta)</span>
+            </div>
+        </div>
+
+        <!-- PM% -->
+        <div class="kpi-card kpi-green">
+            <i class="bi bi-calendar-check kpi-icon"></i>
+            <div class="kpi-label">PM% (Mantenimiento Planificado)</div>
+            <div class="kpi-value" id="kpiValPm">—<span class="kpi-unit">%</span></div>
+            <div class="kpi-meta">
+                <i class="bi bi-bullseye me-1"></i>Meta: &gt; 85% <span style="color:var(--subtext);">(Preventivos vs Correctivos)</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Grid 1 card inferior: DOWNTIME -->
+    <div class="kpi-grid-bottom" id="kpiGridBottom" style="display:none;">
+
+        <div class="kpi-card kpi-red">
+            <i class="bi bi-exclamation-triangle kpi-icon"></i>
+            <div class="kpi-label">Downtime (Tiempo de Inactividad)</div>
+            <div class="kpi-value" id="kpiValDowntime">—<span class="kpi-unit">hrs</span></div>
+            <div class="kpi-meta">
+                <i class="bi bi-info-circle me-1"></i>Suma de correctivos cerrados
+                &nbsp;|&nbsp; OTs cerradas: <strong id="kpiCtaCorrectivos">0</strong>
+                &nbsp;|&nbsp; OTs preventivas: <strong id="kpiCtaPreventivos">0</strong>
+                &nbsp;|&nbsp; Total OTs: <strong id="kpiCtaTotal">0</strong>
+            </div>
+        </div>
+
+    </div>
+
+</div>

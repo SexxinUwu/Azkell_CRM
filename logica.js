@@ -193,8 +193,8 @@ window.verificarSesionGuardada = function() {
     const sec = (wrapId, collapseId, show) => {
         const w = document.getElementById(wrapId);
         const c = collapseId ? document.getElementById(collapseId) : null;
-        if (w) w.style.display = show ? '' : 'none';
-        if (c) { if (show) c.style.removeProperty('display'); else { c.classList.remove('show'); c.style.display = 'none'; } }
+        if (w) { if (show) { w.style.removeProperty('display'); } else { w.style.setProperty('display', 'none', 'important'); } }
+        if (c) { if (show) c.style.removeProperty('display'); else { c.classList.remove('show'); c.style.setProperty('display', 'none', 'important'); } }
     };
 
     // ── VISIBILIDAD DEL MENÚ (nivel Google/Microsoft) ─────────────────
@@ -208,23 +208,34 @@ window.verificarSesionGuardada = function() {
     var vPlacas  = _cL('placas');
     var vFleet   = _cL('fleet');
     var vPlan    = _cL('plan');
-    var vCfgMant = _cL('cfg_mant'); // Config. Preventivos: clave propia, admin-only por defecto
+    var vOT      = _cL('ot');
+    var vCfgMant = _cL('cfg_mant');
 
-    safe('nav-inspecciones',     vInsp);
-    safe('nav-placas',           vPlacas);
-    safe('nav-fleetrun',         vFleet);
-    safe('nav-planificacion',    vPlan);
-    safe('nav-configuracion-mp', vCfgMant);
-    safe('nav-kits-mp',          vCfgMant);
-    safe('nav-tipos-mp',         vCfgMant);
-    safe('nav-config-metrica',   vCfgMant);
+    safe('nav-inspecciones',    vInsp);
+    safe('nav-placas',          vPlacas);
+    safe('nav-fleetrun',        vFleet);
+    safe('nav-planificacion',   vPlan);
+    safe('nav-ordenes',         vOT);
+    safe('nav-status-rampa',    vOT);
+    safe('nav-reportes-ot',     vOT);
+    safe('nav-trabajos-ot',     vOT);
+    safe('nav-almacen-ot',      vOT);
+    safe('nav-backlog-taller',  vOT);
+    safe('nav-kpis-taller',     vOT);
+    safe('nav-productividad',   vOT);
+    safe('nav-finanzas-taller', vOT);
 
-    // Sub-labels del grupo Mantenimiento
-    var subsMant = document.querySelectorAll('#section-items-mantenimiento .nav-sub-label');
-    if (subsMant[0]) subsMant[0].style.display = (vInsp || vPlacas) ? '' : 'none'; // "Preventivo"
-    if (subsMant[1]) subsMant[1].style.display = vCfgMant ? '' : 'none'; // "Config. Preventivos"
+    // Sub-labels del grupo Mantenimiento (por ID — robustos a reordenamiento)
+    var elSubPrev    = document.querySelector('#section-items-mantenimiento .nav-sub-label:not([id])');
+    var elSubOper    = document.getElementById('nav-sub-operativa');
+    var elSubGestion = document.getElementById('nav-sub-gestion');
+    var elSubCorr    = document.getElementById('nav-sub-correctivo');
+    if (elSubPrev)    elSubPrev.style.display    = (vFleet || vPlan) ? '' : 'none';
+    if (elSubOper)    elSubOper.style.display    = vOT ? '' : 'none';
+    if (elSubGestion) elSubGestion.style.display = vOT ? '' : 'none';
+    if (elSubCorr)    elSubCorr.style.display    = vOT ? '' : 'none';
 
-    var showMant = vInsp || vPlacas || vFleet || vPlan || vCfgMant;
+    var showMant = vInsp || vPlacas || vFleet || vPlan || vOT;
     safe('wrap-mantenimiento', showMant);
 
     // ALMACÉN — ítems individuales
@@ -242,17 +253,28 @@ window.verificarSesionGuardada = function() {
     safe('nav-proveedores-inv', vProv);
     safe('nav-kardex',          vKardex);
     safe('nav-costos-inv',      vCostos);
-    safe('nav-familias-inv',    vCfgAlm);
-    safe('nav-unidades-inv',    vCfgAlm);
-    safe('nav-sistemas-inv',    vCfgAlm);
-    safe('nav-marcas-inv',      vCfgAlm);
 
-    // Sub-label "Config. Almacén"
-    var subsAlm = document.querySelectorAll('#section-items-almacen .nav-sub-label');
-    if (subsAlm[0]) subsAlm[0].style.display = vCfgAlm ? '' : 'none';
-
-    var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos || vCfgAlm;
+    var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos;
     safe('wrap-almacen', showAlm);
+
+    // PREFERENCIAS — Config. Preventivos + Config. Almacén (admin-only por defecto)
+    safe('nav-configuracion-mp', vCfgMant);
+    safe('nav-kits-mp',          vCfgMant);
+    safe('nav-tipos-mp',         vCfgMant);
+    safe('nav-config-metrica',   vCfgMant);
+    safe('nav-familias-inv',     vCfgAlm);
+    safe('nav-unidades-inv',     vCfgAlm);
+    safe('nav-sistemas-inv',     vCfgAlm);
+    safe('nav-marcas-inv',       vCfgAlm);
+
+    // Sub-labels de Preferencias
+    var elSubCfgPrev = document.getElementById('nav-sub-cfg-prev');
+    var elSubCfgAlm  = document.getElementById('nav-sub-cfg-alm');
+    if (elSubCfgPrev) elSubCfgPrev.style.display = vCfgMant ? '' : 'none';
+    if (elSubCfgAlm)  elSubCfgAlm.style.display  = vCfgAlm  ? '' : 'none';
+
+    var showPref = vCfgMant || vCfgAlm;
+    safe('wrap-preferencias', showPref);
 
     // FLOTA — ítems individuales
     var vGps    = _cL('gps');
@@ -324,6 +346,7 @@ window.verificarSesionGuardada = function() {
 
 function cerrarSesion() {
     if (window.cerrarSSE) window.cerrarSSE();
+    window._permCache = null; // Invalidar cache de permisos
     localStorage.removeItem('fleet_user'); localStorage.removeItem('fleet_rol'); localStorage.removeItem('fleet_correo'); localStorage.removeItem('fleet_ultimo_acceso'); localStorage.removeItem('fleet_permisos'); localStorage.removeItem('fleet_token');
     usuarioLogueado = ''; rolLogueado = ''; permisosUsuario = {};
 
@@ -839,9 +862,14 @@ setTimeout(function(){ if(typeof window.verificarNotificacionesPWA==='function')
 // ================================================================
 // 🔒 RBAC — Helpers de permisos (usados por todos los módulos)
 // ================================================================
+window._permCache = null; // Se invalida en login/logout
+
 window.checkPerm = function(modKey, action) {
     try {
-        var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+        if (!window._permCache) {
+            window._permCache = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+        }
+        var p = window._permCache;
         if (p.admin === true) return true;
         var m = p[modKey];
         if (m === undefined || m === null) return false;
@@ -1565,6 +1593,12 @@ window.mostrarToast = function(mensaje, tipo, duracion) {
     }, duracion);
 };
 
+// Alias Bootstrap-style: 'danger' → 'error', resto pasa directo
+window.mostrarAlerta = function(mensaje, tipo) {
+    var t = (tipo === 'danger') ? 'error' : (tipo || 'info');
+    window.mostrarToast(mensaje, t);
+};
+
 // Override global de window.alert → redirige a toast automáticamente
 // Upgradea toda la app sin tocar cada archivo individualmente
 (function() {
@@ -2179,10 +2213,19 @@ const MENU_IDS = {
     'mantenimiento/placas':        'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
     'mantenimiento/planificacion': 'nav-planificacion',
-    'mantenimiento/configuracion-mp': 'nav-configuracion-mp',
-    'mantenimiento/kits-mp':          'nav-kits-mp',
-    'mantenimiento/tipos-mp':         'nav-tipos-mp',
-    'mantenimiento/config-metrica':   'nav-config-metrica',
+    'mantenimiento/configuracion-mp':  'nav-configuracion-mp',
+    'mantenimiento/kits-mp':           'nav-kits-mp',
+    'mantenimiento/tipos-mp':          'nav-tipos-mp',
+    'mantenimiento/config-metrica':    'nav-config-metrica',
+    'mantenimiento/ordenes':           'nav-ordenes',
+    'mantenimiento/status-rampa':      'nav-status-rampa',
+    'mantenimiento/reportes-ot':       'nav-reportes-ot',
+    'mantenimiento/trabajos-ot':       'nav-trabajos-ot',
+    'mantenimiento/almacen-ot':        'nav-almacen-ot',
+    'mantenimiento/backlog-taller':    'nav-backlog-taller',
+    'mantenimiento/kpis-taller':       'nav-kpis-taller',
+    'mantenimiento/productividad':     'nav-productividad',
+    'mantenimiento/finanzas-taller':   'nav-finanzas-taller',
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/salidas':             'nav-salidas-inv',
@@ -2210,11 +2253,23 @@ const MENU_SECTION = {
     'almacen/proveedores':        'almacen',
     'almacen/kardex':             'almacen',
     'almacen/costos':             'almacen',
-    'almacen/unidades':           'almacen',
-    'almacen/sistemas':           'almacen',
-    'almacen/familias':           'almacen',
-    'almacen/marcas':             'almacen',
-    'flota/status':               'flota',
+    'almacen/unidades':           'preferencias',
+    'almacen/sistemas':           'preferencias',
+    'almacen/familias':           'preferencias',
+    'almacen/marcas':             'preferencias',
+    'mantenimiento/configuracion-mp': 'preferencias',
+    'mantenimiento/kits-mp':          'preferencias',
+    'mantenimiento/tipos-mp':         'preferencias',
+    'mantenimiento/config-metrica':   'preferencias',
+    'mantenimiento/status-rampa':     'mantenimiento',
+    'mantenimiento/reportes-ot':      'mantenimiento',
+    'mantenimiento/trabajos-ot':      'mantenimiento',
+    'mantenimiento/almacen-ot':       'mantenimiento',
+    'mantenimiento/backlog-taller':   'mantenimiento',
+    'mantenimiento/kpis-taller':      'mantenimiento',
+    'mantenimiento/productividad':    'mantenimiento',
+    'mantenimiento/finanzas-taller':  'mantenimiento',
+    'mantenimiento/ordenes':          'mantenimiento',
     'flota/ubicacion':            'flota',
     'directorio/conductores':     'directorio',
     'sistema/usuarios':           'configuracion',
@@ -2227,10 +2282,23 @@ const BREADCRUMB_MAP = {
     'mantenimiento/placas':       ['Mantenimiento','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
     'almacen/inventario':         ['Almacén','Inventario'],
-    'almacen/unidades':           ['Almacén','Unidades'],
-    'almacen/sistemas':           ['Almacén','Sistemas'],
-    'almacen/familias':           ['Almacén','Familias'],
-    'almacen/marcas':             ['Almacén','Marcas'],
+    'almacen/unidades':           ['Preferencias','Unidades'],
+    'almacen/sistemas':           ['Preferencias','Sistemas'],
+    'almacen/familias':           ['Preferencias','Familias'],
+    'almacen/marcas':             ['Preferencias','Marcas'],
+    'mantenimiento/configuracion-mp': ['Preferencias','Frecuencias MP'],
+    'mantenimiento/kits-mp':          ['Preferencias','Kits MP'],
+    'mantenimiento/tipos-mp':         ['Preferencias','Tipos MP'],
+    'mantenimiento/config-metrica':   ['Preferencias','Config. Métrica'],
+    'mantenimiento/ordenes':          ['Mantenimiento','Órdenes de Mto.'],
+    'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],
+    'mantenimiento/reportes-ot':      ['Mantenimiento','Reportes OT'],
+    'mantenimiento/trabajos-ot':      ['Mantenimiento','Trabajos Anexos'],
+    'mantenimiento/almacen-ot':       ['Mantenimiento','Almacén (Req/Salidas)'],
+    'mantenimiento/backlog-taller':   ['Mantenimiento','Backlog Pendientes'],
+    'mantenimiento/kpis-taller':      ['Mantenimiento','Métricas y KPIs'],
+    'mantenimiento/productividad':    ['Mantenimiento','Productividad Personal'],
+    'mantenimiento/finanzas-taller':  ['Mantenimiento','Reporte Financiero'],
     'flota/status':               ['Flota','Status'],
     'flota/ubicacion':            ['Flota','GPS'],
     'directorio/conductores':     ['Directorio','Personal'],
@@ -2356,7 +2424,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
             script.id = scriptId;
             script.src = `${_rutaDisco}/logica.js`;
             // Llamar la función init una vez que el JS ha cargado por primera vez
-            let nombreCarpeta = rutaModulo.split('/')[1] || rutaModulo.split('/')[0];
+            let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
             let funcionInit = `init_${nombreCarpeta}`;
             script.onload = function() {
                 if (typeof window[funcionInit] === 'function') window[funcionInit]();
@@ -2364,7 +2432,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
             document.body.appendChild(script);
         } else {
             // Si el JS ya estaba cargado, llamamos a su función de inicio automático (si existe)
-            let nombreCarpeta = rutaModulo.split('/')[1] || rutaModulo.split('/')[0];
+            let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
             let funcionInit = `init_${nombreCarpeta}`;
             if (typeof window[funcionInit] === 'function') {
                 window[funcionInit]();

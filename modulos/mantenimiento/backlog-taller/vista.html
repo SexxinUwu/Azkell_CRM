@@ -1,0 +1,238 @@
+<!-- Módulo Backlog Pendientes — Azkell Fleet -->
+<style>
+#moduloBacklogTaller {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Controles */
+#moduloBacklogTaller .bkt-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloBacklogTaller .bkt-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Tabla */
+#moduloBacklogTaller .bkt-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloBacklogTaller table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloBacklogTaller thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloBacklogTaller tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+#moduloBacklogTaller tbody tr:hover { background: var(--bg); }
+#moduloBacklogTaller tbody td { padding: 10px 12px; color: var(--text); vertical-align: middle; }
+#moduloBacklogTaller .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+
+/* Chips de estado (toggle) */
+#moduloBacklogTaller .bkt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 0.71rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+}
+#moduloBacklogTaller .bkt-chip:active { transform: scale(0.96); }
+#moduloBacklogTaller .bkt-chip::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.8;
+}
+#moduloBacklogTaller .chip-pendiente {
+    background: rgba(217,119,6,0.12);
+    color: #d97706;
+}
+#moduloBacklogTaller .chip-realizado {
+    background: rgba(22,163,74,0.12);
+    color: #16a34a;
+}
+
+/* Modal / Drawer nuevo backlog */
+#bktDrawerBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1059;
+}
+#bktDrawerBackdrop.open { display: block; }
+#moduloBacklogTaller .bkt-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 480px;
+    max-width: 96vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
+    transform: translateX(100%);
+    transition: transform 0.28s ease;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+}
+#moduloBacklogTaller .bkt-drawer.open { transform: translateX(0); }
+#moduloBacklogTaller .bkt-drawer-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+#moduloBacklogTaller .bkt-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+#moduloBacklogTaller .bkt-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+</style>
+
+<!-- Backdrop -->
+<div id="bktDrawerBackdrop" onclick="window.bktCerrarDrawer()"></div>
+
+<div id="moduloBacklogTaller">
+
+    <!-- FILA 1: Buscador -->
+    <div class="bkt-controls">
+        <div class="input-group input-group-sm" style="max-width:300px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="bkt-search"
+                placeholder="Buscar por Placa, Tarea, Reportado por..."
+                oninput="window.bktFiltrar()">
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.bktCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+
+    <!-- FILA 2: Filtros + Acciones -->
+    <div class="bkt-filters">
+        <input type="text" class="form-control form-control-sm" id="bkt-fil-placa"
+            placeholder="PLACA" style="max-width:110px; text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase(); window.bktFiltrar()">
+        <select class="form-select form-select-sm" id="bkt-fil-estado"
+            onchange="window.bktFiltrar()" style="max-width:190px">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Realizado">Realizado</option>
+        </select>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-success" onclick="window.bktExportar()">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="window.bktAbrirNuevo()">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Backlog
+        </button>
+    </div>
+
+    <!-- TABLA -->
+    <div class="bkt-table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>F. REGISTRO</th>
+                    <th>TEMA</th>
+                    <th>PLACA</th>
+                    <th>KILOMETRAJE</th>
+                    <th>REPORTADO POR</th>
+                    <th>MANTENIMIENTO PENDIENTE</th>
+                    <th>ESTADO</th>
+                </tr>
+            </thead>
+            <tbody id="bkt-tbody"></tbody>
+        </table>
+    </div>
+
+    <!-- DRAWER: Nuevo Backlog -->
+    <div class="bkt-drawer" id="bkt-drawer-nuevo">
+        <div class="bkt-drawer-hd">
+            <span class="bkt-drawer-title">Registrar Backlog (Mto. Pendiente)</span>
+            <button class="btn btn-sm" onclick="window.bktCerrarDrawer()" style="color:var(--subtext)">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="bkt-drawer-body">
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa *</label>
+                    <input type="text" class="form-control form-control-sm" id="bkt-f-placa"
+                        placeholder="Ej. ATP-999"
+                        style="text-transform:uppercase;"
+                        oninput="this.value=this.value.toUpperCase()">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Kilometraje</label>
+                    <input type="number" class="form-control form-control-sm" id="bkt-f-km"
+                        placeholder="0" min="0">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tema / Categoría</label>
+                <input type="text" class="form-control form-control-sm" id="bkt-f-tema"
+                    placeholder="Ej. Motor, Neumáticos, Frenos...">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Reportado por</label>
+                <input type="text" class="form-control form-control-sm" id="bkt-f-reporta"
+                    placeholder="Ej. Conductor, Mecánico">
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Descripción del Mantenimiento Pendiente *</label>
+                <textarea class="form-control form-control-sm" id="bkt-f-tarea" rows="4"
+                    placeholder="Describe el mantenimiento que está pendiente..."></textarea>
+            </div>
+            <button class="btn btn-primary w-100 fw-bold" onclick="window.bktGuardar()">
+                <i class="bi bi-save me-1"></i>Guardar Backlog
+            </button>
+        </div>
+    </div>
+
+</div>
