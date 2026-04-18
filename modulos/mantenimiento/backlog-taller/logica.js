@@ -16,7 +16,7 @@ window.init_backlog_taller = function() {
 // ── Carga de datos ────────────────────────────────────────────────
 window.bktCargar = function() {
     var tbody = document.getElementById('bkt-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/ot-backlog')
         .then(function(r) {
@@ -33,7 +33,7 @@ window.bktCargar = function() {
                 window.mostrarAlerta('Error al cargar el backlog', 'danger');
             }
             var tb = document.getElementById('bkt-tbody');
-            if (tb) tb.innerHTML = '<tr><td colspan="7" class="td-placeholder">Error al cargar datos</td></tr>';
+            if (tb) tb.innerHTML = '<tr><td colspan="9" class="td-placeholder">Error al cargar datos</td></tr>';
         });
 };
 
@@ -79,7 +79,7 @@ window.bktRenderTabla = function() {
     window.bktDatosFil = datos;
 
     if (datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="td-placeholder"><i class="bi bi-list-task" style="font-size:1.5rem; opacity:0.3"></i><br>Sin tareas en backlog</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-list-task" style="font-size:1.5rem; opacity:0.3"></i><br>Sin tareas en backlog</td></tr>';
         return;
     }
 
@@ -88,13 +88,16 @@ window.bktRenderTabla = function() {
         var tr = document.createElement('tr');
         var chipHtml = bktChip(b);
         tr.innerHTML =
-            '<td>' + bktFmtFecha(b.fecha_reporte || b.creado_en) + '</td>'
+            '<td><span style="font-size:0.72rem;font-weight:700;color:var(--primary,#5865F2);">' + (b.backlog_id || '—') + '</span></td>'
+            + '<td>' + bktFmtFecha(b.fecha_reporte || b.creado_en) + '</td>'
             + '<td><strong>' + (b.tema || '—') + '</strong></td>'
             + '<td><strong>' + (b.placa || '—') + '</strong></td>'
             + '<td>' + (b.km ? b.km + ' km' : '—') + '</td>'
             + '<td>' + (b.reportado_por || '—') + '</td>'
             + '<td style="white-space:normal; max-width:260px; font-size:0.8rem;">' + (b.tarea || '—') + '</td>'
-            + '<td>' + chipHtml + '</td>';
+            + '<td>' + chipHtml + '</td>'
+            + '<td><button class="btn btn-sm" style="color:#dc2626;padding:2px 6px;" '
+            + 'onclick="window.bktEliminar(' + b.id + '); event.stopPropagation();" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button></td>';
         tbody.appendChild(tr);
     });
 };
@@ -104,28 +107,25 @@ function bktChip(b) {
     var esPendiente = b.estado !== 'Realizado';
     if (esPendiente) {
         return '<button class="bkt-chip chip-pendiente" title="Haz clic para marcar como Realizado" '
-            + 'onclick="window.bktToggleEstado(' + JSON.stringify(b.backlog_id || b.id) + ', \'Realizado\'); event.stopPropagation();">'
+            + 'onclick="window.bktToggleEstado(' + b.id + ', \'Realizado\'); event.stopPropagation();">'
             + 'Pendiente</button>';
     } else {
         return '<button class="bkt-chip chip-realizado" title="Haz clic para marcar como Pendiente" '
-            + 'onclick="window.bktToggleEstado(' + JSON.stringify(b.backlog_id || b.id) + ', \'Pendiente\'); event.stopPropagation();">'
+            + 'onclick="window.bktToggleEstado(' + b.id + ', \'Pendiente\'); event.stopPropagation();">'
             + 'Realizado</button>';
     }
 }
 
 // ── Toggle estado ─────────────────────────────────────────────────
-window.bktToggleEstado = function(idBacklog, nuevoEstado) {
-    var idStr = String(idBacklog);
+window.bktToggleEstado = function(id, nuevoEstado) {
     // Actualización optimista en memoria
-    var item = window.bktData.find(function(b) {
-        return String(b.backlog_id || b.id) === idStr;
-    });
+    var item = window.bktData.find(function(b) { return b.id === id; });
     if (item) {
         item.estado = nuevoEstado;
         bktRenderTabla();
     }
 
-    fetch('/api/ot-backlog/' + encodeURIComponent(idBacklog), {
+    fetch('/api/ot-backlog/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: nuevoEstado })
@@ -146,6 +146,30 @@ window.bktToggleEstado = function(idBacklog, nuevoEstado) {
         }
         if (typeof window.mostrarAlerta === 'function') {
             window.mostrarAlerta('Error al actualizar el estado', 'danger');
+        }
+    });
+};
+
+// ── Eliminar backlog ──────────────────────────────────────────────
+window.bktEliminar = function(id) {
+    if (!confirm('¿Eliminar este item del backlog? Esta acción no se puede deshacer.')) return;
+
+    fetch('/api/ot-backlog/' + id, { method: 'DELETE' })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function() {
+        window.bktData = window.bktData.filter(function(b) { return b.id !== id; });
+        bktRenderTabla();
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Backlog eliminado', 'success');
+        }
+    })
+    .catch(function(err) {
+        console.error('Error eliminando backlog:', err);
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Error al eliminar', 'danger');
         }
     });
 };
