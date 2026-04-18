@@ -581,7 +581,8 @@ window.srAbrirDetalleOT = function(idOt) {
     // ── Backlog pendiente de la unidad ──
     if (ot.placa) {
         html += '<div class="rot-sec" id="sr-sec-backlog">'
-              + '<div class="rot-sec-hd" style="color:#d97706;">Backlog Pendiente de la Unidad <span id="sr-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="sr-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+              + '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.srAbrirAgregarBacklog(\'' + ot.placa + '\')"><i class="bi bi-plus"></i> Agregar</button></div>'
               + '<div id="sr-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -640,7 +641,7 @@ window.srAbrirDetalleOT = function(idOt) {
             }, 0);
         var costoMat = window.srOtMaterialesActivos
             .filter(function(m) { return m.estado === 'Despachado'; })
-            .reduce(function(s, m) { return s + parseFloat(m.costo_total || 0); }, 0);
+            .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
         var elCosto = document.getElementById('sr-ot-costo-total');
         if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
     });
@@ -760,53 +761,184 @@ window.srGuardarTrabajo = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
+// ── Variables globales para el form de materiales ────────────────
+window._srMatIdx  = window._srMatIdx  || 0;
+window._srInvData = window._srInvData || [];
+
 window.srAgregarSalida = function(idOt) {
-    var lbl = document.getElementById('sr-mat-ot-lbl'); if (lbl) lbl.textContent = idOt;
+    var lbl = document.getElementById('sr-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
     var hid = document.getElementById('sr-mat-ot-id');  if (hid) hid.value = idOt;
-    ['sr-mat-producto','sr-mat-solicitante','sr-mat-obs'].forEach(function(id) {
-        var el = document.getElementById(id); if (el) el.value = '';
-    });
-    var cant = document.getElementById('sr-mat-cant');       if (cant) cant.value = '1';
-    var cu   = document.getElementById('sr-mat-costo-unit'); if (cu)   cu.value   = '0';
-    var ct   = document.getElementById('sr-mat-costo-total');if (ct)   ct.value   = '0';
-    var um   = document.getElementById('sr-mat-um');         if (um)   um.value   = 'Pza';
+    var vis = document.getElementById('sr-mat-ot-vis'); if (vis) vis.value = idOt;
+
+    var hoy = new Date();
+    var fechaHoy = hoy.getFullYear() + '-' +
+        String(hoy.getMonth()+1).padStart(2,'0') + '-' +
+        String(hoy.getDate()).padStart(2,'0');
+    var fecEl = document.getElementById('sr-mat-fecha'); if (fecEl) fecEl.value = fechaHoy;
+
+    var ot = window.srOtData.find(function(o){ return (o.id_ot || o.ticket_entrada) === idOt; });
+    var placaEl = document.getElementById('sr-mat-placa'); if (placaEl) placaEl.value = ot ? (ot.placa || '') : '';
+    var tipoEl  = document.getElementById('sr-mat-tipo');  if (tipoEl)  tipoEl.value  = 'Vehiculo';
+
+    var solic = document.getElementById('sr-mat-solicitante'); if (solic) solic.value = '';
+    var obs   = document.getElementById('sr-mat-obs');         if (obs)   obs.value   = '';
+    var tb  = document.getElementById('sr-mat-items-tbody'); if (tb) tb.innerHTML = '';
+    window._srMatIdx = 0;
+    var tot = document.getElementById('sr-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
+    _srAgregarItemMat();
+
+    if (!window._srInvData.length) {
+        fetch('/api/almacen/inventario')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                window._srInvData = d || [];
+                var dl = document.getElementById('sr-mat-inv-list');
+                if (dl) dl.innerHTML = (d || []).map(function(a) {
+                    return '<option value="' + _srEsc(a.id + ' — ' + a.descripcion) + '">';
+                }).join('');
+            })
+            .catch(function() {});
+    }
+    fetch('/api/placas-lista')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) {
+            var lista = Array.isArray(d) ? d : [];
+            var dl = document.getElementById('sr-mat-list-placas');
+            if (dl) dl.innerHTML = lista.map(function(p) {
+                return '<option value="' + _srEsc(p.placa || String(p)) + '">';
+            }).join('');
+        })
+        .catch(function() {});
+
     srAbrirDrawer('sr-drawer-material');
 };
 
-window.srCalcTotal = function() {
-    var cant = parseFloat((document.getElementById('sr-mat-cant')       || {}).value || 0);
-    var cu   = parseFloat((document.getElementById('sr-mat-costo-unit') || {}).value || 0);
-    var ct   = document.getElementById('sr-mat-costo-total');
-    if (ct) ct.value = (cant * cu).toFixed(2);
+window._srAgregarItemMat = function() {
+    var tbody = document.getElementById('sr-mat-items-tbody');
+    if (!tbody) return;
+    var idx = window._srMatIdx++;
+    var tr = document.createElement('tr');
+    tr.id = 'sr-mat-item-' + idx;
+    tr.innerHTML =
+        '<td>' +
+            '<input type="text" class="form-control form-control-sm sr-mat-item-desc" list="sr-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._srBuscarArtMat(this,' + idx + ')">' +
+            '<input type="hidden" class="sr-mat-item-inv-id" data-idx="' + idx + '">' +
+            '<input type="hidden" class="sr-mat-item-stock" data-idx="' + idx + '" value="">' +
+            '<div class="sr-mat-item-stock-lbl" data-idx="' + idx + '" style="font-size:0.71rem;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+        '<td><input type="number" class="form-control form-control-sm sr-mat-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._srCalcItemMat(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm sr-mat-item-cu" data-idx="' + idx + '" value="0" min="0" step="0.01" oninput="window._srCalcItemMat(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm sr-mat-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._srQuitarItemMat(' + idx + ')"><i class="bi bi-x"></i></button></td>';
+    tbody.appendChild(tr);
 };
 
-window.srGuardarMaterial = function() {
-    var idOt     = ((document.getElementById('sr-mat-ot-id')         || {}).value || '');
-    var prod     = ((document.getElementById('sr-mat-producto')       || {}).value || '').trim();
-    var cant     = parseFloat((document.getElementById('sr-mat-cant') || {}).value || 1);
-    var um       = ((document.getElementById('sr-mat-um')             || {}).value || 'Pza');
-    var cu       = parseFloat((document.getElementById('sr-mat-costo-unit')  || {}).value || 0);
-    var ct       = parseFloat((document.getElementById('sr-mat-costo-total') || {}).value || 0);
-    var solic    = ((document.getElementById('sr-mat-solicitante')    || {}).value || '').trim();
-    var obs      = ((document.getElementById('sr-mat-obs')            || {}).value || '').trim();
+window._srBuscarArtMat = function(input, idx) {
+    var val = input.value || '';
+    var invId = val.split(' — ')[0].trim();
+    var item = (window._srInvData || []).find(function(d) { return d.id === invId; });
+    var stockEl = document.querySelector('.sr-mat-item-stock[data-idx="' + idx + '"]');
+    var lblEl   = document.querySelector('.sr-mat-item-stock-lbl[data-idx="' + idx + '"]');
+    if (item) {
+        var hidEl = document.querySelector('.sr-mat-item-inv-id[data-idx="' + idx + '"]');
+        if (hidEl) hidEl.value = item.id;
+        var cuEl = document.querySelector('.sr-mat-item-cu[data-idx="' + idx + '"]');
+        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._srCalcItemMat(idx); }
+        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : -1);
+        if (stockEl) stockEl.value = stock;
+        if (lblEl) {
+            lblEl.style.display = '';
+            if (stock <= 0) {
+                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠ Sin stock disponible</span>';
+            } else {
+                lblEl.innerHTML = '<span style="color:#16a34a;">Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
+            }
+        }
+    } else {
+        if (stockEl) stockEl.value = '';
+        if (lblEl) lblEl.style.display = 'none';
+    }
+};
 
-    if (!prod) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El producto es requerido', 'danger'); return; }
+window._srCalcItemMat = function(idx) {
+    var cant = parseFloat((document.querySelector('.sr-mat-item-cant[data-idx="' + idx + '"]') || {}).value) || 0;
+    var cu   = parseFloat((document.querySelector('.sr-mat-item-cu[data-idx="' + idx + '"]')   || {}).value) || 0;
+    var impEl = document.querySelector('.sr-mat-item-imp[data-idx="' + idx + '"]');
+    if (impEl) impEl.value = (cant * cu).toFixed(2);
+    _srActualizarTotalMat();
+};
+
+window._srQuitarItemMat = function(idx) {
+    var tr = document.getElementById('sr-mat-item-' + idx);
+    if (tr) tr.remove();
+    _srActualizarTotalMat();
+};
+
+function _srActualizarTotalMat() {
+    var imps = document.querySelectorAll('.sr-mat-item-imp');
+    var total = 0;
+    imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
+    var el = document.getElementById('sr-mat-items-total');
+    if (el) el.textContent = 'S/. ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+window.srGuardarMaterial = function() {
+    var idOt  = ((document.getElementById('sr-mat-ot-id')      || {}).value || '');
+    var fecha = ((document.getElementById('sr-mat-fecha')       || {}).value || '');
+    var tipo  = ((document.getElementById('sr-mat-tipo')        || {}).value || 'Vehiculo');
+    var placa = ((document.getElementById('sr-mat-placa')       || {}).value || '').trim();
+    var solic = ((document.getElementById('sr-mat-solicitante') || {}).value || '').trim();
+    var obs   = ((document.getElementById('sr-mat-obs')         || {}).value || '').trim();
+
+    var descs = document.querySelectorAll('.sr-mat-item-desc');
+    var cants = document.querySelectorAll('.sr-mat-item-cant');
+    var cus   = document.querySelectorAll('.sr-mat-item-cu');
+    var imps  = document.querySelectorAll('.sr-mat-item-imp');
+    var items = [];
+    for (var i = 0; i < cants.length; i++) {
+        var desc = descs[i] ? descs[i].value.trim() : '';
+        if (!desc) continue;
+        var cant = parseFloat(cants[i].value) || 0;
+        var cu   = parseFloat(cus[i].value)   || 0;
+        var imp  = parseFloat(imps[i].value)  || cant * cu;
+        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
+        items.push({ descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
+    }
+    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
+
+    // Validar stock antes de guardar
+    var sinStock = [];
+    var invIds = document.querySelectorAll('.sr-mat-item-inv-id');
+    var descs2 = document.querySelectorAll('.sr-mat-item-desc');
+    items.forEach(function(it, i) {
+        var invId = invIds[i] ? invIds[i].value : '';
+        if (invId) {
+            var inv = (window._srInvData || []).find(function(d) { return d.id === invId; });
+            if (inv) {
+                var stockDisp = parseFloat(inv.stock_actual != null ? inv.stock_actual : 0);
+                if (it.cantidad > stockDisp) {
+                    sinStock.push('"' + it.descripcion + '" — solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
+                }
+            }
+        }
+    });
+    if (sinStock.length) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Stock insuficiente:\n• ' + sinStock.join('\n• '), 'danger');
+        }
+        return;
+    }
 
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
     fetch('/api/ot-materiales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            ticket_ot: idOt, producto: prod, cantidad: cant,
-            unidad_medida: um, costo_unit: cu, costo_total: ct,
-            personal_solicitante: solic, observacion: obs,
-            estado: 'Pendiente', creado_por: user
-        })
+        body: JSON.stringify({ ticket_ot: idOt, fecha: fecha || null, tipo_destino: tipo, placa: placa, responsable: solic, observaciones: obs, creado_por: user, items: items })
     })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(d) {
         window.srCerrarSubDrawer('sr-drawer-material');
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + (d.id_solicitud || '') + ' registrada', 'success');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + (d.id || '') + ' registrada', 'success');
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
             .then(function(r){ return r.ok ? r.json() : []; })
             .then(function(rows) {
@@ -820,7 +952,7 @@ window.srGuardarMaterial = function() {
 
 window.srEliminarMaterial = function(idSolicitud, idOt) {
     if (!confirm('¿Eliminar esta solicitud de material?')) return;
-    fetch('/api/ot-materiales/' + idSolicitud, { method: 'DELETE' })
+    fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
@@ -907,14 +1039,14 @@ function srRenderSecMateriales(idOt, esAprobada) {
 
     var costoTotal = lista
         .filter(function(m) { return m.estado === 'Despachado'; })
-        .reduce(function(s, m) { return s + parseFloat(m.costo_total || 0); }, 0);
+        .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
     var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado'; });
 
     var html = '';
     if (esAprobada) {
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
               + '<button class="btn btn-sm btn-outline-secondary" onclick="window.srAgregarSalida(\'' + idOt + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Salida</button></div>';
+              + '<i class="bi bi-plus-lg me-1"></i>Agregar Solicitud</button></div>';
     }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
@@ -923,19 +1055,19 @@ function srRenderSecMateriales(idOt, esAprobada) {
             var badge = m.estado === 'Despachado'
                 ? '<span style="background:rgba(22,163,74,0.12);color:#16a34a;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Despachado</span>'
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
+            var items = m.items || [];
+            var artResumen = items.map(function(it) { return it.descripcion || it.inventario_id || '—'; }).join(', ') || '—';
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--text);">' + (m.producto || '—') + '</span> ' + badge + '</div>'
-                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="window.srEliminarMaterial(' + m.id + ',\'' + idOt + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
+                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + (m.id || '—') + '</span> ' + badge + '</div>'
+                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="window.srEliminarMaterial(' + JSON.stringify(m.id) + ',\'' + idOt + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
-                  + '<div style="color:var(--subtext);margin-top:2px;">'
-                  + (m.cantidad || '') + ' ' + (m.unidad_medida || '') + ' · S/' + parseFloat(m.costo_unit || 0).toFixed(2) + ' c/u'
-                  + ' = <strong style="color:var(--text);">S/' + parseFloat(m.costo_total || 0).toFixed(2) + '</strong>'
-                  + '</div>'
+                  + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
+                  + '<div style="margin-top:2px;"><strong style="color:var(--text);">Total: S/.' + parseFloat(m.total_pen || 0).toFixed(2) + '</strong></div>'
                   + '</div>';
         });
         html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">'
-              + 'Total despachado: S/' + costoTotal.toFixed(2)
+              + 'Total despachado: S/.' + costoTotal.toFixed(2)
               + (hayPendientes ? '<span style="font-size:0.72rem;color:#d97706;margin-left:6px;">(pendientes no incluidos)</span>' : '')
               + '</div>';
     }
@@ -1006,7 +1138,7 @@ window.srCerrarSubDrawer = function(drawerId) {
     var d = document.getElementById(drawerId);
     if (d) d.classList.remove('open');
     // Apagar backdrop solo si ningún otro drawer está abierto
-    var abiertos = ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot'].filter(function(id) {
+    var abiertos = ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot','sr-drawer-backlog'].filter(function(id) {
         var el = document.getElementById(id);
         return el && el.classList.contains('open');
     });
@@ -1036,8 +1168,12 @@ function srRenderSecBacklog(items) {
               + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
               + '<div><span style="font-weight:700;font-size:0.72rem;color:#d97706;">' + esc(b.backlog_id || String(b.id)) + '</span>'
               + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + esc(b.tema) + '</span>' : '') + '</div>'
+              + '<div style="display:flex;gap:4px;">'
               + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
               + 'onclick="event.stopPropagation();window.srMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">✓ Realizado</button>'
+              + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
+              + 'onclick="event.stopPropagation();window.srEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
+              + '</div>'
               + '</div>'
               + '<div style="color:var(--text);margin-top:3px;">' + esc(b.tarea || '—') + '</div>'
               + (b.reportado_por ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + esc(b.reportado_por) + '</div>' : '')
@@ -1045,6 +1181,59 @@ function srRenderSecBacklog(items) {
     });
     body.innerHTML = html;
 }
+
+window.srEliminarBacklogItem = function(id, btn) {
+    if (!confirm('¿Eliminar este mantenimiento pendiente?')) return;
+    if (btn) btn.disabled = true;
+    fetch('/api/ot-backlog/' + id, { method: 'DELETE' })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Pendiente eliminado', 'success');
+        if (btn) {
+            var row = btn.closest ? btn.closest('[style*="border-bottom"]') : btn.parentNode.parentNode.parentNode;
+            if (row && row.parentNode) row.parentNode.removeChild(row);
+            var count = document.getElementById('sr-bkg-count');
+            if (count) count.textContent = Math.max(0, (parseInt(count.textContent) || 1) - 1);
+        }
+    })
+    .catch(function() {
+        if (btn) btn.disabled = false;
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger');
+    });
+};
+
+window.srAbrirAgregarBacklog = function(placa) {
+    var lbl = document.getElementById('sr-bkg-placa-lbl'); if (lbl) lbl.textContent = 'Placa: ' + placa;
+    var hid = document.getElementById('sr-bkg-placa-hid'); if (hid) hid.value = placa;
+    var tema  = document.getElementById('sr-bkg-tema');         if (tema)  tema.value  = '';
+    var tarea = document.getElementById('sr-bkg-tarea');        if (tarea) tarea.value = '';
+    var rep   = document.getElementById('sr-bkg-reportado-por');if (rep)   rep.value   = '';
+    srAbrirDrawer('sr-drawer-backlog');
+};
+
+window.srGuardarBacklog = function() {
+    var placa = ((document.getElementById('sr-bkg-placa-hid')     || {}).value || '').trim();
+    var tema  = ((document.getElementById('sr-bkg-tema')          || {}).value || '').trim();
+    var tarea = ((document.getElementById('sr-bkg-tarea')         || {}).value || '').trim();
+    var rep   = ((document.getElementById('sr-bkg-reportado-por') || {}).value || '').trim();
+    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
+    var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ot-backlog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placa: placa, tema: tema, tarea: tarea, reportado_por: rep || user, estado: 'Pendiente', creado_por: user })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        window.srCerrarSubDrawer('sr-drawer-backlog');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Mantenimiento pendiente agregado', 'success');
+        fetch('/api/ot-backlog?placa=' + encodeURIComponent(placa) + '&estado=Pendiente')
+            .then(function(r){ return r.ok ? r.json() : []; })
+            .then(function(items) { srRenderSecBacklog(Array.isArray(items) ? items : []); })
+            .catch(function(){});
+    })
+    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al agregar pendiente', 'danger'); });
+};
 
 window.srMarcarBacklogRealizado = function(id, btn) {
     if (btn) { btn.disabled = true; btn.textContent = '…'; }

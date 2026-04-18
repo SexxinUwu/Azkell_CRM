@@ -3748,6 +3748,18 @@ db.query(
     )`,
     (e) => { if (e) console.warn('CREATE salidas_inv:', e.message); else console.log('✅ Tabla salidas_inv verificada'); }
 );
+// Migraciones: columnas para Req/Salidas OT
+db.query(`ALTER TABLE salidas_inv ADD COLUMN ticket_ot VARCHAR(30) DEFAULT NULL`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER salidas_inv ticket_ot:', e.message);
+});
+db.query(`ALTER TABLE salidas_inv ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Despachado'`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER salidas_inv estado:', e.message);
+});
+db.query(`ALTER TABLE salidas_inv ADD INDEX idx_ticket_ot (ticket_ot)`, (e) => {});
+// inventario_id en detalle_salidas_inv puede ser null (para ítems sin código)
+db.query(`ALTER TABLE detalle_salidas_inv MODIFY COLUMN inventario_id VARCHAR(20) NULL DEFAULT NULL`, (e) => {
+    if (e && !e.message.includes('errno: 150')) console.warn('ALTER detalle_salidas_inv inv_id:', e.message);
+});
 db.query(
     `CREATE TABLE IF NOT EXISTS detalle_salidas_inv (
         id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -3766,7 +3778,7 @@ db.query(
 
 // ── Helper: generar código secuencial para Almacén ───────────────────────
 function _generarCodigoAlmacen(tipo, anio, cb) {
-    const tablas = { INV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', PROV: 'proveedores_inv' };
+    const tablas = { INV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
     const tabla = tablas[tipo];
     const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
     db.query(`SELECT MAX(id) AS max_id FROM \`${tabla}\` WHERE id LIKE ?`, [prefix + '%'], (err, rows) => {
@@ -4347,6 +4359,7 @@ app.get('/api/almacen/salidas', (req, res) => {
     db.query(`SELECT s.*, GROUP_CONCAT(CONCAT(d.descripcion,'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
+              WHERE (s.estado IS NULL OR s.estado = 'Despachado')
               GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC`, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         rows.forEach(r => {
@@ -4404,7 +4417,7 @@ app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
         UNION ALL
         SELECT 'Salida' AS tipo, s.fecha, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
         FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
-        WHERE d.inventario_id=?
+        WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
         ORDER BY fecha ASC, doc_id ASC
     `, [id, id], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -4747,31 +4760,60 @@ app.put('/api/ot-trabajos/:id', (req, res) => {
     res.status(400).json({ error: 'Acción desconocida' });
 });
 
+app.delete('/api/ot-trabajos/:id', (req, res) => {
+    db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
 // ── OT MATERIALES ─────────────────────────────────────────────────
 app.get('/api/ot-materiales', (req, res) => {
     const { ticket_ot } = req.query;
-    let sql = 'SELECT * FROM ot_materiales';
+    let sql = `SELECT s.*,
+        GROUP_CONCAT(CONCAT_WS('\u001f', COALESCE(d.inventario_id,''), COALESCE(d.descripcion,''), d.cantidad, d.costo_unitario, COALESCE(d.moneda,'PEN'), d.importe) ORDER BY d.id SEPARATOR '\u001e') AS items_raw
+        FROM salidas_inv s
+        LEFT JOIN detalle_salidas_inv d ON d.salida_id = s.id
+        WHERE s.ticket_ot IS NOT NULL`;
     const params = [];
-    if (ticket_ot) { sql += ' WHERE ticket_ot = ?'; params.push(ticket_ot); }
-    sql += ' ORDER BY creado_en DESC';
+    if (ticket_ot) { sql += ' AND s.ticket_ot = ?'; params.push(ticket_ot); }
+    sql += ' GROUP BY s.id ORDER BY s.id DESC';
     db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
+        rows.forEach(r => {
+            r.items = r.items_raw ? r.items_raw.split('\u001e').map(s => {
+                const [invId, desc, cant, cu, mon, imp] = s.split('\u001f');
+                return { inventario_id: invId || null, descripcion: desc || '', cantidad: parseFloat(cant) || 0, costo_unitario: parseFloat(cu) || 0, moneda: mon || 'PEN', importe: parseFloat(imp) || 0 };
+            }) : [];
+            delete r.items_raw;
+        });
         res.json(rows);
     });
 });
 
 app.post('/api/ot-materiales', (req, res) => {
-    const { ticket_ot, producto, cantidad, unidad_medida, costo_unit, costo_total, personal_solicitante, observacion, estado, creado_por } = req.body;
-    if (!ticket_ot || !producto) return res.status(400).json({ error: 'ticket_ot y producto son requeridos' });
+    const { ticket_ot, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
+    if (!ticket_ot) return res.status(400).json({ error: 'ticket_ot es requerido' });
+    const fecha = new Date().toISOString().split('T')[0];
     const anio = new Date().getFullYear();
-    generarId('ot_materiales', 'id_solicitud', 'SA', anio, (nuevoId) => {
+    const tc = parseFloat(tipo_cambio) || 1;
+    _generarCodigoAlmacen('SA', anio, (err, id) => {
+        if (err) return res.status(500).json({ error: String(err) });
+        const total_pen = _calcularTotalPen(items || [], tc);
         db.query(
-            `INSERT INTO ot_materiales (id_solicitud, ticket_ot, producto, cantidad, unidad_medida, costo_unit, costo_total, personal_solicitante, observacion, estado, creado_por)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [nuevoId, ticket_ot, producto, cantidad || 1, unidad_medida || 'Pza', costo_unit || 0, costo_total || 0, personal_solicitante || '', observacion || '', estado || 'Pendiente', creado_por || ''],
-            (err, result) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ ok: true, id: result.insertId, id_solicitud: nuevoId });
+            'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
+             moneda || 'PEN', tc, total_pen, observaciones || null, creado_por || null, ticket_ot, 'Pendiente'],
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (items && items.length) {
+                    const dVals = items.map(d => [id, d.inventario_id || null, d.descripcion || null,
+                        parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0,
+                        d.moneda || moneda || 'PEN',
+                        parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))]);
+                    db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
+                }
+                res.json({ ok: true, id });
             }
         );
     });
@@ -4781,7 +4823,7 @@ app.put('/api/ot-materiales/:id', (req, res) => {
     const id = req.params.id;
     const { accion } = req.body;
     if (accion === 'despachar') {
-        db.query("UPDATE ot_materiales SET estado = 'Despachado' WHERE id = ?", [id], (err) => {
+        db.query("UPDATE salidas_inv SET estado = 'Despachado' WHERE id = ?", [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
         });
@@ -4792,11 +4834,11 @@ app.put('/api/ot-materiales/:id', (req, res) => {
 
 app.delete('/api/ot-materiales/:id', (req, res) => {
     const id = req.params.id;
-    // Soporta borrar por id numérico o por id_solicitud (SA-YYYY-NNNN)
-    const col = isNaN(parseInt(id)) ? 'id_solicitud' : 'id';
-    db.query('DELETE FROM ot_materiales WHERE ' + col + ' = ?', [id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+    db.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
+        db.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ ok: true });
+        });
     });
 });
 

@@ -11,6 +11,8 @@ window.rotDetalleId          = window.rotDetalleId          || null;
 window.rotOtTrabajosActivos  = window.rotOtTrabajosActivos  || [];
 window.rotOtMaterialesActivos= window.rotOtMaterialesActivos|| [];
 window.rotOtActivaId         = window.rotOtActivaId         || null;
+window._rotMatIdx            = window._rotMatIdx            || 0;
+window._rotInvData           = window._rotInvData           || [];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
@@ -21,7 +23,7 @@ window.init_reportes_ot = function() {
 // ── Carga desde API ──────────────────────────────────────────────
 window.rotCargar = function() {
     var tbody = document.getElementById('rot-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="td-empty"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="td-empty"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</td></tr>';
 
     fetch('/api/ordenes-trabajo')
         .then(function(res) {
@@ -93,7 +95,7 @@ window.rotRenderTabla = function(lista) {
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
         return;
     }
 
@@ -112,17 +114,15 @@ window.rotRenderTabla = function(lista) {
         // Tipo / Sub Tipo
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         // Supervisor
-        html += '<td style="font-size:0.8rem;">' + rotEscHtml(ot.supervisor || '—') + '</td>';
-        // Técnico
-        html += '<td style="font-size:0.8rem;">' + rotEscHtml(ot.tecnico || '—') + '</td>';
+        html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
         // Situación
-        html += '<td>' + rotBadgeSituacion(ot.situacion) + '</td>';
+        html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
         // Aprobación
         html += '<td>' + rotBadgeAprobacion(ot.aprobacion) + '</td>';
         // Costo total
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         // Fecha
-        html += '<td style="font-size:0.78rem;color:var(--subtext);">' + rotFmtFecha(ot.creado_en) + '</td>';
+        html += '<td style="font-size:0.78rem;color:var(--subtext);">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
         html += '</tr>';
     }
 
@@ -199,7 +199,8 @@ window.rotAbrirDetalle = function(idOT) {
     // Backlog pendiente de la unidad (placeholder)
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
-              + '<div class="rot-sec-hd" style="color:#d97706;">Backlog Pendiente de la Unidad <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+              + '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button></div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -264,7 +265,7 @@ window.rotAbrirDetalle = function(idOT) {
             }, 0);
         var costoMat = window.rotOtMaterialesActivos
             .filter(function(m){ return m.estado === 'Despachado'; })
-            .reduce(function(s, m){ return s + parseFloat(m.costo_total || 0); }, 0);
+            .reduce(function(s, m){ return s + parseFloat(m.total_pen || 0); }, 0);
         var elCosto = document.getElementById('rot-ot-costo-total');
         if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
     });
@@ -519,15 +520,23 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     doc.text('IV. Consumos de Almacén', 14, y);
 
     var matBody = matList.length
-        ? matList.map(function(a) {
-            return [
-                a.producto || '—',
-                (a.cantidad || '0') + ' ' + (a.unidad_medida || ''),
-                money(a.costo_unit),
-                money(a.costo_total),
-                a.estado || '—'
-            ];
-          })
+        ? matList.reduce(function(acc, a) {
+            var items = a.items || [];
+            if (!items.length) {
+                acc.push([a.id || '—', '—', '—', money(a.total_pen), a.estado || '—']);
+            } else {
+                items.forEach(function(it, idx) {
+                    acc.push([
+                        (idx === 0 ? (a.id || '') + ' | ' : '') + (it.descripcion || it.inventario_id || '—'),
+                        parseFloat(it.cantidad || 0).toLocaleString('es-PE', {maximumFractionDigits: 3}),
+                        money(it.costo_unitario),
+                        money(it.importe),
+                        idx === 0 ? (a.estado || '—') : ''
+                    ]);
+                });
+            }
+            return acc;
+          }, [])
         : [['—', 'Sin consumos registrados', '—', '—', '—']];
 
     doc.autoTable({
@@ -559,18 +568,21 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
 // ── KPIs ─────────────────────────────────────────────────────────
 function rotActualizarKPIs(lista) {
-    var total     = lista.length;
-    var pendiente = lista.filter(function(o){ return o.aprobacion === 'Pendiente'; }).length;
-    var aprobada  = lista.filter(function(o){ return o.aprobacion === 'Aprobada'; }).length;
-    var cerrada   = lista.filter(function(o){ return o.aprobacion === 'Cerrada'; }).length;
-    var costo     = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    var total       = lista.length;
+    var pendiente   = lista.filter(function(o){ return o.aprobacion === 'Pendiente'; }).length;
+    var correctivos = lista.filter(function(o) {
+        var det = rotDetalles(o);
+        return (det.tipo_ot || o.tipo || '') === 'Correctivo';
+    }).length;
+    var cerrada = lista.filter(function(o){ return o.aprobacion === 'Cerrada'; }).length;
+    var costo   = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
 
-    rotSetKPI('rot-kpi-total',     total);
-    rotSetKPI('rot-kpi-pendiente', pendiente);
-    rotSetKPI('rot-kpi-aprobada',  aprobada);
-    rotSetKPI('rot-kpi-cerrada',   cerrada);
-    rotSetKPI('rot-kpi-costo',    'S/' + costo.toFixed(2));
-    rotSetKPI('rot-kpi-filtradas', total);
+    rotSetKPI('rot-kpi-total',       total);
+    rotSetKPI('rot-kpi-correctivos', correctivos);
+    rotSetKPI('rot-kpi-pendiente',   pendiente);
+    rotSetKPI('rot-kpi-cerrada',     cerrada);
+    rotSetKPI('rot-kpi-costo',       'S/' + costo.toFixed(2));
+    rotSetKPI('rot-kpi-filtradas',   total);
 }
 
 function rotSetKPI(id, val) {
@@ -715,14 +727,14 @@ function rotRenderSecMateriales(idOt, esAprobada) {
 
     var costoTotal = lista
         .filter(function(m) { return m.estado === 'Despachado'; })
-        .reduce(function(s, m) { return s + parseFloat(m.costo_total || 0); }, 0);
+        .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
     var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado'; });
 
     var html = '';
     if (esAprobada) {
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
               + '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAgregarSalida(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Salida</button></div>';
+              + '<i class="bi bi-plus-lg me-1"></i>Agregar Solicitud</button></div>';
     }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
@@ -731,19 +743,19 @@ function rotRenderSecMateriales(idOt, esAprobada) {
             var badge = m.estado === 'Despachado'
                 ? '<span style="background:rgba(22,163,74,0.12);color:#16a34a;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Despachado</span>'
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
+            var items = m.items || [];
+            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || '—'); }).join(', ') || '—';
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--text);">' + rotEscHtml(m.producto || '—') + '</span> ' + badge + '</div>'
-                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(' + m.id + ',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
+                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || '—') + '</span> ' + badge + '</div>'
+                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(' + JSON.stringify(m.id) + ',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
-                  + '<div style="color:var(--subtext);margin-top:2px;">'
-                  + (m.cantidad || '') + ' ' + (m.unidad_medida || '') + ' · S/' + parseFloat(m.costo_unit || 0).toFixed(2) + ' c/u'
-                  + ' = <strong style="color:var(--text);">S/' + parseFloat(m.costo_total || 0).toFixed(2) + '</strong>'
-                  + '</div>'
+                  + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
+                  + '<div style="margin-top:2px;"><strong style="color:var(--text);">Total: S/.' + parseFloat(m.total_pen || 0).toFixed(2) + '</strong></div>'
                   + '</div>';
         });
         html += '<div style="padding:8px 12px;font-size:0.82rem;font-weight:700;text-align:right;color:#16a34a;">'
-              + 'Total despachado: S/' + costoTotal.toFixed(2)
+              + 'Total despachado: S/.' + costoTotal.toFixed(2)
               + (hayPendientes ? '<span style="font-size:0.72rem;color:#d97706;margin-left:6px;">(pendientes no incluidos)</span>' : '')
               + '</div>';
     }
@@ -768,6 +780,7 @@ window.rotAgregarTrabajo = function(idOt) {
     var fi = document.getElementById('rot-tr-fecha-ini'); if (fi) fi.value = localDT;
     var ff = document.getElementById('rot-tr-fecha-fin'); if (ff) ff.value = '';
     var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Agregar Trabajo';
+    var btnElim = document.getElementById('rot-tr-btn-eliminar'); if (btnElim) btnElim.style.display = 'none';
     rotAbrirSubDrawer('rot-drawer-trabajo');
     rotPoblarPersonal();
 };
@@ -795,6 +808,7 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     var fi = document.getElementById('rot-tr-fecha-ini'); if (fi) fi.value = toLocalDT(t.fecha_trabajo || '');
     var ff = document.getElementById('rot-tr-fecha-fin'); if (ff) ff.value = toLocalDT(t.fecha_salida  || '');
     var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Editar Trabajo ' + ticket;
+    var btnElim = document.getElementById('rot-tr-btn-eliminar'); if (btnElim) btnElim.style.display = '';
     rotAbrirSubDrawer('rot-drawer-trabajo');
     rotPoblarPersonal();
 };
@@ -844,50 +858,226 @@ window.rotGuardarTrabajo = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
-// ── Agregar Salida (material) ─────────────────────────────────────
+// ── Eliminar Trabajo ──────────────────────────────────────────────
+window.rotEliminarTrabajo = function() {
+    var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
+    var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
+    if (!ticket) return;
+    if (!confirm('¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.')) return;
+
+    fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        window.rotCerrarSubDrawer('rot-drawer-trabajo');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Trabajo eliminado', 'success');
+        fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOt))
+            .then(function(r){ return r.ok ? r.json() : []; })
+            .then(function(rows) {
+                window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
+                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                rotRenderSecTrabajos(idOt, ot ? ot.estado === 'Aprobada' : false);
+            }).catch(function(){});
+    })
+    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
+};
+
+// ── Agregar Salida (material) — form rico multi-artículo ──────────
 window.rotAgregarSalida = function(idOt) {
-    var lbl = document.getElementById('rot-mat-ot-lbl'); if (lbl) lbl.textContent = idOt;
+    var lbl = document.getElementById('rot-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
     var hid = document.getElementById('rot-mat-ot-id');  if (hid) hid.value = idOt;
-    ['rot-mat-producto','rot-mat-solicitante','rot-mat-obs'].forEach(function(id) {
-        var el = document.getElementById(id); if (el) el.value = '';
-    });
-    var cant = document.getElementById('rot-mat-cant');        if (cant) cant.value = '1';
-    var cu   = document.getElementById('rot-mat-costo-unit');  if (cu)   cu.value   = '0';
-    var ct   = document.getElementById('rot-mat-costo-total'); if (ct)   ct.value   = '0';
-    var um   = document.getElementById('rot-mat-um');          if (um)   um.value   = 'Pza';
+    var vis = document.getElementById('rot-mat-ot-vis'); if (vis) vis.value = idOt;
+
+    // Pre-llenar fecha de hoy
+    var hoy = new Date();
+    var fechaHoy = hoy.getFullYear() + '-' +
+        String(hoy.getMonth()+1).padStart(2,'0') + '-' +
+        String(hoy.getDate()).padStart(2,'0');
+    var fecEl = document.getElementById('rot-mat-fecha'); if (fecEl) fecEl.value = fechaHoy;
+
+    // Pre-llenar placa desde la OT activa
+    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    var placa = ot ? (ot.placa || '') : '';
+    var placaEl = document.getElementById('rot-mat-placa'); if (placaEl) placaEl.value = placa;
+
+    var tipoEl = document.getElementById('rot-mat-tipo'); if (tipoEl) tipoEl.value = 'Vehiculo';
+    var solic = document.getElementById('rot-mat-solicitante'); if (solic) solic.value = '';
+    var obs   = document.getElementById('rot-mat-obs');         if (obs)   obs.value   = '';
+
+    // Limpiar items
+    var tb = document.getElementById('rot-mat-items-tbody'); if (tb) tb.innerHTML = '';
+    window._rotMatIdx = 0;
+    var tot = document.getElementById('rot-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
+    _rotAgregarItemMat();
+
+    // Cargar inventario y placas si no están cargados
+    if (!window._rotInvData.length) {
+        fetch('/api/almacen/inventario')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                window._rotInvData = d || [];
+                var dl = document.getElementById('rot-mat-inv-list');
+                if (dl) dl.innerHTML = (d || []).map(function(a) {
+                    return '<option value="' + rotEscHtml(a.id + ' — ' + a.descripcion) + '">';
+                }).join('');
+            })
+            .catch(function() {});
+    }
+    fetch('/api/placas-lista')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) {
+            var lista = Array.isArray(d) ? d : [];
+            var dl = document.getElementById('rot-mat-list-placas');
+            if (dl) dl.innerHTML = lista.map(function(p) {
+                return '<option value="' + rotEscHtml(p.placa || String(p)) + '">';
+            }).join('');
+        })
+        .catch(function() {});
+
     rotAbrirSubDrawer('rot-drawer-material');
 };
 
-window.rotCalcTotal = function() {
-    var cant = parseFloat((document.getElementById('rot-mat-cant')       || {}).value || 0);
-    var cu   = parseFloat((document.getElementById('rot-mat-costo-unit') || {}).value || 0);
-    var ct   = document.getElementById('rot-mat-costo-total');
-    if (ct) ct.value = (cant * cu).toFixed(2);
+// ── Item helpers para el form de materiales ───────────────────────
+window._rotAgregarItemMat = function() {
+    var tbody = document.getElementById('rot-mat-items-tbody');
+    if (!tbody) return;
+    var idx = window._rotMatIdx++;
+    var tr = document.createElement('tr');
+    tr.id = 'rot-mat-item-' + idx;
+    tr.innerHTML =
+        '<td>' +
+            '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+            '<input type="hidden" class="rot-mat-item-inv-id" data-idx="' + idx + '">' +
+            '<input type="hidden" class="rot-mat-item-stock" data-idx="' + idx + '" value="">' +
+            '<div class="rot-mat-item-stock-lbl" data-idx="' + idx + '" style="font-size:0.71rem;margin-top:2px;display:none;"></div>' +
+        '</td>' +
+        '<td><input type="number" class="form-control form-control-sm rot-mat-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm rot-mat-item-cu" data-idx="' + idx + '" value="0" min="0" step="0.01" oninput="window._rotCalcItemMat(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm rot-mat-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._rotQuitarItemMat(' + idx + ')"><i class="bi bi-x"></i></button></td>';
+    tbody.appendChild(tr);
 };
+
+window._rotBuscarArtMat = function(input, idx) {
+    var val = input.value || '';
+    var invId = val.split(' — ')[0].trim();
+    var item = (window._rotInvData || []).find(function(d) { return d.id === invId; });
+    var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
+    var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
+    if (item) {
+        var hidEl = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
+        if (hidEl) hidEl.value = item.id;
+        var cuEl = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
+        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._rotCalcItemMat(idx); }
+        var stock = parseFloat(item.stock_actual != null ? item.stock_actual : -1);
+        if (stockEl) stockEl.value = stock;
+        if (lblEl) {
+            lblEl.style.display = '';
+            if (stock <= 0) {
+                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠ Sin stock disponible</span>';
+            } else {
+                lblEl.innerHTML = '<span style="color:#16a34a;">Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
+            }
+        }
+    } else {
+        if (stockEl) stockEl.value = '';
+        if (lblEl) lblEl.style.display = 'none';
+    }
+};
+
+window._rotCalcItemMat = function(idx) {
+    var cant = parseFloat((document.querySelector('.rot-mat-item-cant[data-idx="' + idx + '"]') || {}).value) || 0;
+    var cu   = parseFloat((document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]')   || {}).value) || 0;
+    var impEl = document.querySelector('.rot-mat-item-imp[data-idx="' + idx + '"]');
+    if (impEl) impEl.value = (cant * cu).toFixed(2);
+    _rotActualizarTotalMat();
+};
+
+window._rotQuitarItemMat = function(idx) {
+    var tr = document.getElementById('rot-mat-item-' + idx);
+    if (tr) tr.remove();
+    _rotActualizarTotalMat();
+};
+
+function _rotActualizarTotalMat() {
+    var imps = document.querySelectorAll('.rot-mat-item-imp');
+    var total = 0;
+    imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
+    var el = document.getElementById('rot-mat-items-total');
+    if (el) el.textContent = 'S/. ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 // ── Guardar Material ──────────────────────────────────────────────
 window.rotGuardarMaterial = function() {
-    var idOt  = ((document.getElementById('rot-mat-ot-id')          || {}).value || '');
-    var prod  = ((document.getElementById('rot-mat-producto')        || {}).value || '').trim();
-    var cant  = parseFloat((document.getElementById('rot-mat-cant')  || {}).value || 1);
-    var um    = ((document.getElementById('rot-mat-um')              || {}).value || 'Pza');
-    var cu    = parseFloat((document.getElementById('rot-mat-costo-unit')  || {}).value || 0);
-    var ct    = parseFloat((document.getElementById('rot-mat-costo-total') || {}).value || 0);
-    var solic = ((document.getElementById('rot-mat-solicitante')     || {}).value || '').trim();
-    var obs   = ((document.getElementById('rot-mat-obs')             || {}).value || '').trim();
+    var idOt  = ((document.getElementById('rot-mat-ot-id')      || {}).value || '');
+    var fecha = ((document.getElementById('rot-mat-fecha')       || {}).value || '');
+    var tipo  = ((document.getElementById('rot-mat-tipo')        || {}).value || 'Vehiculo');
+    var placa = ((document.getElementById('rot-mat-placa')       || {}).value || '').trim();
+    var solic = ((document.getElementById('rot-mat-solicitante') || {}).value || '').trim();
+    var obs   = ((document.getElementById('rot-mat-obs')         || {}).value || '').trim();
 
-    if (!prod) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El producto es requerido', 'danger'); return; }
+    // Recoger items
+    var descs = document.querySelectorAll('.rot-mat-item-desc');
+    var cants = document.querySelectorAll('.rot-mat-item-cant');
+    var cus   = document.querySelectorAll('.rot-mat-item-cu');
+    var imps  = document.querySelectorAll('.rot-mat-item-imp');
+    var items = [];
+    for (var i = 0; i < cants.length; i++) {
+        var desc = descs[i] ? descs[i].value.trim() : '';
+        if (!desc) continue;
+        var cant = parseFloat(cants[i].value) || 0;
+        var cu   = parseFloat(cus[i].value)   || 0;
+        var imp  = parseFloat(imps[i].value)  || cant * cu;
+        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
+        items.push({ descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
+    }
+    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
-    var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
-    fetch('/api/ot-materiales', {
+    // Validar stock antes de guardar
+    var sinStock = [];
+    items.forEach(function(it) {
+        var invIds = document.querySelectorAll('.rot-mat-item-inv-id');
+        var descs  = document.querySelectorAll('.rot-mat-item-desc');
+        // buscar el inv-id que corresponde a este item por descripcion
+        var invId = '';
+        for (var j = 0; j < descs.length; j++) {
+            if ((descs[j].value || '').trim() === it.descripcion) {
+                invId = invIds[j] ? invIds[j].value : '';
+                break;
+            }
+        }
+        if (invId) {
+            var inv = (window._rotInvData || []).find(function(d) { return d.id === invId; });
+            if (inv) {
+                var stockDisp = parseFloat(inv.stock_actual != null ? inv.stock_actual : 0);
+                if (it.cantidad > stockDisp) {
+                    sinStock.push('"' + it.descripcion + '" — solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
+                }
+            }
+        }
+    });
+    if (sinStock.length) {
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Stock insuficiente:\n• ' + sinStock.join('\n• '), 'danger');
+        }
+        return;
+    }
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticket_ot: idOt, producto: prod, cantidad: cant, unidad_medida: um, costo_unit: cu, costo_total: ct, personal_solicitante: solic, observacion: obs, estado: 'Pendiente', creado_por: user })
+        body: JSON.stringify({
+            ticket_ot:    idOt,
+            fecha:        fecha || null,
+            tipo_destino: tipo,
+            placa:        placa,
+            responsable:  solic,
+            observaciones: obs,
+            creado_por:   user,
+            items:        items
+        })
     })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(d) {
         window.rotCerrarSubDrawer('rot-drawer-material');
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + (d.id_solicitud || '') + ' registrada', 'success');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + (d.id || '') + ' registrada', 'success');
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
             .then(function(r){ return r.ok ? r.json() : []; })
             .then(function(rows) {
@@ -902,7 +1092,7 @@ window.rotGuardarMaterial = function() {
 // ── Eliminar Material ─────────────────────────────────────────────
 window.rotEliminarMaterial = function(idSolicitud, idOt) {
     if (!confirm('¿Eliminar esta solicitud de material?')) return;
-    fetch('/api/ot-materiales/' + idSolicitud, { method: 'DELETE' })
+    fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
@@ -930,6 +1120,8 @@ window.rotCerrarSubDrawer = function(drawerId) {
 
 // ── Poblar selects de Personal ────────────────────────────────────
 function rotPoblarPersonal() {
+    var el = document.getElementById('rot-tr-personal');
+    var savedVal = el ? el.value : '';
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
@@ -938,8 +1130,11 @@ function rotPoblarPersonal() {
                 var n = (p.nombre_completo || p.nombre || '').trim();
                 return n ? '<option value="' + n + '">' + n + '</option>' : '';
             }).join('');
-            var el = document.getElementById('rot-tr-personal');
-            if (el) el.innerHTML = '<option value="">— Seleccionar técnico —</option>' + opts;
+            var elNow = document.getElementById('rot-tr-personal');
+            if (elNow) {
+                elNow.innerHTML = '<option value="">— Seleccionar técnico —</option>' + opts;
+                if (savedVal) elNow.value = savedVal;
+            }
         })
         .catch(function() {});
 }
@@ -962,8 +1157,12 @@ function rotRenderSecBacklog(items) {
               + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
               + '<div><span style="font-weight:700;font-size:0.72rem;color:#d97706;">' + rotEscHtml(b.backlog_id || String(b.id)) + '</span>'
               + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
+              + '<div style="display:flex;gap:4px;">'
               + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
               + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">✓ Realizado</button>'
+              + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
+              + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
+              + '</div>'
               + '</div>'
               + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(b.tarea || '—') + '</div>'
               + (b.reportado_por ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + rotEscHtml(b.reportado_por) + '</div>' : '')
@@ -972,7 +1171,63 @@ function rotRenderSecBacklog(items) {
     body.innerHTML = html;
 }
 
-// ── Marcar backlog item como Realizado ────────────────────────────
+// ── Eliminar backlog item ─────────────────────────────────────────
+window.rotEliminarBacklogItem = function(id, btn) {
+    if (!confirm('¿Eliminar este mantenimiento pendiente?')) return;
+    if (btn) btn.disabled = true;
+    fetch('/api/ot-backlog/' + id, { method: 'DELETE' })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Pendiente eliminado', 'success');
+        if (btn) {
+            var row = btn.closest ? btn.closest('[style*="border-bottom"]') : btn.parentNode.parentNode.parentNode;
+            if (row && row.parentNode) row.parentNode.removeChild(row);
+            var count = document.getElementById('rot-bkg-count');
+            if (count) count.textContent = Math.max(0, (parseInt(count.textContent) || 1) - 1);
+        }
+    })
+    .catch(function() {
+        if (btn) btn.disabled = false;
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger');
+    });
+};
+
+// ── Abrir sub-drawer agregar backlog ──────────────────────────────
+window.rotAbrirAgregarBacklog = function(placa) {
+    var lbl = document.getElementById('rot-bkg-placa-lbl'); if (lbl) lbl.textContent = 'Placa: ' + placa;
+    var hid = document.getElementById('rot-bkg-placa-hid'); if (hid) hid.value = placa;
+    var tema = document.getElementById('rot-bkg-tema');       if (tema) tema.value = '';
+    var tarea = document.getElementById('rot-bkg-tarea');     if (tarea) tarea.value = '';
+    var rep   = document.getElementById('rot-bkg-reportado-por'); if (rep) rep.value = '';
+    rotAbrirSubDrawer('rot-drawer-backlog');
+};
+
+// ── Guardar nuevo backlog ─────────────────────────────────────────
+window.rotGuardarBacklog = function() {
+    var placa = ((document.getElementById('rot-bkg-placa-hid')     || {}).value || '').trim();
+    var tema  = ((document.getElementById('rot-bkg-tema')          || {}).value || '').trim();
+    var tarea = ((document.getElementById('rot-bkg-tarea')         || {}).value || '').trim();
+    var rep   = ((document.getElementById('rot-bkg-reportado-por') || {}).value || '').trim();
+
+    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
+    var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ot-backlog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placa: placa, tema: tema, tarea: tarea, reportado_por: rep || user, estado: 'Pendiente', creado_por: user })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        window.rotCerrarSubDrawer('rot-drawer-backlog');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Mantenimiento pendiente agregado', 'success');
+        // Recargar backlog
+        fetch('/api/ot-backlog?placa=' + encodeURIComponent(placa) + '&estado=Pendiente')
+            .then(function(r){ return r.ok ? r.json() : []; })
+            .then(function(items) { rotRenderSecBacklog(Array.isArray(items) ? items : []); })
+            .catch(function(){});
+    })
+    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al agregar pendiente', 'danger'); });
+};
 window.rotMarcarBacklogRealizado = function(id, btn) {
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
     fetch('/api/ot-backlog/' + id, {
@@ -983,11 +1238,9 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Backlog marcado como Realizado', 'success');
-        // Quitar el ítem del DOM
         if (btn) {
             var row = btn.closest ? btn.closest('[style]') : btn.parentNode.parentNode;
             if (row && row.parentNode) row.parentNode.removeChild(row);
-            // Actualizar contador
             var count = document.getElementById('rot-bkg-count');
             if (count) count.textContent = Math.max(0, (parseInt(count.textContent) || 1) - 1);
         }

@@ -260,6 +260,8 @@
     flex-direction: column;
 }
 .sr-drawer-global.open { transform: translateX(0); }
+/* El drawer de materiales es más ancho para ver mejor los artículos */
+#sr-drawer-material { width: 560px; }
 .sr-drawer-hd {
     display: flex;
     align-items: center;
@@ -572,7 +574,7 @@
 <div class="sr-drawer-global" id="sr-drawer-material">
     <div class="sr-drawer-hd">
         <div>
-            <div class="sr-drawer-title">Salida de Almacén</div>
+            <div class="sr-drawer-title">Nueva Solicitud de Materiales</div>
             <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-mat-ot-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.srCerrarSubDrawer('sr-drawer-material')" style="color:var(--subtext)">
@@ -582,61 +584,115 @@
     <div class="sr-drawer-body">
         <input type="hidden" id="sr-mat-ot-id">
 
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Producto / Material *</label>
-            <input type="text" class="form-control form-control-sm" id="sr-mat-producto" placeholder="Nombre del producto o material">
-        </div>
-
         <div class="row g-2 mb-3">
-            <div class="col-5">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Cantidad</label>
-                <input type="number" class="form-control form-control-sm" id="sr-mat-cant" value="1" min="0.01" step="0.01" oninput="window.srCalcTotal()">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">N° OT</label>
+                <input type="text" class="form-control form-control-sm" id="sr-mat-ot-vis" readonly style="background:var(--bg);color:var(--subtext);">
             </div>
-            <div class="col-7">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Unidad</label>
-                <select class="form-select form-select-sm" id="sr-mat-um">
-                    <option value="Pza">Pza — Pieza</option>
-                    <option value="Lt">Lt — Litros</option>
-                    <option value="Kg">Kg — Kilogramos</option>
-                    <option value="m">m — Metros</option>
-                    <option value="Gl">Gl — Galones</option>
-                    <option value="Jgo">Jgo — Juego</option>
-                    <option value="Srv">Srv — Servicio</option>
-                    <option value="Un">Un — Unidad</option>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha *</label>
+                <input type="date" class="form-control form-control-sm" id="sr-mat-fecha">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo Destino</label>
+                <select class="form-select form-select-sm" id="sr-mat-tipo">
+                    <option value="Vehiculo">Vehículo</option>
+                    <option value="Personal">Personal</option>
                 </select>
             </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Placa</label>
+                <input type="text" class="form-control form-control-sm" id="sr-mat-placa"
+                    list="sr-mat-list-placas" placeholder="Buscar placa…"
+                    style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <datalist id="sr-mat-list-placas"></datalist>
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Responsable / Solicitante</label>
+                <input type="text" class="form-control form-control-sm" id="sr-mat-solicitante" placeholder="Nombre del responsable">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Observaciones</label>
+                <input type="text" class="form-control form-control-sm" id="sr-mat-obs" placeholder="Motivo, notas…">
+            </div>
         </div>
 
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo Unit. (S/)</label>
-                <input type="number" class="form-control form-control-sm" id="sr-mat-costo-unit" value="0" min="0" step="0.01" oninput="window.srCalcTotal()">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo Total (S/)</label>
-                <input type="number" class="form-control form-control-sm" id="sr-mat-costo-total" value="0" readonly style="background:var(--bg);font-weight:700;">
-            </div>
+        <hr style="border-color:var(--border);">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold" style="font-size:0.83rem;color:var(--text);">
+                <i class="bi bi-list-ul me-1"></i>Artículos
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._srAgregarItemMat()">
+                <i class="bi bi-plus"></i> Agregar
+            </button>
         </div>
+        <div style="overflow-x:auto;">
+            <table class="table table-sm table-bordered" style="font-size:0.8rem;min-width:420px;">
+                <thead style="background:var(--bg);">
+                    <tr>
+                        <th style="min-width:180px;">Artículo</th>
+                        <th style="width:70px;">Cant.</th>
+                        <th style="width:90px;">Costo U.</th>
+                        <th style="width:85px;">Importe</th>
+                        <th style="width:34px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="sr-mat-items-tbody"></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" style="text-align:right;font-weight:700;font-size:0.82rem;color:var(--subtext);">Total:</td>
+                        <td style="font-weight:800;color:#16a34a;" id="sr-mat-items-total">S/. 0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <datalist id="sr-mat-inv-list"></datalist>
+
+        <button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.srGuardarMaterial()">
+            <i class="bi bi-save me-1"></i>Guardar Solicitud
+        </button>
+    </div>
+</div>
+
+
+<!-- ═══════════════ DRAWER: Agregar Mantenimiento Pendiente ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-backlog">
+    <div class="sr-drawer-hd">
+        <div>
+            <div class="sr-drawer-title">Nuevo Mantenimiento Pendiente</div>
+            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-bkg-placa-lbl"></div>
+        </div>
+        <button class="btn btn-sm" onclick="window.srCerrarSubDrawer('sr-drawer-backlog')" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <input type="hidden" id="sr-bkg-placa-hid">
 
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Solicitante</label>
-            <input type="text" class="form-control form-control-sm" id="sr-mat-solicitante" placeholder="Nombre del solicitante">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Categoría / Tema</label>
+            <input type="text" class="form-control form-control-sm" id="sr-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
         </div>
-
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Descripción del Mantenimiento *</label>
+            <textarea class="form-control form-control-sm" id="sr-bkg-tarea" rows="3" placeholder="Describe el trabajo pendiente…"></textarea>
+        </div>
         <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Observación</label>
-            <textarea class="form-control form-control-sm" id="sr-mat-obs" rows="2" placeholder="Notas adicionales..."></textarea>
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Reportado por</label>
+            <input type="text" class="form-control form-control-sm" id="sr-bkg-reportado-por" placeholder="Nombre de quien reporta">
         </div>
 
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.srGuardarMaterial()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Solicitud
+        <button class="btn btn-warning w-100 fw-bold" style="color:#fff;" onclick="window.srGuardarBacklog()">
+            <i class="bi bi-plus-lg me-1"></i>Agregar Pendiente
         </button>
     </div>
 </div>
 
 
 <!-- ═══════════════ SUB-DRAWER: Editar OT ═══════════════ -->
-<div class="sr-drawer" id="sr-drawer-editar-ot" style="width:440px;">
+<div class="sr-drawer-global" id="sr-drawer-editar-ot">
     <div class="sr-drawer-hd">
         <div>
             <div style="font-size:0.95rem;font-weight:800;color:var(--text);">Editar Orden de Trabajo</div>
