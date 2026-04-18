@@ -1,170 +1,342 @@
-<!-- Módulo Almacén / Salidas — SPA Aislado -->
-<div id="mod-salidas" class="modulo-wrapper d-flex flex-column h-100">
+<!-- Módulo Almacén / Salidas — Azkell Fleet -->
+<style>
+#moduloSalidas {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
 
-  <!-- Cabecera -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Salidas de Almacén
-      </h2>
-      <p class="text-muted small mb-0">Registro de salida de artículos</p>
-    </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarSalidas()" title="Actualizar">
-        <i class="bi bi-arrow-clockwise"></i>
-      </button>
-      <button class="btn btn-sm btn-outline-success" onclick="window.exportarSalidasExcel()" title="Exportar Excel">
-        <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Exportar</span>
-      </button>
-      <button class="btn btn-sm btn-danger" onclick="window.abrirModalSalida()">
-        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Salida</span>
-      </button>
-    </div>
-  </div>
+/* Tabs */
+#moduloSalidas .sal-tabs {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+#moduloSalidas .sal-tab {
+    padding: 12px 0;
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--subtext);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+    white-space: nowrap;
+}
+#moduloSalidas .sal-tab:hover { color: var(--text); }
+#moduloSalidas .sal-tab.active {
+    color: var(--primary, #5865F2);
+    border-bottom-color: var(--primary, #5865F2);
+}
+#moduloSalidas .sal-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: var(--surface2, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    margin-left: 5px;
+    color: var(--subtext);
+    padding: 0 4px;
+}
+#moduloSalidas .sal-tab.active .sal-tab-badge {
+    background: rgba(88,101,242,0.12);
+    border-color: rgba(88,101,242,0.3);
+    color: var(--primary, #5865F2);
+}
 
-  <!-- Filtros -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <input type="text" id="sal-buscar" class="form-control form-control-sm" style="max-width:240px;" placeholder="Código, placa, responsable…" oninput="window.filtrarSalidas()">
-    <select id="sal-fil-tipo" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarSalidas()">
-      <option value="">Todos</option>
-      <option value="Vehiculo">Vehículo</option>
-      <option value="Personal">Personal</option>
-    </select>
-    <div class="d-flex align-items-center gap-1">
-      <input type="date" id="sal-fil-desde" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()" title="Desde">
-      <span class="text-muted small">—</span>
-      <input type="date" id="sal-fil-hasta" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarSalidas()" title="Hasta">
-      <button class="btn btn-xs btn-outline-secondary" onclick="window._salLimpiarFechas()" title="Limpiar fechas"><i class="bi bi-x-lg"></i></button>
-    </div>
-    <span id="sal-contador" class="text-muted small ms-auto"></span>
-  </div>
+/* Controles */
+#moduloSalidas .sal-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloSalidas .sal-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
 
-  <!-- Tabla -->
-  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
-    <table class="table table-custom table-hover m-0" id="tabla-salidas">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Fecha</th>
-          <th>Tipo</th>
-          <th>Placa / Destino</th>
-          <th>Responsable</th>
-          <th>Artículos</th>
-          <th class="text-end">Total</th>
-          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-salidas">
-        <tr><td colspan="8" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div id="sal-paginacion" class="mt-2 px-1"></div>
-</div>
+/* Tabla */
+#moduloSalidas .sal-table-wrap { flex: 1 1 0; overflow-y: auto; background: var(--surface); }
+#moduloSalidas table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloSalidas thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloSalidas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+#moduloSalidas tbody tr:hover { background: var(--bg); }
+#moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloSalidas tbody td { padding: 10px 12px; color: var(--text); }
+#moduloSalidas .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
 
-<!-- ═══ MODAL NUEVA SALIDA ════════════════════════════════════════ -->
-<div class="modal fade" id="modal-salida" tabindex="-1">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold"><i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Nueva Salida de Artículos</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <!-- Cabecera del documento -->
-          <div class="col-md-3">
-            <label class="fw-semibold small">Fecha <span class="text-danger">*</span></label>
-            <input type="date" class="form-control" id="sal-f-fecha">
-          </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small">Tipo de Destino <span class="text-danger">*</span></label>
-            <select class="form-select" id="sal-f-tipo" onchange="window._salToggleDestino()">
-              <option value="">Seleccionar…</option>
-              <option value="Vehiculo">Vehículo</option>
-              <option value="Personal">Personal</option>
-            </select>
-          </div>
-          <div class="col-md-3" id="sal-row-placa">
-            <label class="fw-semibold small">Placa</label>
-            <input type="text" class="form-control" id="sal-f-placa" list="sal-list-placas" placeholder="Buscar placa…" oninput="window._salDetectarCliente()" autocomplete="off">
-            <datalist id="sal-list-placas"></datalist>
-          </div>
-          <div class="col-md-3" id="sal-row-cliente" style="display:none;">
-            <label class="fw-semibold small">Cliente</label>
-            <input type="text" class="form-control" id="sal-f-cliente" readonly placeholder="Auto-detectado" style="background:var(--surface);color:var(--subtext);">
-          </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small">Responsable</label>
-            <div class="position-relative">
-              <input type="text" class="form-control" id="sal-f-responsable-texto"
-                placeholder="Buscar responsable…" autocomplete="off"
-                oninput="window._salFiltrarResp()"
-                onfocus="window._salFiltrarResp()"
-                onblur="window._salOcultarRespDD()">
-              <input type="hidden" id="sal-f-responsable-id">
-              <div id="sal-resp-dropdown"
-                style="display:none;position:absolute;z-index:9999;width:100%;max-height:230px;overflow-y:auto;
-                       background:var(--surface);border:1px solid var(--border,#dee2e6);
-                       border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);top:calc(100% + 2px);left:0;">
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small">Moneda</label>
-            <select class="form-select" id="sal-f-moneda" onchange="window._salActualizarTC()">
-              <option value="PEN">PEN (S/)</option>
-              <option value="USD">USD ($)</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small">Tipo de Cambio</label>
-            <input type="number" class="form-control" id="sal-f-tc" step="0.001" placeholder="3.700">
-            <div class="form-text">Solo aplica si moneda = USD</div>
-          </div>
-          <div class="col-md-6">
-            <label class="fw-semibold small">Observaciones</label>
-            <input type="text" class="form-control" id="sal-f-obs" placeholder="Referencia, motivo de salida…">
-          </div>
+/* Badges */
+#moduloSalidas .sal-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+#moduloSalidas .sal-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+#moduloSalidas .badge-pendiente  { background: rgba(217,119,6,0.12); color: #d97706; }
+#moduloSalidas .badge-despachado { background: rgba(22,163,74,0.12);  color: #16a34a; }
+
+/* Panel lateral detalle */
+#moduloSalidas .sal-detail-panel {
+    width: 0; flex-shrink: 0; overflow: hidden;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; transition: width 0.25s; max-width: 380px;
+}
+#moduloSalidas .sal-detail-panel.open { width: 380px; }
+#moduloSalidas .sal-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloSalidas .sal-detail-footer {
+    padding: 0.75rem 1rem; border-top: 1px solid var(--border);
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+}
+
+/* Secciones detalle */
+#moduloSalidas .sal-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloSalidas .sal-sec-hd {
+    background: var(--bg); padding: 8px 12px; font-size: 0.73rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--subtext); border-bottom: 1px solid var(--border);
+}
+#moduloSalidas .sal-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloSalidas .sal-field:last-child { border-bottom: none; }
+#moduloSalidas .sal-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; }
+#moduloSalidas .sal-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
+
+/* Drawer Nueva Solicitud */
+#salNuevoBackdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1059; }
+#salNuevoBackdrop.open { display: block; }
+#moduloSalidas .sal-drawer {
+    position: fixed; top: 0; right: 0; width: 560px; max-width: 96vw; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
+    transform: translateX(100%); transition: transform 0.28s ease; z-index: 1060;
+    display: flex; flex-direction: column;
+}
+#moduloSalidas .sal-drawer.open { transform: translateX(0); }
+#moduloSalidas .sal-drawer-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.25rem; height: 52px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+#moduloSalidas .sal-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+#moduloSalidas .sal-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+</style>
+
+<!-- Backdrop -->
+<div id="salNuevoBackdrop" onclick="window.salCerrarNuevo()"></div>
+
+<div id="moduloSalidas">
+
+    <!-- TABS -->
+    <div class="sal-tabs">
+        <div class="sal-tab active" id="sal-tab-pend" onclick="window.salCambiarTab('pend')">
+            Solicitudes Pendientes
+            <span class="sal-tab-badge" id="sal-badge-pend">0</span>
         </div>
-
-        <hr class="my-3">
-
-        <!-- Grid de artículos -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-1"></i>Artículos</h6>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="window._salAgregarItem()">
-            <i class="bi bi-plus"></i> Agregar artículo
-          </button>
+        <div class="sal-tab" id="sal-tab-desp" onclick="window.salCambiarTab('desp')">
+            Salidas (Despachadas)
+            <span class="sal-tab-badge" id="sal-badge-desp">0</span>
         </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered" id="tabla-sal-items">
-            <thead class="table-light">
-              <tr>
-                <th style="min-width:260px;">Artículo</th>
-                <th style="width:90px;">Cantidad</th>
-                <th style="width:120px;">Costo Unit.</th>
-                <th style="width:110px;">Importe</th>
-                <th style="width:40px;"></th>
-              </tr>
-            </thead>
-            <tbody id="tbody-sal-items"></tbody>
-            <tfoot>
-              <tr class="table-light fw-bold">
-                <td colspan="3" class="text-end">Total:</td>
-                <td id="sal-total-display" class="text-end">S/ 0.00</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
+    </div>
+
+    <!-- FILA 1: Buscador + acciones -->
+    <div class="sal-controls">
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="sal-search"
+                placeholder="Buscar por Artículo, N° OT, Placa…"
+                oninput="window.salFiltrar()">
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-danger" onclick="window.guardarSalida()">
-          <i class="bi bi-save me-1"></i>Registrar Salida
+        <input type="text" class="form-control form-control-sm" id="sal-fil-ot"
+            placeholder="N° OT" style="max-width:110px"
+            oninput="window.salFiltrar()">
+        <input type="text" class="form-control form-control-sm" id="sal-fil-placa"
+            placeholder="PLACA" style="max-width:100px; text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase(); window.salFiltrar()">
+        <input type="month" class="form-control form-control-sm" id="sal-fil-mes"
+            style="max-width:150px" onchange="window.salFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="sal-fil-desde"
+            style="max-width:150px" title="Desde" onchange="window.salFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="sal-fil-hasta"
+            style="max-width:150px" title="Hasta" onchange="window.salFiltrar()">
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.salCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
         </button>
-      </div>
     </div>
-  </div>
+
+    <!-- FILA 2: Estado + Exportar + Nueva Solicitud -->
+    <div class="sal-filters">
+        <select class="form-select form-select-sm" id="sal-fil-estado"
+            onchange="window.salFiltrar()" style="max-width:200px">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Despachado">Despachado</option>
+        </select>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-success" onclick="window.salExportar()">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="window.salAbrirNuevo()">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Solicitud
+        </button>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA -->
+        <div class="sal-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID SOLICITUD</th>
+                        <th>N° OT</th>
+                        <th>PLACA</th>
+                        <th>RESPONSABLE</th>
+                        <th>ARTÍCULOS</th>
+                        <th>TOTAL</th>
+                        <th>ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="sal-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="sal-detail-panel" id="sal-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="sal-detalle-titulo">Detalle Solicitud</span>
+                <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
+            <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
+        </div>
+
+    </div>
+
+    <!-- DRAWER: Nueva Solicitud -->
+    <div class="sal-drawer" id="sal-drawer-nuevo">
+        <div class="sal-drawer-hd">
+            <span class="sal-drawer-title">Nueva Solicitud de Materiales</span>
+            <button class="btn btn-sm" onclick="window.salCerrarNuevo()" style="color:var(--subtext)">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="sal-drawer-body">
+
+            <!-- Cabecera del documento -->
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">N° OT *</label>
+                    <input type="text" class="form-control form-control-sm" id="sal-f-ot"
+                        placeholder="Ej. OT-2026-0001">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha *</label>
+                    <input type="date" class="form-control form-control-sm" id="sal-f-fecha">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tipo Destino</label>
+                    <select class="form-select form-select-sm" id="sal-f-tipo" onchange="window.salToggleTipo()">
+                        <option value="Vehiculo">Vehículo</option>
+                        <option value="Personal">Personal</option>
+                    </select>
+                </div>
+                <div class="col-6" id="sal-row-placa">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa</label>
+                    <input type="text" class="form-control form-control-sm" id="sal-f-placa"
+                        list="sal-list-placas" placeholder="Buscar placa…"
+                        style="text-transform:uppercase;"
+                        oninput="this.value=this.value.toUpperCase()">
+                    <datalist id="sal-list-placas"></datalist>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Responsable</label>
+                    <input type="text" class="form-control form-control-sm" id="sal-f-responsable"
+                        placeholder="Nombre del responsable / solicitante">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Observaciones</label>
+                    <input type="text" class="form-control form-control-sm" id="sal-f-obs"
+                        placeholder="Motivo, referencia, notas…">
+                </div>
+            </div>
+
+            <hr style="border-color:var(--border);">
+
+            <!-- Grid de artículos -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold" style="font-size:0.83rem; color:var(--text);">
+                    <i class="bi bi-list-ul me-1"></i>Artículos
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._salAgregarItem()">
+                    <i class="bi bi-plus"></i> Agregar
+                </button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table table-sm table-bordered" style="font-size:0.8rem; min-width:480px;">
+                    <thead style="background:var(--bg);">
+                        <tr>
+                            <th style="min-width:220px;">Artículo</th>
+                            <th style="width:80px;">Cantidad</th>
+                            <th style="width:110px;">Costo Unit.</th>
+                            <th style="width:100px;">Importe</th>
+                            <th style="width:38px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sal-items-tbody"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align:right; font-weight:700; font-size:0.82rem; color:var(--subtext);">Total:</td>
+                            <td style="font-weight:800; color:#16a34a;" id="sal-items-total">S/. 0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <datalist id="sal-inv-list"></datalist>
+
+            <button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.salGuardarNuevo()">
+                <i class="bi bi-save me-1"></i>Guardar Solicitud
+            </button>
+
+        </div>
+    </div>
+
 </div>

@@ -81,7 +81,6 @@
     opacity: 0.8;
 }
 #moduloTrabajosOT .badge-pendiente { background: rgba(217,119,6,0.12);  color: #d97706; }
-#moduloTrabajosOT .badge-aprobado  { background: rgba(22,163,74,0.12);  color: #16a34a; }
 
 /* Panel lateral detalle */
 #moduloTrabajosOT .tot-detail-panel {
@@ -154,14 +153,8 @@
         </button>
     </div>
 
-    <!-- FILA 2: Estado + Exportar -->
+    <!-- FILA 2: Exportar -->
     <div class="tot-filters">
-        <select class="form-select form-select-sm" id="tot-fil-estado"
-            onchange="window.totFiltrar()" style="max-width:180px">
-            <option value="">Todos los estados</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Aprobado">Aprobado</option>
-        </select>
         <div style="flex:1"></div>
         <button class="btn btn-sm btn-success" onclick="window.totExportar()">
             <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
@@ -178,11 +171,12 @@
                     <tr>
                         <th>ID TRABAJO</th>
                         <th>N° OT</th>
-                        <th>TRABAJADOR(ES)</th>
                         <th>F/H INICIO</th>
-                        <th>F/H FIN</th>
-                        <th>COSTO M.O.</th>
-                        <th>ESTADO</th>
+                        <th>TRABAJO REALIZADO</th>
+                        <th>PERSONAL</th>
+                        <th>F/H SALIDA</th>
+                        <th>COSTO</th>
+                        <th>TIEMPO (HRS)</th>
                     </tr>
                 </thead>
                 <tbody id="tot-tbody"></tbody>
@@ -267,11 +261,10 @@
             <input type="number" class="form-control form-control-sm" id="tot-ed-costo" value="0" min="0" step="0.01">
         </div>
 
-        <div class="mb-4">
+        <div class="mb-4" style="display:none;">
             <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Estado</label>
             <select class="form-select form-select-sm" id="tot-ed-estado">
                 <option value="Pendiente">Pendiente</option>
-                <option value="Aprobado">Aprobado</option>
             </select>
         </div>
 
