@@ -578,6 +578,14 @@ window.srAbrirDetalleOT = function(idOt) {
           + '<div id="sr-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
+    // ── Backlog pendiente de la unidad ──
+    if (ot.placa) {
+        html += '<div class="rot-sec" id="sr-sec-backlog">'
+              + '<div class="rot-sec-hd" style="color:#d97706;">Backlog Pendiente de la Unidad <span id="sr-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+              + '<div id="sr-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
+              + '</div>';
+    }
+
     scroll.innerHTML = html;
 
     var titulo = document.getElementById('sr-ot-det-titulo'); if (titulo) titulo.textContent = idOt;
@@ -587,7 +595,9 @@ window.srAbrirDetalleOT = function(idOt) {
     try { permisos = JSON.parse(localStorage.getItem('fleet_permisos') || '{}'); } catch(ex) {}
     var puedeAprobar = permisos.admin === true || !!(permisos.ot && permisos.ot.aprobar);
 
-    var ftHtml = '<button class="btn btn-sm btn-outline-danger" onclick="window.srEliminarOT(\'' + esc(idOt) + '\')">'
+    var ftHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarOT(\'' + esc(idOt) + '\')">'
+               + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
+               + '<button class="btn btn-sm btn-outline-danger" onclick="window.srEliminarOT(\'' + esc(idOt) + '\')">'
                + '<i class="bi bi-trash me-1"></i>Eliminar</button>';
     if (puedeAprobar && estado !== 'Anulado' && estado !== 'Aprobada' && estado !== 'Cerrada') {
         ftHtml += '<div class="ms-auto d-flex gap-2">'
@@ -607,17 +617,20 @@ window.srAbrirDetalleOT = function(idOt) {
     window.srOtActiva = idOt;
     srAbrirDrawer('sr-drawer-ot-det');
 
-    // ── Fetch trabajos + materiales en paralelo ──
+    // ── Fetch trabajos + materiales + backlog en paralelo ──
     window.srOtTrabajosActivos   = [];
     window.srOtMaterialesActivos = [];
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='   + encodeURIComponent(idOt)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([])
     ]).then(function(res) {
         window.srOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
         window.srOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
+        var backlogItems             = Array.isArray(res[2]) ? res[2] : [];
         srRenderSecTrabajos(idOt, esAprobada);
         srRenderSecMateriales(idOt, esAprobada);
+        srRenderSecBacklog(backlogItems);
         // Actualizar Costo Total dinámico (trabajos Aprobado + materiales Despachado)
         var costoTr = window.srOtTrabajosActivos
             .filter(function(t) { return t.estado === 'Aprobado'; })
@@ -980,7 +993,7 @@ function srAbrirDrawer(id) {
 window.srCerrarDrawers = function() {
     var back = document.getElementById('srDrawerBackdrop');
     if (back) back.classList.remove('open');
-    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material'].forEach(function(id) {
+    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot'].forEach(function(id) {
         var d = document.getElementById(id);
         if (d) d.classList.remove('open');
     });
@@ -993,7 +1006,7 @@ window.srCerrarSubDrawer = function(drawerId) {
     var d = document.getElementById(drawerId);
     if (d) d.classList.remove('open');
     // Apagar backdrop solo si ningún otro drawer está abierto
-    var abiertos = ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material'].filter(function(id) {
+    var abiertos = ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot'].filter(function(id) {
         var el = document.getElementById(id);
         return el && el.classList.contains('open');
     });
@@ -1001,6 +1014,141 @@ window.srCerrarSubDrawer = function(drawerId) {
         var back = document.getElementById('srDrawerBackdrop');
         if (back) back.classList.remove('open');
     }
+};
+
+// ── Render sección Backlog en detalle OT ─────────────────────────
+function srRenderSecBacklog(items) {
+    var body  = document.getElementById('sr-bkg-body');
+    var count = document.getElementById('sr-bkg-count');
+    if (!body) return;
+    if (count) count.textContent = items.length;
+
+    if (!items.length) {
+        body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay pendientes para esta unidad</div>';
+        return;
+    }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    var html = '';
+    items.forEach(function(b) {
+        html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
+              + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
+              + '<div><span style="font-weight:700;font-size:0.72rem;color:#d97706;">' + esc(b.backlog_id || String(b.id)) + '</span>'
+              + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + esc(b.tema) + '</span>' : '') + '</div>'
+              + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
+              + 'onclick="event.stopPropagation();window.srMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">✓ Realizado</button>'
+              + '</div>'
+              + '<div style="color:var(--text);margin-top:3px;">' + esc(b.tarea || '—') + '</div>'
+              + (b.reportado_por ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + esc(b.reportado_por) + '</div>' : '')
+              + '</div>';
+    });
+    body.innerHTML = html;
+}
+
+window.srMarcarBacklogRealizado = function(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    fetch('/api/ot-backlog/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'Realizado' })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Backlog marcado como Realizado', 'success');
+        if (btn) {
+            var row = btn.closest ? btn.closest('[style]') : btn.parentNode.parentNode;
+            if (row && row.parentNode) row.parentNode.removeChild(row);
+            var count = document.getElementById('sr-bkg-count');
+            if (count) count.textContent = Math.max(0, (parseInt(count.textContent) || 1) - 1);
+        }
+    })
+    .catch(function() {
+        if (btn) { btn.disabled = false; btn.innerHTML = '✓ Realizado'; }
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al actualizar el backlog', 'danger');
+    });
+};
+
+// ── Editar OT — abrir sub-drawer ─────────────────────────────────
+window.srEditarOT = function(idOt) {
+    var ot = window.srOtData.find(function(o) { return (o.id_ot || o.ticket_entrada) === idOt; });
+    if (!ot) return;
+    var det = {};
+    try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(ex) {}
+
+    var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('sr-eot-id',         idOt);
+    set('sr-eot-supervisor', det.supervisor || ot.supervisor || '');
+    set('sr-eot-motivo',     det.motivo || ot.observaciones || '');
+
+    var sitEl = document.getElementById('sr-eot-situacion');
+    if (sitEl) sitEl.value = det.situacion_inicial || ot.situacion || '';
+
+    var tipoEl = document.getElementById('sr-eot-tipo');
+    if (tipoEl) {
+        tipoEl.value = det.tipo_ot || '';
+        window.srCambiarTipoEOT();
+    }
+    setTimeout(function() {
+        var subEl = document.getElementById('sr-eot-subtipo');
+        if (subEl) subEl.value = det.sub_tipo || '';
+    }, 50);
+
+    var lbl = document.getElementById('sr-eot-id-lbl');
+    if (lbl) lbl.textContent = idOt;
+
+    srAbrirDrawer('sr-drawer-editar-ot');
+};
+
+window.srCambiarTipoEOT = function() {
+    var tipo = ((document.getElementById('sr-eot-tipo') || {}).value || '');
+    var sel  = document.getElementById('sr-eot-subtipo');
+    if (!sel) return;
+    var opts = SR_SUBTIPOS[tipo] || [];
+    sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+    }).join('');
+    sel.disabled = !opts.length;
+};
+
+window.srGuardarEdicionOT = function() {
+    var idOt       = ((document.getElementById('sr-eot-id')         || {}).value || '').trim();
+    var tipo       = ((document.getElementById('sr-eot-tipo')       || {}).value || '').trim();
+    var subtipo    = ((document.getElementById('sr-eot-subtipo')    || {}).value || '').trim();
+    var supervisor = ((document.getElementById('sr-eot-supervisor') || {}).value || '').trim();
+    var situacion  = ((document.getElementById('sr-eot-situacion')  || {}).value || '').trim();
+    var motivo     = ((document.getElementById('sr-eot-motivo')     || {}).value || '').trim();
+
+    if (!idOt) return;
+
+    fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOt), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            accion:            'editar',
+            tipo_ot:           tipo,
+            sub_tipo:          subtipo,
+            supervisor:        supervisor,
+            situacion_inicial: situacion,
+            motivo:            motivo
+        })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+        window.srCerrarSubDrawer('sr-drawer-editar-ot');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT actualizada correctamente', 'success');
+        fetch('/api/ordenes-trabajo')
+            .then(function(r) { return r.ok ? r.json() : []; })
+            .then(function(data) {
+                window.srOtData = Array.isArray(data) ? data : [];
+                srRenderTabla();
+                window.srAbrirDetalleOT(idOt);
+            }).catch(function() {});
+    })
+    .catch(function(err) {
+        console.error('Error editando OT:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar los cambios', 'danger');
+    });
 };
 
 function srLimpiarFormRegistro() {

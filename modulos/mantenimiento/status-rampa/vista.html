@@ -633,3 +633,66 @@
         </button>
     </div>
 </div>
+
+
+<!-- ═══════════════ SUB-DRAWER: Editar OT ═══════════════ -->
+<div class="sr-drawer" id="sr-drawer-editar-ot" style="width:440px;">
+    <div class="sr-drawer-hd">
+        <div>
+            <div style="font-size:0.95rem;font-weight:800;color:var(--text);">Editar Orden de Trabajo</div>
+            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="sr-eot-id-lbl"></div>
+        </div>
+        <button class="btn btn-sm" onclick="window.srCerrarSubDrawer('sr-drawer-editar-ot')" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="sr-drawer-body">
+        <input type="hidden" id="sr-eot-id">
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo OT</label>
+                <select class="form-select form-select-sm" id="sr-eot-tipo" onchange="window.srCambiarTipoEOT()">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                    <option value="Predictivo">Predictivo</option>
+                    <option value="Proactivo">Proactivo</option>
+                    <option value="Servicio">Servicio</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Sub Tipo</label>
+                <select class="form-select form-select-sm" id="sr-eot-subtipo" disabled>
+                    <option value="">— Seleccionar tipo primero —</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Supervisor</label>
+            <input type="text" class="form-control form-control-sm" id="sr-eot-supervisor" placeholder="Nombre del supervisor">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Situación Inicial</label>
+            <select class="form-select form-select-sm" id="sr-eot-situacion">
+                <option value="">— Seleccionar —</option>
+                <option value="En atención">En atención</option>
+                <option value="Espera de repuesto">Espera de repuesto</option>
+                <option value="Espera de autorización">Espera de autorización</option>
+                <option value="Finalizado">Finalizado</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Motivo / Observaciones</label>
+            <textarea class="form-control form-control-sm" id="sr-eot-motivo" rows="3" placeholder="Describe el motivo de la OT..."></textarea>
+        </div>
+
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.srGuardarEdicionOT()">
+            <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+        </button>
+    </div>
+</div>
+
