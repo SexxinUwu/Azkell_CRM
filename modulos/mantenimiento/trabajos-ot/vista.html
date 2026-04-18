@@ -181,7 +181,7 @@
                         <th>TRABAJADOR(ES)</th>
                         <th>F/H INICIO</th>
                         <th>F/H FIN</th>
-                        <th>COSTO</th>
+                        <th>COSTO M.O.</th>
                         <th>ESTADO</th>
                     </tr>
                 </thead>
@@ -203,4 +203,80 @@
 
     </div>
 
+</div>
+
+<!-- ═══ DRAWER: Editar Trabajo ═══ -->
+<style>
+.tot-edit-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 1059;
+}
+.tot-edit-backdrop.open { display: block; }
+.tot-edit-drawer {
+    position: fixed; top: 0; right: 0;
+    width: 440px; max-width: 96vw; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
+    transform: translateX(100%); transition: transform 0.25s ease;
+    z-index: 1060; display: flex; flex-direction: column;
+}
+.tot-edit-drawer.open { transform: translateX(0); }
+.tot-edit-drawer-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.25rem; height: 52px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tot-edit-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+</style>
+<div class="tot-edit-backdrop" id="tot-edit-backdrop" onclick="window.totCerrarDrawerEditar()"></div>
+<div class="tot-edit-drawer" id="tot-drawer-editar">
+    <div class="tot-edit-drawer-hd">
+        <span style="font-size:0.95rem; font-weight:800; color:var(--text);" id="tot-ed-titulo">Editar Trabajo</span>
+        <button class="btn btn-sm" onclick="window.totCerrarDrawerEditar()" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="tot-edit-drawer-body">
+        <input type="hidden" id="tot-ed-ticket">
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Descripción del Trabajo *</label>
+            <textarea class="form-control form-control-sm" id="tot-ed-desc" rows="3" placeholder="Detalla el trabajo realizado..."></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Personal / Técnico</label>
+            <select class="form-select form-select-sm" id="tot-ed-personal">
+                <option value="">— Seleccionar técnico —</option>
+            </select>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Inicio</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="tot-ed-fecha-ini">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Fin</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="tot-ed-fecha-fin">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo del Trabajo (S/)</label>
+            <input type="number" class="form-control form-control-sm" id="tot-ed-costo" value="0" min="0" step="0.01">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Estado</label>
+            <select class="form-select form-select-sm" id="tot-ed-estado">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Aprobado">Aprobado</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.totGuardarEdicion()">
+            <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+        </button>
+    </div>
 </div>

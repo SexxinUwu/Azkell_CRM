@@ -257,23 +257,26 @@ window.verificarSesionGuardada = function() {
     var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos;
     safe('wrap-almacen', showAlm);
 
-    // PREFERENCIAS — Config. Preventivos + Config. Almacén (admin-only por defecto)
+    // PREFERENCIAS — Config. Preventivos + Config. Taller + Config. Almacén (admin-only por defecto)
     safe('nav-configuracion-mp', vCfgMant);
     safe('nav-kits-mp',          vCfgMant);
     safe('nav-tipos-mp',         vCfgMant);
     safe('nav-config-metrica',   vCfgMant);
+    safe('nav-situaciones',      vCfgMant || vCfgAlm || isAdm);
     safe('nav-familias-inv',     vCfgAlm);
     safe('nav-unidades-inv',     vCfgAlm);
     safe('nav-sistemas-inv',     vCfgAlm);
     safe('nav-marcas-inv',       vCfgAlm);
 
     // Sub-labels de Preferencias
-    var elSubCfgPrev = document.getElementById('nav-sub-cfg-prev');
-    var elSubCfgAlm  = document.getElementById('nav-sub-cfg-alm');
-    if (elSubCfgPrev) elSubCfgPrev.style.display = vCfgMant ? '' : 'none';
-    if (elSubCfgAlm)  elSubCfgAlm.style.display  = vCfgAlm  ? '' : 'none';
+    var elSubCfgPrev   = document.getElementById('nav-sub-cfg-prev');
+    var elSubCfgTaller = document.getElementById('nav-sub-cfg-taller');
+    var elSubCfgAlm    = document.getElementById('nav-sub-cfg-alm');
+    if (elSubCfgPrev)   elSubCfgPrev.style.display   = vCfgMant ? '' : 'none';
+    if (elSubCfgTaller) elSubCfgTaller.style.display  = (vCfgMant || vCfgAlm || isAdm) ? '' : 'none';
+    if (elSubCfgAlm)    elSubCfgAlm.style.display     = vCfgAlm  ? '' : 'none';
 
-    var showPref = vCfgMant || vCfgAlm;
+    var showPref = vCfgMant || vCfgAlm || isAdm;
     safe('wrap-preferencias', showPref);
 
     // FLOTA — ítems individuales
@@ -2080,6 +2083,7 @@ var NOMBRES_MODULOS_RECIENTES = {
     'almacen/sistemas':           'Sistemas',
     'almacen/familias':           'Familias',
     'almacen/marcas':             'Marcas',
+    'preferencias/situaciones':   'Situaciones',
     'flota/status':               'Status Flota',
     'flota/ubicacion':            'GPS',
     'directorio/conductores':     'Personal',
@@ -2200,6 +2204,7 @@ const TITULOS_MODULOS = {
     'almacen/sistemas':            'Sistemas y Sub-Sistemas',
     'almacen/familias':            'Familias de Artículos',
     'almacen/marcas':              'Marcas de Fabricante',
+    'preferencias/situaciones':    'Catálogo de Situaciones',
     'flota/status':                'Status de Flota',
     'flota/ubicacion':             'GPS',
     'directorio/conductores':      'Directorio de Personal',
@@ -2236,6 +2241,7 @@ const MENU_IDS = {
     'almacen/sistemas':            'nav-sistemas-inv',
     'almacen/familias':            'nav-familias-inv',
     'almacen/marcas':              'nav-marcas-inv',
+    'preferencias/situaciones':    'nav-situaciones',
     'flota/status':                'nav-status-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'directorio/conductores':      'nav-conductores',
@@ -2257,6 +2263,7 @@ const MENU_SECTION = {
     'almacen/sistemas':           'preferencias',
     'almacen/familias':           'preferencias',
     'almacen/marcas':             'preferencias',
+    'preferencias/situaciones':   'preferencias',
     'mantenimiento/configuracion-mp': 'preferencias',
     'mantenimiento/kits-mp':          'preferencias',
     'mantenimiento/tipos-mp':         'preferencias',
@@ -2286,6 +2293,7 @@ const BREADCRUMB_MAP = {
     'almacen/sistemas':           ['Preferencias','Sistemas'],
     'almacen/familias':           ['Preferencias','Familias'],
     'almacen/marcas':             ['Preferencias','Marcas'],
+    'preferencias/situaciones':   ['Preferencias','Situaciones'],
     'mantenimiento/configuracion-mp': ['Preferencias','Frecuencias MP'],
     'mantenimiento/kits-mp':          ['Preferencias','Kits MP'],
     'mantenimiento/tipos-mp':         ['Preferencias','Tipos MP'],

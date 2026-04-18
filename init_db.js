@@ -319,6 +319,25 @@ const TABLAS = [
             INDEX idx_placa (placa),
             INDEX idx_estado (estado)
         )`
+    },
+    {
+        nombre: 'taller_rampas',
+        sql: `CREATE TABLE IF NOT EXISTS taller_rampas (
+            id            INT AUTO_INCREMENT PRIMARY KEY,
+            rampa         INT          NOT NULL,
+            placa         VARCHAR(20)  NOT NULL,
+            km            VARCHAR(20)  NULL,
+            fecha_ingreso DATE         NULL,
+            hora_ingreso  TIME         NULL,
+            fecha_salida  DATE         NULL,
+            hora_salida   TIME         NULL,
+            situacion     VARCHAR(80)  NOT NULL DEFAULT '',
+            obs           TEXT         NULL,
+            creado_por    VARCHAR(100) NOT NULL DEFAULT '',
+            creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_rampa (rampa),
+            INDEX idx_placa (placa)
+        )`
     }
 ];
 

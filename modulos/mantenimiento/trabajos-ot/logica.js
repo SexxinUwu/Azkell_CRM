@@ -12,6 +12,7 @@ window.totDetalleId = window.totDetalleId || null;
 // ── Entry point ──────────────────────────────────────────────────
 window.init_trabajos_ot = function() {
     totCargar();
+    totPoblarPersonal();
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
@@ -66,6 +67,15 @@ function totBadge(estado) {
     return '<span class="tot-badge badge-pendiente">Pendiente</span>';
 }
 
+function totParseDetalles(t) {
+    try { return typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); }
+    catch(e) { return {}; }
+}
+
+function totEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Filtrar ───────────────────────────────────────────────────────
 window.totFiltrar = function() {
     totRenderTabla();
@@ -91,26 +101,27 @@ window.totRenderTabla = function() {
     var f = totGetFiltros();
 
     var datos = window.totData.filter(function(t) {
+        var det = totParseDetalles(t);
         // Filtro estado
         if (f.estado && t.estado !== f.estado) return false;
         // Filtro N° OT
-        if (f.ot && String(t.ticket_ot || '').toLowerCase().indexOf(f.ot) === -1) return false;
+        if (f.ot && String(t.id_ot || '').toLowerCase().indexOf(f.ot) === -1) return false;
         // Filtro placa
         if (f.placa && String(t.placa || '').toUpperCase().indexOf(f.placa) === -1) return false;
         // Filtro mes
         if (f.mes) {
-            var fechaStr = t.f_inicio ? String(t.f_inicio).split('T')[0] : '';
+            var fechaStr = t.fecha_trabajo ? String(t.fecha_trabajo).split('T')[0] : '';
             if (!fechaStr.startsWith(f.mes)) return false;
         }
         // Filtro desde/hasta
         if (f.desde || f.hasta) {
-            var fechaStr2 = t.f_inicio ? String(t.f_inicio).split('T')[0] : '';
+            var fechaStr2 = t.fecha_trabajo ? String(t.fecha_trabajo).split('T')[0] : '';
             if (f.desde && fechaStr2 < f.desde) return false;
             if (f.hasta && fechaStr2 > f.hasta) return false;
         }
-        // Buscador libre (personal + descripción/trabajadores)
+        // Buscador libre
         if (f.search) {
-            var s = [t.id_trabajo, t.ticket_ot, t.trabajadores, t.placa].join(' ').toLowerCase();
+            var s = [t.ticket_visita, t.id_ot, det.personal || t.tecnico, t.placa, t.trabajo_realizado].join(' ').toLowerCase();
             if (s.indexOf(f.search) === -1) return false;
         }
         return true;
@@ -125,15 +136,16 @@ window.totRenderTabla = function() {
 
     tbody.innerHTML = '';
     datos.forEach(function(t) {
+        var det = totParseDetalles(t);
         var tr = document.createElement('tr');
-        if (t.id_trabajo === window.totDetalleId) tr.classList.add('tot-row-active');
+        if (t.ticket_visita === window.totDetalleId) tr.classList.add('tot-row-active');
         tr.innerHTML =
-            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + (t.id_trabajo || '—') + '</span></td>'
-            + '<td><strong>' + (t.ticket_ot || '—') + '</strong></td>'
-            + '<td>' + (t.trabajadores || '—') + '</td>'
-            + '<td>' + totFmtDateTime(t.f_inicio) + '</td>'
-            + '<td>' + totFmtDateTime(t.f_fin) + '</td>'
-            + '<td><strong style="color:#16a34a;">' + totFmtMoney(t.costo) + '</strong></td>'
+            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(t.ticket_visita || '—') + '</span></td>'
+            + '<td><strong>' + totEsc(t.id_ot || '—') + '</strong></td>'
+            + '<td>' + totEsc(det.personal || t.tecnico || '—') + '</td>'
+            + '<td>' + totFmtDateTime(t.fecha_trabajo) + '</td>'
+            + '<td>' + totFmtDateTime(t.fecha_salida) + '</td>'
+            + '<td><strong style="color:#16a34a;">' + totFmtMoney(det.costo) + '</strong></td>'
             + '<td>' + totBadge(t.estado) + '</td>';
         tr.onclick = (function(row) {
             return function() { totAbrirDetalle(row); };
@@ -144,24 +156,27 @@ window.totRenderTabla = function() {
 
 // ── Detalle lateral ───────────────────────────────────────────────
 function totAbrirDetalle(t) {
-    window.totDetalleId = t.id_trabajo;
+    window.totDetalleId = t.ticket_visita;
     totRenderTabla();
 
+    var det = totParseDetalles(t);
+
     var titulo = document.getElementById('tot-detalle-titulo');
-    if (titulo) titulo.textContent = 'Trabajo ' + (t.id_trabajo || '');
+    if (titulo) titulo.textContent = 'Trabajo ' + (t.ticket_visita || '');
 
     var html = '';
-    html += '<div style="font-size:1.3rem; font-weight:800; color:var(--text); margin-bottom:0.4rem;">' + (t.id_trabajo || '—') + '</div>';
-    html += '<div style="font-size:0.83rem; color:var(--subtext); margin-bottom:1rem;">N° OT: <strong>' + (t.ticket_ot || '—') + '</strong></div>';
+    html += '<div style="font-size:1.3rem; font-weight:800; color:var(--text); margin-bottom:0.4rem;">' + totEsc(t.ticket_visita || '—') + '</div>';
+    html += '<div style="font-size:0.83rem; color:var(--subtext); margin-bottom:1rem;">N° OT: <strong>' + totEsc(t.id_ot || '—') + '</strong></div>';
 
     html += '<div class="tot-sec">';
     html += '<div class="tot-sec-hd">Información del Trabajo</div>';
     html += '<div class="tot-field"><div class="tot-field-lbl">Estado</div><div class="tot-field-val">' + totBadge(t.estado) + '</div></div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">Placa</div><div class="tot-field-val"><strong>' + (t.placa || '—') + '</strong></div></div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">Trabajador(es)</div><div class="tot-field-val" style="white-space:normal;">' + (t.trabajadores || '—') + '</div></div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">F/H Inicio</div><div class="tot-field-val">' + totFmtDateTime(t.f_inicio) + '</div></div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">F/H Fin</div><div class="tot-field-val">' + totFmtDateTime(t.f_fin) + '</div></div>';
-    html += '<div class="tot-field"><div class="tot-field-lbl">Costo M.O.</div><div class="tot-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">' + totFmtMoney(t.costo) + '</span></div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">Placa</div><div class="tot-field-val"><strong>' + totEsc(t.placa || '—') + '</strong></div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">Trabajador(es)</div><div class="tot-field-val" style="white-space:normal;">' + totEsc(det.personal || t.tecnico || '—') + '</div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">Descripción</div><div class="tot-field-val" style="white-space:normal;">' + totEsc(t.trabajo_realizado || '—') + '</div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">F/H Inicio</div><div class="tot-field-val">' + totFmtDateTime(t.fecha_trabajo) + '</div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">F/H Fin</div><div class="tot-field-val">' + totFmtDateTime(t.fecha_salida) + '</div></div>';
+    html += '<div class="tot-field"><div class="tot-field-lbl">Costo M.O.</div><div class="tot-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">' + totFmtMoney(det.costo) + '</span></div></div>';
     if (t.creado_en) {
         html += '<div class="tot-field"><div class="tot-field-lbl">Registrado</div><div class="tot-field-val" style="font-size:0.75rem;">' + totFmtDateTime(t.creado_en) + '</div></div>';
     }
@@ -173,11 +188,7 @@ function totAbrirDetalle(t) {
     var footer = document.getElementById('tot-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        if (t.estado === 'Pendiente') {
-            footer.innerHTML = '<button class="btn btn-sm btn-success flex-fill fw-bold" onclick="window.totAprobar(' + JSON.stringify(t.id_trabajo) + ')"><i class="bi bi-check-lg me-1"></i>Aprobar Costo Trabajo</button>';
-        } else {
-            footer.innerHTML = '<span style="font-size:0.8rem; color:var(--subtext); padding:4px;">Trabajo ya aprobado</span>';
-        }
+        footer.innerHTML = '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(' + JSON.stringify(t.ticket_visita) + ')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>';
     }
 
     var panel = document.getElementById('tot-panel-detalle');
@@ -191,25 +202,75 @@ window.totCerrarDetalle = function() {
     totRenderTabla();
 };
 
-// ── Aprobar trabajo ───────────────────────────────────────────────
-window.totAprobar = function(idTrabajo) {
-    if (!confirm('¿Aprobar el costo de este trabajo? Esta acción no se puede deshacer.')) return;
+// ── Abrir drawer edición ──────────────────────────────────────────
+window.totAbrirEditar = function(ticket) {
+    var t = window.totData.find(function(x) { return String(x.ticket_visita || '') === String(ticket); });
+    if (!t) return;
+    var det = totParseDetalles(t);
 
-    fetch('/api/ot-trabajos/' + encodeURIComponent(idTrabajo), {
+    var toLocalDT = function(iso) {
+        if (!iso) return '';
+        return String(iso).slice(0, 16);
+    };
+
+    var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('tot-ed-ticket',    ticket);
+    set('tot-ed-desc',      t.trabajo_realizado || '');
+    set('tot-ed-costo',     det.costo !== undefined ? det.costo : '0');
+    set('tot-ed-fecha-ini', toLocalDT(t.fecha_trabajo));
+    set('tot-ed-fecha-fin', toLocalDT(t.fecha_salida));
+
+    var estEl = document.getElementById('tot-ed-estado');
+    if (estEl) estEl.value = t.estado || 'Pendiente';
+
+    var persEl = document.getElementById('tot-ed-personal');
+    if (persEl) persEl.value = det.personal || t.tecnico || '';
+
+    var tit = document.getElementById('tot-ed-titulo');
+    if (tit) tit.textContent = 'Editar ' + ticket;
+
+    var drawer = document.getElementById('tot-drawer-editar');
+    if (drawer) drawer.classList.add('open');
+
+    totPoblarPersonal();
+};
+
+window.totCerrarDrawerEditar = function() {
+    var drawer = document.getElementById('tot-drawer-editar');
+    if (drawer) drawer.classList.remove('open');
+};
+
+// ── Guardar edición ───────────────────────────────────────────────
+window.totGuardarEdicion = function() {
+    var ticket = ((document.getElementById('tot-ed-ticket')    || {}).value || '').trim();
+    var desc   = ((document.getElementById('tot-ed-desc')      || {}).value || '').trim();
+    var pers   = ((document.getElementById('tot-ed-personal')  || {}).value || '').trim();
+    var fIni   = ((document.getElementById('tot-ed-fecha-ini') || {}).value || '');
+    var fFin   = ((document.getElementById('tot-ed-fecha-fin') || {}).value || '');
+    var costo  = parseFloat((document.getElementById('tot-ed-costo')   || {}).value || 0);
+    var estado = ((document.getElementById('tot-ed-estado')    || {}).value || 'Pendiente');
+
+    if (!ticket) return;
+    if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
+
+    fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            accion: 'aprobar',
-            usuario: localStorage.getItem('fleet_correo') || ''
+            accion: 'editar',
+            trabajo_realizado: desc,
+            fecha_trabajo: fIni || null,
+            fecha_salida:  fFin || null,
+            personal:      pers,
+            costo:         costo,
+            estado:        estado
         })
     })
-    .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function() {
+        window.totCerrarDrawerEditar();
         if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('Trabajo aprobado exitosamente', 'success');
+            window.mostrarAlerta('Trabajo actualizado correctamente', 'success');
         }
         window.totDetalleId = null;
         var panel = document.getElementById('tot-panel-detalle');
@@ -217,12 +278,28 @@ window.totAprobar = function(idTrabajo) {
         totCargar();
     })
     .catch(function(err) {
-        console.error('Error aprobando trabajo:', err);
+        console.error('Error editando trabajo:', err);
         if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('Error al aprobar el trabajo', 'danger');
+            window.mostrarAlerta('Error al guardar los cambios', 'danger');
         }
     });
 };
+
+// ── Poblar select Personal ────────────────────────────────────────
+function totPoblarPersonal() {
+    fetch('/api/conductores')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            var lista = Array.isArray(data) ? data : (data.data || []);
+            var opts = lista.map(function(p) {
+                var n = (p.nombre_completo || p.nombre || '').trim();
+                return n ? '<option value="' + n + '">' + n + '</option>' : '';
+            }).join('');
+            var el = document.getElementById('tot-ed-personal');
+            if (el) el.innerHTML = '<option value="">— Seleccionar técnico —</option>' + opts;
+        })
+        .catch(function() {});
+}
 
 // ── Exportar a Excel ──────────────────────────────────────────────
 window.totExportar = function() {
@@ -234,9 +311,7 @@ window.totExportar = function() {
         return;
     }
 
-    // Generar tabla temporal para descargarExcelDinamico si está disponible
     if (typeof window.descargarExcelDinamico === 'function') {
-        // Construir tabla temporal
         var tmpId = 'tot-export-tmp';
         var existing = document.getElementById(tmpId);
         if (existing) existing.remove();
@@ -244,16 +319,18 @@ window.totExportar = function() {
         var tbl = document.createElement('table');
         tbl.id = tmpId;
         tbl.style.display = 'none';
-        var thead = '<thead><tr><th>ID Trabajo</th><th>N° OT</th><th>Placa</th><th>Trabajador(es)</th><th>F/H Inicio</th><th>F/H Fin</th><th>Costo</th><th>Estado</th></tr></thead>';
+        var thead = '<thead><tr><th>ID Trabajo</th><th>N° OT</th><th>Placa</th><th>Trabajador(es)</th><th>Descripción</th><th>F/H Inicio</th><th>F/H Fin</th><th>Costo</th><th>Estado</th></tr></thead>';
         var tbody = '<tbody>' + datos.map(function(t) {
+            var det = totParseDetalles(t);
             return '<tr>'
-                + '<td>' + (t.id_trabajo || '') + '</td>'
-                + '<td>' + (t.ticket_ot || '') + '</td>'
+                + '<td>' + (t.ticket_visita || '') + '</td>'
+                + '<td>' + (t.id_ot || '') + '</td>'
                 + '<td>' + (t.placa || '') + '</td>'
-                + '<td>' + (t.trabajadores || '') + '</td>'
-                + '<td>' + totFmtDateTime(t.f_inicio) + '</td>'
-                + '<td>' + totFmtDateTime(t.f_fin) + '</td>'
-                + '<td>' + totFmtMoney(t.costo) + '</td>'
+                + '<td>' + (det.personal || t.tecnico || '') + '</td>'
+                + '<td>' + (t.trabajo_realizado || '') + '</td>'
+                + '<td>' + totFmtDateTime(t.fecha_trabajo) + '</td>'
+                + '<td>' + totFmtDateTime(t.fecha_salida) + '</td>'
+                + '<td>' + totFmtMoney(det.costo) + '</td>'
                 + '<td>' + (t.estado || '') + '</td>'
                 + '</tr>';
         }).join('') + '</tbody>';
@@ -265,16 +342,18 @@ window.totExportar = function() {
     }
 
     // Fallback CSV
-    var rows = [['ID Trabajo','N° OT','Placa','Trabajador(es)','F/H Inicio','F/H Fin','Costo','Estado']];
+    var rows = [['ID Trabajo','N° OT','Placa','Trabajador(es)','Descripción','F/H Inicio','F/H Fin','Costo','Estado']];
     datos.forEach(function(t) {
+        var det = totParseDetalles(t);
         rows.push([
-            t.id_trabajo || '',
-            t.ticket_ot || '',
+            t.ticket_visita || '',
+            t.id_ot || '',
             t.placa || '',
-            t.trabajadores || '',
-            totFmtDateTime(t.f_inicio),
-            totFmtDateTime(t.f_fin),
-            totFmtMoney(t.costo),
+            det.personal || t.tecnico || '',
+            t.trabajo_realizado || '',
+            totFmtDateTime(t.fecha_trabajo),
+            totFmtDateTime(t.fecha_salida),
+            totFmtMoney(det.costo),
             t.estado || ''
         ]);
     });

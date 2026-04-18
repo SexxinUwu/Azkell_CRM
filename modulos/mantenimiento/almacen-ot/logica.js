@@ -211,7 +211,9 @@ function aotAbrirDetalle(m) {
     if (footer) {
         footer.style.display = 'flex';
         if (m.estado === 'Pendiente') {
-            footer.innerHTML = '<button class="btn btn-sm btn-success flex-fill fw-bold" onclick="window.aotDespachar(' + JSON.stringify(m.id_solicitud) + ')"><i class="bi bi-box-seam me-1"></i>Aprobar y Despachar</button>';
+            footer.innerHTML =
+                '<button class="btn btn-sm btn-outline-danger fw-bold" onclick="window.aotAnular(' + JSON.stringify(m.id_solicitud) + ')" style="min-width:90px;"><i class="bi bi-x-circle me-1"></i>Anular</button>'
+              + '<button class="btn btn-sm btn-success flex-fill fw-bold ms-2" onclick="window.aotDespachar(' + JSON.stringify(m.id_solicitud) + ')"><i class="bi bi-box-seam me-1"></i>Aprobar y Despachar</button>';
         } else {
             footer.innerHTML = '<span style="font-size:0.8rem; color:var(--subtext); padding:4px;">Material ya despachado</span>';
         }
@@ -226,6 +228,23 @@ window.aotCerrarDetalle = function() {
     if (panel) panel.classList.remove('open');
     window.aotDetalleId = null;
     aotRenderTabla();
+};
+
+// ── Anular solicitud ──────────────────────────────────────────────
+window.aotAnular = function(idSolicitud) {
+    if (!confirm('¿Anular la solicitud ' + idSolicitud + '? Se eliminará definitivamente.')) return;
+    fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud anulada', 'success');
+            window.aotDetalleId = null;
+            var panel = document.getElementById('aot-panel-detalle');
+            if (panel) panel.classList.remove('open');
+            aotCargar();
+        })
+        .catch(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la solicitud', 'danger');
+        });
 };
 
 // ── Despachar material ────────────────────────────────────────────

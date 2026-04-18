@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -166,7 +168,7 @@
                 <div id="wrap-preferencias">
                     <button class="nav-section-toggle" data-section="preferencias" aria-expanded="false" onclick="window.toggleNavSection('preferencias')">
                         <span class="link-text">Preferencias</span>
-                        <span class="section-badge">8</span>
+                        <span class="section-badge">9</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-preferencias">
@@ -187,6 +189,12 @@
                         <a id="nav-config-metrica" class="nav-item" onclick="cargarModuloAislado('mantenimiento/config-metrica')">
                             <i class="bi bi-speedometer2 nav-icon"></i>
                             <span class="link-text">Config. Métrica</span>
+                        </a>
+                        <!-- Config. Taller -->
+                        <div class="nav-sub-label" id="nav-sub-cfg-taller"><i class="bi bi-tools me-1"></i>Config. Taller</div>
+                        <a id="nav-situaciones" class="nav-item" onclick="cargarModuloAislado('preferencias/situaciones')">
+                            <i class="bi bi-flag-fill nav-icon"></i>
+                            <span class="link-text">Situaciones</span>
                         </a>
                         <!-- Config. Almacén -->
                         <div class="nav-sub-label" id="nav-sub-cfg-alm"><i class="bi bi-box me-1"></i>Config. Almacén</div>
