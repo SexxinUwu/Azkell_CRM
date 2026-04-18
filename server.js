@@ -4506,6 +4506,208 @@ app.get('/api/almacen/valorizado', (req, res) => {
     });
 });
 
+// ============================================================
+// MÓDULO: ÓRDENES DE MANTENIMIENTO (OT)
+// Tablas: ordenes_trabajo, trabajos_ot, ot_materiales, ot_backlog
+// ============================================================
+
+// ── ORDENES DE TRABAJO ────────────────────────────────────────────
+app.get('/api/ordenes-trabajo', (req, res) => {
+    db.query('SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/ordenes-trabajo', (req, res) => {
+    const { id_ot, placa, estado, fecha_ingreso, creado_por, detalles_json } = req.body;
+    if (!id_ot || !placa) return res.status(400).json({ error: 'id_ot y placa son requeridos' });
+    const detJson = JSON.stringify(detalles_json || {});
+    db.query(
+        `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id_ot, id_ot, placa.toUpperCase(), estado || 'En atención', detJson, creado_por || '', fecha_ingreso || new Date()],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/ordenes-trabajo/:id', (req, res) => {
+    const ticketId = req.params.id;
+    const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
+
+    if (accion === 'aprobar') {
+        db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
+            let det = {};
+            try { det = JSON.parse(rows[0].detalles_json || '{}'); } catch(e) { det = {}; }
+            det.aprobacion = 'Aprobada';
+            db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
+                [JSON.stringify(det), ticketId], (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ ok: true });
+                }
+            );
+        });
+        return;
+    }
+
+    if (accion === 'cerrar') {
+        db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
+            let det = {};
+            try { det = JSON.parse(rows[0].detalles_json || '{}'); } catch(e) { det = {}; }
+            det.aprobacion    = 'Cerrada';
+            det.tecnico_cierre = (detalles_cierre || {}).tecnico_cierre || '';
+            det.obs_cierre    = (detalles_cierre || {}).obs_cierre || '';
+            det.firma         = (detalles_cierre || {}).firma || null;
+            db.query(
+                'UPDATE ordenes_trabajo SET estado = ?, detalles_json = ?, fecha_hora_salida = ? WHERE ticket_entrada = ?',
+                ['Finalizado', JSON.stringify(det), fecha_hora_salida || new Date(), ticketId],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ ok: true });
+                }
+            );
+        });
+        return;
+    }
+
+    // Edición general
+    const sets = [];
+    const params = [];
+    if (estado)            { sets.push('estado = ?');          params.push(estado); }
+    if (detalles_json)     { sets.push('detalles_json = ?');   params.push(JSON.stringify(detalles_json)); }
+    if (fecha_hora_salida) { sets.push('fecha_hora_salida = ?'); params.push(fecha_hora_salida); }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+    params.push(ticketId);
+    db.query('UPDATE ordenes_trabajo SET ' + sets.join(', ') + ' WHERE ticket_entrada = ?', params, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+app.delete('/api/ordenes-trabajo/:id', (req, res) => {
+    const ticketId = req.params.id;
+    db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ── OT TRABAJOS ───────────────────────────────────────────────────
+app.get('/api/ot-trabajos', (req, res) => {
+    db.query('SELECT * FROM trabajos_ot ORDER BY fecha_creacion DESC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/ot-trabajos', (req, res) => {
+    const { id_ot, ticket_visita, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
+    if (!id_ot || !ticket_visita) return res.status(400).json({ error: 'id_ot y ticket_visita son requeridos' });
+    const detJson = JSON.stringify(detalles_json || {});
+    db.query(
+        `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
+         VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
+        [id_ot, ticket_visita, trabajo_realizado || '', (detalles_json || {}).personal || '', fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/ot-trabajos/:id', (req, res) => {
+    const idTrabajo = req.params.id;
+    const { accion } = req.body;
+    if (accion === 'aprobar') {
+        db.query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+    } else {
+        res.status(400).json({ error: 'Acción desconocida' });
+    }
+});
+
+// ── OT MATERIALES ─────────────────────────────────────────────────
+app.get('/api/ot-materiales', (req, res) => {
+    db.query('SELECT * FROM ot_materiales ORDER BY creado_en DESC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/ot-materiales', (req, res) => {
+    const { id_solicitud, ticket_ot, producto, cantidad, unidad_medida, costo_unit, costo_total, personal_solicitante, observacion, estado, creado_por } = req.body;
+    if (!id_solicitud || !ticket_ot || !producto) return res.status(400).json({ error: 'id_solicitud, ticket_ot y producto son requeridos' });
+    db.query(
+        `INSERT INTO ot_materiales (id_solicitud, ticket_ot, producto, cantidad, unidad_medida, costo_unit, costo_total, personal_solicitante, observacion, estado, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id_solicitud, ticket_ot, producto, cantidad || 1, unidad_medida || 'Pza', costo_unit || 0, costo_total || 0, personal_solicitante || '', observacion || '', estado || 'Pendiente', creado_por || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/ot-materiales/:id', (req, res) => {
+    const id = req.params.id;
+    const { accion } = req.body;
+    if (accion === 'despachar') {
+        db.query("UPDATE ot_materiales SET estado = 'Despachado' WHERE id = ?", [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
+    } else {
+        res.status(400).json({ error: 'Acción desconocida' });
+    }
+});
+
+app.delete('/api/ot-materiales/:id', (req, res) => {
+    db.query('DELETE FROM ot_materiales WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+// ── OT BACKLOG ────────────────────────────────────────────────────
+app.get('/api/ot-backlog', (req, res) => {
+    db.query('SELECT * FROM ot_backlog ORDER BY creado_en DESC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/ot-backlog', (req, res) => {
+    const { backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por } = req.body;
+    if (!backlog_id || !placa || !tarea) return res.status(400).json({ error: 'backlog_id, placa y tarea son requeridos' });
+    db.query(
+        `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [backlog_id, placa.toUpperCase(), km || 0, tema || '', tarea, reportado_por || '', fecha_reporte || null, estado || 'Pendiente', creado_por || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        }
+    );
+});
+
+app.put('/api/ot-backlog/:id', (req, res) => {
+    const { estado } = req.body;
+    if (!estado) return res.status(400).json({ error: 'estado requerido' });
+    db.query('UPDATE ot_backlog SET estado = ? WHERE id = ?', [estado, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');

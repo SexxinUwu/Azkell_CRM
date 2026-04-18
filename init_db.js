@@ -282,6 +282,43 @@ const TABLAS = [
             total           DECIMAL(10,2) NOT NULL DEFAULT 0,
             INDEX idx_id_ot (id_ot)
         )`
+    },
+    {
+        nombre: 'ot_materiales',
+        sql: `CREATE TABLE IF NOT EXISTS ot_materiales (
+            id                   INT AUTO_INCREMENT PRIMARY KEY,
+            id_solicitud         VARCHAR(30)   NOT NULL UNIQUE,
+            ticket_ot            VARCHAR(50)   NOT NULL,
+            producto             VARCHAR(200)  NOT NULL,
+            cantidad             DECIMAL(10,3) NOT NULL DEFAULT 1,
+            unidad_medida        VARCHAR(20)   NOT NULL DEFAULT 'Pza',
+            costo_unit           DECIMAL(10,2) NOT NULL DEFAULT 0,
+            costo_total          DECIMAL(10,2) NOT NULL DEFAULT 0,
+            personal_solicitante VARCHAR(100)  NOT NULL DEFAULT '',
+            observacion          TEXT          NULL,
+            estado               VARCHAR(20)   NOT NULL DEFAULT 'Pendiente',
+            creado_por           VARCHAR(100)  NOT NULL DEFAULT '',
+            creado_en            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_ticket_ot (ticket_ot)
+        )`
+    },
+    {
+        nombre: 'ot_backlog',
+        sql: `CREATE TABLE IF NOT EXISTS ot_backlog (
+            id            INT AUTO_INCREMENT PRIMARY KEY,
+            backlog_id    VARCHAR(30)  NOT NULL UNIQUE,
+            placa         VARCHAR(20)  NOT NULL,
+            km            INT          NOT NULL DEFAULT 0,
+            tema          VARCHAR(100) NOT NULL DEFAULT '',
+            tarea         TEXT         NOT NULL,
+            reportado_por VARCHAR(100) NOT NULL DEFAULT '',
+            fecha_reporte DATE         NULL,
+            estado        VARCHAR(20)  NOT NULL DEFAULT 'Pendiente',
+            creado_por    VARCHAR(100) NOT NULL DEFAULT '',
+            creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa),
+            INDEX idx_estado (estado)
+        )`
     }
 ];
 

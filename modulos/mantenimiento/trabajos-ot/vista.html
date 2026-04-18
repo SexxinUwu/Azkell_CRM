@@ -1,0 +1,206 @@
+<!-- Módulo Trabajos Anexos — Azkell Fleet -->
+<style>
+#moduloTrabajosOT {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Barra de controles */
+#moduloTrabajosOT .tot-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloTrabajosOT .tot-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Tabla */
+#moduloTrabajosOT .tot-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloTrabajosOT table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloTrabajosOT thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloTrabajosOT tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+#moduloTrabajosOT tbody tr:hover { background: var(--bg); }
+#moduloTrabajosOT tbody tr.tot-row-active { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloTrabajosOT tbody td { padding: 10px 12px; color: var(--text); }
+#moduloTrabajosOT .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+
+/* Badges */
+#moduloTrabajosOT .tot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+#moduloTrabajosOT .tot-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.8;
+}
+#moduloTrabajosOT .badge-pendiente { background: rgba(217,119,6,0.12);  color: #d97706; }
+#moduloTrabajosOT .badge-aprobado  { background: rgba(22,163,74,0.12);  color: #16a34a; }
+
+/* Panel lateral detalle */
+#moduloTrabajosOT .tot-detail-panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s;
+    max-width: 400px;
+}
+#moduloTrabajosOT .tot-detail-panel.open { width: 400px; }
+#moduloTrabajosOT .tot-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloTrabajosOT .tot-detail-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Secciones detalle */
+#moduloTrabajosOT .tot-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloTrabajosOT .tot-sec-hd {
+    background: var(--bg);
+    padding: 8px 12px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtext);
+    border-bottom: 1px solid var(--border);
+}
+#moduloTrabajosOT .tot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloTrabajosOT .tot-field:last-child { border-bottom: none; }
+#moduloTrabajosOT .tot-field-lbl { width: 42%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; padding-right: 8px; }
+#moduloTrabajosOT .tot-field-val { width: 58%; color: var(--text); font-weight: 600; word-break: break-word; }
+</style>
+
+<div id="moduloTrabajosOT">
+
+    <!-- FILA 1: Buscador + recarga -->
+    <div class="tot-controls">
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="tot-search"
+                placeholder="Buscar por Personal o Descripción..."
+                oninput="window.totFiltrar()">
+        </div>
+        <input type="text" class="form-control form-control-sm" id="tot-fil-ot"
+            placeholder="N° OT" style="max-width:110px"
+            oninput="window.totFiltrar()">
+        <input type="text" class="form-control form-control-sm" id="tot-fil-placa"
+            placeholder="PLACA" style="max-width:100px; text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase(); window.totFiltrar()">
+        <input type="month" class="form-control form-control-sm" id="tot-fil-mes"
+            style="max-width:150px" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="tot-fil-desde"
+            style="max-width:150px" title="Desde" onchange="window.totFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="tot-fil-hasta"
+            style="max-width:150px" title="Hasta" onchange="window.totFiltrar()">
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.totCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+
+    <!-- FILA 2: Estado + Exportar -->
+    <div class="tot-filters">
+        <select class="form-select form-select-sm" id="tot-fil-estado"
+            onchange="window.totFiltrar()" style="max-width:180px">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Aprobado">Aprobado</option>
+        </select>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-success" onclick="window.totExportar()">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+        </button>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA -->
+        <div class="tot-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID TRABAJO</th>
+                        <th>N° OT</th>
+                        <th>TRABAJADOR(ES)</th>
+                        <th>F/H INICIO</th>
+                        <th>F/H FIN</th>
+                        <th>COSTO</th>
+                        <th>ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="tot-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="tot-detail-panel" id="tot-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="tot-detalle-titulo">Detalle Trabajo</span>
+                <button class="btn btn-sm" onclick="window.totCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="tot-detail-scroll" id="tot-detalle-scroll"></div>
+            <div class="tot-detail-footer" id="tot-detalle-footer" style="display:none;"></div>
+        </div>
+
+    </div>
+
+</div>

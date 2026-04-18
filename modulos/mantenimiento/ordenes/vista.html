@@ -1,0 +1,741 @@
+<!-- Módulo Órdenes de Mantenimiento - Azkell Fleet -->
+<style>
+#moduloOrdenes {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Tabs estilo línea */
+#moduloOrdenes .ot-tabs {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+#moduloOrdenes .ot-tab {
+    padding: 12px 0;
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--subtext);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+    white-space: nowrap;
+}
+#moduloOrdenes .ot-tab:hover { color: var(--text); }
+#moduloOrdenes .ot-tab.active {
+    color: var(--primary, #5865F2);
+    border-bottom-color: var(--primary, #5865F2);
+}
+#moduloOrdenes .ot-tab .ot-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: var(--surface2, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    margin-left: 5px;
+    color: var(--subtext);
+    padding: 0 4px;
+}
+#moduloOrdenes .ot-tab.active .ot-tab-badge {
+    background: rgba(88,101,242,0.12);
+    border-color: rgba(88,101,242,0.3);
+    color: var(--primary, #5865F2);
+}
+
+/* Barra de controles */
+#moduloOrdenes .ot-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloOrdenes .ot-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Tabla */
+#moduloOrdenes .ot-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloOrdenes table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloOrdenes thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloOrdenes tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+#moduloOrdenes tbody tr:hover { background: var(--bg); }
+#moduloOrdenes tbody tr.ot-row-active { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloOrdenes tbody td { padding: 10px 12px; color: var(--text); }
+#moduloOrdenes .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+
+/* Badges OT */
+#moduloOrdenes .ot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+#moduloOrdenes .ot-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.8;
+}
+#moduloOrdenes .badge-pendiente   { background: rgba(217,119,6,0.12);  color: #d97706; }
+#moduloOrdenes .badge-aprobada    { background: rgba(22,163,74,0.12);   color: #16a34a; }
+#moduloOrdenes .badge-cerrada     { background: rgba(88,101,242,0.12);  color: var(--primary, #5865F2); }
+#moduloOrdenes .badge-anulado     { background: rgba(220,38,38,0.12);   color: #dc2626; }
+#moduloOrdenes .badge-en-atencion { background: rgba(22,163,74,0.1);   color: #16a34a; }
+#moduloOrdenes .badge-espera      { background: rgba(217,119,6,0.1);   color: #d97706; }
+#moduloOrdenes .badge-finalizado  { background: rgba(88,101,242,0.1);  color: var(--primary, #5865F2); }
+#moduloOrdenes .badge-tipo-prev   { background: rgba(8,145,178,0.1);   color: #0891b2; border: 1px solid rgba(8,145,178,0.25); }
+#moduloOrdenes .badge-tipo-corr   { background: rgba(220,38,38,0.08);  color: #dc2626; border: 1px solid rgba(220,38,38,0.2); }
+
+/* KPI bar */
+#moduloOrdenes .ot-kpi-bar {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloOrdenes .ot-kpi {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 18px;
+    min-width: 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+#moduloOrdenes .ot-kpi-label { font-size: 0.68rem; font-weight: 700; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
+#moduloOrdenes .ot-kpi-val   { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+
+/* Panel lateral derecho (detalle) */
+#moduloOrdenes .ot-detail-panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s;
+    max-width: 420px;
+}
+#moduloOrdenes .ot-detail-panel.open { width: 420px; }
+#moduloOrdenes .ot-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloOrdenes .ot-detail-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Secciones del panel */
+#moduloOrdenes .ot-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloOrdenes .ot-sec-hd {
+    background: var(--bg);
+    padding: 8px 12px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtext);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#moduloOrdenes .ot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloOrdenes .ot-field:last-child { border-bottom: none; }
+#moduloOrdenes .ot-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; padding-right: 8px; }
+#moduloOrdenes .ot-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
+#moduloOrdenes .ot-empty { padding: 1rem; text-align: center; color: var(--subtext); font-size: 0.82rem; }
+#moduloOrdenes .ot-mini-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+#moduloOrdenes .ot-mini-table th { color: var(--subtext); font-size: 0.68rem; text-transform: uppercase; padding: 6px 10px; background: var(--bg); border-bottom: 1px solid var(--border); }
+#moduloOrdenes .ot-mini-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+#moduloOrdenes .ot-mini-table tr:last-child td { border-bottom: none; }
+#moduloOrdenes .ot-mini-table tbody tr:hover { background: var(--bg); cursor: pointer; }
+#moduloOrdenes .ot-link { color: var(--primary, #5865F2); font-weight: 700; cursor: pointer; text-decoration: underline; font-size: 0.8rem; }
+#moduloOrdenes .ot-sec-footer { padding: 6px 12px; border-top: 1px solid var(--border); text-align: right; background: var(--bg); }
+
+/* Drawers deslizables (formularios) */
+#moduloOrdenes .ot-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 520px;
+    max-width: 96vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
+    transform: translateX(100%);
+    transition: transform 0.28s ease;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+}
+#moduloOrdenes .ot-drawer.open { transform: translateX(0); }
+#moduloOrdenes .ot-drawer-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+#moduloOrdenes .ot-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+#moduloOrdenes .ot-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloOrdenes .ot-id-bar {
+    background: rgba(88,101,242,0.06);
+    border: 1px solid rgba(88,101,242,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#moduloOrdenes .ot-id-num { font-size: 1.1rem; font-weight: 800; color: var(--primary, #5865F2); }
+#moduloOrdenes .ot-id-lbl { font-size: 0.7rem; font-weight: 700; color: var(--primary, #5865F2); text-transform: uppercase; }
+
+/* Firma canvas */
+#moduloOrdenes #otFirmaCanvas {
+    width: 100%;
+    height: 130px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+    margin-top: 6px;
+}
+
+/* Backdrop drawer */
+#otDrawerBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1059;
+}
+#otDrawerBackdrop.open { display: block; }
+</style>
+
+<!-- Backdrop para drawers -->
+<div id="otDrawerBackdrop" onclick="window.otCerrarTodosDrawers()"></div>
+
+<div id="moduloOrdenes">
+
+    <!-- TOPBAR / CONTROLES -->
+    <div class="ot-controls">
+        <div class="input-group input-group-sm" style="max-width:220px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0" id="ot-search"
+                placeholder="Buscar placa, N° OT, supervisor..."
+                oninput="window.otFiltrar()">
+        </div>
+        <select class="form-select form-select-sm" id="ot-fil-tipo" onchange="window.otFiltrar()" style="max-width:140px">
+            <option value="">Todos los tipos</option>
+            <option value="Preventivo">Preventivo</option>
+            <option value="Correctivo">Correctivo</option>
+        </select>
+        <select class="form-select form-select-sm" id="ot-fil-aprobacion" onchange="window.otFiltrar()" style="max-width:170px">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente Aprobación</option>
+            <option value="Aprobada">Aprobada (Abierta)</option>
+            <option value="Cerrada">Cerrada</option>
+            <option value="Anulado">Anulado</option>
+        </select>
+        <input type="month" class="form-control form-control-sm" id="ot-fil-mes" onchange="window.otFiltrar()" style="max-width:150px">
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.otCargarTodo()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-sm btn-primary" id="btn-nueva-ot" onclick="window.otAbrirFormNuevo()" data-perm-c="ot">
+            <i class="bi bi-plus-lg me-1"></i>Nueva OT
+        </button>
+    </div>
+
+    <!-- TABS -->
+    <div class="ot-tabs">
+        <div class="ot-tab active" id="ot-tab-ots" onclick="window.otCambiarTab('ots')">
+            Órdenes de Trabajo <span class="ot-tab-badge" id="ot-badge-ots">0</span>
+        </div>
+        <div class="ot-tab" id="ot-tab-trabajos" onclick="window.otCambiarTab('trabajos')">
+            Trabajos <span class="ot-tab-badge" id="ot-badge-trb">0</span>
+        </div>
+        <div class="ot-tab" id="ot-tab-materiales" onclick="window.otCambiarTab('materiales')">
+            Materiales <span class="ot-tab-badge" id="ot-badge-mat">0</span>
+        </div>
+        <div class="ot-tab" id="ot-tab-backlog" onclick="window.otCambiarTab('backlog')">
+            Backlog <span class="ot-tab-badge" id="ot-badge-bk">0</span>
+        </div>
+    </div>
+
+    <!-- KPI BAR -->
+    <div class="ot-kpi-bar" id="ot-kpi-bar">
+        <div class="ot-kpi">
+            <div class="ot-kpi-label">Total OTs</div>
+            <div class="ot-kpi-val" id="kpi-ot-total">0</div>
+        </div>
+        <div class="ot-kpi">
+            <div class="ot-kpi-label">Pendientes</div>
+            <div class="ot-kpi-val" id="kpi-ot-pendiente" style="color:#d97706">0</div>
+        </div>
+        <div class="ot-kpi">
+            <div class="ot-kpi-label">En Proceso</div>
+            <div class="ot-kpi-val" id="kpi-ot-aprobada" style="color:#16a34a">0</div>
+        </div>
+        <div class="ot-kpi">
+            <div class="ot-kpi-label">Cerradas</div>
+            <div class="ot-kpi-val" id="kpi-ot-cerrada" style="color:var(--primary,#5865F2)">0</div>
+        </div>
+        <div class="ot-kpi">
+            <div class="ot-kpi-label">Costo Total</div>
+            <div class="ot-kpi-val" id="kpi-ot-costo" style="color:#16a34a; font-size:1.2rem">S/0.00</div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA DINÁMICA -->
+        <div class="ot-table-wrap" id="ot-tabla-wrap">
+
+            <!-- TAB OTS -->
+            <div id="ot-panel-ots">
+                <table id="ot-tabla-ots">
+                    <thead>
+                        <tr>
+                            <th>N° OT</th>
+                            <th>Placa</th>
+                            <th>Tipo</th>
+                            <th>Supervisor</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Situación</th>
+                            <th>Aprobación</th>
+                            <th>Costo Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ot-tbody-ots"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB TRABAJOS -->
+            <div id="ot-panel-trabajos" style="display:none">
+                <table id="ot-tabla-trabajos">
+                    <thead>
+                        <tr>
+                            <th>ID Trabajo</th>
+                            <th>N° OT</th>
+                            <th>Placa</th>
+                            <th>Trabajador(es)</th>
+                            <th>F. Inicio</th>
+                            <th>F. Fin</th>
+                            <th>Costo M.O.</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ot-tbody-trabajos"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB MATERIALES -->
+            <div id="ot-panel-materiales" style="display:none">
+                <div class="d-flex border-bottom" style="padding:0 1rem; background:var(--surface); flex-shrink:0;">
+                    <div class="ot-tab" id="mat-tab-pend" onclick="window.otMatTab('pend')" style="padding:10px 0; margin-right:1.5rem;">Solicitudes Pendientes</div>
+                    <div class="ot-tab" id="mat-tab-desp" onclick="window.otMatTab('desp')">Despachadas</div>
+                </div>
+                <table id="ot-tabla-materiales">
+                    <thead>
+                        <tr>
+                            <th>ID Solicitud</th>
+                            <th>N° OT</th>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Costo Unit.</th>
+                            <th>Total</th>
+                            <th>Personal</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ot-tbody-materiales"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB BACKLOG -->
+            <div id="ot-panel-backlog" style="display:none">
+                <div style="padding:0.75rem 1.25rem; background:var(--surface); border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+                    <span style="font-size:0.83rem; font-weight:700; color:var(--text);">Mantenimientos Pendientes</span>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-sm btn-primary" id="btn-nuevo-backlog" onclick="window.otAbrirFormBacklog()" data-perm-c="ot">
+                        <i class="bi bi-plus-lg me-1"></i>Registrar
+                    </button>
+                </div>
+                <table id="ot-tabla-backlog">
+                    <thead>
+                        <tr>
+                            <th>F. Registro</th>
+                            <th>Tema</th>
+                            <th>Placa</th>
+                            <th>KM</th>
+                            <th>Reportado por</th>
+                            <th>Tarea Pendiente</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ot-tbody-backlog"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="ot-detail-panel" id="ot-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="ot-detalle-titulo">Detalle</span>
+                <button class="btn btn-sm btn-ghost" onclick="window.otCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="ot-detail-scroll" id="ot-detalle-scroll"></div>
+            <div class="ot-detail-footer" id="ot-detalle-footer" style="display:none;"></div>
+        </div>
+
+    </div><!-- fin contenedor principal -->
+
+</div><!-- fin moduloOrdenes -->
+
+
+<!-- ================= DRAWERS FORMULARIOS ================= -->
+
+<!-- DRAWER: Nueva / Editar OT -->
+<div class="ot-drawer" id="drawer-nueva-ot">
+    <div class="ot-drawer-hd">
+        <span class="ot-drawer-title" id="drawer-ot-titulo">Generar Orden de Trabajo</span>
+        <button class="btn btn-sm" onclick="window.otCerrarTodosDrawers()" style="color:var(--subtext)"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ot-drawer-body">
+        <div class="ot-id-bar">
+            <div>
+                <div class="ot-id-lbl">N° Orden de Trabajo</div>
+                <div class="ot-id-num" id="drawer-ot-id">—</div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--subtext); font-weight:600;" id="drawer-ot-fecha">—</div>
+        </div>
+        <input type="hidden" id="drawer-ot-edit-id">
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa *</label>
+            <input type="text" class="form-control form-control-sm" id="ot-f-placa" placeholder="Ej. ATP-999" maxlength="15" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tipo OT *</label>
+                <select class="form-select form-select-sm" id="ot-f-tipo">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Sub Tipo *</label>
+                <select class="form-select form-select-sm" id="ot-f-subtipo">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Inspección">Inspección</option>
+                    <option value="Rutina">Rutina</option>
+                    <option value="Cambio de aceite">Cambio de aceite</option>
+                    <option value="Falla mecánica">Falla mecánica</option>
+                    <option value="Falla eléctrica">Falla eléctrica</option>
+                    <option value="Neumáticos">Neumáticos</option>
+                    <option value="Carrocería">Carrocería</option>
+                    <option value="Otro">Otro</option>
+                </select>
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Ingreso</label>
+                <input type="date" class="form-control form-control-sm" id="ot-f-fecha-ing">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Ingreso</label>
+                <input type="time" class="form-control form-control-sm" id="ot-f-hora-ing">
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Supervisor</label>
+                <input type="text" class="form-control form-control-sm" id="ot-f-supervisor" placeholder="Nombre del supervisor">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Kilometraje</label>
+                <input type="number" class="form-control form-control-sm" id="ot-f-km" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Situación</label>
+            <select class="form-select form-select-sm" id="ot-f-situacion">
+                <option value="En atención">En Atención</option>
+                <option value="Espera de repuesto">Espera de Repuesto</option>
+                <option value="Espera de autorización">Espera de Autorización</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Motivo / Observaciones Iniciales</label>
+            <textarea class="form-control form-control-sm" id="ot-f-motivo" rows="3" placeholder="Describe el motivo del ingreso al taller..."></textarea>
+        </div>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.otGuardar()">
+            <i class="bi bi-check-lg me-1"></i>Generar Orden de Trabajo
+        </button>
+    </div>
+</div>
+
+<!-- DRAWER: Cerrar OT (con firma) -->
+<div class="ot-drawer" id="drawer-cierre-ot">
+    <div class="ot-drawer-hd">
+        <span class="ot-drawer-title">Cerrar Orden de Trabajo</span>
+        <button class="btn btn-sm" onclick="window.otCerrarTodosDrawers()" style="color:var(--subtext)"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ot-drawer-body">
+        <div class="ot-id-bar">
+            <div>
+                <div class="ot-id-lbl">Cerrando OT</div>
+                <div class="ot-id-num" id="cierre-ot-id">—</div>
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Salida</label>
+                <input type="date" class="form-control form-control-sm" id="cierre-fecha-sal">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Salida</label>
+                <input type="time" class="form-control form-control-sm" id="cierre-hora-sal">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Técnico de Cierre</label>
+            <input type="text" class="form-control form-control-sm" id="cierre-tecnico" placeholder="Nombre del técnico responsable">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Observaciones Finales</label>
+            <textarea class="form-control form-control-sm" id="cierre-obs" rows="3" placeholder="Estado en que se retira la unidad..."></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Firma del Técnico / Supervisor</label>
+            <canvas id="otFirmaCanvas"></canvas>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="window.otLimpiarFirma()">
+                <i class="bi bi-eraser me-1"></i>Limpiar firma
+            </button>
+        </div>
+        <button class="btn btn-success w-100 fw-bold" onclick="window.otGuardarCierre()">
+            <i class="bi bi-lock-fill me-1"></i>Finalizar y Cerrar OT
+        </button>
+    </div>
+</div>
+
+<!-- DRAWER: Nuevo Trabajo -->
+<div class="ot-drawer" id="drawer-nuevo-trabajo">
+    <div class="ot-drawer-hd">
+        <span class="ot-drawer-title">Solicitar Trabajo Anexo</span>
+        <button class="btn btn-sm" onclick="window.otCerrarTodosDrawers()" style="color:var(--subtext)"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ot-drawer-body">
+        <div class="ot-id-bar">
+            <div class="ot-id-lbl">ID Trabajo</div>
+            <div class="ot-id-num" id="trb-id-display">—</div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Asociar a OT *</label>
+            <select class="form-select form-select-sm" id="trb-ot-select"></select>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Inicio</label>
+                <input type="date" class="form-control form-control-sm" id="trb-fecha-ini">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Inicio</label>
+                <input type="time" class="form-control form-control-sm" id="trb-hora-ini">
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Fin</label>
+                <input type="date" class="form-control form-control-sm" id="trb-fecha-fin">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Hora Fin</label>
+                <input type="time" class="form-control form-control-sm" id="trb-hora-fin">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Trabajador(es) * <span style="font-weight:500; text-transform:none; color:var(--subtext); font-size:0.72rem;">(separar por comas)</span></label>
+            <input type="text" class="form-control form-control-sm" id="trb-personal" placeholder="Ej: Juan Pérez, Luis Gómez">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Trabajo Realizado / Descripción *</label>
+            <textarea class="form-control form-control-sm" id="trb-descripcion" rows="2" placeholder="Describe el trabajo a realizar..."></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Costo Estimado (S/.)</label>
+            <input type="number" class="form-control form-control-sm" id="trb-costo" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.otGuardarTrabajo()">
+            <i class="bi bi-send me-1"></i>Solicitar Aprobación
+        </button>
+    </div>
+</div>
+
+<!-- DRAWER: Nuevo Material -->
+<div class="ot-drawer" id="drawer-nuevo-material">
+    <div class="ot-drawer-hd">
+        <span class="ot-drawer-title">Solicitar Material a Almacén</span>
+        <button class="btn btn-sm" onclick="window.otCerrarTodosDrawers()" style="color:var(--subtext)"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ot-drawer-body">
+        <div class="ot-id-bar">
+            <div class="ot-id-lbl">ID Solicitud</div>
+            <div class="ot-id-num" id="mat-id-display">—</div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Asociar a OT *</label>
+            <select class="form-select form-select-sm" id="mat-ot-select"></select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Producto / Repuesto *</label>
+            <input type="text" class="form-control form-control-sm" id="mat-producto" placeholder="Nombre del producto o repuesto">
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-5">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Cantidad *</label>
+                <input type="number" class="form-control form-control-sm" id="mat-cant" placeholder="1" step="0.01" min="0.01" value="1" oninput="window.otCalcMatTotal()">
+            </div>
+            <div class="col-3">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">U.M.</label>
+                <input type="text" class="form-control form-control-sm" id="mat-um" placeholder="Pza">
+            </div>
+            <div class="col-4">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Costo Unit.</label>
+                <input type="number" class="form-control form-control-sm" id="mat-costo-unit" placeholder="0.00" step="0.01" min="0" value="0" oninput="window.otCalcMatTotal()">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Total (S/.)</label>
+            <input type="text" class="form-control form-control-sm" id="mat-total" readonly style="font-weight:800; color:#16a34a;">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Personal Solicitante</label>
+            <input type="text" class="form-control form-control-sm" id="mat-personal" placeholder="Nombre del técnico o mecánico">
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Justificación / Observación</label>
+            <textarea class="form-control form-control-sm" id="mat-obs" rows="2" placeholder="¿Para qué se usa este material?"></textarea>
+        </div>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.otGuardarMaterial()">
+            <i class="bi bi-send me-1"></i>Enviar Solicitud a Almacén
+        </button>
+    </div>
+</div>
+
+<!-- DRAWER: Nuevo Backlog -->
+<div class="ot-drawer" id="drawer-nuevo-backlog">
+    <div class="ot-drawer-hd">
+        <span class="ot-drawer-title">Registrar Backlog (Mto. Pendiente)</span>
+        <button class="btn btn-sm" onclick="window.otCerrarTodosDrawers()" style="color:var(--subtext)"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ot-drawer-body">
+        <div class="ot-id-bar">
+            <div class="ot-id-lbl">ID Tarea</div>
+            <div class="ot-id-num" id="bk-id-display">—</div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha Reporte</label>
+                <input type="date" class="form-control form-control-sm" id="bk-fecha">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa *</label>
+                <input type="text" class="form-control form-control-sm" id="bk-placa" placeholder="ATP-999" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Kilometraje</label>
+                <input type="number" class="form-control form-control-sm" id="bk-km" placeholder="0" min="0">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Reportado por</label>
+                <input type="text" class="form-control form-control-sm" id="bk-reporta" placeholder="Ej. Conductor, Mecánico">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tema / Categoría</label>
+            <input type="text" class="form-control form-control-sm" id="bk-tema" placeholder="Ej. Motor, Neumáticos, Frenos...">
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Descripción del Mantenimiento Pendiente *</label>
+            <textarea class="form-control form-control-sm" id="bk-tarea" rows="3" placeholder="Describe el mantenimiento que está pendiente..."></textarea>
+        </div>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.otGuardarBacklog()">
+            <i class="bi bi-save me-1"></i>Guardar Backlog
+        </button>
+    </div>
+</div>

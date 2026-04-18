@@ -1,0 +1,266 @@
+<!-- Módulo Almacén OT (Req/Salidas) — Azkell Fleet -->
+<style>
+#moduloAlmacenOT {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Tabs estilo línea */
+#moduloAlmacenOT .aot-tabs {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+#moduloAlmacenOT .aot-tab {
+    padding: 12px 0;
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--subtext);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+    white-space: nowrap;
+}
+#moduloAlmacenOT .aot-tab:hover { color: var(--text); }
+#moduloAlmacenOT .aot-tab.active {
+    color: var(--primary, #5865F2);
+    border-bottom-color: var(--primary, #5865F2);
+}
+#moduloAlmacenOT .aot-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: var(--surface2, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    margin-left: 5px;
+    color: var(--subtext);
+    padding: 0 4px;
+}
+#moduloAlmacenOT .aot-tab.active .aot-tab-badge {
+    background: rgba(88,101,242,0.12);
+    border-color: rgba(88,101,242,0.3);
+    color: var(--primary, #5865F2);
+}
+
+/* Controles */
+#moduloAlmacenOT .aot-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloAlmacenOT .aot-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Tabla */
+#moduloAlmacenOT .aot-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloAlmacenOT table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloAlmacenOT thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloAlmacenOT tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+#moduloAlmacenOT tbody tr:hover { background: var(--bg); }
+#moduloAlmacenOT tbody tr.aot-row-active { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloAlmacenOT tbody td { padding: 10px 12px; color: var(--text); }
+#moduloAlmacenOT .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+
+/* Badges */
+#moduloAlmacenOT .aot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+#moduloAlmacenOT .aot-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.8;
+}
+#moduloAlmacenOT .badge-pendiente   { background: rgba(217,119,6,0.12);  color: #d97706; }
+#moduloAlmacenOT .badge-despachado  { background: rgba(22,163,74,0.12);  color: #16a34a; }
+
+/* Panel lateral detalle */
+#moduloAlmacenOT .aot-detail-panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s;
+    max-width: 400px;
+}
+#moduloAlmacenOT .aot-detail-panel.open { width: 400px; }
+#moduloAlmacenOT .aot-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloAlmacenOT .aot-detail-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Secciones detalle */
+#moduloAlmacenOT .aot-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloAlmacenOT .aot-sec-hd {
+    background: var(--bg);
+    padding: 8px 12px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtext);
+    border-bottom: 1px solid var(--border);
+}
+#moduloAlmacenOT .aot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloAlmacenOT .aot-field:last-child { border-bottom: none; }
+#moduloAlmacenOT .aot-field-lbl { width: 42%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; padding-right: 8px; }
+#moduloAlmacenOT .aot-field-val { width: 58%; color: var(--text); font-weight: 600; word-break: break-word; }
+</style>
+
+<div id="moduloAlmacenOT">
+
+    <!-- TABS -->
+    <div class="aot-tabs">
+        <div class="aot-tab active" id="aot-tab-pend" onclick="window.aotCambiarTab('pend')">
+            Solicitudes Pendientes
+            <span class="aot-tab-badge" id="aot-badge-pend">0</span>
+        </div>
+        <div class="aot-tab" id="aot-tab-desp" onclick="window.aotCambiarTab('desp')">
+            Salidas (Despachadas)
+            <span class="aot-tab-badge" id="aot-badge-desp">0</span>
+        </div>
+    </div>
+
+    <!-- FILA 1: Buscador + filtros inline -->
+    <div class="aot-controls">
+        <div class="input-group input-group-sm" style="max-width:280px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="aot-search"
+                placeholder="Buscar por Producto, Personal, Descripción..."
+                oninput="window.aotFiltrar()">
+        </div>
+        <input type="text" class="form-control form-control-sm" id="aot-fil-ot"
+            placeholder="N° OT" style="max-width:110px"
+            oninput="window.aotFiltrar()">
+        <input type="text" class="form-control form-control-sm" id="aot-fil-placa"
+            placeholder="PLACA" style="max-width:100px; text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase(); window.aotFiltrar()">
+        <input type="month" class="form-control form-control-sm" id="aot-fil-mes"
+            style="max-width:150px" onchange="window.aotFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="aot-fil-desde"
+            style="max-width:150px" title="Desde" onchange="window.aotFiltrar()">
+        <input type="date" class="form-control form-control-sm" id="aot-fil-hasta"
+            style="max-width:150px" title="Hasta" onchange="window.aotFiltrar()">
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.aotCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+
+    <!-- FILA 2: Estado + Exportar -->
+    <div class="aot-filters">
+        <select class="form-select form-select-sm" id="aot-fil-estado"
+            onchange="window.aotFiltrar()" style="max-width:200px">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Despachado">Despachado</option>
+        </select>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-success" onclick="window.aotExportar()">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+        </button>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA -->
+        <div class="aot-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID SALIDA</th>
+                        <th>N° OT</th>
+                        <th>PRODUCTO</th>
+                        <th>CANT.</th>
+                        <th>COSTO UNIT.</th>
+                        <th>COSTO TOTAL</th>
+                        <th>PERSONAL</th>
+                        <th>ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="aot-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="aot-detail-panel" id="aot-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="aot-detalle-titulo">Detalle Solicitud</span>
+                <button class="btn btn-sm" onclick="window.aotCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="aot-detail-scroll" id="aot-detalle-scroll"></div>
+            <div class="aot-detail-footer" id="aot-detalle-footer" style="display:none;"></div>
+        </div>
+
+    </div>
+
+</div>
