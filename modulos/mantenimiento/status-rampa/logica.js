@@ -809,6 +809,15 @@ window.srAgregarSalida = function(idOt) {
             }).join('');
         })
         .catch(function() {});
+    fetch('/api/conductores-lista')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) {
+            var dl = document.getElementById('sr-mat-list-personal');
+            if (dl) dl.innerHTML = (Array.isArray(d) ? d : []).map(function(c) {
+                return '<option value="' + _srEsc(c.nombre || '') + '">';
+            }).join('');
+        })
+        .catch(function() {});
 
     srAbrirDrawer('sr-drawer-material');
 };

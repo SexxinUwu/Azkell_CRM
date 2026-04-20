@@ -4558,6 +4558,21 @@ app.get('/api/almacen/valorizado', (req, res) => {
 // Tablas: ordenes_trabajo, trabajos_ot, ot_materiales, ot_backlog
 // ============================================================
 
+// ── Migración: columnas de detalle de trabajo en trabajos_ot ──────────────
+[
+    'trabajo_realizado TEXT NULL',
+    'tecnico VARCHAR(150) NULL DEFAULT \'\'',
+    'fecha_trabajo DATETIME NULL',
+    'fecha_salida DATETIME NULL',
+    'costo DECIMAL(10,2) NULL DEFAULT 0'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE trabajos_ot ADD COLUMN ' + colDef, function(e) {
+        if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ trabajos_ot.' + colName + ' verificada');
+        else console.warn('ALTER trabajos_ot.' + colName + ':', e.message);
+    });
+});
+
 // ── Helper: genera ID secuencial por año  (ej. OT-2026-0001) ─────
 // Solo busca IDs con sufijo de exactamente 4 dígitos (nuevo formato),
 // ignorando los IDs legacy con sufijos largos.

@@ -46,7 +46,13 @@ window.salCargar = function() {
 function _salCargarSelectores() {
     fetch('/api/conductores-lista')
         .then(function(r) { return r.json(); })
-        .then(function(d) { window._salConductores = d || []; })
+        .then(function(d) {
+            window._salConductores = d || [];
+            var dl = document.getElementById('sal-list-personal');
+            if (dl) dl.innerHTML = (d || []).map(function(c) {
+                return '<option value="' + salEsc(c.nombre || '') + '">';
+            }).join('');
+        })
         .catch(function() {});
 
     fetch('/api/placas-lista')
