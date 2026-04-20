@@ -3843,7 +3843,7 @@ app.put('/api/almacen/configuracion', (req, res) => {
 // ALMACÉN — Proveedores
 // ============================================================
 app.get('/api/almacen/proveedores', (req, res) => {
-    db.query('SELECT p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR ", ") AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at ORDER BY p.nombre', (err, rows) => {
+    db.query('SELECT p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at, GROUP_CONCAT(m.marca ORDER BY m.marca SEPARATOR \', \') AS marcas FROM proveedores_inv p LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id=p.id GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at ORDER BY p.nombre', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -4575,7 +4575,7 @@ app.get('/api/almacen/costos', (req, res) => {
                       FROM detalle_salidas_inv d
                       JOIN salidas_inv s ON s.id=d.salida_id
                       LEFT JOIN placas p ON p.placa=s.placa
-                      ${where ? where + ' AND s.tipo_destino="Vehiculo"' : 'WHERE s.tipo_destino="Vehiculo"'}
+                      ${where ? where + " AND s.tipo_destino='Vehiculo'" : "WHERE s.tipo_destino='Vehiculo'"}
                       GROUP BY COALESCE(p.cliente,'Sin cliente'), s.placa ORDER BY total DESC`, params, (e, r) => e ? reject(e) : resolve(r));
         })
     ]).then(([porFamilia, porAlmacen, totales, topItems, porCliente]) => {
