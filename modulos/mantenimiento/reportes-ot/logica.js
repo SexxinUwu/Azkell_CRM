@@ -211,13 +211,17 @@ window.rotAbrirDetalle = function(idOT) {
     body.innerHTML = html;
 
     // Footer
-    var permisos = {};
-    try { permisos = JSON.parse(localStorage.getItem('fleet_permisos') || '{}'); } catch(ex) {}
-    var puedeAprobar = permisos.admin === true || !!(permisos.ot && permisos.ot.aprobar);
-    var ftHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
-               + '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'eliminar\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-trash me-1"></i>Eliminar</button>';
+    var puedeEditar   = window.checkPerm('ot', 'e');
+    var puedeEliminar = window.checkPerm('ot', 'd');
+    var puedeAprobar  = puedeEditar;
+    var ftHtml = (puedeEditar
+        ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
+        + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
+        : '')
+        + (puedeEliminar
+        ? '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'eliminar\',\'' + esc(idOT) + '\')">'
+        + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
+        : '');
     if (puedeAprobar && estado !== 'Anulado' && estado !== 'Aprobada' && estado !== 'Cerrada') {
         ftHtml += '<div class="ms-auto d-flex gap-2">'
                + '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
@@ -287,6 +291,7 @@ window.rotAccion = function(accion, idOT) {
     if (!ot && accion !== 'pdf') return;
 
     if (accion === 'eliminar') {
+        if (!window.guardAction('ot', 'd')) return;
         if (!confirm('¿Eliminar la OT ' + idOT + '? Esta acción no se puede deshacer.')) return;
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
             .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
@@ -303,6 +308,7 @@ window.rotAccion = function(accion, idOT) {
     }
 
     if (accion === 'aprobar') {
+        if (!window.guardAction('ot', 'e')) return;
         if (!confirm('¿Aprobar la OT ' + idOT + '?')) return;
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
             method: 'PUT',
@@ -323,6 +329,7 @@ window.rotAccion = function(accion, idOT) {
     }
 
     if (accion === 'cerrar') {
+        if (!window.guardAction('ot', 'e')) return;
         if (!confirm('¿Cerrar la OT ' + idOT + '? Se marcará como Finalizada.')) return;
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
             method: 'PUT',
@@ -343,7 +350,29 @@ window.rotAccion = function(accion, idOT) {
     }
 
     if (accion === 'editar') {
+        if (!window.guardAction('ot', 'e')) return;
         rotAbrirEditarOT(idOT);
+        return;
+    }
+
+    if (accion === 'anular') {
+        if (!window.guardAction('ot', 'e')) return;
+        if (!confirm('¿Anular la OT ' + idOT + '?')) return;
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'anular' })
+        })
+        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+        .then(function() {
+            window.rotCerrarDetalle();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
+            window.rotCargar();
+        })
+        .catch(function(err) {
+            console.error('Error anulando OT:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la OT', 'danger');
+        });
         return;
     }
 

@@ -254,10 +254,14 @@ function aotAbrirDetalle(m) {
     if (footer) {
         footer.style.display = 'flex';
         var eId = aotEsc(m.id);
-        var btnAnular = m.estado !== 'Anulado'
-            ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.aotAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
-            : '<span class="aot-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>';
-        var btnDespachar = (!m.estado || m.estado === 'Pendiente')
+        var puedeEditar   = window.checkPerm('ot', 'e');
+        var puedeEliminar = window.checkPerm('ot', 'd');
+        var btnAnular = puedeEliminar
+            ? (m.estado !== 'Anulado'
+                ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.aotAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
+                : '<span class="aot-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>')
+            : (m.estado === 'Anulado' ? '<span class="aot-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>' : '');
+        var btnDespachar = (puedeEditar && (!m.estado || m.estado === 'Pendiente'))
             ? '<button class="btn btn-sm btn-success flex-fill fw-bold" onclick="window.aotDespachar(\'' + eId + '\')"><i class="bi bi-box-seam me-1"></i>Despachar</button>'
             : '';
         footer.innerHTML =
@@ -280,6 +284,7 @@ window.aotCerrarDetalle = function() {
 
 // ── Anular ────────────────────────────────────────────────────
 window.aotAnular = function(id) {
+    if (!window.guardAction('ot', 'd')) return;
     var motivo = window.prompt('Motivo de anulación (obligatorio):');
     if (motivo === null) return; // cancelado
     motivo = motivo.trim();
@@ -306,6 +311,7 @@ window.aotAnular = function(id) {
 
 // ── Despachar ─────────────────────────────────────────────────
 window.aotDespachar = function(id) {
+    if (!window.guardAction('ot', 'e')) return;
     if (!confirm('¿Aprobar y despachar? El stock del inventario será descontado.')) return;
     fetch('/api/ot-materiales/' + encodeURIComponent(id), {
         method: 'PUT',
@@ -339,6 +345,7 @@ window.aotDespachar = function(id) {
 
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.aotAbrirNuevo = function() {
+    if (!window.guardAction('ot', 'c')) return;
     var ids = ['aot-f-ot','aot-f-placa','aot-f-responsable','aot-f-obs'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
     var fechaEl = document.getElementById('aot-f-fecha');
