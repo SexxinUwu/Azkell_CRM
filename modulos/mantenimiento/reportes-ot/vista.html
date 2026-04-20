@@ -296,8 +296,8 @@
             <div class="rot-kpi-val" id="rot-kpi-correctivos" style="color:#dc2626">0</div>
         </div>
         <div class="rot-kpi">
-            <div class="rot-kpi-lbl">Pendientes</div>
-            <div class="rot-kpi-val" id="rot-kpi-pendiente" style="color:#d97706">0</div>
+            <div class="rot-kpi-lbl">Preventivos</div>
+            <div class="rot-kpi-val" id="rot-kpi-preventivos" style="color:#2563eb">0</div>
         </div>
         <div class="rot-kpi">
             <div class="rot-kpi-lbl">Cerradas</div>
@@ -395,13 +395,6 @@
             <input type="number" class="form-control form-control-sm" id="rot-tr-costo" value="0" min="0" step="0.01" placeholder="0.00">
         </div>
 
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Estado</label>
-            <select class="form-select form-select-sm" id="rot-tr-estado">
-                <option value="Pendiente">Pendiente</option>
-            </select>
-        </div>
-
         <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarTrabajo()">
             <i class="bi bi-check-lg me-1"></i>Guardar Trabajo
         </button>
@@ -451,7 +444,8 @@
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Responsable / Solicitante</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable">
+                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable" list="rot-mat-list-personal" autocomplete="off">
+                <datalist id="rot-mat-list-personal"></datalist>
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Observaciones</label>

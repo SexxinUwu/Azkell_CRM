@@ -569,17 +569,20 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 // ── KPIs ─────────────────────────────────────────────────────────
 function rotActualizarKPIs(lista) {
     var total       = lista.length;
-    var pendiente   = lista.filter(function(o){ return o.aprobacion === 'Pendiente'; }).length;
     var correctivos = lista.filter(function(o) {
         var det = rotDetalles(o);
         return (det.tipo_ot || o.tipo || '') === 'Correctivo';
+    }).length;
+    var preventivos = lista.filter(function(o) {
+        var det = rotDetalles(o);
+        return (det.tipo_ot || o.tipo || '') === 'Preventivo';
     }).length;
     var cerrada = lista.filter(function(o){ return o.aprobacion === 'Cerrada'; }).length;
     var costo   = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
 
     rotSetKPI('rot-kpi-total',       total);
     rotSetKPI('rot-kpi-correctivos', correctivos);
-    rotSetKPI('rot-kpi-pendiente',   pendiente);
+    rotSetKPI('rot-kpi-preventivos', preventivos);
     rotSetKPI('rot-kpi-cerrada',     cerrada);
     rotSetKPI('rot-kpi-costo',       'S/' + costo.toFixed(2));
     rotSetKPI('rot-kpi-filtradas',   total);
@@ -932,6 +935,15 @@ window.rotAgregarSalida = function(idOt) {
             }).join('');
         })
         .catch(function() {});
+    fetch('/api/conductores-lista')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(d) {
+            var dl = document.getElementById('rot-mat-list-personal');
+            if (dl) dl.innerHTML = (Array.isArray(d) ? d : []).map(function(c) {
+                return '<option value="' + rotEscHtml(c.nombre || '') + '">';
+            }).join('');
+        })
+        .catch(function() {});
 
     rotAbrirSubDrawer('rot-drawer-material');
 };
@@ -1061,6 +1073,9 @@ window.rotGuardarMaterial = function() {
         }
         return;
     }
+
+    var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ot-materiales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
