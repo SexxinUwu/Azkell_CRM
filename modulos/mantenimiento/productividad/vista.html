@@ -14,20 +14,15 @@
 /* ── Barra de controles ── */
 #moduloProductividad .prod-controls {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.85rem 1.25rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.6rem 1.25rem;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     flex-shrink: 0;
 }
-#moduloProductividad .prod-controls-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-}
-#moduloProductividad .prod-controls-row .prod-label {
+#moduloProductividad .prod-label {
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -35,27 +30,35 @@
     color: var(--subtext);
     white-space: nowrap;
 }
-#moduloProductividad .prod-controls-row input[type="time"] {
+#moduloProductividad .prod-controls input[type="time"],
+#moduloProductividad .prod-controls input[type="date"] {
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: 6px;
     font-size: 0.83rem;
     padding: 5px 8px;
-    min-width: 110px;
 }
-#moduloProductividad .prod-controls-row input[type="time"]:focus {
+#moduloProductividad .prod-controls input:focus {
     outline: none;
     border-color: var(--primary, #5865F2);
     box-shadow: 0 0 0 2px rgba(88,101,242,0.15);
 }
 
-/* ── Área de tabla ── */
+/* ── Contenedor principal ── */
+#moduloProductividad .prod-main {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── Tabla ── */
 #moduloProductividad .prod-table-wrap {
     flex: 1 1 0;
     min-height: 0;
     overflow-y: auto;
-    padding: 1rem 1.25rem;
+    background: var(--surface);
 }
 #moduloProductividad .prod-table {
     width: 100%;
@@ -64,26 +67,29 @@
 #moduloProductividad .prod-table thead th {
     position: sticky;
     top: 0;
-    background: var(--surface);
-    border-bottom: 2px solid var(--border);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
     font-size: 0.70rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: var(--subtext);
-    padding: 9px 12px;
+    padding: 10px 12px;
     white-space: nowrap;
     z-index: 1;
 }
-#moduloProductividad .prod-table tbody tr {
+#moduloProductividad .prod-row {
     border-bottom: 1px solid var(--border);
+    cursor: pointer;
     transition: background 0.1s;
 }
-#moduloProductividad .prod-table tbody tr:hover {
-    background: rgba(88,101,242,0.04);
+#moduloProductividad .prod-row:hover { background: var(--bg); }
+#moduloProductividad .prod-row.prod-row-active {
+    background: rgba(88,101,242,0.06);
+    border-left: 3px solid var(--primary, #5865F2);
 }
 #moduloProductividad .prod-table tbody td {
-    padding: 10px 12px;
+    padding: 11px 12px;
     font-size: 0.84rem;
     color: var(--text);
     vertical-align: middle;
@@ -114,65 +120,96 @@
     color: var(--subtext);
     font-size: 0.85rem;
 }
+
+/* ── Panel detalle lateral ── */
+#moduloProductividad .prod-detail-panel {
+    width: 0; flex-shrink: 0; overflow: hidden;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; transition: width 0.25s; max-width: 380px;
+}
+#moduloProductividad .prod-detail-panel.open { width: 380px; }
+#moduloProductividad .prod-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
 </style>
 
 <div id="moduloProductividad">
 
     <!-- Barra de controles -->
     <div class="prod-controls">
-
-        <!-- Fila 1: buscador + refrigerio + PDF -->
-        <div class="prod-controls-row">
-            <div class="input-group input-group-sm" style="max-width:220px;">
-                <span class="input-group-text border-end-0 bg-transparent">
-                    <i class="bi bi-search" style="color:var(--subtext);"></i>
-                </span>
-                <input type="text" class="form-control border-start-0 ps-0"
-                    id="prodBuscador"
-                    placeholder="Buscar mecánico..."
-                    oninput="prodFiltrar()">
-            </div>
-
-            <span class="prod-label">Inicio Refrigerio:</span>
-            <input type="time" id="prodRefInicio" value="13:00" onchange="prodRenderTabla()">
-
-            <span class="prod-label">Fin Refrigerio:</span>
-            <input type="time" id="prodRefFin" value="14:00" onchange="prodRenderTabla()">
-
-            <button class="btn btn-sm btn-primary ms-auto" onclick="prodExportarPDF()">
-                <i class="bi bi-file-earmark-pdf me-1"></i>PDF Productividad
-            </button>
+        <!-- Buscador -->
+        <div class="input-group input-group-sm" style="max-width:200px;">
+            <span class="input-group-text border-end-0 bg-transparent">
+                <i class="bi bi-search" style="color:var(--subtext);"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="prodBuscador"
+                placeholder="Buscar mecánico..."
+                oninput="window.prodFiltrar()">
         </div>
 
-        <!-- Fila 2: Excel -->
-        <div class="prod-controls-row">
-            <button class="btn btn-sm btn-success" onclick="prodExportarExcel()">
-                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar a Excel
-            </button>
-            <span style="font-size:0.73rem; color:var(--subtext); margin-left:auto;" id="prodResumen"></span>
-        </div>
+        <!-- Filtro por día -->
+        <span class="prod-label">Día:</span>
+        <input type="date" id="prodFecha" onchange="window.prodAplicarFiltros()" style="max-width:160px;">
 
+        <!-- Refrigerio -->
+        <span class="prod-label">Inicio refrigerio:</span>
+        <input type="time" id="prodRefInicio" value="13:00" onchange="window.prodRenderTabla()" style="max-width:110px;">
+        <span class="prod-label">Fin:</span>
+        <input type="time" id="prodRefFin" value="14:00" onchange="window.prodRenderTabla()" style="max-width:110px;">
+
+        <button class="btn btn-sm btn-outline-secondary ms-1" onclick="window.prodCargar()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+
+        <div style="flex:1"></div>
+
+        <span style="font-size:0.73rem; color:var(--subtext);" id="prodResumen"></span>
+        <button class="btn btn-sm btn-success" onclick="window.prodExportarExcel()">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar a Excel
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="window.prodExportarPDF()">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF Productividad
+        </button>
     </div>
 
-    <!-- Tabla -->
-    <div class="prod-table-wrap">
-        <table class="prod-table" id="prodTabla">
-            <thead>
-                <tr>
-                    <th>Trabajador / Técnico</th>
-                    <th style="text-align:center;">Total Trabajos Asignados</th>
-                    <th style="text-align:center;">Horas Efectivas Acumuladas</th>
-                </tr>
-            </thead>
-            <tbody id="prodTbody">
-                <tr>
-                    <td colspan="3" class="prod-empty">
-                        <span class="spinner-border spinner-border-sm me-2"></span>
-                        Cargando datos…
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Contenedor principal -->
+    <div class="prod-main">
+
+        <!-- Tabla resumen -->
+        <div class="prod-table-wrap">
+            <table class="prod-table" id="prodTabla">
+                <thead>
+                    <tr>
+                        <th>Trabajador / Técnico</th>
+                        <th style="text-align:center;">Total Trabajos</th>
+                        <th style="text-align:center;">Horas Efectivas</th>
+                        <th style="min-width:160px;">Progreso (meta 9h)</th>
+                    </tr>
+                </thead>
+                <tbody id="prodTbody">
+                    <tr>
+                        <td colspan="4" class="prod-empty">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Cargando datos…
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Panel detalle lateral -->
+        <div class="prod-detail-panel" id="prod-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <div>
+                    <div style="font-size:0.88rem; font-weight:800; color:var(--text);" id="prod-det-titulo">Detalle</div>
+                    <div style="font-size:0.72rem; color:var(--subtext);" id="prod-det-sub"></div>
+                </div>
+                <button class="btn btn-sm" onclick="window.prodCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="prod-detail-scroll" id="prod-det-scroll"></div>
+        </div>
+
     </div>
 
 </div>

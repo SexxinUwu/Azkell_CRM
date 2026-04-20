@@ -1,193 +1,239 @@
-<!-- Módulo Almacén / Costos — SPA Aislado -->
-<div id="mod-costos" class="modulo-wrapper d-flex flex-column h-100">
+<!-- Módulo Valorizado del Almacén — Azkell Fleet -->
+<style>
+#moduloCostos {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--bg);
+    padding: 1.5rem 1.5rem 2rem;
+    gap: 1.5rem;
+}
 
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-graph-up-arrow text-success me-1"></i>Costos de Almacén
-      </h2>
-      <p class="text-muted small mb-0">Análisis de consumo por familia, almacén y artículo</p>
-    </div>
-    <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarCostos()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-  </div>
+/* ── KPI Cards ──────────────────────────────────────────────────── */
+#moduloCostos .cos-kpi-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+#moduloCostos .cos-kpi {
+    flex: 1 1 180px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+#moduloCostos .cos-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--subtext);
+}
+#moduloCostos .cos-kpi-value {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.15;
+}
+#moduloCostos .cos-kpi-sub {
+    font-size: 0.74rem;
+    color: var(--subtext);
+    margin-top: 2px;
+}
 
-  <!-- Filtro de fechas -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <label class="small fw-semibold text-muted mb-0">Período:</label>
-    <div class="d-flex gap-1 align-items-center">
-      <input type="date" id="cos-desde" class="form-control form-control-sm" style="max-width:145px;">
-      <span class="text-muted small">→</span>
-      <input type="date" id="cos-hasta" class="form-control form-control-sm" style="max-width:145px;">
-    </div>
-    <button class="btn btn-sm btn-primary" onclick="window.cargarCostos()"><i class="bi bi-filter me-1"></i>Filtrar</button>
-    <button class="btn btn-sm btn-outline-secondary" onclick="window._cosClearFechas()">Todo</button>
-  </div>
+/* ── Secciones ────────────────────────────────────────────────── */
+#moduloCostos .cos-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+#moduloCostos .cos-section-hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 1.25rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+#moduloCostos .cos-section-title {
+    font-size: 0.83rem;
+    font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
 
-  <!-- KPI Cards -->
-  <div class="row g-3 mb-4" id="cos-kpis">
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Total Entradas</div>
-        <div class="fw-bold fs-5 text-success" id="cos-kpi-entradas">—</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>Total Salidas</div>
-        <div class="fw-bold fs-5 text-danger" id="cos-kpi-salidas">—</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-wallet2 text-primary me-1"></i>Balance</div>
-        <div class="fw-bold fs-5 text-primary" id="cos-kpi-balance">—</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-boxes text-warning me-1"></i>Familias Activas</div>
-        <div class="fw-bold fs-5 text-warning" id="cos-kpi-familias">—</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-currency-dollar text-success me-1"></i>Valorizado S/</div>
-        <div class="fw-bold fs-5 text-success" id="cos-kpi-val-pen">—</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-        <div class="small text-muted mb-1"><i class="bi bi-currency-dollar text-info me-1"></i>Valorizado US$</div>
-        <div class="fw-bold fs-5 text-info" id="cos-kpi-val-usd">—</div>
-      </div>
-    </div>
-  </div>
+/* ── Tabla interna ──────────────────────────────────────────────── */
+#moduloCostos .cos-inner-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+#moduloCostos .cos-inner-table th {
+    padding: 9px 14px;
+    color: var(--subtext);
+    font-size: 0.69rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+#moduloCostos .cos-inner-table td {
+    padding: 10px 14px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+#moduloCostos .cos-inner-table tr:last-child td { border-bottom: none; }
 
-  <!-- Tabs -->
-  <ul class="nav nav-tabs mb-3" id="cos-tabs">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cos-tab-familia">Por Familia</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-almacen">Por Almacén</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-top">Top Artículos</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-cliente">Por Cliente</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-valorizado" onclick="window.cargarValorizado()">Valorizado</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cos-tab-chart">Gráfico</button></li>
-  </ul>
+/* ── Contenido de sección — scroll vertical + horizontal ── */
+#moduloCostos .cos-section-body {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 380px;
+}
 
-  <div class="tab-content flex-grow-1" style="overflow:auto;">
+#moduloCostos .cos-bar-wrap {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 80px;
+}
+#moduloCostos .cos-bar-fill {
+    height: 100%;
+    background: var(--primary, #5865F2);
+    border-radius: 3px;
+}
+</style>
 
-    <!-- Por Familia -->
-    <div class="tab-pane fade show active" id="cos-tab-familia">
-      <div class="card p-0 shadow-sm">
-        <table class="table table-custom table-hover m-0">
-          <thead><tr><th>Familia</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
-          <tbody id="tbody-cos-familia">
-            <tr><td colspan="4" class="text-center py-5 text-muted">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+<div id="moduloCostos">
 
-    <!-- Por Almacén -->
-    <div class="tab-pane fade" id="cos-tab-almacen">
-      <div class="card p-0 shadow-sm">
-        <table class="table table-custom table-hover m-0">
-          <thead><tr><th>Almacén</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
-          <tbody id="tbody-cos-almacen">
-            <tr><td colspan="4" class="text-center py-5 text-muted">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Top Artículos -->
-    <div class="tab-pane fade" id="cos-tab-top">
-      <div class="card p-0 shadow-sm">
-        <table class="table table-custom table-hover m-0">
-          <thead><tr><th>Código</th><th>Artículo</th><th>Familia</th><th class="text-end">Cant. Total</th><th class="text-end">Costo Total</th></tr></thead>
-          <tbody id="tbody-cos-top">
-            <tr><td colspan="5" class="text-center py-5 text-muted">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Por Cliente -->
-    <div class="tab-pane fade" id="cos-tab-cliente">
-      <div class="card p-0 shadow-sm">
-        <table class="table table-custom table-hover m-0">
-          <thead><tr><th>Cliente</th><th>Placa</th><th class="text-end">Total Consumido</th><th class="text-center">Movimientos</th><th>% del Total</th></tr></thead>
-          <tbody id="tbody-cos-cliente">
-            <tr><td colspan="5" class="text-center py-5 text-muted">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Valorizado -->
-    <div class="tab-pane fade" id="cos-tab-valorizado">
-      <!-- KPIs valorizado -->
-      <div class="row g-2 mb-3" id="cos-val-kpis">
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-            <div class="small text-muted mb-1"><i class="bi bi-cash-stack text-success me-1"></i>Total Valorizado S/</div>
-            <div class="fw-bold fs-5 text-success" id="cos-val-total-pen">—</div>
-          </div>
+    <!-- HEADER -->
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; flex-shrink:0;">
+        <div>
+            <div style="font-size:1.1rem; font-weight:800; color:var(--text);">Valorizado del Almacén</div>
+            <div style="font-size:0.78rem; color:var(--subtext); margin-top:2px;">Resumen de stock valorizado y consumo</div>
         </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-            <div class="small text-muted mb-1"><i class="bi bi-cash-stack text-info me-1"></i>Total Valorizado US$</div>
-            <div class="fw-bold fs-5 text-info" id="cos-val-total-usd">—</div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-            <div class="small text-muted mb-1"><i class="bi bi-trophy-fill text-warning me-1"></i>Familia más costosa</div>
-            <div class="fw-bold small text-warning" id="cos-val-top-fam">—</div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-            <div class="small text-muted mb-1"><i class="bi bi-boxes me-1 text-primary"></i>Artículos con stock</div>
-            <div class="fw-bold fs-5 text-primary" id="cos-val-art-count">—</div>
-          </div>
-        </div>
-      </div>
-      <!-- Tabs internas: Por Artículo / Por Familia -->
-      <ul class="nav nav-pills mb-2 gap-1">
-        <li class="nav-item"><button class="nav-link active btn btn-sm" id="val-tab-art-btn" onclick="window._cosValTab('art')">Por Artículo</button></li>
-        <li class="nav-item"><button class="nav-link btn btn-sm" id="val-tab-fam-btn" onclick="window._cosValTab('fam')">Por Familia</button></li>
-      </ul>
-      <div id="cos-val-art" class="card p-0 shadow-sm">
-        <table class="table table-custom table-hover table-sm m-0">
-          <thead><tr>
-            <th>Código</th><th>Artículo</th><th>Familia</th><th>Almacén</th>
-            <th class="text-end">Stock</th><th>Und.</th>
-            <th class="text-end">Costo Ref.</th><th>Mon.</th>
-            <th class="text-end fw-bold">Valor Total</th>
-          </tr></thead>
-          <tbody id="tbody-cos-val-art">
-            <tr><td colspan="9" class="text-center py-5 text-muted">Haz clic en "Valorizado" para cargar</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div id="cos-val-fam" class="card p-0 shadow-sm" style="display:none;">
-        <table class="table table-custom table-hover m-0">
-          <thead><tr>
-            <th>Familia</th><th class="text-end">Valor S/</th><th class="text-end">Valor US$</th><th class="text-center">Artículos</th>
-          </tr></thead>
-          <tbody id="tbody-cos-val-fam">
-            <tr><td colspan="4" class="text-center py-5 text-muted">Haz clic en "Valorizado" para cargar</td></tr>
-          </tbody>
-        </table>
-      </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.init_costos()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
     </div>
 
-    <!-- Gráfico -->
-    <div class="tab-pane fade" id="cos-tab-chart">
-      <div class="card shadow-sm p-3" style="max-height:400px;">
-        <canvas id="chart-cos-familia" height="300"></canvas>
-      </div>
+    <!-- KPIs -->
+    <div class="cos-kpi-row">
+        <div class="cos-kpi">
+            <div class="cos-kpi-label"><i class="bi bi-box-seam me-1"></i>Total Valorizado</div>
+            <div class="cos-kpi-value" id="cos-kpi-pen">S/ —</div>
+            <div class="cos-kpi-sub">Soles (PEN)</div>
+        </div>
+        <div class="cos-kpi">
+            <div class="cos-kpi-label"><i class="bi bi-currency-dollar me-1"></i>Total Valorizado</div>
+            <div class="cos-kpi-value" id="cos-kpi-usd">$ —</div>
+            <div class="cos-kpi-sub">Dólares (USD)</div>
+        </div>
+        <div class="cos-kpi">
+            <div class="cos-kpi-label"><i class="bi bi-layers me-1"></i>Familias</div>
+            <div class="cos-kpi-value" id="cos-kpi-familias">—</div>
+            <div class="cos-kpi-sub">Categorías de artículos</div>
+        </div>
+        <div class="cos-kpi">
+            <div class="cos-kpi-label"><i class="bi bi-tags me-1"></i>Artículos activos</div>
+            <div class="cos-kpi-value" id="cos-kpi-articulos">—</div>
+            <div class="cos-kpi-sub">Con stock &gt; 0</div>
+        </div>
     </div>
 
-  </div>
+    <!-- ARTÍCULO MÁS CONSUMIDO -->
+    <div class="cos-section">
+        <div class="cos-section-hd">
+            <i class="bi bi-graph-up-arrow" style="color:var(--primary,#5865F2);"></i>
+            <span class="cos-section-title">Artículo más consumido</span>
+        </div>
+        <div class="cos-section-body" id="cos-top-consumido">
+            <div style="padding:1.5rem;text-align:center;color:var(--subtext);font-size:0.82rem;">Cargando...</div>
+        </div>
+    </div>
+
+    <!-- TOP 10 ARTÍCULOS MÁS CONSUMIDOS -->
+    <div class="cos-section">
+        <div class="cos-section-hd">
+            <i class="bi bi-list-ol" style="color:#d97706;"></i>
+            <span class="cos-section-title">Top consumo (cantidad despachada)</span>
+        </div>
+        <div class="cos-section-body">
+            <table class="cos-inner-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Artículo</th>
+                        <th>Familia</th>
+                        <th style="text-align:right;">Cantidad</th>
+                        <th style="text-align:right;">Importe Total</th>
+                    </tr>
+                </thead>
+                <tbody id="cos-tbody-consumo">
+                    <tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--subtext);">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TOP ARTÍCULOS MÁS CAROS -->
+    <div class="cos-section">
+        <div class="cos-section-hd">
+            <i class="bi bi-gem" style="color:#16a34a;"></i>
+            <span class="cos-section-title">Artículos más caros (costo referencial)</span>
+        </div>
+        <div class="cos-section-body">
+            <table class="cos-inner-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Artículo</th>
+                        <th>Familia</th>
+                        <th style="text-align:right;">Stock</th>
+                        <th style="text-align:right;">Costo Unit.</th>
+                        <th style="text-align:right;">Valorizado</th>
+                    </tr>
+                </thead>
+                <tbody id="cos-tbody-caros">
+                    <tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--subtext);">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- VALORIZADO POR FAMILIA -->
+    <div class="cos-section">
+        <div class="cos-section-hd">
+            <i class="bi bi-pie-chart" style="color:#ec4899;"></i>
+            <span class="cos-section-title">Valorizado por familia</span>
+        </div>
+        <div class="cos-section-body">
+            <table class="cos-inner-table">
+                <thead>
+                    <tr>
+                        <th>Familia</th>
+                        <th style="text-align:right;">Artículos</th>
+                        <th style="text-align:right;">Valorizado S/</th>
+                        <th style="min-width:140px;">Distribución</th>
+                        <th style="text-align:right;">%</th>
+                    </tr>
+                </thead>
+                <tbody id="cos-tbody-familia">
+                    <tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--subtext);">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>

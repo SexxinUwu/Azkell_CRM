@@ -93,17 +93,21 @@ function aotFmtDate(iso) {
 
 function aotBadge(estado) {
     if (estado === 'Despachado') return '<span class="aot-badge badge-despachado">Despachado</span>';
+    if (estado === 'Anulado')    return '<span class="aot-badge badge-anulado">Anulado</span>';
     return '<span class="aot-badge badge-pendiente">Pendiente</span>';
 }
 
 // ── Badges de tabs ────────────────────────────────────────────
 function aotActualizarBadges() {
-    var pend = window.aotData.filter(function(m) { return m.estado !== 'Despachado'; }).length;
-    var desp = window.aotData.filter(function(m) { return m.estado === 'Despachado'; }).length;
+    var pend    = window.aotData.filter(function(m) { return !m.estado || m.estado === 'Pendiente'; }).length;
+    var desp    = window.aotData.filter(function(m) { return m.estado === 'Despachado'; }).length;
+    var anulado = window.aotData.filter(function(m) { return m.estado === 'Anulado'; }).length;
     var bp = document.getElementById('aot-badge-pend');
     var bd = document.getElementById('aot-badge-desp');
+    var ba = document.getElementById('aot-badge-anulado');
     if (bp) bp.textContent = pend;
     if (bd) bd.textContent = desp;
+    if (ba) ba.textContent = anulado;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -117,7 +121,7 @@ window.aotCambiarTab = function(tab) {
 };
 
 function aotSincronizarTabs() {
-    ['pend', 'desp'].forEach(function(t) {
+    ['pend', 'desp', 'anulado'].forEach(function(t) {
         var el = document.getElementById('aot-tab-' + t);
         if (el) el.classList.toggle('active', t === window.aotTabActiva);
     });
@@ -147,8 +151,9 @@ window.aotRenderTabla = function() {
 
     var datos = window.aotData.filter(function(m) {
         if (!f.estado) {
-            if (window.aotTabActiva === 'pend' && m.estado === 'Despachado') return false;
-            if (window.aotTabActiva === 'desp' && m.estado !== 'Despachado') return false;
+            if (window.aotTabActiva === 'pend'    && (m.estado === 'Despachado' || m.estado === 'Anulado')) return false;
+            if (window.aotTabActiva === 'desp'    && m.estado !== 'Despachado') return false;
+            if (window.aotTabActiva === 'anulado' && m.estado !== 'Anulado') return false;
         } else {
             if (m.estado !== f.estado) return false;
         }
@@ -174,7 +179,9 @@ window.aotRenderTabla = function() {
     window.aotDatosFil = datos;
 
     if (datos.length === 0) {
-        var msg = window.aotTabActiva === 'pend' ? 'Sin solicitudes pendientes' : 'Sin salidas registradas';
+        var msg = window.aotTabActiva === 'pend' ? 'Sin solicitudes pendientes'
+                : window.aotTabActiva === 'anulado' ? 'Sin solicitudes anuladas'
+                : 'Sin salidas registradas';
         tbody.innerHTML = '<tr><td colspan="7" class="td-placeholder"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
         return;
     }
@@ -220,6 +227,7 @@ function aotAbrirDetalle(m) {
     html += '<div class="aot-field"><div class="aot-field-lbl">Placa</div><div class="aot-field-val"><strong>' + aotEsc(m.placa || '—') + '</strong></div></div>';
     html += '<div class="aot-field"><div class="aot-field-lbl">Responsable</div><div class="aot-field-val">' + aotEsc(m.responsable || '—') + '</div></div>';
     if (m.observaciones) html += '<div class="aot-field"><div class="aot-field-lbl">Observaciones</div><div class="aot-field-val" style="white-space:normal;font-size:0.78rem;">' + aotEsc(m.observaciones) + '</div></div>';
+    if (m.motivo_anulacion) html += '<div class="aot-field" style="background:rgba(220,38,38,0.04);"><div class="aot-field-lbl" style="color:#dc2626;">Motivo Anulación</div><div class="aot-field-val" style="color:#dc2626;white-space:normal;font-size:0.78rem;">' + aotEsc(m.motivo_anulacion) + '</div></div>';
     html += '</div>';
 
     if (m.items && m.items.length) {
@@ -245,13 +253,18 @@ function aotAbrirDetalle(m) {
     var footer = document.getElementById('aot-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        if (m.estado !== 'Despachado') {
-            footer.innerHTML =
-                '<button class="btn btn-sm btn-outline-danger fw-bold" onclick="window.aotAnular(' + JSON.stringify(m.id) + ')" style="min-width:90px;"><i class="bi bi-x-circle me-1"></i>Anular</button>'
-              + '<button class="btn btn-sm btn-success flex-fill fw-bold ms-2" onclick="window.aotDespachar(' + JSON.stringify(m.id) + ')"><i class="bi bi-box-seam me-1"></i>Aprobar y Despachar</button>';
-        } else {
-            footer.innerHTML = '<span style="font-size:0.8rem; color:var(--subtext); padding:4px;">Material ya despachado — stock descontado</span>';
-        }
+        var eId = aotEsc(m.id);
+        var btnAnular = m.estado !== 'Anulado'
+            ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.aotAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
+            : '<span class="aot-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>';
+        var btnDespachar = (!m.estado || m.estado === 'Pendiente')
+            ? '<button class="btn btn-sm btn-success flex-fill fw-bold" onclick="window.aotDespachar(\'' + eId + '\')"><i class="bi bi-box-seam me-1"></i>Despachar</button>'
+            : '';
+        footer.innerHTML =
+            '<button class="btn btn-sm btn-outline-secondary" onclick="window.aotVerPDF(window.aotData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-eye me-1"></i>Ver</button>'
+          + '<button class="btn btn-sm btn-outline-primary ms-1" onclick="window.aotGenerarPDF(window.aotData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
+          + (btnDespachar ? '<span class="ms-1">' + btnDespachar + '</span>' : '')
+          + btnAnular;
     }
 
     var panel = document.getElementById('aot-panel-detalle');
@@ -267,19 +280,28 @@ window.aotCerrarDetalle = function() {
 
 // ── Anular ────────────────────────────────────────────────────
 window.aotAnular = function(id) {
-    if (!confirm('¿Anular la solicitud ' + id + '? Se eliminará definitivamente.')) return;
-    fetch('/api/ot-materiales/' + encodeURIComponent(id), { method: 'DELETE' })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function() {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud anulada', 'success');
-            window.aotDetalleId = null;
-            var panel = document.getElementById('aot-panel-detalle');
-            if (panel) panel.classList.remove('open');
-            aotCargar();
-        })
-        .catch(function() {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la solicitud', 'danger');
-        });
+    var motivo = window.prompt('Motivo de anulación (obligatorio):');
+    if (motivo === null) return; // cancelado
+    motivo = motivo.trim();
+    if (!motivo) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El motivo es obligatorio para anular', 'warning'); return; }
+
+    fetch('/api/ot-materiales/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'anular', motivo: motivo })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + id + ' anulada', 'success');
+        window.aotDetalleId = null;
+        var panel = document.getElementById('aot-panel-detalle');
+        if (panel) panel.classList.remove('open');
+        aotCargar();
+    })
+    .catch(function(err) {
+        console.error('Error anulando solicitud:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la solicitud', 'danger');
+    });
 };
 
 // ── Despachar ─────────────────────────────────────────────────
@@ -297,6 +319,17 @@ window.aotDespachar = function(id) {
         var panel = document.getElementById('aot-panel-detalle');
         if (panel) panel.classList.remove('open');
         aotCargar();
+        // Recargar inventario para reflejar el nuevo stock
+        fetch('/api/almacen/inventario')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                window._aotInvData = d || [];
+                var dl = document.getElementById('aot-inv-list');
+                if (dl) dl.innerHTML = (d || []).map(function(a) {
+                    return '<option value="' + aotEsc(a.id + ' — ' + a.descripcion) + '">';
+                }).join('');
+            })
+            .catch(function() {});
     })
     .catch(function(err) {
         console.error('Error despachando:', err);
@@ -359,6 +392,8 @@ window._aotBuscarArt = function(input, idx) {
     var val = input.value || '';
     var invId = val.split(' — ')[0].trim();
     var item = (window._aotInvData || []).find(function(d) { return d.id === invId; });
+    // Fallback: buscar por descripción exacta si no encontró por código
+    if (!item) item = (window._aotInvData || []).find(function(d) { return d.descripcion === val.trim(); });
     var stockEl = document.querySelector('.aot-item-stock[data-idx="' + idx + '"]');
     var lblEl   = document.querySelector('.aot-item-stock-lbl[data-idx="' + idx + '"]');
     if (item) {
@@ -455,6 +490,8 @@ window.aotGuardarNuevo = function() {
         }
         return;
     }
+
+    var body = {
         ticket_ot:    idOt,
         fecha:        fecha,
         tipo_destino: tipo || 'Vehiculo',
@@ -558,4 +595,86 @@ window.aotExportar = function() {
     var a = document.createElement('a');
     a.href = url; a.download = 'Almacen_OT.csv'; a.click();
     URL.revokeObjectURL(url);
+};
+
+// ── PDF / Ver ─────────────────────────────────────────────────
+function aotBuildPDFHtml(m) {
+    var items = m.items || [];
+    var totalPen = parseFloat(m.total_pen || 0);
+    var rowsHtml = items.map(function(it) {
+        var imp = parseFloat(it.importe) || (parseFloat(it.cantidad||0) * parseFloat(it.costo_unitario||0));
+        return '<tr style="border-bottom:1px solid #e5e7eb;">'
+            + '<td style="padding:6px 10px;">' + aotEsc(it.descripcion || it.inventario_id || '—') + '</td>'
+            + '<td style="padding:6px 10px;text-align:right;">' + parseFloat(it.cantidad||0).toLocaleString('es-PE',{maximumFractionDigits:3}) + '</td>'
+            + '<td style="padding:6px 10px;text-align:right;">S/.' + parseFloat(it.costo_unitario||0).toFixed(2) + '</td>'
+            + '<td style="padding:6px 10px;text-align:right;font-weight:700;">S/.' + imp.toFixed(2) + '</td>'
+            + '</tr>';
+    }).join('');
+
+    return '<div style="font-family:Arial,sans-serif;max-width:700px;margin:auto;padding:24px;">'
+        + '<div style="background:#1d4ed8;color:#fff;padding:18px 22px;border-radius:8px 8px 0 0;">'
+        + '<div style="font-size:1.15rem;font-weight:800;">SOLICITUD DE MATERIALES</div>'
+        + '<div style="font-size:0.82rem;opacity:0.85;">Azkell Fleet — Almacén OT</div>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;background:#f8faff;border:1px solid #e5e7eb;">'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">ID Solicitud</span><div style="font-size:1rem;font-weight:800;color:#1d4ed8;">' + aotEsc(m.id||'—') + '</div></div>'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">N° OT</span><div style="font-size:0.9rem;font-weight:700;">' + aotEsc(m.ticket_ot||'—') + '</div></div>'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Fecha</span><div>' + aotFmtDate(m.fecha) + '</div></div>'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Placa</span><div style="font-weight:700;">' + aotEsc(m.placa||'—') + '</div></div>'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Responsable</span><div>' + aotEsc(m.responsable||'—') + '</div></div>'
+        + '<div><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Estado</span><div>' + aotEsc(m.estado||'—') + '</div></div>'
+        + (m.observaciones ? '<div style="grid-column:1/-1;"><span style="font-size:0.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Observaciones</span><div>' + aotEsc(m.observaciones) + '</div></div>' : '')
+        + '</div>'
+        + '<table style="width:100%;border-collapse:collapse;margin-top:8px;">'
+        + '<thead><tr style="background:#1d4ed8;color:#fff;">'
+        + '<th style="padding:8px 10px;text-align:left;font-size:0.78rem;">Artículo</th>'
+        + '<th style="padding:8px 10px;text-align:right;font-size:0.78rem;">Cantidad</th>'
+        + '<th style="padding:8px 10px;text-align:right;font-size:0.78rem;">Costo Unit.</th>'
+        + '<th style="padding:8px 10px;text-align:right;font-size:0.78rem;">Importe</th>'
+        + '</tr></thead>'
+        + '<tbody>' + (rowsHtml || '<tr><td colspan="4" style="padding:12px;text-align:center;color:#9ca3af;">Sin artículos</td></tr>') + '</tbody>'
+        + '</table>'
+        + '<div style="background:#16a34a;color:#fff;padding:12px 16px;text-align:right;font-size:1rem;font-weight:800;border-radius:0 0 8px 8px;">'
+        + 'TOTAL: S/. ' + totalPen.toFixed(2)
+        + '</div>'
+        + '</div>';
+}
+
+window.aotGenerarPDF = function(m) {
+    if (!m) return;
+    if (typeof html2pdf === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('html2pdf no disponible', 'danger');
+        return;
+    }
+    var container = document.createElement('div');
+    container.innerHTML = aotBuildPDFHtml(m);
+    document.body.appendChild(container);
+    html2pdf().set({
+        margin: 10,
+        filename: 'SolicitudMateriales_' + (m.id || 'AOT') + '.pdf',
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(container).save().then(function() {
+        document.body.removeChild(container);
+    });
+};
+
+window.aotVerPDF = function(m) {
+    if (!m) return;
+    if (typeof html2pdf === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('html2pdf no disponible', 'danger');
+        return;
+    }
+    var container = document.createElement('div');
+    container.innerHTML = aotBuildPDFHtml(m);
+    document.body.appendChild(container);
+    html2pdf().set({
+        margin: 10,
+        filename: 'SolicitudMateriales_' + (m.id || 'AOT') + '.pdf',
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(container).outputPdf('bloburl').then(function(url) {
+        document.body.removeChild(container);
+        window.open(url, '_blank');
+    });
 };

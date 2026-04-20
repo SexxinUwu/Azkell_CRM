@@ -117,8 +117,6 @@ window.rotRenderTabla = function(lista) {
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
         // Situación
         html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
-        // Aprobación
-        html += '<td>' + rotBadgeAprobacion(ot.aprobacion) + '</td>';
         // Costo total
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         // Fecha
@@ -167,7 +165,6 @@ window.rotAbrirDetalle = function(idOT) {
     html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
     html += fld('Situación',  esc(det.situacion_inicial || ot.situacion || '—'));
-    html += fld('Aprobación', badge(estado));
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
@@ -310,7 +307,7 @@ window.rotAccion = function(accion, idOT) {
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ aprobacion: 'Aprobada' })
+            body: JSON.stringify({ accion: 'aprobar' })
         })
         .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
         .then(function() {
@@ -326,11 +323,11 @@ window.rotAccion = function(accion, idOT) {
     }
 
     if (accion === 'cerrar') {
-        if (!confirm('¿Cerrar la OT ' + idOT + '? Se marcará como Cerrada.')) return;
+        if (!confirm('¿Cerrar la OT ' + idOT + '? Se marcará como Finalizada.')) return;
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ aprobacion: 'Cerrada', situacion: 'Finalizado' })
+            body: JSON.stringify({ accion: 'cerrar', detalles_cierre: {}, fecha_hora_salida: new Date().toISOString() })
         })
         .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
         .then(function() {
@@ -406,6 +403,111 @@ function rotGenerarPDF(idOT) {
     if (!ot) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT no encontrada', 'danger'); return; }
     window.generarPDF_OT(ot, window.rotOtTrabajosActivos, window.rotOtMaterialesActivos);
 }
+
+// ── PDF del reporte (tabla filtrada) ─────────────────────────────
+window.rotExportarPDF = function() {
+    var lista = window.rotDatosFiltrados.length > 0 ? window.rotDatosFiltrados : window.rotData;
+    if (!lista || lista.length === 0) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No hay datos para exportar.', 'warning');
+        return;
+    }
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('jsPDF no disponible', 'danger');
+        return;
+    }
+    var jsPDF   = window.jspdf.jsPDF;
+    var doc     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    var azul    = [37, 99, 235];
+    var pageW   = doc.internal.pageSize.getWidth();
+
+    // Encabezado
+    doc.setFillColor(azul[0], azul[1], azul[2]);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('REPORTE DE ÓRDENES DE TRABAJO — AZKELL FLEET', 14, 12);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text('Generado: ' + new Date().toLocaleString('es-PE'), pageW - 14, 12, { align: 'right' });
+
+    // Filtros activos
+    var filtros = [];
+    var filOT    = rotVal('rot-fil-ot');
+    var filPlaca = rotVal('rot-fil-placa');
+    var filMes   = rotVal('rot-fil-mes');
+    var filDesde = rotVal('rot-fil-desde');
+    var filHasta = rotVal('rot-fil-hasta');
+    var filEst   = rotVal('rot-fil-estado');
+    var filLibre = rotVal('rot-busqueda-libre');
+    if (filLibre) filtros.push('Búsqueda: ' + filLibre);
+    if (filOT)    filtros.push('N° OT: ' + filOT);
+    if (filPlaca) filtros.push('Placa: ' + filPlaca);
+    if (filMes)   filtros.push('Mes: ' + filMes);
+    if (filDesde) filtros.push('Desde: ' + filDesde);
+    if (filHasta) filtros.push('Hasta: ' + filHasta);
+    if (filEst)   filtros.push('Estado: ' + filEst);
+
+    var y = 23;
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(8);
+    if (filtros.length) {
+        doc.text('Filtros: ' + filtros.join('  |  '), 14, y);
+        y += 5;
+    }
+
+    // KPIs resumen
+    var costoTotal = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    var costoCorr  = lista.filter(function(o){ var d=rotDetalles(o); return (d.tipo_ot||o.tipo||'')==='Correctivo'; })
+                         .reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    var costoPrev  = lista.filter(function(o){ var d=rotDetalles(o); return (d.tipo_ot||o.tipo||'')==='Preventivo'; })
+                         .reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    doc.text('Total OTs: ' + lista.length + '   |   Costo Total: S/' + costoTotal.toFixed(2)
+           + '   |   Correctivo: S/' + costoCorr.toFixed(2)
+           + '   |   Preventivo: S/' + costoPrev.toFixed(2), 14, y);
+    y += 5;
+
+    // Tabla
+    var body = lista.map(function(ot) {
+        var det   = rotDetalles(ot);
+        var idOT  = ot.ticket_entrada || ot.id_ot || '—';
+        var tipo  = det.tipo_ot || ot.tipo || '—';
+        var sub   = det.sub_tipo || '—';
+        var sup   = det.supervisor || ot.supervisor || '—';
+        var estado = ot.aprobacion || ot.estado || '—';
+        var costo = 'S/' + parseFloat(ot.costo_total || 0).toFixed(2);
+        var fecha = rotFechaISO(ot.creado_en || ot.fecha_ingreso);
+        return [idOT, ot.placa || '—', tipo + ' / ' + sub, sup, estado, costo, fecha];
+    });
+
+    doc.autoTable({
+        startY: y,
+        head:   [['N° OT', 'Placa', 'Tipo / Sub Tipo', 'Supervisor', 'Estado', 'Costo Total', 'Fecha']],
+        body:   body,
+        theme:  'striped',
+        headStyles: { fillColor: azul, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        columnStyles: { 5: { halign: 'right' } },
+        margin: { left: 14, right: 14 }
+    });
+
+    // Total al final
+    var finalY = doc.lastAutoTable.finalY + 6;
+    doc.setFillColor(22, 163, 74);
+    doc.rect(14, finalY, pageW - 28, 9, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('COSTO TOTAL: S/' + costoTotal.toFixed(2)
+           + '   CORRECTIVO: S/' + costoCorr.toFixed(2)
+           + '   PREVENTIVO: S/' + costoPrev.toFixed(2),
+           pageW / 2, finalY + 6, { align: 'center' });
+
+    doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
+};
 
 // ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
 window.generarPDF_OT = function(ot, trabajos, materiales) {
@@ -577,15 +679,23 @@ function rotActualizarKPIs(lista) {
         var det = rotDetalles(o);
         return (det.tipo_ot || o.tipo || '') === 'Preventivo';
     }).length;
-    var cerrada = lista.filter(function(o){ return o.aprobacion === 'Cerrada'; }).length;
+    var cerrada = lista.filter(function(o){ return o.aprobacion === 'Cerrada' || o.estado === 'Finalizado'; }).length;
     var costo   = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    var costoCorr = lista
+        .filter(function(o){ var det = rotDetalles(o); return (det.tipo_ot || o.tipo || '') === 'Correctivo'; })
+        .reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
+    var costoPrev = lista
+        .filter(function(o){ var det = rotDetalles(o); return (det.tipo_ot || o.tipo || '') === 'Preventivo'; })
+        .reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
 
-    rotSetKPI('rot-kpi-total',       total);
-    rotSetKPI('rot-kpi-correctivos', correctivos);
-    rotSetKPI('rot-kpi-preventivos', preventivos);
-    rotSetKPI('rot-kpi-cerrada',     cerrada);
-    rotSetKPI('rot-kpi-costo',       'S/' + costo.toFixed(2));
-    rotSetKPI('rot-kpi-filtradas',   total);
+    rotSetKPI('rot-kpi-total',             total);
+    rotSetKPI('rot-kpi-correctivos',       correctivos);
+    rotSetKPI('rot-kpi-preventivos',       preventivos);
+    rotSetKPI('rot-kpi-cerrada',           cerrada);
+    rotSetKPI('rot-kpi-costo',             'S/' + costo.toFixed(2));
+    rotSetKPI('rot-kpi-costo-correctivo',  'S/' + costoCorr.toFixed(2));
+    rotSetKPI('rot-kpi-costo-preventivo',  'S/' + costoPrev.toFixed(2));
+    rotSetKPI('rot-kpi-filtradas',         total);
 }
 
 function rotSetKPI(id, val) {
@@ -731,7 +841,7 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     var costoTotal = lista
         .filter(function(m) { return m.estado === 'Despachado'; })
         .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
-    var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado'; });
+    var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; });
 
     var html = '';
     if (esAprobada) {
@@ -745,13 +855,15 @@ function rotRenderSecMateriales(idOt, esAprobada) {
         lista.forEach(function(m) {
             var badge = m.estado === 'Despachado'
                 ? '<span style="background:rgba(22,163,74,0.12);color:#16a34a;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Despachado</span>'
+                : m.estado === 'Anulado'
+                ? '<span style="background:rgba(220,38,38,0.1);color:#dc2626;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Anulado</span>'
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
             var items = m.items || [];
             var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || '—'); }).join(', ') || '—';
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
                   + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || '—') + '</span> ' + badge + '</div>'
-                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(' + JSON.stringify(m.id) + ',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
+                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(\'' + m.id + '\',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
                   + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
                   + '<div style="margin-top:2px;"><strong style="color:var(--text);">Total: S/.' + parseFloat(m.total_pen || 0).toFixed(2) + '</strong></div>'
@@ -773,7 +885,6 @@ window.rotAgregarTrabajo = function(idOt) {
     var desc = document.getElementById('rot-tr-desc');         if (desc) desc.value = '';
     var pers = document.getElementById('rot-tr-personal');     if (pers) pers.value = '';
     var cos  = document.getElementById('rot-tr-costo');        if (cos)  cos.value  = '0';
-    var est  = document.getElementById('rot-tr-estado');       if (est)  est.value  = 'Pendiente';
     var hoy  = new Date();
     var localDT = hoy.getFullYear() + '-' +
         String(hoy.getMonth()+1).padStart(2,'0') + '-' +
@@ -801,7 +912,6 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     var desc = document.getElementById('rot-tr-desc');         if (desc) desc.value = t.trabajo_realizado || '';
     var pers = document.getElementById('rot-tr-personal');     if (pers) pers.value = det2.personal || t.tecnico || '';
     var cos  = document.getElementById('rot-tr-costo');        if (cos)  cos.value  = det2.costo !== undefined ? det2.costo : '0';
-    var est  = document.getElementById('rot-tr-estado');       if (est)  est.value  = t.estado || 'Pendiente';
 
     var toLocalDT = function(iso) {
         if (!iso) return '';
@@ -825,7 +935,6 @@ window.rotGuardarTrabajo = function() {
     var fIni   = ((document.getElementById('rot-tr-fecha-ini')  || {}).value || '');
     var fFin   = ((document.getElementById('rot-tr-fecha-fin')  || {}).value || '');
     var costo  = parseFloat((document.getElementById('rot-tr-costo')   || {}).value || 0);
-    var estado = ((document.getElementById('rot-tr-estado')     || {}).value || 'Pendiente');
 
     if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
 
@@ -836,7 +945,7 @@ window.rotGuardarTrabajo = function() {
     if (esEdicion) {
         url     = '/api/ot-trabajos/' + encodeURIComponent(ticket);
         method  = 'PUT';
-        payload = { accion: 'editar', trabajo_realizado: desc, fecha_trabajo: fIni || null, fecha_salida: fFin || null, personal: pers, costo: costo, estado: estado };
+        payload = { accion: 'editar', trabajo_realizado: desc, fecha_trabajo: fIni || null, fecha_salida: fFin || null, personal: pers, costo: costo };
     } else {
         url     = '/api/ot-trabajos';
         method  = 'POST';

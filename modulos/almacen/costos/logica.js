@@ -1,305 +1,159 @@
 // ================================================================
-// MÓDULO ALMACÉN / COSTOS — Lógica SPA Aislada
-// Chart.js: destruir antes de crear (CLAUDE.md)
+// Módulo Valorizado del Almacén — Azkell Fleet
 // ================================================================
 
-window._cosChartFamilia = window._cosChartFamilia || null;
-window._cosData         = window._cosData         || null;
+window.cosValData  = window.cosValData  || null;
+window.cosCosData  = window.cosCosData  || null;
 
 window.init_costos = function() {
-    // Setear fechas por defecto: primer día del mes actual → hoy
-    var hoy = new Date();
-    var primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-    var hoyStr    = hoy.toISOString().split('T')[0];
-    var desdeEl   = document.getElementById('cos-desde');
-    var hastaEl   = document.getElementById('cos-hasta');
-    if (desdeEl && !desdeEl.value) desdeEl.value = primerDia;
-    if (hastaEl && !hastaEl.value) hastaEl.value = hoyStr;
-    window._cosValCargado = false;
-    window.cargarCostos();
+    window.cosValData = null;
+    window.cosCosData = null;
+    cosCargar();
 };
 
-window._cosClearFechas = function() {
-    var d = document.getElementById('cos-desde');
-    var h = document.getElementById('cos-hasta');
-    if (d) d.value = '';
-    if (h) h.value = '';
-    window.cargarCostos();
-};
-
-window.cargarCostos = function() {
-    var desde = ((document.getElementById('cos-desde')||{}).value || '');
-    var hasta = ((document.getElementById('cos-hasta')||{}).value || '');
-    var params = '';
-    if (desde) params += (params?'&':'?') + 'desde='+encodeURIComponent(desde);
-    if (hasta) params += (params?'&':'?') + 'hasta='+encodeURIComponent(hasta);
-
-    ['tbody-cos-familia','tbody-cos-almacen','tbody-cos-top'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div></td></tr>';
+function cosCargar() {
+    // Carga en paralelo: valorizado + costos (top consumo)
+    Promise.all([
+        fetch('/api/almacen/valorizado').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+        fetch('/api/almacen/costos').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+    ]).then(function(res) {
+        window.cosValData = res[0];
+        window.cosCosData = res[1];
+        cosRenderKPIs();
+        cosRenderTopConsumido();
+        cosRenderConsumoTabla();
+        cosRenderCaros();
+        cosRenderFamilia();
     });
+}
 
-    fetch('/api/almacen/costos' + params)
-        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(data) {
-            window._cosData = data;
-            window._cosRender(data);
-        })
-        .catch(function(err) {
-            ['cos-kpi-entradas','cos-kpi-salidas','cos-kpi-balance','cos-kpi-familias'].forEach(function(id) {
-                var el = document.getElementById(id); if(el) el.textContent = 'Error';
-            });
-        });
-};
+// ── KPIs ─────────────────────────────────────────────────────────
+function cosRenderKPIs() {
+    var val = window.cosValData;
+    if (!val) return;
 
-window._cosRender = function(data) {
-    var tot    = data.totales || {};
-    var totEnt = parseFloat(tot.total_entradas || 0);
-    var totSal = parseFloat(tot.total_salidas  || 0);
-    var bal    = totEnt - totSal;
-    var fmt    = function(n) { return 'S/ ' + n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    var elPen = document.getElementById('cos-kpi-pen');
+    var elUsd = document.getElementById('cos-kpi-usd');
+    var elFam = document.getElementById('cos-kpi-familias');
+    var elArt = document.getElementById('cos-kpi-articulos');
 
-    _cosSetText('cos-kpi-entradas', fmt(totEnt));
-    _cosSetText('cos-kpi-salidas',  fmt(totSal));
-    _cosSetText('cos-kpi-balance',  (bal >= 0 ? '+' : '') + fmt(bal));
-    _cosSetText('cos-kpi-familias', (data.porFamilia || []).length + ' familias');
-
-    // ── Por Familia ─────────────────────────────────────────────
-    var totalFam = (data.porFamilia || []).reduce(function(a,d) { return a + parseFloat(d.total||0); }, 0);
-    var tbodyFam = document.getElementById('tbody-cos-familia');
-    if (tbodyFam) {
-        if (!data.porFamilia || !data.porFamilia.length) {
-            tbodyFam.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
-        } else {
-            tbodyFam.innerHTML = data.porFamilia.map(function(d) {
-                var pct = totalFam > 0 ? (parseFloat(d.total||0)/totalFam*100).toFixed(1) : 0;
-                return '<tr>'+
-                    '<td><i class="bi bi-tag-fill me-1 text-warning"></i>'+_cosEsc(d.familia||'—')+'</td>'+
-                    '<td class="text-end fw-semibold">'+fmt(parseFloat(d.total||0))+'</td>'+
-                    '<td class="text-center">'+d.movimientos+'</td>'+
-                    '<td><div class="d-flex align-items-center gap-2">'+
-                        '<div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar bg-warning" style="width:'+pct+'%"></div></div>'+
-                        '<small class="text-muted">'+pct+'%</small>'+
-                    '</div></td>'+
-                '</tr>';
-            }).join('');
-        }
+    if (elPen) elPen.textContent = 'S/ ' + cosFmt(val.totalPEN || 0);
+    if (elUsd) elUsd.textContent = '$ ' + cosFmt(val.totalUSD || 0);
+    if (elFam) elFam.textContent = (val.porFamilia || []).length;
+    if (elArt) {
+        var conStock = (val.items || []).filter(function(i) { return parseFloat(i.stock_actual || 0) > 0; }).length;
+        elArt.textContent = conStock;
     }
+}
 
-    // ── Por Almacén ─────────────────────────────────────────────
-    var totalAlm = (data.porAlmacen || []).reduce(function(a,d) { return a + parseFloat(d.total||0); }, 0);
-    var tbodyAlm = document.getElementById('tbody-cos-almacen');
-    if (tbodyAlm) {
-        if (!data.porAlmacen || !data.porAlmacen.length) {
-            tbodyAlm.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
-        } else {
-            tbodyAlm.innerHTML = data.porAlmacen.map(function(d) {
-                var pct = totalAlm > 0 ? (parseFloat(d.total||0)/totalAlm*100).toFixed(1) : 0;
-                return '<tr>'+
-                    '<td><i class="bi bi-building me-1 text-info"></i>'+_cosEsc(d.almacen||'—')+'</td>'+
-                    '<td class="text-end fw-semibold">'+fmt(parseFloat(d.total||0))+'</td>'+
-                    '<td class="text-center">'+d.movimientos+'</td>'+
-                    '<td><div class="d-flex align-items-center gap-2">'+
-                        '<div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar bg-info" style="width:'+pct+'%"></div></div>'+
-                        '<small class="text-muted">'+pct+'%</small>'+
-                    '</div></td>'+
-                '</tr>';
-            }).join('');
-        }
+// ── Artículo más consumido (hero) ─────────────────────────────────
+function cosRenderTopConsumido() {
+    var el = document.getElementById('cos-top-consumido');
+    if (!el) return;
+    var cos = window.cosCosData;
+    if (!cos || !cos.topItems || !cos.topItems.length) {
+        el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--subtext);font-size:0.82rem;">Sin datos de consumo disponibles</div>';
+        return;
     }
-
-    // ── Top Artículos ────────────────────────────────────────────
-    var tbodyTop = document.getElementById('tbody-cos-top');
-    if (tbodyTop) {
-        if (!data.topItems || !data.topItems.length) {
-            tbodyTop.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
-        } else {
-            tbodyTop.innerHTML = data.topItems.map(function(d, i) {
-                var rankBadge = i < 3 ? ['🥇','🥈','🥉'][i] : (i+1)+'.';
-                return '<tr>'+
-                    '<td>'+rankBadge+' <span class="badge bg-secondary fw-normal">'+_cosEsc(d.id||'')+'</span></td>'+
-                    '<td>'+_cosEsc(d.descripcion||'')+'</td>'+
-                    '<td><small class="badge bg-warning-subtle text-warning border">'+_cosEsc(d.familia||'—')+'</small></td>'+
-                    '<td class="text-end">'+parseFloat(d.cantidad_total||0).toLocaleString('es-PE',{minimumFractionDigits:2})+' '+_cosEsc(d.unidad||'')+'</td>'+
-                    '<td class="text-end fw-semibold">'+fmt(parseFloat(d.costo_total||0))+'</td>'+
-                '</tr>';
-            }).join('');
-        }
-    }
-
-    // ── Por Cliente ──────────────────────────────────────────────────
-    var totalCli = (data.porCliente || []).reduce(function(a, d) { return a + parseFloat(d.total || 0); }, 0);
-    var tbodyCli = document.getElementById('tbody-cos-cliente');
-    if (tbodyCli) {
-        if (!data.porCliente || !data.porCliente.length) {
-            tbodyCli.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos de salidas a vehículos</td></tr>';
-        } else {
-            tbodyCli.innerHTML = data.porCliente.map(function(d) {
-                var pct = totalCli > 0 ? (parseFloat(d.total || 0) / totalCli * 100).toFixed(1) : 0;
-                return '<tr>' +
-                    '<td><i class="bi bi-building2 me-1 text-primary"></i>' + _cosEsc(d.cliente || '—') + '</td>' +
-                    '<td><span class="badge bg-secondary fw-normal">' + _cosEsc(d.placa || '—') + '</span></td>' +
-                    '<td class="text-end fw-semibold">' + fmt(parseFloat(d.total || 0)) + '</td>' +
-                    '<td class="text-center">' + d.movimientos + '</td>' +
-                    '<td><div class="d-flex align-items-center gap-2">' +
-                        '<div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar bg-primary" style="width:' + pct + '%"></div></div>' +
-                        '<small class="text-muted">' + pct + '%</small>' +
-                    '</div></td>' +
-                '</tr>';
-            }).join('');
-        }
-    }
-
-    // ── Gráfico Por Familia ──────────────────────────────────────
-    window._cosRenderChart(data.porFamilia || []);
-};
-
-window._cosRenderChart = function(porFamilia) {
-    var canvas = document.getElementById('chart-cos-familia');
-    if (!canvas) return;
-
-    // Destruir instancia anterior si canvas ya no está en DOM o existe
-    if (window._cosChartFamilia) {
-        if (!document.contains(window._cosChartFamilia.canvas)) {
-            window._cosChartFamilia.destroy();
-            window._cosChartFamilia = null;
-        }
-    }
-    if (window._cosChartFamilia) {
-        window._cosChartFamilia.destroy();
-        window._cosChartFamilia = null;
-    }
-    if (!porFamilia.length) return;
-
-    var labels = porFamilia.slice(0, 10).map(function(d) { return d.familia || 'Sin familia'; });
-    var valores = porFamilia.slice(0, 10).map(function(d) { return parseFloat(d.total||0); });
-
-    var isDark = document.body.classList.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
-    var textColor = isDark ? '#e2e8f0' : '#334155';
-
-    window._cosChartFamilia = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Costo Total (S/)',
-                data: valores,
-                backgroundColor: 'rgba(245, 158, 11, 0.7)',
-                borderColor: 'rgba(245, 158, 11, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) { return ' S/ ' + ctx.parsed.y.toLocaleString('es-PE',{minimumFractionDigits:2}); }
-                    }
-                }
-            },
-            scales: {
-                x: { ticks: { color: textColor } },
-                y: { ticks: { color: textColor, callback: function(v) { return 'S/ ' + v.toLocaleString(); } } }
-            }
-        }
+    // Ordenar por cantidad_total DESC
+    var sorted = (cos.topItems || []).slice().sort(function(a, b) {
+        return parseFloat(b.cantidad_total || 0) - parseFloat(a.cantidad_total || 0);
     });
-};
+    var top = sorted[0];
+    var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    el.innerHTML =
+        '<div style="display:flex;align-items:center;gap:16px;padding:1.2rem 1.4rem;">'
+        + '<div style="width:52px;height:52px;border-radius:14px;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;"><i class="bi bi-box-seam" style="color:var(--primary,#5865F2);"></i></div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:1rem;font-weight:800;color:var(--text);">' + esc(top.descripcion || '—') + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--subtext);margin-top:3px;">'
+        + (top.familia ? '<span style="background:rgba(88,101,242,0.08);color:var(--primary,#5865F2);border-radius:8px;padding:1px 8px;font-size:0.7rem;font-weight:700;margin-right:6px;">' + esc(top.familia) + '</span>' : '')
+        + '</div>'
+        + '</div>'
+        + '<div style="text-align:right;flex-shrink:0;">'
+        + '<div style="font-size:1.4rem;font-weight:800;color:var(--text);">' + cosFmt(top.cantidad_total || 0) + ' <span style="font-size:0.78rem;color:var(--subtext);font-weight:600;">' + esc(top.unidad || 'und') + '</span></div>'
+        + '<div style="font-size:0.74rem;color:var(--subtext);">Importe total: <strong style="color:#16a34a;">S/' + cosFmt(top.costo_total || 0) + '</strong></div>'
+        + '</div>'
+        + '</div>';
+}
 
-function _cosSetText(id, val) { var el = document.getElementById(id); if(el) el.textContent = val; }
-function _cosEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ── Valorizado ────────────────────────────────────────────────────
-window._cosValCargado = window._cosValCargado || false;
-
-window.cargarValorizado = function() {
-    if (window._cosValCargado) return; // Ya cargado, no repetir
-    var tbArt = document.getElementById('tbody-cos-val-art');
-    var tbFam = document.getElementById('tbody-cos-val-fam');
-    if (tbArt) tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Calculando...</td></tr>';
-    if (tbFam) tbFam.innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div></td></tr>';
-
-    fetch('/api/almacen/valorizado')
-        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(data) {
-            window._cosValCargado = true;
-            var fmtPen = function(n) { return 'S/ '+parseFloat(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-            var fmtUsd = function(n) { return 'US$ '+parseFloat(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-
-            // KPIs
-            _cosSetText('cos-val-total-pen',  fmtPen(data.totalPEN));
-            _cosSetText('cos-val-total-usd',  fmtUsd(data.totalUSD));
-            _cosSetText('cos-kpi-val-pen',    fmtPen(data.totalPEN));
-            _cosSetText('cos-kpi-val-usd',    fmtUsd(data.totalUSD));
-            var topFam = (data.porFamilia||[])[0];
-            _cosSetText('cos-val-top-fam', topFam ? topFam.familia : '—');
-            var conStock = (data.items||[]).filter(function(it) { return it.stock_actual > 0; }).length;
-            _cosSetText('cos-val-art-count', conStock);
-
-            // Tabla por artículo
-            var items = data.items || [];
-            if (tbArt) {
-                if (!items.length) {
-                    tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin artículos en inventario</td></tr>';
-                } else {
-                    tbArt.innerHTML = items.map(function(it) {
-                        var stockCls = it.stock_actual <= 0 ? 'text-danger' : it.stock_actual < 3 ? 'text-warning' : 'text-success';
-                        var valFmt = it.moneda === 'USD' ? fmtUsd(it.valor_total) : fmtPen(it.valor_total);
-                        var costoFmt = it.moneda === 'USD' ? fmtUsd(it.costo_referencial) : fmtPen(it.costo_referencial);
-                        return '<tr>'+
-                            '<td><span class="badge bg-secondary fw-normal">'+_cosEsc(it.id||'')+'</span></td>'+
-                            '<td>'+_cosEsc(it.descripcion||'')+'</td>'+
-                            '<td><span class="badge bg-warning-subtle text-warning border" style="font-size:.7rem">'+_cosEsc(it.familia||'—')+'</span></td>'+
-                            '<td><small class="text-muted">'+_cosEsc(it.almacen||'—')+'</small></td>'+
-                            '<td class="text-end fw-semibold '+stockCls+'">'+parseFloat(it.stock_actual||0).toLocaleString('es-PE',{maximumFractionDigits:3})+'</td>'+
-                            '<td><small>'+_cosEsc(it.unidad||'')+'</small></td>'+
-                            '<td class="text-end">'+costoFmt+'</td>'+
-                            '<td><span class="badge '+(it.moneda==='USD'?'bg-info-subtle text-info':'bg-success-subtle text-success')+' border">'+_cosEsc(it.moneda||'PEN')+'</span></td>'+
-                            '<td class="text-end fw-bold">'+valFmt+'</td>'+
-                        '</tr>';
-                    }).join('');
-                }
-            }
-
-            // Tabla por familia
-            var famArr = data.porFamilia || [];
-            if (tbFam) {
-                if (!famArr.length) {
-                    tbFam.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
-                } else {
-                    tbFam.innerHTML = famArr.map(function(f) {
-                        return '<tr>'+
-                            '<td><i class="bi bi-tag-fill me-1 text-warning"></i>'+_cosEsc(f.familia||'—')+'</td>'+
-                            '<td class="text-end fw-semibold">'+fmtPen(f.valor_pen)+'</td>'+
-                            '<td class="text-end fw-semibold text-info">'+fmtUsd(f.valor_usd)+'</td>'+
-                            '<td class="text-center">'+f.articulos+'</td>'+
-                        '</tr>';
-                    }).join('');
-                }
-            }
-        })
-        .catch(function(err) {
-            if (tbArt) tbArt.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error: '+_cosEsc(err.message)+'</td></tr>';
-        });
-};
-
-window._cosValTab = function(tab) {
-    var artDiv = document.getElementById('cos-val-art');
-    var famDiv = document.getElementById('cos-val-fam');
-    var artBtn = document.getElementById('val-tab-art-btn');
-    var famBtn = document.getElementById('val-tab-fam-btn');
-    if (tab === 'art') {
-        if (artDiv) artDiv.style.display = '';
-        if (famDiv) famDiv.style.display = 'none';
-        if (artBtn) artBtn.classList.add('active');
-        if (famBtn) famBtn.classList.remove('active');
-    } else {
-        if (artDiv) artDiv.style.display = 'none';
-        if (famDiv) famDiv.style.display = '';
-        if (artBtn) artBtn.classList.remove('active');
-        if (famBtn) famBtn.classList.add('active');
+// ── Top consumo tabla ─────────────────────────────────────────────
+function cosRenderConsumoTabla() {
+    var tbody = document.getElementById('cos-tbody-consumo');
+    if (!tbody) return;
+    var cos = window.cosCosData;
+    if (!cos || !cos.topItems || !cos.topItems.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--subtext);">Sin movimientos de salida registrados</td></tr>';
+        return;
     }
-};
+    var sorted = (cos.topItems || []).slice().sort(function(a, b) {
+        return parseFloat(b.cantidad_total || 0) - parseFloat(a.cantidad_total || 0);
+    }).slice(0, 10);
+    var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    tbody.innerHTML = sorted.map(function(it, i) {
+        return '<tr>'
+            + '<td style="color:var(--subtext);font-weight:700;text-align:center;width:36px;">' + (i + 1) + '</td>'
+            + '<td style="font-weight:600;">' + esc(it.descripcion || '—') + '</td>'
+            + '<td><span style="background:rgba(88,101,242,0.08);color:var(--primary,#5865F2);border-radius:8px;padding:1px 8px;font-size:0.7rem;font-weight:700;">' + esc(it.familia || '—') + '</span></td>'
+            + '<td style="text-align:right;font-weight:700;">' + cosFmt(it.cantidad_total || 0) + ' <span style="color:var(--subtext);font-size:0.75rem;">' + esc(it.unidad || '') + '</span></td>'
+            + '<td style="text-align:right;font-weight:700;color:#16a34a;">S/ ' + cosFmt(it.costo_total || 0) + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+// ── Artículos más caros ───────────────────────────────────────────
+function cosRenderCaros() {
+    var tbody = document.getElementById('cos-tbody-caros');
+    if (!tbody) return;
+    var val = window.cosValData;
+    if (!val || !val.items || !val.items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--subtext);">Sin artículos en inventario</td></tr>';
+        return;
+    }
+    var sorted = (val.items || []).slice().sort(function(a, b) {
+        return parseFloat(b.costo_referencial || 0) - parseFloat(a.costo_referencial || 0);
+    }).slice(0, 10);
+    var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    tbody.innerHTML = sorted.map(function(it, i) {
+        var monSym = it.moneda === 'USD' ? '$' : 'S/';
+        return '<tr>'
+            + '<td style="color:var(--subtext);font-weight:700;text-align:center;width:36px;">' + (i + 1) + '</td>'
+            + '<td style="font-weight:600;">' + esc(it.descripcion || '—') + '</td>'
+            + '<td><span style="background:rgba(22,163,74,0.08);color:#16a34a;border-radius:8px;padding:1px 8px;font-size:0.7rem;font-weight:700;">' + esc(it.familia || '—') + '</span></td>'
+            + '<td style="text-align:right;">' + cosFmt(it.stock_actual || 0) + ' <span style="color:var(--subtext);font-size:0.75rem;">' + esc(it.unidad || '') + '</span></td>'
+            + '<td style="text-align:right;font-weight:700;">' + monSym + ' ' + cosFmt(it.costo_referencial || 0) + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:#16a34a;">' + monSym + ' ' + cosFmt(it.valor_total || 0) + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
+// ── Valorizado por familia ─────────────────────────────────────────
+function cosRenderFamilia() {
+    var tbody = document.getElementById('cos-tbody-familia');
+    if (!tbody) return;
+    var val = window.cosValData;
+    if (!val || !val.porFamilia || !val.porFamilia.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--subtext);">Sin familias disponibles</td></tr>';
+        return;
+    }
+    var familias = val.porFamilia;
+    var maxVal = familias.reduce(function(m, f) { return Math.max(m, f.valor_pen || 0); }, 0.01);
+    var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var totalPEN = val.totalPEN || 0.01;
+    tbody.innerHTML = familias.map(function(f) {
+        var pct = totalPEN > 0 ? Math.round((f.valor_pen || 0) / totalPEN * 100) : 0;
+        var barW = maxVal > 0 ? Math.round((f.valor_pen || 0) / maxVal * 100) : 0;
+        return '<tr>'
+            + '<td style="font-weight:700;">' + esc(f.familia || '—') + '</td>'
+            + '<td style="text-align:right;color:var(--subtext);">' + (f.articulos || 0) + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:#16a34a;">S/ ' + cosFmt(f.valor_pen || 0) + '</td>'
+            + '<td><div class="cos-bar-wrap"><div class="cos-bar-fill" style="width:' + barW + '%"></div></div></td>'
+            + '<td style="text-align:right;font-size:0.8rem;color:var(--subtext);">' + pct + '%</td>'
+            + '</tr>';
+    }).join('');
+}
+
+// ── Helper formatear número ───────────────────────────────────────
+function cosFmt(n) {
+    return parseFloat(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
