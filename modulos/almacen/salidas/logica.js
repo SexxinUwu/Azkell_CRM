@@ -264,12 +264,16 @@ function salAbrirDetalle(m) {
     if (footer) {
         footer.style.display = 'flex';
         var eId = salEsc(m.id);
-        var btnDespachar = (m.estado !== 'Despachado' && m.estado !== 'Anulado')
+        var puedeEditar   = window.checkPerm('sal_inv', 'e');
+        var puedeEliminar = window.checkPerm('sal_inv', 'd');
+        var btnDespachar = (puedeEditar && m.estado !== 'Despachado' && m.estado !== 'Anulado')
             ? '<button class="btn btn-sm btn-success flex-fill fw-bold ms-1" onclick="window.salDespachar(\'' + eId + '\')"><i class="bi bi-box-seam me-1"></i>Despachar</button>'
             : '';
-        var btnAnular = m.estado !== 'Anulado'
-            ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.salAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
-            : '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>';
+        var btnAnular = puedeEliminar
+            ? (m.estado !== 'Anulado'
+                ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.salAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
+                : '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>')
+            : (m.estado === 'Anulado' ? '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>' : '');
         footer.innerHTML =
             '<button class="btn btn-sm btn-outline-secondary" onclick="window.salVerPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-eye me-1"></i>Ver</button>'
           + '<button class="btn btn-sm btn-outline-primary ms-1" onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
@@ -290,6 +294,7 @@ window.salCerrarDetalle = function() {
 
 // ── Despachar salida ──────────────────────────────────────────────
 window.salDespachar = function(id) {
+    if (!window.guardAction('sal_inv', 'e')) return;
     if (!confirm('¿Despachar la salida ' + id + '? El stock del inventario será descontado.')) return;
     fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
         method: 'PUT',
@@ -312,6 +317,7 @@ window.salDespachar = function(id) {
 
 // ── Anular salida ─────────────────────────────────────────────
 window.salAnular = function(id) {
+    if (!window.guardAction('sal_inv', 'd')) return;
     var motivo = window.prompt('Motivo de anulación (obligatorio):');
     if (motivo === null) return; // cancelado
     motivo = motivo.trim();
@@ -465,6 +471,7 @@ window.salVerPDF = function(m) {
 
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.salAbrirNuevo = function() {
+    if (!window.guardAction('sal_inv', 'c')) return;
     var ids = ['sal-f-ot','sal-f-placa','sal-f-responsable','sal-f-obs'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
     var fechaEl = document.getElementById('sal-f-fecha');
