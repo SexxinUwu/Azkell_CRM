@@ -2,9 +2,9 @@
 // 🚛 MÓDULO STATUS FLOTA - LÓGICA AISLADA
 // ================================================================
 
-let dataGlobalStatusFlota = [];
-let expandSFMap = {};
-let expandAllSFState = false;
+window.dataGlobalStatusFlota = window.dataGlobalStatusFlota || [];
+window.expandSFMap         = window.expandSFMap         || {};
+window.expandAllSFState    = window.expandAllSFState    || false;
 
 // ================================================================
 // 🔄 RECARGAR Y RESETEAR
