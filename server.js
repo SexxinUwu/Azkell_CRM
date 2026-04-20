@@ -3930,7 +3930,7 @@ const _stockSQL = `
                     AND (i.fecha_regularizacion IS NULL OR DATE(e.fecha) >= DATE(i.fecha_regularizacion))),0)
       - COALESCE((SELECT SUM(d.cantidad) FROM detalle_salidas_inv d
                   JOIN salidas_inv s ON s.id=d.salida_id
-                  WHERE d.inventario_id=i.id
+                  WHERE (d.inventario_id=i.id OR (d.inventario_id IS NULL AND LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id))
                     AND s.estado = 'Despachado'
                     AND (i.fecha_regularizacion IS NULL OR DATE(s.fecha) >= DATE(i.fecha_regularizacion))),0)
     , 4) AS stock_actual
@@ -4463,10 +4463,10 @@ app.put('/api/almacen/salidas/:id', (req, res) => {
         db.query("UPDATE salidas_inv SET estado='Despachado' WHERE id=?", [id], (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
-            // Resolver inventario_id nulos por coincidencia de descripción
+            // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
             db.query(
                 `UPDATE detalle_salidas_inv d
-                 INNER JOIN inventario i ON i.descripcion = d.descripcion AND i.activo = 1
+                 INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
                  SET d.inventario_id = i.id
                  WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
                 [id], () => {}
@@ -4959,10 +4959,10 @@ app.put('/api/ot-materiales/:id', (req, res) => {
                 console.error('Error despachando:', err.message);
                 return res.status(500).json({ error: err.message });
             }
-            // Resolver inventario_id nulos por coincidencia de descripción
+            // Resolver inventario_id nulos: por descripción exacta O prefijo "INV-XXX — ..."
             db.query(
                 `UPDATE detalle_salidas_inv d
-                 INNER JOIN inventario i ON i.descripcion = d.descripcion AND i.activo = 1
+                 INNER JOIN inventario i ON (i.descripcion = d.descripcion OR LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id) AND i.activo = 1
                  SET d.inventario_id = i.id
                  WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
                 [id], () => {}

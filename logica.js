@@ -2426,26 +2426,19 @@ window.cargarModuloAislado = async function(rutaModulo) {
         // 4. Crear un ID único para el script (ej: script-mantenimiento-placas)
         const scriptId = `script-${rutaModulo.replace('/', '-')}`;
 
-        // 5. Inyectar la lógica (JS) solo si no se ha cargado antes
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = `${_rutaDisco}/logica.js`;
-            // Llamar la función init una vez que el JS ha cargado por primera vez
-            let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
-            let funcionInit = `init_${nombreCarpeta}`;
-            script.onload = function() {
-                if (typeof window[funcionInit] === 'function') window[funcionInit]();
-            };
-            document.body.appendChild(script);
-        } else {
-            // Si el JS ya estaba cargado, llamamos a su función de inicio automático (si existe)
-            let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
-            let funcionInit = `init_${nombreCarpeta}`;
-            if (typeof window[funcionInit] === 'function') {
-                window[funcionInit]();
-            }
-        }
+        // 5. Inyectar la lógica (JS) — siempre recarga para reflejar cambios recientes
+        const oldScript = document.getElementById(scriptId);
+        if (oldScript) oldScript.remove();
+
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `${_rutaDisco}/logica.js?v=${Date.now()}`;
+        let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
+        let funcionInit = `init_${nombreCarpeta}`;
+        script.onload = function() {
+            if (typeof window[funcionInit] === 'function') window[funcionInit]();
+        };
+        document.body.appendChild(script);
         window._navProgress.done();
         // Actualizar visibilidad FAB según módulo activo
         if (typeof actualizarFAB === 'function') actualizarFAB();
