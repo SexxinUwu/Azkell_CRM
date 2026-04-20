@@ -5,18 +5,22 @@
 // ================================================================
 
 // ── Estado global ────────────────────────────────────────────────
-window.bktData     = window.bktData     || [];
-window.bktDatosFil = window.bktDatosFil || [];
+window.bktData      = window.bktData      || [];
+window.bktDatosFil  = window.bktDatosFil  || [];
+window.bktDetalleId = window.bktDetalleId || null;
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_backlog_taller = function() {
+    window.bktDetalleId = null;
+    var panel = document.getElementById('bkt-panel-detalle');
+    if (panel) panel.classList.remove('open');
     bktCargar();
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
 window.bktCargar = function() {
     var tbody = document.getElementById('bkt-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/ot-backlog')
         .then(function(r) {
@@ -33,7 +37,7 @@ window.bktCargar = function() {
                 window.mostrarAlerta('Error al cargar el backlog', 'danger');
             }
             var tb = document.getElementById('bkt-tbody');
-            if (tb) tb.innerHTML = '<tr><td colspan="9" class="td-placeholder">Error al cargar datos</td></tr>';
+            if (tb) tb.innerHTML = '<tr><td colspan="10" class="td-placeholder">Error al cargar datos</td></tr>';
         });
 };
 
@@ -79,7 +83,7 @@ window.bktRenderTabla = function() {
     window.bktDatosFil = datos;
 
     if (datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-list-task" style="font-size:1.5rem; opacity:0.3"></i><br>Sin tareas en backlog</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="td-placeholder"><i class="bi bi-list-task" style="font-size:1.5rem; opacity:0.3"></i><br>Sin tareas en backlog</td></tr>';
         return;
     }
 
@@ -87,6 +91,9 @@ window.bktRenderTabla = function() {
     datos.forEach(function(b) {
         var tr = document.createElement('tr');
         var chipHtml = bktChip(b);
+        var esActiva = (window.bktDetalleId === b.id);
+        tr.className = 'bkt-clickable' + (esActiva ? ' bkt-activa' : '');
+        tr.onclick = function() { window.bktAbrirDetalle(b.id); };
         tr.innerHTML =
             '<td><span style="font-size:0.72rem;font-weight:700;color:var(--primary,#5865F2);">' + (b.backlog_id || '—') + '</span></td>'
             + '<td>' + bktFmtFecha(b.fecha_reporte || b.creado_en) + '</td>'
@@ -94,7 +101,8 @@ window.bktRenderTabla = function() {
             + '<td><strong>' + (b.placa || '—') + '</strong></td>'
             + '<td>' + (b.km ? b.km + ' km' : '—') + '</td>'
             + '<td>' + (b.reportado_por || '—') + '</td>'
-            + '<td style="white-space:normal; max-width:260px; font-size:0.8rem;">' + (b.tarea || '—') + '</td>'
+            + '<td style="white-space:normal; max-width:220px; font-size:0.8rem;">' + (b.tarea || '—') + '</td>'
+            + '<td>' + (b.ticket_ot ? '<span style="font-size:0.72rem;font-weight:700;color:var(--primary,#5865F2);">' + b.ticket_ot + '</span>' : '<span style="color:var(--subtext);font-size:0.78rem;">—</span>') + '</td>'
             + '<td>' + chipHtml + '</td>'
             + '<td><button class="btn btn-sm" style="color:#dc2626;padding:2px 6px;" '
             + 'onclick="window.bktEliminar(' + b.id + '); event.stopPropagation();" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button></td>';
@@ -115,6 +123,87 @@ function bktChip(b) {
             + 'Realizado</button>';
     }
 }
+
+// ── Panel detalle ─────────────────────────────────────────────────
+window.bktAbrirDetalle = function(id) {
+    var b = window.bktData.find(function(x) { return x.id === id; });
+    if (!b) return;
+    window.bktDetalleId = id;
+    bktRenderTabla(); // re-render para highlight
+
+    var scroll = document.getElementById('bkt-detalle-scroll');
+    var footer = document.getElementById('bkt-detalle-footer');
+    var panel  = document.getElementById('bkt-panel-detalle');
+    if (!panel || !scroll) return;
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function fld(lbl, val) {
+        return '<div class="bkt-field"><span class="bkt-field-lbl">' + esc(lbl) + '</span><span class="bkt-field-val">' + val + '</span></div>';
+    }
+    var esPendiente = b.estado !== 'Realizado';
+    var chipCls = esPendiente ? 'background:rgba(217,119,6,0.12);color:#d97706' : 'background:rgba(22,163,74,0.12);color:#16a34a';
+
+    var html = '';
+    // Hero
+    html += '<div style="background:rgba(88,101,242,0.06);border:1px solid rgba(88,101,242,0.2);border-radius:8px;padding:12px 14px;margin-bottom:1.25rem;">';
+    html += '<div style="font-size:0.68rem;font-weight:700;color:var(--primary,#5865F2);text-transform:uppercase;letter-spacing:0.04em;">Backlog ID</div>';
+    html += '<div style="font-size:1.1rem;font-weight:800;color:var(--text);">' + esc(b.backlog_id || '—') + '</div>';
+    html += '<div style="margin-top:6px;"><span style="padding:2px 10px;border-radius:12px;font-size:0.72rem;font-weight:700;' + chipCls + '">' + esc(b.estado || 'Pendiente') + '</span></div>';
+    html += '</div>';
+
+    // Sección vehículo
+    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
+    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Vehículo</div>';
+    html += fld('Placa', '<strong>' + esc(b.placa || '—') + '</strong>');
+    html += fld('Kilometraje', b.km ? esc(Number(b.km).toLocaleString('es-PE')) + ' km' : '—');
+    html += '</div>';
+
+    // Sección tarea
+    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
+    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Mantenimiento Pendiente</div>';
+    html += fld('Tema', esc(b.tema || '—'));
+    html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);">' + esc(b.tarea || '—') + '</div>';
+    html += '</div>';
+
+    // Sección registro
+    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">';
+    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Registro</div>';
+    html += fld('Reportado por', esc(b.reportado_por || '—'));
+    html += fld('F. Registro', bktFmtFecha(b.fecha_reporte || b.creado_en));
+    html += fld('OT Relacionada', b.ticket_ot ? '<span style="font-weight:700;color:var(--primary,#5865F2);">' + esc(b.ticket_ot) + '</span>' : '—');
+    html += fld('Creado por', esc(b.creado_por || '—'));
+    html += '</div>';
+
+    scroll.innerHTML = html;
+
+    if (footer) {
+        var nuevoEst = esPendiente ? 'Realizado' : 'Pendiente';
+        var btnCls   = esPendiente ? 'btn-outline-success' : 'btn-outline-warning';
+        var btnIco   = esPendiente ? 'bi-check2-circle' : 'bi-arrow-counterclockwise';
+        footer.innerHTML =
+            '<button class="btn btn-sm btn-outline-secondary" onclick="window.bktAbrirEditar(' + b.id + ')">'
+            + '<i class="bi bi-pencil me-1"></i>Editar</button>'
+            + '<button class="btn btn-sm ' + btnCls + '" onclick="window.bktToggleEstadoDetalle(' + b.id + ',\'' + nuevoEst + '\')">'
+            + '<i class="bi ' + btnIco + ' me-1"></i>Marcar ' + nuevoEst + '</button>'
+            + '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.bktEliminar(' + b.id + ')">'
+            + '<i class="bi bi-trash me-1"></i>Eliminar</button>';
+    }
+    panel.classList.add('open');
+};
+
+window.bktCerrarDetalle = function() {
+    var panel = document.getElementById('bkt-panel-detalle');
+    if (panel) panel.classList.remove('open');
+    window.bktDetalleId = null;
+    bktRenderTabla();
+};
+
+// Toggle desde el panel detalle (actualiza UI del detalle también)
+window.bktToggleEstadoDetalle = function(id, nuevoEstado) {
+    window.bktToggleEstado(id, nuevoEstado);
+    // Actualizar detalle después del cambio optimista
+    setTimeout(function() { window.bktAbrirDetalle(id); }, 50);
+};
 
 // ── Toggle estado ─────────────────────────────────────────────────
 window.bktToggleEstado = function(id, nuevoEstado) {
@@ -160,6 +249,7 @@ window.bktEliminar = function(id) {
         return r.json();
     })
     .then(function() {
+        if (window.bktDetalleId === id) window.bktCerrarDetalle();
         window.bktData = window.bktData.filter(function(b) { return b.id !== id; });
         bktRenderTabla();
         if (typeof window.mostrarAlerta === 'function') {
@@ -174,6 +264,71 @@ window.bktEliminar = function(id) {
     });
 };
 
+// ── Abrir drawer en modo edición ──────────────────────────────
+window.bktAbrirEditar = function(id) {
+    var b = window.bktData.find(function(x) { return x.id === id; });
+    if (!b) return;
+
+    var set = function(elId, val) { var el = document.getElementById(elId); if (el) el.value = val || ''; };
+    set('bkt-f-placa',   b.placa);
+    set('bkt-f-km',      b.km || '');
+    set('bkt-f-tema',    b.tema);
+    set('bkt-f-reporta', b.reportado_por);
+    set('bkt-f-tarea',   b.tarea);
+    set('bkt-f-ot',      b.ticket_ot || '');
+
+    // Marcar drawer como modo edición
+    var drawer = document.getElementById('bkt-drawer-nuevo');
+    if (drawer) {
+        drawer.setAttribute('data-edit-id', String(id));
+        var titulo = drawer.querySelector('.bkt-drawer-title');
+        if (titulo) titulo.textContent = 'Editar Backlog';
+        var btnGuardar = drawer.querySelector('button[onclick="window.bktGuardar()"]');
+        if (btnGuardar) btnGuardar.setAttribute('onclick', 'window.bktGuardarEdicion()');
+        drawer.classList.add('open');
+    }
+    var bd = document.getElementById('bktDrawerBackdrop');
+    if (bd) bd.classList.add('open');
+};
+
+window.bktGuardarEdicion = function() {
+    var drawer = document.getElementById('bkt-drawer-nuevo');
+    if (!drawer) return;
+    var id = parseInt(drawer.getAttribute('data-edit-id'));
+    if (!id) return;
+
+    var get = function(elId) { var e = document.getElementById(elId); return e ? e.value.trim() : ''; };
+    var placa = get('bkt-f-placa').toUpperCase();
+    var tarea = get('bkt-f-tarea');
+    if (!placa) { alert('La placa es requerida'); return; }
+    if (!tarea) { alert('La descripción de la tarea es requerida'); return; }
+
+    var body = {
+        placa:         placa,
+        km:            parseInt(get('bkt-f-km')) || 0,
+        tema:          get('bkt-f-tema'),
+        tarea:         tarea,
+        reportado_por: get('bkt-f-reporta'),
+        ticket_ot:     get('bkt-f-ot') || null
+    };
+
+    fetch('/api/ot-backlog/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+        window.bktCerrarDrawer();
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Backlog actualizado', 'success');
+        bktCargar();
+    })
+    .catch(function(err) {
+        console.error('Error guardando edición backlog:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar los cambios', 'danger');
+    });
+};
+
 // ── Drawer Nuevo Backlog ──────────────────────────────────────────
 window.bktAbrirNuevo = function() {
     var el;
@@ -182,9 +337,17 @@ window.bktAbrirNuevo = function() {
     el = document.getElementById('bkt-f-tema');   if (el) el.value = '';
     el = document.getElementById('bkt-f-reporta');if (el) el.value = '';
     el = document.getElementById('bkt-f-tarea');  if (el) el.value = '';
+    el = document.getElementById('bkt-f-ot');     if (el) el.value = '';
 
     var drawer = document.getElementById('bkt-drawer-nuevo');
-    if (drawer) drawer.classList.add('open');
+    if (drawer) {
+        drawer.removeAttribute('data-edit-id');
+        var titulo = drawer.querySelector('.bkt-drawer-title');
+        if (titulo) titulo.textContent = 'Nuevo Backlog';
+        var btnGuardar = drawer.querySelector('button[onclick="window.bktGuardarEdicion()"]');
+        if (btnGuardar) btnGuardar.setAttribute('onclick', 'window.bktGuardar()');
+        drawer.classList.add('open');
+    }
     var bd = document.getElementById('bktDrawerBackdrop');
     if (bd) bd.classList.add('open');
 };
@@ -212,6 +375,7 @@ window.bktGuardar = function() {
         tema:          get('bkt-f-tema'),
         tarea:         tarea,
         reportado_por: get('bkt-f-reporta'),
+        ticket_ot:     get('bkt-f-ot') || null,
         estado:        'Pendiente',
         creado_por:    localStorage.getItem('fleet_correo') || ''
     };

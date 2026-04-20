@@ -280,6 +280,9 @@
             onclick="window.rotExportar()">
             <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
         </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="window.rotExportarPDF()" title="Exportar a PDF">
+            <i class="bi bi-filetype-pdf me-1"></i>PDF
+        </button>
         <button class="btn btn-sm btn-outline-secondary" onclick="window.rotCargar()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
         </button>
@@ -308,6 +311,14 @@
             <div class="rot-kpi-val" id="rot-kpi-costo" style="color:#16a34a;font-size:1.1rem">S/0.00</div>
         </div>
         <div class="rot-kpi">
+            <div class="rot-kpi-lbl">Costo Correctivo</div>
+            <div class="rot-kpi-val" id="rot-kpi-costo-correctivo" style="color:#dc2626;font-size:1.1rem">S/0.00</div>
+        </div>
+        <div class="rot-kpi">
+            <div class="rot-kpi-lbl">Costo Preventivo</div>
+            <div class="rot-kpi-val" id="rot-kpi-costo-preventivo" style="color:#2563eb;font-size:1.1rem">S/0.00</div>
+        </div>
+        <div class="rot-kpi">
             <div class="rot-kpi-lbl">Mostrando</div>
             <div class="rot-kpi-val" id="rot-kpi-filtradas" style="font-size:1.1rem">0</div>
         </div>
@@ -323,7 +334,6 @@
                     <th>Tipo / Sub Tipo</th>
                     <th>Supervisor</th>
                     <th>Situación</th>
-                    <th>Aprobación</th>
                     <th>Costo Total</th>
                     <th>Fecha</th>
                 </tr>

@@ -1,64 +1,172 @@
-<!-- Módulo Almacén / Entradas — SPA Aislado -->
-<div id="mod-entradas" class="modulo-wrapper d-flex flex-column h-100">
+<!-- Módulo Almacén / Entradas — Azkell Fleet -->
+<style>
+#moduloEntradas {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
 
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-arrow-down-circle-fill text-success me-1"></i>Entradas al Almacén
-      </h2>
-      <p class="text-muted small mb-0">Registro de ingreso de artículos / compras</p>
-    </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarEntradas()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-      <div class="dropdown">
-        <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Excel</span>
+/* Controles */
+#moduloEntradas .ent-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+#moduloEntradas .ent-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Tabla */
+#moduloEntradas .ent-table-wrap { flex: 1 1 0; overflow-y: auto; background: var(--surface); }
+#moduloEntradas table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloEntradas thead th {
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+#moduloEntradas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+#moduloEntradas tbody tr:hover { background: var(--bg); }
+#moduloEntradas tbody tr.ent-row-active { background: rgba(22,163,74,0.06); border-left: 3px solid #16a34a; }
+#moduloEntradas tbody td { padding: 10px 12px; color: var(--text); }
+#moduloEntradas .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+
+/* Panel lateral detalle */
+#moduloEntradas .ent-detail-panel {
+    width: 0; flex-shrink: 0; overflow: hidden;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; transition: width 0.25s; max-width: 380px;
+}
+#moduloEntradas .ent-detail-panel.open { width: 380px; }
+#moduloEntradas .ent-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloEntradas .ent-detail-footer {
+    padding: 0.75rem 1rem; border-top: 1px solid var(--border);
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+}
+
+/* Secciones detalle */
+#moduloEntradas .ent-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloEntradas .ent-sec-hd {
+    background: var(--bg); padding: 8px 12px; font-size: 0.73rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--subtext); border-bottom: 1px solid var(--border);
+}
+#moduloEntradas .ent-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+#moduloEntradas .ent-field:last-child { border-bottom: none; }
+#moduloEntradas .ent-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; }
+#moduloEntradas .ent-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
+</style>
+
+<div id="moduloEntradas">
+
+    <!-- BARRA CONTROLES -->
+    <div class="ent-controls">
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search" style="color:var(--subtext)"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                id="ent-buscar"
+                placeholder="Código, proveedor, documento…"
+                oninput="window.filtrarEntradas()">
+        </div>
+        <input type="date" class="form-control form-control-sm" id="ent-fil-desde"
+            style="max-width:150px" title="Desde" onchange="window.filtrarEntradas()">
+        <input type="date" class="form-control form-control-sm" id="ent-fil-hasta"
+            style="max-width:150px" title="Hasta" onchange="window.filtrarEntradas()">
+        <button class="btn btn-xs btn-outline-secondary" onclick="window._entLimpiarFechas()" title="Limpiar fechas">
+            <i class="bi bi-x-lg"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" onclick="window.exportarEntradasExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
-          <li><a class="dropdown-item" onclick="window.descargarPlantillaEntradas()"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li><label class="dropdown-item" style="cursor:pointer;"><i class="bi bi-upload me-2 text-warning"></i>Importar Excel<input type="file" id="inputFileEntradas" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelEntradas(event)"></label></li>
-        </ul>
-      </div>
-      <button class="btn btn-sm btn-success" onclick="window.abrirModalEntrada()">
-        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nueva Entrada</span>
-      </button>
+        <span id="ent-contador" class="text-muted small ms-1"></span>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarEntradas()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
     </div>
-  </div>
 
-  <!-- Filtros -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <input type="text" id="ent-buscar" class="form-control form-control-sm" style="max-width:240px;" placeholder="Código, proveedor, documento…" oninput="window.filtrarEntradas()">
-    <div class="d-flex align-items-center gap-1">
-      <input type="date" id="ent-fil-desde" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarEntradas()" title="Desde">
-      <span class="text-muted small">—</span>
-      <input type="date" id="ent-fil-hasta" class="form-control form-control-sm" style="max-width:145px;" onchange="window.filtrarEntradas()" title="Hasta">
-      <button class="btn btn-xs btn-outline-secondary" onclick="window._entLimpiarFechas()" title="Limpiar fechas"><i class="bi bi-x-lg"></i></button>
+    <!-- BARRA ACCIONES -->
+    <div class="ent-filters">
+        <div style="flex:1"></div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-file-earmark-excel"></i><span class="ms-1">Excel</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" onclick="window.exportarEntradasExcel(); return false;"><i class="bi bi-download me-2 text-success"></i>Exportar</a></li>
+                <li><a class="dropdown-item" href="#" onclick="window.descargarPlantillaEntradas(); return false;"><i class="bi bi-file-earmark-arrow-down me-2 text-primary"></i>Plantilla</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <label class="dropdown-item" style="cursor:pointer;">
+                        <i class="bi bi-upload me-2 text-warning"></i>Importar Excel
+                        <input type="file" id="inputFileEntradas" accept=".xlsx,.xls" style="display:none" onchange="window.importarExcelEntradas(event)">
+                    </label>
+                </li>
+            </ul>
+        </div>
+        <button class="btn btn-sm btn-success" onclick="window.abrirModalEntrada()">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Entrada
+        </button>
     </div>
-    <span id="ent-contador" class="text-muted small ms-auto"></span>
-  </div>
 
-  <!-- Tabla -->
-  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;">
-    <table class="table table-custom table-hover m-0" id="tabla-entradas">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Fecha</th>
-          <th>Proveedor</th>
-          <th>Doc. Referencia</th>
-          <th>Artículos</th>
-          <th class="text-end">Total</th>
-          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-entradas">
-        <tr><td colspan="7" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div id="ent-paginacion" class="mt-2 px-1"></div>
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+
+        <!-- TABLA -->
+        <div class="ent-table-wrap">
+            <table id="tabla-entradas">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Fecha</th>
+                        <th>Proveedor</th>
+                        <th>Doc. Referencia</th>
+                        <th class="text-center">Artículos</th>
+                        <th class="text-end">Total PEN</th>
+                        <th style="width:100px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-entradas">
+                    <tr><td colspan="7" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+                </tbody>
+            </table>
+            <div id="ent-paginacion" class="d-flex justify-content-center align-items-center gap-1 py-2"></div>
+        </div>
+
+        <!-- PANEL DETALLE LATERAL -->
+        <div class="ent-detail-panel" id="ent-panel-detalle">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="ent-detalle-titulo">Detalle Entrada</span>
+                <button class="btn btn-sm" onclick="window._entCerrarDetalle()" style="color:var(--subtext);">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="ent-detail-scroll" id="ent-detalle-scroll"></div>
+            <div class="ent-detail-footer" id="ent-detalle-footer" style="display:none;"></div>
+        </div>
+
+    </div>
+
 </div>
 
 <!-- ═══ MODAL NUEVA ENTRADA ═══════════════════════════════════════ -->

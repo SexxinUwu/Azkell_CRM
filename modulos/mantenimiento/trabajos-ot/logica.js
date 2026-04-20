@@ -199,7 +199,7 @@ function totAbrirDetalle(t) {
     var footer = document.getElementById('tot-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        footer.innerHTML = '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(' + JSON.stringify(t.ticket_visita) + ')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>';
+        footer.innerHTML = '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(\'' + t.ticket_visita + '\')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>';
     }
 
     var panel = document.getElementById('tot-panel-detalle');

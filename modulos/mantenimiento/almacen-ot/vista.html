@@ -108,6 +108,7 @@
 #moduloAlmacenOT .aot-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.8; }
 #moduloAlmacenOT .badge-pendiente  { background: rgba(217,119,6,0.12); color: #d97706; }
 #moduloAlmacenOT .badge-despachado { background: rgba(22,163,74,0.12);  color: #16a34a; }
+#moduloAlmacenOT .badge-anulado    { background: rgba(220,38,38,0.1);   color: #dc2626; }
 
 /* Panel lateral detalle */
 #moduloAlmacenOT .aot-detail-panel {
@@ -167,6 +168,10 @@
             Salidas (Despachadas)
             <span class="aot-tab-badge" id="aot-badge-desp">0</span>
         </div>
+        <div class="aot-tab" id="aot-tab-anulado" onclick="window.aotCambiarTab('anulado')">
+            Anuladas
+            <span class="aot-tab-badge" id="aot-badge-anulado">0</span>
+        </div>
     </div>
 
     <!-- FILA 1: Buscador + acciones -->
@@ -205,6 +210,7 @@
             <option value="">Todos los estados</option>
             <option value="Pendiente">Pendiente</option>
             <option value="Despachado">Despachado</option>
+            <option value="Anulado">Anulado</option>
         </select>
         <div style="flex:1"></div>
         <button class="btn btn-sm btn-success" onclick="window.aotExportar()">

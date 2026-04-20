@@ -9,6 +9,10 @@ window.srOtData               = window.srOtData               || [];
 window.srCatSituaciones       = window.srCatSituaciones       || [];
 window.srOtTrabajosActivos    = window.srOtTrabajosActivos    || [];
 window.srOtMaterialesActivos  = window.srOtMaterialesActivos  || [];
+window.srHistorialData        = window.srHistorialData        || [];
+window.srTabActual            = window.srTabActual            || 'rampas';
+window.srHistPage             = window.srHistPage             || 1;
+window.srHistPageSize         = window.srHistPageSize         || 20;
 // srEntradas se carga desde BD — no se persiste en localStorage
 window.srEntradas             = [];
 
@@ -19,6 +23,16 @@ var SR_COLORES = [
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_status_rampa = function() {
+    window.srTabActual = 'rampas';
+    window.srHistPage  = 1;
+    var paneR = document.getElementById('sr-pane-rampas');
+    var paneH = document.getElementById('sr-pane-historial');
+    if (paneR) paneR.style.display = 'flex';
+    if (paneH) paneH.style.display = 'none';
+    var tabR = document.getElementById('sr-tab-rampas');
+    var tabH = document.getElementById('sr-tab-historial');
+    if (tabR) tabR.classList.add('active');
+    if (tabH) tabH.classList.remove('active');
     srCargarCatalogos();
     srCargarEntradas();
     srCargarOTs();
@@ -46,6 +60,9 @@ function srCargarEntradas() {
                 };
             });
             srRenderTabla();
+            // Actualizar badge pestaña Rampas
+            var badgeR = document.getElementById('sr-tab-badge-rampas');
+            if (badgeR) badgeR.textContent = window.srEntradas.length;
             if (window.srDetalleId !== null) window.srAbrirDetalle(window.srDetalleId);
         })
         .catch(function() { window.srEntradas = []; srRenderTabla(); });
@@ -340,17 +357,193 @@ window.srEditarRampa = function(id) {
 window.srLiberarRampa = function(id) {
     var e = window.srEntradas.find(function(x) { return x._id === id; });
     if (!e) return;
-    if (!confirm('¿Confirmar salida de ' + e.placa + ' de la Rampa ' + e.rampa + '?')) return;
-    fetch('/api/taller-rampas/' + id, { method: 'DELETE' })
+    if (!confirm('¿Confirmar salida de ' + e.placa + ' de la Rampa ' + e.rampa + '?\n\nEl registro quedará en el historial.')) return;
+    var ahora = new Date();
+    var fechaHoy = ahora.toISOString().split('T')[0];
+    var horaAhora = ahora.toTimeString().slice(0, 5);
+    fetch('/api/taller-rampas/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            accion: 'liberar',
+            liberado_por: localStorage.getItem('fleet_user') || '',
+            fecha_salida_real: fechaHoy,
+            hora_salida_real: horaAhora
+        })
+    })
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function() {
             if (window.srDetalleId === id) window.srCerrarDetalle();
             srCargarEntradas();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Rampa liberada — registro en historial', 'success');
         })
         .catch(function() {
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al liberar rampa', 'danger');
         });
 };
+
+// ── Tabs ──────────────────────────────────────────────────────────
+window.srCambiarTab = function(tab) {
+    window.srTabActual = tab;
+    var paneR = document.getElementById('sr-pane-rampas');
+    var paneH = document.getElementById('sr-pane-historial');
+    var tabR  = document.getElementById('sr-tab-rampas');
+    var tabH  = document.getElementById('sr-tab-historial');
+    if (tab === 'historial') {
+        if (paneR) paneR.style.display = 'none';
+        if (paneH) { paneH.style.display = 'flex'; paneH.style.flexDirection = 'column'; }
+        if (tabR) tabR.classList.remove('active');
+        if (tabH) tabH.classList.add('active');
+        window.srHistPage = 1;
+        srCargarHistorial();
+    } else {
+        if (paneR) paneR.style.display = 'flex';
+        if (paneH) paneH.style.display = 'none';
+        if (tabH) tabH.classList.remove('active');
+        if (tabR) tabR.classList.add('active');
+    }
+};
+
+function srCargarHistorial() {
+    var tbody = document.getElementById('sr-historial-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    fetch('/api/taller-rampas?historial=1')
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(rows) {
+            window.srHistorialData = rows;
+            // Actualizar badge pestaña Historial
+            var badgeH = document.getElementById('sr-tab-badge-historial');
+            if (badgeH) badgeH.textContent = rows.length;
+            srRenderHistorial();
+        })
+        .catch(function() {
+            var t = document.getElementById('sr-historial-tbody');
+            if (t) t.innerHTML = '<tr><td colspan="8" class="td-placeholder text-danger">Error al cargar historial</td></tr>';
+        });
+}
+
+function srRenderHistorial() {
+    var tbody = document.getElementById('sr-historial-tbody');
+    if (!tbody) return;
+    var rows = window.srHistorialData || [];
+    var pageSize = window.srHistPageSize || 20;
+    var page     = window.srHistPage    || 1;
+    var total    = rows.length;
+    var totalPag = Math.max(1, Math.ceil(total / pageSize));
+    if (page > totalPag) page = totalPag;
+    var desde = (page - 1) * pageSize;
+    var slice = rows.slice(desde, desde + pageSize);
+
+    // Paginación UI
+    var info    = document.getElementById('sr-hist-pag-info');
+    var btnPrev = document.getElementById('sr-hist-prev');
+    var btnNext = document.getElementById('sr-hist-next');
+    if (info) info.textContent = total ? 'Página ' + page + ' de ' + totalPag + '  (' + total + ' registros)' : 'Sin registros';
+    if (btnPrev) btnPrev.disabled = (page <= 1);
+    if (btnNext) btnNext.disabled = (page >= totalPag);
+
+    if (!slice.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="td-placeholder">Sin registros liberados</td></tr>';
+        return;
+    }
+    tbody.innerHTML = slice.map(function(r) {
+        var fIng     = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '—';
+        var fLibDate = r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : (r.fecha_salida ? String(r.fecha_salida).split('T')[0] : '—');
+        var fLibTime = r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '';
+        return '<tr style="cursor:pointer;" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
+            + '<td><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
+            + '<td><strong>' + (r.placa || '—') + '</strong></td>'
+            + '<td style="font-size:0.79rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
+            + '<td style="font-size:0.79rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
+            + '<td style="font-size:0.79rem;">' + (r.situacion || '—') + '</td>'
+            + '<td style="font-size:0.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (r.obs || '') + '">' + (r.obs || '—') + '</td>'
+            + '<td style="font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
+            + '<td onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
+            + '</tr>';
+    }).join('');
+}
+
+window.srHistPaginar = function(dir) {
+    var total    = (window.srHistorialData || []).length;
+    var pageSize = window.srHistPageSize || 20;
+    var totalPag = Math.max(1, Math.ceil(total / pageSize));
+    window.srHistPage = Math.max(1, Math.min(totalPag, (window.srHistPage || 1) + dir));
+    srRenderHistorial();
+};
+
+window.srAbrirDetalleHistorial = function(id) {
+    var row = (window.srHistorialData || []).find(function(r) { return r.id === id; });
+    if (!row) return;
+
+    var fIng     = row.fecha_ingreso ? String(row.fecha_ingreso).split('T')[0] : '';
+    var fLibDate = row.fecha_liberado ? String(row.fecha_liberado).split('T')[0] : '';
+    var fLibTime = row.fecha_liberado ? String(row.fecha_liberado).slice(11, 16) : '';
+
+    function fld(lbl, val) {
+        return '<div style="display:flex;padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.82rem;">'
+            + '<span style="width:40%;color:var(--subtext);font-weight:600;font-size:0.78rem;">' + lbl + '</span>'
+            + '<span style="width:60%;color:var(--text);font-weight:600;word-break:break-word;">' + val + '</span>'
+            + '</div>';
+    }
+    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    var html = '';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
+    html += '<span class="sr-badge-rampa" style="background:#64748b;font-size:1rem;">Rampa ' + esc(row.rampa || '—') + '</span>';
+    html += '<span style="background:#16a34a22;color:#16a34a;border-radius:9px;padding:2px 10px;font-size:0.75rem;font-weight:800;">Liberada</span>';
+    html += '</div>';
+
+    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
+    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Datos del Vehículo</div>';
+    html += fld('Placa', '<strong>' + esc(row.placa || '—') + '</strong>');
+    html += fld('Kilometraje', esc(row.km || '—'));
+    html += fld('Situación', esc(row.situacion || '—'));
+    html += fld('Observaciones', esc(row.obs || '—'));
+    html += '</div>';
+
+    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
+    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Fechas</div>';
+    html += fld('Ingreso', srFmtFecha(fIng) + (row.hora_ingreso ? ' ' + String(row.hora_ingreso).slice(0,5) : ''));
+    html += fld('Salida programada', row.fecha_salida ? srFmtFecha(String(row.fecha_salida).split('T')[0]) + (row.hora_salida ? ' ' + String(row.hora_salida).slice(0,5) : '') : '—');
+    html += fld('Liberado el', fLibDate ? srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') : '—');
+    html += fld('Liberado por', esc(row.liberado_por || '—'));
+    html += '</div>';
+
+    var scroll  = document.getElementById('sr-hist-detalle-scroll');
+    var footer  = document.getElementById('sr-hist-detalle-footer');
+    var panel   = document.getElementById('sr-panel-detalle-hist');
+    if (scroll) scroll.innerHTML = html;
+    if (footer) {
+        footer.innerHTML = '<button class="btn btn-sm btn-outline-warning w-100" onclick="window.srReactivarRampa(' + row.id + ')">'
+            + '<i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar en Rampa</button>';
+    }
+    if (panel) panel.classList.add('open');
+};
+
+window.srCerrarDetalleHist = function() {
+    var panel = document.getElementById('sr-panel-detalle-hist');
+    if (panel) panel.classList.remove('open');
+};
+
+window.srReactivarRampa = function(id) {
+    if (!confirm('¿Reactivar esta entrada en rampa? Volverá al estado Activo.')) return;
+    fetch('/api/taller-rampas/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'reactivar' })
+    })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+            window.srCerrarDetalleHist();
+            window.srCambiarTab('rampas');
+            srCargarEntradas();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Rampa reactivada correctamente', 'success');
+        })
+        .catch(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al reactivar rampa', 'danger');
+        });
+};
+
 
 // ── Guardar registro (nueva o edición) ──────────────────────────
 window.srGuardarRegistro = function() {
@@ -1069,7 +1262,7 @@ function srRenderSecMateriales(idOt, esAprobada) {
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
                   + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + (m.id || '—') + '</span> ' + badge + '</div>'
-                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="window.srEliminarMaterial(' + JSON.stringify(m.id) + ',\'' + idOt + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
+                  + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="window.srEliminarMaterial(\'' + m.id + '\',\'' + idOt + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
                   + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
                   + '<div style="margin-top:2px;"><strong style="color:var(--text);">Total: S/.' + parseFloat(m.total_pen || 0).toFixed(2) + '</strong></div>'

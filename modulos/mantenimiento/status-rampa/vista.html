@@ -217,7 +217,71 @@
     background: rgba(88,101,242,0.05);
 }
 
-/* ── OT Detalle — clases compartidas con Reportes OT ────────── */
+/* ── Tabs ─────────────────────────────────────────────────────── */
+#moduloStatusRampa .sr-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+}
+#moduloStatusRampa .sr-tab {
+    padding: 11px 0;
+    margin-right: 1.5rem;
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--subtext);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    transition: color 0.15s;
+}
+#moduloStatusRampa .sr-tab:hover { color: var(--text); }
+#moduloStatusRampa .sr-tab.active {
+    color: var(--primary, #5865F2);
+    border-bottom-color: var(--primary, #5865F2);
+}
+#moduloStatusRampa .sr-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    margin-left: 5px;
+    color: var(--subtext);
+    padding: 0 4px;
+}
+#moduloStatusRampa .sr-tab.active .sr-tab-badge {
+    background: rgba(88,101,242,0.12);
+    border-color: rgba(88,101,242,0.3);
+    color: var(--primary, #5865F2);
+}
+
+/* ── Historial paginación ──────────────────────────────────────── */
+#moduloStatusRampa .sr-hist-table-wrap {
+    flex: 1 1 0;
+    overflow-y: auto;
+    background: var(--surface);
+}
+#moduloStatusRampa .sr-hist-pag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
 .rot-sec { border:1px solid var(--border); border-radius:8px; margin-top:1rem; overflow:hidden; }
 .rot-sec-hd { background:var(--bg); padding:7px 12px; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--subtext); border-bottom:1px solid var(--border); }
 .rot-field { display:flex; padding:8px 12px; border-bottom:1px solid var(--border); font-size:0.82rem; }
@@ -299,8 +363,18 @@
         </button>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL (tabla + panel detalle) -->
-    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+    <!-- PESTAÑAS -->
+    <div class="sr-tabs">
+        <div class="sr-tab active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
+            Rampas <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
+        </div>
+        <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
+            Historial <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
+        </div>
+    </div>
+
+    <!-- PANE: RAMPAS -->
+    <div id="sr-pane-rampas" style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
 
         <!-- TABLA -->
         <div class="sr-table-wrap" id="sr-tabla-wrap">
@@ -335,7 +409,50 @@
             <div class="sr-detail-footer" id="sr-detalle-footer"></div>
         </div>
 
-    </div><!-- fin contenedor -->
+    </div><!-- fin pane rampas -->
+
+    <!-- PANE: HISTORIAL -->
+    <div id="sr-pane-historial" style="display:none; flex:1 1 0; min-height:0; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+            <!-- TABLA HISTORIAL -->
+            <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
+                <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                    <thead>
+                        <tr style="background:var(--bg);">
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2;">Rampa</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Placa</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Ingreso</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Liberado</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Situación</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Liberado por</th>
+                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2; width:110px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sr-historial-tbody">
+                        <tr><td colspan="8" class="td-placeholder">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- PANEL DETALLE HISTORIAL -->
+            <div class="sr-detail-panel" id="sr-panel-detalle-hist">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                    <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle Historial</span>
+                    <button class="btn btn-sm" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="sr-detail-scroll" id="sr-hist-detalle-scroll"></div>
+                <div class="sr-detail-footer" id="sr-hist-detalle-footer"></div>
+            </div>
+        </div>
+        <!-- PAGINACIÓN HISTORIAL -->
+        <div class="sr-hist-pag" id="sr-hist-pag-bar">
+            <button class="btn btn-sm btn-outline-secondary" id="sr-hist-prev" onclick="window.srHistPaginar(-1)"><i class="bi bi-chevron-left"></i></button>
+            <span id="sr-hist-pag-info" style="font-size:0.8rem; color:var(--subtext);"></span>
+            <button class="btn btn-sm btn-outline-secondary" id="sr-hist-next" onclick="window.srHistPaginar(1)"><i class="bi bi-chevron-right"></i></button>
+        </div>
+    </div>
 
 </div><!-- fin moduloStatusRampa -->
 

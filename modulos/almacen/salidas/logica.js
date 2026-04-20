@@ -17,6 +17,7 @@ window._salInvData   = window._salInvData   || [];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_salidas = function() {
+    window.salTabActiva = 'desp';
     salSincronizarTabs();
     salCargar();
     _salCargarSelectores();
@@ -27,7 +28,7 @@ window.salCargar = function() {
     var tbody = document.getElementById('sal-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
-    fetch('/api/ot-materiales')
+    fetch('/api/almacen/salidas')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function(data) {
             window.salData = Array.isArray(data) ? data : [];
@@ -100,17 +101,21 @@ function salFmtDate(iso) {
 
 function salBadge(estado) {
     if (estado === 'Despachado') return '<span class="sal-badge badge-despachado">Despachado</span>';
+    if (estado === 'Anulado')   return '<span class="sal-badge badge-anulado">Anulado</span>';
     return '<span class="sal-badge badge-pendiente">Pendiente</span>';
 }
 
 // ── Badges de tabs ────────────────────────────────────────────
 function salActualizarBadges() {
-    var pend = window.salData.filter(function(m) { return m.estado !== 'Despachado'; }).length;
-    var desp = window.salData.filter(function(m) { return m.estado === 'Despachado'; }).length;
+    var pend   = window.salData.filter(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; }).length;
+    var desp   = window.salData.filter(function(m) { return m.estado === 'Despachado'; }).length;
+    var anulado= window.salData.filter(function(m) { return m.estado === 'Anulado'; }).length;
     var bp = document.getElementById('sal-badge-pend');
     var bd = document.getElementById('sal-badge-desp');
+    var ba = document.getElementById('sal-badge-anulado');
     if (bp) bp.textContent = pend;
     if (bd) bd.textContent = desp;
+    if (ba) ba.textContent = anulado;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -124,7 +129,7 @@ window.salCambiarTab = function(tab) {
 };
 
 function salSincronizarTabs() {
-    ['pend', 'desp'].forEach(function(t) {
+    ['pend', 'desp', 'anulado'].forEach(function(t) {
         var el = document.getElementById('sal-tab-' + t);
         if (el) el.classList.toggle('active', t === window.salTabActiva);
     });
@@ -154,8 +159,9 @@ window.salRenderTabla = function() {
 
     var datos = window.salData.filter(function(m) {
         if (!f.estado) {
-            if (window.salTabActiva === 'pend' && m.estado === 'Despachado') return false;
-            if (window.salTabActiva === 'desp' && m.estado !== 'Despachado') return false;
+            if (window.salTabActiva === 'pend'    && (m.estado === 'Despachado' || m.estado === 'Anulado')) return false;
+            if (window.salTabActiva === 'desp'    && m.estado !== 'Despachado') return false;
+            if (window.salTabActiva === 'anulado' && m.estado !== 'Anulado')    return false;
         } else {
             if (m.estado !== f.estado) return false;
         }
@@ -181,7 +187,9 @@ window.salRenderTabla = function() {
     window.salDatosFil = datos;
 
     if (datos.length === 0) {
-        var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes' : 'Sin salidas registradas';
+        var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
+                : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
+                : 'Sin salidas registradas';
         tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
         return;
     }
@@ -214,7 +222,7 @@ function salAbrirDetalle(m) {
     salRenderTabla();
 
     var titulo = document.getElementById('sal-detalle-titulo');
-    if (titulo) titulo.textContent = 'Solicitud ' + (m.id || '');
+    if (titulo) titulo.textContent = 'Salida ' + (m.id || '');
 
     var html = '';
     html += '<div style="font-size:1.2rem; font-weight:800; color:var(--text); margin-bottom:0.3rem;">' + salEsc(m.id || '—') + '</div>';
@@ -227,6 +235,9 @@ function salAbrirDetalle(m) {
     html += '<div class="sal-field"><div class="sal-field-lbl">Placa</div><div class="sal-field-val"><strong>' + salEsc(m.placa || '—') + '</strong></div></div>';
     html += '<div class="sal-field"><div class="sal-field-lbl">Responsable</div><div class="sal-field-val">' + salEsc(m.responsable || '—') + '</div></div>';
     if (m.observaciones) html += '<div class="sal-field"><div class="sal-field-lbl">Observaciones</div><div class="sal-field-val" style="white-space:normal;font-size:0.78rem;">' + salEsc(m.observaciones) + '</div></div>';
+    if (m.estado === 'Anulado' && m.motivo_anulacion) {
+        html += '<div class="sal-field" style="background:rgba(220,38,38,0.04);"><div class="sal-field-lbl" style="color:#dc2626;">Motivo anulación</div><div class="sal-field-val" style="color:#dc2626;white-space:normal;font-size:0.78rem;">' + salEsc(m.motivo_anulacion) + '</div></div>';
+    }
     html += '</div>';
 
     if (m.items && m.items.length) {
@@ -252,13 +263,18 @@ function salAbrirDetalle(m) {
     var footer = document.getElementById('sal-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        if (m.estado !== 'Despachado') {
-            footer.innerHTML =
-                '<button class="btn btn-sm btn-outline-danger fw-bold" onclick="window.salAnular(' + JSON.stringify(m.id) + ')" style="min-width:90px;"><i class="bi bi-x-circle me-1"></i>Anular</button>'
-              + '<button class="btn btn-sm btn-success flex-fill fw-bold ms-2" onclick="window.salDespachar(' + JSON.stringify(m.id) + ')"><i class="bi bi-box-seam me-1"></i>Aprobar y Despachar</button>';
-        } else {
-            footer.innerHTML = '<span style="font-size:0.8rem; color:var(--subtext); padding:4px;">Material ya despachado — stock descontado</span>';
-        }
+        var eId = salEsc(m.id);
+        var btnDespachar = (m.estado !== 'Despachado' && m.estado !== 'Anulado')
+            ? '<button class="btn btn-sm btn-success flex-fill fw-bold ms-1" onclick="window.salDespachar(\'' + eId + '\')"><i class="bi bi-box-seam me-1"></i>Despachar</button>'
+            : '';
+        var btnAnular = m.estado !== 'Anulado'
+            ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.salAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
+            : '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>';
+        footer.innerHTML =
+            '<button class="btn btn-sm btn-outline-secondary" onclick="window.salVerPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-eye me-1"></i>Ver</button>'
+          + '<button class="btn btn-sm btn-outline-primary ms-1" onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
+          + (btnDespachar ? btnDespachar : '')
+          + btnAnular;
     }
 
     var panel = document.getElementById('sal-panel-detalle');
@@ -272,42 +288,178 @@ window.salCerrarDetalle = function() {
     salRenderTabla();
 };
 
-// ── Anular ────────────────────────────────────────────────────
-window.salAnular = function(id) {
-    if (!confirm('¿Anular la solicitud ' + id + '? Se eliminará definitivamente.')) return;
-    fetch('/api/ot-materiales/' + encodeURIComponent(id), { method: 'DELETE' })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function() {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud anulada', 'success');
-            window.salDetalleId = null;
-            var panel = document.getElementById('sal-panel-detalle');
-            if (panel) panel.classList.remove('open');
-            salCargar();
-        })
-        .catch(function() {
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la solicitud', 'danger');
-        });
-};
-
-// ── Despachar ─────────────────────────────────────────────────
+// ── Despachar salida ──────────────────────────────────────────────
 window.salDespachar = function(id) {
-    if (!confirm('¿Aprobar y despachar? El stock del inventario será descontado.')) return;
-    fetch('/api/ot-materiales/' + encodeURIComponent(id), {
+    if (!confirm('¿Despachar la salida ' + id + '? El stock del inventario será descontado.')) return;
+    fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accion: 'despachar' })
     })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function() {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Material despachado — stock actualizado', 'success');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + id + ' despachada — stock descontado', 'success');
         window.salDetalleId = null;
         var panel = document.getElementById('sal-panel-detalle');
         if (panel) panel.classList.remove('open');
         salCargar();
     })
     .catch(function(err) {
-        console.error('Error despachando:', err);
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al despachar', 'danger');
+        console.error('Error despachando salida:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al despachar la salida', 'danger');
+    });
+};
+
+// ── Anular salida ─────────────────────────────────────────────
+window.salAnular = function(id) {
+    var motivo = window.prompt('Motivo de anulación (obligatorio):');
+    if (motivo === null) return; // cancelado
+    motivo = motivo.trim();
+    if (!motivo) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El motivo es obligatorio para anular', 'warning'); return; }
+
+    fetch('/api/almacen/salidas/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'anular', motivo: motivo })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + id + ' anulada — stock restaurado', 'success');
+        window.salDetalleId = null;
+        var panel = document.getElementById('sal-panel-detalle');
+        if (panel) panel.classList.remove('open');
+        salCargar();
+    })
+    .catch(function(err) {
+        console.error('Error anulando salida:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la salida', 'danger');
+    });
+};
+
+// ── Eliminar salida ───────────────────────────────────────────
+window.salEliminar = function(id) {
+    if (!confirm('¿Eliminar la salida ' + id + '? El stock volverá a su valor anterior.')) return;
+    fetch('/api/almacen/salidas/' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida eliminada — stock restaurado', 'success');
+            window.salDetalleId = null;
+            var panel = document.getElementById('sal-panel-detalle');
+            if (panel) panel.classList.remove('open');
+            salCargar();
+        })
+        .catch(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la salida', 'danger');
+        });
+};
+
+// ── Construir HTML del comprobante ────────────────────────────
+function salBuildPDFHtml(m) {
+    var id      = m.id || '—';
+    var fecha   = m.fecha ? String(m.fecha).split('T')[0] : '—';
+    var totalPen = parseFloat(m.total_pen || 0);
+    var itemsHTML = (m.items || []).map(function(it, i) {
+        var cant = parseFloat(it.cantidad || 0);
+        var cu   = parseFloat(it.costo_unitario || 0);
+        var imp  = parseFloat(it.importe || 0) || cant * cu;
+        var bgRow = i % 2 === 0 ? '#f9fafb' : '#ffffff';
+        return '<tr style="background:' + bgRow + '">'
+            + '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px">' + salEsc(it.descripcion || it.inventario_id || '—') + '</td>'
+            + '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:center">' + cant.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>'
+            + '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right">S/ ' + cu.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</td>'
+            + '<td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;text-align:right;font-weight:600">S/ ' + imp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>'
+            + '</tr>';
+    }).join('');
+
+    var estadoBadge = m.estado === 'Anulado'
+        ? '<span style="display:inline-block;padding:2px 10px;background:#fee2e2;color:#dc2626;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;">ANULADA</span>'
+        : '';
+    var motivoHtml = (m.estado === 'Anulado' && m.motivo_anulacion)
+        ? '<div style="padding:10px 14px;background:#fee2e2;border-radius:6px;border-left:3px solid #dc2626;font-size:12px;margin-bottom:12px"><b>Motivo anulación: </b>' + salEsc(m.motivo_anulacion) + '</div>'
+        : '';
+
+    return '<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:32px;color:#1e293b">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #2563eb">'
+            + '<div><div style="font-size:22px;font-weight:700;color:#2563eb">AZKELL FLEET</div><div style="font-size:11px;color:#64748b;margin-top:2px">Sistema de Gestión de Flotas</div></div>'
+            + '<div style="text-align:right"><div style="font-size:18px;font-weight:700">COMPROBANTE DE SALIDA' + estadoBadge + '</div>'
+            + '<div style="font-size:13px;color:#2563eb;font-weight:600;margin-top:4px">' + salEsc(id) + '</div>'
+            + '<div style="font-size:11px;color:#64748b;margin-top:2px">Fecha: ' + fecha + '</div></div>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:14px 16px;background:#f1f5f9;border-radius:8px">'
+            + '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">OT Referencia</div><div style="font-size:13px;font-weight:600">' + salEsc(m.ticket_ot || '—') + '</div></div>'
+            + '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Tipo Destino</div><div style="font-size:13px;font-weight:600">' + salEsc(m.tipo_destino || '—') + '</div></div>'
+            + '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Placa</div><div style="font-size:13px;font-weight:600">' + salEsc(m.placa || '—') + '</div></div>'
+            + '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Responsable</div><div style="font-size:13px;font-weight:600">' + salEsc(m.responsable || '—') + '</div></div>'
+        + '</div>'
+        + motivoHtml
+        + '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'
+            + '<thead><tr style="background:#2563eb;color:#fff">'
+                + '<th style="padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase">Artículo</th>'
+                + '<th style="padding:9px 10px;text-align:center;font-size:11px;text-transform:uppercase">Cantidad</th>'
+                + '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase">Costo Unit.</th>'
+                + '<th style="padding:9px 10px;text-align:right;font-size:11px;text-transform:uppercase">Importe</th>'
+            + '</tr></thead>'
+            + '<tbody>' + itemsHTML + '</tbody>'
+        + '</table>'
+        + '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">'
+            + '<div style="min-width:220px">'
+                + '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:#2563eb;color:#fff;border-radius:6px;font-size:14px;font-weight:700">'
+                    + '<span>TOTAL PEN</span><span>S/ ' + totalPen.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
+                + '</div>'
+            + '</div>'
+        + '</div>'
+        + (m.observaciones ? '<div style="padding:10px 14px;background:#fef9c3;border-radius:6px;border-left:3px solid #eab308;font-size:12px;margin-bottom:12px"><b>Obs.: </b>' + salEsc(m.observaciones) + '</div>' : '')
+        + '<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">'
+            + '<span>Generado: ' + new Date().toLocaleString('es-PE') + '</span>'
+            + '<span>Azkell Fleet — Sistema de Gestión de Flotas</span>'
+        + '</div>'
+    + '</div>';
+}
+
+// ── Generar PDF de salida (descarga) ─────────────────────────
+window.salGenerarPDF = function(m) {
+    if (!m) return;
+    if (typeof html2pdf === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería html2pdf no cargada', 'danger');
+        return;
+    }
+    var opt = {
+        margin: [8, 8, 8, 8],
+        filename: 'Salida_' + (m.id || 'sin-id') + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = salBuildPDFHtml(m);
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px';
+    document.body.appendChild(wrapper);
+    html2pdf().set(opt).from(wrapper.firstChild).save().then(function() {
+        document.body.removeChild(wrapper);
+    });
+};
+
+// ── Previsualizar comprobante en nueva pestaña ────────────────
+window.salVerPDF = function(m) {
+    if (!m) return;
+    if (typeof html2pdf === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería html2pdf no cargada', 'danger');
+        return;
+    }
+    var opt = {
+        margin: [8, 8, 8, 8],
+        filename: 'Salida_' + (m.id || '') + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = salBuildPDFHtml(m);
+    wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px';
+    document.body.appendChild(wrapper);
+    html2pdf().set(opt).from(wrapper.firstChild).outputPdf('bloburl').then(function(url) {
+        document.body.removeChild(wrapper);
+        window.open(url, '_blank');
     });
 };
 
@@ -403,7 +555,6 @@ window.salGuardarNuevo = function() {
     var resp    = get('sal-f-responsable');
     var obs     = get('sal-f-obs');
 
-    if (!idOt)  { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El N° de OT es requerido', 'danger'); return; }
     if (!fecha) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La fecha es requerida', 'danger'); return; }
 
     var invIds = document.querySelectorAll('.sal-item-inv-id');
@@ -435,7 +586,7 @@ window.salGuardarNuevo = function() {
         items:        items
     };
 
-    fetch('/api/ot-materiales', {
+    fetch('/api/almacen/salidas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -443,12 +594,12 @@ window.salGuardarNuevo = function() {
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
         window.salCerrarNuevo();
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud ' + (d.id || '') + ' registrada', 'success');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + (d.id || '') + ' registrada', 'success');
         salCargar();
     })
     .catch(function(err) {
-        console.error('Error guardando solicitud:', err);
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar la solicitud', 'danger');
+        console.error('Error guardando salida:', err);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar la salida', 'danger');
     });
 };
 
