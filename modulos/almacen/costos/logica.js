@@ -62,10 +62,10 @@ function cosRenderTopConsumido() {
     var top = sorted[0];
     var esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
     el.innerHTML =
-        '<div style="display:flex;align-items:center;gap:16px;padding:1.2rem 1.4rem;">'
-        + '<div style="width:52px;height:52px;border-radius:14px;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;"><i class="bi bi-box-seam" style="color:var(--primary,#5865F2);"></i></div>'
+        '<div style="display:flex;align-items:center;gap:20px;padding:1.8rem 1.6rem;">'
+        + '<div style="width:64px;height:64px;border-radius:16px;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;"><i class="bi bi-box-seam" style="color:var(--primary,#5865F2);"></i></div>'
         + '<div style="flex:1;">'
-        + '<div style="font-size:1rem;font-weight:800;color:var(--text);">' + esc(top.descripcion || '—') + '</div>'
+        + '<div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:4px;">' + esc(top.descripcion || '—') + '</div>'
         + '<div style="font-size:0.78rem;color:var(--subtext);margin-top:3px;">'
         + (top.familia ? '<span style="background:rgba(88,101,242,0.08);color:var(--primary,#5865F2);border-radius:8px;padding:1px 8px;font-size:0.7rem;font-weight:700;margin-right:6px;">' + esc(top.familia) + '</span>' : '')
         + '</div>'

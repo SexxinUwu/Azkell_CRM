@@ -2380,6 +2380,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
     document.body.style.paddingRight = '';
     document.body.style.overflow = '';
 
+    // 🧹 DISPOSE TOOLTIPS — evita crash tooltip.js al navegar entre módulos
+    tooltipList.forEach(function(t) { try { t.dispose(); } catch(e) {} });
+    tooltipList = [];
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        try { const tip = bootstrap.Tooltip.getInstance(el); if (tip) tip.dispose(); } catch(e) {}
+    });
+
     // ⏳ PROGRESS BAR
     window._navProgress.start();
 

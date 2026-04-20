@@ -14,6 +14,10 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Render (y cualquier reverse proxy) necesita esto para que express-rate-limit
+// pueda identificar IPs correctamente desde el header X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
 app.use(compression());
 
@@ -396,9 +400,7 @@ db.query(
     });
 });
 // ── Fix: fleetrun — permitir NULL en columnas legacy NOT NULL ─────────────
-['ALTER TABLE fleetrun MODIFY COLUMN kilometraje_ejecucion INT NULL DEFAULT NULL',
- 'ALTER TABLE fleetrun MODIFY COLUMN fecha_ejecucion DATE NULL DEFAULT NULL',
- 'ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\''
+['ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\''
 ].forEach(function(sql) {
     db.query(sql, function(e) {
         if (!e) console.log('✅ fleetrun nullable fix: ' + sql.substring(0,60));
@@ -2067,8 +2069,7 @@ app.get('/api/auditoria', (req, res) => {
     // Garantizar columna modulo antes de consultar
     db.query('ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL', () => {
         const { modulo, accion, usuario, limit } = req.query;
-        // Usar nombres reales: idAuditoria, fecha, usuario, accion, detalle, modulo
-        let sql = 'SELECT idAuditoria AS id, COALESCE(fecha, `timestamp`) AS fecha, usuario, IFNULL(modulo,\'\') AS modulo, accion, detalle FROM auditoria';
+        let sql = 'SELECT idAuditoria AS id, fecha, usuario, IFNULL(modulo,\'\') AS modulo, accion, detalle FROM auditoria';
         const params = [];
         const conditions = [];
         if (modulo) { conditions.push('modulo = ?'); params.push(modulo); }
@@ -3679,13 +3680,13 @@ db.query(
     'ALTER TABLE inventario ADD COLUMN marca_unidad   VARCHAR(100)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN sistema        VARCHAR(100)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN sub_sistema    VARCHAR(100)     NULL DEFAULT NULL',
-    'ALTER TABLE inventario ADD COLUMN tipo           ENUM("Original","Alternativo") NULL DEFAULT NULL',
-    'ALTER TABLE inventario ADD COLUMN sub_tipo       ENUM("Nuevo","Reparado") NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN tipo           ENUM(\'Original\',\'Alternativo\') NULL DEFAULT NULL',
+    'ALTER TABLE inventario ADD COLUMN sub_tipo       ENUM(\'Nuevo\',\'Reparado\') NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN ubicacion      VARCHAR(150)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN anaquel        DECIMAL(6,2)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN stock_min      DECIMAL(14,4)    NOT NULL DEFAULT 0',
     'ALTER TABLE inventario ADD COLUMN stock_max      DECIMAL(14,4)    NOT NULL DEFAULT 0',
-    'ALTER TABLE inventario ADD COLUMN estado_art     VARCHAR(50)      NULL DEFAULT "Activo"',
+    'ALTER TABLE inventario ADD COLUMN estado_art     VARCHAR(50)      NULL DEFAULT \'Activo\'',
     'ALTER TABLE inventario ADD COLUMN codigo_barras  VARCHAR(100)     NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN imagen_url     TEXT             NULL DEFAULT NULL',
     'ALTER TABLE inventario ADD COLUMN articulo       VARCHAR(300)     NULL DEFAULT NULL',
