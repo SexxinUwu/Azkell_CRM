@@ -390,6 +390,11 @@ db.query(
     'ALTER TABLE tipos_mantenimiento DROP INDEX codigo',
     (e) => { if (!e || e.code === 'ER_CANT_DROP_FIELD_OR_KEY') console.log('✅ tipos_mantenimiento.codigo unique index removido'); }
 );
+// ── Migración: columna descripcion en tipos_mantenimiento ──────────────────
+db.query(
+    'ALTER TABLE tipos_mantenimiento ADD COLUMN descripcion TEXT NULL DEFAULT NULL',
+    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ tipos_mantenimiento.descripcion verificada'); }
+);
 // ── Fix: tipos_mantenimiento — permitir NULL en columnas legacy NOT NULL ──
 ['ALTER TABLE tipos_mantenimiento MODIFY COLUMN codigo VARCHAR(20) NULL DEFAULT \'\'',
  'ALTER TABLE tipos_mantenimiento MODIFY COLUMN descripcion VARCHAR(100) NULL DEFAULT \'\'',
