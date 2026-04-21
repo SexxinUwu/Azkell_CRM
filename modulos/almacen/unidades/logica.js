@@ -52,8 +52,8 @@ window._undRender = function() {
             '<td>' + _undEsc(u.nombre || '—') + (u.descripcion ? '<br><small class="text-muted">' + _undEsc(u.descripcion) + '</small>' : '') + '</td>' +
             '<td>' + (u.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarUnidad(' + u.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarUnidad(' + u.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');
@@ -87,6 +87,7 @@ window.abrirModalUnidad = function(id) {
 window.guardarUnidad = function(event) {
     if (event) event.preventDefault();
     var id   = (document.getElementById('und-edit-id') || {}).value || '';
+    if (!window.guardAction('cfg_almacen', id ? 'e' : 'c')) return;
     var nombre = ((document.getElementById('und-f-nombre') || {}).value || '').trim().toUpperCase();
     var desc   = ((document.getElementById('und-f-descripcion') || {}).value || '').trim();
     var activo = ((document.getElementById('und-f-activo') || {}).value || '1');
@@ -106,6 +107,7 @@ window.guardarUnidad = function(event) {
 };
 
 window.eliminarUnidad = function(id) {
+    if (!window.guardAction('cfg_almacen', 'd')) return;
     if (!confirm('¿Eliminar esta unidad?')) return;
     fetch('/api/almacen/unidades/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })

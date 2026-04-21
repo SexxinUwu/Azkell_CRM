@@ -1643,6 +1643,21 @@ app.post('/api/eliminarMasivo', (req, res) => {
     const { ids, coleccion } = req.body;
     if (!ids || !ids.length || !coleccion) return res.status(400).json({ error: "Datos incompletos" });
 
+    // 🛡️ VALIDACIÓN DE ROLES PARA ELIMINACIÓN MASIVA
+    if (req.user && req.user.rol !== 'Fundador') {
+        try {
+            let p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
+            if (!p.admin) {
+                let mapPerm = { Placas:'placas', Fleetrun:'fleet', Mantenimientos:'fleet', Inspecciones:'insp', statusMant:'insp', StatusFlota:'status', statusFlota:'status', Usuarios:'seg' };
+                let mod = mapPerm[coleccion];
+                if (!mod || !p[mod] || (p[mod].d !== 1 && p[mod].d !== true)) {
+                    console.warn(`[RBAC] Bloqueado eliminarMasivo en ${coleccion}`);
+                    return res.status(403).json({ error: 'Permisos insuficientes para eliminar masivamente' });
+                }
+            }
+        } catch(e) {}
+    }
+
     let tabla = '';
 
     // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota)

@@ -137,7 +137,7 @@ function abrirModalConductor(f = null) {
         camposSelect.forEach(id => document.getElementById(id).disabled = true);
         document.getElementById('c_foto_preview').style.pointerEvents = 'none';
 
-        document.getElementById('btnEditarConductor').style.display = 'inline-block';
+        document.getElementById('btnEditarConductor').style.display = window.checkPerm('cond', 'e') ? 'inline-block' : 'none';
         document.getElementById('btnGuardarConductor').style.display = 'none';
 
     } else {

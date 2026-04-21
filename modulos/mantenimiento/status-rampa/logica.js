@@ -198,8 +198,10 @@ function srRenderTabla() {
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td>' + otsTxt + '</td>';
             html += '<td>';
-            html += '<button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srEditarRampa(' + e._id + ')" title="Editar"><i class="bi bi-pencil"></i></button> ';
-            html += '<button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srLiberarRampa(' + e._id + ')" title="Liberar"><i class="bi bi-box-arrow-right"></i></button>';
+            if (window.checkPerm('ot', 'e')) {
+                html += '<button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srEditarRampa(' + e._id + ')" title="Editar"><i class="bi bi-pencil"></i></button> ';
+                html += '<button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srLiberarRampa(' + e._id + ')" title="Liberar"><i class="bi bi-box-arrow-right"></i></button>';
+            }
             html += '</td></tr>';
         });
     }
@@ -294,9 +296,13 @@ window.srAbrirDetalle = function(id) {
     html += '</div>';
 
     scroll.innerHTML = html;
-    footer.innerHTML =
-        '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarRampa(' + id + ')"><i class="bi bi-pencil me-1"></i>Editar Ingreso</button>' +
-        '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-box-arrow-right me-1"></i>Liberar</button>';
+    
+    footer.innerHTML = '';
+    if (window.checkPerm('ot', 'e')) {
+        footer.innerHTML =
+            '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarRampa(' + id + ')"><i class="bi bi-pencil me-1"></i>Editar Ingreso</button>' +
+            '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-box-arrow-right me-1"></i>Liberar</button>';
+    }
     footer.style.display = 'flex';
 };
 
@@ -355,6 +361,7 @@ window.srEditarRampa = function(id) {
 
 // ── Liberar entrada ──────────────────────────────────────────────
 window.srLiberarRampa = function(id) {
+    if (!window.guardAction('ot', 'e')) return;
     var e = window.srEntradas.find(function(x) { return x._id === id; });
     if (!e) return;
     if (!confirm('¿Confirmar salida de ' + e.placa + ' de la Rampa ' + e.rampa + '?\n\nEl registro quedará en el historial.')) return;
@@ -547,6 +554,8 @@ window.srReactivarRampa = function(id) {
 
 // ── Guardar registro (nueva o edición) ──────────────────────────
 window.srGuardarRegistro = function() {
+    var isEdit = document.getElementById('sr-f-idx') && document.getElementById('sr-f-idx').value !== '';
+    if (!window.guardAction('ot', isEdit ? 'e' : 'c')) return;
     var hidEl   = document.getElementById('sr-f-idx');
     var sRampa  = document.getElementById('sr-f-rampa');
     var sPlaca  = document.getElementById('sr-f-placa');
