@@ -1923,54 +1923,6 @@ window.actualizarBadgesSidebar = function() {
     }, { passive: true });
 })();
 
-window.generarEstadoVacio = function(icono, titulo, descripcion, compacto) {
-    icono       = icono       || 'bi-inbox';
-    titulo      = titulo      || 'Sin datos';
-    descripcion = descripcion || 'No hay registros para mostrar.';
-    var cls = compacto ? 'empty-state empty-state-sm' : 'empty-state';
-    return '<div class="' + cls + '">' +
-        '<i class="bi ' + icono + ' empty-icon"></i>' +
-        '<h5>' + titulo + '</h5>' +
-        '<p>' + descripcion + '</p>' +
-        '</div>';
-};
-
-// ─── Avatares generados ─────────────────────────────────────────
-window.generarAvatar = function(nombre, size) {
-    nombre = nombre || 'U';
-    size   = size   || 36;
-    var initials = nombre.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
-    var palette  = ['#2563eb','#7c3aed','#db2777','#ea580c','#16a34a','#0891b2','#9333ea','#c2410c'];
-    var idx      = nombre.split('').reduce(function(a,c){ return a + c.charCodeAt(0); }, 0) % palette.length;
-    var color    = palette[idx];
-    var r        = Math.round(size / 3);
-    return '<div class="user-avatar" style="width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:' + r + 'px;display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(size * 0.38) + 'px;font-weight:700;color:#fff;flex-shrink:0;">' + initials + '</div>';
-};
-
-window._actualizarAvatares = function(nombre) {
-    var els = document.querySelectorAll('.js-user-avatar');
-    for (var i = 0; i < els.length; i++) {
-        var sz = parseInt(els[i].getAttribute('data-size') || '36');
-        els[i].outerHTML = window.generarAvatar(nombre, sz).replace('class="user-avatar"', 'class="user-avatar js-user-avatar" data-size="' + sz + '"');
-    }
-};
-
-// ─── Copy-to-clipboard ──────────────────────────────────────────
-window.copiarTexto = function(texto, btnEl) {
-    if (!navigator.clipboard) {
-        window.mostrarToast('Portapapeles no disponible', 'warning'); return;
-    }
-    navigator.clipboard.writeText(texto).then(function() {
-        window.mostrarToast('¡Copiado al portapapeles!', 'success', 2000);
-        if (btnEl) {
-            var orig = btnEl.innerHTML;
-            btnEl.innerHTML = '<i class="bi bi-check-lg" style="color:#10b981"></i>';
-            btnEl.disabled = true;
-            setTimeout(function() { btnEl.innerHTML = orig; btnEl.disabled = false; }, 1800);
-        }
-    }).catch(function() { window.mostrarToast('No se pudo copiar', 'error', 2000); });
-};
-
 // ─── Modal de confirmación elegante ─────────────────────────────
 window._confirmarResolve = null;
 window.confirmar = function(opts) {
