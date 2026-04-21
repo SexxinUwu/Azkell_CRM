@@ -2443,7 +2443,14 @@ window.cargarModuloAislado = async function(rutaModulo) {
         let nombreCarpeta = (rutaModulo.split('/')[1] || rutaModulo.split('/')[0]).replace(/-/g, '_');
         let funcionInit = `init_${nombreCarpeta}`;
         script.onload = function() {
-            if (typeof window[funcionInit] === 'function') window[funcionInit]();
+            if (typeof window[funcionInit] === 'function') {
+                window[funcionInit]();
+            } else {
+                // Fallback: módulos con guiones en el nombre (ej: init_configuracion-mp)
+                var carpetaOriginal = rutaModulo.split('/')[1] || rutaModulo.split('/')[0];
+                var funcionInitHyphen = 'init_' + carpetaOriginal;
+                if (typeof window[funcionInitHyphen] === 'function') window[funcionInitHyphen]();
+            }
         };
         document.body.appendChild(script);
         window._navProgress.done();
