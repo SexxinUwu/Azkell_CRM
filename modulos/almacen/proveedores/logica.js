@@ -6,6 +6,8 @@ window._provData          = window._provData          || [];
 window._provFiltrados     = window._provFiltrados     || [];
 window._provMarcas        = window._provMarcas        || [];
 window._provSeleccionados = window._provSeleccionados || [];
+window._provPagina        = window._provPagina        || 1;
+window._provPorPagina     = 25;
 
 window.init_proveedores = function() {
     if (!window.checkPerm('prov_inv', 'l')) {
@@ -52,17 +54,26 @@ window.filtrarProveedores = function() {
         var matchE = !filEst || d.estado === filEst;
         return matchB && matchE;
     });
+    window._provPagina = 1;
     window._provRender();
 };
 
 window._provRender = function() {
-    var datos = window._provFiltrados || [];
+    var todos = window._provFiltrados || [];
+    var total = todos.length;
+    var porPag = window._provPorPagina || 25;
+    var paginas = Math.max(1, Math.ceil(total / porPag));
+    if (window._provPagina > paginas) window._provPagina = paginas;
+    var inicio = (window._provPagina - 1) * porPag;
+    var datos = todos.slice(inicio, inicio + porPag);
+
     var cont  = document.getElementById('prov-contador');
-    if (cont) cont.textContent = datos.length + ' proveedor' + (datos.length!==1?'es':'');
+    if (cont) cont.textContent = total + ' proveedor' + (total!==1?'es':'');
     var tbody = document.getElementById('tbody-proveedores');
     if (!tbody) return;
     if (!datos.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin proveedores</td></tr>';
+        window._provRenderPaginador(0, 1, 0);
         return;
     }
     var sel = window._provSeleccionados || [];
@@ -89,7 +100,32 @@ window._provRender = function() {
             '</div></td>'+
         '</tr>';
     }).join('');
+    window._provRenderPaginador(total, paginas, inicio + datos.length);
     window._provActualizarBtnMasivo();
+};
+
+window._provRenderPaginador = function(total, paginas, hasta) {
+    var cont = document.getElementById('prov-paginador');
+    if (!cont) return;
+    if (paginas <= 1) { cont.innerHTML = ''; return; }
+    var pag = window._provPagina;
+    var btns = '';
+    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+pag+'- 1)" '+(pag<=1?'disabled':'')+'>‹ Ant</button>';
+    // Números de página (máx 5 visibles)
+    var start = Math.max(1, pag - 2), end = Math.min(paginas, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+    for (var i = start; i <= end; i++) {
+        btns += '<button class="btn btn-xs '+(i===pag?'btn-primary':'btn-outline-secondary')+'" onclick="window._provIrPagina('+i+')">'+i+'</button>';
+    }
+    btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+pag+'+ 1)" '+(pag>=paginas?'disabled':'')+'>Sig ›</button>';
+    btns += '<span class="text-muted small ms-2">Pág '+pag+' de '+paginas+' ('+total+' total)</span>';
+    cont.innerHTML = btns;
+};
+
+window._provIrPagina = function(pag) {
+    var paginas = Math.max(1, Math.ceil((window._provFiltrados||[]).length / (window._provPorPagina||25)));
+    window._provPagina = Math.max(1, Math.min(paginas, pag));
+    window._provRender();
 };
 
 // ── Tags de marca ─────────────────────────────────────────────────

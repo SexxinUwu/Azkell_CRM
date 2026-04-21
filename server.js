@@ -3910,54 +3910,79 @@ app.delete('/api/almacen/proveedores/:id', (req, res) => {
     });
 });
 
-app.post('/api/almacen/importarProveedoresMasivo', (req, res) => {
+app.post('/api/almacen/importarProveedoresMasivo', async (req, res) => {
     const lista = req.body.proveedores || [];
     if (!lista.length) return res.status(400).json({ error: 'Sin datos' });
-    let insertados = 0, actualizados = 0, errores = 0;
-    const procesar = (i) => {
-        if (i >= lista.length) return res.json({ insertados, actualizados, errores });
-        const p = lista[i];
-        if (!p.nombre) { errores++; return procesar(i + 1); }
-        // Normalizar marcas: string "WIX, MOBIL" → array ["WIX","MOBIL"]
-        const marcasArr = p.marcas
-            ? (typeof p.marcas === 'string' ? p.marcas.split(',').map(m => m.trim()).filter(Boolean) : p.marcas)
-            : [];
-        db.query('SELECT id FROM proveedores_inv WHERE nombre=? LIMIT 1', [p.nombre], (err, rows) => {
-            if (err) { errores++; return procesar(i + 1); }
-            const existingId = rows.length ? rows[0].id : null;
-            if (existingId) {
-                db.query(
-                    'UPDATE proveedores_inv SET razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
-                    [p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
-                     p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null, existingId],
-                    (err2) => {
-                        if (err2) { errores++; return procesar(i + 1); }
-                        actualizados++;
-                        db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [existingId], () => {
-                            if (marcasArr.length) {
-                                db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [existingId, m])], () => procesar(i + 1));
-                            } else { procesar(i + 1); }
-                        });
-                    });
-            } else {
-                _generarCodigoAlmacen('PROV', null, (err, id) => {
-                    if (err) { errores++; return procesar(i + 1); }
-                    db.query(
-                        'INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                        [id, p.nombre, p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
-                         p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null],
-                        (err2) => {
-                            if (err2) { errores++; return procesar(i + 1); }
-                            insertados++;
-                            if (marcasArr.length) {
-                                db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [id, m])], () => procesar(i + 1));
-                            } else { procesar(i + 1); }
-                        });
-                });
+
+    // Helper promisificado
+    const dbq = (sql, params) => new Promise((resolve, reject) =>
+        db.query(sql, params || [], (err, rows) => err ? reject(err) : resolve(rows))
+    );
+
+    try {
+        // 1. Buscar todos los existentes por nombre en una sola query
+        const nombres = lista.filter(p => p.nombre).map(p => p.nombre);
+        if (!nombres.length) return res.json({ insertados: 0, actualizados: 0, errores: lista.length });
+
+        const existentes = await dbq('SELECT id, nombre FROM proveedores_inv WHERE nombre IN (?)', [nombres]);
+        const existMap = {};
+        existentes.forEach(r => { existMap[r.nombre] = r.id; });
+
+        // 2. Separar nuevos vs a actualizar
+        const nuevos    = lista.filter(p => p.nombre && !existMap[p.nombre]);
+        const actualizar = lista.filter(p => p.nombre && existMap[p.nombre]);
+
+        // 3. Obtener próximo número de secuencia una sola vez
+        let startNum = 1;
+        if (nuevos.length) {
+            const maxRow = await dbq("SELECT MAX(id) AS max_id FROM proveedores_inv WHERE id LIKE 'PROV-%'");
+            if (maxRow[0] && maxRow[0].max_id) {
+                const parts = maxRow[0].max_id.split('-');
+                const last = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(last)) startNum = last + 1;
             }
-        });
-    };
-    procesar(0);
+        }
+
+        const mkMarcas = p => p.marcas
+            ? (typeof p.marcas === 'string' ? p.marcas.split(',').map(m => m.trim()).filter(Boolean) : (p.marcas || []))
+            : [];
+
+        let insertados = 0, actualizados = 0, errores = 0;
+
+        // 4. INSERT nuevos en paralelo (IDs pre-asignados, sin race condition)
+        await Promise.all(nuevos.map((p, i) => {
+            const id = 'PROV-' + String(startNum + i).padStart(3, '0');
+            const marcasArr = mkMarcas(p);
+            return dbq(
+                'INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                [id, p.nombre, p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
+                 p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null]
+            ).then(() => {
+                insertados++;
+                if (marcasArr.length) return dbq('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [id, m])]);
+            }).catch(() => { errores++; });
+        }));
+
+        // 5. UPDATE existentes en paralelo + refresh marcas
+        await Promise.all(actualizar.map(p => {
+            const id = existMap[p.nombre];
+            const marcasArr = mkMarcas(p);
+            return dbq(
+                'UPDATE proveedores_inv SET razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
+                [p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
+                 p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null, id]
+            ).then(() => {
+                actualizados++;
+                return dbq('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [id]).then(() => {
+                    if (marcasArr.length) return dbq('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [id, m])]);
+                });
+            }).catch(() => { errores++; });
+        }));
+
+        res.json({ insertados, actualizados, errores });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/almacen/proveedores/bulk-delete', (req, res) => {
