@@ -2,9 +2,10 @@
 // MÓDULO ALMACÉN / PROVEEDORES — Lógica SPA Aislada
 // ================================================================
 
-window._provData      = window._provData      || [];
-window._provFiltrados = window._provFiltrados || [];
-window._provMarcas    = window._provMarcas    || [];
+window._provData          = window._provData          || [];
+window._provFiltrados     = window._provFiltrados     || [];
+window._provMarcas        = window._provMarcas        || [];
+window._provSeleccionados = window._provSeleccionados || [];
 
 window.init_proveedores = function() {
     if (!window.checkPerm('prov_inv', 'l')) {
@@ -22,8 +23,10 @@ window.init_proveedores = function() {
 };
 
 window.cargarProveedores = function() {
+    window._provSeleccionados = [];
+    window._provActualizarBtnMasivo();
     var tbody = document.getElementById('tbody-proveedores');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
     fetch('/api/almacen/proveedores')
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(data) {
@@ -33,7 +36,7 @@ window.cargarProveedores = function() {
         })
         .catch(function(err) {
             var t = document.getElementById('tbody-proveedores');
-            if (t) t.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
+            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
         });
 };
 
@@ -59,9 +62,10 @@ window._provRender = function() {
     var tbody = document.getElementById('tbody-proveedores');
     if (!tbody) return;
     if (!datos.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin proveedores</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin proveedores</td></tr>';
         return;
     }
+    var sel = window._provSeleccionados || [];
     tbody.innerHTML = datos.map(function(d) {
         var estadoBadge = d.estado === 'Activo'
             ? '<span class="badge bg-success-subtle text-success">Activo</span>'
@@ -69,7 +73,9 @@ window._provRender = function() {
         var marcasBadges = d.marcas
             ? d.marcas.split(', ').map(function(m) { return '<span class="badge bg-info-subtle text-info border border-info border-opacity-25 ms-1">'+_provEsc(m)+'</span>'; }).join('')
             : '—';
+        var checked = sel.indexOf(d.id) !== -1 ? ' checked' : '';
         return '<tr>'+
+            '<td><input type="checkbox" class="form-check-input" onchange="window._provToggleSel(\''+_provEsc(d.id)+'\',this.checked)"'+checked+'></td>'+
             '<td><span class="badge bg-secondary fw-normal">'+_provEsc(d.id||'')+'</span></td>'+
             '<td>'+_provEsc(d.nombre||'')+(d.razon_social?'<br><small class="text-muted">'+_provEsc(d.razon_social)+'</small>':'')+'</td>'+
             '<td><span class="badge bg-light text-dark border">'+_provEsc(d.tipo_documento||'—')+'</span></td>'+
@@ -83,6 +89,7 @@ window._provRender = function() {
             '</div></td>'+
         '</tr>';
     }).join('');
+    window._provActualizarBtnMasivo();
 };
 
 // ── Tags de marca ─────────────────────────────────────────────────
@@ -215,7 +222,46 @@ window.descargarPlantillaProveedores = function() {
     XLSX.writeFile(wb, 'Plantilla_Proveedores.xlsx');
 };
 
-// ── Importar Excel ────────────────────────────────────────────────
+// ── Selección masiva ──────────────────────────────────────────────
+window._provToggleSel = function(id, checked) {
+    var arr = window._provSeleccionados || [];
+    if (checked) { if (arr.indexOf(id) === -1) arr.push(id); }
+    else { window._provSeleccionados = arr.filter(function(x) { return x !== id; }); return window._provActualizarBtnMasivo(); }
+    window._provSeleccionados = arr;
+    window._provActualizarBtnMasivo();
+};
+
+window._provToggleSelAll = function(checked) {
+    window._provSeleccionados = checked ? (window._provFiltrados||[]).map(function(d){ return d.id; }) : [];
+    window._provRender();
+};
+
+window._provActualizarBtnMasivo = function() {
+    var btn = document.getElementById('prov-btn-eliminar-masivo');
+    var n = (window._provSeleccionados||[]).length;
+    if (!btn) return;
+    btn.style.display = n > 0 ? '' : 'none';
+    btn.innerHTML = '<i class="bi bi-trash me-1"></i>Eliminar ' + n + ' seleccionado' + (n!==1?'s':'');
+};
+
+window.eliminarMasivoProveedores = function() {
+    if (!window.guardAction('prov_inv', 'd')) return;
+    var ids = window._provSeleccionados || [];
+    if (!ids.length) return;
+    if (!confirm('¿Eliminar ' + ids.length + ' proveedor' + (ids.length!==1?'es':'') + '? Esta acción no se puede deshacer.')) return;
+    fetch('/api/almacen/proveedores/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(res) {
+        window._provSeleccionados = [];
+        window.cargarProveedores();
+    })
+    .catch(function(err) { alert('Error: '+err.message); });
+};
+
 window.importarExcelProveedores = function(event) {
     var file = event.target.files[0];
     if (!file) return;

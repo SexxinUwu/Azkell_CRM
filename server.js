@@ -3918,26 +3918,56 @@ app.post('/api/almacen/importarProveedoresMasivo', (req, res) => {
         if (i >= lista.length) return res.json({ insertados, actualizados, errores });
         const p = lista[i];
         if (!p.nombre) { errores++; return procesar(i + 1); }
-        const marcas = Array.isArray(p.marcas) ? p.marcas.join(', ') : (p.marcas || '');
-        db.query(
-            `INSERT INTO proveedores_inv (nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, marcas, estado, observaciones)
-             VALUES (?,?,?,?,?,?,?,?,?,?)
-             ON DUPLICATE KEY UPDATE
-               razon_social=VALUES(razon_social), tipo_documento=VALUES(tipo_documento),
-               numero_documento=VALUES(numero_documento), telefono=VALUES(telefono),
-               email=VALUES(email), direccion=VALUES(direccion),
-               marcas=VALUES(marcas), estado=VALUES(estado), observaciones=VALUES(observaciones)`,
-            [p.nombre, p.razon_social||'', p.tipo_documento||'RUC', p.numero_documento||'',
-             p.telefono||'', p.email||'', p.direccion||'', marcas, p.estado||'Activo', p.observaciones||''],
-            (err, result) => {
-                if (err) { errores++; }
-                else if (result.insertId > 0 && result.affectedRows === 1) { insertados++; }
-                else { actualizados++; }
-                procesar(i + 1);
+        // Normalizar marcas: string "WIX, MOBIL" → array ["WIX","MOBIL"]
+        const marcasArr = p.marcas
+            ? (typeof p.marcas === 'string' ? p.marcas.split(',').map(m => m.trim()).filter(Boolean) : p.marcas)
+            : [];
+        db.query('SELECT id FROM proveedores_inv WHERE nombre=? LIMIT 1', [p.nombre], (err, rows) => {
+            if (err) { errores++; return procesar(i + 1); }
+            const existingId = rows.length ? rows[0].id : null;
+            if (existingId) {
+                db.query(
+                    'UPDATE proveedores_inv SET razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
+                    [p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
+                     p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null, existingId],
+                    (err2) => {
+                        if (err2) { errores++; return procesar(i + 1); }
+                        actualizados++;
+                        db.query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [existingId], () => {
+                            if (marcasArr.length) {
+                                db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [existingId, m])], () => procesar(i + 1));
+                            } else { procesar(i + 1); }
+                        });
+                    });
+            } else {
+                _generarCodigoAlmacen('PROV', null, (err, id) => {
+                    if (err) { errores++; return procesar(i + 1); }
+                    db.query(
+                        'INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                        [id, p.nombre, p.razon_social||null, p.tipo_documento||'RUC', p.numero_documento||null,
+                         p.telefono||null, p.email||null, p.direccion||null, p.estado||'Activo', p.observaciones||null],
+                        (err2) => {
+                            if (err2) { errores++; return procesar(i + 1); }
+                            insertados++;
+                            if (marcasArr.length) {
+                                db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [marcasArr.map(m => [id, m])], () => procesar(i + 1));
+                            } else { procesar(i + 1); }
+                        });
+                });
             }
-        );
+        });
     };
     procesar(0);
+});
+
+app.post('/api/almacen/proveedores/bulk-delete', (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Sin IDs' });
+    const placeholders = ids.map(() => '?').join(',');
+    db.query('DELETE FROM proveedores_inv WHERE id IN (' + placeholders + ')', ids, (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, eliminados: result.affectedRows });
+    });
 });
 
 // ============================================================
