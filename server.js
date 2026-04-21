@@ -3248,6 +3248,18 @@ app.delete('/api/tipos-mantenimiento/:id', (req, res) => {
     });
 });
 
+// POST /api/tipos-mantenimiento/bulk-delete — eliminación masiva por IDs
+app.post('/api/tipos-mantenimiento/bulk-delete', (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length)
+        return res.status(400).json({ error: 'Sin IDs' });
+    const placeholders = ids.map(function(){ return '?'; }).join(',');
+    db.query('DELETE FROM tipos_mantenimiento WHERE id IN (' + placeholders + ')', ids, (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, eliminados: result.affectedRows });
+    });
+});
+
 // POST /api/tipos-mantenimiento/importar — importación masiva (upsert por marca+tipo_mp+uts)
 app.post('/api/tipos-mantenimiento/importar', async (req, res) => {
     const { registros } = req.body;

@@ -59,6 +59,10 @@
               onclick="window.cargarTablaConfigFlota()">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
+      <button id="cfg-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none"
+              onclick="window.eliminarMasivoConfigFlota()">
+        <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionados
+      </button>
       <button class="btn btn-sm btn-primary fw-bold" onclick="window.abrirModalConfigFlota()">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Tipo MP
       </button>
@@ -68,6 +72,7 @@
       <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
         <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
           <tr style="border-bottom:2px solid var(--border)">
+            <th style="width:32px"><input type="checkbox" class="form-check-input" id="cfg-chk-all" onchange="window._cfgToggleSelAll(this.checked)" title="Seleccionar todos"></th>
             <th style="min-width:80px">Marca</th>
             <th style="min-width:140px">Tipo MP</th>
             <th>UTS</th>
@@ -81,7 +86,7 @@
           </tr>
         </thead>
         <tbody id="cfg-flota-tbody">
-          <tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+          <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
         </tbody>
       </table>
     </div>

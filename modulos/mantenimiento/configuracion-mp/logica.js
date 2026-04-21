@@ -11,6 +11,7 @@ function _bsModal(el) {
 window.cfgDataFlota    = window.cfgDataFlota    || [];
 window.cfgDataFlotaFil = window.cfgDataFlotaFil || [];
 window.cmpImportRows   = window.cmpImportRows   || [];
+window._cfgSeleccionados = window._cfgSeleccionados || [];
 
 // ── Entry point ───────────────────────────────────────────────────
 window['init_configuracion-mp'] = function() {
@@ -20,7 +21,6 @@ window['init_configuracion-mp'] = function() {
     }
     var btnNuevo = document.querySelector('[onclick*="abrirModalConfigFlota"]');
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('cfg_mant','c') ? '' : 'none';
-    // Registrar callback: al seleccionar una marca en el filtro, disparar filtrado
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('cfg-flota-fil-marca', function() { window.filtrarTablaConfigFlota(); });
     }
@@ -67,11 +67,13 @@ function _cfPopularDatalists() {
 window.cargarTablaConfigFlota = function() {
     var tb = document.getElementById('cfg-flota-tbody');
     if (!tb) return;
-    tb.innerHTML = '<tr><td colspan="10" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="11" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></td></tr>';
     fetch('/api/tipos-mantenimiento')
-        .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function(r) { return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error || ('HTTP ' + r.status)); }); })
         .then(function(j) {
             window.cfgDataFlota = j.data || [];
+            window._cfgSeleccionados = [];
+            _cfgActualizarBtnMasivo();
             var prev = typeof window._cbGet === 'function' ? window._cbGet('cfg-flota-fil-marca') : '';
             var marcasMap = {};
             window.cfgDataFlota.forEach(function(r) {
@@ -84,7 +86,14 @@ window.cargarTablaConfigFlota = function() {
             if (prev && typeof window._cbSet === 'function') window._cbSet('cfg-flota-fil-marca', prev, prev);
             window.filtrarTablaConfigFlota();
         })
-        .catch(function(e) { console.error(e); });
+        .catch(function(e) {
+            console.error('cargarTablaConfigFlota:', e);
+            var tb2 = document.getElementById('cfg-flota-tbody');
+            if (tb2) tb2.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:#dc2626">'
+                + '<i class="bi bi-exclamation-triangle me-1"></i>Error al cargar datos. '
+                + '<a href="#" onclick="window.cargarTablaConfigFlota();return false">Reintentar</a>'
+                + '</td></tr>';
+        });
 };
 
 window.filtrarTablaConfigFlota = function() {
@@ -102,16 +111,19 @@ window.filtrarTablaConfigFlota = function() {
     var tb = document.getElementById('cfg-flota-tbody');
     if (!tb) return;
     if (!window.cfgDataFlotaFil.length) {
-        tb.innerHTML = '<tr><td colspan="10" class="text-center py-4" style="color:var(--subtext)">Sin tipos de mantenimiento</td></tr>';
+        tb.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Sin tipos de mantenimiento</td></tr>';
         return;
     }
+    var sel = window._cfgSeleccionados || [];
     tb.innerHTML = window.cfgDataFlotaFil.map(function(r) {
+        var checked = sel.indexOf(r.id) !== -1 ? 'checked' : '';
         var utsBadge = r.uts === 'LOCAL'
             ? '<span class="badge bg-info text-dark">LOCAL</span>'
             : (r.uts === 'NACIONAL' ? '<span class="badge bg-warning text-dark">NACIONAL</span>' : (r.uts || '—'));
         return '<tr>' +
-            '<td class="fw-bold">' + r.marca + '</td>' +
-            '<td><span class="badge bg-primary">' + r.tipo_mp + '</span></td>' +
+            '<td><input type="checkbox" class="form-check-input cfg-chk" value="' + r.id + '" ' + checked + ' onchange="window._cfgToggleSel(' + r.id + ',this.checked)"></td>' +
+            '<td class="fw-bold">' + (r.marca||'') + '</td>' +
+            '<td><span class="badge bg-primary">' + (r.tipo_mp||'') + '</span></td>' +
             '<td>' + utsBadge + '</td>' +
             '<td>' + (r.frecuencia_km   ? (parseInt(r.frecuencia_km)||0).toLocaleString('es-PE') + ' km' : '—') + '</td>' +
             '<td>' + (r.frecuencia_horas ? (parseInt(r.frecuencia_horas)||0) + ' h'                      : '—') + '</td>' +
@@ -124,6 +136,54 @@ window.filtrarTablaConfigFlota = function() {
                 '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarConfigFlota(' + r.id + ',\'' + (r.marca + ' ' + r.tipo_mp).replace(/'/g,'') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
             '</td></tr>';
     }).join('');
+};
+
+// ── Selección masiva ──────────────────────────────────────────────
+window._cfgToggleSel = function(id, checked) {
+    window._cfgSeleccionados = window._cfgSeleccionados || [];
+    if (checked) {
+        if (window._cfgSeleccionados.indexOf(id) === -1) window._cfgSeleccionados.push(id);
+    } else {
+        window._cfgSeleccionados = window._cfgSeleccionados.filter(function(x){ return x !== id; });
+    }
+    _cfgActualizarBtnMasivo();
+};
+
+window._cfgToggleSelAll = function(checked) {
+    window._cfgSeleccionados = checked
+        ? (window.cfgDataFlotaFil||[]).map(function(r){ return r.id; })
+        : [];
+    document.querySelectorAll('.cfg-chk').forEach(function(chk) { chk.checked = checked; });
+    _cfgActualizarBtnMasivo();
+};
+
+function _cfgActualizarBtnMasivo() {
+    var n = (window._cfgSeleccionados||[]).length;
+    var btn = document.getElementById('cfg-btn-eliminar-masivo');
+    if (btn) {
+        btn.style.display = n > 0 ? '' : 'none';
+        btn.textContent = 'Eliminar ' + n + ' seleccionado' + (n !== 1 ? 's' : '');
+    }
+    var chkAll = document.getElementById('cfg-chk-all');
+    if (chkAll) chkAll.indeterminate = n > 0 && n < (window.cfgDataFlotaFil||[]).length;
+}
+
+window.eliminarMasivoConfigFlota = function() {
+    var ids = window._cfgSeleccionados || [];
+    if (!ids.length) return;
+    if (!confirm('¿Eliminar ' + ids.length + ' registro(s) seleccionado(s)? Esta acción no se puede deshacer.')) return;
+    fetch('/api/tipos-mantenimiento/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+    })
+    .then(function(r){ return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error); }); })
+    .then(function(res){
+        window.mostrarToast('Eliminados: ' + (res.eliminados||ids.length) + ' registros', 'success');
+        window._cfgSeleccionados = [];
+        window.cargarTablaConfigFlota();
+    })
+    .catch(function(e){ window.mostrarToast('Error: ' + e.message, 'danger'); });
 };
 
 window.abrirModalConfigFlota = function() {
