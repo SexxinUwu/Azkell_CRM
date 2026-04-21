@@ -272,6 +272,7 @@ window._entRender = function() {
     var pag = Math.min(window._entPagActual, totalPag);
     window._entPagActual = pag;
     var pagina = datos.slice((pag - 1) * _ENT_POR_PAG, pag * _ENT_POR_PAG);
+    var canDelete = window.checkPerm('ent_inv', 'd');
 
     var cont = document.getElementById('ent-contador');
     if (cont) cont.textContent = total + ' registro' + (total !== 1 ? 's' : '');
@@ -298,7 +299,7 @@ window._entRender = function() {
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Descargar PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                        (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                     '</div>' +
                 '</td></tr>';
         }).join('');
