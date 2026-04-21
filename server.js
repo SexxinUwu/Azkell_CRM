@@ -397,8 +397,13 @@ db.query(
 );
 // ── Fix: tipos_mantenimiento — permitir NULL en columnas legacy NOT NULL ──
 ['ALTER TABLE tipos_mantenimiento MODIFY COLUMN codigo VARCHAR(20) NULL DEFAULT \'\'',
- 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN descripcion VARCHAR(100) NULL DEFAULT \'\'',
- 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN km_intervalo INT NULL DEFAULT NULL'
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN descripcion TEXT NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN km_intervalo INT NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN tipo VARCHAR(100) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN sistema VARCHAR(100) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_km DECIMAL(10,2) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL',
+ 'ALTER TABLE tipos_mantenimiento MODIFY COLUMN frecuencia_dias INT NULL DEFAULT NULL'
 ].forEach(function(sql) {
     db.query(sql, function(e) {
         if (!e) console.log('✅ tipos_mantenimiento nullable fix: ' + sql.substring(0,60));
