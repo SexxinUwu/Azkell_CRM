@@ -69,6 +69,7 @@ const db = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: Number(process.env.DB_PORT),
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     ssl: { rejectUnauthorized: false }, // Crucial para que Render acepte a Aiven
     charset: 'utf8mb4',
     waitForConnections: true,
@@ -729,6 +730,26 @@ function verifyToken(req, res, next) {
     }
 }
 app.use('/api', verifyToken);
+
+// ============================================================
+// 🛡️ MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
+// ============================================================
+function requirePerm(modulo, accion) {
+    return (req, res, next) => {
+        if (!req.user) return res.status(401).json({ error: 'No autenticado' });
+        if (req.user.rol === 'Fundador') return next();
+        try {
+            let p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
+            if (p.admin === true) return next();
+            let m = p[modulo];
+            if (!m) return res.status(403).json({ error: `Acceso denegado al módulo: ${modulo}` });
+            if (m[accion] === 1 || m[accion] === true) return next();
+            return res.status(403).json({ error: 'Permisos insuficientes para esta acción en el servidor' });
+        } catch (e) {
+            return res.status(403).json({ error: 'Error de permisos' });
+        }
+    };
+}
 
 setInterval(() => {
     sseClients.forEach(c => {
