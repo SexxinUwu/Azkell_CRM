@@ -40,6 +40,10 @@
       <option value="Activo">Activos</option>
       <option value="Inactivo">Inactivos</option>
     </select>
+    <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none"
+            onclick="window.eliminarMasivoProveedores()">
+      <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionados
+    </button>
     <span id="prov-contador" class="text-muted small ms-auto"></span>
   </div>
 
@@ -48,6 +52,7 @@
     <table class="table table-custom table-hover m-0">
       <thead>
         <tr>
+          <th style="width:32px"><input type="checkbox" class="form-check-input" id="prov-chk-all" onchange="window._provToggleSelAll(this.checked)" title="Seleccionar todos"></th>
           <th>ID</th>
           <th>Nombre</th>
           <th>Tipo Doc.</th>
@@ -59,7 +64,7 @@
         </tr>
       </thead>
       <tbody id="tbody-proveedores">
-        <tr><td colspan="8" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+        <tr><td colspan="9" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
       </tbody>
     </table>
   </div>
