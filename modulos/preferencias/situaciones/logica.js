@@ -8,6 +8,12 @@ window.sitFiltrados = window.sitFiltrados || [];
 
 // ── Entry point ─────────────────────────────────────────────────
 window.init_situaciones = function() {
+    if (!window.checkPerm('ot', 'l') && !window.checkPerm('cfg_mant', 'l')) {
+        window.showNoPermMsg('root-dinamico');
+        return;
+    }
+    var btnNuevo = document.querySelector('[onclick*="sitNueva"]');
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('ot', 'c') ? '' : 'none';
     sitCargar();
 };
 
@@ -50,10 +56,10 @@ function sitRenderizar() {
               + '<span style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></span>'
               + _sitEsc(label)
               + '</span></td>';
-        html += '<td style="text-align:right;">'
-              + '<button class="btn btn-sm btn-outline-secondary me-1" onclick="window.sitEditar(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>'
-              + '<button class="btn btn-sm btn-outline-danger" onclick="window.sitEliminar(' + s.id + ',\'' + _sitEsc(label) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>'
-              + '</td>';
+        html += '<td style="text-align:right;">' +
+            (window.checkPerm('ot','e') ? '<button class="btn btn-sm btn-outline-secondary me-1" onclick="window.sitEditar(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+            (window.checkPerm('ot','d') ? '<button class="btn btn-sm btn-outline-danger" onclick="window.sitEliminar(' + s.id + ',\'' + _sitEsc(label) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+            '</td>';
         html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -106,6 +112,8 @@ window.sitGuardar = function() {
     var color  = colorEl  ? colorEl.value  : '#94a3b8';
     var id     = idEl     ? idEl.value     : '';
 
+    if (!window.guardAction('ot', id ? 'e' : 'c')) return;
+
     if (!nombre) {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('El nombre es requerido', 'danger');
         if (nombreEl) nombreEl.focus();
@@ -133,6 +141,7 @@ window.sitGuardar = function() {
 
 // ── Eliminar ─────────────────────────────────────────────────────
 window.sitEliminar = function(id, nombre) {
+    if (!window.guardAction('ot', 'd')) return;
     if (!confirm('¿Eliminar la situación "' + nombre + '"?\nEsta acción no se puede deshacer.')) return;
 
     fetch('/api/cat-situaciones/' + id, { method: 'DELETE' })
