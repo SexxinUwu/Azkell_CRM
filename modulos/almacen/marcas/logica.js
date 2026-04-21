@@ -53,8 +53,8 @@ window._mrcRender = function() {
             '<td class="text-muted small">' + _mrcEsc(m.descripcion || '—') + '</td>' +
             '<td>' + (m.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalMarca(' + m.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarMarca(' + m.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalMarca(' + m.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarMarca(' + m.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');
@@ -88,6 +88,7 @@ window.abrirModalMarca = function(id) {
 window.guardarMarca = function(event) {
     if (event) event.preventDefault();
     var id     = (document.getElementById('mrc-edit-id') || {}).value || '';
+    if (!window.guardAction('cfg_almacen', id ? 'e' : 'c')) return;
     var nombre = ((document.getElementById('mrc-f-nombre') || {}).value || '').trim().toUpperCase();
     var desc   = ((document.getElementById('mrc-f-descripcion') || {}).value || '').trim();
     var activo = ((document.getElementById('mrc-f-activo') || {}).value || '1');
@@ -107,6 +108,7 @@ window.guardarMarca = function(event) {
 };
 
 window.eliminarMarca = function(id) {
+    if (!window.guardAction('cfg_almacen', 'd')) return;
     if (!confirm('¿Eliminar esta marca?')) return;
     fetch('/api/almacen/marcas/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })

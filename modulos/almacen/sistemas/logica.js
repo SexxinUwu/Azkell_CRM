@@ -55,8 +55,8 @@ window._sisRender = function() {
             '<td>' + (subs || '<small class="text-muted">Sin sub-sistemas</small>') + '</td>' +
             '<td>' + (s.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalSistema(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSistema(' + s.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalSistema(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarSistema(' + s.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');
@@ -131,6 +131,7 @@ window.abrirModalSistema = function(id) {
 window.guardarSistema = function(event) {
     if (event) event.preventDefault();
     var id   = (document.getElementById('sis-edit-id') || {}).value || '';
+    if (!window.guardAction('cfg_almacen', id ? 'e' : 'c')) return;
     var nombre = ((document.getElementById('sis-f-nombre') || {}).value || '').trim().toUpperCase();
     var orden  = parseInt((document.getElementById('sis-f-orden') || {}).value || '0') || 0;
     var activo = ((document.getElementById('sis-f-activo') || {}).value || '1');
@@ -155,6 +156,7 @@ window.guardarSistema = function(event) {
 };
 
 window.eliminarSistema = function(id) {
+    if (!window.guardAction('cfg_almacen', 'd')) return;
     if (!confirm('¿Eliminar este sistema y todos sus sub-sistemas?')) return;
     fetch('/api/almacen/sistemas/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })

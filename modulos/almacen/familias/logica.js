@@ -53,8 +53,8 @@ window._famRender = function() {
             '<td class="text-muted small">' + _famEsc(f.descripcion || '—') + '</td>' +
             '<td>' + (f.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalFamilia(' + f.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarFamilia(' + f.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalFamilia(' + f.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarFamilia(' + f.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');
@@ -88,6 +88,7 @@ window.abrirModalFamilia = function(id) {
 window.guardarFamilia = function(event) {
     if (event) event.preventDefault();
     var id   = (document.getElementById('fam-edit-id') || {}).value || '';
+    if (!window.guardAction('cfg_almacen', id ? 'e' : 'c')) return;
     var nombre = ((document.getElementById('fam-f-nombre') || {}).value || '').trim().toUpperCase();
     var desc   = ((document.getElementById('fam-f-descripcion') || {}).value || '').trim();
     var activo = ((document.getElementById('fam-f-activo') || {}).value || '1');
@@ -107,6 +108,7 @@ window.guardarFamilia = function(event) {
 };
 
 window.eliminarFamilia = function(id) {
+    if (!window.guardAction('cfg_almacen', 'd')) return;
     if (!confirm('¿Eliminar esta familia?')) return;
     fetch('/api/almacen/familias/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
