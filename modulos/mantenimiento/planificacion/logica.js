@@ -1001,7 +1001,14 @@ window.procesarArchivoExcelPlan = function(input) {
             var cols = Object.keys(rows[0]).slice(0, 8);
             var thead = '<tr>' + cols.map(function(c){ return '<th class="text-uppercase" style="font-size:0.7rem; white-space:nowrap">' + c + '</th>'; }).join('') + '</tr>';
             var tbody = rows.slice(0,50).map(function(r){
-                return '<tr>' + cols.map(function(c){ return '<td style="white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis">' + (r[c] || '') + '</td>'; }).join('') + '</tr>';
+                return '<tr>' + cols.map(function(c){
+                    var v = r[c];
+                    if (v instanceof Date) {
+                        var dd = v.getDate(), mm = v.getMonth()+1, yy = v.getFullYear();
+                        v = (dd<10?'0':'')+dd+'/'+(mm<10?'0':'')+mm+'/'+yy;
+                    }
+                    return '<td style="white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis">' + (v || '') + '</td>';
+                }).join('') + '</tr>';
             }).join('');
 
             var th = document.getElementById('plan-up-thead');
