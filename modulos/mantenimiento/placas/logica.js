@@ -4,12 +4,12 @@
 // ================================================================
 
 // ── Variables de estado del módulo ──────────────────────────────
-let dataGlobalPlacas    = [];
-let datosFiltradosPlacas = [];
-let paginaActualPlacas  = 1;
-let colActualesPlacas   = 4;
+var dataGlobalPlacas    = window.dataGlobalPlacas || [];
+var datosFiltradosPlacas = window.datosFiltradosPlacas || [];
+var paginaActualPlacas  = window.paginaActualPlacas || 1;
+var colActualesPlacas   = window.colActualesPlacas || 4;
 window.filasPlacasConfig = window.filasPlacasConfig || parseInt(localStorage.getItem('fleet_placas_filas') || '4');
-let ITEMS_POR_PAGINA    = colActualesPlacas * window.filasPlacasConfig;
+var ITEMS_POR_PAGINA    = colActualesPlacas * window.filasPlacasConfig;
 
 // ── Poblar selects dinámicos desde dataGlobalPlacas ──────────────
 window.poblarSelectsFormularios = function(datos) {
