@@ -1511,44 +1511,46 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
     `;
 
     let ok = 0, errores = 0;
-    const promesas = registros.map(r => new Promise(resolve => {
-        const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
-        if (!placa) { errores++; return resolve(); }
-
-        const vals = [
-            placa,
-            r.cliente || r.CLIENTE || '',
-            r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
-            r.marca || r.MARCA || '',
-            r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
-            r.tipo || r.TIPO || '',
-            r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
-            r.color || r.COLOR || '',
-            r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
-            r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
-            r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
-            r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
-            r.configuracion || r.CONFIGURACION || '',
-            r.anio || r.AÑO || r.ANIO || '',
-            (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
-            r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
-            r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
-            r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
-            r.estado || r.ESTADO || 'Activa',
-            r.uts || r.UTS || '',
-            r.motora || r.MOTORA || '',
-            r.llantas || r.LLANTAS || '',
-            r.en_uso || r['EN USO?'] || r.EN_USO || ''
-        ];
-
-        db.query(query, vals, err => {
-            if (err) { errores++; console.error('Import error:', placa, err.message); }
-            else ok++;
-            resolve();
-        });
-    }));
-
-    await Promise.all(promesas);
+    for (let i = 0; i < registros.length; i += 50) {
+        const lote = registros.slice(i, i + 50);
+        const promesas = lote.map(r => new Promise(resolve => {
+            const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
+            if (!placa) { errores++; return resolve(); }
+    
+            const vals = [
+                placa,
+                r.cliente || r.CLIENTE || '',
+                r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
+                r.marca || r.MARCA || '',
+                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
+                r.tipo || r.TIPO || '',
+                r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
+                r.color || r.COLOR || '',
+                r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
+                r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
+                r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
+                r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
+                r.configuracion || r.CONFIGURACION || '',
+                r.anio || r.AÑO || r.ANIO || '',
+                (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
+                r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
+                r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
+                r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
+                r.estado || r.ESTADO || 'Activa',
+                r.uts || r.UTS || '',
+                r.motora || r.MOTORA || '',
+                r.llantas || r.LLANTAS || '',
+                r.en_uso || r['EN USO?'] || r.EN_USO || ''
+            ];
+    
+            db.query(query, vals, err => {
+                if (err) { errores++; console.error('Import error:', placa, err.message); }
+                else ok++;
+                resolve();
+            });
+        }));
+        await Promise.all(promesas);
+    }
     broadcast('placas', 'importar');
     res.json({ ok, errores });
 });
@@ -1562,36 +1564,38 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     let okCount = 0;
     let errCount = 0;
 
-    const promesas = registros.map(r => new Promise(resolve => {
-        const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
-        const placa = r.PLACA || r.placa || '';
-        const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
-        const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
-        const cliente = r.CLIENTE || r.cliente || '';
-        const tec = r.TECNICO || r.tecnico || '';
-        const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
-        const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
+    const sql = `
+        INSERT INTO inspecciones
+        (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+        fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
+        cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
+    `;
 
-        if (!placa || placa === "") { errCount++; return resolve(); }
-
-        const sql = `
-            INSERT INTO inspecciones
-            (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
-            cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
-        `;
-
-        db.query(sql, [id, fecha, placa, km, cliente, tec, dias, detalles], (err) => {
-            if (err) { console.error("Error importando inspección:", err.message); errCount++; }
-            else { okCount++; }
-            resolve();
-        });
-    }));
-
-    await Promise.all(promesas);
+    for (let i = 0; i < registros.length; i += 50) {
+        const lote = registros.slice(i, i + 50);
+        const promesas = lote.map(r => new Promise(resolve => {
+            const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+            const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
+            const placa = r.PLACA || r.placa || '';
+            const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
+            const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
+            const cliente = r.CLIENTE || r.cliente || '';
+            const tec = r.TECNICO || r.tecnico || '';
+            const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
+            const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
+    
+            if (!placa || placa === "") { errCount++; return resolve(); }
+    
+            db.query(sql, [id, fecha, placa, km, cliente, tec, dias, detalles], (err) => {
+                if (err) { console.error("Error importando inspección:", err.message); errCount++; }
+                else { okCount++; }
+                resolve();
+            });
+        }));
+        await Promise.all(promesas);
+    }
 
     broadcast('inspecciones', 'importar');
     res.json({ ok: okCount, errores: errCount });
@@ -1606,24 +1610,28 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
 
     let okCount = 0; let errCount = 0;
 
-    const promesas = registros.map(r => new Promise(resolve => {
-        if (!r.placa || r.placa === "") { errCount++; return resolve(); }
-        const sql = `
-            INSERT INTO fleetrun
-            (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
-            frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
-            mes=VALUES(mes), anio=VALUES(anio)
-        `;
-        db.query(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs], (err) => {
-            if (err) { console.error("Error importando fleetrun:", err.message); errCount++; }
-            else { okCount++; }
-            resolve();
-        });
-    }));
-    await Promise.all(promesas);
+    const sql = `
+        INSERT INTO fleetrun
+        (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+        fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
+        frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
+        mes=VALUES(mes), anio=VALUES(anio)
+    `;
+
+    for (let i = 0; i < registros.length; i += 50) {
+        const lote = registros.slice(i, i + 50);
+        const promesas = lote.map(r => new Promise(resolve => {
+            if (!r.placa || r.placa === "") { errCount++; return resolve(); }
+            db.query(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs], (err) => {
+                if (err) { console.error("Error importando fleetrun:", err.message); errCount++; }
+                else { okCount++; }
+                resolve();
+            });
+        }));
+        await Promise.all(promesas);
+    }
     broadcast('fleetrun', 'importar');
     res.json({ ok: okCount, errores: errCount });
 });
