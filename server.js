@@ -1499,7 +1499,7 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
             placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
             nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
             combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ?
         ON DUPLICATE KEY UPDATE
             cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
             modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
@@ -1511,14 +1511,17 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
     `;
 
     let ok = 0, errores = 0;
-    for (let i = 0; i < registros.length; i += 50) {
-        const lote = registros.slice(i, i + 50);
-        const promesas = lote.map(r => new Promise(resolve => {
-            const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
-            if (!placa) { errores++; return resolve(); }
-    
-            const vals = [
-                placa,
+    const validos = registros.filter(r => {
+        const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
+        if (!placa) { errores++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
                 r.cliente || r.CLIENTE || '',
                 r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
                 r.marca || r.MARCA || '',
@@ -1541,19 +1544,28 @@ app.post('/api/importarPlacasMasivo', async (req, res) => {
                 r.motora || r.MOTORA || '',
                 r.llantas || r.LLANTAS || '',
                 r.en_uso || r['EN USO?'] || r.EN_USO || ''
-            ];
-    
-            db.query(query, vals, err => {
-                if (err) { errores++; console.error('Import error:', placa, err.message); }
-                else ok++;
-                resolve();
-            });
-        }));
-        await Promise.all(promesas);
+            ]);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(query, [vals], (err) => {
+                        if (err) return reject(err);
+                        ok += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error('Import error bulk placas:', e.message);
+                errores += lote.length;
+            }
+        }
     }
     broadcast('placas', 'importar');
     res.json({ ok, errores });
 });
+
+// ============================================================
+// 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
 // ============================================================
 app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     const registros = req.body.registros;
@@ -1567,34 +1579,45 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     const sql = `
         INSERT INTO inspecciones
         (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ?
         ON DUPLICATE KEY UPDATE
         fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
         cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
     `;
 
-    for (let i = 0; i < registros.length; i += 50) {
-        const lote = registros.slice(i, i + 50);
-        const promesas = lote.map(r => new Promise(resolve => {
-            const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-            const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
-            const placa = r.PLACA || r.placa || '';
-            const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
-            const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
-            const cliente = r.CLIENTE || r.cliente || '';
-            const tec = r.TECNICO || r.tecnico || '';
-            const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
-            const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
-    
-            if (!placa || placa === "") { errCount++; return resolve(); }
-    
-            db.query(sql, [id, fecha, placa, km, cliente, tec, dias, detalles], (err) => {
-                if (err) { console.error("Error importando inspección:", err.message); errCount++; }
-                else { okCount++; }
-                resolve();
-            });
-        }));
-        await Promise.all(promesas);
+    const validos = registros.filter(r => {
+        const placa = r.PLACA || r.placa || '';
+        if (!placa || placa === "") { errCount++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '',
+                r.PLACA || r.placa || '',
+                (r['KM TABLERO'] || r.KM || r.km_tablero || '') !== '' ? (parseInt(r['KM TABLERO'] || r.KM || r.km_tablero) || 0) : null,
+                r.CLIENTE || r.cliente || '',
+                r.TECNICO || r.tecnico || '',
+                r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30',
+                r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]'
+            ]);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(sql, [vals], (err) => {
+                        if (err) return reject(err);
+                        okCount += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error("Error bulk inspecciones:", e.message);
+                errCount += lote.length;
+            }
+        }
     }
 
     broadcast('inspecciones', 'importar');
@@ -1613,24 +1636,38 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
     const sql = `
         INSERT INTO fleetrun
         (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ?
         ON DUPLICATE KEY UPDATE
         fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
         frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
         mes=VALUES(mes), anio=VALUES(anio)
     `;
 
-    for (let i = 0; i < registros.length; i += 50) {
-        const lote = registros.slice(i, i + 50);
-        const promesas = lote.map(r => new Promise(resolve => {
-            if (!r.placa || r.placa === "") { errCount++; return resolve(); }
-            db.query(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs], (err) => {
-                if (err) { console.error("Error importando fleetrun:", err.message); errCount++; }
-                else { okCount++; }
-                resolve();
-            });
-        }));
-        await Promise.all(promesas);
+    const validos = registros.filter(r => {
+        if (!r.placa || r.placa === "") { errCount++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs
+            ]);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(sql, [vals], (err) => {
+                        if (err) return reject(err);
+                        okCount += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error("Error bulk fleetrun:", e.message);
+                errCount += lote.length;
+            }
+        }
     }
     broadcast('fleetrun', 'importar');
     res.json({ ok: okCount, errores: errCount });
