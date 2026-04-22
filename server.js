@@ -1562,42 +1562,36 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
     let okCount = 0;
     let errCount = 0;
 
-    const promesaQuery = (sql, params) => new Promise((resolve, reject) => {
-        db.query(sql, params, (err, results) => {
-            if (err) reject(err); else resolve(results);
+    const promesas = registros.map(r => new Promise(resolve => {
+        const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+        const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
+        const placa = r.PLACA || r.placa || '';
+        const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
+        const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
+        const cliente = r.CLIENTE || r.cliente || '';
+        const tec = r.TECNICO || r.tecnico || '';
+        const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
+        const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
+
+        if (!placa || placa === "") { errCount++; return resolve(); }
+
+        const sql = `
+            INSERT INTO inspecciones
+            (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
+            cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
+        `;
+
+        db.query(sql, [id, fecha, placa, km, cliente, tec, dias, detalles], (err) => {
+            if (err) { console.error("Error importando inspección:", err.message); errCount++; }
+            else { okCount++; }
+            resolve();
         });
-    });
+    }));
 
-    for (let r of registros) {
-        try {
-            const id = r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-            const fecha = r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '';
-            const placa = r.PLACA || r.placa || '';
-            const kmRaw = r['KM TABLERO'] || r.KM || r.km_tablero || '';
-            const km = kmRaw !== '' && kmRaw !== null && kmRaw !== undefined ? (parseInt(kmRaw) || 0) : null;
-            const cliente = r.CLIENTE || r.cliente || '';
-            const tec = r.TECNICO || r.tecnico || '';
-            const dias = r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30';
-            const detalles = r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]';
-
-            if (!placa || placa === "") { errCount++; continue; }
-
-            const sql = `
-                INSERT INTO inspecciones
-                (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
-                cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
-            `;
-
-            await promesaQuery(sql, [id, fecha, placa, km, cliente, tec, dias, detalles]);
-            okCount++;
-        } catch (e) {
-            console.error("Error importando inspección:", e);
-            errCount++;
-        }
-    }
+    await Promise.all(promesas);
 
     broadcast('inspecciones', 'importar');
     res.json({ ok: okCount, errores: errCount });
@@ -1611,27 +1605,25 @@ app.post('/api/importarFleetrunMasivo', async (req, res) => {
     if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
 
     let okCount = 0; let errCount = 0;
-    const promesaQuery = (sql, params) => new Promise((resolve, reject) => {
-        db.query(sql, params, (err, results) => { if (err) reject(err); else resolve(results); });
-    });
 
-    for (let r of registros) {
-        try {
-            if (!r.placa || r.placa === "") { errCount++; continue; }
-
-            const sql = `
-                INSERT INTO fleetrun
-                (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
-                frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
-                mes=VALUES(mes), anio=VALUES(anio)
-            `;
-            await promesaQuery(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs]);
-            okCount++;
-        } catch (e) { console.error("Error importando fleetrun:", e); errCount++; }
-    }
+    const promesas = registros.map(r => new Promise(resolve => {
+        if (!r.placa || r.placa === "") { errCount++; return resolve(); }
+        const sql = `
+            INSERT INTO fleetrun
+            (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
+            frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
+            mes=VALUES(mes), anio=VALUES(anio)
+        `;
+        db.query(sql, [r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs], (err) => {
+            if (err) { console.error("Error importando fleetrun:", err.message); errCount++; }
+            else { okCount++; }
+            resolve();
+        });
+    }));
+    await Promise.all(promesas);
     broadcast('fleetrun', 'importar');
     res.json({ ok: okCount, errores: errCount });
 });
