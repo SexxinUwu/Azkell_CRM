@@ -130,23 +130,26 @@ function mostrarFleetrun(datos) {
   }
   // ── Preservar grupos expandidos antes de re-render ───────────────────────
   var _expandedGroupsBefore = new Set();
-  document.querySelectorAll('#cuerpoTablaFleetrun tr.child-row-fleetrun').forEach(function(row) {
-      if (row.style.display !== 'none') {
-          row.classList.forEach(function(c) {
-              if (c.startsWith('child-') && c !== 'child-row-fleetrun') _expandedGroupsBefore.add(c);
-          });
-      }
-  });
-  document.getElementById('cuerpoTablaFleetrun').innerHTML = html;
-  // ── Restaurar grupos que estaban abiertos ────────────────────────────────
-  _expandedGroupsBefore.forEach(function(groupClass) {
-      document.querySelectorAll('#cuerpoTablaFleetrun .' + groupClass + '.child-row-fleetrun').forEach(function(row) {
-          row.style.display = '';
+  var tbodyFleetrun = document.getElementById('cuerpoTablaFleetrun');
+  if (tbodyFleetrun) {
+      document.querySelectorAll('#cuerpoTablaFleetrun tr.child-row-fleetrun').forEach(function(row) {
+          if (row.style.display !== 'none') {
+              row.classList.forEach(function(c) {
+                  if (c.startsWith('child-') && c !== 'child-row-fleetrun') _expandedGroupsBefore.add(c);
+              });
+          }
       });
-      var placaClass = groupClass.replace('child-', '');
-      var icon = document.querySelector('#cuerpoTablaFleetrun .toggle-icon-' + placaClass);
-      if (icon) icon.className = icon.className.replace('bi-chevron-right', 'bi-chevron-down');
-  });
+      tbodyFleetrun.innerHTML = html;
+      // ── Restaurar grupos que estaban abiertos ────────────────────────────────
+      _expandedGroupsBefore.forEach(function(groupClass) {
+          document.querySelectorAll('#cuerpoTablaFleetrun .' + groupClass + '.child-row-fleetrun').forEach(function(row) {
+              row.style.display = '';
+          });
+          var placaClass = groupClass.replace('child-', '');
+          var icon = document.querySelector('#cuerpoTablaFleetrun .toggle-icon-' + placaClass);
+          if (icon) icon.className = icon.className.replace('bi-chevron-right', 'bi-chevron-down');
+      });
+  }
   // ── Refrescar offcanvas si sigue abierto ─────────────────────────────────
   var _ocElFr = document.getElementById('offcanvasFleetrun');
   if (_ocElFr && window._fleetrunDetalleId) {
