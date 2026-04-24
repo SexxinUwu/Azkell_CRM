@@ -822,31 +822,41 @@ function enviarEdicionPlaca(event, formObj) {
     var cb  = function(id) { return typeof window._cbGet === 'function' ? (window._cbGet(id) || '') : get(id + '-txt') || get(id); };
 
     var placa = get('e_placa');
-    var payload = {
-        cliente:      cb('e_cliente'),
-        ruc_dni:      get('e_ruc'),
-        marca:        cb('e_marca'),
-        modelo_uts:   get('e_modelo'),
-        tipo:         cb('e_tipo'),
-        sub_tipo:     cb('e_sub_tipo'),
-        color:        cb('e_color'),
-        nro_motor:    get('e_nro_motor'),
-        nro_caja:     get('e_nro_caja'),
-        nro_corona:   get('e_nro_corona'),
-        nro_vin:      get('e_nro_vin'),
-        configuracion: cb('e_conf'),
-        anio:         get('e_anio'),
-        combustible:  cb('e_comb'),
-        carga_util:   get('e_carga_util'),
-        peso_neto:    get('e_peso_neto'),
-        peso_bruto:   get('e_peso_bruto'),
-        estado:       get('e_estado'),
-        uts:          get('e_uts'),
-        motora:       get('e_motora'),
-        llantas:      get('e_llantas'),
-        en_uso:       get('e_enuso'),
-        usuario_autor: localStorage.getItem('fleet_user') || ''
-    };
+    var camposRequeridos = [
+        'cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
+        'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
+        'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso'
+    ];
+    var payload = {};
+    camposRequeridos.forEach(function(c) {
+        switch(c) {
+            case 'cliente': payload[c] = cb('e_cliente'); break;
+            case 'ruc_dni': payload[c] = get('e_ruc'); break;
+            case 'marca': payload[c] = cb('e_marca'); break;
+            case 'modelo_uts': payload[c] = get('e_modelo'); break;
+            case 'tipo': payload[c] = cb('e_tipo'); break;
+            case 'sub_tipo': payload[c] = cb('e_sub_tipo'); break;
+            case 'color': payload[c] = cb('e_color'); break;
+            case 'nro_motor': payload[c] = get('e_nro_motor'); break;
+            case 'nro_caja': payload[c] = get('e_nro_caja'); break;
+            case 'nro_corona': payload[c] = get('e_nro_corona'); break;
+            case 'nro_vin': payload[c] = get('e_nro_vin'); break;
+            case 'configuracion': payload[c] = cb('e_conf'); break;
+            case 'anio': payload[c] = get('e_anio'); break;
+            case 'combustible': payload[c] = cb('e_comb'); break;
+            case 'carga_util': payload[c] = get('e_carga_util'); break;
+            case 'peso_neto': payload[c] = get('e_peso_neto'); break;
+            case 'peso_bruto': payload[c] = get('e_peso_bruto'); break;
+            case 'estado': payload[c] = get('e_estado'); break;
+            case 'uts': payload[c] = get('e_uts'); break;
+            case 'motora': payload[c] = get('e_motora'); break;
+            case 'llantas': payload[c] = get('e_llantas'); break;
+            case 'en_uso': payload[c] = get('e_enuso'); break;
+            default: payload[c] = '';
+        }
+        if (payload[c] === undefined || payload[c] === null) payload[c] = '';
+    });
+    payload.usuario_autor = localStorage.getItem('fleet_user') || '';
 
     fetch('/api/placas/' + encodeURIComponent(placa), {
         method: 'PUT',
