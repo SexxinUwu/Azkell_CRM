@@ -797,6 +797,12 @@ window.abrirModalEditarPlaca = function(index) {
         }
     });
 
+    // Precargar campo métrica
+    var elMetrica = document.getElementById('e_metrica');
+    if (elMetrica && p.metrica !== undefined && p.metrica !== null) {
+        elMetrica.value = p.metrica;
+    }
+
     // Autocompletar RUC tras setear cliente en modo edición
     const editCliente = typeof window._cbGet === 'function' ? window._cbGet('e_cliente') : '';
     if (editCliente) window.autocompletarRucSelect(editCliente, 'e_ruc');
