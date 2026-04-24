@@ -830,7 +830,12 @@ function enviarEdicionPlaca(event, formObj) {
         // Obtener valor de metrica (puedes ajustar el id según tu formulario)
         var getMetrica = function() {
             var el = document.getElementById('e_metrica');
-            return el ? (el.value || '').trim() : '';
+            var val = el ? (el.value || '').trim() : '';
+            if (val !== 'km' && val !== 'horas') {
+                alert('El campo MÉTRICA es obligatorio y solo puede ser "km" o "horas".');
+                throw new Error('Valor de métrica inválido');
+            }
+            return val;
         };
     var payload = {};
     camposRequeridos.forEach(function(c) {
