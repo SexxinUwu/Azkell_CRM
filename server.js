@@ -3648,7 +3648,7 @@ app.put('/api/placas/:placa', (req, res) => {
     const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
     const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
                      'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
-                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso'];
+                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica'];
 
     db.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
         if (err)  return res.status(500).json({ error: err.message });
