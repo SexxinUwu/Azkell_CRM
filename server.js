@@ -5029,7 +5029,7 @@ app.delete('/api/ot-trabajos/:id', (req, res) => {
     const id = req.params.id;
     // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita como ID
     db.query(
-        'DELETE FROM trabajos_ot WHERE (id_ot = ? AND id_ot != "") OR (id_ot = "" AND ticket_visita = ?)',
+        'DELETE FROM trabajos_ot WHERE (id_ot = ? AND id_ot != \'\') OR (id_ot = \'\' AND ticket_visita = ?)',
         [id, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
