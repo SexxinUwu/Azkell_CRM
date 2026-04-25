@@ -837,8 +837,8 @@ function enviarEdicionPlaca(event, formObj) {
         var getMetrica = function() {
             var el = document.getElementById('e_metrica');
             var val = el ? (el.value || '').trim() : '';
-            // Permitir vacío, 'km' o 'horas'
-            return val;
+            // ENUM('km','horas') NOT NULL — nunca enviar vacío
+            return (val === 'horas') ? 'horas' : 'km';
         };
     var payload = {};
     camposRequeridos.forEach(function(c) {
