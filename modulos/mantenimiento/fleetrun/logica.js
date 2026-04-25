@@ -894,21 +894,16 @@ window.eliminarMasivo = function(coleccion, contexto) {
 function poblarSelectTipoMantt(selectId, valorActual) {
     var sel = document.getElementById(selectId);
     if (!sel) return;
-    fetch('/api/tipos-mantenimiento')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            var lista = Array.isArray(data) ? data : [];
-            // Extraer únicos de tipo_mp ordenados
-            var tiposUnicos = [];
-            var seen = new Set();
-            lista.forEach(function(t) {
-                var v = (t.tipo_mp || '').trim();
-                if (v && !seen.has(v.toUpperCase())) {
-                    seen.add(v.toUpperCase());
-                    tiposUnicos.push(v);
-                }
-            });
-            tiposUnicos.sort(function(a, b) { return a.localeCompare(b); });
+    // Jala de /api/tipos-preventivo (módulo Preferencias → Tipos MP)
+    fetch('/api/tipos-preventivo')
+        .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+        .then(function(resp) {
+            var lista = Array.isArray(resp) ? resp : (resp.data || []);
+            var tiposUnicos = lista
+                .filter(function(t) { return t.activo !== 0; })
+                .map(function(t) { return (t.nombre || '').trim(); })
+                .filter(function(n) { return n.length > 0; })
+                .sort(function(a, b) { return a.localeCompare(b); });
             sel.innerHTML = '<option value="">— Seleccionar tipo —</option>';
             tiposUnicos.forEach(function(tipo) {
                 var opt = document.createElement('option');
