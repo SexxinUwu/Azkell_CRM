@@ -365,7 +365,7 @@ function _filtrarDatosAMostrar(datos) {
     });
 }
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); frTipoInit('f', ''); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
+function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); frPlacaInit('f', ''); frTipoInit('f', ''); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
@@ -494,7 +494,7 @@ window.mostrarDetalleFleetrun = function(index) {
     bsOffcanvas.show();
 };
 
-function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; frTipoInit('eF', p[8]);const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
+function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; frPlacaInit('eF', p[4]); frTipoInit('eF', p[8]);const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 
 function enviarFleetrun(event, formObj) { event.preventDefault(); if (!window.guardAction('fleet','c')) return; const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
 
@@ -889,6 +889,92 @@ window.eliminarMasivo = function(coleccion, contexto) {
     })
     .catch(function(err) { alert('Error al eliminar: ' + err.message); });
 };
+
+// ── Searchable single-select para Placa ─────────────────────────────────────
+function frPlacaInit(prefix, valorActual) {
+    var hidden = document.getElementById(prefix + '_placa');
+    var lbl    = document.getElementById('frPlacaLbl-' + prefix);
+    var dd     = document.getElementById('frPlacaDD-' + prefix);
+    var busq   = document.getElementById('frPlacaBusq-' + prefix);
+    if (hidden) hidden.value = valorActual || '';
+    if (lbl) { lbl.textContent = valorActual || 'Selecciona una placa...'; lbl.style.color = valorActual ? 'var(--text,#212529)' : '#6c757d'; }
+    if (dd) dd.style.display = 'none';
+    if (busq) busq.value = '';
+    frPlacaRender('', prefix);
+}
+
+window.frPlacaToggle = function(prefix) {
+    var dd  = document.getElementById('frPlacaDD-' + prefix);
+    var box = document.getElementById('frPlacaBox-' + prefix);
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var busq = document.getElementById('frPlacaBusq-' + prefix);
+        if (busq) { busq.value = ''; busq.focus(); }
+        frPlacaRender('', prefix);
+    }
+};
+
+window.frPlacaFiltrar = function(query, prefix) { frPlacaRender(query || '', prefix); };
+
+function frPlacaRender(query, prefix) {
+    var container = document.getElementById('frPlacaOpts-' + prefix);
+    if (!container) return;
+    var q = (query || '').toUpperCase();
+    var hidden = document.getElementById(prefix + '_placa');
+    var actual = (hidden ? hidden.value : '').toUpperCase();
+    var lista = (window.dataGlobalPlacas || [])
+        .map(function(p) { return (p[0] || '').trim().toUpperCase(); })
+        .filter(function(p, i, arr) { return p && arr.indexOf(p) === i; })
+        .sort();
+    var filtrados = q ? lista.filter(function(p) { return p.indexOf(q) !== -1; }) : lista;
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext,#6c757d); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(placa) {
+        var isSelected = placa === actual;
+        var pEsc = placa.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<div onclick="window.frPlacaSelect(\'' + pEsc + '\',\'' + prefix + '\')" '
+            + 'style="padding:9px 14px; cursor:pointer; font-size:0.85rem; font-weight:600; letter-spacing:0.04em; color:var(--text,#212529);'
+            + (isSelected ? ' background:var(--primary,#5865F2); color:#fff;' : '')
+            + '" onmouseenter="this.style.background=this.style.background||\'var(--bg,#f8f9fa)\'" '
+            + 'onmouseleave="this.style.background=\'\'"> '
+            + placa + '</div>';
+    }).join('');
+}
+
+window.frPlacaSelect = function(valor, prefix) {
+    var hidden = document.getElementById(prefix + '_placa');
+    var lbl    = document.getElementById('frPlacaLbl-' + prefix);
+    var dd     = document.getElementById('frPlacaDD-' + prefix);
+    var box    = document.getElementById('frPlacaBox-' + prefix);
+    if (hidden) hidden.value = valor;
+    if (lbl) { lbl.textContent = valor; lbl.style.color = 'var(--text,#212529)'; }
+    if (dd) dd.style.display = 'none';
+    if (box) box.style.borderColor = '';
+    if (typeof window.autocompletarFleetrun === 'function') window.autocompletarFleetrun(prefix);
+};
+
+// Cerrar al clicar fuera (safe SPA)
+window._frPlacaOutsideClick = function(e) {
+    ['f', 'eF'].forEach(function(prefix) {
+        var wrapper = document.getElementById('frPlacaW-' + prefix);
+        if (wrapper && !wrapper.contains(e.target)) {
+            var dd  = document.getElementById('frPlacaDD-' + prefix);
+            var box = document.getElementById('frPlacaBox-' + prefix);
+            if (dd) dd.style.display = 'none';
+            if (box) box.style.borderColor = '';
+        }
+    });
+};
+document.removeEventListener('click', window._frPlacaOutsideClick);
+document.addEventListener('click', window._frPlacaOutsideClick);
 
 // ── Searchable single-select para Tipo de Mantenimiento ─────────────────────
 window._frTipoLista = window._frTipoLista || [];

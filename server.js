@@ -1604,12 +1604,12 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
             const lote = validos.slice(i, i + 500);
             const vals = lote.map(r => [
                 r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '',
+                (r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '').trim() || null,
                 r.PLACA || r.placa || '',
-                (r['KM TABLERO'] || r.KM || r.km_tablero || '') !== '' ? (parseInt(r['KM TABLERO'] || r.KM || r.km_tablero) || 0) : null,
+                parseInt(r['KM TABLERO'] || r.KM || r.km_tablero || '0') || 0,
                 r.CLIENTE || r.cliente || '',
                 r.TECNICO || r.tecnico || '',
-                r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30',
+                parseInt(r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30') || 30,
                 r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]'
             ]);
 
