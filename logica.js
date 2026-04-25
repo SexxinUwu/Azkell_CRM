@@ -2367,7 +2367,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
 
     try {
         // 3. Traer el diseño (HTML) desde la carpeta específica
-        const respHTML = await fetch(`${_rutaDisco}/vista.html`, { cache: 'no-cache' });
+        const respHTML = await fetch(`${_rutaDisco}/vista.html?v=${Date.now()}`, { cache: 'no-cache' });
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         root.classList.add('module-transitioning');
