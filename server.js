@@ -4977,7 +4977,7 @@ app.get('/api/ot-trabajos', (req, res) => {
     // ticket_visita = FK a ordenes_trabajo.ticket_entrada | id_ot = ID único del trabajo (TR-YYYY-NNN)
     let sql = 'SELECT t.*, ot.placa, ot.id_ot as ot_id FROM trabajos_ot t LEFT JOIN ordenes_trabajo ot ON ot.ticket_entrada = t.ticket_visita';
     const params = [];
-    if (id_ot) { sql += ' WHERE t.id_ot = ?'; params.push(id_ot); }
+    if (id_ot) { sql += ' WHERE t.ticket_visita = ?'; params.push(id_ot); }
     sql += ' ORDER BY t.fecha_creacion DESC';
     db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
