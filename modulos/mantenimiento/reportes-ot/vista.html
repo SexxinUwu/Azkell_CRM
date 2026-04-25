@@ -384,9 +384,24 @@
 
         <div class="mb-3">
             <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Personal / Técnico</label>
-            <select class="form-select form-select-sm" id="rot-tr-personal">
-                <option value="">— Seleccionar técnico —</option>
-            </select>
+            <input type="hidden" id="rot-tr-personal">
+            <div style="position:relative;" id="rot-ms-wrapper">
+                <div id="rot-ms-box" onclick="rotMsToggle()"
+                    style="background:var(--bg); border:1.5px solid var(--border); border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
+                    <span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>
+                </div>
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--subtext); pointer-events:none; font-size:0.8rem;">▾</span>
+                <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--surface); border:1.5px solid var(--border); border-radius:8px; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,0.18); overflow:hidden;">
+                    <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
+                        oninput="rotMsFiltrar(this.value)"
+                        style="width:100%; border:none; border-bottom:1px solid var(--border); background:var(--bg); color:var(--text); padding:9px 12px; font-size:0.84rem; outline:none;">
+                    <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
+                    <div style="padding:7px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <span id="rot-ms-count" style="font-size:0.76rem; color:var(--subtext);">0 seleccionados</span>
+                        <span onclick="rotMsLimpiar()" style="font-size:0.76rem; color:#f87171; cursor:pointer;">Limpiar todo</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row g-2 mb-3">

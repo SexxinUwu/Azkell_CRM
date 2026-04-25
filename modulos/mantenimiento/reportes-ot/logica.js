@@ -912,7 +912,6 @@ window.rotAgregarTrabajo = function(idOt) {
     var hid  = document.getElementById('rot-tr-ot-id');        if (hid)  hid.value = idOt;
     var hid2 = document.getElementById('rot-tr-ticket-hid');   if (hid2) hid2.value = '';
     var desc = document.getElementById('rot-tr-desc');         if (desc) desc.value = '';
-    var pers = document.getElementById('rot-tr-personal');     if (pers) pers.value = '';
     var cos  = document.getElementById('rot-tr-costo');        if (cos)  cos.value  = '0';
     var hoy  = new Date();
     var localDT = hoy.getFullYear() + '-' +
@@ -925,7 +924,7 @@ window.rotAgregarTrabajo = function(idOt) {
     var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Agregar Trabajo';
     var btnElim = document.getElementById('rot-tr-btn-eliminar'); if (btnElim) btnElim.style.display = 'none';
     rotAbrirSubDrawer('rot-drawer-trabajo');
-    rotPoblarPersonal();
+    rotMsInit('');
 };
 
 // ── Editar Trabajo ────────────────────────────────────────────────
@@ -939,7 +938,6 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     var hid  = document.getElementById('rot-tr-ot-id');        if (hid)  hid.value = idOt;
     var hid2 = document.getElementById('rot-tr-ticket-hid');   if (hid2) hid2.value = ticket;
     var desc = document.getElementById('rot-tr-desc');         if (desc) desc.value = t.trabajo_realizado || '';
-    var pers = document.getElementById('rot-tr-personal');     if (pers) pers.value = det2.personal || t.tecnico || '';
     var cos  = document.getElementById('rot-tr-costo');        if (cos)  cos.value  = det2.costo !== undefined ? det2.costo : '0';
 
     var toLocalDT = function(iso) {
@@ -952,7 +950,7 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Editar Trabajo ' + ticket;
     var btnElim = document.getElementById('rot-tr-btn-eliminar'); if (btnElim) btnElim.style.display = '';
     rotAbrirSubDrawer('rot-drawer-trabajo');
-    rotPoblarPersonal();
+    rotMsInit(det2.personal || t.tecnico || '');
 };
 
 // ── Guardar Trabajo (nuevo o edición) ────────────────────────────
@@ -1271,26 +1269,135 @@ window.rotCerrarSubDrawer = function(drawerId) {
     if (d) d.classList.remove('open');
 };
 
-// ── Poblar selects de Personal ────────────────────────────────────
-function rotPoblarPersonal() {
-    var el = document.getElementById('rot-tr-personal');
-    var savedVal = el ? el.value : '';
+// ── Multiselect Personal (Agregar/Editar Trabajo) ────────────────
+window._rotPersonalLista = window._rotPersonalLista || [];
+window._rotSeleccionados = window._rotSeleccionados || [];
+
+function rotMsInit(valorActual) {
+    window._rotSeleccionados = valorActual
+        ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean)
+        : [];
+    rotMsRenderBox();
+    var dd = document.getElementById('rot-ms-dropdown');
+    if (dd) dd.style.display = 'none';
+    var s = document.getElementById('rot-ms-search');
+    if (s) s.value = '';
+    var cnt = document.getElementById('rot-ms-count');
+    if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('rot-tr-personal');
+    if (hidden) hidden.value = window._rotSeleccionados.join(', ');
+
+    var doRender = function() { rotMsRenderOptions(''); };
+    if (window._rotPersonalLista.length > 0) { doRender(); return; }
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
             var lista = Array.isArray(data) ? data : (data.data || []);
-            var opts = lista.map(function(p) {
+            window._rotPersonalLista = lista.map(function(p) {
                 var n = (p.nombre_completo || p.nombre || '').trim();
-                return n ? '<option value="' + n + '">' + n + '</option>' : '';
-            }).join('');
-            var elNow = document.getElementById('rot-tr-personal');
-            if (elNow) {
-                elNow.innerHTML = '<option value="">— Seleccionar técnico —</option>' + opts;
-                if (savedVal) elNow.value = savedVal;
-            }
+                return n.split(' ').map(function(w) {
+                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+                }).join(' ');
+            }).filter(Boolean).sort();
+            doRender();
         })
         .catch(function() {});
 }
+
+window.rotMsToggle = function() {
+    var dd = document.getElementById('rot-ms-dropdown');
+    var box = document.getElementById('rot-ms-box');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var search = document.getElementById('rot-ms-search');
+        if (search) { search.value = ''; search.focus(); }
+        rotMsRenderOptions('');
+    }
+};
+
+window.rotMsFiltrar = function(query) { rotMsRenderOptions(query || ''); };
+
+function rotMsRenderOptions(query) {
+    var container = document.getElementById('rot-ms-options');
+    if (!container) return;
+    var q = (query || '').toLowerCase();
+    var filtrados = window._rotPersonalLista.filter(function(n) {
+        return !q || n.toLowerCase().indexOf(q) !== -1;
+    });
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(n) {
+        var checked = window._rotSeleccionados.indexOf(n) !== -1;
+        var nEsc = n.replace(/'/g, "\\'");
+        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
+            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+            + 'onclick="event.stopPropagation(); rotMsToggleItem(\'' + nEsc + '\')" '
+            + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
+            + n + '</label>';
+    }).join('');
+}
+
+window.rotMsToggleItem = function(nombre) {
+    var idx = window._rotSeleccionados.indexOf(nombre);
+    if (idx === -1) window._rotSeleccionados.push(nombre);
+    else window._rotSeleccionados.splice(idx, 1);
+    rotMsRenderBox();
+    rotMsRenderOptions((document.getElementById('rot-ms-search') || {}).value || '');
+    var cnt = document.getElementById('rot-ms-count');
+    if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('rot-tr-personal');
+    if (hidden) hidden.value = window._rotSeleccionados.join(', ');
+};
+
+window.rotMsLimpiar = function() {
+    window._rotSeleccionados = [];
+    rotMsRenderBox();
+    rotMsRenderOptions('');
+    var cnt = document.getElementById('rot-ms-count');
+    if (cnt) cnt.textContent = '0 seleccionados';
+    var hidden = document.getElementById('rot-tr-personal');
+    if (hidden) hidden.value = '';
+};
+
+function rotMsRenderBox() {
+    var box = document.getElementById('rot-ms-box');
+    if (!box) return;
+    var sel = window._rotSeleccionados;
+    if (sel.length === 0) {
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
+    } else {
+        box.innerHTML = sel.map(function(n) {
+            var nEsc = n.replace(/'/g, "\\'");
+            return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
+                + n
+                + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">×</span>'
+                + '</span>';
+        }).join('');
+    }
+}
+
+window._rotMsOutsideClick = function(e) {
+    var wrapper = document.getElementById('rot-ms-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        var dd = document.getElementById('rot-ms-dropdown');
+        var box = document.getElementById('rot-ms-box');
+        if (dd) dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    }
+};
+document.removeEventListener('click', window._rotMsOutsideClick);
+document.addEventListener('click', window._rotMsOutsideClick);
+
 
 // ── Render sección Backlog ────────────────────────────────────────
 function rotRenderSecBacklog(items) {
