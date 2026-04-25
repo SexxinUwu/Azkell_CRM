@@ -115,8 +115,7 @@ function srPoblarPlacas() {
 // ── Personal / Supervisor ────────────────────────────────────────
 function srPoblarPersonal() {
     var selSupervisor = document.getElementById('sr-ot-supervisor');
-    var selTecnico    = document.getElementById('sr-tr-personal');
-    if (!selSupervisor && !selTecnico) return;
+    if (!selSupervisor) return;
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
@@ -126,10 +125,138 @@ function srPoblarPersonal() {
                 return n ? '<option value="' + n + '">' + n + '</option>' : '';
             }).join('');
             if (selSupervisor) selSupervisor.innerHTML = '<option value="">— Seleccionar supervisor —</option>' + opts;
-            if (selTecnico)    selTecnico.innerHTML    = '<option value="">— Seleccionar técnico —</option>'   + opts;
         })
         .catch(function() {});
 }
+
+// ── Multiselect Personal Técnico (Agregar Trabajo) ────────────────
+window._srPersonalLista = window._srPersonalLista || [];
+window._srSeleccionados = window._srSeleccionados || [];
+
+function srMsInit(valorActual) {
+    window._srSeleccionados = valorActual
+        ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean)
+        : [];
+    srMsRenderBox();
+    var dd = document.getElementById('sr-ms-dropdown');
+    if (dd) dd.style.display = 'none';
+    var s = document.getElementById('sr-ms-search');
+    if (s) s.value = '';
+    var cnt = document.getElementById('sr-ms-count');
+    if (cnt) cnt.textContent = window._srSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('sr-tr-personal');
+    if (hidden) hidden.value = window._srSeleccionados.join(', ');
+
+    var doRender = function() { srMsRenderOptions(''); };
+    if (window._srPersonalLista.length > 0) { doRender(); return; }
+    fetch('/api/conductores')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            var lista = Array.isArray(data) ? data : (data.data || []);
+            window._srPersonalLista = lista.map(function(p) {
+                var n = (p.nombre_completo || p.nombre || '').trim();
+                return n.split(' ').map(function(w) {
+                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+                }).join(' ');
+            }).filter(Boolean).sort();
+            doRender();
+        })
+        .catch(function() {});
+}
+
+window.srMsToggle = function() {
+    var dd = document.getElementById('sr-ms-dropdown');
+    var box = document.getElementById('sr-ms-box');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var search = document.getElementById('sr-ms-search');
+        if (search) { search.value = ''; search.focus(); }
+        srMsRenderOptions('');
+    }
+};
+
+window.srMsFiltrar = function(query) { srMsRenderOptions(query || ''); };
+
+function srMsRenderOptions(query) {
+    var container = document.getElementById('sr-ms-options');
+    if (!container) return;
+    var q = (query || '').toLowerCase();
+    var filtrados = window._srPersonalLista.filter(function(n) {
+        return !q || n.toLowerCase().indexOf(q) !== -1;
+    });
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(n) {
+        var checked = window._srSeleccionados.indexOf(n) !== -1;
+        var nEsc = n.replace(/'/g, "\\'");
+        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
+            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+            + 'onclick="event.stopPropagation(); srMsToggleItem(\'' + nEsc + '\')" '
+            + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
+            + n + '</label>';
+    }).join('');
+}
+
+window.srMsToggleItem = function(nombre) {
+    var idx = window._srSeleccionados.indexOf(nombre);
+    if (idx === -1) window._srSeleccionados.push(nombre);
+    else window._srSeleccionados.splice(idx, 1);
+    srMsRenderBox();
+    srMsRenderOptions((document.getElementById('sr-ms-search') || {}).value || '');
+    var cnt = document.getElementById('sr-ms-count');
+    if (cnt) cnt.textContent = window._srSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('sr-tr-personal');
+    if (hidden) hidden.value = window._srSeleccionados.join(', ');
+};
+
+window.srMsLimpiar = function() {
+    window._srSeleccionados = [];
+    srMsRenderBox();
+    srMsRenderOptions('');
+    var cnt = document.getElementById('sr-ms-count');
+    if (cnt) cnt.textContent = '0 seleccionados';
+    var hidden = document.getElementById('sr-tr-personal');
+    if (hidden) hidden.value = '';
+};
+
+function srMsRenderBox() {
+    var box = document.getElementById('sr-ms-box');
+    if (!box) return;
+    var sel = window._srSeleccionados;
+    if (sel.length === 0) {
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
+    } else {
+        box.innerHTML = sel.map(function(n) {
+            var nEsc = n.replace(/'/g, "\\'");
+            return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
+                + n
+                + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); srMsToggleItem(\'' + nEsc + '\')">×</span>'
+                + '</span>';
+        }).join('');
+    }
+}
+
+window._srMsOutsideClick = function(e) {
+    var wrapper = document.getElementById('sr-ms-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        var dd = document.getElementById('sr-ms-dropdown');
+        var box = document.getElementById('sr-ms-box');
+        if (dd) dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    }
+};
+document.removeEventListener('click', window._srMsOutsideClick);
+document.addEventListener('click', window._srMsOutsideClick);
 
 // ── Carga OTs ────────────────────────────────────────────────────
 function srCargarOTs() {
@@ -912,7 +1039,6 @@ window.srAgregarTrabajo = function(idOt) {
     var lbl = document.getElementById('sr-tr-ot-lbl'); if (lbl) lbl.textContent = idOt;
     var hid = document.getElementById('sr-tr-ot-id');  if (hid) hid.value = idOt;
     var desc  = document.getElementById('sr-tr-desc');    if (desc)  desc.value  = '';
-    var pers  = document.getElementById('sr-tr-personal'); if (pers) pers.value  = '';
     var costo = document.getElementById('sr-tr-costo');   if (costo) costo.value = '0';
     var hoy = new Date();
     var localDT = hoy.getFullYear() + '-' +
@@ -923,7 +1049,7 @@ window.srAgregarTrabajo = function(idOt) {
     var fi = document.getElementById('sr-tr-fecha-ini'); if (fi) fi.value = localDT;
     var ff = document.getElementById('sr-tr-fecha-fin'); if (ff) ff.value = '';
     srAbrirDrawer('sr-drawer-trabajo');
-};
+    srMsInit('');
 
 window.srGuardarTrabajo = function() {
     var idOt  = (document.getElementById('sr-tr-ot-id')       || {}).value || '';
