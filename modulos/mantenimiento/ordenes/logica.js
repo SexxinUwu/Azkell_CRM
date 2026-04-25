@@ -11,6 +11,85 @@ window.otBkData    = window.otBkData    || [];
 window.otTabActiva = window.otTabActiva || 'ots';
 window.otMatTabActiva = window.otMatTabActiva || 'pend';
 window.otDetalleId = window.otDetalleId || null;  // ticket_entrada activo en panel
+window._otPersonalLista = window._otPersonalLista || []; // caché de personal
+
+// ── Multi-select técnicos (drawer nuevo trabajo) ──────────────────
+window._otTrbSeleccionados = window._otTrbSeleccionados || [];
+
+window.otTrbPersonalInit = function() {
+    window._otTrbSeleccionados = [];
+    var hidden = document.getElementById('trb-personal');
+    if (hidden) hidden.value = '';
+    var chips = document.getElementById('trb-personal-chips');
+    if (chips) chips.innerHTML = '';
+    var search = document.getElementById('trb-personal-search');
+    if (search) search.value = '';
+    otTrbPersonalCerrar();
+
+    // Cargar lista si no está en caché
+    if (window._otPersonalLista.length > 0) return;
+    fetch('/api/conductores')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            var lista = Array.isArray(data) ? data : (data.data || []);
+            window._otPersonalLista = lista.map(function(p) {
+                var n = (p.nombre_completo || p.nombre || '').trim();
+                return n.split(' ').map(function(w) {
+                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+                }).join(' ');
+            }).filter(Boolean).sort();
+        })
+        .catch(function() {});
+};
+
+window.otTrbPersonalBuscar = function(query) {
+    var dropdown = document.getElementById('trb-personal-dropdown');
+    if (!dropdown) return;
+    var q = query.trim().toLowerCase();
+    if (!q) { dropdown.style.display = 'none'; return; }
+    var filtrados = window._otPersonalLista.filter(function(n) {
+        return n.toLowerCase().includes(q) && !window._otTrbSeleccionados.includes(n);
+    });
+    if (filtrados.length === 0) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = filtrados.map(function(n) {
+        return '<div style="padding:8px 12px; cursor:pointer; font-size:0.83rem; color:var(--text);" '
+            + 'onmousedown="event.preventDefault(); otTrbPersonalAgregar(\'' + n.replace(/'/g, "\\'") + '\')">'
+            + n + '</div>';
+    }).join('');
+    dropdown.style.display = 'block';
+};
+
+window.otTrbPersonalCerrar = function() {
+    var dropdown = document.getElementById('trb-personal-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+};
+
+window.otTrbPersonalAgregar = function(nombre) {
+    if (!nombre || window._otTrbSeleccionados.includes(nombre)) return;
+    window._otTrbSeleccionados.push(nombre);
+    otTrbPersonalRenderChips();
+    var search = document.getElementById('trb-personal-search');
+    if (search) search.value = '';
+    otTrbPersonalCerrar();
+};
+
+window.otTrbPersonalQuitar = function(nombre) {
+    window._otTrbSeleccionados = window._otTrbSeleccionados.filter(function(n) { return n !== nombre; });
+    otTrbPersonalRenderChips();
+};
+
+function otTrbPersonalRenderChips() {
+    var chips = document.getElementById('trb-personal-chips');
+    var hidden = document.getElementById('trb-personal');
+    if (!chips) return;
+    chips.innerHTML = window._otTrbSeleccionados.map(function(n) {
+        return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600;">'
+            + n
+            + '<span style="cursor:pointer; opacity:0.8; margin-left:2px;" onmousedown="event.preventDefault(); otTrbPersonalQuitar(\'' + n.replace(/'/g, "\\'") + '\')">✕</span>'
+            + '</span>';
+    }).join('');
+    if (hidden) hidden.value = window._otTrbSeleccionados.join(', ');
+}
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_ordenes = function() {
@@ -61,7 +140,10 @@ function otFmtFecha(iso) {
 }
 function otFmtDateTime(iso) {
     if (!iso) return '—';
-    var d = new Date(iso);
+    // Tratar como hora local: quitar 'Z' o '+00:00' para evitar conversión UTC→local
+    var s = String(iso).replace('Z', '').replace('+00:00', '');
+    if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
+    var d = new Date(s);
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) + ' ' +
            d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
@@ -815,9 +897,7 @@ window.otGuardarCierre = function() {
 // ── FORM Trabajo ──────────────────────────────────────────────────
 window.otAbrirFormTrabajo = function(ticketId) {
     if (!window.guardAction('ot', 'c')) return;
-    var nuevoId = otGenId('TRB', window.otTrbData.map(function(t){ return t.id_ot; }));
-    var el = document.getElementById('trb-id-display'); if (el) el.textContent = nuevoId;
-
+    var el;
     // Poblar select de OTs aprobadas
     var sel = document.getElementById('trb-ot-select');
     if (sel) {
@@ -835,9 +915,10 @@ window.otAbrirFormTrabajo = function(ticketId) {
     el = document.getElementById('trb-hora-ini');  if (el) el.value = now.toTimeString().slice(0,5);
     el = document.getElementById('trb-fecha-fin'); if (el) el.value = '';
     el = document.getElementById('trb-hora-fin');  if (el) el.value = '';
-    el = document.getElementById('trb-personal');  if (el) el.value = '';
     el = document.getElementById('trb-descripcion'); if (el) el.value = '';
     el = document.getElementById('trb-costo');     if (el) el.value = '';
+    // Inicializar multi-select de técnicos
+    otTrbPersonalInit();
     otAbrirDrawer('drawer-nuevo-trabajo');
 };
 
@@ -850,17 +931,18 @@ window.otGuardarTrabajo = function() {
     if (!ticketId)    { alert('Debes asociar el trabajo a una OT'); return; }
     if (!descripcion) { alert('La descripción del trabajo es requerida'); return; }
 
-    var trbId = document.getElementById('trb-id-display') ? document.getElementById('trb-id-display').textContent : '';
+    // Combinar fecha + hora de inicio correctamente
+    var fechaIniRaw = get('trb-fecha-ini');
+    var fechaIni = fechaIniRaw ? fechaIniRaw + 'T' + (get('trb-hora-ini') || '00:00') + ':00' : null;
     var fechaFin = get('trb-fecha-fin') ? get('trb-fecha-fin') + 'T' + (get('trb-hora-fin') || '00:00') + ':00' : null;
 
     fetch('/api/ot-trabajos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            id_ot:            trbId,
             ticket_visita:    ticketId,
             trabajo_realizado: descripcion,
-            fecha_trabajo:    get('trb-fecha-ini'),
+            fecha_trabajo:    fechaIni,
             fecha_salida:     fechaFin,
             creado_por:       localStorage.getItem('fleet_correo') || '',
             detalles_json: {
@@ -873,7 +955,10 @@ window.otGuardarTrabajo = function() {
     }).then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
-    }).then(function() {
+    }).then(function(resp) {
+        // Actualizar display con el ID asignado por el servidor
+        var disp = document.getElementById('trb-id-display');
+        if (disp && resp.id_ot) disp.textContent = resp.id_ot;
         window.otCerrarTodosDrawers();
         window.otCargarTodo();
         window.mostrarAlerta('Trabajo registrado, pendiente de aprobación', 'success');

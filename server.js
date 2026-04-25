@@ -4977,21 +4977,23 @@ app.get('/api/ot-trabajos', (req, res) => {
 });
 
 app.post('/api/ot-trabajos', (req, res) => {
-    const { id_ot, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
-    if (!id_ot) return res.status(400).json({ error: 'id_ot es requerido' });
+    const { trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
     const anio    = new Date().getFullYear();
     const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
     const personal = (typeof detalles_json === 'object' && detalles_json) ? (detalles_json.personal || '') : '';
-    generarId('trabajos_ot', 'ticket_visita', 'TR', anio, (nuevoId) => {
-        db.query(
-            `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
-             VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
-            [id_ot, nuevoId, trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
-            (err, result) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ ok: true, id: result.insertId, ticket_visita: nuevoId });
-            }
-        );
+    // Generar ticket_visita (TR-YYYY-NNN) y también id_ot (TRB-YYYY-NNN) en el servidor
+    generarId('trabajos_ot', 'ticket_visita', 'TR', anio, (nuevoTicket) => {
+        generarId('trabajos_ot', 'id_ot', 'TRB', anio, (nuevoIdOt) => {
+            db.query(
+                `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
+                 VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
+                [nuevoIdOt, nuevoTicket, trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
+                (err, result) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ ok: true, id: result.insertId, ticket_visita: nuevoTicket, id_ot: nuevoIdOt });
+                }
+            );
+        });
     });
 });
 

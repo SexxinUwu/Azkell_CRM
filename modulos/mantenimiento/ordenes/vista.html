@@ -627,8 +627,20 @@
             </div>
         </div>
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Trabajador(es) * <span style="font-weight:500; text-transform:none; color:var(--subtext); font-size:0.72rem;">(separar por comas)</span></label>
-            <input type="text" class="form-control form-control-sm" id="trb-personal" placeholder="Ej: Juan Pérez, Luis Gómez">
+            <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Personal / Técnico(s)</label>
+            <!-- Input oculto que acumula los seleccionados separados por comas -->
+            <input type="hidden" id="trb-personal">
+            <!-- Chips de técnicos seleccionados -->
+            <div id="trb-personal-chips" style="display:flex; flex-wrap:wrap; gap:4px; min-height:28px; margin-bottom:4px;"></div>
+            <!-- Buscador + dropdown -->
+            <div style="position:relative;">
+                <input type="text" class="form-control form-control-sm" id="trb-personal-search"
+                    placeholder="Escribe para buscar técnico..."
+                    autocomplete="off"
+                    oninput="otTrbPersonalBuscar(this.value)"
+                    onkeydown="if(event.key==='Escape'){otTrbPersonalCerrar();}">
+                <div id="trb-personal-dropdown" style="display:none; position:absolute; left:0; right:0; background:var(--surface); border:1px solid var(--border); border-radius:6px; max-height:180px; overflow-y:auto; z-index:999; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Trabajo Realizado / Descripción *</label>

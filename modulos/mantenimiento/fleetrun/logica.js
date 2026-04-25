@@ -365,7 +365,7 @@ function _filtrarDatosAMostrar(datos) {
     });
 }
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
+function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); poblarSelectTipoMantt('f_tipomp', ''); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
@@ -494,7 +494,7 @@ window.mostrarDetalleFleetrun = function(index) {
     bsOffcanvas.show();
 };
 
-function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
+function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; poblarSelectTipoMantt('eF_tipomp', p[8]); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 
 function enviarFleetrun(event, formObj) { event.preventDefault(); if (!window.guardAction('fleet','c')) return; const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
 
@@ -889,6 +889,37 @@ window.eliminarMasivo = function(coleccion, contexto) {
     })
     .catch(function(err) { alert('Error al eliminar: ' + err.message); });
 };
+
+// ── Poblar select de Tipo de Mantenimiento ──────────────────────────────────
+function poblarSelectTipoMantt(selectId, valorActual) {
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    fetch('/api/tipos-mantenimiento')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(data) {
+            var lista = Array.isArray(data) ? data : [];
+            // Extraer únicos de tipo_mp ordenados
+            var tiposUnicos = [];
+            var seen = new Set();
+            lista.forEach(function(t) {
+                var v = (t.tipo_mp || '').trim();
+                if (v && !seen.has(v.toUpperCase())) {
+                    seen.add(v.toUpperCase());
+                    tiposUnicos.push(v);
+                }
+            });
+            tiposUnicos.sort(function(a, b) { return a.localeCompare(b); });
+            sel.innerHTML = '<option value="">— Seleccionar tipo —</option>';
+            tiposUnicos.forEach(function(tipo) {
+                var opt = document.createElement('option');
+                opt.value = tipo;
+                opt.textContent = tipo;
+                if (valorActual && tipo.toUpperCase() === valorActual.toUpperCase()) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(function() {});
+}
 
 // ================================================================
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router

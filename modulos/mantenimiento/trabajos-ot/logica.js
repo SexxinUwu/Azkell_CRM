@@ -46,7 +46,11 @@ function totFmtMoney(val) {
 
 function totFmtDateTime(iso) {
     if (!iso) return '—';
-    var d = new Date(iso);
+    // Tratar como hora local: reemplazar 'Z' o añadir offset cero para evitar conversión UTC
+    var s = String(iso).replace('Z', '').replace('+00:00', '');
+    // Si el string no tiene 'T', MySQL lo devuelve como 'YYYY-MM-DD HH:MM:SS' — reemplazar espacio por T
+    if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
+    var d = new Date(s);
     if (isNaN(d.getTime())) return String(iso).split('T')[0] || '—';
     return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' })
         + ' ' + d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
@@ -306,6 +310,10 @@ function totPoblarPersonal() {
             var lista = Array.isArray(data) ? data : (data.data || []);
             var opts = lista.map(function(p) {
                 var n = (p.nombre_completo || p.nombre || '').trim();
+                // Normalizar a Title Case independientemente de cómo esté en la DB
+                n = n.split(' ').map(function(w) {
+                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+                }).join(' ');
                 return n ? '<option value="' + n + '">' + n + '</option>' : '';
             }).join('');
             var elNow = document.getElementById('tot-ed-personal');
