@@ -4966,7 +4966,8 @@ app.delete('/api/ordenes-trabajo/:id', (req, res) => {
 // ── OT TRABAJOS ───────────────────────────────────────────────────
 app.get('/api/ot-trabajos', (req, res) => {
     const { id_ot } = req.query;
-    let sql = 'SELECT t.*, ot.placa FROM trabajos_ot t LEFT JOIN ordenes_trabajo ot ON ot.ticket_entrada = t.id_ot';
+    // ticket_visita = FK a ordenes_trabajo.ticket_entrada | id_ot = ID único del trabajo (TR-YYYY-NNN)
+    let sql = 'SELECT t.*, ot.placa, ot.id_ot as ot_id FROM trabajos_ot t LEFT JOIN ordenes_trabajo ot ON ot.ticket_entrada = t.ticket_visita';
     const params = [];
     if (id_ot) { sql += ' WHERE t.id_ot = ?'; params.push(id_ot); }
     sql += ' ORDER BY t.fecha_creacion DESC';
@@ -4977,20 +4978,20 @@ app.get('/api/ot-trabajos', (req, res) => {
 });
 
 app.post('/api/ot-trabajos', (req, res) => {
-    // ticket_visita del body = ticket_entrada de la OT (FK de asociación)
+    // ticket_visita del body = ticket_entrada de la OT (FK de asociación al OT)
     const { ticket_visita: ticketEntrada, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
     const anio    = new Date().getFullYear();
     const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
     const personal = (typeof detalles_json === 'object' && detalles_json) ? (detalles_json.personal || '') : '';
-    // Solo generar ticket_visita único (TR-YYYY-NNN); id_ot = FK al ticket_entrada de la OT
-    generarId('trabajos_ot', 'ticket_visita', 'TR', anio, (nuevoTicket) => {
+    // Generar id_ot único (TR-YYYY-NNN); ticket_visita = FK al ticket_entrada del OT
+    generarId('trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
         db.query(
             `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
              VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
-            [ticketEntrada || '', nuevoTicket, trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
+            [nuevoId, ticketEntrada || '', trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ ok: true, id: result.insertId, ticket_visita: nuevoTicket, id_ot: ticketEntrada });
+                res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
             }
         );
     });
@@ -5010,7 +5011,7 @@ app.put('/api/ot-trabajos/:id', (req, res) => {
         const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado } = req.body;
         const detJson = JSON.stringify({ personal: personal || '', costo: parseFloat(costo) || 0 });
         db.query(
-            `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=? WHERE ticket_visita=?`,
+            `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=? WHERE id_ot=?`,
             [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -5023,7 +5024,7 @@ app.put('/api/ot-trabajos/:id', (req, res) => {
 });
 
 app.delete('/api/ot-trabajos/:id', (req, res) => {
-    db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [req.params.id], (err) => {
+    db.query('DELETE FROM trabajos_ot WHERE id_ot = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
     });

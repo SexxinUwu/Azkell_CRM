@@ -152,10 +152,10 @@ window.totRenderTabla = function() {
             }
         }
         var tr = document.createElement('tr');
-        if (t.ticket_visita === window.totDetalleId) tr.classList.add('tot-row-active');
+        if (t.id_ot === window.totDetalleId) tr.classList.add('tot-row-active');
         tr.innerHTML =
-            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(t.ticket_visita || '—') + '</span></td>'
-            + '<td><strong>' + totEsc(t.id_ot || '—') + '</strong></td>'
+            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(t.id_ot || '—') + '</span></td>'
+            + '<td><strong>' + totEsc(t.ot_id || '—') + '</strong></td>'
             + '<td style="font-size:0.79rem;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
             + '<td style="max-width:200px;white-space:normal;font-size:0.81rem;">' + totEsc(t.trabajo_realizado || '—') + '</td>'
             + '<td>' + totEsc(det.personal || t.tecnico || '—') + '</td>'
@@ -171,17 +171,17 @@ window.totRenderTabla = function() {
 
 // ── Detalle lateral ───────────────────────────────────────────────
 function totAbrirDetalle(t) {
-    window.totDetalleId = t.ticket_visita;
+    window.totDetalleId = t.id_ot;
     totRenderTabla();
 
     var det = totParseDetalles(t);
 
     var titulo = document.getElementById('tot-detalle-titulo');
-    if (titulo) titulo.textContent = 'Trabajo ' + (t.ticket_visita || '');
+    if (titulo) titulo.textContent = 'Trabajo ' + (t.id_ot || '');
 
     var html = '';
-    html += '<div style="font-size:1.3rem; font-weight:800; color:var(--text); margin-bottom:0.4rem;">' + totEsc(t.ticket_visita || '—') + '</div>';
-    html += '<div style="font-size:0.83rem; color:var(--subtext); margin-bottom:1rem;">N° OT: <strong>' + totEsc(t.id_ot || '—') + '</strong></div>';
+    html += '<div style="font-size:1.3rem; font-weight:800; color:var(--text); margin-bottom:0.4rem;">' + totEsc(t.id_ot || '—') + '</div>';
+    html += '<div style="font-size:0.83rem; color:var(--subtext); margin-bottom:1rem;">N° OT: <strong>' + totEsc(t.ot_id || '—') + '</strong></div>';
 
     html += '<div class="tot-sec">';
     html += '<div class="tot-sec-hd">Información del Trabajo</div>';
@@ -204,8 +204,8 @@ function totAbrirDetalle(t) {
     if (footer) {
         footer.style.display = 'flex';
         footer.innerHTML =
-            '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(\'' + t.ticket_visita + '\')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>'
-            + '<button class="btn btn-sm btn-danger ms-2" style="min-width:38px;" onclick="window.totEliminar(\'' + t.ticket_visita + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>';
+            '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(\'' + t.id_ot + '\')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>'
+            + '<button class="btn btn-sm btn-danger ms-2" style="min-width:38px;" onclick="window.totEliminar(\'' + t.id_ot + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>';
     }
 
     var panel = document.getElementById('tot-panel-detalle');
@@ -245,7 +245,7 @@ window.totEliminar = function(ticket) {
 
 // ── Abrir drawer edición ──────────────────────────────────────────
 window.totAbrirEditar = function(ticket) {
-    var t = window.totData.find(function(x) { return String(x.ticket_visita || '') === String(ticket); });
+    var t = window.totData.find(function(x) { return String(x.id_ot || '') === String(ticket); });
     if (!t) return;
     var det = totParseDetalles(t);
 
