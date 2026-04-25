@@ -17,7 +17,6 @@ window._rotInvData           = window._rotInvData           || [];
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
     window.rotCargar();
-    rotPoblarPersonal();
 };
 
 // ── Carga desde API ──────────────────────────────────────────────
@@ -976,7 +975,7 @@ window.rotGuardarTrabajo = function() {
     } else {
         url     = '/api/ot-trabajos';
         method  = 'POST';
-        payload = { id_ot: idOt, trabajo_realizado: desc, fecha_trabajo: fIni || null, fecha_salida: fFin || null, creado_por: user, detalles_json: JSON.stringify({ personal: pers, costo: costo }) };
+        payload = { ticket_visita: idOt, trabajo_realizado: desc, fecha_trabajo: fIni || null, fecha_salida: fFin || null, creado_por: user, detalles_json: JSON.stringify({ personal: pers, costo: costo }) };
     }
 
     fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
