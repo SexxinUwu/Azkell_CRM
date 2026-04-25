@@ -1348,6 +1348,14 @@ window.SS = (function() {
             dd.style.display = 'none';
             if (box) box.style.borderColor = '';
         } else {
+            if (box) {
+                var rect = box.getBoundingClientRect();
+                dd.style.position = 'fixed';
+                dd.style.top  = (rect.bottom + 2) + 'px';
+                dd.style.left = rect.left + 'px';
+                dd.style.width = rect.width + 'px';
+                dd.style.right = 'auto';
+            }
             dd.style.display = 'block';
             if (box) box.style.borderColor = 'var(--primary,#5865F2)';
             var busq = document.getElementById(ids.busq);
@@ -2727,32 +2735,30 @@ function generarWizardFase3() {
 
         if(sec.type === "registro") {
             htmlTabs += `<div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="fw-bold">Fecha de Ingreso</label>
                     <input type="date" class="form-control fw-bold text-primary border-primary shadow-sm" id="i_fecha" required>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="fw-bold text-primary d-flex justify-content-between">
                         <span><i class="bi bi-truck"></i> Placa *</span>
                         <a href="#" class="text-success small fw-bold text-decoration-none" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle-fill"></i> Nueva Placa</a>
                     </label>
                     ${window.SS.html('insp-placa','i_placa','i_placa','ESCRIBE PARA BUSCAR...','Buscar placa...')}
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="fw-bold">KM Tablero (Opcional)</label>
                     <input type="number" class="form-control text-danger fw-bold border-danger shadow-sm" id="i_kmtablero" placeholder="Ej: 150000">
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="fw-bold text-secondary">Dueño (Cliente)</label>
                     <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="form-label fw-bold text-secondary">Tipo</label>
                     <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-12 mb-3">
                     <label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> KM GPS (Wialon)</label>
                     <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando...">
                 </div>
