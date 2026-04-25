@@ -986,8 +986,12 @@ window.importarExcelInspecciones = function(event) {
         .then(r => {
             document.body.style.cursor = 'default';
             event.target.value = '';
-            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
-            recargarModulo('statusMant');
+            if (r.errores > 0 && r.ok === 0 && r.detalle) {
+                alert(`❌ Importación fallida.\nError del servidor: ${r.detalle}`);
+            } else {
+                alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}${r.detalle ? '\n\nDetalle: ' + r.detalle : ''}`);
+            }
+            if (r.ok > 0) recargarModulo('statusMant');
         })
         .catch(err => {
             document.body.style.cursor = 'default';
