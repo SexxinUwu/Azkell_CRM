@@ -535,7 +535,7 @@ async function procesarGuardadoInspeccion() {
     .then(res => res.json())
     .then(r => {
         if(r.data === 'Éxito') {
-            bootstrap.Modal.getInstance(document.getElementById('modalInspeccion')).hide();
+            bootstrap.Offcanvas.getInstance(document.getElementById('drawerInspeccion')).hide();
             recargarModulo('statusMant');
         } else { alert("Error: " + r.data); }
         btn.disabled = false; btn.innerHTML = 'Guardar Registro';
@@ -612,7 +612,7 @@ window.abrirModalNuevaInspeccion = function() {
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
 
     window.cambiarPestana(0);
-    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+    new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
 };
 
 window.abrirModalEditarInspeccion = function(idBusqueda) {
@@ -699,7 +699,7 @@ window.abrirModalEditarInspeccion = function(idBusqueda) {
     }
 
     window.cambiarPestana(0);
-    new bootstrap.Modal(document.getElementById('modalInspeccion')).show();
+    new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
 };
 
 // ============================================================
