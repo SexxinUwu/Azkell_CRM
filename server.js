@@ -3667,7 +3667,7 @@ app.put('/api/placas/:placa', (req, res) => {
 
         // Actualizar la placa
         const sets = campos.map(c => `${c}=?`).join(', ');
-        const vals = campos.map(c => nuevo[c] != null ? String(nuevo[c]).trim() || null : null);
+        const vals = campos.map(c => nuevo[c] != null ? String(nuevo[c]).trim() : '');
         db.query(`UPDATE placas SET ${sets} WHERE placa=?`, [...vals, placa], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
 
@@ -4977,23 +4977,22 @@ app.get('/api/ot-trabajos', (req, res) => {
 });
 
 app.post('/api/ot-trabajos', (req, res) => {
-    const { trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
+    // ticket_visita del body = ticket_entrada de la OT (FK de asociación)
+    const { ticket_visita: ticketEntrada, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
     const anio    = new Date().getFullYear();
     const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
     const personal = (typeof detalles_json === 'object' && detalles_json) ? (detalles_json.personal || '') : '';
-    // Generar ticket_visita (TR-YYYY-NNN) y también id_ot (TRB-YYYY-NNN) en el servidor
+    // Solo generar ticket_visita único (TR-YYYY-NNN); id_ot = FK al ticket_entrada de la OT
     generarId('trabajos_ot', 'ticket_visita', 'TR', anio, (nuevoTicket) => {
-        generarId('trabajos_ot', 'id_ot', 'TRB', anio, (nuevoIdOt) => {
-            db.query(
-                `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
-                 VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
-                [nuevoIdOt, nuevoTicket, trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
-                (err, result) => {
-                    if (err) return res.status(500).json({ error: err.message });
-                    res.json({ ok: true, id: result.insertId, ticket_visita: nuevoTicket, id_ot: nuevoIdOt });
-                }
-            );
-        });
+        db.query(
+            `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
+             VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
+            [ticketEntrada || '', nuevoTicket, trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
+            (err, result) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, id: result.insertId, ticket_visita: nuevoTicket, id_ot: ticketEntrada });
+            }
+        );
     });
 });
 
