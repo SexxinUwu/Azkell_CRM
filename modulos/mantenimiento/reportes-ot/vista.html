@@ -462,10 +462,7 @@
             </div>
             <div class="col-6">
                 <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Placa</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-placa"
-                    list="rot-mat-list-placas" placeholder="Buscar placa…"
-                    style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
-                <datalist id="rot-mat-list-placas"></datalist>
+                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Responsable / Solicitante</label>

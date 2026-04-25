@@ -1063,11 +1063,8 @@ window.rotAgregarSalida = function(idOt) {
     fetch('/api/placas-lista')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
-            var lista = Array.isArray(d) ? d : [];
-            var dl = document.getElementById('rot-mat-list-placas');
-            if (dl) dl.innerHTML = lista.map(function(p) {
-                return '<option value="' + rotEscHtml(p.placa || String(p)) + '">';
-            }).join('');
+            var lista = (Array.isArray(d) ? d : []).map(function(p){ return (p.placa || String(p) || '').toUpperCase(); }).filter(Boolean).sort();
+            if (window.SS) window.SS.init('rot-placa', 'rot-mat-placa', lista, '', null, 'Buscar placa…');
         })
         .catch(function() {});
     fetch('/api/conductores-lista')

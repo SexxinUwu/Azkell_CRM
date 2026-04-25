@@ -1281,6 +1281,179 @@ function _escCbH(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g
 
 function normalizeStr(str) { return str ? str.toString().trim().toUpperCase() : ""; }
 
+// ══════════════════════════════════════════════════════════════════
+// window.SS — SearchSelect global reutilizable
+// Uso:
+//   1. En el HTML inyectar: SS.html('wid','hidden-id','hidden-name','Placeholder','Buscar...')
+//   2. Después de inyectar el HTML: SS.init('wid', ['op1','op2'], valorActual, onSelectFn)
+//   3. Para ediciones programáticas: SS.setValue('wid', valor)
+// ══════════════════════════════════════════════════════════════════
+window.SS = (function() {
+    var _store = {};
+
+    function _ids(wid) {
+        return {
+            wrap:  'ss-W-' + wid,
+            box:   'ss-B-' + wid,
+            lbl:   'ss-L-' + wid,
+            dd:    'ss-D-' + wid,
+            busq:  'ss-S-' + wid,
+            opts:  'ss-O-' + wid
+        };
+    }
+
+    function html(wid, hiddenId, hiddenName, placeholder, searchPh, extraClass) {
+        var ids = _ids(wid);
+        var cls = extraClass || '';
+        return '<div id="' + ids.wrap + '" class="ss-wrapper ' + cls + '" style="position:relative;">'
+            + '<div id="' + ids.box + '" class="form-select ss-box border-primary shadow-sm"'
+            + ' style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;"'
+            + ' onclick="window.SS.toggle(\'' + wid + '\')">'
+            + '<span id="' + ids.lbl + '" class="ss-lbl" style="color:#6c757d;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">'
+            + (placeholder || '— Seleccionar —') + '</span>'
+            + '<i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.75rem;margin-left:4px;"></i>'
+            + '</div>'
+            + '<input type="hidden" id="' + hiddenId + '" name="' + hiddenName + '">'
+            + '<div id="' + ids.dd + '" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);">'
+            + '<div style="padding:8px 8px 4px;">'
+            + '<input type="text" id="' + ids.busq + '" class="form-control form-control-sm ss-search" placeholder="' + (searchPh || 'Buscar...') + '"'
+            + ' oninput="window.SS.filter(this.value,\'' + wid + '\')" autocomplete="off"'
+            + ' style="border-color:var(--primary,#5865F2);">'
+            + '</div>'
+            + '<div id="' + ids.opts + '" class="ss-options" style="max-height:220px;overflow-y:auto;"></div>'
+            + '</div>'
+            + '</div>';
+    }
+
+    function init(wid, lista, valorActual, onSelect) {
+        var ids = _ids(wid);
+        _store[wid] = { lista: lista, onSelect: onSelect || null };
+        var hidden = document.getElementById(ids.busq.replace('ss-S-', ''));
+        // find hidden input: the one after the box — use stored wid pattern
+        setValue(wid, valorActual || '');
+        var dd = document.getElementById(ids.dd);
+        if (dd) dd.style.display = 'none';
+        var busq = document.getElementById(ids.busq);
+        if (busq) busq.value = '';
+        _render('', wid);
+    }
+
+    function toggle(wid) {
+        var ids = _ids(wid);
+        var dd  = document.getElementById(ids.dd);
+        var box = document.getElementById(ids.box);
+        if (!dd) return;
+        var isOpen = dd.style.display !== 'none';
+        if (isOpen) {
+            dd.style.display = 'none';
+            if (box) box.style.borderColor = '';
+        } else {
+            dd.style.display = 'block';
+            if (box) box.style.borderColor = 'var(--primary,#5865F2)';
+            var busq = document.getElementById(ids.busq);
+            if (busq) { busq.value = ''; busq.focus(); }
+            _render('', wid);
+        }
+    }
+
+    function filter(q, wid) { _render(q || '', wid); }
+
+    function select(valor, wid) {
+        var ids = _ids(wid);
+        var dd  = document.getElementById(ids.dd);
+        var box = document.getElementById(ids.box);
+        // find hidden: we stored hiddenId in _store
+        var store = _store[wid] || {};
+        var hidden = store.hiddenEl || null;
+        if (hidden) { hidden.value = valor; }
+        var lbl = document.getElementById(ids.lbl);
+        if (lbl) { lbl.textContent = valor || (store.placeholder || '— Seleccionar —'); lbl.style.color = valor ? 'var(--text,#212529)' : '#6c757d'; }
+        if (dd) dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+        if (store.onSelect) store.onSelect(valor);
+    }
+
+    function setValue(wid, valor) {
+        var ids = _ids(wid);
+        var store = _store[wid] || {};
+        var hidden = store.hiddenEl || null;
+        if (hidden) hidden.value = valor || '';
+        var lbl = document.getElementById(ids.lbl);
+        if (lbl) { lbl.textContent = valor || (store.placeholder || '— Seleccionar —'); lbl.style.color = valor ? 'var(--text,#212529)' : '#6c757d'; }
+    }
+
+    function _getLista(wid) {
+        var store = _store[wid];
+        if (!store) return [];
+        return typeof store.lista === 'function' ? store.lista() : (store.lista || []);
+    }
+
+    function _render(query, wid) {
+        var ids = _ids(wid);
+        var container = document.getElementById(ids.opts);
+        if (!container) return;
+        var q = (query || '').toUpperCase();
+        var store = _store[wid] || {};
+        var hidden = store.hiddenEl;
+        var actual = hidden ? (hidden.value || '').toUpperCase() : '';
+        var lista = _getLista(wid);
+        var filtrados = q ? lista.filter(function(n) { return (n || '').toUpperCase().indexOf(q) !== -1; }) : lista;
+        if (filtrados.length === 0) {
+            container.innerHTML = '<div style="padding:10px 14px;color:var(--subtext,#6c757d);font-size:0.83rem;text-align:center;">Sin resultados</div>';
+            return;
+        }
+        container.innerHTML = filtrados.map(function(n) {
+            var isSelected = (n || '').toUpperCase() === actual;
+            var nEsc = String(n).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            return '<div onclick="window.SS.select(\'' + nEsc + '\',\'' + wid + '\')"'
+                + ' style="padding:9px 14px;cursor:pointer;font-size:0.85rem;font-weight:600;letter-spacing:0.03em;color:var(--text,#212529);'
+                + (isSelected ? 'background:var(--primary,#5865F2);color:#fff;' : '')
+                + '" onmouseenter="this.style.background=this.style.background||\'var(--bg,#f8f9fa)\'"'
+                + ' onmouseleave="this.style.background=\'\'"> '
+                + n + '</div>';
+        }).join('');
+    }
+
+    // Cerrar al clicar fuera — un solo listener global
+    document.addEventListener('click', function(e) {
+        Object.keys(_store).forEach(function(wid) {
+            var wrap = document.getElementById('ss-W-' + wid);
+            if (wrap && !wrap.contains(e.target)) {
+                var dd  = document.getElementById('ss-D-' + wid);
+                var box = document.getElementById('ss-B-' + wid);
+                if (dd) dd.style.display = 'none';
+                if (box) box.style.borderColor = '';
+            }
+        });
+    });
+
+    // init v2 que también guarda hiddenEl y placeholder
+    function initFull(wid, hiddenId, lista, valorActual, onSelect, placeholder) {
+        _store[wid] = {
+            lista: lista,
+            onSelect: onSelect || null,
+            placeholder: placeholder || '— Seleccionar —',
+            hiddenEl: document.getElementById(hiddenId) || null
+        };
+        var ids = _ids(wid);
+        var dd = document.getElementById(ids.dd);
+        if (dd) dd.style.display = 'none';
+        var busq = document.getElementById(ids.busq);
+        if (busq) busq.value = '';
+        setValue(wid, valorActual || '');
+        _render('', wid);
+    }
+
+    return {
+        html: html,
+        init: initFull,   // SS.init(wid, hiddenId, lista, valorActual, onSelect, placeholder)
+        toggle: toggle,
+        filter: filter,
+        select: select,
+        setValue: setValue
+    };
+})();
+
 // =======================================================
 // 🛡️ NÚCLEO DE SEGURIDAD Y ENRUTAMIENTO RBAC
 // =======================================================
@@ -2563,7 +2736,7 @@ function generarWizardFase3() {
                         <span><i class="bi bi-truck"></i> Placa *</span>
                         <a href="#" class="text-success small fw-bold text-decoration-none" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle-fill"></i> Nueva Placa</a>
                     </label>
-                    <input type="text" class="form-control text-uppercase border-primary fw-bold shadow-sm" id="i_placa" list="dl-placas" onchange="autocompletarInfoInsp()" oninput="autocompletarInfoInsp()" placeholder="Escribe para buscar..." autocomplete="off" required>
+                    ${window.SS.html('insp-placa','i_placa','i_placa','ESCRIBE PARA BUSCAR...','Buscar placa...')}
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="fw-bold">KM Tablero (Opcional)</label>
@@ -2621,6 +2794,16 @@ function generarWizardFase3() {
 
     let wH = document.getElementById('wizardHeaders'); if(wH) wH.innerHTML = htmlHeaders;
     let wD = document.getElementById('wizard-dynamic-tabs'); if(wD) wD.innerHTML = htmlTabs;
+    // Inicializar SS para placa
+    window.SS.init('insp-placa', 'i_placa',
+        function() {
+            return (window.dataGlobalPlacas || [])
+                .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
+                .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
+                .sort();
+        },
+        '', window.autocompletarInfoInsp, 'ESCRIBE PARA BUSCAR...'
+    );
 }
 
 
