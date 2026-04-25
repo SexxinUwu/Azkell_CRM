@@ -109,7 +109,7 @@ window.init_ordenes = function() {
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
-window.otCargarTodo = function() {
+window.otCargarTodo = function(cb) {
     Promise.all([
         fetch('/api/ordenes-trabajo').then(function(r){ return r.json(); }),
         fetch('/api/ot-trabajos').then(function(r){ return r.json(); }),
@@ -123,6 +123,7 @@ window.otCargarTodo = function() {
         otActualizarKPIs();
         otActualizarBadgesTabs();
         otRenderTabActiva();
+        if (typeof cb === 'function') cb();
     }).catch(function(err) {
         console.error('Error cargando OTs:', err);
         window.mostrarAlerta('Error al cargar órdenes de mantenimiento', 'danger');
@@ -959,12 +960,13 @@ window.otGuardarTrabajo = function() {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
     }).then(function(resp) {
-        // Actualizar display con el ID asignado por el servidor
-        var disp = document.getElementById('trb-id-display');
-        if (disp && resp.id_ot) disp.textContent = resp.id_ot;
+        var savedTicket = ticketId; // capturar antes de cerrar
         window.otCerrarTodosDrawers();
-        window.otCargarTodo();
         window.mostrarAlerta('Trabajo registrado, pendiente de aprobación', 'success');
+        // Recargar datos y re-abrir el detalle de la OT para mostrar el nuevo trabajo
+        window.otCargarTodo(function() {
+            if (savedTicket) otAbrirDetalle(savedTicket);
+        });
     }).catch(function(err) { console.error(err); window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
