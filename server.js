@@ -54,7 +54,15 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+    setHeaders: function(res, filePath) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));

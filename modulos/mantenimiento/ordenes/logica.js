@@ -20,14 +20,19 @@ window.otTrbPersonalInit = function() {
     window._otTrbSeleccionados = [];
     var hidden = document.getElementById('trb-personal');
     if (hidden) hidden.value = '';
-    var chips = document.getElementById('trb-personal-chips');
-    if (chips) chips.innerHTML = '';
-    var search = document.getElementById('trb-personal-search');
+    otTrbMsRenderBox();
+    var dd = document.getElementById('trb-ms-dropdown');
+    if (dd) dd.style.display = 'none';
+    var search = document.getElementById('trb-ms-search');
     if (search) search.value = '';
-    otTrbPersonalCerrar();
+    var cnt = document.getElementById('trb-ms-count');
+    if (cnt) cnt.textContent = '0 seleccionados';
 
     // Cargar lista si no está en caché
-    if (window._otPersonalLista.length > 0) return;
+    if (window._otPersonalLista.length > 0) {
+        otTrbMsRenderOptions('');
+        return;
+    }
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
@@ -38,58 +43,108 @@ window.otTrbPersonalInit = function() {
                     return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
                 }).join(' ');
             }).filter(Boolean).sort();
+            otTrbMsRenderOptions('');
         })
         .catch(function() {});
 };
 
-window.otTrbPersonalBuscar = function(query) {
-    var dropdown = document.getElementById('trb-personal-dropdown');
-    if (!dropdown) return;
-    var q = query.trim().toLowerCase();
-    if (!q) { dropdown.style.display = 'none'; return; }
+window.otTrbMsToggle = function() {
+    var dd = document.getElementById('trb-ms-dropdown');
+    var box = document.getElementById('trb-ms-box');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var search = document.getElementById('trb-ms-search');
+        if (search) { search.value = ''; search.focus(); }
+        otTrbMsRenderOptions('');
+    }
+};
+
+window.otTrbMsFiltrar = function(query) {
+    otTrbMsRenderOptions(query || '');
+};
+
+function otTrbMsRenderOptions(query) {
+    var container = document.getElementById('trb-ms-options');
+    if (!container) return;
+    var q = (query || '').toLowerCase();
     var filtrados = window._otPersonalLista.filter(function(n) {
-        return n.toLowerCase().includes(q) && !window._otTrbSeleccionados.includes(n);
+        return !q || n.toLowerCase().indexOf(q) !== -1;
     });
-    if (filtrados.length === 0) { dropdown.style.display = 'none'; return; }
-    dropdown.innerHTML = filtrados.map(function(n) {
-        return '<div style="padding:8px 12px; cursor:pointer; font-size:0.83rem; color:var(--text);" '
-            + 'onmousedown="event.preventDefault(); otTrbPersonalAgregar(\'' + n.replace(/'/g, "\\'") + '\')">'
-            + n + '</div>';
-    }).join('');
-    dropdown.style.display = 'block';
-};
-
-window.otTrbPersonalCerrar = function() {
-    var dropdown = document.getElementById('trb-personal-dropdown');
-    if (dropdown) dropdown.style.display = 'none';
-};
-
-window.otTrbPersonalAgregar = function(nombre) {
-    if (!nombre || window._otTrbSeleccionados.includes(nombre)) return;
-    window._otTrbSeleccionados.push(nombre);
-    otTrbPersonalRenderChips();
-    var search = document.getElementById('trb-personal-search');
-    if (search) search.value = '';
-    otTrbPersonalCerrar();
-};
-
-window.otTrbPersonalQuitar = function(nombre) {
-    window._otTrbSeleccionados = window._otTrbSeleccionados.filter(function(n) { return n !== nombre; });
-    otTrbPersonalRenderChips();
-};
-
-function otTrbPersonalRenderChips() {
-    var chips = document.getElementById('trb-personal-chips');
-    var hidden = document.getElementById('trb-personal');
-    if (!chips) return;
-    chips.innerHTML = window._otTrbSeleccionados.map(function(n) {
-        return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600;">'
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(n) {
+        var checked = window._otTrbSeleccionados.indexOf(n) !== -1;
+        var nEsc = n.replace(/'/g, "\\'");
+        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
+            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+            + 'onclick="event.stopPropagation(); otTrbMsToggleItem(\'' + nEsc + '\')" '
+            + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
             + n
-            + '<span style="cursor:pointer; opacity:0.8; margin-left:2px;" onmousedown="event.preventDefault(); otTrbPersonalQuitar(\'' + n.replace(/'/g, "\\'") + '\')">✕</span>'
-            + '</span>';
+            + '</label>';
     }).join('');
-    if (hidden) hidden.value = window._otTrbSeleccionados.join(', ');
 }
+
+window.otTrbMsToggleItem = function(nombre) {
+    var idx = window._otTrbSeleccionados.indexOf(nombre);
+    if (idx === -1) window._otTrbSeleccionados.push(nombre);
+    else window._otTrbSeleccionados.splice(idx, 1);
+    otTrbMsRenderBox();
+    otTrbMsRenderOptions((document.getElementById('trb-ms-search') || {}).value || '');
+    var cnt = document.getElementById('trb-ms-count');
+    if (cnt) cnt.textContent = window._otTrbSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('trb-personal');
+    if (hidden) hidden.value = window._otTrbSeleccionados.join(', ');
+};
+
+window.otTrbMsLimpiar = function() {
+    window._otTrbSeleccionados = [];
+    otTrbMsRenderBox();
+    otTrbMsRenderOptions('');
+    var cnt = document.getElementById('trb-ms-count');
+    if (cnt) cnt.textContent = '0 seleccionados';
+    var hidden = document.getElementById('trb-personal');
+    if (hidden) hidden.value = '';
+};
+
+function otTrbMsRenderBox() {
+    var box = document.getElementById('trb-ms-box');
+    if (!box) return;
+    var sel = window._otTrbSeleccionados;
+    if (sel.length === 0) {
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
+    } else {
+        box.innerHTML = sel.map(function(n) {
+            var nEsc = n.replace(/'/g, "\\'");
+            return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
+                + n
+                + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); otTrbMsToggleItem(\'' + nEsc + '\')">×</span>'
+                + '</span>';
+        }).join('');
+    }
+}
+
+// Cerrar dropdown al hacer clic fuera (safe para SPA re-init)
+window._otTrbMsOutsideClick = function(e) {
+    var wrapper = document.getElementById('trb-ms-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        var dd = document.getElementById('trb-ms-dropdown');
+        var box = document.getElementById('trb-ms-box');
+        if (dd) dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    }
+};
+document.removeEventListener('click', window._otTrbMsOutsideClick);
+document.addEventListener('click', window._otTrbMsOutsideClick);
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_ordenes = function() {
@@ -921,6 +976,8 @@ window.otAbrirFormTrabajo = function(ticketId) {
     el = document.getElementById('trb-hora-fin');  if (el) el.value = '';
     el = document.getElementById('trb-descripcion'); if (el) el.value = '';
     el = document.getElementById('trb-costo');     if (el) el.value = '';
+    // Guardar contexto OT para garantizar asociación al guardar
+    el = document.getElementById('trb-ot-context'); if (el) el.value = ticketId || '';
     // Inicializar multi-select de técnicos
     otTrbPersonalInit();
     otAbrirDrawer('drawer-nuevo-trabajo');
@@ -929,7 +986,7 @@ window.otAbrirFormTrabajo = function(ticketId) {
 window.otGuardarTrabajo = function() {
     if (!window.guardAction('ot', 'c')) return;
     var get = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; };
-    var ticketId    = get('trb-ot-select');
+    var ticketId    = get('trb-ot-select') || get('trb-ot-context');
     var descripcion = get('trb-descripcion');
     var personal    = get('trb-personal');
     if (!ticketId)    { alert('Debes asociar el trabajo a una OT'); return; }
