@@ -1050,6 +1050,7 @@ window.srAgregarTrabajo = function(idOt) {
     var ff = document.getElementById('sr-tr-fecha-fin'); if (ff) ff.value = '';
     srAbrirDrawer('sr-drawer-trabajo');
     srMsInit('');
+};
 
 window.srGuardarTrabajo = function() {
     var idOt  = (document.getElementById('sr-tr-ot-id')       || {}).value || '';
@@ -1065,7 +1066,7 @@ window.srGuardarTrabajo = function() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            id_ot: idOt,
+            ticket_visita: idOt,
             trabajo_realizado: desc,
             fecha_trabajo:  fIni || null,
             fecha_salida:   fFin || null,
