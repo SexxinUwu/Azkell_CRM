@@ -203,7 +203,9 @@ function totAbrirDetalle(t) {
     var footer = document.getElementById('tot-detalle-footer');
     if (footer) {
         footer.style.display = 'flex';
-        footer.innerHTML = '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(\'' + t.ticket_visita + '\')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>';
+        footer.innerHTML =
+            '<button class="btn btn-sm btn-primary flex-fill fw-bold" onclick="window.totAbrirEditar(\'' + t.ticket_visita + '\')"><i class="bi bi-pencil me-1"></i>Editar Trabajo</button>'
+            + '<button class="btn btn-sm btn-danger ms-2" style="min-width:38px;" onclick="window.totEliminar(\'' + t.ticket_visita + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>';
     }
 
     var panel = document.getElementById('tot-panel-detalle');
@@ -217,6 +219,30 @@ window.totCerrarDetalle = function() {
     totRenderTabla();
 };
 
+// ── Eliminar trabajo ──────────────────────────────────────────────
+window.totEliminar = function(ticket) {
+    if (!confirm('¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.')) return;
+    fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
+        .then(function(r) {
+            if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'HTTP ' + r.status); });
+            return r.json();
+        })
+        .then(function() {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Trabajo eliminado correctamente', 'success');
+            }
+            window.totDetalleId = null;
+            var panel = document.getElementById('tot-panel-detalle');
+            if (panel) panel.classList.remove('open');
+            totCargar();
+        })
+        .catch(function(err) {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('Error al eliminar: ' + err.message, 'danger');
+            }
+        });
+};
+
 // ── Abrir drawer edición ──────────────────────────────────────────
 window.totAbrirEditar = function(ticket) {
     var t = window.totData.find(function(x) { return String(x.ticket_visita || '') === String(ticket); });
@@ -225,7 +251,9 @@ window.totAbrirEditar = function(ticket) {
 
     var toLocalDT = function(iso) {
         if (!iso) return '';
-        return String(iso).slice(0, 16);
+        var s = String(iso).replace('Z', '').replace('+00:00', '');
+        if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
+        return s.slice(0, 16); // YYYY-MM-DDTHH:MM para datetime-local
     };
 
     var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
