@@ -17,7 +17,6 @@ function totGetId(t) {
 // ── Entry point ──────────────────────────────────────────────────
 window.init_trabajos_ot = function() {
     totCargar();
-    totPoblarPersonal();
 };
 
 // ── Carga de datos ────────────────────────────────────────────────
@@ -272,16 +271,14 @@ window.totAbrirEditar = function(ticket) {
     var estEl = document.getElementById('tot-ed-estado');
     if (estEl) estEl.value = t.estado || 'Pendiente';
 
-    var persEl = document.getElementById('tot-ed-personal');
-    if (persEl) persEl.value = det.personal || t.tecnico || '';
-
     var tit = document.getElementById('tot-ed-titulo');
     if (tit) tit.textContent = 'Editar ' + ticket;
 
+    // Inicializar multiselect con el personal actual
+    totMsInit(det.personal || t.tecnico || '');
+
     var drawer = document.getElementById('tot-drawer-editar');
     if (drawer) drawer.classList.add('open');
-
-    totPoblarPersonal();
 };
 
 window.totCerrarDrawerEditar = function() {
@@ -334,30 +331,134 @@ window.totGuardarEdicion = function() {
     });
 };
 
-// ── Poblar select Personal ────────────────────────────────────────
-function totPoblarPersonal() {
-    var el = document.getElementById('tot-ed-personal');
-    var savedVal = el ? el.value : '';
+// ── Poblar / Multiselect Personal ────────────────────────────────────────────
+window._totPersonalLista = window._totPersonalLista || [];
+window._totSeleccionados = window._totSeleccionados || [];
+
+function totMsInit(valorActual) {
+    window._totSeleccionados = valorActual
+        ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean)
+        : [];
+    totMsRenderBox();
+    var dd = document.getElementById('tot-ms-dropdown');
+    if (dd) dd.style.display = 'none';
+    var s = document.getElementById('tot-ms-search');
+    if (s) s.value = '';
+    var cnt = document.getElementById('tot-ms-count');
+    if (cnt) cnt.textContent = window._totSeleccionados.length + ' seleccionados';
+
+    var doRender = function() { totMsRenderOptions(''); };
+    if (window._totPersonalLista.length > 0) { doRender(); return; }
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
             var lista = Array.isArray(data) ? data : (data.data || []);
-            var opts = lista.map(function(p) {
+            window._totPersonalLista = lista.map(function(p) {
                 var n = (p.nombre_completo || p.nombre || '').trim();
-                // Normalizar a Title Case independientemente de cómo esté en la DB
-                n = n.split(' ').map(function(w) {
+                return n.split(' ').map(function(w) {
                     return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
                 }).join(' ');
-                return n ? '<option value="' + n + '">' + n + '</option>' : '';
-            }).join('');
-            var elNow = document.getElementById('tot-ed-personal');
-            if (elNow) {
-                elNow.innerHTML = '<option value="">— Seleccionar técnico —</option>' + opts;
-                if (savedVal) elNow.value = savedVal;
-            }
+            }).filter(Boolean).sort();
+            doRender();
         })
         .catch(function() {});
 }
+
+window.totMsToggle = function() {
+    var dd = document.getElementById('tot-ms-dropdown');
+    var box = document.getElementById('tot-ms-box');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var search = document.getElementById('tot-ms-search');
+        if (search) { search.value = ''; search.focus(); }
+        totMsRenderOptions('');
+    }
+};
+
+window.totMsFiltrar = function(query) { totMsRenderOptions(query || ''); };
+
+function totMsRenderOptions(query) {
+    var container = document.getElementById('tot-ms-options');
+    if (!container) return;
+    var q = (query || '').toLowerCase();
+    var filtrados = window._totPersonalLista.filter(function(n) {
+        return !q || n.toLowerCase().indexOf(q) !== -1;
+    });
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(n) {
+        var checked = window._totSeleccionados.indexOf(n) !== -1;
+        var nEsc = n.replace(/'/g, "\\'");
+        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
+            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+            + 'onclick="event.stopPropagation(); totMsToggleItem(\'' + nEsc + '\')" '
+            + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
+            + n + '</label>';
+    }).join('');
+}
+
+window.totMsToggleItem = function(nombre) {
+    var idx = window._totSeleccionados.indexOf(nombre);
+    if (idx === -1) window._totSeleccionados.push(nombre);
+    else window._totSeleccionados.splice(idx, 1);
+    totMsRenderBox();
+    totMsRenderOptions((document.getElementById('tot-ms-search') || {}).value || '');
+    var cnt = document.getElementById('tot-ms-count');
+    if (cnt) cnt.textContent = window._totSeleccionados.length + ' seleccionados';
+    var hidden = document.getElementById('tot-ed-personal');
+    if (hidden) hidden.value = window._totSeleccionados.join(', ');
+};
+
+window.totMsLimpiar = function() {
+    window._totSeleccionados = [];
+    totMsRenderBox();
+    totMsRenderOptions('');
+    var cnt = document.getElementById('tot-ms-count');
+    if (cnt) cnt.textContent = '0 seleccionados';
+    var hidden = document.getElementById('tot-ed-personal');
+    if (hidden) hidden.value = '';
+};
+
+function totMsRenderBox() {
+    var box = document.getElementById('tot-ms-box');
+    if (!box) return;
+    var sel = window._totSeleccionados;
+    if (sel.length === 0) {
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
+    } else {
+        box.innerHTML = sel.map(function(n) {
+            var nEsc = n.replace(/'/g, "\\'");
+            return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
+                + n
+                + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); totMsToggleItem(\'' + nEsc + '\')">×</span>'
+                + '</span>';
+        }).join('');
+    }
+}
+
+// Cerrar dropdown al clicar fuera (safe para SPA)
+window._totMsOutsideClick = function(e) {
+    var wrapper = document.getElementById('tot-ms-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        var dd = document.getElementById('tot-ms-dropdown');
+        var box = document.getElementById('tot-ms-box');
+        if (dd) dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    }
+};
+document.removeEventListener('click', window._totMsOutsideClick);
+document.addEventListener('click', window._totMsOutsideClick);
+
 
 // ── Exportar a Excel ──────────────────────────────────────────────
 window.totExportar = function() {
