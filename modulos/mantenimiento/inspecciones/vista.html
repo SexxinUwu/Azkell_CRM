@@ -207,26 +207,20 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalInspeccion" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
-        <div class="modal-content" style="height: 90vh;">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold text-white"><i class="bi bi-clipboard2-check text-warning"></i> Formulario de Inspecciones</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0 d-flex flex-column">
-                <div class="wizard-header" id="wizardHeaders"></div>
-                <div class="p-3 flex-grow-1 overflow-auto" style="background-color: var(--bg);">
-                    <form id="formNuevaInspeccion">
-                        <div id="wizard-dynamic-tabs"></div>
-                    </form>
-                </div>
-            </div>
-            <div class="modal-footer d-flex justify-content-between" style="background: var(--surface);">
-                <button type="button" class="btn btn-secondary fw-bold px-4" id="btnWizAnterior" onclick="moverWizard(-1)" disabled>Anterior</button>
-                <button type="button" class="btn btn-primary fw-bold px-4" id="btnWizSiguiente" onclick="moverWizard(1)">Siguiente</button>
-                <button type="button" class="btn btn-success fw-bold px-4" id="btnWizGuardar" style="display:none;" onclick="procesarGuardadoInspeccion()">Guardar Registro</button>
-            </div>
-        </div>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="drawerInspeccion" data-bs-backdrop="static" style="width:760px;max-width:96vw;">
+    <div class="offcanvas-header" style="background:#1e293b;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <h5 class="offcanvas-title fw-bold text-white"><i class="bi bi-clipboard2-check text-warning"></i> Formulario de Inspecciones</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="wizard-header" id="wizardHeaders" style="flex-shrink:0;"></div>
+    <div class="offcanvas-body p-3" style="background-color:var(--bg);">
+        <form id="formNuevaInspeccion">
+            <div id="wizard-dynamic-tabs"></div>
+        </form>
+    </div>
+    <div class="d-flex justify-content-between" style="padding:0.75rem 1rem;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+        <button type="button" class="btn btn-secondary fw-bold px-4" id="btnWizAnterior" onclick="moverWizard(-1)" disabled>Anterior</button>
+        <button type="button" class="btn btn-primary fw-bold px-4" id="btnWizSiguiente" onclick="moverWizard(1)">Siguiente</button>
+        <button type="button" class="btn btn-success fw-bold px-4" id="btnWizGuardar" style="display:none;" onclick="procesarGuardadoInspeccion()">Guardar Registro</button>
     </div>
 </div>
