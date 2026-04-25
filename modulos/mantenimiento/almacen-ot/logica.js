@@ -52,10 +52,8 @@ function _aotCargarSelectores() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             window._aotPlacas = d || [];
-            var dl = document.getElementById('aot-list-placas');
-            if (dl) dl.innerHTML = (d || []).map(function(p) {
-                return '<option value="' + aotEsc(p.placa) + '">';
-            }).join('');
+            var lista = (d || []).map(function(p){ return (p.placa||'').toUpperCase(); }).filter(Boolean).sort();
+            if (window.SS) window.SS.init('aot-placa', 'aot-f-placa', lista, '', null, 'Buscar placa…');
         })
         .catch(function() {});
 

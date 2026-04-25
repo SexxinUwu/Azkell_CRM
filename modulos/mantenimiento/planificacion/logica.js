@@ -114,12 +114,16 @@ window.init_planificacion = function() {
     var upMes = document.getElementById('up-sel-mes');
     if (upMes) upMes.value = mesAct;
 
-    // Poblar datalist de placas para modal nuevo plan
-    var dl = document.getElementById('np-placas-list');
-    if (dl && window.dataGlobalPlacas && window.dataGlobalPlacas.length) {
-        dl.innerHTML = window.dataGlobalPlacas.map(function(p) {
-            return '<option value="' + (p[0]||'') + '">';
-        }).join('');
+    // SS widget para placa en modal nuevo plan
+    if (window.SS && window.dataGlobalPlacas && window.dataGlobalPlacas.length) {
+        var lista = window.dataGlobalPlacas
+            .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
+            .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
+            .sort();
+        window.SS.init('np-placa', 'np-placa', lista, '', function(v) {
+            if (typeof window.sugerirFechasNuevoPlan === 'function') window.sugerirFechasNuevoPlan();
+            if (typeof window.npAutoKmMinMax === 'function') window.npAutoKmMinMax();
+        }, 'ABC-123');
     }
 
     // Drag & drop zona de upload
@@ -1300,7 +1304,10 @@ function _cfPopularDatalists() {
     _fill('cf-dl-tipomps',  tipos);
     _fill('cf-dl-sistemas', sistemas);
     _fill('kit-dl-tipomps', tipos);
-    _fill('np-dl-tipomps',  tipos);
+    // np-tipomp ahora usa SS widget
+    if (window.SS) window.SS.init('np-tipomp', 'np-tipomp', tipos, '', function(v) {
+        if (typeof window.sugerirFechasNuevoPlan === 'function') window.sugerirFechasNuevoPlan();
+    }, 'MP1, FILTRO DE AIRE...');
 }
 
 // ── TIPOS DE MANTENIMIENTO ────────────────────────────────────────

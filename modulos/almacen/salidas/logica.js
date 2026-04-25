@@ -60,10 +60,8 @@ function _salCargarSelectores() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             window._salPlacas = d || [];
-            var dl = document.getElementById('sal-list-placas');
-            if (dl) dl.innerHTML = (d || []).map(function(p) {
-                return '<option value="' + salEsc(p.placa) + '">';
-            }).join('');
+            var lista = (d || []).map(function(p){ return (p.placa||'').toUpperCase(); }).filter(Boolean).sort();
+            if (window.SS) window.SS.init('sal-placa', 'sal-f-placa', lista, '', null, 'Buscar placa…');
         })
         .catch(function() {});
 

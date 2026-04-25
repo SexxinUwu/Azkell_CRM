@@ -97,19 +97,19 @@ function srCargarCatalogos() {
         .catch(function() {});
 }
 
-// ── Placas datalist ──────────────────────────────────────────────
+// ── Placas SS widget ─────────────────────────────────────────────
 function srPoblarPlacas() {
-    var dl = document.getElementById('sr-placas-dl');
-    if (!dl) return;
+    if (!window.SS) return;
+    var lista = [];
     var vistas = {};
-    var html = '';
     (window.dataGlobalPlacas || []).forEach(function(r) {
         var p = String(Array.isArray(r) ? (r[0] || '') : (r.placa || r[0] || '')).trim().toUpperCase();
         if (!p || p === 'PLACA' || vistas[p]) return;
         vistas[p] = true;
-        html += '<option value="' + p + '">';
+        lista.push(p);
     });
-    dl.innerHTML = html;
+    lista.sort();
+    window.SS.init('sr-placa', 'sr-f-placa', lista, '', null, 'Buscar placa...');
 }
 
 // ── Personal / Supervisor ────────────────────────────────────────

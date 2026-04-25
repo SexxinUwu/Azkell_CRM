@@ -639,6 +639,7 @@ window.abrirModalEditarInspeccion = function(idBusqueda) {
 
     document.getElementById('i_fecha').value = fIngreso;
     document.getElementById('i_placa').value = insp.placa || "";
+    if (window.SS) window.SS.setValue('insp-placa', insp.placa || '');
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
     document.getElementById('i_cliente').value = insp.cliente || "";
     document.getElementById('i_tecnico').value = insp.tecnico || "";
