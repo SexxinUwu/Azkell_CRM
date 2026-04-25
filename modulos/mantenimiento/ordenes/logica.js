@@ -911,8 +911,11 @@ window.otAbrirFormTrabajo = function(ticketId) {
         });
     }
     var now = new Date();
-    el = document.getElementById('trb-fecha-ini'); if (el) el.value = now.toISOString().slice(0,10);
-    el = document.getElementById('trb-hora-ini');  if (el) el.value = now.toTimeString().slice(0,5);
+    var pad2 = function(n) { return String(n).padStart(2, '0'); };
+    var localDate = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+    var localTime = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+    el = document.getElementById('trb-fecha-ini'); if (el) el.value = localDate;
+    el = document.getElementById('trb-hora-ini');  if (el) el.value = localTime;
     el = document.getElementById('trb-fecha-fin'); if (el) el.value = '';
     el = document.getElementById('trb-hora-fin');  if (el) el.value = '';
     el = document.getElementById('trb-descripcion'); if (el) el.value = '';
