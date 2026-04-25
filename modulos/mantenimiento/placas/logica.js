@@ -877,7 +877,10 @@ function enviarEdicionPlaca(event, formObj) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'HTTP ' + r.status); });
+        return r.json();
+    })
     .then(function(r) {
         var modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPlaca'));
         if (modal) modal.hide();
