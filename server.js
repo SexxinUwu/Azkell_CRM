@@ -4907,9 +4907,11 @@ app.put('/api/ordenes-trabajo/:id', (req, res) => {
             det.tecnico_cierre = (detalles_cierre || {}).tecnico_cierre || '';
             det.obs_cierre    = (detalles_cierre || {}).obs_cierre || '';
             det.firma         = (detalles_cierre || {}).firma || null;
+            const fhSalidaRaw = fecha_hora_salida ? new Date(fecha_hora_salida) : new Date();
+            const fhSalida = fhSalidaRaw.toISOString().slice(0, 19).replace('T', ' ');
             db.query(
                 'UPDATE ordenes_trabajo SET estado = ?, detalles_json = ?, fecha_hora_salida = ? WHERE ticket_entrada = ?',
-                ['Finalizado', JSON.stringify(det), fecha_hora_salida || new Date(), ticketId],
+                ['Finalizado', JSON.stringify(det), fhSalida, ticketId],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     res.json({ ok: true });
@@ -4947,7 +4949,7 @@ app.put('/api/ordenes-trabajo/:id', (req, res) => {
     const params = [];
     if (estado)            { sets.push('estado = ?');          params.push(estado); }
     if (detalles_json)     { sets.push('detalles_json = ?');   params.push(JSON.stringify(detalles_json)); }
-    if (fecha_hora_salida) { sets.push('fecha_hora_salida = ?'); params.push(fecha_hora_salida); }
+    if (fecha_hora_salida) { sets.push('fecha_hora_salida = ?'); params.push(new Date(fecha_hora_salida).toISOString().slice(0,19).replace('T',' ')); }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
     params.push(ticketId);
     db.query('UPDATE ordenes_trabajo SET ' + sets.join(', ') + ' WHERE ticket_entrada = ?', params, (err) => {
