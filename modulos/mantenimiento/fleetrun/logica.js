@@ -365,7 +365,7 @@ function _filtrarDatosAMostrar(datos) {
     });
 }
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); poblarSelectTipoMantt('f_tipomp', ''); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
+function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); frTipoInit('f', ''); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
@@ -494,7 +494,7 @@ window.mostrarDetalleFleetrun = function(index) {
     bsOffcanvas.show();
 };
 
-function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; poblarSelectTipoMantt('eF_tipomp', p[8]); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
+function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; frTipoInit('eF', p[8]);const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
 
 function enviarFleetrun(event, formObj) { event.preventDefault(); if (!window.guardAction('fleet','c')) return; const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
 
@@ -890,31 +890,106 @@ window.eliminarMasivo = function(coleccion, contexto) {
     .catch(function(err) { alert('Error al eliminar: ' + err.message); });
 };
 
-// ── Poblar select de Tipo de Mantenimiento ──────────────────────────────────
-function poblarSelectTipoMantt(selectId, valorActual) {
-    var sel = document.getElementById(selectId);
-    if (!sel) return;
-    // Jala de /api/tipos-preventivo (módulo Preferencias → Tipos MP)
+// ── Searchable single-select para Tipo de Mantenimiento ─────────────────────
+window._frTipoLista = window._frTipoLista || [];
+
+function frTipoInit(prefix, valorActual) {
+    var hidden = document.getElementById(prefix + '_tipomp');
+    var lbl    = document.getElementById('frTipoLbl-' + prefix);
+    var dd     = document.getElementById('frTipoDD-' + prefix);
+    var busq   = document.getElementById('frTipoBusq-' + prefix);
+    if (hidden) hidden.value = valorActual || '';
+    if (lbl) lbl.textContent = valorActual || '— Seleccionar tipo —';
+    if (lbl) lbl.style.color = valorActual ? 'var(--text,#212529)' : '#6c757d';
+    if (dd) dd.style.display = 'none';
+    if (busq) busq.value = '';
+
+    var doRender = function() { frTipoRender('', prefix); };
+    if (window._frTipoLista.length > 0) { doRender(); return; }
     fetch('/api/tipos-preventivo')
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
         .then(function(resp) {
             var lista = Array.isArray(resp) ? resp : (resp.data || []);
-            var tiposUnicos = lista
+            window._frTipoLista = lista
                 .filter(function(t) { return t.activo !== 0; })
                 .map(function(t) { return (t.nombre || '').trim(); })
                 .filter(function(n) { return n.length > 0; })
                 .sort(function(a, b) { return a.localeCompare(b); });
-            sel.innerHTML = '<option value="">— Seleccionar tipo —</option>';
-            tiposUnicos.forEach(function(tipo) {
-                var opt = document.createElement('option');
-                opt.value = tipo;
-                opt.textContent = tipo;
-                if (valorActual && tipo.toUpperCase() === valorActual.toUpperCase()) opt.selected = true;
-                sel.appendChild(opt);
-            });
+            doRender();
         })
         .catch(function() {});
 }
+
+window.frTipoToggle = function(prefix) {
+    var dd  = document.getElementById('frTipoDD-' + prefix);
+    var box = document.getElementById('frTipoBox-' + prefix);
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
+        var busq = document.getElementById('frTipoBusq-' + prefix);
+        if (busq) { busq.value = ''; busq.focus(); }
+        frTipoRender('', prefix);
+    }
+};
+
+window.frTipoFiltrar = function(query, prefix) { frTipoRender(query || '', prefix); };
+
+function frTipoRender(query, prefix) {
+    var container = document.getElementById('frTipoOpts-' + prefix);
+    if (!container) return;
+    var q = (query || '').toLowerCase();
+    var hidden = document.getElementById(prefix + '_tipomp');
+    var actual = hidden ? (hidden.value || '').toUpperCase() : '';
+    var filtrados = window._frTipoLista.filter(function(n) {
+        return !q || n.toLowerCase().indexOf(q) !== -1;
+    });
+    if (filtrados.length === 0) {
+        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext,#6c757d); font-size:0.83rem; text-align:center;">Sin resultados</div>';
+        return;
+    }
+    container.innerHTML = filtrados.map(function(n) {
+        var isSelected = n.toUpperCase() === actual;
+        var nEsc = n.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<div onclick="window.frTipoSelect(\'' + nEsc + '\',\'' + prefix + '\')" '
+            + 'style="padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text,#212529);'
+            + (isSelected ? ' background:var(--primary,#5865F2); color:#fff; font-weight:600;' : '')
+            + '" onmouseenter="if(!this.classList.contains(\'fr-sel\')) this.style.background=\'var(--bg,#f8f9fa)\'" '
+            + 'onmouseleave="if(!this.classList.contains(\'fr-sel\')) this.style.background=\'\'"> '
+            + n + '</div>';
+    }).join('');
+}
+
+window.frTipoSelect = function(valor, prefix) {
+    var hidden = document.getElementById(prefix + '_tipomp');
+    var lbl    = document.getElementById('frTipoLbl-' + prefix);
+    var dd     = document.getElementById('frTipoDD-' + prefix);
+    var box    = document.getElementById('frTipoBox-' + prefix);
+    if (hidden) hidden.value = valor;
+    if (lbl) { lbl.textContent = valor; lbl.style.color = 'var(--text,#212529)'; }
+    if (dd) dd.style.display = 'none';
+    if (box) box.style.borderColor = '';
+    if (typeof calcularFrecuencia === 'function') calcularFrecuencia(prefix);
+};
+
+// Cerrar al clicar fuera (safe SPA)
+window._frTipoOutsideClick = function(e) {
+    ['f', 'eF'].forEach(function(prefix) {
+        var wrapper = document.getElementById('frTipoW-' + prefix);
+        if (wrapper && !wrapper.contains(e.target)) {
+            var dd  = document.getElementById('frTipoDD-' + prefix);
+            var box = document.getElementById('frTipoBox-' + prefix);
+            if (dd) dd.style.display = 'none';
+            if (box) box.style.borderColor = '';
+        }
+    });
+};
+document.removeEventListener('click', window._frTipoOutsideClick);
+document.addEventListener('click', window._frTipoOutsideClick);
 
 // ================================================================
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
