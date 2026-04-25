@@ -5010,9 +5010,11 @@ app.put('/api/ot-trabajos/:id', (req, res) => {
     if (accion === 'editar') {
         const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado } = req.body;
         const detJson = JSON.stringify({ personal: personal || '', costo: parseFloat(costo) || 0 });
+        // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita
         db.query(
-            `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=? WHERE id_ot=?`,
-            [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo],
+            `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=?
+             WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?)`,
+            [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo, idTrabajo],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ ok: true });
@@ -5024,10 +5026,16 @@ app.put('/api/ot-trabajos/:id', (req, res) => {
 });
 
 app.delete('/api/ot-trabajos/:id', (req, res) => {
-    db.query('DELETE FROM trabajos_ot WHERE id_ot = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
-    });
+    const id = req.params.id;
+    // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita como ID
+    db.query(
+        'DELETE FROM trabajos_ot WHERE (id_ot = ? AND id_ot != "") OR (id_ot = "" AND ticket_visita = ?)',
+        [id, id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
 });
 
 // ── OT MATERIALES ─────────────────────────────────────────────────
@@ -5314,6 +5322,10 @@ app.delete('/api/taller-rampas/:id', (req, res) => {
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
     console.log('🚀 Servidor Backend de Azkell corriendo');
+    // Migración: fecha_trabajo debe ser DATETIME (puede estar como DATE en DBs antiguas)
+    db.query("ALTER TABLE trabajos_ot MODIFY COLUMN fecha_trabajo DATETIME NULL", (e) => {
+        if (e) console.warn('ALTER fecha_trabajo (puede ignorarse si ya es DATETIME):', e.message);
+    });
     // Migración: añadir ticket_ot a ot_backlog si no existe (compatible MySQL 5.7+)
     db.query(
         "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ot_backlog' AND COLUMN_NAME='ticket_ot'",
