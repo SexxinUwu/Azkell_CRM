@@ -1581,8 +1581,23 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
         return res.status(400).json({ error: "Datos inválidos" });
     }
 
+    // Sanitiza fecha a YYYY-MM-DD o null
+    function sanitizarFecha(val) {
+        if (!val || String(val).trim() === '') return null;
+        let s = String(val).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        // DD/MM/YYYY o DD-MM-YYYY
+        let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+        // Fallback: Date.parse
+        let d = new Date(s);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return null;
+    }
+
     let okCount = 0;
     let errCount = 0;
+    let primerError = null;
 
     const sql = `
         INSERT INTO inspecciones
@@ -1604,11 +1619,11 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
             const lote = validos.slice(i, i + 500);
             const vals = lote.map(r => [
                 r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                (r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso || '').trim() || null,
-                r.PLACA || r.placa || '',
+                sanitizarFecha(r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso),
+                (r.PLACA || r.placa || '').toString().toUpperCase().trim(),
                 parseInt(r['KM TABLERO'] || r.KM || r.km_tablero || '0') || 0,
-                r.CLIENTE || r.cliente || '',
-                r.TECNICO || r.tecnico || '',
+                (r.CLIENTE || r.cliente || '').toString().trim(),
+                (r.TECNICO || r.tecnico || '').toString().trim(),
                 parseInt(r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30') || 30,
                 r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]'
             ]);
@@ -1623,13 +1638,14 @@ app.post('/api/importarInspeccionesMasivo', async (req, res) => {
                 });
             } catch (e) {
                 console.error("Error bulk inspecciones:", e.message);
+                if (!primerError) primerError = e.message;
                 errCount += lote.length;
             }
         }
     }
 
     broadcast('inspecciones', 'importar');
-    res.json({ ok: okCount, errores: errCount });
+    res.json({ ok: okCount, errores: errCount, detalle: primerError || null });
 });
 
 // ============================================================
