@@ -500,12 +500,9 @@ window._invToggleCheck = function(id, checked) {
 };
 
 window._invSeleccionarTodos = function() {
-    var pagina = window._invFiltrados.slice(
-        (window._invPagActual - 1) * _INV_POR_PAG,
-        window._invPagActual * _INV_POR_PAG
-    );
-    var todasSeleccionadas = pagina.every(function(d) { return window._invSeleccionados.has(d.id); });
-    pagina.forEach(function(d) {
+    var todos = window._invFiltrados || [];
+    var todasSeleccionadas = todos.length > 0 && todos.every(function(d) { return window._invSeleccionados.has(d.id); });
+    todos.forEach(function(d) {
         if (todasSeleccionadas) window._invSeleccionados.delete(d.id);
         else window._invSeleccionados.add(d.id);
     });
