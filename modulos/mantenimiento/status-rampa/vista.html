@@ -29,21 +29,23 @@
 #moduloStatusRampa table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.83rem;
+    font-size: 0.79rem;
+    table-layout: fixed;
 }
 #moduloStatusRampa thead th {
     background: var(--bg);
     color: var(--subtext);
-    font-size: 0.7rem;
+    font-size: 0.67rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 10px 12px;
+    padding: 7px 8px;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 2;
     white-space: nowrap;
+    overflow: hidden;
 }
 #moduloStatusRampa tbody tr {
     border-bottom: 1px solid var(--border);
@@ -52,7 +54,7 @@
 #moduloStatusRampa tbody tr.sr-ocupada { cursor: pointer; }
 #moduloStatusRampa tbody tr.sr-ocupada:hover { background: var(--bg); }
 #moduloStatusRampa tbody tr.sr-activa  { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
-#moduloStatusRampa tbody td { padding: 10px 12px; color: var(--text); }
+#moduloStatusRampa tbody td { padding: 6px 8px; color: var(--text); vertical-align: top; }
 
 /* ── Badge rampa (círculos únicos) ───────────────────────────── */
 #moduloStatusRampa .sr-badge-rampa {
@@ -381,16 +383,16 @@
             <table id="sr-tabla">
                 <thead>
                     <tr>
-                        <th style="width:64px">Rampa</th>
-                        <th>Fecha Ingreso</th>
-                        <th>Hora</th>
-                        <th>Placa</th>
-                        <th>Situación</th>
+                        <th style="width:50px">Rampa</th>
+                        <th style="width:90px">Fecha Ingreso</th>
+                        <th style="width:52px">Hora</th>
+                        <th style="width:72px">Placa</th>
+                        <th style="width:108px">Situación</th>
                         <th>Observaciones</th>
-                        <th>Fecha Salida (Est.)</th>
-                        <th>Hora</th>
-                        <th>OT Relacionadas</th>
-                        <th style="width:90px"></th>
+                        <th style="width:90px">Fecha Salida (Est.)</th>
+                        <th style="width:52px">Hora</th>
+                        <th style="width:118px">OT Relacionadas</th>
+                        <th style="width:80px"></th>
                     </tr>
                 </thead>
                 <tbody id="sr-tbody"></tbody>
@@ -416,17 +418,17 @@
         <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
             <!-- TABLA HISTORIAL -->
             <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
-                <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.79rem; table-layout:fixed;">
                     <thead>
                         <tr style="background:var(--bg);">
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2;">Rampa</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Placa</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Ingreso</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Liberado</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Situación</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Liberado por</th>
-                            <th style="padding:7px 12px; color:var(--subtext); font-size:0.7rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2; width:110px;"></th>
+                            <th style="width:50px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2;">Rampa</th>
+                            <th style="width:72px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Placa</th>
+                            <th style="width:110px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Ingreso</th>
+                            <th style="width:110px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Liberado</th>
+                            <th style="width:108px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Situación</th>
+                            <th style="padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
+                            <th style="width:110px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Liberado por</th>
+                            <th style="width:100px; padding:6px 8px; color:var(--subtext); font-size:0.67rem; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;"></th>
                         </tr>
                     </thead>
                     <tbody id="sr-historial-tbody">
