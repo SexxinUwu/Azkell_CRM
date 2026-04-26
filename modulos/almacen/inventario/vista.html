@@ -79,259 +79,245 @@
 </div>
 
 <!-- ═══ MODAL ADD / EDIT ═══════════════════════════════════════════ -->
-<div class="modal fade" id="modal-inv-articulo" tabindex="-1">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold" id="modal-inv-titulo"><i class="bi bi-box-fill me-1"></i>Nuevo Artículo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+<div class="modal fade" id="modal-inv-articulo" tabindex="-1" style="display:none!important;"></div>
 
-      <!-- 2 tabs -->
-      <ul class="nav nav-tabs px-3 pt-2 border-bottom-0" id="inv-modal-tabs">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#inv-tab-articulo"><i class="bi bi-card-list me-1"></i>Artículo</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-tab-imagen"><i class="bi bi-image me-1"></i>Imagen &amp; QR</button></li>
-      </ul>
+<!-- ═══ DRAWER — Nuevo / Editar Artículo ════════════════════════ -->
+<div id="inv-drawer-backdrop" onclick="window._invCerrarDrawer()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1049;"></div>
 
-      <form id="form-inv-articulo" onsubmit="window.guardarArticuloInv(event)">
-        <input type="hidden" id="inv-edit-id">
-        <div class="modal-body pt-2" style="max-height:72vh;overflow-y:auto;">
-          <div class="tab-content">
+<div id="inv-form-drawer"
+     style="position:fixed;top:0;right:-500px;width:480px;max-width:100vw;height:100vh;
+            background:var(--surface);box-shadow:-6px 0 32px rgba(0,0,0,.15);
+            z-index:1050;transition:right .3s cubic-bezier(.4,0,.2,1);
+            display:flex;flex-direction:column;overflow:hidden;">
 
-            <!-- ── TAB 1: Artículo (todo en una sola lista) ─── -->
-            <div class="tab-pane fade show active" id="inv-tab-articulo">
-              <div class="row g-3">
-
-                <!-- Preview del nombre generado -->
-                <div class="col-12">
-                  <label class="fw-semibold small text-muted" style="font-size:0.72rem;letter-spacing:.4px;text-transform:uppercase;">Nombre generado automáticamente</label>
-                  <div id="inv-nombre-preview" class="p-2 rounded fw-semibold" style="background:var(--surface);border:1px solid var(--border,#dee2e6);color:var(--text);min-height:38px;font-size:0.95rem;">
-                    <span class="text-muted fst-italic" style="font-size:0.85rem;font-weight:400;">Completa los campos para generar el nombre…</span>
-                  </div>
-                </div>
-
-                <!-- Fila: Artículo + Código + Marca -->
-                <div class="col-md-5">
-                  <label class="fw-semibold small">Artículo <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="inv-f-articulo" required placeholder="Ej: Cinta Aislante, Filtro Aceite" oninput="window._invActualizarPreview()">
-                </div>
-                <div class="col-md-3">
-                  <label class="fw-semibold small">Código de Artículo</label>
-                  <input type="text" class="form-control" id="inv-f-codigo-articulo" placeholder="Ej: M1, LF3000" oninput="window._invActualizarPreview()">
-                </div>
-                <div class="col-md-4">
-                  <label class="fw-semibold small">Marca (fabricante)</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-marca-txt" class="form-control" placeholder="Buscar marca…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-marca');window._invActualizarPreview()"
-                      onfocus="window._cbFiltrar('inv-f-marca')" onblur="window._cbHide('inv-f-marca')">
-                    <input type="hidden" id="inv-f-marca">
-                    <div id="inv-f-marca-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-
-                <!-- Marca de Unidad (multi-select chips) -->
-                <div class="col-12">
-                  <label class="fw-semibold small">Marca de Unidad <span class="text-muted fw-normal">(vehículos compatibles)</span></label>
-                  <div class="border rounded p-2" id="inv-marcas-wrap" style="background:var(--surface);min-height:42px;cursor:text;" onclick="document.getElementById('inv-marcas-input').focus()">
-                    <div id="inv-marcas-chips" class="d-inline-flex flex-wrap gap-1 me-1"></div>
-                    <input type="text" id="inv-marcas-input" class="border-0 outline-0 bg-transparent"
-                      style="outline:none;min-width:160px;max-width:100%;font-size:0.875rem;color:var(--text);"
-                      placeholder="Escribir y Enter para agregar…"
-                      oninput="window._invFiltrarMarcas()"
-                      onkeydown="window._invMarcasKeydown(event)"
-                      autocomplete="off">
-                  </div>
-                  <div id="inv-marcas-dropdown" class="list-group shadow-sm mt-1" style="position:absolute;z-index:1050;max-height:180px;overflow-y:auto;display:none;min-width:240px;"></div>
-                </div>
-
-                <!-- Divider: Datos Generales -->
-                <div class="col-12"><hr class="my-1"><small class="text-muted fw-semibold text-uppercase" style="font-size:0.68rem;letter-spacing:.5px;">Datos Generales</small></div>
-
-                <!-- Familia + Unidad -->
-                <div class="col-md-6">
-                  <label class="fw-semibold small">Familia</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-familia-txt" class="form-control" placeholder="Buscar familia…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-familia')"
-                      onfocus="window._cbFiltrar('inv-f-familia')" onblur="window._cbHide('inv-f-familia')">
-                    <input type="hidden" id="inv-f-familia">
-                    <div id="inv-f-familia-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="fw-semibold small">Unidad</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-unidad-txt" class="form-control" placeholder="Buscar unidad…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-unidad')"
-                      onfocus="window._cbFiltrar('inv-f-unidad')" onblur="window._cbHide('inv-f-unidad')">
-                    <input type="hidden" id="inv-f-unidad">
-                    <div id="inv-f-unidad-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-
-                <!-- Moneda + Costo + Estado -->
-                <div class="col-md-3">
-                  <label class="fw-semibold small">Moneda</label>
-                  <select class="form-select" id="inv-f-moneda">
-                    <option value="PEN">PEN (S/)</option>
-                    <option value="USD">USD ($)</option>
-                  </select>
-                </div>
-                <div class="col-md-3">
-                  <label class="fw-semibold small">Costo</label>
-                  <input type="number" class="form-control" id="inv-f-costo" step="0.0001" placeholder="0.00">
-                </div>
-                <div class="col-md-6">
-                  <label class="fw-semibold small">Estado</label>
-                  <select class="form-select" id="inv-f-estado-art">
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                    <option value="Descontinuado">Descontinuado</option>
-                  </select>
-                </div>
-
-                <!-- Observaciones -->
-                <div class="col-12">
-                  <label class="fw-semibold small">Observaciones</label>
-                  <textarea class="form-control" id="inv-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
-                </div>
-
-                <!-- Divider: Clasificación -->
-                <div class="col-12"><hr class="my-1"><small class="text-muted fw-semibold text-uppercase" style="font-size:0.68rem;letter-spacing:.5px;">Clasificación</small></div>
-
-                <!-- Sistema + Sub-Sistema -->
-                <div class="col-md-6">
-                  <label class="fw-semibold small">Sistema</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-sistema-txt" class="form-control" placeholder="Buscar sistema…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sistema')"
-                      onfocus="window._cbFiltrar('inv-f-sistema')" onblur="window._cbHide('inv-f-sistema')">
-                    <input type="hidden" id="inv-f-sistema">
-                    <div id="inv-f-sistema-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="fw-semibold small">Sub-Sistema</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-sub-sistema-txt" class="form-control" placeholder="Buscar sub-sistema…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sub-sistema')"
-                      onfocus="window._cbFiltrar('inv-f-sub-sistema')" onblur="window._cbHide('inv-f-sub-sistema')">
-                    <input type="hidden" id="inv-f-sub-sistema">
-                    <div id="inv-f-sub-sistema-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-
-                <!-- Tipo + Sub-Tipo -->
-                <div class="col-md-4">
-                  <label class="fw-semibold small">Tipo</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-tipo-txt" class="form-control" placeholder="Buscar tipo…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-tipo')"
-                      onfocus="window._cbFiltrar('inv-f-tipo')" onblur="window._cbHide('inv-f-tipo')">
-                    <input type="hidden" id="inv-f-tipo">
-                    <div id="inv-f-tipo-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <label class="fw-semibold small">Sub-Tipo</label>
-                  <div class="position-relative">
-                    <input type="text" id="inv-f-sub-tipo-txt" class="form-control" placeholder="Buscar sub-tipo…"
-                      autocomplete="off" oninput="window._cbFiltrar('inv-f-sub-tipo')"
-                      onfocus="window._cbFiltrar('inv-f-sub-tipo')" onblur="window._cbHide('inv-f-sub-tipo')">
-                    <input type="hidden" id="inv-f-sub-tipo">
-                    <div id="inv-f-sub-tipo-dd" class="cb-dropdown"></div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <label class="fw-semibold small">Almacén</label>
-                  <input type="text" class="form-control" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: Principal, Neumáticos, Llantas">
-                  <datalist id="inv-list-almacenes">
-                    <option value="Principal">
-                    <option value="Neumáticos">
-                    <option value="Llantas">
-                    <option value="Lubricantes">
-                    <option value="Filtros">
-                  </datalist>
-                </div>
-
-                <!-- Ubicación/Estante + Anaquel + Stock Min + Stock Max + Código Barras -->
-                <div class="col-md-4">
-                  <label class="fw-semibold small">Ubicación / Estante</label>
-                  <input type="text" class="form-control" id="inv-f-ubicacion" placeholder="Ej: Estante B3, Cajón 2">
-                </div>
-                <div class="col-md-2">
-                  <label class="fw-semibold small">Anaquel Nro.</label>
-                  <input type="number" class="form-control" id="inv-f-anaquel" step="0.01" placeholder="Ej: 3.5">
-                </div>
-                <div class="col-md-2">
-                  <label class="fw-semibold small">Stock Mínimo</label>
-                  <input type="number" class="form-control" id="inv-f-stock-min" step="0.0001" placeholder="0">
-                </div>
-                <div class="col-md-2">
-                  <label class="fw-semibold small">Stock Máximo</label>
-                  <input type="number" class="form-control" id="inv-f-stock-max" step="0.0001" placeholder="0">
-                </div>
-                <div class="col-md-2">
-                  <label class="fw-semibold small">Código de Barras</label>
-                  <input type="text" class="form-control" id="inv-f-codigo-barras" placeholder="EAN-13 / QR...">
-                </div>
-
-              </div>
-            </div><!-- /tab-articulo -->
-
-            <!-- ── TAB 2: Imagen & QR ─── -->
-            <div class="tab-pane fade" id="inv-tab-imagen">
-              <div id="inv-img-nuevo-aviso" class="alert alert-info py-2 small" style="display:none;">
-                <i class="bi bi-info-circle me-1"></i>Guarda el artículo primero para poder subir una imagen.
-              </div>
-              <div id="inv-img-section" class="row g-3 align-items-start">
-                <!-- Imagen -->
-                <div class="col-md-6">
-                  <p class="fw-semibold small mb-2">Imagen del Artículo</p>
-                  <div class="border rounded d-flex align-items-center justify-content-center mb-2 overflow-hidden bg-light" style="height:200px;">
-                    <img id="inv-img-preview" src="" alt="" style="max-height:200px;max-width:100%;object-fit:contain;display:none;">
-                    <div id="inv-img-placeholder" class="text-center text-muted">
-                      <i class="bi bi-image fs-1"></i><br><small>Sin imagen</small>
-                    </div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <label class="btn btn-sm btn-outline-primary flex-grow-1" style="cursor:pointer;">
-                      <i class="bi bi-upload me-1"></i>Subir imagen
-                      <input type="file" id="inv-img-input" accept="image/*" style="display:none" onchange="window._invSubirImagen(event)">
-                    </label>
-                    <button type="button" id="inv-img-btn-quitar" class="btn btn-sm btn-outline-danger" onclick="window._invQuitarImagen()" style="display:none;">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- QR -->
-                <div class="col-md-6 text-center">
-                  <p class="fw-semibold small mb-2">Código QR del Artículo</p>
-                  <div id="inv-qr-wrap" class="border rounded p-3 d-inline-flex flex-column align-items-center gap-2" style="display:none!important;">
-                    <img id="inv-qr-img" src="" alt="QR" style="width:160px;height:160px;">
-                    <small class="text-muted" id="inv-qr-label"></small>
-                    <button type="button" class="btn btn-xs btn-outline-secondary" onclick="window._invDescargarQR()">
-                      <i class="bi bi-download me-1"></i>Descargar QR
-                    </button>
-                  </div>
-                  <div id="inv-qr-placeholder" class="text-muted small">
-                    <i class="bi bi-qr-code fs-1 d-block mb-1"></i>El QR se genera automáticamente al guardar
-                  </div>
-                </div>
-              </div>
-            </div><!-- /tab-imagen -->
-
-          </div><!-- /tab-content -->
-        </div><!-- /modal-body -->
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
-        </div>
-      </form>
-    </div>
+  <!-- Cabecera sticky -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;
+              border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);">
+    <h6 class="fw-bold m-0" id="modal-inv-titulo" style="color:var(--text);font-size:.95rem;">
+      <i class="bi bi-box-fill me-1 text-warning"></i>Nuevo Artículo
+    </h6>
+    <button type="button" class="btn-close" onclick="window._invCerrarDrawer()"></button>
   </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs px-3 pt-2 border-bottom-0 flex-shrink-0" id="inv-modal-tabs">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#inv-tab-articulo"><i class="bi bi-card-list me-1"></i>Artículo</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-tab-imagen"><i class="bi bi-image me-1"></i>Imagen &amp; QR</button></li>
+  </ul>
+
+  <!-- Body scrollable -->
+  <form id="form-inv-articulo" onsubmit="window.guardarArticuloInv(event)"
+        style="flex:1 1 0;display:flex;flex-direction:column;min-height:0;">
+    <input type="hidden" id="inv-edit-id">
+    <div style="flex:1 1 0;overflow-y:auto;padding:1rem 1.25rem;">
+      <div class="tab-content">
+
+        <!-- ── TAB 1: Artículo ─── -->
+        <div class="tab-pane fade show active" id="inv-tab-articulo">
+          <div class="row g-2">
+
+            <!-- Preview nombre -->
+            <div class="col-12">
+              <label class="fw-semibold small text-muted" style="font-size:0.7rem;letter-spacing:.4px;text-transform:uppercase;">Nombre generado</label>
+              <div id="inv-nombre-preview" class="p-2 rounded fw-semibold" style="background:var(--bg);border:1px solid var(--border,#dee2e6);color:var(--text);min-height:34px;font-size:0.88rem;">
+                <span class="text-muted fst-italic" style="font-size:0.82rem;font-weight:400;">Completa los campos para generar el nombre…</span>
+              </div>
+            </div>
+
+            <!-- Artículo + Código -->
+            <div class="col-8">
+              <label class="fw-semibold small">Artículo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="inv-f-articulo" required placeholder="Ej: Filtro Aceite" oninput="window._invActualizarPreview()">
+            </div>
+            <div class="col-4">
+              <label class="fw-semibold small">Código</label>
+              <input type="text" class="form-control form-control-sm" id="inv-f-codigo-articulo" placeholder="Ej: LF3000" oninput="window._invActualizarPreview()">
+            </div>
+            <!-- Marca fabricante -->
+            <div class="col-12">
+              <label class="fw-semibold small">Marca (fabricante)</label>
+              <div class="position-relative">
+                <input type="text" id="inv-f-marca-txt" class="form-control form-control-sm" placeholder="Buscar marca…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-marca');window._invActualizarPreview()"
+                  onfocus="window._cbFiltrar('inv-f-marca')" onblur="window._cbHide('inv-f-marca')">
+                <input type="hidden" id="inv-f-marca">
+                <div id="inv-f-marca-dd" class="cb-dropdown"></div>
+              </div>
+            </div>
+
+            <!-- Marca de Unidad chips -->
+            <div class="col-12">
+              <label class="fw-semibold small">Marca de Unidad <span class="text-muted fw-normal">(vehículos compatibles)</span></label>
+              <div class="border rounded p-2" id="inv-marcas-wrap" style="background:var(--bg);min-height:38px;cursor:text;" onclick="document.getElementById('inv-marcas-input').focus()">
+                <div id="inv-marcas-chips" class="d-inline-flex flex-wrap gap-1 me-1"></div>
+                <input type="text" id="inv-marcas-input" class="border-0 outline-0 bg-transparent"
+                  style="outline:none;min-width:140px;max-width:100%;font-size:0.85rem;color:var(--text);"
+                  placeholder="Escribir y Enter para agregar…"
+                  oninput="window._invFiltrarMarcas()"
+                  onkeydown="window._invMarcasKeydown(event)"
+                  autocomplete="off">
+              </div>
+              <div id="inv-marcas-dropdown" class="list-group shadow-sm mt-1" style="position:absolute;z-index:1055;max-height:160px;overflow-y:auto;display:none;min-width:220px;"></div>
+            </div>
+
+            <!-- Datos Generales -->
+            <div class="col-12"><hr class="my-1"><small class="text-muted fw-semibold text-uppercase" style="font-size:0.65rem;letter-spacing:.5px;">Datos Generales</small></div>
+
+            <div class="col-6">
+              <label class="fw-semibold small">Familia</label>
+              <div class="position-relative">
+                <input type="text" id="inv-f-familia-txt" class="form-control form-control-sm" placeholder="Buscar familia…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-familia')"
+                  onfocus="window._cbFiltrar('inv-f-familia')" onblur="window._cbHide('inv-f-familia')">
+                <input type="hidden" id="inv-f-familia">
+                <div id="inv-f-familia-dd" class="cb-dropdown"></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="fw-semibold small">Unidad</label>
+              <div class="position-relative">
+                <input type="text" id="inv-f-unidad-txt" class="form-control form-control-sm" placeholder="Buscar unidad…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-unidad')"
+                  onfocus="window._cbFiltrar('inv-f-unidad')" onblur="window._cbHide('inv-f-unidad')">
+                <input type="hidden" id="inv-f-unidad">
+                <div id="inv-f-unidad-dd" class="cb-dropdown"></div>
+              </div>
+            </div>
+
+            <div class="col-4">
+              <label class="fw-semibold small">Moneda</label>
+              <select class="form-select form-select-sm" id="inv-f-moneda">
+                <option value="PEN">PEN (S/)</option>
+                <option value="USD">USD ($)</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="fw-semibold small">Costo</label>
+              <input type="number" class="form-control form-control-sm" id="inv-f-costo" step="0.0001" placeholder="0.00">
+            </div>
+            <div class="col-4">
+              <label class="fw-semibold small">Estado</label>
+              <select class="form-select form-select-sm" id="inv-f-estado-art">
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+                <option value="Descontinuado">Descontinuado</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="fw-semibold small">Observaciones</label>
+              <textarea class="form-control form-control-sm" id="inv-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
+            </div>
+
+            <!-- Clasificación -->
+            <div class="col-12"><hr class="my-1"><small class="text-muted fw-semibold text-uppercase" style="font-size:0.65rem;letter-spacing:.5px;">Clasificación</small></div>
+
+            <!-- Sistema + Sub-Sistema OCULTOS (se guardan pero no se muestran) -->
+            <div class="col-6" style="display:none">
+              <input type="hidden" id="inv-f-sistema-txt"><input type="hidden" id="inv-f-sistema"><div id="inv-f-sistema-dd"></div>
+            </div>
+            <div class="col-6" style="display:none">
+              <input type="hidden" id="inv-f-sub-sistema-txt"><input type="hidden" id="inv-f-sub-sistema"><div id="inv-f-sub-sistema-dd"></div>
+            </div>
+
+            <div class="col-6">
+              <label class="fw-semibold small">Tipo</label>
+              <div class="position-relative">
+                <input type="text" id="inv-f-tipo-txt" class="form-control form-control-sm" placeholder="Buscar tipo…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-tipo')"
+                  onfocus="window._cbFiltrar('inv-f-tipo')" onblur="window._cbHide('inv-f-tipo')">
+                <input type="hidden" id="inv-f-tipo">
+                <div id="inv-f-tipo-dd" class="cb-dropdown"></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="fw-semibold small">Sub-Tipo</label>
+              <div class="position-relative">
+                <input type="text" id="inv-f-sub-tipo-txt" class="form-control form-control-sm" placeholder="Buscar sub-tipo…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-sub-tipo')"
+                  onfocus="window._cbFiltrar('inv-f-sub-tipo')" onblur="window._cbHide('inv-f-sub-tipo')">
+                <input type="hidden" id="inv-f-sub-tipo">
+                <div id="inv-f-sub-tipo-dd" class="cb-dropdown"></div>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="fw-semibold small">Almacén</label>
+              <input type="text" class="form-control form-control-sm" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: Principal, Neumáticos">
+              <datalist id="inv-list-almacenes">
+                <option value="Principal"><option value="Neumáticos"><option value="Llantas"><option value="Lubricantes"><option value="Filtros">
+              </datalist>
+            </div>
+
+            <div class="col-6">
+              <label class="fw-semibold small">Ubicación / Estante</label>
+              <input type="text" class="form-control form-control-sm" id="inv-f-ubicacion" placeholder="Ej: Estante B3">
+            </div>
+            <div class="col-2">
+              <label class="fw-semibold small">Anaquel</label>
+              <input type="number" class="form-control form-control-sm" id="inv-f-anaquel" step="0.01" placeholder="3.5">
+            </div>
+            <div class="col-2">
+              <label class="fw-semibold small">Stock Mín.</label>
+              <input type="number" class="form-control form-control-sm" id="inv-f-stock-min" step="0.0001" placeholder="0">
+            </div>
+            <div class="col-2">
+              <label class="fw-semibold small">Stock Máx.</label>
+              <input type="number" class="form-control form-control-sm" id="inv-f-stock-max" step="0.0001" placeholder="0">
+            </div>
+            <div class="col-12">
+              <label class="fw-semibold small">Código de Barras</label>
+              <input type="text" class="form-control form-control-sm" id="inv-f-codigo-barras" placeholder="EAN-13 / QR...">
+            </div>
+
+          </div>
+        </div><!-- /tab-articulo -->
+
+        <!-- ── TAB 2: Imagen & QR ─── -->
+        <div class="tab-pane fade" id="inv-tab-imagen">
+          <div id="inv-img-nuevo-aviso" class="alert alert-info py-2 small" style="display:none;">
+            <i class="bi bi-info-circle me-1"></i>Guarda el artículo primero para poder subir una imagen.
+          </div>
+          <div id="inv-img-section" class="row g-3 align-items-start">
+            <div class="col-12">
+              <p class="fw-semibold small mb-2">Imagen del Artículo</p>
+              <div class="border rounded d-flex align-items-center justify-content-center mb-2 overflow-hidden bg-light" style="height:180px;">
+                <img id="inv-img-preview" src="" alt="" style="max-height:180px;max-width:100%;object-fit:contain;display:none;">
+                <div id="inv-img-placeholder" class="text-center text-muted">
+                  <i class="bi bi-image fs-1"></i><br><small>Sin imagen</small>
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <label class="btn btn-sm btn-outline-primary flex-grow-1" style="cursor:pointer;">
+                  <i class="bi bi-upload me-1"></i>Subir imagen
+                  <input type="file" id="inv-img-input" accept="image/*" style="display:none" onchange="window._invSubirImagen(event)">
+                </label>
+                <button type="button" id="inv-img-btn-quitar" class="btn btn-sm btn-outline-danger" onclick="window._invQuitarImagen()" style="display:none;"><i class="bi bi-trash"></i></button>
+              </div>
+            </div>
+            <div class="col-12 text-center">
+              <p class="fw-semibold small mb-2">Código QR</p>
+              <div id="inv-qr-wrap" class="border rounded p-3 d-inline-flex flex-column align-items-center gap-2" style="display:none!important;">
+                <img id="inv-qr-img" src="" alt="QR" style="width:140px;height:140px;">
+                <small class="text-muted" id="inv-qr-label"></small>
+                <button type="button" class="btn btn-xs btn-outline-secondary" onclick="window._invDescargarQR()"><i class="bi bi-download me-1"></i>Descargar QR</button>
+              </div>
+              <div id="inv-qr-placeholder" class="text-muted small">
+                <i class="bi bi-qr-code fs-1 d-block mb-1"></i>El QR se genera al guardar
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-imagen -->
+
+      </div><!-- /tab-content -->
+    </div><!-- /body scrollable -->
+
+    <!-- Footer fijo -->
+    <div style="padding:.75rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem;flex-shrink:0;background:var(--surface);">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="window._invCerrarDrawer()">Cancelar</button>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Guardar</button>
+    </div>
+  </form>
 </div>
 
 <!-- ═══ MODAL DETALLE (Vista Rápida) ════════════════════════════════ -->

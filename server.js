@@ -4112,6 +4112,54 @@ const _stockSQL = `
   WHERE i.activo=1
   ORDER BY i.id`;
 
+app.get('/api/notificaciones/resumen', (req, res) => {
+    const qInspVencidas = `
+        SELECT COUNT(*) AS cnt FROM inspecciones
+        WHERE estado IS NULL OR estado != 'Eliminada'
+        AND fecha_ingreso IS NOT NULL
+        AND DATE_ADD(
+            CASE
+                WHEN fecha_ingreso REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+                    THEN STR_TO_DATE(fecha_ingreso, '%d/%m/%Y')
+                WHEN fecha_ingreso REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                    THEN DATE(fecha_ingreso)
+                ELSE NULL
+            END,
+            INTERVAL COALESCE(dias_propuestos, 30) DAY
+        ) < CURDATE()
+    `;
+    const qFleetrunVenc = `
+        SELECT COUNT(*) AS cnt FROM (
+            SELECT f.placa, f.tipo_mp
+            FROM fleetrun f
+            INNER JOIN (
+                SELECT placa, tipo_mp, MAX(fecha) AS max_fecha
+                FROM fleetrun GROUP BY placa, tipo_mp
+            ) lf ON f.placa = lf.placa AND f.tipo_mp = lf.tipo_mp AND f.fecha = lf.max_fecha
+            WHERE f.km_proximo > 0 AND f.km_actual >= f.km_proximo
+            GROUP BY f.placa, f.tipo_mp
+        ) t
+    `;
+    const qStockCrit = `
+        SELECT COUNT(*) AS cnt FROM inventario
+        WHERE activo = 1 AND stock_min > 0
+        AND stock_actual <= stock_min
+    `;
+    const runQ = (sql) => new Promise((resolve) => {
+        db.query(sql, (err, rows) => {
+            resolve(err ? 0 : (rows[0] && rows[0].cnt != null ? parseInt(rows[0].cnt) : 0));
+        });
+    });
+    Promise.all([runQ(qInspVencidas), runQ(qFleetrunVenc), runQ(qStockCrit)])
+        .then(([inspVenc, fleetVenc, stockCrit]) => {
+            res.json([
+                { id: 'insp-vencidas',  tipo: 'danger',  icono: 'bi-shield-x',             titulo: 'Inspecciones Vencidas',  count: inspVenc,  modulo: 'mantenimiento/inspecciones' },
+                { id: 'fleet-vencidos', tipo: 'warning', icono: 'bi-speedometer2',          titulo: 'MP Fleetrun Vencidos',   count: fleetVenc, modulo: 'mantenimiento/fleetrun'      },
+                { id: 'stock-critico',  tipo: 'info',    icono: 'bi-exclamation-triangle',  titulo: 'Stock Crítico',          count: stockCrit, modulo: 'almacen/inventario'          }
+            ]);
+        });
+});
+
 app.get('/api/almacen/inventario', (req, res) => {
     db.query(_stockSQL, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });

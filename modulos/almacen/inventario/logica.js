@@ -105,10 +105,13 @@ window._invCargarUnidades = function() {
             window._invUnidadesData = data || [];
             var prev = window._cbGet('inv-f-unidad');
             var items = [{ value: '', label: '— Sin unidad —' }].concat(
-                data.map(function(u) { return { value: u.nombre, label: u.nombre }; })
+                data.map(function(u) { return { value: u.nombre, label: u.descripcion || u.nombre }; })
             );
             window._cbInit('inv-f-unidad', items, 'Buscar unidad…');
-            if (prev) window._cbSet('inv-f-unidad', prev, prev);
+            if (prev) {
+                var uObj = data.find(function(u) { return u.nombre === prev; });
+                window._cbSet('inv-f-unidad', prev, uObj ? (uObj.descripcion || prev) : prev);
+            }
         })
         .catch(function() {});
 };
@@ -444,17 +447,13 @@ function _invRenderCard(d) {
         '<div style="font-weight:700;font-size:.9rem;line-height:1.3;margin-bottom:.2rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" title="' + desc + '">' + desc + '</div>' +
         '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#94a3b8;margin-bottom:.85rem;font-style:italic">' + familia + ' / ' + sistema + '</div>' +
         '<div style="margin-top:auto">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.4rem">' +
+            '<div style="margin-bottom:.4rem">' +
                 '<div>' +
                     '<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#cbd5e1">Cantidad</div>' +
                     '<div style="font-size:1.75rem;font-weight:900;line-height:1;color:' + (estado === 'critical' ? '#ef4444' : 'inherit') + '">' +
                         stockActual.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) +
                         (unidad ? ' <span style="font-size:.65rem;font-weight:700;color:#94a3b8">' + unidad + '</span>' : '') +
                     '</div>' +
-                '</div>' +
-                '<div style="text-align:right">' +
-                    '<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#cbd5e1">Costo Ref.</div>' +
-                    '<div style="font-size:.95rem;font-weight:800;color:#2563eb">' + moneda + ' ' + costo + '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="stock-bar-bg"><div class="stock-bar-fill ' + estado + '" style="width:' + pct + '%"></div></div>' +
@@ -497,6 +496,13 @@ window._invToggleCheck = function(id, checked) {
     // Feedback visual en la card
     var cardEl = document.querySelector('.card-bento[data-id="' + id + '"]');
     if (cardEl) cardEl.classList.toggle('card-selected', checked);
+};
+
+window._invCerrarDrawer = function() {
+    var drawer = document.getElementById('inv-form-drawer');
+    if (drawer) drawer.style.right = '-500px';
+    var bd = document.getElementById('inv-drawer-backdrop');
+    if (bd) bd.style.display = 'none';
 };
 
 window._invSeleccionarTodos = function() {
@@ -584,8 +590,6 @@ window.abrirDetalleInv = function(id) {
                     '<div class="row g-2 small">' +
                         _detRow('Código', '<span class="badge bg-secondary">' + _invEsc(item.id) + '</span>') +
                         _detRow('Familia', item.familia) +
-                        _detRow('Sistema', item.sistema ? '<span class="badge bg-warning text-dark">' + _invEsc(item.sistema) + '</span>' : '—') +
-                        _detRow('Tipo', item.tipo ? _invEsc(item.tipo) + (item.sub_tipo ? ' / ' + _invEsc(item.sub_tipo) : '') : '—') +
                         _detRow('Almacén', item.almacen) +
                         _detRow('Ubicación', item.ubicacion) +
                         _detRow('Unidad', item.unidad) +
@@ -624,7 +628,7 @@ window.abrirModalInventario = function(id) {
     if (firstTab) {
         document.querySelectorAll('#inv-modal-tabs .nav-link').forEach(function(t) { t.classList.remove('active'); });
         firstTab.classList.add('active');
-        document.querySelectorAll('#modal-inv-articulo .tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
+        document.querySelectorAll('#inv-form-drawer .tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
         var basico = document.getElementById('inv-tab-articulo');
         if (basico) basico.classList.add('show', 'active');
     }
@@ -679,8 +683,10 @@ window.abrirModalInventario = function(id) {
         if (titulo) titulo.innerHTML = '<i class="bi bi-box-fill me-1"></i>Nuevo Artículo';
     }
 
-    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-inv-articulo'));
-    modal.show();
+    var modal = document.getElementById('inv-form-drawer');
+    if (modal) { modal.style.right = '0'; }
+    var bd = document.getElementById('inv-drawer-backdrop');
+    if (bd) bd.style.display = 'block';
 };
 
 function _invResetImageUI(item) {
@@ -843,8 +849,7 @@ window.guardarArticuloInv = function(event) {
     fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function() {
-            var m = bootstrap.Modal.getInstance(document.getElementById('modal-inv-articulo'));
-            if (m) m.hide();
+            window._invCerrarDrawer();
             window.cargarInventario();
         })
         .catch(function(err) { alert('Error al guardar: ' + err.message); });

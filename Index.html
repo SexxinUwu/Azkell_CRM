@@ -314,6 +314,34 @@
                     <button class="btn btn-link p-0 fs-5" onclick="cargarModuloAislado('sistema/configuracion')" title="Configuración" style="color: var(--subtext);">
                         <i class="bi bi-gear-fill"></i>
                     </button>
+
+                    <!-- ── Centro de Notificaciones ── -->
+                    <div class="dropdown d-inline-block" id="notif-dropdown-wrap">
+                        <button class="btn btn-link p-0 fs-5 position-relative" id="btn-notif"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                style="color:var(--subtext);" onclick="window.cargarNotificaciones()">
+                            <i class="bi bi-bell-fill"></i>
+                            <span id="notif-badge"
+                                  class="position-absolute badge rounded-pill bg-danger"
+                                  style="font-size:0.5rem;padding:3px 5px;top:-2px;left:10px;display:none;min-width:16px;line-height:1;">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg p-0"
+                             style="width:340px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--surface);">
+                            <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);">
+                                <span style="font-weight:800;font-size:.88rem;color:var(--text);">
+                                    <i class="bi bi-bell-fill me-1 text-primary" style="font-size:.8rem;"></i>Notificaciones
+                                </span>
+                                <button class="btn btn-sm btn-link p-0" style="font-size:.72rem;color:var(--crm-accent);"
+                                        onclick="window.notifMarcarTodoLeido()">Marcar todo leído</button>
+                            </div>
+                            <div id="notif-lista" style="max-height:380px;overflow-y:auto;background:var(--surface);">
+                                <div class="text-center py-4" style="color:var(--subtext);font-size:.82rem;">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="dropdown d-inline-block">
     <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; transition: 0.2s;">
         <div class="user-avatar" id="topbar-avatar-icon" style="width:32px;height:32px;background:var(--crm-accent);border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">U</div>
@@ -627,6 +655,109 @@
     </div>
   </div>
 </div>
+
+<script>
+// ── Centro de Notificaciones ──────────────────────────────────
+window._notifData = [];
+
+window.cargarNotificaciones = function() {
+    fetch('/api/notificaciones/resumen')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            window._notifData = data || [];
+            window._notifRender();
+        })
+        .catch(function() {
+            var lista = document.getElementById('notif-lista');
+            if (lista) lista.innerHTML = '<div class="text-center py-3" style="color:#94a3b8;font-size:.82rem;">No se pudo cargar</div>';
+        });
+};
+
+window._notifGetRead = function() {
+    try { return JSON.parse(localStorage.getItem('fleet_notif_read') || '{}'); } catch(e) { return {}; }
+};
+
+window._notifIsRead = function(id, count) {
+    var r = window._notifGetRead();
+    return r[id] !== undefined && r[id] >= count;
+};
+
+window._notifRender = function() {
+    var lista = document.getElementById('notif-lista');
+    if (!lista) return;
+    var data = window._notifData || [];
+    var unread = 0;
+
+    if (!data.length) {
+        lista.innerHTML = '<div class="text-center py-4" style="color:#94a3b8;font-size:.82rem;"><i class="bi bi-bell-slash fs-4 d-block mb-2"></i>Sin notificaciones</div>';
+        window._notifUpdateBadge(0);
+        return;
+    }
+
+    var colorMap = { danger: '#ef4444', warning: '#f59e0b', info: '#3b82f6' };
+    var bgMap    = { danger: '#fff1f2', warning: '#fffbeb', info: '#eff6ff' };
+
+    var html = '';
+    data.forEach(function(n) {
+        var isRead = window._notifIsRead(n.id, n.count);
+        if (!isRead && n.count > 0) unread++;
+        var color = colorMap[n.tipo] || '#64748b';
+        var bg    = bgMap[n.tipo]    || '#f8fafc';
+        html += '<div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);' +
+            (isRead || n.count === 0 ? 'opacity:.5;' : '') + '">' +
+            '<div style="width:40px;height:40px;border-radius:12px;background:' + bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                '<i class="bi ' + n.icono + '" style="color:' + color + ';font-size:1.1rem;"></i>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:.82rem;font-weight:700;color:var(--text);">' + n.titulo + '</div>' +
+                '<div style="font-size:.75rem;color:var(--subtext);">' +
+                    (n.count === 0 ? 'Todo en orden' : '<strong style="color:' + color + ';">' + n.count + '</strong> requieren atención') +
+                '</div>' +
+            '</div>' +
+            (n.count > 0
+                ? '<div style="display:flex;flex-direction:column;gap:.25rem;align-items:flex-end;">' +
+                    '<button class="btn btn-sm" style="font-size:.68rem;padding:2px 8px;color:' + color + ';border:1px solid ' + color + ';border-radius:8px;white-space:nowrap;" ' +
+                        'onclick="event.stopPropagation();cargarModuloAislado(\'' + n.modulo + '\')">Ver →</button>' +
+                    (!isRead
+                        ? '<button class="btn btn-sm" style="font-size:.65rem;padding:1px 6px;color:var(--subtext);border:1px solid var(--border);border-radius:8px;" ' +
+                            'onclick="event.stopPropagation();window.notifMarcarLeido(\'' + n.id + '\',' + n.count + ')">✓ Leído</button>'
+                        : '') +
+                  '</div>'
+                : '') +
+        '</div>';
+    });
+
+    lista.innerHTML = html;
+    window._notifUpdateBadge(unread);
+};
+
+window._notifUpdateBadge = function(count) {
+    var badge = document.getElementById('notif-badge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = ''; }
+    else badge.style.display = 'none';
+};
+
+window.notifMarcarLeido = function(id, count) {
+    var r = window._notifGetRead();
+    r[id] = count;
+    localStorage.setItem('fleet_notif_read', JSON.stringify(r));
+    window._notifRender();
+};
+
+window.notifMarcarTodoLeido = function() {
+    var r = window._notifGetRead();
+    (window._notifData || []).forEach(function(n) { r[n.id] = n.count; });
+    localStorage.setItem('fleet_notif_read', JSON.stringify(r));
+    window._notifRender();
+};
+
+// Cargar al inicio y cada 5 minutos
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(window.cargarNotificaciones, 3000);
+    setInterval(window.cargarNotificaciones, 5 * 60 * 1000);
+});
+</script>
 
 </body>
 </html>
