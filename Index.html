@@ -56,14 +56,35 @@
                     </a>
                 </div>
 
+                <!-- FLOTA -->
+                <div id="wrap-flota">
+                    <button class="nav-section-toggle" data-section="flota" aria-expanded="false" onclick="window.toggleNavSection('flota')">
+                        <span class="link-text" data-i18n="nav.flota">Flota</span>
+                        <span class="section-badge">2</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-flota">
+                        <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
+                            <i class="bi bi-geo-alt-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.gps">GPS</span>
+                        </a>
+                        <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
+                            <i class="bi bi-activity nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.status">Status Flota</span>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- MANTENIMIENTO -->
                 <div id="wrap-mantenimiento">
                     <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="false" onclick="window.toggleNavSection('mantenimiento')">
                         <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
-                        <span class="section-badge">13</span>
+                        <span class="section-badge">18</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
+                        <!-- Inspecciones & Placas -->
+                        <div class="nav-sub-label"><i class="bi bi-clipboard2-pulse me-1"></i>Inspecciones</div>
                         <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
                             <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span>
@@ -126,54 +147,8 @@
                             <i class="bi bi-file-earmark-text-fill nav-icon"></i>
                             <span class="link-text">Órdenes de Mto.</span>
                         </a>
-                    </div>
-                </div>
-
-                <!-- ALMACÉN -->
-                <div id="wrap-almacen">
-                    <button class="nav-section-toggle" data-section="almacen" aria-expanded="false" onclick="window.toggleNavSection('almacen')">
-                        <span class="link-text" data-i18n="nav.almacen">Almacén</span>
-                        <span class="section-badge">6</span>
-                        <i class="bi bi-chevron-down section-chevron"></i>
-                    </button>
-                    <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
-                        <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
-                            <i class="bi bi-box-fill nav-icon"></i>
-                            <span class="link-text">Inventario</span>
-                        </a>
-                        <a id="nav-entradas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/entradas')">
-                            <i class="bi bi-arrow-down-circle-fill nav-icon"></i>
-                            <span class="link-text">Entradas</span>
-                        </a>
-                        <a id="nav-salidas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/salidas')">
-                            <i class="bi bi-arrow-up-circle-fill nav-icon"></i>
-                            <span class="link-text">Salidas</span>
-                        </a>
-                        <a id="nav-proveedores-inv" class="nav-item" onclick="cargarModuloAislado('almacen/proveedores')">
-                            <i class="bi bi-building-fill nav-icon"></i>
-                            <span class="link-text">Proveedores</span>
-                        </a>
-                        <a id="nav-kardex" class="nav-item" onclick="cargarModuloAislado('almacen/kardex')">
-                            <i class="bi bi-journal-text nav-icon"></i>
-                            <span class="link-text">Kardex</span>
-                        </a>
-                        <a id="nav-costos-inv" class="nav-item" onclick="cargarModuloAislado('almacen/costos')">
-                            <i class="bi bi-graph-up-arrow nav-icon"></i>
-                            <span class="link-text">Costos</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- PREFERENCIAS -->
-                <div id="wrap-preferencias">
-                    <button class="nav-section-toggle" data-section="preferencias" aria-expanded="false" onclick="window.toggleNavSection('preferencias')">
-                        <span class="link-text">Preferencias</span>
-                        <span class="section-badge">9</span>
-                        <i class="bi bi-chevron-down section-chevron"></i>
-                    </button>
-                    <div class="nav-section-items nav-section-collapsed" id="section-items-preferencias">
-                        <!-- Config. Preventivos -->
-                        <div class="nav-sub-label" id="nav-sub-cfg-prev"><i class="bi bi-sliders me-1"></i>Config. Preventivos</div>
+                        <!-- Sub-grupo Configuración Mantenimiento -->
+                        <div class="nav-sub-label" id="nav-sub-cfg-mant"><i class="bi bi-sliders me-1"></i>Configuración</div>
                         <a id="nav-configuracion-mp" class="nav-item" onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
                             <i class="bi bi-sliders nav-icon"></i>
                             <span class="link-text">Frecuencias MP</span>
@@ -190,14 +165,51 @@
                             <i class="bi bi-speedometer2 nav-icon"></i>
                             <span class="link-text">Config. Métrica</span>
                         </a>
-                        <!-- Config. Taller -->
-                        <div class="nav-sub-label" id="nav-sub-cfg-taller"><i class="bi bi-tools me-1"></i>Config. Taller</div>
                         <a id="nav-situaciones" class="nav-item" onclick="cargarModuloAislado('preferencias/situaciones')">
                             <i class="bi bi-flag-fill nav-icon"></i>
                             <span class="link-text">Situaciones</span>
                         </a>
-                        <!-- Config. Almacén -->
-                        <div class="nav-sub-label" id="nav-sub-cfg-alm"><i class="bi bi-box me-1"></i>Config. Almacén</div>
+                    </div>
+                </div>
+
+                <!-- ALMACÉN -->
+                <div id="wrap-almacen">
+                    <button class="nav-section-toggle" data-section="almacen" aria-expanded="false" onclick="window.toggleNavSection('almacen')">
+                        <span class="link-text" data-i18n="nav.almacen">Almacén</span>
+                        <span class="section-badge">10</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
+                        <!-- Movimientos -->
+                        <div class="nav-sub-label"><i class="bi bi-arrow-left-right me-1"></i>Movimientos</div>
+                        <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
+                            <i class="bi bi-box-fill nav-icon"></i>
+                            <span class="link-text">Inventario</span>
+                        </a>
+                        <a id="nav-entradas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/entradas')">
+                            <i class="bi bi-arrow-down-circle-fill nav-icon"></i>
+                            <span class="link-text">Entradas</span>
+                        </a>
+                        <a id="nav-salidas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/salidas')">
+                            <i class="bi bi-arrow-up-circle-fill nav-icon"></i>
+                            <span class="link-text">Salidas</span>
+                        </a>
+                        <a id="nav-kardex" class="nav-item" onclick="cargarModuloAislado('almacen/kardex')">
+                            <i class="bi bi-journal-text nav-icon"></i>
+                            <span class="link-text">Kardex</span>
+                        </a>
+                        <a id="nav-costos-inv" class="nav-item" onclick="cargarModuloAislado('almacen/costos')">
+                            <i class="bi bi-graph-up-arrow nav-icon"></i>
+                            <span class="link-text">Costos</span>
+                        </a>
+                        <!-- Gestión -->
+                        <div class="nav-sub-label"><i class="bi bi-building me-1"></i>Gestión</div>
+                        <a id="nav-proveedores-inv" class="nav-item" onclick="cargarModuloAislado('almacen/proveedores')">
+                            <i class="bi bi-building-fill nav-icon"></i>
+                            <span class="link-text">Proveedores</span>
+                        </a>
+                        <!-- Configuración Almacén -->
+                        <div class="nav-sub-label" id="nav-sub-cfg-alm"><i class="bi bi-box me-1"></i>Configuración</div>
                         <a id="nav-familias-inv" class="nav-item" onclick="cargarModuloAislado('almacen/familias')">
                             <i class="bi bi-tags-fill nav-icon"></i>
                             <span class="link-text">Familias</span>
@@ -217,40 +229,17 @@
                     </div>
                 </div>
 
-                <!-- FLOTA -->
-                <div id="wrap-flota">
-                    <button class="nav-section-toggle" data-section="flota" aria-expanded="false" onclick="window.toggleNavSection('flota')">
-                        <span class="link-text" data-i18n="nav.flota">Flota</span>
-                        <span class="section-badge">2</span>
-                        <i class="bi bi-chevron-down section-chevron"></i>
-                    </button>
-                    <div class="nav-section-items nav-section-collapsed" id="section-items-flota">
-                        <a id="nav-ubicacion" class="nav-item" onclick="cargarModuloAislado('flota/ubicacion')">
-                            <i class="bi bi-geo-alt-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.gps">GPS</span>
-                        </a>
-                        <a id="nav-status-flota" class="nav-item" onclick="cargarModuloAislado('flota/status')">
-                            <i class="bi bi-activity nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.status">Status Flota</span>
-                        </a>
-                    </div>
-                </div>
-
                 <!-- DIRECTORIO -->
                 <div id="wrap-directorio">
                     <button class="nav-section-toggle" data-section="directorio" aria-expanded="false" onclick="window.toggleNavSection('directorio')">
                         <span class="link-text" data-i18n="nav.directorio">Directorio</span>
-                        <span class="section-badge">2</span>
+                        <span class="section-badge">1</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-directorio">
                         <a id="nav-conductores" class="nav-item" onclick="cargarModuloAislado('directorio/conductores')">
                             <i class="bi bi-person-vcard-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.conductores">Personal</span>
-                        </a>
-                        <a id="nav-talleres" class="nav-item" onclick="alert('Pronto: Talleres')">
-                            <i class="bi bi-shop nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.talleres">Talleres</span>
                         </a>
                     </div>
                 </div>

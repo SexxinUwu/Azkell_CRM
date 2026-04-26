@@ -14,6 +14,8 @@ var _INV_POR_PAG = 24;
 window._invSistemasData = window._invSistemasData || [];
 window._invUnidadesData = window._invUnidadesData || [];
 window._invFamiliasData = window._invFamiliasData || [];
+window._invModoSeleccion = false;
+window._invSeleccionados = window._invSeleccionados instanceof Set ? new Set() : new Set();
 
 window.init_inventario = function() {
     if (!window.checkPerm('inv', 'l')) {
@@ -22,6 +24,12 @@ window.init_inventario = function() {
     }
     var btnNuevo = document.querySelector('#mod-inventario .btn-primary[onclick*="abrirModalArticulo"]');
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('inv','c') ? '' : 'none';
+    // Mostrar botón seleccionar solo si tiene permiso eliminar
+    var btnSel = document.getElementById('inv-btn-sel');
+    if (btnSel) btnSel.style.display = window.checkPerm('inv','d') ? '' : 'none';
+    // Resetear modo selección al entrar al módulo
+    window._invModoSeleccion = false;
+    window._invSeleccionados = new Set();
     window._invPagActual = 1;
     window.cargarInventario();
     window._invCargarMarcasPlacas();
@@ -344,9 +352,20 @@ function _invRenderCard(d) {
     var desc = _invEsc(d.descripcion || '');
     var unid = _invEsc(d.unidad || '');
 
+    var chkHtml = window._invModoSeleccion
+        ? '<input type="checkbox" class="form-check-input position-absolute" '
+          + 'style="top:8px;right:8px;width:18px;height:18px;z-index:5;cursor:pointer;" '
+          + 'onchange="window._invToggleCheck(\'' + id + '\', this.checked)" onclick="event.stopPropagation()">'
+        : '';
+
+    var clickHandler = window._invModoSeleccion
+        ? 'onclick="var cb=this.querySelector(\'input[type=checkbox]\'); if(cb){ cb.checked=!cb.checked; window._invToggleCheck(\'' + id + '\', cb.checked); }"'
+        : '';
+
     return '<div class="col-6 col-sm-4 col-md-3 col-xxl-2">' +
-        '<div class="card h-100 border-0 shadow-sm" style="border-radius:10px;overflow:hidden;">' +
-            '<div class="position-relative inv-card-img" onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;">' +
+        '<div class="card h-100 border-0 shadow-sm position-relative" style="border-radius:10px;overflow:hidden;' + (window._invModoSeleccion ? 'cursor:pointer;' : '') + '" ' + clickHandler + '>' +
+            chkHtml +
+            '<div class="position-relative inv-card-img"' + (!window._invModoSeleccion ? ' onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;"' : '') + '>' +
                 imgHtml +
                 '<span class="badge bg-dark bg-opacity-75 position-absolute top-0 start-0 m-1" style="font-size:0.6rem;backdrop-filter:blur(4px);">' + id + '</span>' +
                 (d.stock_min > 0 && parseFloat(d.stock_actual || 0) <= parseFloat(d.stock_min) && parseFloat(d.stock_actual || 0) > 0
@@ -354,22 +373,70 @@ function _invRenderCard(d) {
                 (parseFloat(d.stock_actual || 0) <= 0
                     ? '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size:0.6rem;" title="Sin stock"><i class="bi bi-x-circle-fill"></i></span>' : '') +
             '</div>' +
-            '<div class="card-body p-2" onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;">' +
+            '<div class="card-body p-2"' + (!window._invModoSeleccion ? ' onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;"' : '') + '>' +
                 '<div class="fw-semibold small mb-1" style="font-size:0.8rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="' + desc + '">' + desc + '</div>' +
                 '<div class="d-flex justify-content-between align-items-center gap-1 flex-wrap">' +
                     sistemaBadge +
                     _invStockBadge(d) + (unid ? '<small class="text-muted">' + unid + '</small>' : '') +
                 '</div>' +
             '</div>' +
-            '<div class="card-footer p-1 bg-transparent border-top d-flex gap-1 justify-content-end">' +
+            (!window._invModoSeleccion ? '<div class="card-footer p-1 bg-transparent border-top d-flex gap-1 justify-content-end">' +
                 (window.checkPerm('inv','e') ? '<button class="btn btn-xs btn-outline-primary" title="Editar" onclick="window.abrirModalInventario(\'' + id + '\')"><i class="bi bi-pencil"></i></button>' : '') +
                 (window.checkPerm('inv','d') ? '<button class="btn btn-xs btn-outline-danger" title="Eliminar" onclick="window.eliminarArticuloInv(\'' + id + '\')"><i class="bi bi-trash"></i></button>' : '') +
-            '</div>' +
+            '</div>' : '') +
         '</div>' +
     '</div>';
 }
 
 window._invIrPag = function(n) { window._invPagActual = n; window._invRender(); };
+
+// ── Selección masiva ──────────────────────────────────────────────
+window._invToggleSeleccion = function() {
+    window._invModoSeleccion = !window._invModoSeleccion;
+    window._invSeleccionados.clear();
+    var btn = document.getElementById('inv-btn-sel');
+    if (btn) {
+        btn.classList.toggle('btn-outline-secondary', !window._invModoSeleccion);
+        btn.classList.toggle('btn-primary', window._invModoSeleccion);
+    }
+    var bdel = document.getElementById('inv-btn-bulk-del');
+    if (bdel) bdel.classList.add('d-none');
+    var cnt = document.getElementById('inv-bulk-cnt');
+    if (cnt) cnt.textContent = '0';
+    window._invRender();
+};
+
+window._invToggleCheck = function(id, checked) {
+    if (checked) window._invSeleccionados.add(id);
+    else window._invSeleccionados.delete(id);
+    var cnt = window._invSeleccionados.size;
+    var bdel = document.getElementById('inv-btn-bulk-del');
+    if (bdel) bdel.classList.toggle('d-none', cnt === 0);
+    var c = document.getElementById('inv-bulk-cnt');
+    if (c) c.textContent = cnt;
+};
+
+window._invEliminarMasivo = function() {
+    var ids = Array.from(window._invSeleccionados);
+    if (!ids.length) return;
+    if (!confirm('¿Eliminar ' + ids.length + ' artículo(s) seleccionados? Esta acción los desactivará.')) return;
+    fetch('/api/almacen/inventario/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+        window._invModoSeleccion = false;
+        window._invSeleccionados.clear();
+        var btn = document.getElementById('inv-btn-sel');
+        if (btn) { btn.classList.add('btn-outline-secondary'); btn.classList.remove('btn-primary'); }
+        var bdel = document.getElementById('inv-btn-bulk-del');
+        if (bdel) bdel.classList.add('d-none');
+        window.cargarInventario();
+    })
+    .catch(function(err) { alert('Error: ' + err.message); });
+};
 function _invEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 // ── Modal Detalle (Vista Rápida) ──────────────────────────────────

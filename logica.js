@@ -2740,9 +2740,8 @@ function generarWizardFase3() {
                     <input type="date" class="form-control fw-bold text-primary border-primary shadow-sm" id="i_fecha" required>
                 </div>
                 <div class="col-12 mb-3">
-                    <label class="fw-bold text-primary d-flex justify-content-between">
-                        <span><i class="bi bi-truck"></i> Placa *</span>
-                        <a href="#" class="text-success small fw-bold text-decoration-none" onclick="document.getElementById('formPlaca').reset(); new bootstrap.Modal(document.getElementById('modalPlaca')).show();"><i class="bi bi-plus-circle-fill"></i> Nueva Placa</a>
+                    <label class="fw-bold text-primary">
+                        <i class="bi bi-truck"></i> Placa *
                     </label>
                     ${window.SS.html('insp-placa','i_placa','i_placa','ESCRIBE PARA BUSCAR...','Buscar placa...')}
                 </div>
