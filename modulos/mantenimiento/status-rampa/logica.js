@@ -320,7 +320,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td style="color:var(--subtext);font-size:0.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (e.obs || '') + '">' + (e.obs || '') + '</td>';
+            html += '<td style="color:var(--subtext);font-size:0.78rem;white-space:normal;word-break:break-word;line-height:1.35;">' + (e.obs || '') + '</td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td>' + otsTxt + '</td>';
@@ -584,15 +584,15 @@ function srRenderHistorial() {
         var fIng     = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '—';
         var fLibDate = r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : (r.fecha_salida ? String(r.fecha_salida).split('T')[0] : '—');
         var fLibTime = r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '';
-        return '<tr style="cursor:pointer;" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
-            + '<td><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
-            + '<td><strong>' + (r.placa || '—') + '</strong></td>'
-            + '<td style="font-size:0.79rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
-            + '<td style="font-size:0.79rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
-            + '<td style="font-size:0.79rem;">' + (r.situacion || '—') + '</td>'
-            + '<td style="font-size:0.79rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (r.obs || '') + '">' + (r.obs || '—') + '</td>'
-            + '<td style="font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
-            + '<td onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
+        return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
+            + '<td style="padding:5px 8px;"><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
+            + '<td style="padding:5px 8px;font-weight:700;">' + (r.placa || '—') + '</td>'
+            + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
+            + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
+            + '<td style="padding:5px 8px;font-size:0.78rem;">' + (r.situacion || '—') + '</td>'
+            + '<td style="padding:5px 8px;font-size:0.78rem;white-space:normal;word-break:break-word;line-height:1.35;">' + (r.obs || '—') + '</td>'
+            + '<td style="padding:5px 8px;font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
+            + '<td style="padding:5px 8px;" onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
             + '</tr>';
     }).join('');
 }
