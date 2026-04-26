@@ -188,7 +188,7 @@ window.salRenderTabla = function() {
         var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
                 : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
                 : 'Sin salidas registradas';
-        tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
         return;
     }
 

@@ -76,6 +76,10 @@
     border-color: #fde68a;
     background: #fffdf0;
 }
+.card-bento.card-selected {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.25) !important;
+}
 
 /* Barra de stock */
 .stock-bar-bg   { height: 7px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin-top: .5rem; }
