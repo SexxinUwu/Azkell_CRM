@@ -4203,6 +4203,16 @@ app.delete('/api/almacen/inventario/:id', (req, res) => {
     });
 });
 
+app.post('/api/almacen/inventario/bulk-delete', (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !ids.length) return res.status(400).json({ error: 'Sin IDs' });
+    const placeholders = ids.map(() => '?').join(',');
+    db.query(`UPDATE inventario SET activo=0 WHERE id IN (${placeholders})`, ids, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, eliminados: ids.length });
+    });
+});
+
 // Upload imagen de artículo → Cloudinary
 app.post('/api/almacen/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
