@@ -25,58 +25,38 @@
     </div>
   </div>
 
-  <!-- Info del artículo seleccionado -->
-  <div id="kdx-info-art" style="display:none;" class="mb-3">
-    <div class="row g-2">
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm p-3" style="background:var(--surface);">
-          <div class="small text-muted mb-1">Artículo</div>
-          <div class="fw-bold" id="kdx-art-nombre">—</div>
-          <div class="text-muted small" id="kdx-art-codigo">—</div>
-        </div>
+  <!-- Info del artículo (elementos ocultos, referenciados por JS) -->
+  <div id="kdx-info-art" style="display:none!important;">
+    <span id="kdx-art-nombre"></span>
+    <span id="kdx-art-codigo"></span>
+    <span id="kdx-stock-base"></span>
+    <span id="kdx-fecha-reg"></span>
+    <span id="kdx-total-entradas"></span>
+    <span id="kdx-stock-actual"></span>
+  </div>
+
+  <!-- KPI Row Bento (visible tras consulta) -->
+  <div id="kdx-kpi-row" class="bento-kpi-row" style="display:none;"></div>
+
+  <!-- Encabezado del artículo seleccionado -->
+  <div id="kdx-art-header" style="display:none;margin-bottom:.75rem;">
+    <div style="background:#fff;border:1px solid #eef2f6;border-radius:18px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;">
+      <div style="width:42px;height:42px;background:#eff6ff;color:#2563eb;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
+        <i class="bi bi-journal-text"></i>
       </div>
-      <div class="col-md-2">
-        <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-          <div class="small text-muted mb-1">Stock Base</div>
-          <div class="fw-bold fs-5" id="kdx-stock-base">—</div>
-          <div class="text-muted small" id="kdx-fecha-reg">al inicio</div>
-        </div>
-      </div>
-      <div class="col-md-2">
-        <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-          <div class="small text-muted mb-1">Entradas</div>
-          <div class="fw-bold fs-5 text-success" id="kdx-total-entradas">0</div>
-        </div>
-      </div>
-      <div class="col-md-2">
-        <div class="card border-0 shadow-sm p-3 text-center" style="background:var(--surface);">
-          <div class="small text-muted mb-1">Stock Actual</div>
-          <div class="fw-bold fs-5 text-primary" id="kdx-stock-actual">—</div>
-        </div>
+      <div>
+        <div style="font-weight:800;font-size:.95rem;" id="kdx-art-header-nombre">—</div>
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;" id="kdx-art-header-info">—</div>
       </div>
     </div>
   </div>
 
-  <!-- Tabla movimientos -->
-  <div class="card p-0 shadow-sm flex-grow-1" style="overflow:auto;" id="kdx-tabla-card">
-    <div class="text-center py-5 text-muted" id="kdx-placeholder">
-      <i class="bi bi-journal-text fs-3 d-block mb-2 text-muted"></i>
+  <!-- Timeline de movimientos -->
+  <div class="flex-grow-1" style="overflow-y:auto;min-height:0;">
+    <div id="kdx-placeholder" class="text-center py-5 text-muted">
+      <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
       Selecciona un artículo para ver su kardex
     </div>
-    <table class="table table-custom table-hover m-0" id="tabla-kardex" style="display:none;">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Tipo</th>
-          <th>Documento</th>
-          <th>Contraparte</th>
-          <th class="text-end">Cantidad</th>
-          <th class="text-end">Costo Unit.</th>
-          <th class="text-end">Importe</th>
-          <th class="text-end fw-bold">Saldo</th>
-        </tr>
-      </thead>
-      <tbody id="tbody-kardex"></tbody>
-    </table>
+    <div id="kdx-timeline" class="kdx-timeline" style="background:#fff;border:1px solid #eef2f6;border-radius:20px;overflow:hidden;display:none;"></div>
   </div>
 </div>

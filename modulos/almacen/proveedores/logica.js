@@ -10,6 +10,14 @@ window._provPagina        = window._provPagina        || 1;
 window._provPorPagina     = 25;
 
 window.init_proveedores = function() {
+    // Inyectar CSS Bento Grid
+    if (!document.getElementById('almacen-bento-css')) {
+        var lnk = document.createElement('link');
+        lnk.id = 'almacen-bento-css';
+        lnk.rel = 'stylesheet';
+        lnk.href = '/modulos/almacen/almacen-bento.css';
+        document.head.appendChild(lnk);
+    }
     if (!window.checkPerm('prov_inv', 'l')) {
         window.showNoPermMsg('mod-proveedores');
         return;
@@ -27,18 +35,19 @@ window.init_proveedores = function() {
 window.cargarProveedores = function() {
     window._provSeleccionados = [];
     window._provActualizarBtnMasivo();
-    var tbody = document.getElementById('tbody-proveedores');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    var grid = document.getElementById('prov-grid');
+    if (grid) grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</div>';
     fetch('/api/almacen/proveedores')
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(data) {
             window._provData = data;
             window._provFiltrados = data;
+            window._provRenderKPIs(data);
             window.filtrarProveedores();
         })
         .catch(function(err) {
-            var t = document.getElementById('tbody-proveedores');
-            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
+            var g = document.getElementById('prov-grid');
+            if (g) g.innerHTML = '<div style="padding:2rem;color:#ef4444">Error: '+err.message+'</div>';
         });
 };
 
@@ -58,6 +67,27 @@ window.filtrarProveedores = function() {
     window._provRender();
 };
 
+// ── KPI Row Bento ─────────────────────────────────────────────────
+window._provRenderKPIs = function(data) {
+    var total   = data.length;
+    var activos = data.filter(function(d) { return d.estado === 'Activo'; }).length;
+    var el = document.getElementById('prov-kpi-row');
+    if (!el) return;
+    el.innerHTML =
+        '<div class="bento-kpi">' +
+          '<div><div class="bento-kpi-label">Total Proveedores</div><div class="bento-kpi-num">' + total + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-truck fs-4"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi">' +
+          '<div><div class="bento-kpi-label">Activos</div><div class="bento-kpi-num" style="color:#16a34a">' + activos + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-check-circle-fill fs-4"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-dark">' +
+          '<div><div class="bento-kpi-label">Inactivos</div><div class="bento-kpi-num">' + (total - activos) + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-pause-circle fs-4" style="color:#94a3b8"></i></div>' +
+        '</div>';
+};
+
 window._provRender = function() {
     var todos = window._provFiltrados || [];
     var total = todos.length;
@@ -67,39 +97,64 @@ window._provRender = function() {
     var inicio = (window._provPagina - 1) * porPag;
     var datos = todos.slice(inicio, inicio + porPag);
 
-    var cont  = document.getElementById('prov-contador');
-    if (cont) cont.textContent = total + ' proveedor' + (total!==1?'es':'');
-    var tbody = document.getElementById('tbody-proveedores');
-    if (!tbody) return;
+    var cont = document.getElementById('prov-contador');
+    if (cont) cont.textContent = total + ' proveedor' + (total !== 1 ? 'es' : '');
+
+    var grid = document.getElementById('prov-grid');
+    if (!grid) return;
+
     if (!datos.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin proveedores</td></tr>';
+        grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;grid-column:1/-1"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</div>';
         window._provRenderPaginador(0, 1, 0);
         return;
     }
-    var sel = window._provSeleccionados || [];
-    tbody.innerHTML = datos.map(function(d) {
-        var estadoBadge = d.estado === 'Activo'
-            ? '<span class="badge bg-success-subtle text-success">Activo</span>'
-            : '<span class="badge bg-secondary">Inactivo</span>';
-        var marcasBadges = d.marcas
-            ? d.marcas.split(', ').map(function(m) { return '<span class="badge bg-info-subtle text-info border border-info border-opacity-25 ms-1">'+_provEsc(m)+'</span>'; }).join('')
-            : '—';
-        var checked = sel.indexOf(d.id) !== -1 ? ' checked' : '';
-        return '<tr>'+
-            '<td><input type="checkbox" class="form-check-input" onchange="window._provToggleSel(\''+_provEsc(d.id)+'\',this.checked)"'+checked+'></td>'+
-            '<td><span class="badge bg-secondary fw-normal">'+_provEsc(d.id||'')+'</span></td>'+
-            '<td>'+_provEsc(d.nombre||'')+(d.razon_social?'<br><small class="text-muted">'+_provEsc(d.razon_social)+'</small>':'')+'</td>'+
-            '<td><span class="badge bg-light text-dark border">'+_provEsc(d.tipo_documento||'—')+'</span></td>'+
-            '<td>'+_provEsc(d.numero_documento||'—')+'</td>'+
-            '<td><small>'+_provEsc(d.telefono||'—')+'</small></td>'+
-            '<td>'+marcasBadges+'</td>'+
-            '<td>'+estadoBadge+'</td>'+
-            '<td class="text-center"><div class="d-flex gap-1 justify-content-center">'+
-                (window.checkPerm('prov_inv','e') ? '<button class="btn btn-xs btn-outline-primary" onclick="window.abrirModalProveedor(\''+_provEsc(d.id)+'\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '')+
-                (window.checkPerm('prov_inv','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarProveedor(\''+_provEsc(d.id)+'\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '')+
-            '</div></td>'+
-        '</tr>';
+
+    var canEdit = window.checkPerm('prov_inv', 'e');
+    var canDel  = window.checkPerm('prov_inv', 'd');
+
+    grid.innerHTML = datos.map(function(d) {
+        // Avatar con iniciales (primeras 2 palabras)
+        var initials = (d.nombre || '?').split(' ').slice(0, 2).map(function(w) { return (w[0] || ''); }).join('').toUpperCase();
+
+        // Tags de marcas
+        var marcasHtml = '';
+        if (d.marcas) {
+            marcasHtml = d.marcas.split(',').filter(Boolean).map(function(m) {
+                return '<span class="prov-marca-tag">' + _provEsc(m.trim()) + '</span>';
+            }).join('');
+        }
+
+        // Badge documento
+        var badgeDoc = d.tipo_documento === 'RUC'
+            ? '<span class="bento-badge ok">RUC Activo</span>'
+            : d.tipo_documento === 'DNI'
+                ? '<span class="bento-badge warning">DNI</span>'
+                : '<span class="bento-badge warning">' + _provEsc(d.tipo_documento || '—') + '</span>';
+
+        // Estado
+        var estadoHtml = d.estado === 'Activo'
+            ? '<span style="font-size:.62rem;font-weight:700;color:#16a34a;text-transform:uppercase">● Activo</span>'
+            : '<span style="font-size:.62rem;font-weight:700;color:#94a3b8;text-transform:uppercase">● Inactivo</span>';
+
+        return '<div class="prov-card">' +
+            '<div class="prov-avatar">' + _provEsc(initials) + '</div>' +
+            '<div style="flex:1;min-width:0">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">' +
+                    badgeDoc +
+                    '<div style="display:flex;gap:.2rem">' +
+                        (canEdit ? '<button class="btn btn-sm p-1" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil" style="color:#94a3b8;font-size:.85rem"></i></button>' : '') +
+                        (canDel  ? '<button class="btn btn-sm p-1" onclick="window.eliminarProveedor(\'' + _provEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash" style="color:#ef4444;font-size:.85rem"></i></button>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div style="font-weight:800;font-size:.95rem;line-height:1.2;margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + _provEsc(d.nombre) + '">' + _provEsc(d.nombre) + '</div>' +
+                '<div style="font-size:.7rem;color:#94a3b8;font-weight:600;margin-bottom:.55rem">' +
+                    _provEsc(d.numero_documento || '—') + ' · ' + _provEsc(d.telefono || 'Sin tel.') + ' · ' + estadoHtml +
+                '</div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:.25rem">' + (marcasHtml || '<span style="font-size:.65rem;color:#cbd5e1">Sin marcas registradas</span>') + '</div>' +
+            '</div>' +
+        '</div>';
     }).join('');
+
     window._provRenderPaginador(total, paginas, inicio + datos.length);
     window._provActualizarBtnMasivo();
 };
