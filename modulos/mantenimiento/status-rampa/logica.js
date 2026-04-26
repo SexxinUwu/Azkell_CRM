@@ -320,7 +320,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td style="color:var(--subtext);font-size:0.78rem;white-space:normal;word-break:break-word;line-height:1.35;">' + (e.obs || '') + '</td>';
+            html += '<td style="color:var(--text);font-size:0.78rem;white-space:normal;word-break:break-word;line-height:1.35;">' + (e.obs || '') + '</td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td>' + otsTxt + '</td>';
