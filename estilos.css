@@ -2063,8 +2063,8 @@ body.dark .btn-toggle-sidebar:hover {
 
 /* 4. Section labels */
 .nav-section-label {
-    padding: 14px 18px 3px !important;
-    font-size: 0.645rem !important;
+    padding: 9px 18px 2px !important;
+    font-size: 0.625rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.09em !important;
@@ -2080,9 +2080,9 @@ body.dark .btn-toggle-sidebar:hover {
 #sidebarMenu .nav-item {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
-    padding: 8px 12px !important;
-    margin: 1px 10px !important;
+    gap: 8px !important;
+    padding: 5px 10px !important;
+    margin: 1px 8px !important;
     border-radius: 8px !important;
     color: var(--subtext) !important;
     font-size: 0.845rem !important;
@@ -2112,7 +2112,7 @@ body.dark .btn-toggle-sidebar:hover {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     color: inherit !important;
-    font-size: 0.845rem !important;
+    font-size: 0.8rem !important;
     font-weight: 500 !important;
 }
 #sidebarMenu .nav-item:hover {
@@ -2298,9 +2298,9 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
 /* Contenedor de items de la sección — animación de colapso */
 .nav-section-items {
     overflow: hidden !important;
-    max-height: 500px !important;
+    max-height: 2000px !important;
     opacity: 1 !important;
-    transition: max-height 0.3s ease, opacity 0.25s ease !important;
+    transition: max-height 0.4s ease, opacity 0.25s ease !important;
 }
 .nav-section-items.nav-section-collapsed {
     max-height: 0 !important;
@@ -2312,11 +2312,11 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
     display: none !important;
 }
 .sidebar.collapsed .nav-section-items {
-    max-height: 500px !important;
+    max-height: 2000px !important;
     opacity: 1 !important;
 }
 .sidebar.collapsed .nav-section-items.nav-section-collapsed {
-    max-height: 500px !important;
+    max-height: 2000px !important;
     opacity: 1 !important;
 }
 
@@ -2368,12 +2368,12 @@ body.sidebar-compact #sidebarMenu .nav-item .nav-icon { font-size: 1.15rem !impo
 
 /* Sub-etiqueta dentro de sección del nav (ej: "Preventivo" bajo Mantenimiento) */
 .nav-sub-label {
-    font-size: 0.64rem !important;
+    font-size: 0.6rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.06em !important;
     color: var(--subtext) !important;
-    padding: 10px 22px 2px !important;
+    padding: 6px 18px 1px !important;
     opacity: 0.65;
     pointer-events: none;
 }
