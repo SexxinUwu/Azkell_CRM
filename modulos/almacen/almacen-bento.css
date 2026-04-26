@@ -1,0 +1,168 @@
+/* ============================================================
+   Azkell Fleet — Almacén Bento Grid UI
+   Estilos compartidos para Inventario, Proveedores y Kardex
+   ============================================================ */
+
+/* ─── KPI Row ─────────────────────────────────────────────── */
+.bento-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.bento-kpi {
+    background: #fff;
+    border: 1px solid #eef2f6;
+    border-radius: 24px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.bento-kpi.accent-red  { background: #ef4444; color: #fff; border-color: transparent; box-shadow: 0 8px 20px -4px rgba(239,68,68,.35); }
+.bento-kpi.accent-dark { background: #0f172a; color: #fff; border-color: transparent; }
+.bento-kpi-num   { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+.bento-kpi-label { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; opacity: .7; margin-bottom: .3rem; }
+.bento-kpi-icon  {
+    width: 52px; height: 52px;
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    background: rgba(0,0,0,.06);
+    flex-shrink: 0;
+}
+.bento-kpi.accent-red  .bento-kpi-icon,
+.bento-kpi.accent-dark .bento-kpi-icon { background: rgba(255,255,255,.12); }
+
+/* ─── Badge semáforo ──────────────────────────────────────── */
+.bento-badge {
+    font-size: .6rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: .25rem .7rem; border-radius: 99px;
+    white-space: nowrap;
+}
+.bento-badge.ok       { background: #dcfce7; color: #15803d; }
+.bento-badge.warning  { background: #fef3c7; color: #b45309; }
+.bento-badge.critical { background: #ef4444; color: #fff; box-shadow: 0 2px 8px rgba(239,68,68,.4); }
+
+/* ─── Inventario — Cards ──────────────────────────────────── */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+.card-bento {
+    background: #fff;
+    border: 1px solid #eef2f6;
+    border-radius: 24px;
+    padding: 1.25rem;
+    display: flex; flex-direction: column;
+    transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s, border-color .25s;
+    cursor: pointer;
+    position: relative;
+}
+.card-bento:hover {
+    transform: translateY(-3px) scale(1.012);
+    box-shadow: 0 16px 32px -8px rgba(0,0,0,.1);
+    border-color: #bfdbfe;
+}
+.card-bento.critical {
+    border-color: #fca5a5;
+    background: #fff7f7;
+    box-shadow: 0 0 0 2px #ef4444;
+}
+.card-bento.warning {
+    border-color: #fde68a;
+    background: #fffdf0;
+}
+
+/* Barra de stock */
+.stock-bar-bg   { height: 7px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin-top: .5rem; }
+.stock-bar-fill { height: 100%; border-radius: 99px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.stock-bar-fill.ok       { background: #22c55e; }
+.stock-bar-fill.warning  { background: #f59e0b; }
+.stock-bar-fill.critical { background: #ef4444; }
+
+/* ─── Proveedores — Cards ─────────────────────────────────── */
+.prov-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+.prov-card {
+    background: #fff;
+    border: 1px solid #eef2f6;
+    border-radius: 24px;
+    padding: 1.4rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    transition: transform .25s, box-shadow .25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.prov-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(0,0,0,.09);
+}
+.prov-avatar {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.15rem; color: #475569;
+    flex-shrink: 0; letter-spacing: .05em;
+}
+.prov-marca-tag {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: .65rem; font-weight: 700;
+    padding: .15rem .55rem; border-radius: 6px;
+    color: #64748b;
+    transition: background .15s;
+}
+.prov-marca-tag:hover { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+
+/* ─── Kardex — Timeline ───────────────────────────────────── */
+.kdx-timeline { display: flex; flex-direction: column; }
+.kdx-item {
+    display: flex; gap: 1rem; align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f8fafc;
+    transition: background .15s;
+}
+.kdx-item:last-child { border-bottom: none; }
+.kdx-item:hover { background: #f8fafc; }
+.kdx-icon {
+    width: 48px; height: 48px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    transition: transform .2s;
+}
+.kdx-item:hover .kdx-icon { transform: scale(1.1); }
+.kdx-icon.entrada { background: #dcfce7; color: #16a34a; }
+.kdx-icon.salida  { background: #fee2e2; color: #dc2626; }
+.kdx-saldo {
+    min-width: 80px; text-align: right;
+    font-size: 1.05rem; font-weight: 900; color: #0f172a;
+}
+
+/* ─── Dark mode ───────────────────────────────────────────── */
+[data-bs-theme="dark"] .card-bento,
+[data-bs-theme="dark"] .bento-kpi:not(.accent-red):not(.accent-dark),
+[data-bs-theme="dark"] .prov-card {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+[data-bs-theme="dark"] .bento-kpi-icon { background: rgba(255,255,255,.08); }
+[data-bs-theme="dark"] .stock-bar-bg   { background: #334155; }
+[data-bs-theme="dark"] .kdx-item:hover { background: #1e293b; }
+[data-bs-theme="dark"] .kdx-item       { border-color: #334155; }
+[data-bs-theme="dark"] .kdx-saldo      { color: #e2e8f0; }
+[data-bs-theme="dark"] .prov-avatar    { background: linear-gradient(135deg, #334155, #1e293b); color: #94a3b8; }
+[data-bs-theme="dark"] .prov-marca-tag { background: #1e293b; border-color: #334155; color: #94a3b8; }
+[data-bs-theme="dark"] .bento-badge.ok      { background: #14532d; color: #86efac; }
+[data-bs-theme="dark"] .bento-badge.warning { background: #451a03; color: #fcd34d; }
+
+/* ─── Paginación adaptada (Inventario/Proveedores) ────────── */
+.bento-page-info { font-size: .75rem; font-weight: 600; color: #94a3b8; }

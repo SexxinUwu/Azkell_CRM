@@ -47,26 +47,16 @@
     <span id="prov-contador" class="text-muted small ms-auto"></span>
   </div>
 
-  <!-- Tabla -->
-  <div class="card p-0 shadow-sm" style="overflow-x:auto; overflow-y:auto; flex:1; min-height:0;">
-    <table class="table table-custom table-hover m-0">
-      <thead>
-        <tr>
-          <th style="width:32px"><input type="checkbox" class="form-check-input" id="prov-chk-all" onchange="window._provToggleSelAll(this.checked)" title="Seleccionar todos"></th>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Tipo Doc.</th>
-          <th>N° Documento</th>
-          <th>Teléfono</th>
-          <th>Marcas</th>
-          <th>Estado</th>
-          <th class="text-center"><i class="bi bi-three-dots-vertical"></i></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-proveedores">
-        <tr><td colspan="9" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
-      </tbody>
-    </table>
+  <!-- KPI Row Bento -->
+  <div id="prov-kpi-row" class="bento-kpi-row"></div>
+
+  <!-- Grid de Cards (scrollable) -->
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0;">
+    <div id="prov-grid" class="prov-grid pb-3">
+      <div style="text-align:center;padding:3rem;color:#94a3b8;">
+        <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
+      </div>
+    </div>
   </div>
 
   <!-- Paginador -->

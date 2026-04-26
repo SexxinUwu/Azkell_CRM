@@ -8,6 +8,14 @@ window._kdxSelId     = window._kdxSelId     || null;
 window._kdxStockBase = window._kdxStockBase || 0;
 
 window.init_kardex = function() {
+    // Inyectar CSS Bento Grid
+    if (!document.getElementById('almacen-bento-css')) {
+        var lnk = document.createElement('link');
+        lnk.id = 'almacen-bento-css';
+        lnk.rel = 'stylesheet';
+        lnk.href = '/modulos/almacen/almacen-bento.css';
+        document.head.appendChild(lnk);
+    }
     window._kdxCargarInventario();
 };
 
@@ -61,11 +69,16 @@ window._kdxCargarKardex = function() {
 
     var placeholder = document.getElementById('kdx-placeholder');
     if (placeholder) placeholder.style.display = 'none';
-    var tabla = document.getElementById('tabla-kardex');
-    if (tabla) tabla.style.display = '';
+    var timeline = document.getElementById('kdx-timeline');
+    if (timeline) { timeline.style.display = ''; timeline.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#94a3b8"><div class="spinner-border spinner-border-sm me-2"></div>Cargando movimientos...</div>'; }
 
-    var tbody = document.getElementById('tbody-kardex');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando movimientos...</td></tr>';
+    // Encabezado del artículo
+    var hdr = document.getElementById('kdx-art-header');
+    var hdrNombre = document.getElementById('kdx-art-header-nombre');
+    var hdrInfo   = document.getElementById('kdx-art-header-info');
+    if (hdr) hdr.style.display = '';
+    if (hdrNombre) hdrNombre.textContent = item.descripcion || '—';
+    if (hdrInfo) hdrInfo.textContent = item.id + (item.familia ? ' · ' + item.familia : '') + (item.almacen ? ' · ' + item.almacen : '');
 
     fetch('/api/almacen/kardex/' + encodeURIComponent(item.id))
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -81,52 +94,87 @@ window._kdxCargarKardex = function() {
 
 window._kdxRenderKardex = function(res, item) {
     var movs = res.movimientos || [];
-    var tbody = document.getElementById('tbody-kardex');
-    if (!tbody) return;
 
     // Calcular totales
-    var totalEntradas = 0;
-    var totalSalidas  = 0;
+    var totalEntradas = 0, totalSalidas = 0;
     movs.forEach(function(m) {
         if (m.tipo === 'Entrada') totalEntradas += parseFloat(m.cantidad) || 0;
         else totalSalidas += parseFloat(m.cantidad) || 0;
     });
     var stockActual = window._kdxStockBase + totalEntradas - totalSalidas;
 
+    // KPI row
+    var kpiEl = document.getElementById('kdx-kpi-row');
+    if (kpiEl) {
+        kpiEl.style.display = '';
+        kpiEl.innerHTML =
+            '<div class="bento-kpi">' +
+              '<div><div class="bento-kpi-label">Entradas Totales</div><div class="bento-kpi-num" style="color:#16a34a">+' + totalEntradas.toFixed(2) + '</div></div>' +
+              '<div class="bento-kpi-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-box-arrow-in-down fs-4"></i></div>' +
+            '</div>' +
+            '<div class="bento-kpi">' +
+              '<div><div class="bento-kpi-label">Salidas Totales</div><div class="bento-kpi-num" style="color:#ef4444">−' + totalSalidas.toFixed(2) + '</div></div>' +
+              '<div class="bento-kpi-icon" style="background:#fee2e2;color:#ef4444"><i class="bi bi-wrench-adjustable fs-4"></i></div>' +
+            '</div>' +
+            '<div class="bento-kpi accent-dark" style="background:linear-gradient(135deg,#1e40af,#3730a3)">' +
+              '<div><div class="bento-kpi-label">Stock Final</div><div class="bento-kpi-num" style="font-size:2rem;font-style:italic">' + stockActual.toFixed(2) + ' <span style="font-size:.8rem;font-weight:700;opacity:.7">' + _kdxEsc(item.unidad || '') + '</span></div></div>' +
+              '<div class="bento-kpi-icon"><span style="width:8px;height:8px;background:#4ade80;border-radius:50%;display:inline-block;box-shadow:0 0 6px #4ade80"></span></div>' +
+            '</div>';
+    }
+
+    // Actualizar elementos legacy (ocultos, para exportación)
     var elEnt = document.getElementById('kdx-total-entradas');
     if (elEnt) elEnt.textContent = '+' + totalEntradas.toFixed(2) + ' / −' + totalSalidas.toFixed(2);
     var elAct = document.getElementById('kdx-stock-actual');
-    if (elAct) elAct.textContent = stockActual.toFixed(2) + ' ' + (item.unidad||'');
+    if (elAct) elAct.textContent = stockActual.toFixed(2) + ' ' + (item.unidad || '');
 
     var btnExp = document.getElementById('btn-export-kardex');
     if (btnExp) btnExp.style.display = movs.length ? '' : 'none';
 
+    var timeline = document.getElementById('kdx-timeline');
+    if (!timeline) return;
+
     if (!movs.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>Sin movimientos registrados para este artículo</td></tr>';
+        timeline.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin movimientos registrados para este artículo</div>';
         return;
     }
 
-    tbody.innerHTML = movs.map(function(m, i) {
-        var fecha = m.fecha ? String(m.fecha).split('T')[0] : '—';
+    // Encabezado del timeline
+    var headerHtml = '<div style="padding:.75rem 1.25rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#64748b">Registro Maestro de Flujos</span>' +
+        '<span style="font-size:.7rem;color:#94a3b8;font-weight:600">' + movs.length + ' movimiento' + (movs.length !== 1 ? 's' : '') + '</span>' +
+    '</div>';
+
+    var saldoAcum = window._kdxStockBase;
+    var timelineHtml = movs.map(function(m) {
         var esEntrada = m.tipo === 'Entrada';
-        var tipoCls = esEntrada ? 'text-success' : 'text-danger';
-        var tipoIcon = esEntrada ? '<i class="bi bi-arrow-down-circle-fill text-success me-1"></i>' : '<i class="bi bi-arrow-up-circle-fill text-danger me-1"></i>';
-        var cantSign = esEntrada ? '+' : '−';
-        var cu   = parseFloat(m.costo_unitario||0);
-        var cant = parseFloat(m.cantidad||0);
-        var imp  = parseFloat(m.importe||0);
-        var saldo = m.saldo != null ? m.saldo.toFixed(4) : '—';
-        return '<tr>'+
-            '<td>'+fecha+'</td>'+
-            '<td>'+tipoIcon+'<span class="'+tipoCls+' fw-semibold">'+m.tipo+'</span></td>'+
-            '<td><span class="badge bg-secondary fw-normal small">'+_kdxEsc(m.doc_id||'—')+'</span></td>'+
-            '<td><small>'+_kdxEsc(m.contraparte||'—')+'</small></td>'+
-            '<td class="text-end '+tipoCls+' fw-semibold">'+cantSign+cant.toLocaleString('es-PE',{minimumFractionDigits:4,maximumFractionDigits:4})+'</td>'+
-            '<td class="text-end"><small>'+cu.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4})+'</small></td>'+
-            '<td class="text-end"><small>'+imp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</small></td>'+
-            '<td class="text-end fw-bold">'+saldo+'</td>'+
-        '</tr>';
+        var cant = parseFloat(m.cantidad || 0);
+        saldoAcum += esEntrada ? cant : -cant;
+        var fecha = '';
+        if (m.fecha) {
+            try { fecha = new Date(String(m.fecha).split('T')[0] + 'T00:00').toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'}); }
+            catch(e) { fecha = String(m.fecha).split('T')[0]; }
+        }
+        return '<div class="kdx-item">' +
+            '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
+                '<i class="bi ' + (esEntrada ? 'bi-file-arrow-down' : 'bi-wrench-adjustable') + '"></i>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0">' +
+                '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
+                    '<span style="font-size:.85rem;font-weight:700">' + (esEntrada ? 'Entrada por Compra' : 'Salida a Taller') + '</span>' +
+                    '<span style="background:#f1f5f9;color:#64748b;font-size:.62rem;font-weight:700;padding:.12rem .5rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
+                '</div>' +
+                '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-top:.15rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
+            '</div>' +
+            '<div style="text-align:center;min-width:80px">' +
+                '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#16a34a' : '#ef4444') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                '<div style="font-size:.6rem;color:#94a3b8">' + fecha + '</div>' +
+            '</div>' +
+            '<div class="kdx-saldo">' + saldoAcum.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+        '</div>';
     }).join('');
+
+    timeline.innerHTML = headerHtml + timelineHtml;
 };
 
 // ── Export Excel ──────────────────────────────────────────────────

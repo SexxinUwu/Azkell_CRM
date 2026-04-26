@@ -18,6 +18,14 @@ window._invModoSeleccion = false;
 window._invSeleccionados = window._invSeleccionados instanceof Set ? new Set() : new Set();
 
 window.init_inventario = function() {
+    // Inyectar CSS Bento Grid
+    if (!document.getElementById('almacen-bento-css')) {
+        var lnk = document.createElement('link');
+        lnk.id = 'almacen-bento-css';
+        lnk.rel = 'stylesheet';
+        lnk.href = '/modulos/almacen/almacen-bento.css';
+        document.head.appendChild(lnk);
+    }
     if (!window.checkPerm('inv', 'l')) {
         window.showNoPermMsg('mod-inventario');
         return;
@@ -54,6 +62,7 @@ window.cargarInventario = function() {
             window._invData = data;
             window._invFiltrados = data;
             window._invPoblarFiltros(data);
+            window._invRenderKPIs(data);
             window.filtrarInventario();
         })
         .catch(function(err) {
@@ -268,6 +277,37 @@ window._invPoblarFiltros = function(data) {
     // Esta función es un stub para mantener compatibilidad
 };
 
+// ── KPI Row Bento ─────────────────────────────────────────────────
+window._invRenderKPIs = function(data) {
+    var total = data.length;
+    var criticos = data.filter(function(d) {
+        return parseFloat(d.stock_actual || 0) <= parseFloat(d.stock_min || 0);
+    }).length;
+    var valor = data.reduce(function(s, d) {
+        return s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0));
+    }, 0);
+    var valorStr = valor >= 1000000
+        ? 'S/ ' + (valor / 1000000).toFixed(1) + 'M'
+        : valor >= 1000
+            ? 'S/ ' + (valor / 1000).toFixed(1) + 'k'
+            : 'S/ ' + valor.toFixed(0);
+    var el = document.getElementById('inv-kpi-row');
+    if (!el) return;
+    el.innerHTML =
+        '<div class="bento-kpi">' +
+          '<div><div class="bento-kpi-label">Total Artículos</div><div class="bento-kpi-num">' + total.toLocaleString() + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-boxes fs-4"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-red">' +
+          '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-dark">' +
+          '<div><div class="bento-kpi-label">Valor de Almacén</div><div class="bento-kpi-num" style="font-size:1.6rem">' + valorStr + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-currency-dollar fs-4" style="color:#60a5fa"></i></div>' +
+        '</div>';
+};
+
 // ── Filtrar ───────────────────────────────────────────────────────
 window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
@@ -338,52 +378,79 @@ window._invRender = function() {
 };
 
 function _invRenderCard(d) {
-    var hasImg = d.imagen_url && d.imagen_url.length > 0;
-    var imgHtml = hasImg
-        ? '<img src="' + _invEsc(d.imagen_url) + '" class="card-img-top" style="height:130px;object-fit:cover;" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-          '<div class="d-none align-items-center justify-content-center text-muted" style="height:130px;background:var(--surface);"><i class="bi bi-image fs-3"></i></div>'
-        : '<div class="d-flex align-items-center justify-content-center text-muted" style="height:130px;background:var(--surface);"><i class="bi bi-box fs-2"></i></div>';
-
-    var sistemaBadge = d.sistema
-        ? '<span class="badge bg-secondary fw-normal" style="font-size:0.6rem;">' + _invEsc(d.sistema) + '</span>'
-        : '';
-
     var id = _invEsc(d.id || '');
-    var desc = _invEsc(d.descripcion || '');
-    var unid = _invEsc(d.unidad || '');
 
+    // Semáforo de stock
+    var stockActual = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
+    var stockMin    = parseFloat(d.stock_min || 0);
+    var stockMax    = parseFloat(d.stock_max || 0);
+    if (stockMax <= 0) stockMax = stockMin > 0 ? stockMin * 4 : Math.max(stockActual * 1.5, 1);
+    var pct = Math.min(100, stockMax > 0 ? Math.round((stockActual / stockMax) * 100) : 0);
+    var estado = stockActual <= stockMin ? 'critical'
+               : stockMin > 0 && stockActual <= stockMin * 1.5 ? 'warning'
+               : 'ok';
+    var badgeTxt = estado === 'critical' ? '¡Reponer Ya!'
+                 : estado === 'warning'  ? 'Stock Bajo'
+                 : 'Stock OK';
+
+    // Icono según familia
+    var iconMap = {
+        'LUBRICANTES':'bi-droplet-fill','Lubricantes':'bi-droplet-fill',
+        'FRENOS':'bi-disc','Frenos':'bi-disc',
+        'NEUMÁTICOS':'bi-circle','Neumáticos':'bi-circle',
+        'FILTROS':'bi-funnel-fill','Filtros':'bi-funnel-fill',
+        'ELÉCTRICO':'bi-lightning-fill','Eléctrico':'bi-lightning-fill',
+        'MOTOR':'bi-gear-fill','Motor':'bi-gear-fill'
+    };
+    var iconClass = iconMap[d.familia] || 'bi-box-seam';
+
+    // Checkbox modo selección
     var chkHtml = window._invModoSeleccion
         ? '<input type="checkbox" class="form-check-input position-absolute" '
-          + 'style="top:8px;right:8px;width:18px;height:18px;z-index:5;cursor:pointer;" '
-          + 'onchange="window._invToggleCheck(\'' + id + '\', this.checked)" onclick="event.stopPropagation()">'
+          + 'style="top:10px;right:10px;width:18px;height:18px;z-index:5;cursor:pointer;" '
+          + 'onchange="window._invToggleCheck(\'' + id + '\',this.checked)" onclick="event.stopPropagation()">'
         : '';
 
-    var clickHandler = window._invModoSeleccion
-        ? 'onclick="var cb=this.querySelector(\'input[type=checkbox]\'); if(cb){ cb.checked=!cb.checked; window._invToggleCheck(\'' + id + '\', cb.checked); }"'
-        : '';
+    var clickAttr = window._invModoSeleccion
+        ? 'onclick="var cb=this.querySelector(\'input[type=checkbox]\');if(cb){cb.checked=!cb.checked;window._invToggleCheck(\'' + id + '\',cb.checked);}"'
+        : 'onclick="window.abrirDetalleInv(\'' + id + '\')"';
 
-    return '<div class="col-6 col-sm-4 col-md-3 col-xxl-2">' +
-        '<div class="card h-100 border-0 shadow-sm position-relative" style="border-radius:10px;overflow:hidden;' + (window._invModoSeleccion ? 'cursor:pointer;' : '') + '" ' + clickHandler + '>' +
-            chkHtml +
-            '<div class="position-relative inv-card-img"' + (!window._invModoSeleccion ? ' onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;"' : '') + '>' +
-                imgHtml +
-                '<span class="badge bg-dark bg-opacity-75 position-absolute top-0 start-0 m-1" style="font-size:0.6rem;backdrop-filter:blur(4px);">' + id + '</span>' +
-                (d.stock_min > 0 && parseFloat(d.stock_actual || 0) <= parseFloat(d.stock_min) && parseFloat(d.stock_actual || 0) > 0
-                    ? '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-1" style="font-size:0.6rem;" title="Stock bajo mínimo"><i class="bi bi-exclamation-triangle-fill"></i></span>' : '') +
-                (parseFloat(d.stock_actual || 0) <= 0
-                    ? '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size:0.6rem;" title="Sin stock"><i class="bi bi-x-circle-fill"></i></span>' : '') +
+    var familia = _invEsc(d.familia || '—');
+    var sistema = _invEsc(d.sistema || '—');
+    var desc    = _invEsc(d.descripcion || d.articulo || '');
+    var unidad  = _invEsc(d.unidad || '');
+    var moneda  = d.moneda === 'USD' ? '$' : 'S/.';
+    var costo   = parseFloat(d.costo_referencial || 0).toFixed(2);
+
+    return '<div class="card-bento ' + estado + '" ' + clickAttr + '>' +
+        chkHtml +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.85rem">' +
+            '<div style="width:44px;height:44px;background:#eff6ff;color:#2563eb;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0">' +
+                '<i class="bi ' + iconClass + '"></i>' +
             '</div>' +
-            '<div class="card-body p-2"' + (!window._invModoSeleccion ? ' onclick="window.abrirDetalleInv(\'' + id + '\')" style="cursor:pointer;"' : '') + '>' +
-                '<div class="fw-semibold small mb-1" style="font-size:0.8rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="' + desc + '">' + desc + '</div>' +
-                '<div class="d-flex justify-content-between align-items-center gap-1 flex-wrap">' +
-                    sistemaBadge +
-                    _invStockBadge(d) + (unid ? '<small class="text-muted">' + unid + '</small>' : '') +
+            '<span class="bento-badge ' + estado + '">' + badgeTxt + '</span>' +
+        '</div>' +
+        '<div style="font-weight:700;font-size:.9rem;line-height:1.3;margin-bottom:.2rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" title="' + desc + '">' + desc + '</div>' +
+        '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#94a3b8;margin-bottom:.85rem;font-style:italic">' + familia + ' / ' + sistema + '</div>' +
+        '<div style="margin-top:auto">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.4rem">' +
+                '<div>' +
+                    '<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#cbd5e1">Cantidad</div>' +
+                    '<div style="font-size:1.75rem;font-weight:900;line-height:1;color:' + (estado === 'critical' ? '#ef4444' : 'inherit') + '">' +
+                        stockActual.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) +
+                        (unidad ? ' <span style="font-size:.65rem;font-weight:700;color:#94a3b8">' + unidad + '</span>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div style="text-align:right">' +
+                    '<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#cbd5e1">Costo Ref.</div>' +
+                    '<div style="font-size:.95rem;font-weight:800;color:#2563eb">' + moneda + ' ' + costo + '</div>' +
                 '</div>' +
             '</div>' +
-            (!window._invModoSeleccion ? '<div class="card-footer p-1 bg-transparent border-top d-flex gap-1 justify-content-end">' +
-                (window.checkPerm('inv','e') ? '<button class="btn btn-xs btn-outline-primary" title="Editar" onclick="window.abrirModalInventario(\'' + id + '\')"><i class="bi bi-pencil"></i></button>' : '') +
-                (window.checkPerm('inv','d') ? '<button class="btn btn-xs btn-outline-danger" title="Eliminar" onclick="window.eliminarArticuloInv(\'' + id + '\')"><i class="bi bi-trash"></i></button>' : '') +
-            '</div>' : '') +
+            '<div class="stock-bar-bg"><div class="stock-bar-fill ' + estado + '" style="width:' + pct + '%"></div></div>' +
+            '<div style="font-size:.58rem;color:#94a3b8;margin-top:.25rem;display:flex;justify-content:space-between">' +
+                '<span>' + _invEsc(d.id) + '</span>' +
+                '<span>' + pct + '% capacidad</span>' +
+            '</div>' +
         '</div>' +
     '</div>';
 }
