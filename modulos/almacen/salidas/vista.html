@@ -198,7 +198,9 @@
   </div>
 
   <!-- ═══ KPI ROW ══════════════════════════════════════════════════ -->
-  <div id="sal-kpi-row" class="bento-kpi-row" style="padding:.65rem 1rem .25rem;"></div>
+  <div id="sal-kpi-row" class="bento-kpi-row"
+       style="display:flex;flex-wrap:nowrap;overflow-x:auto;gap:.6rem;
+              padding:.65rem 1rem .25rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
 
   <!-- ═══ TABS MOBILE (segmented control) ═════════════════════════ -->
   <div id="sal-m-tabs" style="display:none;">
@@ -422,11 +424,16 @@
         </div>
         <div class="col-12">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable</label>
-          <input type="text" class="form-control form-control-sm" id="sal-f-responsable"
-                 placeholder="Nombre del responsable / solicitante"
-                 list="sal-list-personal" autocomplete="off"
-                 style="border-radius:12px;min-height:44px;">
-          <datalist id="sal-list-personal"></datalist>
+          <div class="position-relative">
+            <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm"
+                   placeholder="Nombre del responsable / solicitante"
+                   autocomplete="off" style="border-radius:12px;min-height:44px;"
+                   oninput="window._cbFiltrar('sal-f-responsable')"
+                   onfocus="window._cbFiltrar('sal-f-responsable')"
+                   onblur="window._cbHide('sal-f-responsable')">
+            <input type="hidden" id="sal-f-responsable">
+            <div id="sal-f-responsable-dd" class="cb-dropdown"></div>
+          </div>
         </div>
         <div class="col-12">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
@@ -449,7 +456,7 @@
           <i class="bi bi-plus-lg me-1"></i>Agregar
         </button>
       </div>
-      <div style="overflow-x:auto;border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+      <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
         <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
           <thead style="background:var(--bg);">
             <tr>
