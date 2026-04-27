@@ -1218,6 +1218,13 @@ window._invScannerRAF    = window._invScannerRAF    || null;
 
 window._invAbrirScanner = function(target) {
     window._invScannerTarget = target;
+    // En mobile: usar cámara nativa (mejor calidad, enfoque automático)
+    var esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (esMobile) {
+        window._invScannerNativo();
+        return;
+    }
+    // Desktop: usar getUserMedia con overlay
     var overlay = document.getElementById('inv-scanner-overlay');
     var video   = document.getElementById('inv-scanner-video');
     if (!overlay || !video) return;
@@ -1230,6 +1237,49 @@ window._invAbrirScanner = function(target) {
     } else {
         window._invIniciarCamara(video);
     }
+};
+
+// Cámara nativa del teléfono (file input capture)
+window._invScannerNativo = function() {
+    var cargarJsQR = function(cb) {
+        if (typeof jsQR !== 'undefined') { cb(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+        s.onload = cb;
+        document.head.appendChild(s);
+    };
+    cargarJsQR(function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.setAttribute('capture', 'environment');
+        input.style.display = 'none';
+        document.body.appendChild(input);
+        input.addEventListener('change', function() {
+            if (!input.files || !input.files[0]) { document.body.removeChild(input); return; }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    var imageData = ctx.getImageData(0, 0, img.width, img.height);
+                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                    if (code && code.data) {
+                        window._invOnScanResult(code.data);
+                    } else {
+                        alert('No se detectó ningún código. Intenta enfocar bien y vuelve a intentar.');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+            document.body.removeChild(input);
+        });
+        input.click();
+    });
 };
 
 window._invIniciarCamara = function(video) {
