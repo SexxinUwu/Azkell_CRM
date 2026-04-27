@@ -39,6 +39,8 @@
 @media (max-width: 767.98px) {
     /* Ocultar SPA topbar mientras inventario está activo */
     .topbar { display: none !important; }
+    /* Quitar padding lateral de main-area para usar el espacio completo */
+    .main-area { padding: 0 !important; overflow: hidden !important; }
     /* Ocultar controles de escritorio */
     #inv-desktop-controls, #inv-filter-row { display: none !important; }
     /* Mostrar header + search mobile */
@@ -273,12 +275,10 @@
       <i class="bi bi-qr-code-scan"></i>
     </button>
   </div>
-      <i class="bi bi-qr-code-scan"></i>
-    </button>
-  </div>
 
+  <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0;">
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem;">
     <div id="inv-grid" class="bento-grid pb-3 px-1">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
@@ -555,38 +555,41 @@
        style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
               -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
   <!-- Menú expandido (Material Design 3 style) -->
-  <div id="inv-fab-menu" style="display:flex;flex-direction:column;align-items:flex-end;gap:.9rem;margin-bottom:1rem;">
+  <div id="inv-fab-menu" style="display:flex;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">
     <!-- SALIDA RÁPIDA -->
-    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);">SALIDA RÁPIDA</span>
       <button onclick="window._invFABClose();cargarModuloAislado('almacen/salidas')"
-              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
-                     background:#0f172a;color:#fff;border:none;border-radius:16px;
-                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
-                     box-shadow:0 4px 12px rgba(0,0,0,.25);transition:all .2s;">
-        <span style="white-space:nowrap;">SALIDA RÁPIDA</span>
-        <i class="bi bi-dash-lg" style="font-size:1.1rem;"></i>
+              style="width:56px;height:56px;border-radius:18px;background:#ef4444;border:2px solid #fff;
+                     color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(239,68,68,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-dash-lg"></i>
       </button>
     </div>
     <!-- ENTRADA RÁPIDA -->
-    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);">ENTRADA RÁPIDA</span>
       <button onclick="window._invFABClose();cargarModuloAislado('almacen/entradas')"
-              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
-                     background:#22c55e;color:#fff;border:none;border-radius:16px;
-                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
-                     box-shadow:0 4px 12px rgba(34,197,94,.3);transition:all .2s;">
-        <span style="white-space:nowrap;">ENTRADA RÁPIDA</span>
-        <i class="bi bi-plus-lg" style="font-size:1.1rem;"></i>
+              style="width:56px;height:56px;border-radius:18px;background:#22c55e;border:2px solid #fff;
+                     color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(34,197,94,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-plus-lg"></i>
       </button>
     </div>
     <!-- NUEVO ARTÍCULO -->
-    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);">NUEVO ARTÍCULO</span>
       <button onclick="window._invFABClose();window.abrirModalInventario()"
-              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
-                     background:#2563eb;color:#fff;border:none;border-radius:16px;
-                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
-                     box-shadow:0 4px 12px rgba(37,99,235,.3);transition:all .2s;">
-        <span style="white-space:nowrap;">NUEVO ARTÍCULO</span>
-        <i class="bi bi-archive-fill" style="font-size:1.1rem;"></i>
+              style="width:56px;height:56px;border-radius:18px;background:#2563eb;border:2px solid #fff;
+                     color:#fff;font-size:1.2rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(37,99,235,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-archive-fill"></i>
       </button>
     </div>
   </div>
