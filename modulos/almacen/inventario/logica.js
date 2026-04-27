@@ -304,9 +304,7 @@ window._invRenderKPIs = function(data) {
         return (d.moneda || '').toUpperCase() === 'USD' ? s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0)) : s;
     }, 0);
     function fmtV(v, pre) {
-        return v >= 1000000 ? pre + (v/1000000).toFixed(1) + 'M'
-             : v >= 1000    ? pre + (v/1000).toFixed(1) + 'k'
-             :                pre + v.toFixed(0);
+        return pre + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     var el = document.getElementById('inv-kpi-row');
     if (!el) return;
