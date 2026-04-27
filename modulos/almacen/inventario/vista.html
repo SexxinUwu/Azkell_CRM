@@ -1,8 +1,84 @@
 <!-- Módulo Almacén / Inventario — SPA Aislado v3 (Cards, formulario unificado) -->
+<style>
+/* ─── Drawer: open/close via CSS class ──────────────────────────── */
+#inv-form-drawer {
+    position: fixed; top: 0; right: -500px;
+    width: 480px; max-width: 100vw; height: 100vh;
+    background: var(--surface); box-shadow: -6px 0 32px rgba(0,0,0,.15);
+    z-index: 1050; transition: right .3s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+}
+#inv-form-drawer.open { right: 0; }
+
+/* ─── Mobile-First (@media ≤ 767px) ─────────────────────────────── */
+@media (max-width: 767.98px) {
+    /* Ocultar SPA topbar mientras inventario está activo */
+    .topbar { display: none !important; }
+    /* Ocultar controles de escritorio */
+    #inv-desktop-controls, #inv-filter-row { display: none !important; }
+    /* Mostrar header + search mobile */
+    #inv-m-header   { display: flex !important; }
+    /* KPI: scroll horizontal */
+    #inv-kpi-row {
+        display: flex !important; flex-wrap: nowrap !important;
+        overflow-x: auto; gap: .55rem; padding-bottom: .4rem;
+        scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    #inv-kpi-row::-webkit-scrollbar { display: none; }
+    .bento-kpi { min-width: 130px; flex-shrink: 0; border-radius: 18px; }
+    /* Cards: columna única */
+    #inv-grid.bento-grid {
+        grid-template-columns: 1fr !important;
+        gap: .65rem !important;
+    }
+    /* Padding inferior para bottom nav */
+    #mod-inventario { padding-bottom: 80px; }
+    /* Drawer: bottom sheet en mobile */
+    #inv-form-drawer {
+        top: auto !important; bottom: -100vh; right: 0 !important;
+        width: 100vw !important; height: 91vh !important;
+        border-radius: 22px 22px 0 0 !important;
+        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
+        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important;
+    }
+    #inv-form-drawer.open { bottom: 0 !important; right: 0 !important; }
+    /* FAB y Bottom Nav visibles solo en mobile */
+    #inv-fab-wrap    { display: block !important; }
+    #inv-bottom-nav  { display: flex !important; }
+}
+</style>
 <div id="mod-inventario" class="modulo-wrapper d-flex flex-column h-100">
 
-  <!-- Cabecera + controles -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <!-- ═══ HEADER MOBILE (solo mobile) ══════════════════════════════ -->
+  <div id="inv-m-header" style="display:none;align-items:center;justify-content:space-between;
+       padding:.7rem 1rem 0;flex-shrink:0;">
+    <div style="font-size:1.15rem;font-weight:900;color:var(--text);">
+      <i class="bi bi-box-seam text-warning me-2"></i>Inventario
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn border-0 p-1" onclick="window._invMobileSearchToggle()" style="background:transparent;">
+        <i class="bi bi-search" style="font-size:1.2rem;color:var(--text);"></i>
+      </button>
+      <div id="inv-m-avatar" onclick="cargarModuloAislado('sistema/usuarios')"
+           style="width:34px;height:34px;border-radius:10px;background:#2563eb;display:flex;
+                  align-items:center;justify-content:center;font-weight:800;font-size:.78rem;
+                  color:#fff;cursor:pointer;flex-shrink:0;">SA</div>
+    </div>
+  </div>
+  <!-- Search bar mobile -->
+  <div id="inv-m-search-bar" style="display:none;padding:.5rem 1rem;align-items:center;gap:.5rem;flex-shrink:0;">
+    <div class="input-group" style="border-radius:14px;overflow:hidden;background:var(--bg);border:1.5px solid var(--border);">
+      <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="inv-m-buscar" class="form-control border-0 bg-transparent shadow-none"
+             placeholder="¿Qué repuesto buscas?"
+             oninput="var d=document.getElementById('inv-buscar');if(d)d.value=this.value;window.filtrarInventario();">
+    </div>
+    <button class="btn btn-sm btn-link p-0 text-nowrap" onclick="window._invMobileSearchToggle()"
+            style="color:var(--subtext);font-size:.8rem;">Cerrar</button>
+  </div>
+
+  <!-- Cabecera + controles (escritorio) -->
+  <div id="inv-desktop-controls" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
       <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
         <i class="bi bi-box-seam text-warning me-1"></i>Inventario
@@ -48,7 +124,7 @@
   </div>
 
   <!-- Filtros -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+  <div id="inv-filter-row" class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
     <div class="input-group input-group-sm" style="max-width:260px;">
       <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
       <input type="text" id="inv-buscar" class="form-control border-0 bg-transparent shadow-none" placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
@@ -85,11 +161,7 @@
 <div id="inv-drawer-backdrop" onclick="window._invCerrarDrawer()"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1049;"></div>
 
-<div id="inv-form-drawer"
-     style="position:fixed;top:0;right:-500px;width:480px;max-width:100vw;height:100vh;
-            background:var(--surface);box-shadow:-6px 0 32px rgba(0,0,0,.15);
-            z-index:1050;transition:right .3s cubic-bezier(.4,0,.2,1);
-            display:flex;flex-direction:column;overflow:hidden;">
+<div id="inv-form-drawer">
 
   <!-- Cabecera sticky -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;
@@ -318,6 +390,79 @@
       <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Guardar</button>
     </div>
   </form>
+</div>
+
+<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+<div id="inv-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1.1rem;z-index:1041;align-items:flex-end;flex-direction:column;">
+  <!-- Backdrop blur -->
+  <div id="inv-fab-backdrop" onclick="window._invFABClose()"
+       style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
+              -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
+  <!-- Menú expandido -->
+  <div id="inv-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:.7rem;margin-bottom:.8rem;">
+    <div class="d-flex align-items-center gap-2">
+      <span style="background:#0f172a;color:#fff;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">SALIDA RÁPIDA</span>
+      <button onclick="window._invFABClose();cargarModuloAislado('almacen/salidas')"
+              style="width:52px;height:52px;border-radius:50%;background:#ef4444;border:none;color:#fff;
+                     font-size:1.35rem;box-shadow:0 4px 18px rgba(239,68,68,.45);
+                     display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-dash-lg"></i>
+      </button>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span style="background:#0f172a;color:#fff;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">ENTRADA RÁPIDA</span>
+      <button onclick="window._invFABClose();cargarModuloAislado('almacen/entradas')"
+              style="width:52px;height:52px;border-radius:50%;background:#22c55e;border:none;color:#fff;
+                     font-size:1.35rem;box-shadow:0 4px 18px rgba(34,197,94,.45);
+                     display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span style="background:#0f172a;color:#fff;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">NUEVO ARTÍCULO</span>
+      <button onclick="window._invFABClose();window.abrirModalInventario()"
+              style="width:52px;height:52px;border-radius:50%;background:#2563eb;border:none;color:#fff;
+                     font-size:1.1rem;box-shadow:0 4px 18px rgba(37,99,235,.45);
+                     display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-archive-fill"></i>
+      </button>
+    </div>
+  </div>
+  <!-- Botón principal naranja -->
+  <button id="inv-fab-btn" onclick="window._invFABToggle()"
+          style="width:58px;height:58px;border-radius:50%;background:#f97316;border:none;color:#fff;
+                 font-size:1.6rem;box-shadow:0 6px 24px rgba(249,115,22,.5);
+                 display:flex;align-items:center;justify-content:center;
+                 transition:transform .25s,background .2s;">
+    <i class="bi bi-plus-lg" id="inv-fab-icon"></i>
+  </button>
+</div>
+
+<!-- ═══ BOTTOM NAVIGATION — solo mobile ═════════════════════════ -->
+<div id="inv-bottom-nav"
+     style="display:none;position:fixed;bottom:0;left:0;right:0;height:68px;
+            background:var(--surface);border-top:1px solid var(--border);z-index:1039;
+            align-items:center;justify-content:space-around;padding:0 .25rem;">
+  <button onclick="window._invBottomNav('stock')" id="inv-bnav-stock"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:#2563eb;">
+    <i class="bi bi-box-seam-fill" style="font-size:1.3rem;"></i>
+    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Stock</span>
+  </button>
+  <button onclick="window._invBottomNav('kardex')" id="inv-bnav-kardex"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
+    <i class="bi bi-arrow-left-right" style="font-size:1.3rem;"></i>
+    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Kardex</span>
+  </button>
+  <button onclick="window._invBottomNav('flota')" id="inv-bnav-flota"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
+    <i class="bi bi-truck-flatbed" style="font-size:1.3rem;"></i>
+    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Flota</span>
+  </button>
+  <button onclick="window._invBottomNav('mas')" id="inv-bnav-mas"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
+    <i class="bi bi-grid-3x3-gap-fill" style="font-size:1.3rem;"></i>
+    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Más</span>
+  </button>
 </div>
 
 <!-- ═══ MODAL DETALLE (Vista Rápida) ════════════════════════════════ -->
