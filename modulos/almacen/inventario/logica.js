@@ -1247,8 +1247,9 @@ window._invAbrirScanner = function(target) {
 
 window._invIniciarCamara = function(video) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // Sin getUserMedia (APK sin permiso de cámara declarado) → fallback nativo
         window._invCerrarScanner();
-        alert('Tu navegador no soporta acceso a cámara en tiempo real.');
+        window._invScannerFallbackFile();
         return;
     }
     navigator.mediaDevices.getUserMedia({
@@ -1268,9 +1269,77 @@ window._invIniciarCamara = function(video) {
             window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
         }
     }).catch(function(err) {
+        // NotAllowedError → APK no tiene permiso de cámara → usar input nativo
         window._invCerrarScanner();
-        alert('No se pudo acceder a la cámara: ' + err.message);
+        window._invScannerFallbackFile();
     });
+};
+
+// Fallback para APK/WebView sin permiso de cámara: abre la app nativa de cámara
+// No necesita permiso propio porque delega al sistema operativo
+window._invScannerFallbackFile = function() {
+    var input = document.getElementById('inv-scanner-file-input');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'file';
+        input.id = 'inv-scanner-file-input';
+        input.accept = 'image/*';
+        input.setAttribute('capture', 'environment');
+        input.style.display = 'none';
+        document.body.appendChild(input);
+    }
+    input.onchange = function() {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        input.value = '';
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                // Intentar BarcodeDetector sobre la imagen capturada
+                if ('BarcodeDetector' in window) {
+                    BarcodeDetector.getSupportedFormats().then(function(supported) {
+                        var fmts = ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e'];
+                        var use = fmts.filter(function(f){ return supported.includes(f); });
+                        if (!use.length) use = supported;
+                        var det = new BarcodeDetector({ formats: use });
+                        det.detect(img).then(function(codes) {
+                            if (codes.length > 0) {
+                                window._invOnScanResult(codes[0].rawValue);
+                            } else {
+                                window._invScannerDecodeJsQR(img);
+                            }
+                        }).catch(function() { window._invScannerDecodeJsQR(img); });
+                    });
+                } else {
+                    window._invScannerDecodeJsQR(img);
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+};
+
+// Decodificar imagen con jsQR (fallback cuando no hay BarcodeDetector)
+window._invScannerDecodeJsQR = function(img) {
+    if (typeof jsQR === 'undefined') {
+        alert('No se pudo detectar el código. Intenta de nuevo con buena iluminación.');
+        return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(data.data, data.width, data.height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) {
+        window._invOnScanResult(code.data);
+    } else {
+        alert('No se detectó ningún código. Asegúrate de enfocar bien el código.');
+    }
 };
 
 // BarcodeDetector nativo (Android Chrome) — detecta automáticamente sin foto
@@ -1331,8 +1400,10 @@ window._invOnScanResult = function(valor) {
     } else {
         var inv = document.getElementById('inv-buscar');
         var mob = document.getElementById('inv-m-buscar');
+        var compact = document.getElementById('inv-search-input');
         if (inv) inv.value = valor;
         if (mob) mob.value = valor;
+        if (compact) compact.value = valor;
         window.filtrarInventario();
     }
 };
@@ -1363,7 +1434,7 @@ window._invFABToggle = function() {
         menu.style.display = 'flex';
         if (bd) bd.style.display = 'block';
         if (icon) { icon.className = 'bi bi-x-lg'; }
-        if (btn)  { btn.style.transform = 'rotate(45deg)'; btn.style.background = '#374151'; }
+        if (btn)  { btn.style.transform = 'scale(0.9)'; btn.style.background = '#ea580c'; }
     }
 };
 
