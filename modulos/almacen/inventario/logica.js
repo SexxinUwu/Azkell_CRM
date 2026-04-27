@@ -50,6 +50,8 @@ window.init_inventario = function() {
     window._cbInit('inv-f-sub-tipo', ['','Nuevo','Reparado'],                 'Buscar sub-tipo…');
     // Al seleccionar sistema → actualizar opciones de sub-sistema
     window._cbOnSelect('inv-f-sistema', function() { window._invFiltrarSubSistemas(); });
+    // ── Inicialización mobile ──────────────────────────────────────
+    window._invMobileInit();
 };
 
 // ── Cargar datos ─────────────────────────────────────────────────
@@ -520,7 +522,7 @@ window._invToggleCheck = function(id, checked) {
 
 window._invCerrarDrawer = function() {
     var drawer = document.getElementById('inv-form-drawer');
-    if (drawer) drawer.style.right = '-500px';
+    if (drawer) drawer.classList.remove('open');
     var bd = document.getElementById('inv-drawer-backdrop');
     if (bd) bd.style.display = 'none';
 };
@@ -704,7 +706,7 @@ window.abrirModalInventario = function(id) {
     }
 
     var modal = document.getElementById('inv-form-drawer');
-    if (modal) { modal.style.right = '0'; }
+    if (modal) { modal.classList.add('open'); }
     var bd = document.getElementById('inv-drawer-backdrop');
     if (bd) bd.style.display = 'block';
 };
@@ -1108,4 +1110,90 @@ window.importarExcelInventario = function(event) {
         });
     };
     reader.readAsArrayBuffer(file);
+};
+
+// ══════════════════════════════════════════════════════════════════
+// Mobile-First: FAB, Bottom Nav, Search, Avatar
+// ══════════════════════════════════════════════════════════════════
+window._invMobileInit = function() {
+    // Avatar desde sesión
+    var email = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+    var av = document.getElementById('inv-m-avatar');
+    if (av && email) {
+        var parts = email.split('@')[0].split(/[._-]/);
+        var initials = parts.length >= 2
+            ? (parts[0][0] + parts[1][0]).toUpperCase()
+            : email.substring(0, 2).toUpperCase();
+        av.textContent = initials;
+    }
+    // Limpiar clases SPA cuando el módulo se desmonte (MutationObserver)
+    var rootEl = document.getElementById('root-dinamico');
+    if (rootEl && !window._invMobileObserver) {
+        window._invMobileObserver = new MutationObserver(function() {
+            if (!document.getElementById('mod-inventario')) {
+                // Restaurar topbar al salir del módulo
+                document.querySelectorAll('.topbar').forEach(function(el) {
+                    el.style.removeProperty('display');
+                });
+                if (window._invMobileObserver) {
+                    window._invMobileObserver.disconnect();
+                    window._invMobileObserver = null;
+                }
+            }
+        });
+        window._invMobileObserver.observe(rootEl, { childList: true });
+    }
+};
+
+window._invFABToggle = function() {
+    var menu = document.getElementById('inv-fab-menu');
+    var icon = document.getElementById('inv-fab-icon');
+    var btn  = document.getElementById('inv-fab-btn');
+    var bd   = document.getElementById('inv-fab-backdrop');
+    if (!menu) return;
+    var isOpen = menu.style.display === 'flex';
+    if (isOpen) {
+        menu.style.display = 'none';
+        if (bd) bd.style.display = 'none';
+        if (icon) { icon.className = 'bi bi-plus-lg'; }
+        if (btn)  { btn.style.transform = ''; btn.style.background = '#f97316'; }
+    } else {
+        menu.style.display = 'flex';
+        if (bd) bd.style.display = 'block';
+        if (icon) { icon.className = 'bi bi-x-lg'; }
+        if (btn)  { btn.style.transform = 'rotate(45deg)'; btn.style.background = '#374151'; }
+    }
+};
+
+window._invFABClose = function() {
+    var menu = document.getElementById('inv-fab-menu');
+    var icon = document.getElementById('inv-fab-icon');
+    var btn  = document.getElementById('inv-fab-btn');
+    var bd   = document.getElementById('inv-fab-backdrop');
+    if (menu) menu.style.display = 'none';
+    if (bd)   bd.style.display = 'none';
+    if (icon) icon.className = 'bi bi-plus-lg';
+    if (btn)  { btn.style.transform = ''; btn.style.background = '#f97316'; }
+};
+
+window._invMobileSearchToggle = function() {
+    var bar = document.getElementById('inv-m-search-bar');
+    if (!bar) return;
+    var isOpen = bar.style.display === 'flex';
+    bar.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen) {
+        var inp = document.getElementById('inv-m-buscar');
+        if (inp) setTimeout(function() { inp.focus(); }, 100);
+    }
+};
+
+window._invBottomNav = function(tab) {
+    if (tab === 'stock')  return; // ya estamos aquí
+    if (tab === 'kardex') { cargarModuloAislado('almacen/kardex'); return; }
+    if (tab === 'flota')  { cargarModuloAislado('flota/status');   return; }
+    if (tab === 'mas') {
+        // Navegar al menú principal abriendo el sidebar
+        var sidebarToggle = document.getElementById('sidebar-toggle') || document.querySelector('[onclick*="toggleSidebar"]');
+        if (sidebarToggle) sidebarToggle.click();
+    }
 };
