@@ -173,3 +173,15 @@
 
 /* ─── Paginación adaptada (Inventario/Proveedores) ────────── */
 .bento-page-info { font-size: .75rem; font-weight: 600; color: #94a3b8; }
+
+/* ─── Mobile: KPI sin sombra exterior (evita overflow visual) */
+@media (max-width: 767.98px) {
+    .bento-kpi {
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+    .bento-kpi-icon {
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+}
