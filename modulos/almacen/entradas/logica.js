@@ -17,6 +17,30 @@ window.init_entradas = function() {
     window.cargarEntradas();
     window._entCargarProveedores();
     window._entCargarConfig();
+    window._entMobileInit();
+};
+
+// ── Mobile Init ───────────────────────────────────────────────────
+window._entMobileInit = function() {
+    var isMob = window.innerWidth < 768;
+    var mHeader = document.getElementById('ent-m-header');
+    var fabWrap = document.getElementById('ent-fab-wrap');
+    if (mHeader) mHeader.style.display = isMob ? 'flex' : 'none';
+    if (fabWrap) fabWrap.style.display = isMob ? 'flex' : 'none';
+    // Iniciales del avatar
+    var av = document.getElementById('ent-m-avatar');
+    if (av) {
+        var email = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+        var partes = email.split('@')[0].split(/[._-]/);
+        var inits = partes.length >= 2 ? (partes[0][0]+partes[1][0]).toUpperCase() : email.substr(0,2).toUpperCase();
+        av.textContent = inits || 'SA';
+    }
+};
+
+window._entToggleFiltrosMobile = function() {
+    var el = document.getElementById('ent-filtros-mobile');
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 };
 
 window.cargarEntradas = function() {
@@ -27,6 +51,7 @@ window.cargarEntradas = function() {
         .then(function(data) {
             window._entData = data;
             window._entFiltrados = data;
+            window._entRenderKPIs(data);
             window.filtrarEntradas();
         })
         .catch(function(err) {
@@ -388,11 +413,15 @@ window._entAbrirDetalle = function(id) {
 
     var panel = document.getElementById('ent-panel-detalle');
     if (panel) panel.classList.add('open');
+    var bd = document.getElementById('ent-det-backdrop');
+    if (bd && window.innerWidth < 768) bd.style.display = 'block';
 };
 
 window._entCerrarDetalle = function() {
     var panel = document.getElementById('ent-panel-detalle');
     if (panel) panel.classList.remove('open');
+    var bd = document.getElementById('ent-det-backdrop');
+    if (bd) bd.style.display = 'none';
     window._entDetalleId = null;
     window._entRender();
 };
@@ -681,4 +710,32 @@ window.importarExcelEntradas = function(event) {
         });
     };
     reader.readAsArrayBuffer(file);
+};
+
+// ── KPI Row ───────────────────────────────────────────────────────
+window._entRenderKPIs = function(data) {
+    var el = document.getElementById('ent-kpi-row');
+    if (!el) return;
+    var total = data.length;
+    var hoy = new Date();
+    var mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+    var esteMes = data.filter(function(d) {
+        return (d.fecha || '').slice(0, 7) === mesActual;
+    }).length;
+    var totalPEN = data.reduce(function(s, d) { return s + parseFloat(d.total_pen || 0); }, 0);
+    el.innerHTML =
+        '<div class="bento-kpi">' +
+          '<div><div class="bento-kpi-label">Total Entradas</div><div class="bento-kpi-num">' + total + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-arrow-down-circle-fill fs-5"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-dark">' +
+          '<div><div class="bento-kpi-label">Este Mes</div><div class="bento-kpi-num">' + esteMes + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-calendar-check fs-5"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi" style="background:#fffbeb;border-color:#fde68a;">' +
+          '<div><div class="bento-kpi-label" style="color:#92400e;">Valor Total S/</div>' +
+          '<div class="bento-kpi-num" style="color:#d97706;font-size:1.25rem;">' +
+          'S/ ' + totalPEN.toLocaleString('es-PE', {minimumFractionDigits:0, maximumFractionDigits:0}) + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#fef3c7;color:#d97706;"><i class="bi bi-coin fs-5"></i></div>' +
+        '</div>';
 };
