@@ -3,6 +3,22 @@
 // Convención: window.var = window.var || default (no let/const globales)
 // ================================================================
 
+// ── _invCbFiltrar: wrapper de _cbFiltrar con posición fixed
+//    (el drawer tiene overflow:hidden que corta los dropdowns)
+window._invCbFiltrar = function(id) {
+    window._cbFiltrar(id);
+    var dd  = document.getElementById(id + '-dd');
+    var txt = document.getElementById(id + '-txt');
+    if (!dd || !txt || dd.style.display === 'none') return;
+    var r = txt.getBoundingClientRect();
+    dd.style.position  = 'fixed';
+    dd.style.top       = (r.bottom + 2) + 'px';
+    dd.style.left      = r.left + 'px';
+    dd.style.width     = r.width + 'px';
+    dd.style.maxWidth  = r.width + 'px';
+    dd.style.zIndex    = '99999';
+};
+
 window._invData              = window._invData              || [];
 window._invFiltrados         = window._invFiltrados         || [];
 window._invPagActual         = window._invPagActual         || 1;
