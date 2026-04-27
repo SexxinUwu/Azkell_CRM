@@ -80,10 +80,11 @@ function _salCargarSelectores() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             window._salConductores = d || [];
-            var dl = document.getElementById('sal-list-personal');
-            if (dl) dl.innerHTML = (d || []).map(function(c) {
-                return '<option value="' + salEsc(c.nombre || '') + '">';
-            }).join('');
+            var items = (d || []).map(function(c) {
+                var nom = (c.nombre || '').trim();
+                return nom ? { value: nom, label: nom } : null;
+            }).filter(Boolean);
+            window._cbInit('sal-f-responsable', items, 'Buscar responsable…');
         })
         .catch(function() {});
 
@@ -508,9 +509,10 @@ window.salVerPDF = function(m) {
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.salAbrirNuevo = function() {
     if (!window.guardAction('sal_inv', 'c')) return;
-    var ids = ['sal-f-ot','sal-f-responsable','sal-f-obs'];
+    var ids = ['sal-f-ot','sal-f-obs'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
     window._cbReset('sal-f-placa');
+    window._cbReset('sal-f-responsable');
     var fechaEl = document.getElementById('sal-f-fecha');
     if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
     var tipoEl = document.getElementById('sal-f-tipo');
@@ -596,7 +598,7 @@ window.salGuardarNuevo = function() {
     var fecha   = get('sal-f-fecha');
     var tipo    = get('sal-f-tipo');
     var placa   = (window._cbGet('sal-f-placa') || '').toUpperCase();
-    var resp    = get('sal-f-responsable');
+    var resp    = window._cbGetText('sal-f-responsable') || get('sal-f-responsable-txt') || '';
     var obs     = get('sal-f-obs');
 
     if (!fecha) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La fecha es requerida', 'danger'); return; }
