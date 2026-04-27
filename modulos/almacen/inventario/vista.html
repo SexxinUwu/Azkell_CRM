@@ -69,7 +69,7 @@
     /* Ocultar SPA topbar mientras inventario está activo */
     .topbar { display: none !important; }
     /* Quitar padding lateral de main-area para usar el espacio completo */
-    .main-area { padding: 0 !important; overflow: hidden !important; }
+    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
     /* Ocultar controles de escritorio */
     #inv-desktop-controls, #inv-filter-row { display: none !important; }
     /* Mostrar header + search mobile */
@@ -307,7 +307,7 @@
 
   <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem; background:transparent;">
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
     <div id="inv-grid" class="bento-grid pb-3 px-1">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
