@@ -13,15 +13,17 @@
 .bento-kpi {
     background: #fff;
     border: 1px solid #eef2f6;
-    border-radius: 16px;
-    padding: 0.85rem 1rem;
+    border-radius: 20px;
+    padding: 0.9rem 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    overflow: hidden;
 }
-.bento-kpi.accent-red  { background: #ef4444; color: #fff; border-color: transparent; box-shadow: 0 8px 20px -4px rgba(239,68,68,.35); }
-.bento-kpi.accent-dark { background: #0f172a; color: #fff; border-color: transparent; }
+.bento-kpi.accent-red  { background: #ef4444; color: #fff; border-color: transparent; box-shadow: none; }
+.bento-kpi.accent-yellow { background: #fff8ec; color: #92400e; border-color: #fde68a; box-shadow: none; }
+.bento-kpi.accent-dark { background: #0f172a; color: #fff; border-color: transparent; box-shadow: none; }
 .bento-kpi-num   { font-size: 1.65rem; font-weight: 900; line-height: 1; }
 .bento-kpi-label { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; opacity: .7; margin-bottom: .25rem; }
 .bento-kpi-icon  {
@@ -33,7 +35,8 @@
     flex-shrink: 0;
 }
 .bento-kpi.accent-red  .bento-kpi-icon,
-.bento-kpi.accent-dark .bento-kpi-icon { background: rgba(255,255,255,.12); }
+.bento-kpi.accent-yellow .bento-kpi-icon,
+.bento-kpi.accent-dark .bento-kpi-icon { background: rgba(255,255,255,.18); }
 
 /* ─── Badge semáforo ──────────────────────────────────────── */
 .bento-badge {

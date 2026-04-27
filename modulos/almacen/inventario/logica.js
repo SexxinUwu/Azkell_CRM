@@ -576,66 +576,106 @@ function _invEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g
 window.abrirDetalleInv = function(id) {
     var item = (window._invData || []).find(function(d) { return d.id === id; });
     if (!item) return;
-    var el = document.getElementById('modal-inv-detalle');
-    if (!el) return;
+    var drawer = document.getElementById('inv-det-drawer');
+    var bd     = document.getElementById('inv-det-backdrop');
+    if (!drawer) return;
 
-    var titulo = document.getElementById('modal-det-titulo');
-    if (titulo) titulo.textContent = item.id + ' — ' + (item.descripcion || '');
+    // Header
+    var elCod  = document.getElementById('inv-det-codigo');
+    var elNom  = document.getElementById('inv-det-nombre');
+    if (elCod) elCod.textContent = item.id || '';
+    if (elNom) elNom.textContent = item.descripcion || '';
 
-    var btnEditar = document.getElementById('modal-det-btn-editar');
-    if (btnEditar) {
-        btnEditar.onclick = function() {
-            bootstrap.Modal.getInstance(el).hide();
-            setTimeout(function() { window.abrirModalInventario(id); }, 300);
-        };
+    // Botones
+    var btnEditar = document.getElementById('inv-det-btn-editar');
+    var btnReg    = document.getElementById('inv-det-btn-reg');
+    if (btnEditar) btnEditar.onclick = function() {
+        window._invCerrarDetalle();
+        setTimeout(function() { window.abrirModalInventario(id); }, 320);
+    };
+    if (btnReg) btnReg.onclick = function() {
+        window._invCerrarDetalle();
+        setTimeout(function() { window.abrirRegularizarStock(id); }, 320);
+    };
+
+    // Datos
+    var hasImg  = item.imagen_url && item.imagen_url.length > 0;
+    var stock   = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
+    var stockMin = parseFloat(item.stock_min || 0);
+    var stockMax = parseFloat(item.stock_max || 0);
+    var pct     = stockMax > 0 ? Math.min(100, Math.round((stock / stockMax) * 100)) : 0;
+    var isCrit  = stockMin > 0 && stock < stockMin;
+    var isWarn  = !isCrit && stockMin > 0 && stock < stockMax;
+    var stockColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#22c55e');
+    var stockBg    = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : '#f0fdf4');
+    var barColor   = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : '#22c55e');
+
+    var body = document.getElementById('inv-det-body');
+    if (!body) return;
+
+    // Imagen — solo si existe
+    var imgHtml = hasImg
+        ? '<img src="' + _invEsc(item.imagen_url) + '" style="width:100%;max-height:200px;object-fit:contain;border-radius:16px;margin-bottom:1.25rem;">'
+        : '';
+
+    // Función fila moderna
+    function row(lbl, val, full) {
+        if (!val || val === '—' || val === '' || val === 'undefined') return '';
+        if (full) {
+            return '<div style="padding:.6rem 0;border-bottom:1px solid var(--border);">' +
+                   '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--subtext);margin-bottom:.3rem;">' + lbl + '</div>' +
+                   '<div style="font-size:.85rem;font-weight:600;color:var(--text);">' + val + '</div>' +
+                   '</div>';
+        }
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);">' +
+               '<span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">' + lbl + '</span>' +
+               '<span style="font-size:.88rem;font-weight:700;color:var(--text);text-align:right;max-width:60%;">' + val + '</span>' +
+               '</div>';
     }
 
-    var btnReg = document.getElementById('modal-det-btn-regularizar');
-    if (btnReg) {
-        btnReg.onclick = function() {
-            bootstrap.Modal.getInstance(el).hide();
-            setTimeout(function() { window.abrirRegularizarStock(id); }, 300);
-        };
-    }
+    var costo = (item.moneda === 'USD' ? '$ ' : 'S/ ') +
+        parseFloat(item.costo_referencial || 0).toLocaleString('es-PE', {minimumFractionDigits: 2});
 
-    var hasImg = item.imagen_url && item.imagen_url.length > 0;
-    var stock = parseFloat(item.stock_actual != null ? item.stock_actual : 0);
-    var stockCls = stock <= 0 ? 'danger' : (item.stock_min > 0 && stock <= parseFloat(item.stock_min || 0) ? 'warning' : 'success');
+    body.innerHTML =
+        imgHtml +
 
-    var body = document.getElementById('modal-det-body');
-    if (body) {
-        body.innerHTML =
-            '<div class="row g-3">' +
-                '<div class="col-md-4 text-center">' +
-                    (hasImg
-                        ? '<img src="' + _invEsc(item.imagen_url) + '" class="img-fluid rounded mb-2" style="max-height:200px;object-fit:contain;">'
-                        : '<div class="d-flex align-items-center justify-content-center rounded mb-2 text-muted" style="height:160px;background:var(--surface);"><i class="bi bi-box fs-1"></i></div>') +
-                    '<div><img id="det-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(item.id) + '" alt="QR" style="width:90px;height:90px;" title="QR: ' + _invEsc(item.id) + '"></div>' +
-                '</div>' +
-                '<div class="col-md-8">' +
-                    '<h6 class="fw-bold mb-2">' + _invEsc(item.descripcion) + '</h6>' +
-                    '<div class="row g-2 small">' +
-                        _detRow('Código', '<span class="badge bg-secondary">' + _invEsc(item.id) + '</span>') +
-                        _detRow('Familia', item.familia) +
-                        _detRow('Almacén', item.almacen) +
-                        _detRow('Ubicación', item.ubicacion) +
-                        _detRow('Unidad', item.unidad) +
-                        _detRow('Costo Ref.', (item.moneda === 'USD' ? '$ ' : 'S/ ') + parseFloat(item.costo_referencial || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})) +
-                        _detRow('Stock', '<span class="badge bg-' + stockCls + (stockCls === 'warning' ? ' text-dark' : '') + ' fs-6">' + stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) + ' ' + _invEsc(item.unidad || '') + '</span>') +
-                        _detRow('Stock Min/Max', parseFloat(item.stock_min || 0) + ' / ' + parseFloat(item.stock_max || 0)) +
-                        _detRow('Estado', item.estado_art || 'Activo') +
-                        (item.observaciones ? _detRow('Obs.', item.observaciones) : '') +
-                    '</div>' +
-                '</div>' +
-            '</div>';
-    }
+        // Stock — bloque prominente
+        '<div style="background:' + stockBg + ';border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid ' + stockColor + '20;">' +
+            '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:' + stockColor + ';margin-bottom:.4rem;">Stock Actual</div>' +
+            '<div style="font-size:2.4rem;font-weight:900;color:' + stockColor + ';line-height:1;">' +
+                stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) +
+                '<span style="font-size:.9rem;font-weight:700;margin-left:.4rem;opacity:.75;">' + _invEsc(item.unidad || '') + '</span>' +
+            '</div>' +
+            (stockMax > 0 ? '<div style="height:6px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:.65rem;">' +
+                '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;"></div>' +
+            '</div>' +
+            '<div style="font-size:.65rem;font-weight:700;color:' + stockColor + ';opacity:.8;margin-top:.3rem;">' + pct + '% de capacidad</div>' : '') +
+        '</div>' +
 
-    bootstrap.Modal.getOrCreateInstance(el).show();
+        // Filas de datos
+        '<div style="margin-bottom:.5rem;">' +
+            row('Código', '<span style="background:#f1f5f9;color:#475569;font-size:.72rem;font-weight:800;padding:.2rem .6rem;border-radius:8px;font-family:monospace;">' + _invEsc(item.id) + '</span>') +
+            row('Familia', item.familia) +
+            row('Almacén', item.almacen) +
+            row('Ubicación', item.ubicacion) +
+            row('Unidad', item.unidad) +
+            row('Costo Ref.', costo) +
+            row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) +
+            row('Estado', '<span style="background:' + (item.estado_art === 'Inactivo' ? '#fee2e2' : '#dcfce7') + ';color:' + (item.estado_art === 'Inactivo' ? '#dc2626' : '#16a34a') + ';font-size:.7rem;font-weight:800;padding:.2rem .65rem;border-radius:99px;">' + _invEsc(item.estado_art || 'Activo') + '</span>') +
+            (item.observaciones ? row('Observaciones', _invEsc(item.observaciones), true) : '') +
+        '</div>';
+
+    // Abrir
+    drawer.classList.add('open');
+    if (bd) bd.style.display = 'block';
 };
 
-function _detRow(lbl, val) {
-    return '<div class="col-5 text-muted">' + lbl + ':</div><div class="col-7 fw-semibold">' + (val || '—') + '</div>';
-}
+window._invCerrarDetalle = function() {
+    var drawer = document.getElementById('inv-det-drawer');
+    var bd     = document.getElementById('inv-det-backdrop');
+    if (drawer) drawer.classList.remove('open');
+    if (bd) bd.style.display = 'none';
+};
 
 // ── Modal Add / Edit ─────────────────────────────────────────────
 window.abrirModalInventario = function(id) {
