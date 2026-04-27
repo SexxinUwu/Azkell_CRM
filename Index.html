@@ -421,8 +421,8 @@
     <datalist id="dl-placas"></datalist><datalist id="dl-clientes"></datalist><datalist id="dl-tipos"></datalist><datalist id="dl-marcas"></datalist><datalist id="dl-modelos"></datalist><datalist id="dl-confs"></datalist><datalist id="dl-combs"></datalist><datalist id="dl-uts"></datalist><datalist id="dl-tpmp"></datalist><datalist id="dl-wialon"></datalist><datalist id="dl-conductores-status"></datalist>
     <datalist id="dl-tecnicos"><option value="Juan Cardenas"><option value="Glen"></datalist>
 
-    <!-- FAB: Floating Action Button para Móviles -->
-    <div class="fab-container d-md-none" style="position: fixed; bottom: 150px; right: 25px; z-index: 1030;">
+    <!-- FAB: Floating Action Button para Móviles — oculto, cada módulo tiene su propio FAB -->
+    <div class="fab-container d-md-none" style="position: fixed; bottom: 150px; right: 25px; z-index: 1030; display:none!important;">
         <button id="btnFabMain" onclick="toggleFabMenu()" title="Acciones rápidas"
             style="width: 56px; height: 56px; border-radius: 50% !important; background-color: var(--crm-accent); color: var(--crm-sidebar); border: none; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
             <i class="bi bi-plus-lg"></i>

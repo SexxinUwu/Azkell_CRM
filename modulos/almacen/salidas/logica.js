@@ -91,8 +91,11 @@ function _salCargarSelectores() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             window._salPlacas = d || [];
-            var lista = (d || []).map(function(p){ return (p.placa||'').toUpperCase(); }).filter(Boolean).sort();
-            if (window.SS) window.SS.init('sal-placa', 'sal-f-placa', lista, '', null, 'Buscar placa…');
+            var items = (d || []).map(function(p) {
+                var placa = (p.placa || '').toUpperCase();
+                return { value: placa, label: placa };
+            }).filter(function(x) { return x.value; }).sort(function(a,b){ return a.label.localeCompare(b.label); });
+            window._cbInit('sal-f-placa', items, 'Buscar placa…');
         })
         .catch(function() {});
 
@@ -505,8 +508,9 @@ window.salVerPDF = function(m) {
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.salAbrirNuevo = function() {
     if (!window.guardAction('sal_inv', 'c')) return;
-    var ids = ['sal-f-ot','sal-f-placa','sal-f-responsable','sal-f-obs'];
+    var ids = ['sal-f-ot','sal-f-responsable','sal-f-obs'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    window._cbReset('sal-f-placa');
     var fechaEl = document.getElementById('sal-f-fecha');
     if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
     var tipoEl = document.getElementById('sal-f-tipo');
@@ -591,7 +595,7 @@ window.salGuardarNuevo = function() {
     var idOt    = get('sal-f-ot');
     var fecha   = get('sal-f-fecha');
     var tipo    = get('sal-f-tipo');
-    var placa   = get('sal-f-placa').toUpperCase();
+    var placa   = (window._cbGet('sal-f-placa') || '').toUpperCase();
     var resp    = get('sal-f-responsable');
     var obs     = get('sal-f-obs');
 
@@ -649,7 +653,7 @@ window.salToggleTipo = function() {
     var rowPlaca = document.getElementById('sal-row-placa');
     if (rowPlaca) rowPlaca.style.display = tipo === 'Vehiculo' ? '' : 'none';
     if (tipo !== 'Vehiculo') {
-        var p = document.getElementById('sal-f-placa'); if (p) p.value = '';
+        window._cbReset('sal-f-placa');
     }
 };
 

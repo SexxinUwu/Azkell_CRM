@@ -251,19 +251,31 @@
     </button>
   </div>
   <!-- Filtros mobile expandibles -->
-  <div id="sal-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
-    <input type="text" class="form-control form-control-sm" id="sal-fil-ot-mob"
-           placeholder="N° OT" style="flex:1;min-width:90px;border-radius:12px;text-transform:uppercase;"
-           oninput="(function(){var d=document.getElementById('sal-fil-ot');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
-    <input type="date" class="form-control form-control-sm" id="sal-fil-desde-mob"
-           style="flex:1;min-width:130px;border-radius:12px;"
-           onchange="(function(){var d=document.getElementById('sal-fil-desde');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
-    <input type="date" class="form-control form-control-sm" id="sal-fil-hasta-mob"
-           style="flex:1;min-width:130px;border-radius:12px;"
-           onchange="(function(){var h=document.getElementById('sal-fil-hasta');if(h)h.value=this.value;window.salFiltrar();}).call(this)">
+  <div id="sal-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:flex-end;">
+    <div style="flex:1;min-width:90px;">
+      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">N° OT</div>
+      <input type="text" id="sal-fil-ot-mob"
+             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;text-transform:uppercase;"
+             oninput="(function(){var d=document.getElementById('sal-fil-ot');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
+    </div>
+    <div style="flex:1;min-width:120px;">
+      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Desde</div>
+      <input type="date" id="sal-fil-desde-mob"
+             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
+             onchange="(function(){var d=document.getElementById('sal-fil-desde');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
+    </div>
+    <div style="flex:1;min-width:120px;">
+      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Hasta</div>
+      <input type="date" id="sal-fil-hasta-mob"
+             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
+             onchange="(function(){var h=document.getElementById('sal-fil-hasta');if(h)h.value=this.value;window.salFiltrar();}).call(this)">
+    </div>
     <button onclick="(function(){['sal-fil-ot','sal-fil-desde','sal-fil-hasta'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});['sal-fil-ot-mob','sal-fil-desde-mob','sal-fil-hasta-mob'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});window.salFiltrar();})()"
-            style="width:36px;height:36px;border-radius:10px;background:#fee2e2;border:none;
-                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;">
+            style="width:40px;height:40px;border-radius:12px;background:#fee2e2;border:none;
+                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -298,10 +310,14 @@
              oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
       <input type="month" class="form-control form-control-sm" id="sal-fil-mes"
              style="max-width:150px" onchange="window.salFiltrar()">
-      <input type="date" class="form-control form-control-sm" id="sal-fil-desde"
-             style="max-width:150px" onchange="window.salFiltrar()">
-      <input type="date" class="form-control form-control-sm" id="sal-fil-hasta"
-             style="max-width:150px" onchange="window.salFiltrar()">
+      <input type="date" id="sal-fil-desde"
+             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
+             onchange="window.salFiltrar()">
+      <input type="date" id="sal-fil-hasta"
+             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
+             onchange="window.salFiltrar()">
       <div style="flex:1"></div>
       <button class="btn btn-sm btn-outline-secondary" onclick="window.salCargar()" title="Actualizar">
         <i class="bi bi-arrow-clockwise"></i>
@@ -393,7 +409,16 @@
         </div>
         <div class="col-6" id="sal-row-placa">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
-          <div id="ss-W-sal-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-sal-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:12px;min-height:44px;" onclick="window.SS.toggle('sal-placa')"><span id="ss-L-sal-placa" class="ss-lbl" style="color:#6c757d;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.7rem;margin-left:4px;"></i></div><input type="hidden" id="sal-f-placa" name="sal-f-placa"><div id="ss-D-sal-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-sal-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'sal-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-sal-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
+          <div class="position-relative">
+            <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm"
+                   placeholder="Buscar placa…" autocomplete="off"
+                   style="border-radius:12px;min-height:44px;"
+                   oninput="window._cbFiltrar('sal-f-placa')"
+                   onfocus="window._cbFiltrar('sal-f-placa')"
+                   onblur="window._cbHide('sal-f-placa')">
+            <input type="hidden" id="sal-f-placa" name="sal-f-placa">
+            <div id="sal-f-placa-dd" class="cb-dropdown"></div>
+          </div>
         </div>
         <div class="col-12">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable</label>

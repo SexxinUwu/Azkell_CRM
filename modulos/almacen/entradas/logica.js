@@ -88,11 +88,9 @@ window._entCargarProveedores = function() {
 
 window._entActualizarTC = function() {
     var moneda = (document.getElementById('ent-f-moneda') || {}).value || 'PEN';
-    var tcEl = document.getElementById('ent-f-tc');
-    if (tcEl) tcEl.value = moneda === 'USD' ? window._entTC.toFixed(3) : '1.000';
     var mon = moneda === 'USD' ? '$' : 'S/';
     var el = document.getElementById('ent-total-display');
-    if (el) { var old = el.textContent.replace(/^[S\$\/\s]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
+    if (el) { var old = el.textContent.replace(/^[S\$\/\s\.]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
 };
 
 // ── Grid items ────────────────────────────────────────────────────
@@ -100,53 +98,57 @@ window._entAgregarItem = function() {
     var tbody = document.getElementById('tbody-ent-items');
     if (!tbody) return;
     var idx = window._entItemIdx++;
+    var cbId = 'ent-art-' + idx;
     var tr = document.createElement('tr');
     tr.id = 'ent-item-' + idx;
     tr.innerHTML =
-        '<td>' +
-            '<input type="text" class="form-control form-control-sm ent-item-desc" list="ent-inv-list" placeholder="Buscar artículo (INV-XXXX…)" ' +
-                'data-idx="'+idx+'" oninput="window._entBuscarArt(this,'+idx+')">' +
-            '<datalist id="ent-inv-list"></datalist>' +
-            '<input type="hidden" class="ent-item-inv-id" data-idx="'+idx+'">' +
+        '<td style="min-width:220px;">' +
+            '<div class="position-relative">' +
+                '<input type="text" id="' + cbId + '-txt" class="form-control form-control-sm ent-item-desc" data-idx="' + idx + '"' +
+                    ' placeholder="Buscar artículo…" autocomplete="off"' +
+                    ' oninput="window._cbFiltrar(\'' + cbId + '\')"' +
+                    ' onfocus="window._cbFiltrar(\'' + cbId + '\')"' +
+                    ' onblur="window._cbHide(\'' + cbId + '\')">' +
+                '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
+                '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
+            '</div>' +
         '</td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-cant" data-idx="'+idx+'" value="1" min="0.001" step="0.001" oninput="window._entCalcImporte('+idx+')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-cu" data-idx="'+idx+'" value="0" min="0" step="0.0001" oninput="window._entCalcImporte('+idx+')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-imp" data-idx="'+idx+'" value="0" readonly></td>' +
-        '<td><button type="button" class="btn btn-xs btn-outline-danger" onclick="window._entQuitarItem('+idx+')"><i class="bi bi-x"></i></button></td>';
+        '<td><input type="number" class="form-control form-control-sm ent-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm ent-item-cu" data-idx="' + idx + '" value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm ent-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
+        '<td><button type="button" style="width:28px;height:28px;border-radius:8px;border:none;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;" onclick="window._entQuitarItem(' + idx + ')"><i class="bi bi-x-lg"></i></button></td>';
     tbody.appendChild(tr);
 
-    if (!document.getElementById('ent-inv-list').children.length) {
-        window._entCargarInv();
+    // Cargar inventario si no está cargado
+    if (!window._entInvData.length) {
+        window._entCargarInv(function() { window._entInitCbItem(idx, cbId); });
+    } else {
+        window._entInitCbItem(idx, cbId);
     }
 };
 
-window._entCargarInv = function() {
-    if (window._entInvData.length) { window._entPoblarDL(); return; }
+window._entInitCbItem = function(idx, cbId) {
+    var items = (window._entInvData || []).map(function(d) {
+        return { value: d.id, label: d.id + ' — ' + (d.descripcion || '') };
+    });
+    window._cbInit(cbId, items, 'Buscar artículo…');
+    window._cbOnSelect(cbId, function(val) {
+        var item = (window._entInvData || []).find(function(d) { return d.id === val; });
+        if (item) {
+            var cuEl = document.querySelector('.ent-item-cu[data-idx="' + idx + '"]');
+            if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._entCalcImporte(idx); }
+        }
+    });
+};
+
+window._entCargarInv = function(cb) {
+    if (window._entInvData.length) { if (cb) cb(); return; }
     fetch('/api/almacen/inventario')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._entInvData = data || [];
-            window._entPoblarDL();
-        }).catch(function() {});
-};
-
-window._entPoblarDL = function() {
-    var dl = document.getElementById('ent-inv-list');
-    if (dl) dl.innerHTML = window._entInvData.map(function(d) {
-        return '<option value="'+_entEsc(d.id+' — '+d.descripcion)+'" data-id="'+_entEsc(d.id)+'" data-cu="'+(d.costo_referencial||0)+'">';
-    }).join('');
-};
-
-window._entBuscarArt = function(input, idx) {
-    var val = input.value || '';
-    var invId = val.split(' — ')[0].trim();
-    var item = window._entInvData.find(function(d) { return d.id === invId; });
-    if (item) {
-        var hiddenId = document.querySelector('.ent-item-inv-id[data-idx="'+idx+'"]');
-        if (hiddenId) hiddenId.value = item.id;
-        var cuEl = document.querySelector('.ent-item-cu[data-idx="'+idx+'"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial||0).toFixed(2); window._entCalcImporte(idx); }
-    }
+            if (cb) cb();
+        }).catch(function() { if (cb) cb(); });
 };
 
 window._entCalcImporte = function(idx) {
@@ -167,7 +169,7 @@ window._entActualizarTotal = function() {
     var imps = document.querySelectorAll('.ent-item-imp');
     var total = 0;
     imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
-    var moneda = (document.getElementById('ent-f-moneda') || {}).value === 'USD' ? '$' : 'S/';
+    var moneda = (document.getElementById('ent-f-moneda') || {}).value === 'USD' ? 'USD $' : 'S/';
     var el = document.getElementById('ent-total-display');
     if (el) el.textContent = moneda + ' ' + total.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2});
 };
@@ -180,7 +182,6 @@ window.guardarEntrada = function() {
     var provNombre = window._cbGetText('ent-f-proveedor');
     var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
-    var tc     = parseFloat((document.getElementById('ent-f-tc') || {}).value) || 1;
     var obs    = (document.getElementById('ent-f-obs')     || {}).value || '';
 
     if (!fecha)  { alert('Falta la fecha.'); return; }
@@ -205,7 +206,7 @@ window.guardarEntrada = function() {
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
     var payload = { fecha, proveedor_id: provId||null, proveedor_nombre: provNombre||null,
-        documento_referencia: docRef||null, moneda, tipo_cambio: tc, observaciones: obs,
+        documento_referencia: docRef||null, moneda, tipo_cambio: 1, observaciones: obs,
         creado_por: localStorage.getItem('fleet_user')||'', items };
 
     fetch('/api/almacen/entradas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
@@ -234,8 +235,6 @@ window.abrirModalEntrada = function() {
     if (fecha) fecha.value = new Date().toISOString().split('T')[0];
     var mon = document.getElementById('ent-f-moneda');
     if (mon) mon.value = 'PEN';
-    var tc = document.getElementById('ent-f-tc');
-    if (tc) tc.value = window._entTC.toFixed(3);
 
     window._entAgregarItem();
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-entrada'));
