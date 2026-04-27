@@ -282,18 +282,32 @@ window._invPoblarFiltros = function(data) {
 
 // ── KPI Row Bento ─────────────────────────────────────────────────
 window._invRenderKPIs = function(data) {
-    var total = data.length;
-    var criticos = data.filter(function(d) {
-        return parseFloat(d.stock_actual || 0) <= parseFloat(d.stock_min || 0);
+    var total = data.filter(function(d) {
+        return parseFloat(d.stock_actual || 0) > 0.1;
     }).length;
-    var valor = data.reduce(function(s, d) {
-        return s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0));
+    var criticos = data.filter(function(d) {
+        var sa = parseFloat(d.stock_actual || 0);
+        var sm = parseFloat(d.stock_min || 0);
+        return sm > 0 && sa < sm;
+    }).length;
+    var advertencia = data.filter(function(d) {
+        var sa = parseFloat(d.stock_actual || 0);
+        var sm = parseFloat(d.stock_min || 0);
+        var sx = parseFloat(d.stock_max || 0);
+        return sm > 0 && sx > 0 && sa >= sm && sa < sx;
+    }).length;
+    var valorPEN = data.reduce(function(s, d) {
+        var moneda = (d.moneda || 'PEN').toUpperCase();
+        return moneda !== 'USD' ? s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0)) : s;
     }, 0);
-    var valorStr = valor >= 1000000
-        ? 'S/ ' + (valor / 1000000).toFixed(1) + 'M'
-        : valor >= 1000
-            ? 'S/ ' + (valor / 1000).toFixed(1) + 'k'
-            : 'S/ ' + valor.toFixed(0);
+    var valorUSD = data.reduce(function(s, d) {
+        return (d.moneda || '').toUpperCase() === 'USD' ? s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0)) : s;
+    }, 0);
+    function fmtV(v, pre) {
+        return v >= 1000000 ? pre + (v/1000000).toFixed(1) + 'M'
+             : v >= 1000    ? pre + (v/1000).toFixed(1) + 'k'
+             :                pre + v.toFixed(0);
+    }
     var el = document.getElementById('inv-kpi-row');
     if (!el) return;
     el.innerHTML =
@@ -301,12 +315,20 @@ window._invRenderKPIs = function(data) {
           '<div><div class="bento-kpi-label">Total Artículos</div><div class="bento-kpi-num">' + total.toLocaleString() + '</div></div>' +
           '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-boxes fs-4"></i></div>' +
         '</div>' +
+        '<div class="bento-kpi" style="background:#fffbeb;border-color:#fde68a">' +
+          '<div><div class="bento-kpi-label" style="color:#92400e">Stock Bajo</div><div class="bento-kpi-num" style="color:#d97706">' + advertencia + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
+        '</div>' +
         '<div class="bento-kpi accent-red">' +
           '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-exclamation-circle-fill fs-4"></i></div>' +
         '</div>' +
         '<div class="bento-kpi accent-dark">' +
-          '<div><div class="bento-kpi-label">Valor de Almacén</div><div class="bento-kpi-num" style="font-size:1.6rem">' + valorStr + '</div></div>' +
+          '<div><div class="bento-kpi-label">Valor S/ (PEN)</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorPEN, 'S/ ') + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-coin fs-4" style="color:#fbbf24"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-dark">' +
+          '<div><div class="bento-kpi-label">Valor $ (USD)</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorUSD, '$ ') + '</div></div>' +
           '<div class="bento-kpi-icon"><i class="bi bi-currency-dollar fs-4" style="color:#60a5fa"></i></div>' +
         '</div>';
 };
