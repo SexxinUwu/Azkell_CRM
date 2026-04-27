@@ -1,5 +1,34 @@
 <!-- Módulo Almacén / Inventario — SPA Aislado v3 (Cards, formulario unificado) -->
 <style>
+/* ─── Tabs: segmented control moderno ───────────────────────────── */
+#inv-modal-tabs {
+    background: var(--bg, #f1f5f9);
+    border-radius: 14px !important;
+    padding: 4px !important;
+    gap: 3px !important;
+    border-bottom: none !important;
+    margin: .75rem 1rem .25rem !important;
+}
+#inv-modal-tabs .nav-item { flex: 1; }
+#inv-modal-tabs .nav-link {
+    width: 100%;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: .72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    color: var(--subtext, #64748b) !important;
+    padding: .55rem .5rem !important;
+    text-align: center !important;
+    transition: all .2s !important;
+    background: transparent !important;
+}
+#inv-modal-tabs .nav-link.active {
+    background: var(--surface, #fff) !important;
+    color: #2563eb !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1) !important;
+}
 /* ─── Drawer: open/close via CSS class ──────────────────────────── */
 #inv-form-drawer {
     position: fixed; top: 0; right: -500px;
@@ -278,7 +307,7 @@
 
   <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem;">
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem; background:transparent;">
     <div id="inv-grid" class="bento-grid pb-3 px-1">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
@@ -400,10 +429,13 @@
 
             <div class="col-4">
               <label class="fw-semibold small">Moneda</label>
-              <select class="form-select form-select-sm" id="inv-f-moneda">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USD">USD ($)</option>
-              </select>
+              <div class="position-relative">
+                <input type="text" id="inv-f-moneda-txt" class="form-control form-control-sm" placeholder="Moneda…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-moneda')"
+                  onfocus="window._cbFiltrar('inv-f-moneda')" onblur="window._cbHide('inv-f-moneda')">
+                <input type="hidden" id="inv-f-moneda">
+                <div id="inv-f-moneda-dd" class="cb-dropdown"></div>
+              </div>
             </div>
             <div class="col-4">
               <label class="fw-semibold small">Costo</label>
@@ -411,11 +443,13 @@
             </div>
             <div class="col-4">
               <label class="fw-semibold small">Estado</label>
-              <select class="form-select form-select-sm" id="inv-f-estado-art">
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
-                <option value="Descontinuado">Descontinuado</option>
-              </select>
+              <div class="position-relative">
+                <input type="text" id="inv-f-estado-art-txt" class="form-control form-control-sm" placeholder="Estado…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-estado-art')"
+                  onfocus="window._cbFiltrar('inv-f-estado-art')" onblur="window._cbHide('inv-f-estado-art')">
+                <input type="hidden" id="inv-f-estado-art">
+                <div id="inv-f-estado-art-dd" class="cb-dropdown"></div>
+              </div>
             </div>
 
             <div class="col-12">
@@ -456,13 +490,17 @@
             </div>
             <div class="col-12">
               <label class="fw-semibold small">Almacén</label>
-              <input type="text" class="form-control form-control-sm" id="inv-f-almacen" list="inv-list-almacenes" placeholder="Ej: Principal, Neumáticos">
-              <datalist id="inv-list-almacenes">
-                <option value="Principal"><option value="Neumáticos"><option value="Llantas"><option value="Lubricantes"><option value="Filtros">
-              </datalist>
+              <div class="position-relative">
+                <input type="text" id="inv-f-almacen-txt" class="form-control form-control-sm" placeholder="Buscar almacén…"
+                  autocomplete="off" oninput="window._cbFiltrar('inv-f-almacen')"
+                  onfocus="window._cbFiltrar('inv-f-almacen')" onblur="window._cbHide('inv-f-almacen')">
+                <input type="hidden" id="inv-f-almacen">
+                <div id="inv-f-almacen-dd" class="cb-dropdown"></div>
+              </div>
             </div>
 
-            <div class="col-6">
+            <!-- Ubicación/Estante — OCULTO del form (se conserva en BD) -->
+            <div class="col-6" style="display:none">
               <label class="fw-semibold small">Ubicación / Estante</label>
               <input type="text" class="form-control form-control-sm" id="inv-f-ubicacion" placeholder="Ej: Estante B3">
             </div>
