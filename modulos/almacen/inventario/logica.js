@@ -9,7 +9,7 @@ window._invPagActual         = window._invPagActual         || 1;
 window._invProveedores       = window._invProveedores       || [];
 window._invMarcasSeleccionadas = window._invMarcasSeleccionadas || [];
 window._invMarcasPlacas      = window._invMarcasPlacas      || [];
-var _INV_POR_PAG = 24;
+var _INV_POR_PAG = 10;
 
 window._invSistemasData = window._invSistemasData || [];
 window._invUnidadesData = window._invUnidadesData || [];
@@ -48,6 +48,21 @@ window.init_inventario = function() {
     // Inicializar comboboxes estáticos
     window._cbInit('inv-f-tipo',     ['','Original','Alternativo'],           'Buscar tipo…');
     window._cbInit('inv-f-sub-tipo', ['','Nuevo','Reparado'],                 'Buscar sub-tipo…');
+    window._cbInit('inv-f-moneda', [
+        {value:'PEN', label:'PEN (S/)'},
+        {value:'USD', label:'USD ($)'}
+    ], 'Moneda…');
+    window._cbInit('inv-f-estado-art', [
+        {value:'Activo',        label:'Activo'},
+        {value:'Inactivo',      label:'Inactivo'},
+        {value:'Descontinuado', label:'Descontinuado'}
+    ], 'Estado…');
+    window._cbInit('inv-f-almacen', [
+        {value:'',           label:'— Sin almacén —'},
+        {value:'Principal',  label:'Principal'},
+        {value:'Lubricantes',label:'Lubricantes'},
+        {value:'Neumáticos', label:'Neumáticos'}
+    ], 'Buscar almacén…');
     // Al seleccionar sistema → actualizar opciones de sub-sistema
     window._cbOnSelect('inv-f-sistema', function() { window._invFiltrarSubSistemas(); });
     // ── Inicialización mobile ──────────────────────────────────────
@@ -411,10 +426,10 @@ window._invRender = function() {
     if (paginEl) {
         if (totalPag <= 1) { paginEl.innerHTML = ''; return; }
         var btns = '';
-        btns += '<button class="btn btn-sm btn-outline-secondary" ' + (pag <= 1 ? 'disabled' : '') + ' onclick="window._invIrPag(' + (pag - 1) + ')"><i class="bi bi-chevron-left"></i></button>';
-        btns += '<span class="small text-muted mx-2">Pág. ' + pag + ' / ' + totalPag + '</span>';
-        btns += '<button class="btn btn-sm btn-outline-secondary" ' + (pag >= totalPag ? 'disabled' : '') + ' onclick="window._invIrPag(' + (pag + 1) + ')"><i class="bi bi-chevron-right"></i></button>';
-        paginEl.innerHTML = '<div class="d-flex align-items-center gap-1">' + btns + '</div>';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag<=1?'0.35':'1') + ';" ' + (pag<=1?'disabled':'') + ' onclick="window._invIrPag(' + (pag-1) + ')"><i class="bi bi-chevron-left"></i></button>';
+        btns += '<span style="font-size:.8rem;font-weight:700;color:var(--subtext);">Pág. <b style="color:var(--text)">' + pag + '</b> / ' + totalPag + '</span>';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag>=totalPag?'0.35':'1') + ';" ' + (pag>=totalPag?'disabled':'') + ' onclick="window._invIrPag(' + (pag+1) + ')"><i class="bi bi-chevron-right"></i></button>';
+        paginEl.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem .75rem;">' + btns + '</div>';
     }
 };
 
@@ -724,9 +739,11 @@ window.abrirModalInventario = function(id) {
             var uDescE = uObjE ? (uObjE.descripcion || uObjE.nombre) : (item.unidad || '');
             window._cbSet('inv-f-unidad', uDescE, uDescE);
         })();
-        _invSetField('inv-f-moneda',            item.moneda || 'PEN');
+        var monedaLabels = {'PEN':'PEN (S/)','USD':'USD ($)'};
+        var monVal = item.moneda || 'PEN';
+        window._cbSet('inv-f-moneda',     monVal, monedaLabels[monVal] || monVal);
         _invSetField('inv-f-costo',             item.costo_referencial);
-        _invSetField('inv-f-estado-art',        item.estado_art || 'Activo');
+        window._cbSet('inv-f-estado-art', item.estado_art || 'Activo', item.estado_art || 'Activo');
         _invSetField('inv-f-obs',               item.observaciones);
 
         // Chips marca_unidad
@@ -744,7 +761,7 @@ window.abrirModalInventario = function(id) {
         _invSetField('inv-f-sub-sistema',   item.sub_sistema);
         _invSetField('inv-f-tipo',          item.tipo);
         _invSetField('inv-f-sub-tipo',      item.sub_tipo);
-        _invSetField('inv-f-almacen',       item.almacen);
+        window._cbSet('inv-f-almacen', item.almacen || '', item.almacen || '');
         _invSetField('inv-f-ubicacion',     item.ubicacion);
         _invSetField('inv-f-anaquel',       item.anaquel);
         _invSetField('inv-f-stock-min',     item.stock_min);
