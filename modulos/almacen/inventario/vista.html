@@ -168,22 +168,7 @@
   </div>
   <div id="inv-avatar-popup-bd" onclick="window._invAvatarPopupClose()"
        style="display:none;position:fixed;inset:0;z-index:1059;"></div>
-  <!-- Search bar mobile -->
-  <div id="inv-m-search-bar" style="display:none;padding:.5rem 1rem;align-items:center;gap:.5rem;flex-shrink:0;">
-    <div class="input-group" style="border-radius:14px;overflow:hidden;background:var(--bg);border:1.5px solid var(--border);">
-      <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
-      <input type="text" id="inv-m-buscar" class="form-control border-0 bg-transparent shadow-none"
-             placeholder="¿Qué repuesto buscas?"
-             oninput="var d=document.getElementById('inv-buscar');if(d)d.value=this.value;window.filtrarInventario();">
-    </div>
-    <button onclick="window._invAbrirScanner('search')"
-            style="width:44px;height:44px;border-radius:12px;background:#eff6ff;border:none;
-                   color:#2563eb;font-size:1.15rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-      <i class="bi bi-qr-code-scan"></i>
-    </button>
-    <button class="btn btn-sm btn-link p-0 text-nowrap" onclick="window._invMobileSearchToggle()"
-            style="color:var(--subtext);font-size:.8rem;">Cerrar</button>
-  </div>
+  <!-- Search bar mobile — obsoleta, reemplazada por inv-search-compact -->
 
   <!-- Cabecera + controles (escritorio) -->
   <div id="inv-desktop-controls" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -260,7 +245,26 @@
              style="flex:1;border:none;background:transparent;outline:none;
                     font-size:.92rem;color:var(--text);padding:0;"
              placeholder="¿Qué repuesto buscas?"
-             oninput="var d=document.getElementById('inv-buscar');if(d)d.value=this.value;window.filtrarInventario();">
+             oninput="(function(v){
+               var d=document.getElementById('inv-buscar');if(d)d.value=v;
+               var mob=document.getElementById('inv-m-buscar');if(mob)mob.value=v;
+               var btn=document.getElementById('inv-search-clear');
+               if(btn)btn.style.display=v?'flex':'none';
+               window.filtrarInventario();
+             })(this.value);">
+      <button id="inv-search-clear"
+              onclick="(function(){
+                var i=document.getElementById('inv-search-input');if(i){i.value='';i.focus();}
+                var d=document.getElementById('inv-buscar');if(d)d.value='';
+                var mob=document.getElementById('inv-m-buscar');if(mob)mob.value='';
+                document.getElementById('inv-search-clear').style.display='none';
+                window.filtrarInventario();
+              })()"
+              style="display:none;width:22px;height:22px;border-radius:50%;background:#ef4444;
+                     border:none;color:#fff;font-size:.65rem;flex-shrink:0;
+                     align-items:center;justify-content:center;cursor:pointer;">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
     <button onclick="window._invAbrirScanner('search')"
             style="width:46px;height:46px;border-radius:50%;background:#2563eb;border:none;
@@ -551,7 +555,7 @@
        style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
               -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
   <!-- Menú expandido (Material Design 3 style) -->
-  <div id="inv-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:.9rem;margin-bottom:1rem;">
+  <div id="inv-fab-menu" style="display:flex;flex-direction:column;align-items:flex-end;gap:.9rem;margin-bottom:1rem;">
     <!-- SALIDA RÁPIDA -->
     <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
       <button onclick="window._invFABClose();cargarModuloAislado('almacen/salidas')"
