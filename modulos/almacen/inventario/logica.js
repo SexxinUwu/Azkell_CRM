@@ -1312,8 +1312,8 @@ window._invIniciarCamara = function(video) {
     navigator.mediaDevices.getUserMedia({
         video: {
             facingMode: 'environment',
-            width:  { ideal: 1280, min: 640 },
-            height: { ideal: 720,  min: 480 }
+            width:  { ideal: 4096 },
+            height: { ideal: 2160 }
         }
     }).then(function(stream) {
         window._invScannerStream = stream;
