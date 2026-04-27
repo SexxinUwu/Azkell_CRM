@@ -18,6 +18,8 @@
     #inv-desktop-controls, #inv-filter-row { display: none !important; }
     /* Mostrar header + search mobile */
     #inv-m-header   { display: flex !important; }
+    /* Mostrar barra de búsqueda compacta */
+    #inv-search-compact { display: flex !important; }
     /* KPI: scroll horizontal */
     #inv-kpi-row {
         display: flex !important; flex-wrap: nowrap !important;
@@ -211,6 +213,20 @@
   <!-- KPI Row Bento -->
   <div id="inv-kpi-row" class="bento-kpi-row"></div>
 
+  <!-- Search bar compacta (solo mobile, debajo de KPIs) -->
+  <div id="inv-search-compact" style="display:none;padding:.7rem 1rem;align-items:center;gap:.5rem;flex-shrink:0;flex-wrap:nowrap;">
+    <div style="flex:1;display:flex;align-items:center;border-radius:14px;overflow:hidden;background:var(--bg);border:1.5px solid var(--border);">
+      <span style="padding:0 .65rem;color:var(--subtext);"><i class="bi bi-search"></i></span>
+      <input type="text" id="inv-search-input" class="form-control border-0 bg-transparent shadow-none"
+             placeholder="¿Qué repuesto buscas?" style="font-size:.9rem;"
+             oninput="var d=document.getElementById('inv-buscar');if(d)d.value=this.value;window.filtrarInventario();">
+    </div>
+    <button onclick="window._invAbrirScanner('search')"
+            style="width:44px;height:44px;border-radius:12px;background:#2563eb;border:none;color:#fff;font-size:1.15rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+      <i class="bi bi-qr-code-scan"></i>
+    </button>
+  </div>
+
   <!-- Grid de Cards (scrollable) -->
   <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0;">
     <div id="inv-grid" class="bento-grid pb-3 px-1">
@@ -239,7 +255,12 @@
     <h6 class="fw-bold m-0" id="modal-inv-titulo" style="color:var(--text);font-size:.95rem;">
       <i class="bi bi-box-fill me-1 text-warning"></i>Nuevo Artículo
     </h6>
-    <button type="button" class="btn-close" onclick="window._invCerrarDrawer()"></button>
+    <button type="button" onclick="window._invCerrarDrawer()"
+            style="width:40px;height:40px;border-radius:50%;background:var(--bg);border:none;
+                   color:var(--text);font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                   cursor:pointer;transition:background .2s;flex-shrink:0;">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
 
   <!-- Tabs -->
@@ -462,62 +483,77 @@
     </div><!-- /body scrollable -->
 
     <!-- Footer fijo -->
-    <div style="padding:.75rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem;flex-shrink:0;background:var(--surface);">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="window._invCerrarDrawer()">Cancelar</button>
-      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Guardar</button>
+    <div style="padding:.85rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.6rem;flex-shrink:0;background:var(--surface);">
+      <button type="button" onclick="window._invCerrarDrawer()"
+              style="padding:.6rem 1.1rem;border-radius:12px;border:1.5px solid var(--border);
+                     background:transparent;color:var(--text);font-weight:700;font-size:.9rem;
+                     cursor:pointer;transition:all .2s;">Cancelar</button>
+      <button type="submit"
+              style="padding:.6rem 1.1rem;border-radius:12px;border:none;
+                     background:#2563eb;color:#fff;font-weight:700;font-size:.9rem;
+                     cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.4rem;">
+        <i class="bi bi-save"></i>Guardar
+      </button>
     </div>
   </form>
 </div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="inv-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1.1rem;z-index:1041;align-items:flex-end;flex-direction:column;">
+<div id="inv-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1rem;z-index:1041;align-items:flex-end;flex-direction:column;">
   <!-- Backdrop blur -->
   <div id="inv-fab-backdrop" onclick="window._invFABClose()"
        style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
               -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
-  <!-- Menú expandido -->
-  <div id="inv-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:.7rem;margin-bottom:.8rem;">
-    <div class="d-flex align-items-center gap-2">
-      <span style="background:#0f172a;color:#fff!important;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">SALIDA RÁPIDA</span>
+  <!-- Menú expandido (Material Design 3 style) -->
+  <div id="inv-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:.9rem;margin-bottom:1rem;">
+    <!-- SALIDA RÁPIDA -->
+    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
       <button onclick="window._invFABClose();cargarModuloAislado('almacen/salidas')"
-              style="width:52px;height:52px;border-radius:50%;background:#ef4444;border:none;color:#fff;
-                     font-size:1.35rem;box-shadow:0 4px 18px rgba(239,68,68,.45);
-                     display:flex;align-items:center;justify-content:center;">
-        <i class="bi bi-dash-lg"></i>
+              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
+                     background:#0f172a;color:#fff;border:none;border-radius:16px;
+                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
+                     box-shadow:0 4px 12px rgba(0,0,0,.25);transition:all .2s;">
+        <span style="white-space:nowrap;">SALIDA RÁPIDA</span>
+        <i class="bi bi-dash-lg" style="font-size:1.1rem;"></i>
       </button>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <span style="background:#0f172a;color:#fff!important;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">ENTRADA RÁPIDA</span>
+    <!-- ENTRADA RÁPIDA -->
+    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
       <button onclick="window._invFABClose();cargarModuloAislado('almacen/entradas')"
-              style="width:52px;height:52px;border-radius:50%;background:#22c55e;border:none;color:#fff;
-                     font-size:1.35rem;box-shadow:0 4px 18px rgba(34,197,94,.45);
-                     display:flex;align-items:center;justify-content:center;">
-        <i class="bi bi-plus-lg"></i>
+              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
+                     background:#22c55e;color:#fff;border:none;border-radius:16px;
+                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
+                     box-shadow:0 4px 12px rgba(34,197,94,.3);transition:all .2s;">
+        <span style="white-space:nowrap;">ENTRADA RÁPIDA</span>
+        <i class="bi bi-plus-lg" style="font-size:1.1rem;"></i>
       </button>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <span style="background:#0f172a;color:#fff!important;padding:.3rem .85rem;border-radius:20px;font-size:.7rem;font-weight:800;letter-spacing:.06em;white-space:nowrap;">NUEVO ARTÍCULO</span>
+    <!-- NUEVO ARTÍCULO -->
+    <div class="d-flex align-items:center;gap:.7rem;flex-wrap:nowrap;">
       <button onclick="window._invFABClose();window.abrirModalInventario()"
-              style="width:52px;height:52px;border-radius:50%;background:#2563eb;border:none;color:#fff;
-                     font-size:1.1rem;box-shadow:0 4px 18px rgba(37,99,235,.45);
-                     display:flex;align-items:center;justify-content:center;">
-        <i class="bi bi-archive-fill"></i>
+              style="flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:.55rem 1rem;
+                     background:#2563eb;color:#fff;border:none;border-radius:16px;
+                     font-size:.7rem;font-weight:800;letter-spacing:.08em;
+                     box-shadow:0 4px 12px rgba(37,99,235,.3);transition:all .2s;">
+        <span style="white-space:nowrap;">NUEVO ARTÍCULO</span>
+        <i class="bi bi-archive-fill" style="font-size:1.1rem;"></i>
       </button>
     </div>
   </div>
-  <!-- Botón principal naranja -->
+  <!-- Botón principal — Material Design 3 (cuadrado con bordes redondeados) -->
   <button id="inv-fab-btn" onclick="window._invFABToggle()"
-          style="width:52px;height:52px;border-radius:50%;background:#f97316;border:none;color:#fff;
-                 font-size:1.45rem;box-shadow:0 6px 24px rgba(249,115,22,.5);
+          style="width:60px;height:60px;border-radius:18px;background:#f97316;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(249,115,22,.5);
                  display:flex;align-items:center;justify-content:center;
-                 transition:transform .25s,background .2s;margin-top:.5rem;">
+                 transition:transform .25s cubic-bezier(.4,0,.2,1),background .2s;margin-top:.5rem;
+                 flex-shrink:0;">
     <i class="bi bi-plus-lg" id="inv-fab-icon"></i>
   </button>
   <!-- FAB IA — oculto temporalmente -->
-  <button id="inv-fab-ia" style="display:none;width:52px;height:52px;border-radius:50%;
-          background:#f97316;border:none;color:#fff;font-size:1.1rem;
+  <button id="inv-fab-ia" style="display:none;width:60px;height:60px;border-radius:18px;
+          background:#f97316;border:none;color:#fff;font-size:1.2rem;
           box-shadow:0 4px 16px rgba(249,115,22,.4);
-          align-items:center;justify-content:center;margin-top:.5rem;">
+          align-items:center;justify-content:center;margin-top:.5rem;flex-shrink:0;">
     <i class="bi bi-robot"></i>
   </button>
 </div>
