@@ -21,6 +21,36 @@ window.init_salidas = function() {
     salSincronizarTabs();
     salCargar();
     _salCargarSelectores();
+    window._salMobileInit();
+};
+
+// ── Mobile Init ───────────────────────────────────────────────────
+window._salMobileInit = function() {
+    var isMob = window.innerWidth < 768;
+    ['sal-m-header','sal-m-tabs','sal-search-compact','sal-fab-wrap'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = isMob ? 'flex' : 'none';
+    });
+    // Iniciales avatar
+    var av = document.getElementById('sal-m-avatar');
+    if (av) {
+        var email = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+        var partes = email.split('@')[0].split(/[._-]/);
+        var inits = partes.length >= 2 ? (partes[0][0]+partes[1][0]).toUpperCase() : email.substr(0,2).toUpperCase();
+        av.textContent = inits || 'SA';
+    }
+};
+
+window._salToggleFiltrosMobile = function() {
+    var el = document.getElementById('sal-filtros-mobile');
+    if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+};
+
+window._salSyncMTabs = function(tab) {
+    ['pend','desp','anulado'].forEach(function(t) {
+        var btn = document.getElementById('sal-m-tab-'+t);
+        if (btn) btn.classList.toggle('active', t === tab);
+    });
 };
 
 // ── Carga de datos ─────────────────────────────────────────────
@@ -32,6 +62,7 @@ window.salCargar = function() {
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function(data) {
             window.salData = Array.isArray(data) ? data : [];
+            window._salRenderKPIs(window.salData);
             salActualizarBadges();
             salRenderTabla();
         })
@@ -218,6 +249,8 @@ window.salRenderTabla = function() {
 function salAbrirDetalle(m) {
     window.salDetalleId = m.id;
     salRenderTabla();
+    var bd = document.getElementById('sal-det-backdrop');
+    if (bd && window.innerWidth < 768) bd.style.display = 'block';
 
     var titulo = document.getElementById('sal-detalle-titulo');
     if (titulo) titulo.textContent = 'Salida ' + (m.id || '');
@@ -286,6 +319,8 @@ function salAbrirDetalle(m) {
 window.salCerrarDetalle = function() {
     var panel = document.getElementById('sal-panel-detalle');
     if (panel) panel.classList.remove('open');
+    var bd = document.getElementById('sal-det-backdrop');
+    if (bd) bd.style.display = 'none';
     window.salDetalleId = null;
     salRenderTabla();
 };
@@ -683,4 +718,35 @@ window.salExportar = function() {
     var a = document.createElement('a');
     a.href = url; a.download = 'Almacen_Salidas.csv'; a.click();
     URL.revokeObjectURL(url);
+};
+
+// ── KPI Row ───────────────────────────────────────────────────────
+window._salRenderKPIs = function(data) {
+    var el = document.getElementById('sal-kpi-row');
+    if (!el) return;
+    var pend = data.filter(function(d){ return d.estado === 'Pendiente'; }).length;
+    var desp = data.filter(function(d){ return d.estado === 'Despachado'; }).length;
+    var hoy = new Date();
+    var mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+    var esteMes = data.filter(function(d){
+        return (d.fecha || '').slice(0,7) === mesActual && d.estado === 'Despachado';
+    }).length;
+    el.innerHTML =
+        '<div class="bento-kpi accent-yellow">' +
+          '<div><div class="bento-kpi-label">Pendientes</div><div class="bento-kpi-num">' + pend + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-hourglass-split fs-5"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi accent-dark">' +
+          '<div><div class="bento-kpi-label">Despachadas</div><div class="bento-kpi-num">' + desp + '</div></div>' +
+          '<div class="bento-kpi-icon"><i class="bi bi-check2-circle fs-5"></i></div>' +
+        '</div>' +
+        '<div class="bento-kpi">' +
+          '<div><div class="bento-kpi-label">Este Mes</div><div class="bento-kpi-num">' + esteMes + '</div></div>' +
+          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb;"><i class="bi bi-calendar-check fs-5"></i></div>' +
+        '</div>';
+    // Sync badges mobile
+    var bP = document.getElementById('sal-m-badge-pend');
+    var bD = document.getElementById('sal-m-badge-desp');
+    if (bP) bP.textContent = pend > 0 ? '(' + pend + ')' : '';
+    if (bD) bD.textContent = desp > 0 ? '(' + desp + ')' : '';
 };

@@ -225,21 +225,21 @@ body {
 
         /* Botón "+" Gemelo */
         .btn-fab-main {
-            width: 56px;  /* Tamaño gemelo */
-            height: 56px; /* Tamaño gemelo */
-            border-radius: 50%;
-            background-color: var(--crm-accent);
-            color: var(--crm-sidebar);
+            width: 60px;
+            height: 60px;
+            border-radius: 18px; /* cuadrado redondeado, estilo MD3 */
+            background-color: #f97316; /* naranja consistente con Inventario */
+            color: #fff;
             border: none;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease, background-color 0.2s;
+            box-shadow: 0 6px 24px rgba(249,115,22,.5);
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1), background-color 0.2s;
             cursor: pointer;
         }
-        .btn-fab-main.open { transform: rotate(135deg); background-color: #eab308; }
+        .btn-fab-main.open { transform: rotate(135deg); background-color: #1e293b; box-shadow: 0 8px 24px rgba(30,41,59,.4); }
 
         /* Lista Emergente del Botón + */
         .fab-action-list-wrapper {

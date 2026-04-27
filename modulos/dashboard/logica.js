@@ -118,6 +118,11 @@ window.procesarFleetrunParaDashboard = function() {
         }
     });
     updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+    // Actualizar contadores móvil Fleetrun
+    var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
+    var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
+    if (dMobFV) dMobFV.textContent = cntTotalVenc || '0';
+    if (dMobFP) dMobFP.textContent = cntTotalPV   || '0';
 };
 
 // ============================================================

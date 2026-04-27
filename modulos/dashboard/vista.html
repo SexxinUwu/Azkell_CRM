@@ -63,17 +63,15 @@
     <!-- ── ACCIONES RÁPIDAS MÓVIL (d-block d-md-none) ─── -->
     <div class="d-block d-md-none mb-3">
         <div class="list-group shadow-sm rounded-3 overflow-hidden">
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#" onclick="event.preventDefault(); cargarModuloAislado('mantenimiento/inspecciones')">
-                <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">Insp. Vencidas</span></span>
-                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-danger fs-6" id="dash-mob-vencidas">—</span><i class="bi bi-chevron-right text-muted"></i></span>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#"
+               onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <span><i class="bi bi-exclamation-circle-fill text-danger me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span></span>
+                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-danger fs-6" id="dash-mob-fleet-vencidos">—</span><i class="bi bi-chevron-right text-muted"></i></span>
             </a>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#" onclick="event.preventDefault(); cargarModuloAislado('mantenimiento/inspecciones')">
-                <span><i class="bi bi-clock-history text-warning me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">Insp. Por Vencer (7d)</span></span>
-                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-warning fs-6" id="dash-mob-porvencer">—</span><i class="bi bi-chevron-right text-muted"></i></span>
-            </a>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#" onclick="event.preventDefault(); cargarModuloAislado('mantenimiento/fleetrun')">
-                <span><i class="bi bi-speedometer2 text-primary me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span></span>
-                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-primary fs-6" id="dash-mob-fleet-vencidos">—</span><i class="bi bi-chevron-right text-muted"></i></span>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#"
+               onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <span><i class="bi bi-clock-history text-warning me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Por Vencer</span></span>
+                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-warning fs-6" id="dash-mob-fleet-porvencer">—</span><i class="bi bi-chevron-right text-muted"></i></span>
             </a>
         </div>
     </div>
@@ -125,33 +123,6 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-4">
-            <div class="kpi-card h-100 p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold m-0" style="color:var(--text)"><i class="bi bi-activity me-2" style="color:var(--crm-accent)"></i>Actividad Reciente</h6>
-                    <button class="btn btn-sm btn-link p-0" style="color:var(--crm-accent);font-size:0.75rem;" onclick="cargarModuloAislado('mantenimiento/inspecciones')">Ver todo →</button>
-                </div>
-                <div id="dash-activity-feed" style="overflow-y:auto;max-height:220px;">
-                    <div class="text-center py-3" style="color:var(--subtext);font-size:0.82rem;">Cargando actividad...</div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ── PREDICCIÓN DE VENCIMIENTOS (90 días) ─────────────── -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="kpi-card p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold m-0" style="color:var(--text);"><i class="bi bi-calendar-range text-primary me-2"></i>Vencimientos próximos 90 días</h6>
-                    <span class="badge bg-primary" id="dash-pred-total">—</span>
-                </div>
-                <div style="position:relative; height:120px;">
-                    <canvas id="chartPrediccion90d"></canvas>
-                </div>
-            </div>
-        </div>
     </div>
 
 </div>

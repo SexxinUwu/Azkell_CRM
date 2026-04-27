@@ -1,345 +1,470 @@
-<!-- Módulo Almacén / Salidas — Azkell Fleet -->
+<!-- Módulo Almacén / Salidas — Azkell Fleet v2 (Bento UI) -->
 <style>
-#moduloSalidas {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
+/* ─── Mobile-First ──────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .topbar { display: none !important; }
+    .main-area { padding: 0 !important; overflow: hidden !important; }
+    #sal-desktop-header { display: none !important; }
+    #sal-m-header { display: flex !important; }
+    #sal-search-compact { display: flex !important; }
+    #sal-kpi-row {
+        display: flex !important; flex-wrap: nowrap !important;
+        overflow-x: auto; gap: .55rem;
+        padding: .25rem 1rem .6rem !important;
+        scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    #sal-kpi-row::-webkit-scrollbar { display: none; }
+    .bento-kpi { min-width: 130px; flex-shrink: 0; }
+    #moduloSalidas { padding-bottom: 80px; }
+    #sal-fab-wrap { display: flex !important; }
+    .sal-controls, .sal-filters { display: none !important; }
+    /* Tabs: segmented control en mobile */
+    #sal-m-tabs {
+        display: flex !important;
+        background: var(--bg, #f1f5f9);
+        border-radius: 14px;
+        padding: 4px;
+        gap: 3px;
+        margin: 0 1rem .5rem;
+    }
+    #sal-m-tabs .sal-m-tab {
+        flex: 1; border: none; border-radius: 10px;
+        font-size: .65rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .04em; color: var(--subtext); padding: .5rem .25rem;
+        background: transparent; cursor: pointer; text-align: center;
+        transition: all .2s; white-space: nowrap;
+    }
+    #sal-m-tabs .sal-m-tab.active {
+        background: var(--surface, #fff);
+        color: #5865F2;
+        box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    /* Panel detalle: bottom sheet en mobile */
+    #sal-panel-detalle {
+        position: fixed !important; bottom: -100vh !important; left: 0 !important;
+        right: 0 !important; width: 100vw !important; max-width: 100vw !important;
+        height: 88vh !important; border-radius: 22px 22px 0 0 !important;
+        border-left: none !important; border-top: 1px solid var(--border) !important;
+        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
+        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important; z-index: 1055 !important;
+    }
+    #sal-panel-detalle.open { bottom: 0 !important; width: 100% !important; }
+    /* Tabla mobile */
+    #moduloSalidas table { font-size: .75rem; }
+    #moduloSalidas thead th,
+    #moduloSalidas tbody td { padding: 8px 8px; }
+    #moduloSalidas .col-hide-mob { display: none !important; }
+    /* Drawer full-screen en mobile */
+    #moduloSalidas .sal-drawer {
+        width: 100vw !important; max-width: 100vw !important;
+        border-radius: 0 !important;
+    }
 }
 
-/* Tabs */
+/* ─── Base ────────────────────────────────────────────────── */
+#moduloSalidas {
+    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
+}
+
+/* Tabs desktop */
 #moduloSalidas .sal-tabs {
-    display: flex;
-    gap: 1.5rem;
-    padding: 0 1.25rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
+    display: flex; gap: 1.5rem;
+    padding: 0 1.25rem; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
 }
 #moduloSalidas .sal-tab {
-    padding: 12px 0;
-    font-size: 0.83rem;
-    font-weight: 700;
-    color: var(--subtext);
-    cursor: pointer;
+    padding: 12px 0; font-size: .83rem; font-weight: 700;
+    color: var(--subtext); cursor: pointer;
     border-bottom: 2px solid transparent;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    transition: color 0.15s;
-    white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .04em;
+    transition: color .15s; white-space: nowrap;
 }
 #moduloSalidas .sal-tab:hover { color: var(--text); }
-#moduloSalidas .sal-tab.active {
-    color: var(--primary, #5865F2);
-    border-bottom-color: var(--primary, #5865F2);
-}
+#moduloSalidas .sal-tab.active { color: #5865F2; border-bottom-color: #5865F2; }
 #moduloSalidas .sal-tab-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    background: var(--surface2, var(--bg));
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    font-size: 0.68rem;
-    font-weight: 800;
-    margin-left: 5px;
-    color: var(--subtext);
-    padding: 0 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 9px; font-size: .68rem; font-weight: 800;
+    margin-left: 5px; color: var(--subtext); padding: 0 4px;
 }
 #moduloSalidas .sal-tab.active .sal-tab-badge {
-    background: rgba(88,101,242,0.12);
-    border-color: rgba(88,101,242,0.3);
-    color: var(--primary, #5865F2);
+    background: rgba(88,101,242,.12); border-color: rgba(88,101,242,.3); color: #5865F2;
 }
 
 /* Controles */
 #moduloSalidas .sal-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.6rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0.6rem 1.25rem; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
 }
 #moduloSalidas .sal-filters {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.45rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0.45rem 1.25rem; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
 }
 
 /* Tabla */
 #moduloSalidas .sal-table-wrap { flex: 1 1 0; overflow-y: auto; background: var(--surface); }
-#moduloSalidas table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+#moduloSalidas table { width: 100%; border-collapse: collapse; font-size: .83rem; }
 #moduloSalidas thead th {
-    background: var(--bg);
-    color: var(--subtext);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    white-space: nowrap;
+    background: var(--bg); color: var(--subtext);
+    font-size: .68rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .06em; padding: 10px 12px;
+    border-bottom: 2px solid var(--border);
+    position: sticky; top: 0; z-index: 2; white-space: nowrap;
 }
-#moduloSalidas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+#moduloSalidas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; }
 #moduloSalidas tbody tr:hover { background: var(--bg); }
-#moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,0.06); border-left: 3px solid var(--primary, #5865F2); }
+#moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,.06); border-left: 3px solid #5865F2; }
 #moduloSalidas tbody td { padding: 10px 12px; color: var(--text); }
-#moduloSalidas .td-placeholder { text-align: center; color: var(--subtext); font-size: 0.82rem; padding: 2rem; }
+#moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
 
 /* Badges */
 #moduloSalidas .sal-badge {
     display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+    padding: 3px 9px; border-radius: 20px; font-size: .7rem; font-weight: 700; white-space: nowrap;
 }
-#moduloSalidas .sal-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.8; }
-#moduloSalidas .badge-pendiente  { background: rgba(217,119,6,0.12); color: #d97706; }
-#moduloSalidas .badge-despachado { background: rgba(22,163,74,0.12);  color: #16a34a; }
-#moduloSalidas .badge-anulado    { background: rgba(220,38,38,0.1);   color: #dc2626; }
+#moduloSalidas .sal-badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.8; }
+#moduloSalidas .badge-pendiente  { background: rgba(217,119,6,.12); color: #d97706; }
+#moduloSalidas .badge-despachado { background: rgba(22,163,74,.12);  color: #16a34a; }
+#moduloSalidas .badge-anulado    { background: rgba(220,38,38,.1);   color: #dc2626; }
 
-/* Panel lateral detalle */
+/* Panel lateral */
 #moduloSalidas .sal-detail-panel {
     width: 0; flex-shrink: 0; overflow: hidden;
     background: var(--surface); border-left: 1px solid var(--border);
-    display: flex; flex-direction: column; transition: width 0.25s; max-width: 380px;
+    display: flex; flex-direction: column; transition: width .25s; max-width: 380px;
 }
 #moduloSalidas .sal-detail-panel.open { width: 380px; }
-#moduloSalidas .sal-detail-scroll { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloSalidas .sal-detail-scroll { flex:1; overflow-y:auto; padding:1.25rem; }
 #moduloSalidas .sal-detail-footer {
-    padding: 0.75rem 1rem; border-top: 1px solid var(--border);
-    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    padding:.75rem 1rem; border-top:1px solid var(--border);
+    display:flex; gap:.5rem; flex-wrap:wrap;
 }
-
-/* Secciones detalle */
-#moduloSalidas .sal-sec { border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem; overflow: hidden; }
+#moduloSalidas .sal-sec { border:1px solid var(--border); border-radius:10px; margin-top:1rem; overflow:hidden; }
 #moduloSalidas .sal-sec-hd {
-    background: var(--bg); padding: 8px 12px; font-size: 0.73rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.05em; color: var(--subtext); border-bottom: 1px solid var(--border);
+    background:var(--bg); padding:8px 12px; font-size:.72rem; font-weight:800;
+    text-transform:uppercase; letter-spacing:.06em; color:var(--subtext);
+    border-bottom:1px solid var(--border);
 }
-#moduloSalidas .sal-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
-#moduloSalidas .sal-field:last-child { border-bottom: none; }
-#moduloSalidas .sal-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: 0.78rem; }
-#moduloSalidas .sal-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
+#moduloSalidas .sal-field { display:flex; padding:8px 12px; border-bottom:1px solid var(--border); font-size:.82rem; }
+#moduloSalidas .sal-field:last-child { border-bottom:none; }
+#moduloSalidas .sal-field-lbl { width:40%; color:var(--subtext); font-weight:600; font-size:.78rem; }
+#moduloSalidas .sal-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
 
-/* Drawer Nueva Solicitud */
-#salNuevoBackdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1059; }
-#salNuevoBackdrop.open { display: block; }
+/* Drawer */
+#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:1059; }
+#salNuevoBackdrop.open { display:block; }
 #moduloSalidas .sal-drawer {
-    position: fixed; top: 0; right: 0; width: 560px; max-width: 96vw; height: 100vh;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
-    transform: translateX(100%); transition: transform 0.28s ease; z-index: 1060;
-    display: flex; flex-direction: column;
+    position:fixed; top:0; right:0; width:560px; max-width:96vw; height:100vh;
+    background:var(--surface); border-left:1px solid var(--border);
+    box-shadow:-8px 0 30px rgba(0,0,0,.14);
+    transform:translateX(100%); transition:transform .28s ease; z-index:1060;
+    display:flex; flex-direction:column;
 }
-#moduloSalidas .sal-drawer.open { transform: translateX(0); }
+#moduloSalidas .sal-drawer.open { transform:translateX(0); }
 #moduloSalidas .sal-drawer-hd {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 1.25rem; height: 52px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 1.25rem; height:52px; border-bottom:1px solid var(--border); flex-shrink:0;
 }
-#moduloSalidas .sal-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
-#moduloSalidas .sal-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+#moduloSalidas .sal-drawer-title { font-size:.95rem; font-weight:800; color:var(--text); }
+#moduloSalidas .sal-drawer-body { flex:1; overflow-y:auto; padding:1.25rem; }
 </style>
 
 <!-- Backdrop -->
 <div id="salNuevoBackdrop" onclick="window.salCerrarNuevo()"></div>
+<!-- Backdrop panel detalle mobile -->
+<div id="sal-det-backdrop" onclick="window.salCerrarDetalle()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);
+            backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1054;"></div>
 
-<div id="moduloSalidas">
+<div id="moduloSalidas" class="modulo-wrapper d-flex flex-column h-100">
 
-    <!-- TABS -->
+  <!-- ═══ HEADER MOBILE ════════════════════════════════════════════ -->
+  <div id="sal-m-header" style="display:none;align-items:center;justify-content:space-between;
+       padding:.7rem 1rem 0;flex-shrink:0;">
+    <div style="font-size:1.15rem;font-weight:900;color:var(--text);">
+      <i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Salidas
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn border-0 p-1" onclick="window.salCargar()" style="background:transparent;">
+        <i class="bi bi-arrow-clockwise" style="font-size:1.2rem;color:var(--text);"></i>
+      </button>
+      <div style="width:34px;height:34px;border-radius:10px;background:#5865F2;display:flex;
+                  align-items:center;justify-content:center;font-weight:800;font-size:.78rem;
+                  color:#fff;cursor:pointer;flex-shrink:0;" id="sal-m-avatar">SA</div>
+    </div>
+  </div>
+
+  <!-- ═══ KPI ROW ══════════════════════════════════════════════════ -->
+  <div id="sal-kpi-row" class="bento-kpi-row" style="padding:.65rem 1rem .25rem;"></div>
+
+  <!-- ═══ TABS MOBILE (segmented control) ═════════════════════════ -->
+  <div id="sal-m-tabs" style="display:none;">
+    <button class="sal-m-tab active" id="sal-m-tab-pend" onclick="window.salCambiarTab('pend');window._salSyncMTabs('pend')">
+      Pendientes <span id="sal-m-badge-pend" style="font-size:.58rem;font-weight:800;"></span>
+    </button>
+    <button class="sal-m-tab" id="sal-m-tab-desp" onclick="window.salCambiarTab('desp');window._salSyncMTabs('desp')">
+      Salidas <span id="sal-m-badge-desp" style="font-size:.58rem;font-weight:800;"></span>
+    </button>
+    <button class="sal-m-tab" id="sal-m-tab-anulado" onclick="window.salCambiarTab('anulado');window._salSyncMTabs('anulado')">
+      Anuladas
+    </button>
+  </div>
+
+  <!-- ═══ BARRA BÚSQUEDA COMPACTA (mobile) ════════════════════════ -->
+  <div id="sal-search-compact" style="display:none;padding:.3rem 1rem .65rem;align-items:center;gap:.6rem;flex-shrink:0;">
+    <div style="flex:1;display:flex;align-items:center;
+                background:#f1f5f9;border-radius:99px;
+                box-shadow:0 2px 8px rgba(0,0,0,.06);
+                overflow:hidden;height:46px;padding:0 .9rem;gap:.4rem;">
+      <i class="bi bi-search" style="color:#94a3b8;font-size:.95rem;flex-shrink:0;"></i>
+      <input type="text" id="sal-search-mobile"
+             style="flex:1;border:none;background:transparent;outline:none;
+                    font-size:.92rem;color:var(--text);padding:0;"
+             placeholder="Artículo, N° OT, Placa…"
+             oninput="(function(v){
+               var d=document.getElementById('sal-search');if(d)d.value=v;
+               var btn=document.getElementById('sal-search-clear');
+               if(btn)btn.style.display=v?'flex':'none';
+               window.salFiltrar();
+             })(this.value);">
+      <button id="sal-search-clear"
+              onclick="(function(){
+                var i=document.getElementById('sal-search-mobile');if(i){i.value='';i.focus();}
+                var d=document.getElementById('sal-search');if(d)d.value='';
+                document.getElementById('sal-search-clear').style.display='none';
+                window.salFiltrar();
+              })()"
+              style="display:none;width:22px;height:22px;border-radius:50%;background:#ef4444;
+                     border:none;color:#fff;font-size:.65rem;flex-shrink:0;
+                     align-items:center;justify-content:center;cursor:pointer;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <button onclick="window._salToggleFiltrosMobile()"
+            style="width:46px;height:46px;border-radius:50%;background:#f1f5f9;border:none;
+                   color:var(--subtext);font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;
+                   justify-content:center;cursor:pointer;">
+      <i class="bi bi-funnel-fill"></i>
+    </button>
+  </div>
+  <!-- Filtros mobile expandibles -->
+  <div id="sal-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
+    <input type="text" class="form-control form-control-sm" id="sal-fil-ot-mob"
+           placeholder="N° OT" style="flex:1;min-width:90px;border-radius:12px;text-transform:uppercase;"
+           oninput="(function(){var d=document.getElementById('sal-fil-ot');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
+    <input type="date" class="form-control form-control-sm" id="sal-fil-desde-mob"
+           style="flex:1;min-width:130px;border-radius:12px;"
+           onchange="(function(){var d=document.getElementById('sal-fil-desde');if(d)d.value=this.value;window.salFiltrar();}).call(this)">
+    <input type="date" class="form-control form-control-sm" id="sal-fil-hasta-mob"
+           style="flex:1;min-width:130px;border-radius:12px;"
+           onchange="(function(){var h=document.getElementById('sal-fil-hasta');if(h)h.value=this.value;window.salFiltrar();}).call(this)">
+    <button onclick="(function(){['sal-fil-ot','sal-fil-desde','sal-fil-hasta'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});['sal-fil-ot-mob','sal-fil-desde-mob','sal-fil-hasta-mob'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});window.salFiltrar();})()"
+            style="width:36px;height:36px;border-radius:10px;background:#fee2e2;border:none;
+                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
+  <div id="sal-desktop-header">
+    <!-- TABS DESKTOP -->
     <div class="sal-tabs">
-        <div class="sal-tab active" id="sal-tab-pend" onclick="window.salCambiarTab('pend')">
-            Solicitudes Pendientes
-            <span class="sal-tab-badge" id="sal-badge-pend">0</span>
-        </div>
-        <div class="sal-tab" id="sal-tab-desp" onclick="window.salCambiarTab('desp')">
-            Salidas (Despachadas)
-            <span class="sal-tab-badge" id="sal-badge-desp">0</span>
-        </div>
-        <div class="sal-tab" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado')">
-            Anuladas
-            <span class="sal-tab-badge" id="sal-badge-anulado">0</span>
-        </div>
+      <div class="sal-tab active" id="sal-tab-pend" onclick="window.salCambiarTab('pend')">
+        Solicitudes Pendientes <span class="sal-tab-badge" id="sal-badge-pend">0</span>
+      </div>
+      <div class="sal-tab" id="sal-tab-desp" onclick="window.salCambiarTab('desp')">
+        Salidas (Despachadas) <span class="sal-tab-badge" id="sal-badge-desp">0</span>
+      </div>
+      <div class="sal-tab" id="sal-tab-anulado" onclick="window.salCambiarTab('anulado')">
+        Anuladas <span class="sal-tab-badge" id="sal-badge-anulado">0</span>
+      </div>
     </div>
-
-    <!-- FILA 1: Buscador + acciones -->
+    <!-- CONTROLES ESCRITORIO -->
     <div class="sal-controls">
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-search" style="color:var(--subtext)"></i>
-            </span>
-            <input type="text" class="form-control border-start-0 ps-0"
-                id="sal-search"
-                placeholder="Buscar por Artículo, N° OT, Placa…"
-                oninput="window.salFiltrar()">
-        </div>
-        <input type="text" class="form-control form-control-sm" id="sal-fil-ot"
-            placeholder="N° OT" style="max-width:110px"
-            oninput="window.salFiltrar()">
-        <input type="text" class="form-control form-control-sm" id="sal-fil-placa"
-            placeholder="PLACA" style="max-width:100px; text-transform:uppercase"
-            oninput="this.value=this.value.toUpperCase(); window.salFiltrar()">
-        <input type="month" class="form-control form-control-sm" id="sal-fil-mes"
-            style="max-width:150px" onchange="window.salFiltrar()">
-        <input type="date" class="form-control form-control-sm" id="sal-fil-desde"
-            style="max-width:150px" title="Desde" onchange="window.salFiltrar()">
-        <input type="date" class="form-control form-control-sm" id="sal-fil-hasta"
-            style="max-width:150px" title="Hasta" onchange="window.salFiltrar()">
-        <div style="flex:1"></div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.salCargar()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
-        </button>
+      <div class="input-group input-group-sm" style="max-width:260px;">
+        <span class="input-group-text bg-transparent border-end-0">
+          <i class="bi bi-search" style="color:var(--subtext)"></i>
+        </span>
+        <input type="text" class="form-control border-start-0 ps-0" id="sal-search"
+               placeholder="Artículo, N° OT, Placa…" oninput="window.salFiltrar()">
+      </div>
+      <input type="text" class="form-control form-control-sm" id="sal-fil-ot" placeholder="N° OT"
+             style="max-width:110px" oninput="window.salFiltrar()">
+      <input type="text" class="form-control form-control-sm" id="sal-fil-placa" placeholder="PLACA"
+             style="max-width:100px;text-transform:uppercase"
+             oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
+      <input type="month" class="form-control form-control-sm" id="sal-fil-mes"
+             style="max-width:150px" onchange="window.salFiltrar()">
+      <input type="date" class="form-control form-control-sm" id="sal-fil-desde"
+             style="max-width:150px" onchange="window.salFiltrar()">
+      <input type="date" class="form-control form-control-sm" id="sal-fil-hasta"
+             style="max-width:150px" onchange="window.salFiltrar()">
+      <div style="flex:1"></div>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.salCargar()" title="Actualizar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
     </div>
-
-    <!-- FILA 2: Estado + Exportar + Nueva Solicitud -->
     <div class="sal-filters">
-        <select class="form-select form-select-sm" id="sal-fil-estado"
-            onchange="window.salFiltrar()" style="max-width:200px">
-            <option value="">Todos los estados</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Despachado">Despachado</option>
-            <option value="Anulado">Anulado</option>
-        </select>
-        <div style="flex:1"></div>
-        <button class="btn btn-sm btn-success" onclick="window.salExportar()">
-            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+      <select class="form-select form-select-sm" id="sal-fil-estado"
+              onchange="window.salFiltrar()" style="max-width:200px">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Despachado">Despachado</option>
+        <option value="Anulado">Anulado</option>
+      </select>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm btn-success" onclick="window.salExportar()"
+              style="border-radius:12px;font-weight:700;">
+        <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+      </button>
+      <button class="btn btn-sm btn-primary" onclick="window.salAbrirNuevo()"
+              style="border-radius:12px;font-weight:700;">
+        <i class="bi bi-plus-lg me-1"></i>Nueva Solicitud
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
+  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;">
+
+    <!-- TABLA -->
+    <div class="sal-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Solicitud</th>
+            <th class="col-hide-mob">N° OT</th>
+            <th>Placa</th>
+            <th class="col-hide-mob">Responsable</th>
+            <th class="text-center">Arts.</th>
+            <th class="text-end">Total</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="sal-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- PANEL DETALLE LATERAL -->
+    <div class="sal-detail-panel" id="sal-panel-detalle">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:0 1rem;height:48px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <span style="font-size:.88rem;font-weight:800;color:var(--text);" id="sal-detalle-titulo">Detalle Solicitud</span>
+        <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:var(--subtext);">
+          <i class="bi bi-x-lg"></i>
         </button>
-        <button class="btn btn-sm btn-primary" onclick="window.salAbrirNuevo()">
-            <i class="bi bi-plus-lg me-1"></i>Nueva Solicitud
+      </div>
+      <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
+      <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
+    </div>
+
+  </div>
+
+  <!-- DRAWER: Nueva Solicitud -->
+  <div class="sal-drawer" id="sal-drawer-nuevo">
+    <div class="sal-drawer-hd">
+      <span class="sal-drawer-title"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud</span>
+      <button class="btn btn-sm" onclick="window.salCerrarNuevo()" style="color:var(--subtext)">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="sal-drawer-body">
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
+          <input type="text" class="form-control form-control-sm" id="sal-f-ot"
+                 placeholder="Ej. OT-2026-0001" style="border-radius:12px;min-height:44px;">
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
+          <input type="date" class="form-control form-control-sm" id="sal-f-fecha"
+                 style="border-radius:12px;min-height:44px;">
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
+          <select class="form-select form-select-sm" id="sal-f-tipo" onchange="window.salToggleTipo()"
+                  style="border-radius:12px;min-height:44px;">
+            <option value="Vehiculo">Vehículo</option>
+            <option value="Personal">Personal</option>
+          </select>
+        </div>
+        <div class="col-6" id="sal-row-placa">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
+          <div id="ss-W-sal-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-sal-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:12px;min-height:44px;" onclick="window.SS.toggle('sal-placa')"><span id="ss-L-sal-placa" class="ss-lbl" style="color:#6c757d;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.7rem;margin-left:4px;"></i></div><input type="hidden" id="sal-f-placa" name="sal-f-placa"><div id="ss-D-sal-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-sal-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'sal-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-sal-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable</label>
+          <input type="text" class="form-control form-control-sm" id="sal-f-responsable"
+                 placeholder="Nombre del responsable / solicitante"
+                 list="sal-list-personal" autocomplete="off"
+                 style="border-radius:12px;min-height:44px;">
+          <datalist id="sal-list-personal"></datalist>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
+          <input type="text" class="form-control form-control-sm" id="sal-f-obs"
+                 placeholder="Motivo, referencia, notas…"
+                 style="border-radius:12px;min-height:44px;">
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);">
+
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold" style="font-size:.83rem;color:var(--text);">
+          <i class="bi bi-list-ul me-1"></i>Artículos
+        </span>
+        <button type="button"
+                style="padding:.4rem .9rem;border-radius:12px;border:1.5px solid #5865F2;
+                       background:transparent;color:#5865F2;font-weight:700;font-size:.78rem;cursor:pointer;"
+                onclick="window._salAgregarItem()">
+          <i class="bi bi-plus-lg me-1"></i>Agregar
         </button>
+      </div>
+      <div style="overflow-x:auto;border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+        <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
+          <thead style="background:var(--bg);">
+            <tr>
+              <th style="min-width:220px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
+              <th style="width:80px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cantidad</th>
+              <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Costo Unit.</th>
+              <th style="width:100px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Importe</th>
+              <th style="width:38px;"></th>
+            </tr>
+          </thead>
+          <tbody id="sal-items-tbody"></tbody>
+          <tfoot style="background:var(--bg);">
+            <tr>
+              <td colspan="3" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">Total:</td>
+              <td style="font-weight:800;color:#16a34a;padding:10px 12px;" id="sal-items-total">S/. 0.00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <datalist id="sal-inv-list"></datalist>
+
+      <button style="width:100%;margin-top:1rem;border-radius:14px;border:none;background:#5865F2;
+                     color:#fff;font-weight:700;font-size:.9rem;min-height:48px;cursor:pointer;
+                     display:flex;align-items:center;justify-content:center;gap:.4rem;"
+              onclick="window.salGuardarNuevo()">
+        <i class="bi bi-save"></i>Guardar Solicitud
+      </button>
     </div>
+  </div>
 
-    <!-- CONTENEDOR PRINCIPAL -->
-    <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+</div>
 
-        <!-- TABLA -->
-        <div class="sal-table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID SOLICITUD</th>
-                        <th>N° OT</th>
-                        <th>PLACA</th>
-                        <th>RESPONSABLE</th>
-                        <th>ARTÍCULOS</th>
-                        <th>TOTAL</th>
-                        <th>ESTADO</th>
-                    </tr>
-                </thead>
-                <tbody id="sal-tbody"></tbody>
-            </table>
-        </div>
-
-        <!-- PANEL DETALLE LATERAL -->
-        <div class="sal-detail-panel" id="sal-panel-detalle">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
-                <span style="font-size:0.88rem; font-weight:800; color:var(--text);" id="sal-detalle-titulo">Detalle Solicitud</span>
-                <button class="btn btn-sm" onclick="window.salCerrarDetalle()" style="color:var(--subtext);">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <div class="sal-detail-scroll" id="sal-detalle-scroll"></div>
-            <div class="sal-detail-footer" id="sal-detalle-footer" style="display:none;"></div>
-        </div>
-
-    </div>
-
-    <!-- DRAWER: Nueva Solicitud -->
-    <div class="sal-drawer" id="sal-drawer-nuevo">
-        <div class="sal-drawer-hd">
-            <span class="sal-drawer-title">Nueva Solicitud de Materiales</span>
-            <button class="btn btn-sm" onclick="window.salCerrarNuevo()" style="color:var(--subtext)">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="sal-drawer-body">
-
-            <!-- Cabecera del documento -->
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">N° OT *</label>
-                    <input type="text" class="form-control form-control-sm" id="sal-f-ot"
-                        placeholder="Ej. OT-2026-0001">
-                </div>
-                <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Fecha *</label>
-                    <input type="date" class="form-control form-control-sm" id="sal-f-fecha">
-                </div>
-                <div class="col-6">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tipo Destino</label>
-                    <select class="form-select form-select-sm" id="sal-f-tipo" onchange="window.salToggleTipo()">
-                        <option value="Vehiculo">Vehículo</option>
-                        <option value="Personal">Personal</option>
-                    </select>
-                </div>
-                <div class="col-6" id="sal-row-placa">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Placa</label>
-                    <div id="ss-W-sal-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-sal-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="window.SS.toggle('sal-placa')"><span id="ss-L-sal-placa" class="ss-lbl" style="color:#6c757d;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.7rem;margin-left:4px;"></i></div><input type="hidden" id="sal-f-placa" name="sal-f-placa"><div id="ss-D-sal-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-sal-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'sal-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-sal-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
-                </div>
-                <div class="col-12">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Responsable</label>
-                    <input type="text" class="form-control form-control-sm" id="sal-f-responsable"
-                        placeholder="Nombre del responsable / solicitante" list="sal-list-personal" autocomplete="off">
-                    <datalist id="sal-list-personal"></datalist>
-                </div>
-                <div class="col-12">
-                    <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Observaciones</label>
-                    <input type="text" class="form-control form-control-sm" id="sal-f-obs"
-                        placeholder="Motivo, referencia, notas…">
-                </div>
-            </div>
-
-            <hr style="border-color:var(--border);">
-
-            <!-- Grid de artículos -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold" style="font-size:0.83rem; color:var(--text);">
-                    <i class="bi bi-list-ul me-1"></i>Artículos
-                </span>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._salAgregarItem()">
-                    <i class="bi bi-plus"></i> Agregar
-                </button>
-            </div>
-            <div style="overflow-x:auto;">
-                <table class="table table-sm table-bordered" style="font-size:0.8rem; min-width:480px;">
-                    <thead style="background:var(--bg);">
-                        <tr>
-                            <th style="min-width:220px;">Artículo</th>
-                            <th style="width:80px;">Cantidad</th>
-                            <th style="width:110px;">Costo Unit.</th>
-                            <th style="width:100px;">Importe</th>
-                            <th style="width:38px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="sal-items-tbody"></tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" style="text-align:right; font-weight:700; font-size:0.82rem; color:var(--subtext);">Total:</td>
-                            <td style="font-weight:800; color:#16a34a;" id="sal-items-total">S/. 0.00</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            <datalist id="sal-inv-list"></datalist>
-
-            <button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.salGuardarNuevo()">
-                <i class="bi bi-save me-1"></i>Guardar Solicitud
-            </button>
-
-        </div>
-    </div>
-
+<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+<div id="sal-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1rem;z-index:1041;">
+  <button onclick="window.salAbrirNuevo()"
+          style="width:60px;height:60px;border-radius:18px;background:#5865F2;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(88,101,242,.5);
+                 display:flex;align-items:center;justify-content:center;
+                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
+    <i class="bi bi-plus-lg"></i>
+  </button>
 </div>
