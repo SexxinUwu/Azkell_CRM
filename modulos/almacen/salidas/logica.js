@@ -737,18 +737,23 @@ window._salRenderKPIs = function(data) {
     var esteMes = data.filter(function(d){
         return (d.fecha || '').slice(0,7) === mesActual && d.estado === 'Despachado';
     }).length;
+    var card = 'flex:0 0 auto;min-width:130px;display:flex;justify-content:space-between;align-items:center;' +
+               'padding:.85rem 1rem;border-radius:18px;border:1.5px solid;gap:.6rem;';
+    var lbl  = 'font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem;';
+    var num  = 'font-size:1.6rem;font-weight:900;line-height:1;';
+    var ico  = 'width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;';
     el.innerHTML =
-        '<div class="bento-kpi accent-yellow">' +
-          '<div><div class="bento-kpi-label">Pendientes</div><div class="bento-kpi-num">' + pend + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-hourglass-split fs-5"></i></div>' +
+        '<div style="' + card + 'background:#fffbeb;border-color:#fde68a;">' +
+          '<div><div style="' + lbl + 'color:#92400e;">Pendientes</div><div style="' + num + 'color:#d97706;">' + pend + '</div></div>' +
+          '<div style="' + ico + 'background:#fef3c7;color:#d97706;"><i class="bi bi-hourglass-split" style="font-size:1.2rem;"></i></div>' +
         '</div>' +
-        '<div class="bento-kpi accent-dark">' +
-          '<div><div class="bento-kpi-label">Despachadas</div><div class="bento-kpi-num">' + desp + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-check2-circle fs-5"></i></div>' +
+        '<div style="' + card + 'background:#1e293b;border-color:#1e293b;">' +
+          '<div><div style="' + lbl + 'color:#94a3b8;">Despachadas</div><div style="' + num + 'color:#fff;">' + desp + '</div></div>' +
+          '<div style="' + ico + 'background:rgba(255,255,255,.12);color:#fff;"><i class="bi bi-check2-circle" style="font-size:1.2rem;"></i></div>' +
         '</div>' +
-        '<div class="bento-kpi">' +
-          '<div><div class="bento-kpi-label">Este Mes</div><div class="bento-kpi-num">' + esteMes + '</div></div>' +
-          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb;"><i class="bi bi-calendar-check fs-5"></i></div>' +
+        '<div style="' + card + 'background:var(--surface,#fff);border-color:var(--border,#e2e8f0);">' +
+          '<div><div style="' + lbl + 'color:var(--subtext,#64748b);">Este Mes</div><div style="' + num + 'color:var(--text,#0f172a);">' + esteMes + '</div></div>' +
+          '<div style="' + ico + 'background:#eff6ff;color:#2563eb;"><i class="bi bi-calendar-check" style="font-size:1.2rem;"></i></div>' +
         '</div>';
     // Sync badges mobile
     var bP = document.getElementById('sal-m-badge-pend');
