@@ -1126,15 +1126,17 @@ window._invMobileInit = function() {
             : email.substring(0, 2).toUpperCase();
         av.textContent = initials;
     }
-    // Limpiar clases SPA cuando el módulo se desmonte (MutationObserver)
+    // Renderizar bottom nav dinámico
+    window._invRenderBottomNav();
+    // MutationObserver: limpiar al salir del módulo
     var rootEl = document.getElementById('root-dinamico');
     if (rootEl && !window._invMobileObserver) {
         window._invMobileObserver = new MutationObserver(function() {
             if (!document.getElementById('mod-inventario')) {
-                // Restaurar topbar al salir del módulo
                 document.querySelectorAll('.topbar').forEach(function(el) {
                     el.style.removeProperty('display');
                 });
+                window._invCerrarScanner();
                 if (window._invMobileObserver) {
                     window._invMobileObserver.disconnect();
                     window._invMobileObserver = null;
@@ -1143,6 +1145,154 @@ window._invMobileInit = function() {
         });
         window._invMobileObserver.observe(rootEl, { childList: true });
     }
+};
+
+// ── Bottom Nav dinámico por permisos ─────────────────────────────
+window._invRenderBottomNav = function() {
+    var nav = document.getElementById('inv-bottom-nav');
+    if (!nav) return;
+    var perms = {};
+    try { perms = JSON.parse(localStorage.getItem('fleet_permisos') || '{}'); } catch(e) {}
+    var isAdmin = perms.admin === true;
+    var TABS = [
+        { id: 'dashboard',  icon: 'bi-house-fill',            label: 'Inicio',  ruta: 'dashboard',                   perm: null    },
+        { id: 'inventario', icon: 'bi-box-seam-fill',         label: 'Stock',   ruta: 'almacen/inventario',           perm: 'inv'   },
+        { id: 'insp',       icon: 'bi-clipboard2-check-fill', label: 'Insp.',   ruta: 'Mantenimiento/inspecciones',   perm: 'insp'  },
+        { id: 'flota',      icon: 'bi-truck-flatbed',         label: 'Flota',   ruta: 'flota/status',                 perm: 'status'},
+        { id: 'gps',        icon: 'bi-geo-alt-fill',          label: 'GPS',     ruta: 'flota/ubicacion',              perm: 'gps'   },
+        { id: 'mas',        icon: 'bi-grid-3x3-gap-fill',     label: 'Más',     ruta: null,                           perm: null    }
+    ];
+    var visibles = TABS.filter(function(t) {
+        if (!t.perm) return true;
+        if (isAdmin) return true;
+        var p = perms[t.perm];
+        return p && (p.l === 1 || p === true);
+    });
+    if (visibles.length > 5) visibles = visibles.slice(0, 4).concat([visibles[visibles.length - 1]]);
+    nav.innerHTML = visibles.map(function(t) {
+        var isActive = t.id === 'inventario';
+        var color = isActive ? '#2563eb' : 'var(--subtext)';
+        var onclick = t.ruta
+            ? 'cargarModuloAislado(\'' + t.ruta + '\')'
+            : 'window._invBottomNavMas()';
+        return '<button onclick="' + onclick + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:' + color + ';">' +
+               '<i class="bi ' + t.icon + '" style="font-size:1.3rem;"></i>' +
+               '<span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">' + t.label + '</span>' +
+               '</button>';
+    }).join('');
+};
+
+window._invBottomNavMas = function() {
+    var toggle = document.querySelector('[data-action="sidebar-toggle"], #sidebar-toggle, .sidebar-toggle, [onclick*="toggleSidebar"]');
+    if (toggle) toggle.click();
+};
+
+// ── Avatar popup mobile ───────────────────────────────────────────
+window._invAvatarPopup = function() {
+    var popup = document.getElementById('inv-avatar-popup');
+    var bd    = document.getElementById('inv-avatar-popup-bd');
+    if (!popup) return;
+    var email  = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
+    var rol    = localStorage.getItem('fleet_rol') || 'Usuario';
+    var partes = email.split('@')[0].split(/[._-]/);
+    var inits  = partes.length >= 2 ? (partes[0][0] + partes[1][0]).toUpperCase() : email.substr(0, 2).toUpperCase();
+    var nombre = partes.map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+    var elAv = document.getElementById('iap-avatar'); if (elAv) elAv.textContent = inits;
+    var elNm = document.getElementById('iap-nombre'); if (elNm) elNm.textContent = nombre;
+    var elRl = document.getElementById('iap-rol');    if (elRl) elRl.textContent = rol.charAt(0).toUpperCase() + rol.slice(1);
+    var elEm = document.getElementById('iap-email');  if (elEm) elEm.textContent = email;
+    popup.style.display = 'block';
+    if (bd) bd.style.display = 'block';
+};
+window._invAvatarPopupClose = function() {
+    var popup = document.getElementById('inv-avatar-popup');
+    var bd    = document.getElementById('inv-avatar-popup-bd');
+    if (popup) popup.style.display = 'none';
+    if (bd)    bd.style.display = 'none';
+};
+
+// ── Scanner QR / Código de Barras ────────────────────────────────
+window._invScannerTarget = window._invScannerTarget || null;
+window._invScannerStream = window._invScannerStream || null;
+window._invScannerRAF    = window._invScannerRAF    || null;
+
+window._invAbrirScanner = function(target) {
+    window._invScannerTarget = target;
+    var overlay = document.getElementById('inv-scanner-overlay');
+    var video   = document.getElementById('inv-scanner-video');
+    if (!overlay || !video) return;
+    overlay.style.display = 'flex';
+    if (typeof jsQR === 'undefined') {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+        s.onload = function() { window._invIniciarCamara(video); };
+        document.head.appendChild(s);
+    } else {
+        window._invIniciarCamara(video);
+    }
+};
+
+window._invIniciarCamara = function(video) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        window._invCerrarScanner();
+        alert('Tu navegador no soporta acceso a cámara.');
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            window._invScannerStream = stream;
+            video.srcObject = stream;
+            video.play();
+            window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
+        })
+        .catch(function(err) {
+            window._invCerrarScanner();
+            alert('No se pudo acceder a la cámara: ' + err.message);
+        });
+};
+
+window._invScannerTick = function() {
+    var video  = document.getElementById('inv-scanner-video');
+    var canvas = document.getElementById('inv-scanner-canvas');
+    if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
+        return;
+    }
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    if (code && code.data) {
+        window._invOnScanResult(code.data);
+        return;
+    }
+    window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
+};
+
+window._invOnScanResult = function(valor) {
+    window._invCerrarScanner();
+    if (window._invScannerTarget === 'form') {
+        var campo = document.getElementById('inv-f-codigo-barras');
+        if (campo) { campo.value = valor; campo.dispatchEvent(new Event('input')); }
+    } else {
+        var inv = document.getElementById('inv-buscar');
+        var mob = document.getElementById('inv-m-buscar');
+        if (inv) inv.value = valor;
+        if (mob) mob.value = valor;
+        window.filtrarInventario();
+    }
+};
+
+window._invCerrarScanner = function() {
+    if (window._invScannerRAF) { cancelAnimationFrame(window._invScannerRAF); window._invScannerRAF = null; }
+    if (window._invScannerStream) {
+        window._invScannerStream.getTracks().forEach(function(t) { t.stop(); });
+        window._invScannerStream = null;
+    }
+    var overlay = document.getElementById('inv-scanner-overlay');
+    if (overlay) overlay.style.display = 'none';
 };
 
 window._invFABToggle = function() {
@@ -1187,13 +1337,4 @@ window._invMobileSearchToggle = function() {
     }
 };
 
-window._invBottomNav = function(tab) {
-    if (tab === 'stock')  return; // ya estamos aquí
-    if (tab === 'kardex') { cargarModuloAislado('almacen/kardex'); return; }
-    if (tab === 'flota')  { cargarModuloAislado('flota/status');   return; }
-    if (tab === 'mas') {
-        // Navegar al menú principal abriendo el sidebar
-        var sidebarToggle = document.getElementById('sidebar-toggle') || document.querySelector('[onclick*="toggleSidebar"]');
-        if (sidebarToggle) sidebarToggle.click();
-    }
-};
+// _invBottomNav reemplazado por _invRenderBottomNav (dinámico por permisos)
