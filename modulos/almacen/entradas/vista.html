@@ -165,21 +165,29 @@
   </div>
   <!-- Filtros fecha mobile (expandible) -->
   <div id="ent-filtros-mobile" style="display:none;padding:0 1rem .65rem;gap:.5rem;flex-wrap:wrap;align-items:center;">
-    <input type="date" class="form-control form-control-sm" id="ent-fil-desde-mob"
-           style="flex:1;min-width:130px;border-radius:12px;" title="Desde"
-           onchange="(function(){
-             var d=document.getElementById('ent-fil-desde');if(d)d.value=this.value;
-             window.filtrarEntradas();
-           }).call(this)">
-    <input type="date" class="form-control form-control-sm" id="ent-fil-hasta-mob"
-           style="flex:1;min-width:130px;border-radius:12px;" title="Hasta"
-           onchange="(function(){
-             var h=document.getElementById('ent-fil-hasta');if(h)h.value=this.value;
-             window.filtrarEntradas();
-           }).call(this)">
+    <div style="flex:1;min-width:130px;">
+      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Desde</div>
+      <input type="date" id="ent-fil-desde-mob"
+             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
+             onchange="(function(){
+               var d=document.getElementById('ent-fil-desde');if(d)d.value=this.value;
+               window.filtrarEntradas();
+             }).call(this)">
+    </div>
+    <div style="flex:1;min-width:130px;">
+      <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:3px;">Hasta</div>
+      <input type="date" id="ent-fil-hasta-mob"
+             style="width:100%;height:40px;border:1.5px solid var(--border);border-radius:12px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;"
+             onchange="(function(){
+               var h=document.getElementById('ent-fil-hasta');if(h)h.value=this.value;
+               window.filtrarEntradas();
+             }).call(this)">
+    </div>
     <button onclick="window._entLimpiarFechas()"
-            style="width:36px;height:36px;border-radius:10px;background:#fee2e2;border:none;
-                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;">
+            style="width:40px;height:40px;border-radius:12px;background:#fee2e2;border:none;
+                   color:#ef4444;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:17px;">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -194,8 +202,14 @@
         <input type="text" class="form-control border-start-0 ps-0" id="ent-buscar"
                placeholder="Código, proveedor, documento…" oninput="window.filtrarEntradas()">
       </div>
-      <input type="date" class="form-control form-control-sm" id="ent-fil-desde" style="max-width:150px" onchange="window.filtrarEntradas()">
-      <input type="date" class="form-control form-control-sm" id="ent-fil-hasta" style="max-width:150px" onchange="window.filtrarEntradas()">
+      <input type="date" id="ent-fil-desde"
+             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
+             onchange="window.filtrarEntradas()">
+      <input type="date" id="ent-fil-hasta"
+             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
+                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
+             onchange="window.filtrarEntradas()">
       <button class="btn btn-xs btn-outline-secondary" onclick="window._entLimpiarFechas()" title="Limpiar">
         <i class="bi bi-x-lg"></i>
       </button>
@@ -319,16 +333,14 @@
           </div>
           <div class="col-md-3">
             <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Moneda</label>
-            <select class="form-select" id="ent-f-moneda" onchange="window._entActualizarTC()" style="border-radius:12px;min-height:44px;">
-              <option value="PEN">PEN (S/)</option>
-              <option value="USD">USD ($)</option>
-            </select>
+            <div class="position-relative">
+              <select class="form-select" id="ent-f-moneda" style="border-radius:12px;min-height:44px;">
+                <option value="PEN">PEN (S/)</option>
+                <option value="USD">USD ($)</option>
+              </select>
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Tipo de Cambio</label>
-            <input type="number" class="form-control" id="ent-f-tc" step="0.001" placeholder="3.700" style="border-radius:12px;min-height:44px;">
-          </div>
-          <div class="col-md-6">
+          <div class="col-12">
             <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
             <input type="text" class="form-control" id="ent-f-obs" placeholder="Notas, condiciones de compra…" style="border-radius:12px;min-height:44px;">
           </div>
