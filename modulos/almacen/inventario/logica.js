@@ -107,12 +107,17 @@ window._invCargarUnidades = function() {
             window._invUnidadesData = data || [];
             var prev = window._cbGet('inv-f-unidad');
             var items = [{ value: '', label: '— Sin unidad —' }].concat(
-                data.map(function(u) { return { value: u.nombre, label: u.descripcion || u.nombre }; })
+                data.map(function(u) {
+                    var desc = u.descripcion || u.nombre;
+                    return { value: desc, label: desc };
+                })
             );
             window._cbInit('inv-f-unidad', items, 'Buscar unidad…');
             if (prev) {
-                var uObj = data.find(function(u) { return u.nombre === prev; });
-                window._cbSet('inv-f-unidad', prev, uObj ? (uObj.descripcion || prev) : prev);
+                // prev puede ser código (KG) o descripción (Kilogramos)
+                var uObj = data.find(function(u) { return u.nombre === prev || u.descripcion === prev; });
+                var uDesc = uObj ? (uObj.descripcion || uObj.nombre) : prev;
+                window._cbSet('inv-f-unidad', uDesc, uDesc);
             }
         })
         .catch(function() {});
@@ -671,7 +676,14 @@ window.abrirModalInventario = function(id) {
         _invSetField('inv-f-codigo-articulo',   item.codigo_articulo);
         _invSetField('inv-f-marca',             item.marca);
         _invSetField('inv-f-familia',           item.familia);
-        _invSetField('inv-f-unidad',            item.unidad);
+        // Unidad: mostrar descripción aunque en BD esté el código
+        (function() {
+            var uObjE = (window._invUnidadesData || []).find(function(u) {
+                return u.nombre === item.unidad || u.descripcion === item.unidad;
+            });
+            var uDescE = uObjE ? (uObjE.descripcion || uObjE.nombre) : (item.unidad || '');
+            window._cbSet('inv-f-unidad', uDescE, uDescE);
+        })();
         _invSetField('inv-f-moneda',            item.moneda || 'PEN');
         _invSetField('inv-f-costo',             item.costo_referencial);
         _invSetField('inv-f-estado-art',        item.estado_art || 'Activo');
@@ -942,7 +954,7 @@ window.descargarPlantillaInventario = function() {
 
     var marcasList  = (window._invMarcasFabData || []).map(function(m) { return m.nombre; }).join(',');
     var familiaList = (window._invFamiliasData  || []).map(function(f) { return f.nombre; }).join(',');
-    var unidadList  = (window._invUnidadesData  || []).map(function(u) { return u.nombre; }).join(',');
+    var unidadList  = (window._invUnidadesData  || []).map(function(u) { return u.descripcion || u.nombre; }).join(',');
     var sistList    = (window._invSistemasData  || []).map(function(s) { return s.nombre; }).join(',');
 
     ws['!dataValidation'] = {};
@@ -1218,17 +1230,11 @@ window._invScannerRAF    = window._invScannerRAF    || null;
 
 window._invAbrirScanner = function(target) {
     window._invScannerTarget = target;
-    // En mobile: usar cámara nativa (mejor calidad, enfoque automático)
-    var esMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (esMobile) {
-        window._invScannerNativo();
-        return;
-    }
-    // Desktop: usar getUserMedia con overlay
     var overlay = document.getElementById('inv-scanner-overlay');
     var video   = document.getElementById('inv-scanner-video');
     if (!overlay || !video) return;
     overlay.style.display = 'flex';
+    // Cargar jsQR como fallback (no bloquea si BarcodeDetector está disponible)
     if (typeof jsQR === 'undefined') {
         var s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
@@ -1239,66 +1245,62 @@ window._invAbrirScanner = function(target) {
     }
 };
 
-// Cámara nativa del teléfono (file input capture)
-window._invScannerNativo = function() {
-    var cargarJsQR = function(cb) {
-        if (typeof jsQR !== 'undefined') { cb(); return; }
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
-        s.onload = cb;
-        document.head.appendChild(s);
-    };
-    cargarJsQR(function() {
-        var input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.setAttribute('capture', 'environment');
-        input.style.display = 'none';
-        document.body.appendChild(input);
-        input.addEventListener('change', function() {
-            if (!input.files || !input.files[0]) { document.body.removeChild(input); return; }
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    canvas.width = img.width; canvas.height = img.height;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    var imageData = ctx.getImageData(0, 0, img.width, img.height);
-                    var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-                    if (code && code.data) {
-                        window._invOnScanResult(code.data);
-                    } else {
-                        alert('No se detectó ningún código. Intenta enfocar bien y vuelve a intentar.');
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
-            document.body.removeChild(input);
-        });
-        input.click();
-    });
-};
-
 window._invIniciarCamara = function(video) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         window._invCerrarScanner();
-        alert('Tu navegador no soporta acceso a cámara.');
+        alert('Tu navegador no soporta acceso a cámara en tiempo real.');
         return;
     }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(function(stream) {
-            window._invScannerStream = stream;
-            video.srcObject = stream;
-            video.play();
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: 'environment',
+            width:  { ideal: 1280, min: 640 },
+            height: { ideal: 720,  min: 480 }
+        }
+    }).then(function(stream) {
+        window._invScannerStream = stream;
+        video.srcObject = stream;
+        video.play();
+        // BarcodeDetector nativo (Android Chrome, S25 Ultra etc.) — mucho más rápido
+        if ('BarcodeDetector' in window) {
+            window._invScannerConDetector(video);
+        } else {
             window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
-        })
-        .catch(function(err) {
-            window._invCerrarScanner();
-            alert('No se pudo acceder a la cámara: ' + err.message);
-        });
+        }
+    }).catch(function(err) {
+        window._invCerrarScanner();
+        alert('No se pudo acceder a la cámara: ' + err.message);
+    });
+};
+
+// BarcodeDetector nativo (Android Chrome) — detecta automáticamente sin foto
+window._invScannerConDetector = function(video) {
+    var formats = ['ean_13','ean_8','code_128','code_39','code_93','qr_code','upc_a','upc_e','data_matrix'];
+    BarcodeDetector.getSupportedFormats().then(function(supported) {
+        var useFormats = formats.filter(function(f) { return supported.includes(f); });
+        if (!useFormats.length) useFormats = supported;
+        var detector = new BarcodeDetector({ formats: useFormats });
+        var tick = function() {
+            var overlay = document.getElementById('inv-scanner-overlay');
+            if (!overlay || overlay.style.display === 'none') return;
+            if (video.readyState < video.HAVE_ENOUGH_DATA) {
+                window._invScannerRAF = requestAnimationFrame(tick); return;
+            }
+            detector.detect(video).then(function(codes) {
+                if (codes.length > 0) {
+                    window._invOnScanResult(codes[0].rawValue);
+                } else {
+                    window._invScannerRAF = requestAnimationFrame(tick);
+                }
+            }).catch(function() {
+                window._invScannerRAF = requestAnimationFrame(tick);
+            });
+        };
+        window._invScannerRAF = requestAnimationFrame(tick);
+    }).catch(function() {
+        // Si BarcodeDetector falla, usar jsQR
+        window._invScannerRAF = requestAnimationFrame(window._invScannerTick);
+    });
 };
 
 window._invScannerTick = function() {
