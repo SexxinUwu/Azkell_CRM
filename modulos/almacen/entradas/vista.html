@@ -367,6 +367,55 @@
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
             backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:1058;"></div>
 
+<!-- ═══ QR SCANNER OVERLAY ══════════════════════════════════════ -->
+<div id="ent-qr-overlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+            z-index:2100;flex-direction:column;align-items:center;justify-content:center;">
+
+  <!-- Header -->
+  <div style="position:absolute;top:0;left:0;right:0;padding:1rem 1.25rem;
+              display:flex;align-items:center;justify-content:space-between;">
+    <div style="color:#fff;font-size:1rem;font-weight:800;">
+      <i class="bi bi-qr-code-scan me-2" style="color:#16a34a;"></i>Escanear Artículo
+    </div>
+    <button onclick="window._entCerrarQR()"
+            style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);
+                   border:none;color:#fff;font-size:.9rem;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <!-- Marco visual + reader -->
+  <div style="position:relative;">
+    <div style="width:280px;height:280px;border-radius:20px;overflow:hidden;background:#000;">
+      <div id="ent-qr-reader" style="width:280px;"></div>
+    </div>
+    <!-- Esquinas decorativas -->
+    <div style="position:absolute;top:-2px;left:-2px;width:28px;height:28px;
+                border-top:3px solid #16a34a;border-left:3px solid #16a34a;border-radius:6px 0 0 0;"></div>
+    <div style="position:absolute;top:-2px;right:-2px;width:28px;height:28px;
+                border-top:3px solid #16a34a;border-right:3px solid #16a34a;border-radius:0 6px 0 0;"></div>
+    <div style="position:absolute;bottom:-2px;left:-2px;width:28px;height:28px;
+                border-bottom:3px solid #16a34a;border-left:3px solid #16a34a;border-radius:0 0 0 6px;"></div>
+    <div style="position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;
+                border-bottom:3px solid #16a34a;border-right:3px solid #16a34a;border-radius:0 0 6px 0;"></div>
+  </div>
+
+  <div id="ent-qr-status"
+       style="color:#94a3b8;font-size:.82rem;margin-top:1.25rem;text-align:center;
+              max-width:260px;line-height:1.5;">
+    Apunta la cámara al código QR del artículo
+  </div>
+
+  <button onclick="window._entCerrarQR()"
+          style="margin-top:1.5rem;padding:.55rem 1.5rem;border-radius:12px;
+                 background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);
+                 color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;">
+    Cancelar
+  </button>
+</div>
+
 <!-- ═══ PANEL NUEVA ENTRADA (fullscreen slide) ═══════════════════ -->
 <div id="modal-entrada" class="ent-panel-full">
 
@@ -464,12 +513,21 @@
       <div style="font-size:.68rem;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:.08em;">
         <i class="bi bi-list-ul me-1" style="color:#16a34a;"></i>Artículos
       </div>
-      <button type="button" onclick="window._entAgregarItem()"
-              style="display:flex;align-items:center;gap:.35rem;padding:.35rem .85rem;
-                     border-radius:12px;border:1.5px solid #16a34a;background:#f0fdf4;
-                     color:#16a34a;font-weight:800;font-size:.72rem;cursor:pointer;">
-        <i class="bi bi-plus-lg"></i>Agregar
-      </button>
+      <div style="display:flex;gap:.5rem;">
+        <button type="button" onclick="window._entAbrirQR()"
+                style="display:flex;align-items:center;gap:.35rem;padding:.35rem .85rem;
+                       border-radius:12px;border:1.5px solid #2563eb;background:#eff6ff;
+                       color:#2563eb;font-weight:800;font-size:.72rem;cursor:pointer;"
+                title="Escanear QR del artículo">
+          <i class="bi bi-qr-code-scan"></i>QR
+        </button>
+        <button type="button" onclick="window._entAgregarItem()"
+                style="display:flex;align-items:center;gap:.35rem;padding:.35rem .85rem;
+                       border-radius:12px;border:1.5px solid #16a34a;background:#f0fdf4;
+                       color:#16a34a;font-weight:800;font-size:.72rem;cursor:pointer;">
+          <i class="bi bi-plus-lg"></i>Agregar
+        </button>
+      </div>
     </div>
 
     <!-- Cards de artículos -->
