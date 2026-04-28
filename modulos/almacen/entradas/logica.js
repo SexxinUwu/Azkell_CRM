@@ -115,18 +115,20 @@ window._entActualizarTC = function() {
     if (el) { var old = el.textContent.replace(/^[S\$\/\s\.]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
 };
 
-// ── Grid items ────────────────────────────────────────────────────
+// ── Grid items (card-based) ───────────────────────────────────────
 window._entAgregarItem = function() {
-    var tbody = document.getElementById('tbody-ent-items');
-    if (!tbody) return;
-    var idx = window._entItemIdx++;
+    var container = document.getElementById('ent-items-cards');
+    if (!container) return;
+    var idx  = window._entItemIdx++;
     var cbId = 'ent-art-' + idx;
-    var tr = document.createElement('tr');
-    tr.id = 'ent-item-' + idx;
-    tr.innerHTML =
-        '<td style="min-width:220px;">' +
-            '<div class="position-relative">' +
-                '<input type="text" id="' + cbId + '-txt" class="form-control form-control-sm ent-item-desc" data-idx="' + idx + '"' +
+    var card = document.createElement('div');
+    card.id        = 'ent-item-' + idx;
+    card.className = 'ent-item-card';
+    card.innerHTML =
+        // Fila 1: búsqueda artículo + botón eliminar
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+            '<div style="flex:1;position:relative;">' +
+                '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
                     ' placeholder="Buscar artículo…" autocomplete="off"' +
                     ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
                     ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
@@ -134,14 +136,34 @@ window._entAgregarItem = function() {
                 '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
                 '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
             '</div>' +
-        '</td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-cu" data-idx="' + idx + '" value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm ent-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
-        '<td><button type="button" style="width:28px;height:28px;border-radius:8px;border:none;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;" onclick="window._entQuitarItem(' + idx + ')"><i class="bi bi-x-lg"></i></button></td>';
-    tbody.appendChild(tr);
+            '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
+                ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
+                'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
+                '<i class="bi bi-x-lg"></i>' +
+            '</button>' +
+        '</div>' +
+        // Fila 2: Cant / Costo / Importe
+        '<div style="display:grid;grid-template-columns:80px 1fr 1fr;gap:8px;">' +
+            '<div>' +
+                '<div class="ent-field-label">Cant.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
+                    ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ')">' +
+            '</div>' +
+            '<div>' +
+                '<div class="ent-field-label">Costo Unit.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-cu" data-idx="' + idx + '"' +
+                    ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ')">' +
+            '</div>' +
+            '<div>' +
+                '<div class="ent-field-label">Importe</div>' +
+                '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
+                    ' value="0" readonly style="background:#f1f5f9;color:#64748b;">' +
+            '</div>' +
+        '</div>' +
+        // Fila 3: alerta de precio (oculta por defecto)
+        '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
+    container.appendChild(card);
 
-    // Cargar inventario si no está cargado
     if (!window._entInvData.length) {
         window._entCargarInv(function() { window._entInitCbItem(idx, cbId); });
     } else {
@@ -157,8 +179,13 @@ window._entInitCbItem = function(idx, cbId) {
     window._cbOnSelect(cbId, function(val) {
         var item = (window._entInvData || []).find(function(d) { return d.id === val; });
         if (item) {
+            var oldCost = parseFloat(item.costo_referencial || 0);
             var cuEl = document.querySelector('.ent-item-cu[data-idx="' + idx + '"]');
-            if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._entCalcImporte(idx); }
+            if (cuEl) {
+                cuEl.value = oldCost.toFixed(2);
+                cuEl.dataset.oldCost = oldCost;
+                window._entCalcImporte(idx);
+            }
         }
     });
 };
@@ -174,10 +201,39 @@ window._entCargarInv = function(cb) {
 };
 
 window._entCalcImporte = function(idx) {
-    var cant = parseFloat((document.querySelector('.ent-item-cant[data-idx="'+idx+'"]') || {}).value) || 0;
-    var cu   = parseFloat((document.querySelector('.ent-item-cu[data-idx="'+idx+'"]')   || {}).value) || 0;
+    var cant  = parseFloat((document.querySelector('.ent-item-cant[data-idx="'+idx+'"]') || {}).value) || 0;
+    var cuEl  = document.querySelector('.ent-item-cu[data-idx="'+idx+'"]');
+    var cu    = parseFloat((cuEl || {}).value) || 0;
     var impEl = document.querySelector('.ent-item-imp[data-idx="'+idx+'"]');
     if (impEl) impEl.value = (cant * cu).toFixed(2);
+
+    // Alerta comparación de precio
+    var alertEl = document.getElementById('ent-price-alert-' + idx);
+    var card    = document.getElementById('ent-item-' + idx);
+    var oldCost = parseFloat((cuEl || {}).dataset && (cuEl || {}).dataset.oldCost);
+    if (alertEl && !isNaN(oldCost) && oldCost > 0 && Math.abs(cu - oldCost) > 0.001) {
+        var diff = cu - oldCost;
+        var pct  = (diff / oldCost * 100).toFixed(1);
+        var isUp = diff > 0;
+        alertEl.style.display   = 'flex';
+        alertEl.style.alignItems = 'center';
+        alertEl.style.gap       = '.4rem';
+        alertEl.innerHTML =
+            '<span style="display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;' +
+            'border-radius:99px;font-size:.65rem;font-weight:800;' +
+            'background:' + (isUp ? '#fee2e2;color:#ef4444' : '#dcfce7;color:#16a34a') + ';">' +
+            '<i class="bi bi-arrow-' + (isUp ? 'up' : 'down') + '"></i>' +
+            (isUp ? '¡Sube Precio!' : 'Baja Precio') + '</span>' +
+            '<span style="font-size:.65rem;color:#94a3b8;font-weight:600;">' +
+            'Ref: S/ ' + oldCost.toFixed(2) + ' → ' + (isUp ? '+' : '') + pct + '%</span>';
+        if (card) {
+            card.classList.remove('price-up', 'price-down');
+            card.classList.add(isUp ? 'price-up' : 'price-down');
+        }
+    } else if (alertEl) {
+        alertEl.style.display = 'none';
+        if (card) card.classList.remove('price-up', 'price-down');
+    }
     window._entActualizarTotal();
 };
 
@@ -248,17 +304,17 @@ window.guardarEntrada = function() {
     fetch('/api/almacen/entradas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(r) {
-            bootstrap.Modal.getInstance(document.getElementById('modal-entrada'))?.hide();
+            window._entCerrarModal();
             alert('✅ Entrada registrada: '+r.id);
             window.cargarEntradas();
         })
         .catch(function(err) { alert('Error: '+err.message); });
 };
 
-// ── Abrir modal ───────────────────────────────────────────────────
+// ── Abrir panel ───────────────────────────────────────────────────
 window.abrirModalEntrada = function() {
-    var tbody = document.getElementById('tbody-ent-items');
-    if (tbody) tbody.innerHTML = '';
+    var cards = document.getElementById('ent-items-cards');
+    if (cards) cards.innerHTML = '';
     window._entItemIdx = 0;
     var totalEl = document.getElementById('ent-total-display');
     if (totalEl) totalEl.textContent = 'S/ 0.00';
@@ -266,21 +322,31 @@ window.abrirModalEntrada = function() {
     ['ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
-    // Ocultar fila observaciones y resetear botón toggle
     var obsRow = document.getElementById('ent-obs-row');
     var obsBtn = document.getElementById('ent-obs-toggle');
     if (obsRow) obsRow.style.display = 'none';
-    if (obsBtn) { obsBtn.style.background = 'var(--bg)'; obsBtn.style.color = 'var(--subtext)'; }
+    if (obsBtn) { obsBtn.style.background = 'transparent'; obsBtn.style.color = '#94a3b8'; }
     window._cbReset('ent-f-proveedor');
     var fecha = document.getElementById('ent-f-fecha');
     if (fecha) fecha.value = new Date().toISOString().split('T')[0];
     var mon = document.getElementById('ent-f-moneda');
     if (mon) mon.value = 'PEN';
-    window._entOnMonedaChange(); // oculta T/C row y resetea total
+    window._entOnMonedaChange();
 
     window._entAgregarItem();
-    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-entrada'));
-    modal.show();
+
+    var panel = document.getElementById('modal-entrada');
+    var bd    = document.getElementById('ent-entrada-bd');
+    if (panel) panel.classList.add('open');
+    if (bd)    bd.style.display = 'block';
+};
+
+// ── Cerrar panel ──────────────────────────────────────────────────
+window._entCerrarModal = function() {
+    var panel = document.getElementById('modal-entrada');
+    var bd    = document.getElementById('ent-entrada-bd');
+    if (panel) panel.classList.remove('open');
+    if (bd)    bd.style.display = 'none';
 };
 
 // ── Eliminar ──────────────────────────────────────────────────────
