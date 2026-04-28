@@ -231,20 +231,33 @@
   <!-- Search bar mobile — obsoleta, reemplazada por inv-search-compact -->
 
   <!-- Cabecera + controles (escritorio) -->
-  <div id="inv-desktop-controls" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div id="inv-desktop-controls"
+       style="display:flex;align-items:center;justify-content:space-between;
+              padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
+              background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:.75rem;">
     <div>
-      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
-        <i class="bi bi-box-seam text-warning me-1"></i>Inventario
+      <h2 style="font-size:1.05rem;font-weight:900;color:var(--text);margin:0;line-height:1.2;">
+        <i class="bi bi-box-seam text-warning me-2"></i>Inventario
       </h2>
-      <p class="text-muted small mb-0">Catálogo de artículos — stock calculado automáticamente</p>
+      <p style="font-size:.71rem;color:var(--subtext);margin:0;font-weight:600;">Catálogo de artículos — stock calculado automáticamente</p>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarInventario()" title="Actualizar">
+    <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+      <!-- Refrescar -->
+      <button onclick="window.cargarInventario()" title="Actualizar"
+              style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
+                     background:transparent;color:var(--subtext);font-size:.95rem;
+                     display:flex;align-items:center;justify-content:center;cursor:pointer;
+                     transition:all .15s;flex-shrink:0;">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
+      <!-- Excel -->
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
+        <button style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid var(--border);
+                       background:transparent;color:var(--text);font-size:.82rem;font-weight:700;
+                       display:flex;align-items:center;gap:.4rem;cursor:pointer;"
+                data-bs-toggle="dropdown">
+          <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>Excel
+          <i class="bi bi-chevron-down" style="font-size:.65rem;color:var(--subtext);"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" onclick="window.exportarInventarioExcel()"><i class="bi bi-download me-2 text-success"></i>Exportar todo</a></li>
@@ -258,37 +271,70 @@
           </li>
         </ul>
       </div>
-      <button class="btn btn-sm btn-outline-secondary" id="inv-btn-sel"
-              onclick="window._invToggleSeleccion()" style="display:none;">
-        <i class="bi bi-ui-checks"></i> <span class="d-none d-md-inline">Seleccionar</span>
+      <!-- Seleccionar -->
+      <button id="inv-btn-sel" onclick="window._invToggleSeleccion()"
+              style="display:none;height:36px;padding:0 .85rem;border-radius:10px;
+                     border:1.5px solid var(--border);background:transparent;
+                     color:var(--text);font-size:.82rem;font-weight:700;
+                     align-items:center;gap:.4rem;cursor:pointer;">
+        <i class="bi bi-ui-checks"></i><span class="d-none d-md-inline">Seleccionar</span>
       </button>
-      <button class="btn btn-sm btn-outline-primary d-none" id="inv-btn-sel-all"
-              onclick="window._invSeleccionarTodos()">
-        <i class="bi bi-check-all"></i> <span class="d-none d-md-inline">Todos</span>
+      <button class="d-none" id="inv-btn-sel-all" onclick="window._invSeleccionarTodos()"
+              style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid #2563eb;
+                     background:#eff6ff;color:#2563eb;font-size:.82rem;font-weight:700;
+                     align-items:center;gap:.4rem;cursor:pointer;">
+        <i class="bi bi-check-all"></i><span class="d-none d-md-inline">Todos</span>
       </button>
-      <button class="btn btn-sm btn-danger d-none" id="inv-btn-bulk-del"
-              onclick="window._invEliminarMasivo()">
-        <i class="bi bi-trash"></i> Eliminar (<span id="inv-bulk-cnt">0</span>)
+      <button class="d-none" id="inv-btn-bulk-del" onclick="window._invEliminarMasivo()"
+              style="height:36px;padding:0 .85rem;border-radius:10px;border:none;
+                     background:#ef4444;color:#fff;font-size:.82rem;font-weight:700;
+                     align-items:center;gap:.4rem;cursor:pointer;">
+        <i class="bi bi-trash"></i>Eliminar (<span id="inv-bulk-cnt">0</span>)
       </button>
-      <button class="btn btn-sm btn-primary" onclick="window.abrirModalInventario()">
-        <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">Nuevo</span>
+      <!-- + Nuevo -->
+      <button onclick="window.abrirModalInventario()"
+              style="height:36px;padding:0 1.1rem;border-radius:10px;border:none;
+                     background:#2563eb;color:#fff;font-size:.83rem;font-weight:700;
+                     display:flex;align-items:center;gap:.4rem;cursor:pointer;
+                     box-shadow:0 2px 10px rgba(37,99,235,.28);flex-shrink:0;">
+        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline">Nuevo</span>
       </button>
     </div>
   </div>
 
   <!-- Filtros -->
-  <div id="inv-filter-row" class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <div class="input-group input-group-sm" style="max-width:260px;">
-      <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search text-muted"></i></span>
-      <input type="text" id="inv-buscar" class="form-control border-0 bg-transparent shadow-none" placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
+  <div id="inv-filter-row"
+       style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
+              border-bottom:1px solid var(--border);background:var(--surface);
+              flex-shrink:0;flex-wrap:wrap;">
+    <!-- Pill search -->
+    <div style="display:flex;align-items:center;gap:.45rem;background:var(--bg);
+                border:1.5px solid var(--border);border-radius:99px;padding:.25rem .85rem;
+                min-width:230px;transition:border-color .2s,box-shadow .2s;"
+         onfocusin="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.08)'"
+         onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
+      <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
+      <input type="text" id="inv-buscar"
+             style="border:none;background:transparent;outline:none;
+                    font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
+             placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
     </div>
-    <select id="inv-fil-familia" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarInventario()">
+    <!-- Familia -->
+    <select id="inv-fil-familia" onchange="window.filtrarInventario()"
+            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
+                   background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
+                   font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todas las familias</option>
     </select>
-    <select id="inv-fil-sistema" class="form-select form-select-sm" style="max-width:150px;" onchange="window.filtrarInventario()">
+    <!-- Sistema -->
+    <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
+            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
+                   background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
+                   font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todos los sistemas</option>
     </select>
-    <span id="inv-contador" class="text-muted small ms-auto"></span>
+    <span id="inv-contador"
+          style="font-size:.78rem;font-weight:700;color:var(--subtext);margin-left:auto;"></span>
   </div>
 
   <!-- KPI Row Bento -->
