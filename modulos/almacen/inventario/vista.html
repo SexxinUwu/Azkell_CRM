@@ -396,6 +396,26 @@
               </div>
             </div>
 
+            <!-- Código de Barras — arriba de Artículo para escanear primero -->
+            <div class="col-12">
+              <label class="fw-semibold small">Código de Barras</label>
+              <div style="display:flex;gap:.5rem;align-items:stretch;">
+                <input type="text" class="form-control form-control-sm" id="inv-f-codigo-barras"
+                       placeholder="EAN-13 / QR..." style="flex:1;border-radius:10px;">
+                <button type="button" onclick="window._invAbrirScanner('form')" title="Escanear código con cámara"
+                        style="padding:0 .75rem;border-radius:10px;
+                               background:linear-gradient(135deg,#2563eb 0%,#4f46e5 100%);
+                               border:none;color:#fff;font-size:1.1rem;
+                               display:flex;align-items:center;justify-content:center;
+                               box-shadow:0 4px 14px rgba(37,99,235,.4);flex-shrink:0;cursor:pointer;
+                               transition:transform .15s ease,box-shadow .15s ease;"
+                        onmouseover="this.style.transform='scale(1.04)'"
+                        onmouseout="this.style.transform=''">
+                  <i class="bi bi-qr-code-scan"></i>
+                </button>
+              </div>
+            </div>
+
             <!-- Artículo + Código -->
             <div class="col-8">
               <label class="fw-semibold small">Artículo <span class="text-danger">*</span></label>
@@ -417,7 +437,7 @@
                   <div id="inv-f-marca-dd" class="cb-dropdown"></div>
                 </div>
                 <button type="button" onclick="window._invQuickAddMarca()"
-                        title="Nueva marca" style="width:32px;height:32px;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        title="Nueva marca" style="align-self:stretch;padding:0 .6rem;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                   <i class="bi bi-plus-lg"></i>
                 </button>
               </div>
@@ -452,7 +472,7 @@
                   <div id="inv-f-familia-dd" class="cb-dropdown"></div>
                 </div>
                 <button type="button" onclick="window._invQuickAddFamilia()"
-                        title="Nueva familia" style="width:32px;height:32px;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        title="Nueva familia" style="align-self:stretch;padding:0 .6rem;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                   <i class="bi bi-plus-lg"></i>
                 </button>
               </div>
@@ -562,25 +582,6 @@
               <label class="fw-semibold small">Stock Máx.</label>
               <input type="number" class="form-control form-control-sm" id="inv-f-stock-max" step="0.0001" placeholder="0">
             </div>
-            <div class="col-12">
-              <label class="fw-semibold small">Código de Barras</label>
-              <div style="display:flex;gap:.5rem;align-items:center;">
-                <input type="text" class="form-control form-control-sm" id="inv-f-codigo-barras"
-                       placeholder="EAN-13 / QR..." style="flex:1;border-radius:12px;min-height:44px;">
-                <button type="button" onclick="window._invAbrirScanner('form')" title="Escanear código con cámara"
-                        style="width:48px;height:44px;border-radius:14px;
-                               background:linear-gradient(135deg,#2563eb 0%,#4f46e5 100%);
-                               border:none;color:#fff;font-size:1.2rem;
-                               display:flex;align-items:center;justify-content:center;
-                               box-shadow:0 4px 14px rgba(37,99,235,.4);flex-shrink:0;cursor:pointer;
-                               transition:transform .15s ease,box-shadow .15s ease;"
-                        onmouseover="this.style.transform='scale(1.06)';this.style.boxShadow='0 6px 20px rgba(37,99,235,.55)'"
-                        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(37,99,235,.4)'">
-                  <i class="bi bi-qr-code-scan"></i>
-                </button>
-              </div>
-            </div>
-
           </div>
         </div><!-- /tab-articulo -->
 
@@ -868,4 +869,29 @@
     Apunta al código para escanear
   </p>
   <canvas id="inv-scanner-canvas" style="display:none;"></canvas>
+</div>
+
+<!-- ═══ MINI-MODAL Quick-add Familia / Marca ════════════════════ -->
+<div id="inv-quick-bd" onclick="window._invQuickClose()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2100;"></div>
+<div id="inv-quick-panel"
+     style="display:none;position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+            width:100%;max-width:460px;background:var(--surface);
+            border-radius:20px 20px 0 0;z-index:2101;padding:1.25rem 1.25rem 1.5rem;
+            box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto .85rem;"></div>
+  <div id="inv-quick-titulo" style="font-size:.9rem;font-weight:800;color:var(--text);margin-bottom:.85rem;"></div>
+  <input type="text" id="inv-quick-input" class="form-control" placeholder=""
+         style="border-radius:12px;font-size:.92rem;margin-bottom:.75rem;"
+         onkeydown="if(event.key==='Enter'){event.preventDefault();window._invQuickGuardar();}">
+  <div style="display:flex;gap:.5rem;">
+    <button type="button" onclick="window._invQuickClose()"
+            style="flex:1;padding:.65rem;border-radius:12px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-weight:700;font-size:.88rem;cursor:pointer;">
+      Cancelar
+    </button>
+    <button type="button" onclick="window._invQuickGuardar()"
+            style="flex:2;padding:.65rem;border-radius:12px;border:none;background:#2563eb;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;">
+      <i class="bi bi-plus-lg me-1"></i>Agregar
+    </button>
+  </div>
 </div>

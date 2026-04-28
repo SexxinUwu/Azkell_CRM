@@ -49,7 +49,7 @@ window._mrcRender = function() {
     }
     tb.innerHTML = datos.map(function(m) {
         return '<tr>' +
-            '<td><span class="badge bg-danger fw-bold">' + _mrcEsc(m.nombre) + '</span></td>' +
+            '<td style="font-weight:700;color:var(--text);">' + _mrcEsc(m.nombre) + '</td>' +
             '<td class="text-muted small">' + _mrcEsc(m.descripcion || '—') + '</td>' +
             '<td>' + (m.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
