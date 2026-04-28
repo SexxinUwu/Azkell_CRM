@@ -2,6 +2,21 @@
 // MÓDULO ALMACÉN / ENTRADAS — Lógica SPA Aislada
 // ================================================================
 
+// ── _entCbFiltrar: wrapper con position:fixed (evita clipping por overflow:auto)
+window._entCbFiltrar = function(id) {
+    window._cbFiltrar(id);
+    var dd  = document.getElementById(id + '-dd');
+    var txt = document.getElementById(id + '-txt');
+    if (!dd || !txt || dd.style.display === 'none') return;
+    var r = txt.getBoundingClientRect();
+    dd.style.position = 'fixed';
+    dd.style.top      = (r.bottom + 2) + 'px';
+    dd.style.left     = r.left + 'px';
+    dd.style.width    = r.width + 'px';
+    dd.style.maxWidth = r.width + 'px';
+    dd.style.zIndex   = '99999';
+};
+
 window._entData      = window._entData      || [];
 window._entFiltrados = window._entFiltrados || [];
 window._entPagActual = window._entPagActual || 1;
@@ -60,6 +75,13 @@ window.cargarEntradas = function() {
         });
 };
 
+window._entOnMonedaChange = function() {
+    var moneda = (document.getElementById('ent-f-moneda') || {}).value;
+    var tcRow = document.getElementById('ent-tc-row');
+    if (tcRow) tcRow.style.display = moneda === 'USD' ? 'block' : 'none';
+    window._entActualizarTotal();
+};
+
 window._entCargarConfig = function() {
     fetch('/api/almacen/configuracion')
         .then(function(r) { return r.json(); })
@@ -106,8 +128,8 @@ window._entAgregarItem = function() {
             '<div class="position-relative">' +
                 '<input type="text" id="' + cbId + '-txt" class="form-control form-control-sm ent-item-desc" data-idx="' + idx + '"' +
                     ' placeholder="Buscar artículo…" autocomplete="off"' +
-                    ' oninput="window._cbFiltrar(\'' + cbId + '\')"' +
-                    ' onfocus="window._cbFiltrar(\'' + cbId + '\')"' +
+                    ' oninput="window._entCbFiltrar(\'' + cbId + '\')"' +
+                    ' onfocus="window._entCbFiltrar(\'' + cbId + '\')"' +
                     ' onblur="window._cbHide(\'' + cbId + '\')">' +
                 '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
                 '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
@@ -169,9 +191,19 @@ window._entActualizarTotal = function() {
     var imps = document.querySelectorAll('.ent-item-imp');
     var total = 0;
     imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
-    var moneda = (document.getElementById('ent-f-moneda') || {}).value === 'USD' ? 'USD $' : 'S/';
+    var moneda = (document.getElementById('ent-f-moneda') || {}).value;
     var el = document.getElementById('ent-total-display');
-    if (el) el.textContent = moneda + ' ' + total.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (!el) return;
+    if (moneda === 'USD') {
+        var tc = parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70;
+        var pen = total * tc;
+        el.innerHTML = '<span style="font-weight:900;">$ ' +
+            total.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +
+            '</span><span style="font-size:.75rem;color:var(--subtext);margin-left:.4rem;">\u2248 S/ ' +
+            pen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
+    } else {
+        el.textContent = 'S/ ' + total.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
 };
 
 // ── Guardar ───────────────────────────────────────────────────────
@@ -206,7 +238,11 @@ window.guardarEntrada = function() {
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
     var payload = { fecha, proveedor_id: provId||null, proveedor_nombre: provNombre||null,
-        documento_referencia: docRef||null, moneda, tipo_cambio: 1, observaciones: obs,
+        documento_referencia: docRef||null, moneda,
+        tipo_cambio: moneda === 'USD'
+            ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70)
+            : 1,
+        observaciones: obs,
         creado_por: localStorage.getItem('fleet_user')||'', items };
 
     fetch('/api/almacen/entradas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
@@ -230,11 +266,17 @@ window.abrirModalEntrada = function() {
     ['ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
+    // Ocultar fila observaciones y resetear botón toggle
+    var obsRow = document.getElementById('ent-obs-row');
+    var obsBtn = document.getElementById('ent-obs-toggle');
+    if (obsRow) obsRow.style.display = 'none';
+    if (obsBtn) { obsBtn.style.background = 'var(--bg)'; obsBtn.style.color = 'var(--subtext)'; }
     window._cbReset('ent-f-proveedor');
     var fecha = document.getElementById('ent-f-fecha');
     if (fecha) fecha.value = new Date().toISOString().split('T')[0];
     var mon = document.getElementById('ent-f-moneda');
     if (mon) mon.value = 'PEN';
+    window._entOnMonedaChange(); // oculta T/C row y resetea total
 
     window._entAgregarItem();
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-entrada'));
