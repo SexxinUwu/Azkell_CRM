@@ -664,8 +664,7 @@ window.abrirDetalleInv = function(id) {
                '</div>';
     }
 
-    var costo = (item.moneda === 'USD' ? '$ ' : 'S/ ') +
-        parseFloat(item.costo_referencial || 0).toLocaleString('es-PE', {minimumFractionDigits: 2});
+    var costo = 'S/ ' + parseFloat(item.costo_referencial || 0).toLocaleString('es-PE', {minimumFractionDigits: 2});
 
     body.innerHTML =
         imgHtml +

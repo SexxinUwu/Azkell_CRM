@@ -628,6 +628,8 @@ window.salGuardarNuevo = function() {
         placa:        tipo === 'Vehiculo' ? placa : null,
         responsable:  resp,
         observaciones: obs,
+        moneda:       'PEN',
+        tipo_cambio:  1,
         creado_por:   localStorage.getItem('fleet_correo') || '',
         items:        items
     };

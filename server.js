@@ -4599,8 +4599,25 @@ app.post('/api/almacen/entradas', (req, res) => {
                             parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
                             parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
                     });
-                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
-                    res.json({ ok: true, id });
+                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
+                        // Actualizar costo_referencial en PEN para cada ítem con inventario_id conocido
+                        const toUpdate = items.filter(d =>
+                            (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
+                        );
+                        if (!toUpdate.length) return res.json({ ok: true, id });
+                        let done = 0;
+                        toUpdate.forEach(d => {
+                            const invId = d.inventario_id || mapaInvEnt[d.descripcion];
+                            const costoPEN = (d.moneda === 'USD' || moneda === 'USD')
+                                ? parseFloat(d.costo_unitario) * tc
+                                : parseFloat(d.costo_unitario);
+                            db.query(
+                                'UPDATE inventario SET costo_referencial = ? WHERE id = ? AND activo = 1',
+                                [costoPEN, invId],
+                                () => { if (++done === toUpdate.length) res.json({ ok: true, id }); }
+                            );
+                        });
+                    });
                 });
             });
     });

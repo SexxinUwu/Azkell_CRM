@@ -306,85 +306,99 @@
 <div class="modal fade" id="modal-entrada" tabindex="-1">
   <div class="modal-dialog modal-xl">
     <div class="modal-content" style="border-radius:20px;border:none;">
-      <div class="modal-header" style="border-bottom:1px solid var(--border);padding:1rem 1.5rem;">
-        <h5 class="modal-title fw-bold" style="font-size:.95rem;">
+      <div class="modal-header" style="border-bottom:1px solid var(--border);padding:.7rem 1.25rem;">
+        <h5 class="modal-title fw-bold" style="font-size:.9rem;">
           <i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Nueva Entrada de Artículos
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body" style="padding:1.25rem 1.5rem;">
-        <div class="row g-3">
-          <div class="col-md-3">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Fecha <span class="text-danger">*</span></label>
-            <input type="date" class="form-control" id="ent-f-fecha" style="border-radius:12px;min-height:44px;">
+      <div class="modal-body" style="padding:.85rem 1.25rem;">
+        <div class="row g-2">
+          <div class="col-md-2">
+            <label class="fw-semibold" style="font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control form-control-sm" id="ent-f-fecha" style="border-radius:10px;">
           </div>
           <div class="col-md-3">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Proveedor <span class="text-danger">*</span></label>
+            <label class="fw-semibold" style="font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">Proveedor <span class="text-danger">*</span></label>
             <div class="position-relative">
-              <input type="text" id="ent-f-proveedor-txt" class="form-control" placeholder="Buscar proveedor…"
-                style="border-radius:12px;min-height:44px;"
+              <input type="text" id="ent-f-proveedor-txt" class="form-control form-control-sm" placeholder="Buscar proveedor…"
+                style="border-radius:10px;"
                 autocomplete="off" oninput="window._cbFiltrar('ent-f-proveedor')"
                 onfocus="window._cbFiltrar('ent-f-proveedor')" onblur="window._cbHide('ent-f-proveedor')">
               <input type="hidden" id="ent-f-proveedor">
               <div id="ent-f-proveedor-dd" class="cb-dropdown"></div>
             </div>
           </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Doc. Referencia</label>
-            <input type="text" class="form-control" id="ent-f-doc-ref" placeholder="Factura, guía, O/C…" style="border-radius:12px;min-height:44px;">
+          <div class="col-md-4">
+            <label class="fw-semibold" style="font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">Doc. Referencia</label>
+            <input type="text" class="form-control form-control-sm" id="ent-f-doc-ref" placeholder="Factura, guía, O/C…" style="border-radius:10px;">
           </div>
-          <div class="col-md-3">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Moneda</label>
-            <div class="position-relative">
-              <select class="form-select" id="ent-f-moneda" style="border-radius:12px;min-height:44px;">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USD">USD ($)</option>
-              </select>
+          <div class="col-md-2">
+            <label class="fw-semibold" style="font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);">Moneda</label>
+            <select class="form-select form-select-sm" id="ent-f-moneda"
+                    onchange="window._entOnMonedaChange()" style="border-radius:10px;">
+              <option value="PEN">PEN (S/)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+            <!-- T/C: aparece debajo cuando moneda = USD -->
+            <div id="ent-tc-row" style="display:none;margin-top:4px;">
+              <div style="font-size:.56rem;font-weight:800;text-transform:uppercase;
+                          letter-spacing:.08em;color:var(--subtext);margin-bottom:2px;">T/C USD → S/</div>
+              <input type="number" id="ent-f-tc" class="form-control form-control-sm"
+                     step="0.0001" min="0.01" placeholder="3.70" style="border-radius:10px;">
             </div>
           </div>
-          <div class="col-12">
-            <label class="fw-semibold small text-muted" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
-            <input type="text" class="form-control" id="ent-f-obs" placeholder="Notas, condiciones de compra…" style="border-radius:12px;min-height:44px;">
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="button" id="ent-obs-toggle"
+                    onclick="(function(){var r=document.getElementById('ent-obs-row');var open=r.style.display!=='none';r.style.display=open?'none':'';document.getElementById('ent-obs-toggle').style.background=open?'var(--bg)':'#eff6ff';document.getElementById('ent-obs-toggle').style.color=open?'var(--subtext)':'#2563eb';})()"
+                    title="Observaciones"
+                    style="width:100%;height:31px;border-radius:10px;border:1.5px solid var(--border);
+                           background:var(--bg);color:var(--subtext);font-size:.8rem;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;gap:.3rem;">
+              <i class="bi bi-chat-text"></i>
+            </button>
+          </div>
+          <div class="col-12" id="ent-obs-row" style="display:none;">
+            <input type="text" class="form-control form-control-sm" id="ent-f-obs" placeholder="Notas, condiciones de compra…" style="border-radius:10px;">
           </div>
         </div>
-        <hr class="my-3" style="border-color:var(--border);">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold mb-0" style="font-size:.85rem;"><i class="bi bi-list-ul me-1"></i>Artículos</h6>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:.65rem 0 .4rem;">
+          <span style="font-size:.78rem;font-weight:800;color:var(--text);"><i class="bi bi-list-ul me-1"></i>Artículos</span>
           <button type="button"
-                  style="padding:.45rem 1rem;border-radius:12px;border:1.5px solid #16a34a;
-                         background:transparent;color:#16a34a;font-weight:700;font-size:.8rem;cursor:pointer;"
+                  style="padding:.35rem .85rem;border-radius:10px;border:1.5px solid #16a34a;
+                         background:transparent;color:#16a34a;font-weight:700;font-size:.75rem;cursor:pointer;"
                   onclick="window._entAgregarItem()">
             <i class="bi bi-plus-lg me-1"></i>Agregar artículo
           </button>
         </div>
         <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-          <table class="table table-sm mb-0" id="tabla-ent-items" style="font-size:.83rem;">
+          <table class="table table-sm mb-0" id="tabla-ent-items" style="font-size:.82rem;">
             <thead style="background:var(--bg);">
               <tr>
-                <th style="min-width:260px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
-                <th style="width:90px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Cantidad</th>
-                <th style="width:120px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Costo Unit.</th>
-                <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Importe</th>
+                <th style="min-width:260px;padding:8px 10px;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
+                <th style="width:90px;padding:8px 10px;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Cantidad</th>
+                <th style="width:120px;padding:8px 10px;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Costo Unit.</th>
+                <th style="width:110px;padding:8px 10px;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Importe</th>
                 <th style="width:40px;"></th>
               </tr>
             </thead>
             <tbody id="tbody-ent-items"></tbody>
             <tfoot style="background:var(--bg);">
               <tr>
-                <td colspan="3" class="text-end fw-bold" style="padding:10px 12px;">Total:</td>
-                <td id="ent-total-display" class="text-end fw-bold" style="padding:10px 12px;color:#16a34a;">S/ 0.00</td>
+                <td colspan="3" class="text-end fw-bold" style="padding:8px 10px;">Total:</td>
+                <td id="ent-total-display" class="text-end fw-bold" style="padding:8px 10px;color:#16a34a;">S/ 0.00</td>
                 <td></td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
-      <div class="modal-footer" style="border-top:1px solid var(--border);padding:.85rem 1.5rem;gap:.5rem;">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                style="border-radius:12px;font-weight:700;min-height:44px;padding:.5rem 1.25rem;">Cancelar</button>
+      <div class="modal-footer" style="border-top:1px solid var(--border);padding:.65rem 1.25rem;gap:.5rem;">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
+                style="border-radius:10px;font-weight:700;min-height:38px;padding:.4rem 1.1rem;">Cancelar</button>
         <button type="button" onclick="window.guardarEntrada()"
-                style="border-radius:12px;border:none;background:#16a34a;color:#fff;font-weight:700;
-                       font-size:.9rem;min-height:44px;padding:.5rem 1.5rem;cursor:pointer;
+                style="border-radius:10px;border:none;background:#16a34a;color:#fff;font-weight:700;
+                       font-size:.88rem;min-height:38px;padding:.4rem 1.25rem;cursor:pointer;
                        display:flex;align-items:center;gap:.4rem;">
           <i class="bi bi-save"></i>Registrar Entrada
         </button>
