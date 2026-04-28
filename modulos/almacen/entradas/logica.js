@@ -249,55 +249,21 @@ window._entQuitarItem = function(idx) {
     window._entActualizarTotal();
 };
 
-// ── QR Scanner ────────────────────────────────────────────────────
+// ── QR Scanner — usa el scanner global de la app ──────────────────
 window._entQrScanner   = window._entQrScanner   || null;
 window._entQrTargetIdx = window._entQrTargetIdx || null;
 
 window._entAbrirQR = function(idx) {
     window._entQrTargetIdx = (idx !== undefined) ? idx : null;
-    var overlay = document.getElementById('ent-qr-overlay');
-    if (overlay) overlay.style.display = 'flex';
-    var status = document.getElementById('ent-qr-status');
-
-    if (typeof Html5Qrcode === 'undefined') {
-        if (status) status.innerHTML = '<span style="color:#ef4444;">Librería QR no cargada. Recarga la página.</span>';
-        return;
-    }
-
-    // Limpiar reader anterior si existe
-    var readerEl = document.getElementById('ent-qr-reader');
-    if (readerEl) readerEl.innerHTML = '';
-    if (status) status.textContent = 'Apunta la cámara al código QR del artículo';
-
-    try {
-        window._entQrScanner = new Html5Qrcode('ent-qr-reader');
-        window._entQrScanner.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1 },
-            function(decodedText) {
-                var targetIdx = window._entQrTargetIdx;
-                window._entCerrarQR();
-                window._entSeleccionarItemPorQR(decodedText.trim(), targetIdx);
-            },
-            function() { /* errores de frame — ignorar */ }
-        ).catch(function(err) {
-            if (status) status.innerHTML = '<span style="color:#ef4444;">No se pudo acceder a la cámara.<br>Permite el permiso e intenta de nuevo.</span>';
-        });
-    } catch(e) {
-        if (status) status.innerHTML = '<span style="color:#ef4444;">Error al iniciar el escáner.</span>';
-    }
+    var targetIdx = window._entQrTargetIdx;
+    window._abrirEscaner(function(text) {
+        window._entSeleccionarItemPorQR(text, targetIdx);
+    }, 'Escanear Artículo');
 };
 
 window._entCerrarQR = function() {
-    if (window._entQrScanner) {
-        window._entQrScanner.stop().catch(function() {});
-        window._entQrScanner = null;
-    }
+    window._cerrarEscaner();
     window._entQrTargetIdx = null;
-    var overlay = document.getElementById('ent-qr-overlay');
-    if (overlay) overlay.style.display = 'none';
-    var readerEl = document.getElementById('ent-qr-reader');
-    if (readerEl) readerEl.innerHTML = '';
 };
 
 // Rellena el artículo en el card correspondiente al idx dado
