@@ -1,5 +1,32 @@
 <!-- Módulo Almacén / Inventario — SPA Aislado v3 (Cards, formulario unificado) -->
 <style>
+/* ─── Lista estilo KeyFacil — tarjetas horizontales ─────────────── */
+.inv-list-card {
+    display: flex; align-items: center; gap: .85rem;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: .85rem 1rem; cursor: pointer;
+    transition: box-shadow .18s, border-color .18s;
+    position: relative; overflow: hidden;
+}
+.inv-list-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.09); border-color: #2563eb55; }
+.inv-list-card:active { opacity: .85; }
+.inv-list-card .ilc-icon {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+.inv-list-card .ilc-body { flex: 1; min-width: 0; }
+.inv-list-card .ilc-name { font-weight: 800; font-size: .9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-list-card .ilc-sub  { font-size: .65rem; color: var(--subtext); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+.inv-list-card .ilc-right { text-align: right; flex-shrink: 0; }
+.inv-list-card .ilc-stock { font-size: 1.25rem; font-weight: 900; line-height: 1.1; }
+.inv-list-card .ilc-badge {
+    display: inline-block; font-size: .58rem; font-weight: 800;
+    padding: .18rem .55rem; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em;
+}
+.ilc-badge.ok       { background: #dcfce7; color: #15803d; }
+.ilc-badge.warning  { background: #fef9c3; color: #854d0e; }
+.ilc-badge.critical { background: #fee2e2; color: #dc2626; }
+#inv-grid { display: flex; flex-direction: column; gap: .55rem; }
 /* ─── Tabs: segmented control moderno ───────────────────────────── */
 #inv-modal-tabs {
     background: var(--bg, #f1f5f9);
@@ -310,7 +337,7 @@
   <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
   <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
-    <div id="inv-grid" class="bento-grid pb-3 px-1">
+    <div id="inv-grid" class="pb-3 px-1">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
       </div>
@@ -381,12 +408,18 @@
             <!-- Marca fabricante -->
             <div class="col-12">
               <label class="fw-semibold small">Marca (fabricante)</label>
-              <div class="position-relative">
-                <input type="text" id="inv-f-marca-txt" class="form-control form-control-sm" placeholder="Buscar marca…"
-                  autocomplete="off" oninput="window._invCbFiltrar('inv-f-marca');window._invActualizarPreview()"
-                  onfocus="window._invCbFiltrar('inv-f-marca')" onblur="window._cbHide('inv-f-marca')">
-                <input type="hidden" id="inv-f-marca">
-                <div id="inv-f-marca-dd" class="cb-dropdown"></div>
+              <div style="display:flex;gap:4px;align-items:flex-start;">
+                <div class="position-relative" style="flex:1;">
+                  <input type="text" id="inv-f-marca-txt" class="form-control form-control-sm" placeholder="Buscar marca…"
+                    autocomplete="off" oninput="window._invCbFiltrar('inv-f-marca');window._invActualizarPreview()"
+                    onfocus="window._invCbFiltrar('inv-f-marca')" onblur="window._cbHide('inv-f-marca')">
+                  <input type="hidden" id="inv-f-marca">
+                  <div id="inv-f-marca-dd" class="cb-dropdown"></div>
+                </div>
+                <button type="button" onclick="window._invQuickAddMarca()"
+                        title="Nueva marca" style="width:32px;height:32px;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
               </div>
             </div>
 
@@ -410,12 +443,18 @@
 
             <div class="col-6">
               <label class="fw-semibold small">Familia</label>
-              <div class="position-relative">
-                <input type="text" id="inv-f-familia-txt" class="form-control form-control-sm" placeholder="Buscar familia…"
-                  autocomplete="off" oninput="window._invCbFiltrar('inv-f-familia')"
-                  onfocus="window._invCbFiltrar('inv-f-familia')" onblur="window._cbHide('inv-f-familia')">
-                <input type="hidden" id="inv-f-familia">
-                <div id="inv-f-familia-dd" class="cb-dropdown"></div>
+              <div style="display:flex;gap:4px;align-items:flex-start;">
+                <div class="position-relative" style="flex:1;">
+                  <input type="text" id="inv-f-familia-txt" class="form-control form-control-sm" placeholder="Buscar familia…"
+                    autocomplete="off" oninput="window._invCbFiltrar('inv-f-familia')"
+                    onfocus="window._invCbFiltrar('inv-f-familia')" onblur="window._cbHide('inv-f-familia')">
+                  <input type="hidden" id="inv-f-familia">
+                  <div id="inv-f-familia-dd" class="cb-dropdown"></div>
+                </div>
+                <button type="button" onclick="window._invQuickAddFamilia()"
+                        title="Nueva familia" style="width:32px;height:32px;border-radius:8px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;flex-shrink:0;font-size:.9rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
               </div>
             </div>
             <div class="col-6">
@@ -437,6 +476,11 @@
                   onfocus="window._invCbFiltrar('inv-f-moneda')" onblur="window._cbHide('inv-f-moneda')">
                 <input type="hidden" id="inv-f-moneda">
                 <div id="inv-f-moneda-dd" class="cb-dropdown"></div>
+              </div>
+              <!-- T/C USD → S/ (solo visible cuando moneda=USD) -->
+              <div id="inv-tc-row" style="display:none;margin-top:4px;">
+                <div style="font-size:.56rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtext);margin-bottom:2px;">T/C USD → S/</div>
+                <input type="number" id="inv-f-tc" class="form-control form-control-sm" step="0.0001" min="0.01" placeholder="3.70" style="border-radius:10px;">
               </div>
             </div>
             <div class="col-4">
