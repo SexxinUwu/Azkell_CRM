@@ -284,6 +284,43 @@
 
   <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
   <div id="sal-desktop-header">
+
+    <!-- Barra título + acciones -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
+                background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:.75rem;">
+      <div>
+        <h2 style="font-size:1.05rem;font-weight:900;color:var(--text);margin:0;line-height:1.2;">
+          <i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Salidas
+        </h2>
+        <p style="font-size:.71rem;color:var(--subtext);margin:0;font-weight:600;">Despacho de artículos del almacén a vehículos o personal</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+        <!-- Refrescar -->
+        <button onclick="window.salCargar()" title="Actualizar"
+                style="width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);
+                       background:transparent;color:var(--subtext);font-size:.95rem;
+                       display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <!-- Excel -->
+        <button onclick="window.salExportar()"
+                style="height:36px;padding:0 .85rem;border-radius:10px;border:1.5px solid var(--border);
+                       background:transparent;color:var(--text);font-size:.82rem;font-weight:700;
+                       display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+          <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>Excel
+        </button>
+        <!-- + Nueva Solicitud -->
+        <button onclick="window.salAbrirNuevo()"
+                style="height:36px;padding:0 1.1rem;border-radius:10px;border:none;
+                       background:#5865F2;color:#fff;font-size:.83rem;font-weight:700;
+                       display:flex;align-items:center;gap:.4rem;cursor:pointer;
+                       box-shadow:0 2px 10px rgba(88,101,242,.28);flex-shrink:0;">
+          <i class="bi bi-plus-lg"></i>Nueva Solicitud
+        </button>
+      </div>
+    </div>
+
     <!-- TABS DESKTOP -->
     <div class="sal-tabs">
       <div class="sal-tab active" id="sal-tab-pend" onclick="window.salCambiarTab('pend')">
@@ -296,53 +333,57 @@
         Anuladas <span class="sal-tab-badge" id="sal-badge-anulado">0</span>
       </div>
     </div>
-    <!-- CONTROLES ESCRITORIO -->
-    <div class="sal-controls">
-      <div class="input-group input-group-sm" style="max-width:260px;">
-        <span class="input-group-text bg-transparent border-end-0">
-          <i class="bi bi-search" style="color:var(--subtext)"></i>
-        </span>
-        <input type="text" class="form-control border-start-0 ps-0" id="sal-search"
+
+    <!-- Barra filtros combinada -->
+    <div class="sal-controls"
+         style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
+                background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <!-- Pill search -->
+      <div style="display:flex;align-items:center;gap:.45rem;background:var(--bg);
+                  border:1.5px solid var(--border);border-radius:99px;padding:.25rem .85rem;
+                  min-width:210px;transition:border-color .2s,box-shadow .2s;"
+           onfocusin="this.style.borderColor='#5865F2';this.style.boxShadow='0 0 0 3px rgba(88,101,242,.08)'"
+           onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
+        <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
+        <input type="text" id="sal-search"
+               style="border:none;background:transparent;outline:none;
+                      font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
                placeholder="Artículo, N° OT, Placa…" oninput="window.salFiltrar()">
       </div>
-      <input type="text" class="form-control form-control-sm" id="sal-fil-ot" placeholder="N° OT"
-             style="max-width:110px" oninput="window.salFiltrar()">
-      <input type="text" class="form-control form-control-sm" id="sal-fil-placa" placeholder="PLACA"
-             style="max-width:100px;text-transform:uppercase"
+      <!-- Inputs N° OT / Placa -->
+      <input type="text" id="sal-fil-ot" placeholder="N° OT"
+             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
+                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
+                    color:var(--text);outline:none;max-width:100px;"
+             oninput="window.salFiltrar()">
+      <input type="text" id="sal-fil-placa" placeholder="PLACA"
+             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
+                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
+                    color:var(--text);outline:none;max-width:100px;text-transform:uppercase;"
              oninput="this.value=this.value.toUpperCase();window.salFiltrar()">
-      <input type="month" class="form-control form-control-sm" id="sal-fil-mes"
-             style="max-width:150px" onchange="window.salFiltrar()">
-      <input type="date" id="sal-fil-desde"
-             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
-             onchange="window.salFiltrar()">
-      <input type="date" id="sal-fil-hasta"
-             style="height:36px;border:1.5px solid var(--border);border-radius:10px;padding:0 .7rem;
-                    font-size:.82rem;background:var(--surface);color:var(--text);outline:none;max-width:150px;"
-             onchange="window.salFiltrar()">
-      <div style="flex:1"></div>
-      <button class="btn btn-sm btn-outline-secondary" onclick="window.salCargar()" title="Actualizar">
-        <i class="bi bi-arrow-clockwise"></i>
-      </button>
-    </div>
-    <div class="sal-filters">
-      <select class="form-select form-select-sm" id="sal-fil-estado"
-              onchange="window.salFiltrar()" style="max-width:200px">
+      <!-- Fechas -->
+      <input type="date" id="sal-fil-desde" onchange="window.salFiltrar()"
+             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
+                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
+                    color:var(--text);outline:none;max-width:145px;">
+      <input type="date" id="sal-fil-hasta" onchange="window.salFiltrar()"
+             style="height:36px;border-radius:10px;border:1.5px solid var(--border);
+                    background:var(--surface);padding:0 .75rem;font-size:.82rem;
+                    color:var(--text);outline:none;max-width:145px;">
+      <!-- Estado -->
+      <select id="sal-fil-estado" onchange="window.salFiltrar()"
+              style="height:36px;border-radius:10px;border:1.5px solid var(--border);
+                     background:var(--surface);padding:0 .75rem;font-size:.82rem;
+                     font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
         <option value="">Todos los estados</option>
         <option value="Pendiente">Pendiente</option>
         <option value="Despachado">Despachado</option>
         <option value="Anulado">Anulado</option>
       </select>
-      <div style="flex:1"></div>
-      <button class="btn btn-sm btn-success" onclick="window.salExportar()"
-              style="border-radius:12px;font-weight:700;">
-        <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
-      </button>
-      <button class="btn btn-sm btn-primary" onclick="window.salAbrirNuevo()"
-              style="border-radius:12px;font-weight:700;">
-        <i class="bi bi-plus-lg me-1"></i>Nueva Solicitud
-      </button>
+      <!-- Mes (oculto, usado por JS) -->
+      <input type="month" id="sal-fil-mes" style="display:none;" onchange="window.salFiltrar()">
     </div>
+
   </div>
 
   <!-- ═══ CONTENEDOR PRINCIPAL ═════════════════════════════════════ -->
