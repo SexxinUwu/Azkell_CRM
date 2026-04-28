@@ -352,6 +352,68 @@ window.verificarSesionGuardada = function() {
     }).obtenerDatosFleetrun();
 }
 
+// ══════════════════════════════════════════════════════════════════
+// SCANNER GLOBAL — único scanner para toda la app (AppSheet style)
+// Uso: window._abrirEscaner(callback, titulo)
+// ══════════════════════════════════════════════════════════════════
+window._gscannerInstance = window._gscannerInstance || null;
+window._gscannerCB       = window._gscannerCB       || null;
+
+window._abrirEscaner = function(callback, titulo) {
+    window._gscannerCB = callback;
+    var overlay = document.getElementById('gscanner-overlay');
+    if (!overlay) { console.warn('Global scanner overlay no encontrado'); return; }
+    var tit = document.getElementById('gscanner-titulo');
+    if (tit) tit.textContent = titulo || 'Escanear código';
+    // Limpiar instancia anterior
+    var reader = document.getElementById('gscanner-reader');
+    if (reader) reader.innerHTML = '';
+    overlay.style.display = 'block';
+
+    if (typeof Html5Qrcode === 'undefined') {
+        overlay.style.display = 'none';
+        alert('Scanner no disponible — recarga la página.');
+        return;
+    }
+    try {
+        window._gscannerInstance = new Html5Qrcode('gscanner-reader');
+        var w = Math.round(Math.min(window.innerWidth * 0.68, 270));
+        var h = Math.round(w * 0.75);
+        window._gscannerInstance.start(
+            { facingMode: 'environment' },
+            {
+                fps: 15,
+                qrbox: { width: w, height: h },
+                aspectRatio: window.innerHeight / window.innerWidth,
+                rememberLastUsedCamera: true,
+                showTorchButtonIfSupported: false
+            },
+            function(text) {
+                window._cerrarEscaner();
+                if (typeof window._gscannerCB === 'function') window._gscannerCB(text.trim());
+            },
+            function() { /* frames sin código — ignorar */ }
+        ).catch(function(err) {
+            overlay.style.display = 'none';
+            alert('No se pudo acceder a la cámara: ' + err);
+        });
+    } catch(e) {
+        overlay.style.display = 'none';
+    }
+};
+
+window._cerrarEscaner = function() {
+    var overlay = document.getElementById('gscanner-overlay');
+    if (overlay) overlay.style.display = 'none';
+    if (window._gscannerInstance) {
+        window._gscannerInstance.stop().catch(function() {});
+        window._gscannerInstance = null;
+    }
+    window._gscannerCB = null;
+    var reader = document.getElementById('gscanner-reader');
+    if (reader) reader.innerHTML = '';
+};
+
 function cerrarSesion() {
     if (window.cerrarSSE) window.cerrarSSE();
     window._permCache = null; // Invalidar cache de permisos
