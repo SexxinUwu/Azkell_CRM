@@ -303,7 +303,9 @@ window._entCerrarQR = function() {
 // Rellena el artículo en el card correspondiente al idx dado
 window._entSeleccionarItemPorQR = function(invId, idx) {
     var doSelect = function() {
-        var item = (window._entInvData || []).find(function(d) { return d.id === invId; });
+        var item = (window._entInvData || []).find(function(d) {
+            return d.id === invId || (d.codigo_barras && d.codigo_barras.trim() === invId);
+        });
         if (!item) {
             alert('Artículo no encontrado: ' + invId);
             return;
