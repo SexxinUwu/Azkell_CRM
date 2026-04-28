@@ -55,6 +55,12 @@ window.init_inventario = function() {
     window._invModoSeleccion = false;
     window._invSeleccionados = new Set();
     window._invPagActual = 1;
+    // Cargar tipo de cambio para conversión USD→PEN
+    window._invTC = window._invTC || 3.70;
+    fetch('/api/almacen/configuracion')
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(cfg){ if (cfg && cfg.tipo_cambio) window._invTC = parseFloat(cfg.tipo_cambio) || 3.70; })
+        .catch(function(){});
     window.cargarInventario();
     window._invCargarMarcasPlacas();
     window._invCargarUnidades();
@@ -79,6 +85,14 @@ window.init_inventario = function() {
         {value:'Lubricantes',label:'Lubricantes'},
         {value:'Neumáticos', label:'Neumáticos'}
     ], 'Buscar almacén…');
+    // Al seleccionar moneda → mostrar/ocultar campo T/C
+    window._cbOnSelect('inv-f-moneda', function() {
+        var m = window._cbGet('inv-f-moneda');
+        var row = document.getElementById('inv-tc-row');
+        if (row) row.style.display = m === 'USD' ? 'block' : 'none';
+        var tcEl = document.getElementById('inv-f-tc');
+        if (tcEl && !tcEl.value) tcEl.value = window._invTC || 3.70;
+    });
     // Al seleccionar sistema → actualizar opciones de sub-sistema
     window._cbOnSelect('inv-f-sistema', function() { window._invFiltrarSubSistemas(); });
     // ── Inicialización mobile ──────────────────────────────────────
@@ -455,15 +469,10 @@ function _invRenderCard(d) {
     // Semáforo de stock
     var stockActual = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
     var stockMin    = parseFloat(d.stock_min || 0);
-    var stockMax    = parseFloat(d.stock_max || 0);
-    if (stockMax <= 0) stockMax = stockMin > 0 ? stockMin * 4 : Math.max(stockActual * 1.5, 1);
-    var pct = Math.min(100, stockMax > 0 ? Math.round((stockActual / stockMax) * 100) : 0);
     var estado = stockActual <= stockMin ? 'critical'
                : stockMin > 0 && stockActual <= stockMin * 1.5 ? 'warning'
                : 'ok';
-    var badgeTxt = estado === 'critical' ? '¡Reponer Ya!'
-                 : estado === 'warning'  ? 'Stock Bajo'
-                 : 'Stock OK';
+    var badgeTxt = estado === 'critical' ? '¡Reponer!' : estado === 'warning' ? 'Stock Bajo' : 'Stock OK';
 
     // Icono según familia
     var iconMap = {
@@ -475,11 +484,13 @@ function _invRenderCard(d) {
         'MOTOR':'bi-gear-fill','Motor':'bi-gear-fill'
     };
     var iconClass = iconMap[d.familia] || 'bi-box-seam';
+    var iconBg    = estado === 'critical' ? '#fee2e2' : estado === 'warning' ? '#fef9c3' : '#eff6ff';
+    var iconClr   = estado === 'critical' ? '#dc2626' : estado === 'warning' ? '#d97706' : '#2563eb';
 
     // Checkbox modo selección
     var chkHtml = window._invModoSeleccion
-        ? '<input type="checkbox" class="form-check-input position-absolute" '
-          + 'style="top:10px;right:10px;width:18px;height:18px;z-index:5;cursor:pointer;" '
+        ? '<input type="checkbox" class="form-check-input" '
+          + 'style="position:absolute;top:12px;left:12px;width:18px;height:18px;z-index:5;cursor:pointer;" '
           + 'onchange="window._invToggleCheck(\'' + id + '\',this.checked)" onclick="event.stopPropagation()">'
         : '';
 
@@ -487,38 +498,27 @@ function _invRenderCard(d) {
         ? 'onclick="var cb=this.querySelector(\'input[type=checkbox]\');if(cb){cb.checked=!cb.checked;window._invToggleCheck(\'' + id + '\',cb.checked);}"'
         : 'onclick="window.abrirDetalleInv(\'' + id + '\')"';
 
-    var familia = _invEsc(d.familia || '—');
-    var sistema = _invEsc(d.sistema || '—');
-    var desc    = _invEsc(d.descripcion || d.articulo || '');
-    var unidad  = _invEsc(d.unidad || '');
-    var moneda  = d.moneda === 'USD' ? '$' : 'S/.';
-    var costo   = parseFloat(d.costo_referencial || 0).toFixed(2);
+    var desc   = _invEsc(d.descripcion || d.articulo || '');
+    var familia= _invEsc(d.familia || '—');
+    var unidad = _invEsc(d.unidad || 'ud.');
+    var costo  = 'S/ ' + parseFloat(d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-    return '<div class="card-bento ' + estado + '" data-id="' + id + '" ' + clickAttr + '>' +
+    return '<div class="inv-list-card" data-id="' + id + '" ' + clickAttr + '>' +
         chkHtml +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.85rem">' +
-            '<div style="width:44px;height:44px;background:#eff6ff;color:#2563eb;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0">' +
-                '<i class="bi ' + iconClass + '"></i>' +
-            '</div>' +
-            '<span class="bento-badge ' + estado + '">' + badgeTxt + '</span>' +
+        '<div class="ilc-icon" style="background:' + iconBg + ';color:' + iconClr + ';">' +
+            '<i class="bi ' + iconClass + '"></i>' +
         '</div>' +
-        '<div style="font-weight:700;font-size:.9rem;line-height:1.3;margin-bottom:.2rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" title="' + desc + '">' + desc + '</div>' +
-        '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#94a3b8;margin-bottom:.85rem;font-style:italic">' + familia + ' / ' + sistema + '</div>' +
-        '<div style="margin-top:auto">' +
-            '<div style="margin-bottom:.4rem">' +
-                '<div>' +
-                    '<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#cbd5e1">Cantidad</div>' +
-                    '<div style="font-size:1.75rem;font-weight:900;line-height:1;color:' + (estado === 'critical' ? '#ef4444' : 'inherit') + '">' +
-                        stockActual.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) +
-                        (unidad ? ' <span style="font-size:.65rem;font-weight:700;color:#94a3b8">' + unidad + '</span>' : '') +
-                    '</div>' +
-                '</div>' +
+        '<div class="ilc-body">' +
+            '<div class="ilc-name" title="' + desc + '">' + desc + '</div>' +
+            '<div class="ilc-sub">' + familia + ' · ' + _invEsc(d.id) + '</div>' +
+            '<div style="margin-top:.3rem"><span class="ilc-badge ' + estado + '">' + badgeTxt + '</span></div>' +
+        '</div>' +
+        '<div class="ilc-right">' +
+            '<div class="ilc-stock" style="color:' + (estado==='critical'?'#ef4444':'var(--text)') + '">' +
+                stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +
+                ' <span style="font-size:.6rem;font-weight:700;color:var(--subtext)">' + unidad + '</span>' +
             '</div>' +
-            '<div class="stock-bar-bg"><div class="stock-bar-fill ' + estado + '" style="width:' + pct + '%"></div></div>' +
-            '<div style="font-size:.58rem;color:#94a3b8;margin-top:.25rem;display:flex;justify-content:space-between">' +
-                '<span>' + _invEsc(d.id) + '</span>' +
-                '<span>' + pct + '% capacidad</span>' +
-            '</div>' +
+            '<div style="font-size:.68rem;color:var(--subtext);font-weight:700;margin-top:.18rem;">' + costo + '</div>' +
         '</div>' +
     '</div>';
 }
@@ -757,6 +757,11 @@ window.abrirModalInventario = function(id) {
         var monedaLabels = {'PEN':'PEN (S/)','USD':'USD ($)'};
         var monVal = item.moneda || 'PEN';
         window._cbSet('inv-f-moneda',     monVal, monedaLabels[monVal] || monVal);
+        // Mostrar/ocultar T/C según moneda
+        var tcRowE = document.getElementById('inv-tc-row');
+        if (tcRowE) tcRowE.style.display = monVal === 'USD' ? 'block' : 'none';
+        var tcElE = document.getElementById('inv-f-tc');
+        if (tcElE && monVal === 'USD' && !tcElE.value) tcElE.value = window._invTC || 3.70;
         _invSetField('inv-f-costo',             item.costo_referencial);
         window._cbSet('inv-f-estado-art', item.estado_art || 'Activo', item.estado_art || 'Activo');
         _invSetField('inv-f-obs',               item.observaciones);
@@ -787,6 +792,12 @@ window.abrirModalInventario = function(id) {
         _invResetImageUI(item);
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-box-fill me-1"></i>Nuevo Artículo';
+        // Default: moneda PEN → ocultar T/C
+        window._cbSet('inv-f-moneda', 'PEN', 'PEN (S/)');
+        var tcRow0 = document.getElementById('inv-tc-row');
+        if (tcRow0) tcRow0.style.display = 'none';
+        // Default unidad = Unidades
+        window._cbSet('inv-f-unidad', 'Unidades', 'Unidades');
     }
 
     var modal = document.getElementById('inv-form-drawer');
@@ -909,6 +920,41 @@ window._invDescargarQR = function() {
     a.click();
 };
 
+// ── Quick-add Familia / Marca ─────────────────────────────────────
+window._invQuickAddFamilia = function() {
+    var nombre = prompt('Nombre de la nueva familia:');
+    if (!nombre || !nombre.trim()) return;
+    fetch('/api/almacen/familias', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({nombre: nombre.trim()})
+    })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(){
+        var n = nombre.trim();
+        window._invCargarFamilias();
+        setTimeout(function(){ window._cbSet('inv-f-familia', n, n); }, 600);
+    })
+    .catch(function(err){ alert('Error al crear familia: ' + err.message); });
+};
+
+window._invQuickAddMarca = function() {
+    var nombre = prompt('Nombre de la nueva marca:');
+    if (!nombre || !nombre.trim()) return;
+    fetch('/api/almacen/marcas', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({nombre: nombre.trim()})
+    })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(){
+        var n = nombre.trim();
+        window._invCargarMarcasFabricante();
+        setTimeout(function(){ window._cbSet('inv-f-marca', n, n); }, 600);
+    })
+    .catch(function(err){ alert('Error al crear marca: ' + err.message); });
+};
+
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarArticuloInv = function(event) {
     if (event) event.preventDefault();
@@ -931,7 +977,12 @@ window.guardarArticuloInv = function(event) {
         familia:        g('inv-f-familia') || null,
         unidad:         g('inv-f-unidad') || null,
         moneda:         g('inv-f-moneda') || 'PEN',
-        costo_referencial: gN('inv-f-costo'),
+        costo_referencial: (function(){
+            var moneda = g('inv-f-moneda') || 'PEN';
+            var costo  = gN('inv-f-costo');
+            var tc     = parseFloat((document.getElementById('inv-f-tc')||{}).value) || window._invTC || 3.70;
+            return moneda === 'USD' ? costo * tc : costo;
+        })(),
         marca:          marca || null,
         marca_unidad:   JSON.stringify(window._invMarcasSeleccionadas || []),
         estado_art:     g('inv-f-estado-art') || 'Activo',

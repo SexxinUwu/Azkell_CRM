@@ -21,41 +21,32 @@
     text-transform: uppercase; letter-spacing: .1em;
 }
 
-/* Grid de cards */
+/* Grid de cards — 2 columnas fijas */
 .adm-grid {
-    padding: 1.5rem 1.75rem;
+    padding: 1.5rem 1.25rem;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
 }
 @media (max-width: 767.98px) {
-    .adm-grid { padding: 1rem; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+    .adm-grid { padding: .85rem; gap: .75rem; }
 }
 
-/* Section label dentro del grid */
-.adm-section-label {
-    grid-column: 1 / -1;
-    font-size: .6rem; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .12em; color: var(--subtext);
-    display: flex; align-items: center; gap: .5rem;
-    padding-top: .25rem;
-}
-.adm-section-label::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-/* Card individual */
+/* Card individual — centrada verticalmente */
 .adm-card {
     background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 20px;
-    padding: 1.25rem 1rem 1.1rem;
+    padding: 1.5rem 1rem 1.25rem;
     cursor: pointer;
     transition: transform .18s cubic-bezier(.4,0,.2,1),
                 box-shadow .18s cubic-bezier(.4,0,.2,1),
                 border-color .18s;
-    display: flex; flex-direction: column; align-items: flex-start; gap: .6rem;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: .65rem;
     position: relative; overflow: hidden;
+    min-height: 130px;
 }
 .adm-card:hover {
     transform: translateY(-3px);
@@ -64,18 +55,11 @@
 }
 .adm-card:active { transform: translateY(-1px); }
 
-/* Número de orden */
-.adm-card-num {
-    position: absolute; top: .75rem; right: .9rem;
-    font-size: .58rem; font-weight: 900; color: var(--border);
-    letter-spacing: .04em;
-}
-
-/* Ícono */
+/* Ícono grande centrado */
 .adm-card-icon {
-    width: 48px; height: 48px; border-radius: 16px;
+    width: 64px; height: 64px; border-radius: 20px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.75rem;
     background: var(--adm-bg, #eff6ff);
     color: var(--adm-color, #2563eb);
     flex-shrink: 0;
@@ -85,22 +69,20 @@
 .adm-card-name {
     font-size: .88rem; font-weight: 800; color: var(--text); line-height: 1.2;
 }
-.adm-card-desc {
-    font-size: .67rem; color: var(--subtext); font-weight: 600; line-height: 1.35;
-}
 
-/* Flecha de acción */
-.adm-card-arrow {
-    margin-top: auto; align-self: flex-end;
-    width: 26px; height: 26px; border-radius: 8px;
-    background: var(--adm-bg, #eff6ff);
-    color: var(--adm-color, #2563eb);
-    display: flex; align-items: center; justify-content: center;
-    font-size: .78rem; transition: background .18s;
+/* Ocultar elementos no necesarios en diseño centrado */
+.adm-card-desc, .adm-card-arrow, .adm-card-num { display: none; }
+
+/* Section label — ocupa las 2 columnas */
+.adm-section-label {
+    grid-column: 1 / -1;
+    font-size: .6rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--subtext);
+    display: flex; align-items: center; gap: .5rem;
+    padding-top: .25rem;
 }
-.adm-card:hover .adm-card-arrow {
-    background: var(--adm-color, #2563eb);
-    color: #fff;
+.adm-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
 }
 </style>
 
