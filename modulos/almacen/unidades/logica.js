@@ -48,8 +48,9 @@ window._undRender = function() {
         return;
     }
     tb.innerHTML = datos.map(function(u) {
+        var display = _undEsc(u.descripcion || u.nombre || '—');
         return '<tr>' +
-            '<td>' + _undEsc(u.nombre || '—') + (u.descripcion ? '<br><small class="text-muted">' + _undEsc(u.descripcion) + '</small>' : '') + '</td>' +
+            '<td style="font-weight:600;color:var(--text);">' + display + '</td>' +
             '<td>' + (u.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
                 (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
@@ -70,13 +71,11 @@ window.abrirModalUnidad = function(id) {
     if (id) {
         var item = (window._undData || []).find(function(u) { return u.id == id; });
         if (!item) return;
-        if (titulo) titulo.innerHTML = '<i class="bi bi-rulers me-1"></i>Editar Unidad — ' + _undEsc(item.nombre);
+        if (titulo) titulo.innerHTML = '<i class="bi bi-rulers me-1"></i>Editar Unidad — ' + _undEsc(item.descripcion || item.nombre);
         if (editId) editId.value = item.id;
         var fn = document.getElementById('und-f-nombre');
-        var fd = document.getElementById('und-f-descripcion');
         var fa = document.getElementById('und-f-activo');
-        if (fn) fn.value = item.nombre || '';
-        if (fd) fd.value = item.descripcion || '';
+        if (fn) fn.value = item.descripcion || item.nombre || '';
         if (fa) fa.value = item.activo ? '1' : '0';
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-rulers me-1"></i>Nueva Unidad';
@@ -88,15 +87,15 @@ window.guardarUnidad = function(event) {
     if (event) event.preventDefault();
     var id   = (document.getElementById('und-edit-id') || {}).value || '';
     if (!window.guardAction('cfg_almacen', id ? 'e' : 'c')) return;
-    var nombre = ((document.getElementById('und-f-nombre') || {}).value || '').trim().toUpperCase();
-    var desc   = ((document.getElementById('und-f-descripcion') || {}).value || '').trim();
+    var nombre = ((document.getElementById('und-f-nombre') || {}).value || '').trim();
     var activo = ((document.getElementById('und-f-activo') || {}).value || '1');
-    if (!nombre) { alert('El campo Código es obligatorio.'); return; }
+    if (!nombre) { alert('El campo Nombre es obligatorio.'); return; }
 
     var url    = id ? '/api/almacen/unidades/' + encodeURIComponent(id) : '/api/almacen/unidades';
     var method = id ? 'PUT' : 'POST';
+    // nombre se usa como descripción visible; para compatibilidad BD usamos el mismo valor
     fetch(url, { method: method, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre, descripcion: desc || null, activo: activo === '1' ? 1 : 0 }) })
+        body: JSON.stringify({ nombre: nombre.toUpperCase().slice(0,20), descripcion: nombre, activo: activo === '1' ? 1 : 0 }) })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function() {
         var m = bootstrap.Modal.getInstance(document.getElementById('modal-unidad'));

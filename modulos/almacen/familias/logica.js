@@ -49,7 +49,7 @@ window._famRender = function() {
     }
     tb.innerHTML = datos.map(function(f) {
         return '<tr>' +
-            '<td><span class="badge bg-primary fw-bold">' + _famEsc(f.nombre) + '</span></td>' +
+            '<td style="font-weight:700;color:var(--text);">' + _famEsc(f.nombre) + '</td>' +
             '<td class="text-muted small">' + _famEsc(f.descripcion || '—') + '</td>' +
             '<td>' + (f.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +

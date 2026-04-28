@@ -920,40 +920,60 @@ window._invDescargarQR = function() {
     a.click();
 };
 
-// ── Quick-add Familia / Marca ─────────────────────────────────────
-window._invQuickAddFamilia = function() {
-    var nombre = prompt('Nombre de la nueva familia:');
-    if (!nombre || !nombre.trim()) return;
-    fetch('/api/almacen/familias', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({nombre: nombre.trim()})
-    })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(){
-        var n = nombre.trim();
-        window._invCargarFamilias();
-        setTimeout(function(){ window._cbSet('inv-f-familia', n, n); }, 600);
-    })
-    .catch(function(err){ alert('Error al crear familia: ' + err.message); });
+// ── Quick-add Familia / Marca (mini-modal bottom sheet) ──────────
+window._invQuickTarget = window._invQuickTarget || null; // 'familia' | 'marca'
+
+window._invQuickOpen = function(tipo) {
+    window._invQuickTarget = tipo;
+    var panel = document.getElementById('inv-quick-panel');
+    var bd    = document.getElementById('inv-quick-bd');
+    var titulo= document.getElementById('inv-quick-titulo');
+    var input = document.getElementById('inv-quick-input');
+    if (!panel || !bd) return;
+    if (titulo) titulo.innerHTML = tipo === 'familia'
+        ? '<i class="bi bi-tags-fill me-1" style="color:#7c3aed;"></i>Nueva Familia'
+        : '<i class="bi bi-award-fill me-1" style="color:#db2777;"></i>Nueva Marca';
+    if (input) { input.placeholder = tipo === 'familia' ? 'Ej: LUBRICANTES, FILTROS…' : 'Ej: SHELL, MOBIL…'; input.value = ''; }
+    panel.style.display = 'block';
+    bd.style.display = 'block';
+    setTimeout(function(){ if (input) input.focus(); }, 100);
 };
 
-window._invQuickAddMarca = function() {
-    var nombre = prompt('Nombre de la nueva marca:');
-    if (!nombre || !nombre.trim()) return;
-    fetch('/api/almacen/marcas', {
+window._invQuickClose = function() {
+    var panel = document.getElementById('inv-quick-panel');
+    var bd    = document.getElementById('inv-quick-bd');
+    if (panel) panel.style.display = 'none';
+    if (bd)    bd.style.display = 'none';
+    window._invQuickTarget = null;
+};
+
+window._invQuickGuardar = function() {
+    var input = document.getElementById('inv-quick-input');
+    var nombre = input ? input.value.trim() : '';
+    if (!nombre) { if (input) input.focus(); return; }
+    var tipo = window._invQuickTarget;
+    var url  = tipo === 'familia' ? '/api/almacen/familias' : '/api/almacen/marcas';
+    window._invQuickClose();
+    fetch(url, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({nombre: nombre.trim()})
+        body: JSON.stringify({nombre: nombre})
     })
     .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(){
-        var n = nombre.trim();
-        window._invCargarMarcasFabricante();
-        setTimeout(function(){ window._cbSet('inv-f-marca', n, n); }, 600);
+        if (tipo === 'familia') {
+            window._invCargarFamilias();
+            setTimeout(function(){ window._cbSet('inv-f-familia', nombre, nombre); }, 600);
+        } else {
+            window._invCargarMarcasFabricante();
+            setTimeout(function(){ window._cbSet('inv-f-marca', nombre, nombre); }, 600);
+        }
     })
-    .catch(function(err){ alert('Error al crear marca: ' + err.message); });
+    .catch(function(err){ alert('Error al guardar: ' + err.message); });
 };
+
+window._invQuickAddFamilia = function() { window._invQuickOpen('familia'); };
+window._invQuickAddMarca   = function() { window._invQuickOpen('marca'); };
 
 // ── Guardar ───────────────────────────────────────────────────────
 window.guardarArticuloInv = function(event) {
