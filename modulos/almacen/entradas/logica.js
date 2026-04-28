@@ -125,8 +125,8 @@ window._entAgregarItem = function() {
     card.id        = 'ent-item-' + idx;
     card.className = 'ent-item-card';
     card.innerHTML =
-        // Fila 1: búsqueda artículo + botón eliminar
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+        // Fila 1: búsqueda artículo + botón QR + botón eliminar
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
             '<div style="flex:1;position:relative;">' +
                 '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
                     ' placeholder="Buscar artículo…" autocomplete="off"' +
@@ -136,6 +136,12 @@ window._entAgregarItem = function() {
                 '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
                 '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
             '</div>' +
+            '<button type="button" onclick="window._entAbrirQR(' + idx + ')"' +
+                ' title="Escanear QR"' +
+                ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
+                'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
+                '<i class="bi bi-qr-code-scan"></i>' +
+            '</button>' +
             '<button type="button" onclick="window._entQuitarItem(' + idx + ')"' +
                 ' style="width:32px;height:32px;border-radius:10px;border:none;background:#fee2e2;' +
                 'color:#ef4444;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;">' +
@@ -244,9 +250,11 @@ window._entQuitarItem = function(idx) {
 };
 
 // ── QR Scanner ────────────────────────────────────────────────────
-window._entQrScanner = window._entQrScanner || null;
+window._entQrScanner   = window._entQrScanner   || null;
+window._entQrTargetIdx = window._entQrTargetIdx || null;
 
-window._entAbrirQR = function() {
+window._entAbrirQR = function(idx) {
+    window._entQrTargetIdx = (idx !== undefined) ? idx : null;
     var overlay = document.getElementById('ent-qr-overlay');
     if (overlay) overlay.style.display = 'flex';
     var status = document.getElementById('ent-qr-status');
@@ -259,6 +267,7 @@ window._entAbrirQR = function() {
     // Limpiar reader anterior si existe
     var readerEl = document.getElementById('ent-qr-reader');
     if (readerEl) readerEl.innerHTML = '';
+    if (status) status.textContent = 'Apunta la cámara al código QR del artículo';
 
     try {
         window._entQrScanner = new Html5Qrcode('ent-qr-reader');
@@ -266,8 +275,9 @@ window._entAbrirQR = function() {
             { facingMode: 'environment' },
             { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1 },
             function(decodedText) {
+                var targetIdx = window._entQrTargetIdx;
                 window._entCerrarQR();
-                window._entAgregarItemPorQR(decodedText.trim());
+                window._entSeleccionarItemPorQR(decodedText.trim(), targetIdx);
             },
             function() { /* errores de frame — ignorar */ }
         ).catch(function(err) {
@@ -283,24 +293,46 @@ window._entCerrarQR = function() {
         window._entQrScanner.stop().catch(function() {});
         window._entQrScanner = null;
     }
+    window._entQrTargetIdx = null;
     var overlay = document.getElementById('ent-qr-overlay');
     if (overlay) overlay.style.display = 'none';
     var readerEl = document.getElementById('ent-qr-reader');
     if (readerEl) readerEl.innerHTML = '';
 };
 
+// Rellena el artículo en el card correspondiente al idx dado
+window._entSeleccionarItemPorQR = function(invId, idx) {
+    var doSelect = function() {
+        var item = (window._entInvData || []).find(function(d) { return d.id === invId; });
+        if (!item) {
+            alert('Artículo no encontrado: ' + invId);
+            return;
+        }
+        var cbId = 'ent-art-' + idx;
+        var lbl  = item.id + ' — ' + (item.descripcion || '');
+        window._cbSet(cbId, item.id, lbl);
+        if (window._cbCallbacks && window._cbCallbacks[cbId]) {
+            window._cbCallbacks[cbId](item.id, lbl);
+        }
+        // Enfocar el campo de cantidad para agilizar el ingreso
+        var cantEl = document.querySelector('.ent-item-cant[data-idx="' + idx + '"]');
+        if (cantEl) { cantEl.focus(); cantEl.select(); }
+    };
+    if (!(window._entInvData || []).length) {
+        window._entCargarInv(doSelect);
+    } else {
+        doSelect();
+    }
+};
+
+// Función legacy mantenida por compatibilidad
 window._entAgregarItemPorQR = function(invId) {
     var doAdd = function() {
         var item = (window._entInvData || []).find(function(d) { return d.id === invId; });
-        if (!item) {
-            alert('Artículo no encontrado en inventario: ' + invId);
-            return;
-        }
-        // Capturar el idx que usará _entAgregarItem (antes del incremento)
+        if (!item) { alert('Artículo no encontrado: ' + invId); return; }
         var futureIdx = window._entItemIdx;
         var futureCbId = 'ent-art-' + futureIdx;
-        window._entAgregarItem(); // _entInvData ya está cargado → sincrónico
-        // Auto-seleccionar el artículo en el combobox recién creado
+        window._entAgregarItem();
         var lbl = item.id + ' — ' + (item.descripcion || '');
         window._cbSet(futureCbId, item.id, lbl);
         if (window._cbCallbacks && window._cbCallbacks[futureCbId]) {

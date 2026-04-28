@@ -2561,6 +2561,28 @@ window.cargarModuloAislado = async function(rutaModulo) {
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         root.classList.add('module-transitioning');
         root.innerHTML = await respHTML.text();
+
+        // ← Botón "Atrás a Administración" para sub-módulos admin
+        const ADMIN_SUBRUTAS = [
+            'almacen/proveedores','almacen/familias','almacen/unidades',
+            'almacen/sistemas','almacen/marcas',
+            'mantenimiento/configuracion-mp','mantenimiento/kits-mp',
+            'mantenimiento/tipos-mp','mantenimiento/config-metrica',
+            'preferencias/situaciones'
+        ];
+        if (ADMIN_SUBRUTAS.includes(rutaModulo)) {
+            var backBtn = document.createElement('div');
+            backBtn.style.cssText = 'flex-shrink:0;padding:.45rem 1rem .25rem;';
+            backBtn.innerHTML = '<button onclick="cargarModuloAislado(\'administracion\')" ' +
+                'style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;' +
+                'border-radius:10px;border:1.5px solid var(--border);background:var(--surface);' +
+                'color:var(--subtext);font-size:.72rem;font-weight:700;cursor:pointer;' +
+                'transition:background .15s;"' +
+                ' onmouseover="this.style.background=\'var(--bg)\'"' +
+                ' onmouseout="this.style.background=\'var(--surface)\'">' +
+                '<i class="bi bi-arrow-left"></i>Administración</button>';
+            root.insertBefore(backBtn, root.firstChild);
+        }
         if (typeof window.applyI18n === 'function') window.applyI18n();
         // Transición fade-in
         requestAnimationFrame(function() {
