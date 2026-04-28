@@ -1,0 +1,261 @@
+<!-- Módulo Administración — Hub de configuración Azkell Fleet -->
+<style>
+/* ─── Admin Hub ──────────────────────────────────────────────────── */
+#moduloAdmin {
+    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+    overflow-y: auto; background: var(--bg);
+}
+.adm-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    padding: 2rem 2rem 1.6rem;
+    flex-shrink: 0;
+}
+@media (max-width: 767.98px) {
+    .adm-hero { padding: 1.25rem 1rem 1rem; }
+}
+.adm-hero-title {
+    font-size: 1.45rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: .3rem;
+}
+.adm-hero-sub {
+    font-size: .75rem; color: #94a3b8; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .1em;
+}
+
+/* Grid de cards */
+.adm-grid {
+    padding: 1.5rem 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+@media (max-width: 767.98px) {
+    .adm-grid { padding: 1rem; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+}
+
+/* Section label dentro del grid */
+.adm-section-label {
+    grid-column: 1 / -1;
+    font-size: .6rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--subtext);
+    display: flex; align-items: center; gap: .5rem;
+    padding-top: .25rem;
+}
+.adm-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Card individual */
+.adm-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.25rem 1rem 1.1rem;
+    cursor: pointer;
+    transition: transform .18s cubic-bezier(.4,0,.2,1),
+                box-shadow .18s cubic-bezier(.4,0,.2,1),
+                border-color .18s;
+    display: flex; flex-direction: column; align-items: flex-start; gap: .6rem;
+    position: relative; overflow: hidden;
+}
+.adm-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.1);
+    border-color: var(--adm-color, #2563eb);
+}
+.adm-card:active { transform: translateY(-1px); }
+
+/* Número de orden */
+.adm-card-num {
+    position: absolute; top: .75rem; right: .9rem;
+    font-size: .58rem; font-weight: 900; color: var(--border);
+    letter-spacing: .04em;
+}
+
+/* Ícono */
+.adm-card-icon {
+    width: 48px; height: 48px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+    background: var(--adm-bg, #eff6ff);
+    color: var(--adm-color, #2563eb);
+    flex-shrink: 0;
+}
+
+/* Texto */
+.adm-card-name {
+    font-size: .88rem; font-weight: 800; color: var(--text); line-height: 1.2;
+}
+.adm-card-desc {
+    font-size: .67rem; color: var(--subtext); font-weight: 600; line-height: 1.35;
+}
+
+/* Flecha de acción */
+.adm-card-arrow {
+    margin-top: auto; align-self: flex-end;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--adm-bg, #eff6ff);
+    color: var(--adm-color, #2563eb);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem; transition: background .18s;
+}
+.adm-card:hover .adm-card-arrow {
+    background: var(--adm-color, #2563eb);
+    color: #fff;
+}
+</style>
+
+<div id="moduloAdmin">
+
+    <!-- Hero header -->
+    <div class="adm-hero">
+        <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.6rem;">
+            <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.1);
+                        display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-grid-fill" style="font-size:1.3rem;color:#fff;"></i>
+            </div>
+            <div>
+                <div class="adm-hero-title">Administración</div>
+                <div class="adm-hero-sub">Configuración &amp; Maestros del sistema</div>
+            </div>
+        </div>
+        <!-- Stats row -->
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;">
+            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
+                        border-radius:10px;padding:.35rem .75rem;">
+                <i class="bi bi-box-seam" style="color:#22c55e;font-size:.85rem;"></i>
+                <span style="font-size:.72rem;color:#94a3b8;font-weight:700;">5 módulos Almacén</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
+                        border-radius:10px;padding:.35rem .75rem;">
+                <i class="bi bi-tools" style="color:#f59e0b;font-size:.85rem;"></i>
+                <span style="font-size:.72rem;color:#94a3b8;font-weight:700;">5 módulos Mantenimiento</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards grid -->
+    <div class="adm-grid">
+
+        <!-- ── ALMACÉN ── -->
+        <div class="adm-section-label">
+            <i class="bi bi-box-seam" style="color:#16a34a;"></i>Almacén
+        </div>
+
+        <div class="adm-card" style="--adm-color:#16a34a;--adm-bg:#dcfce7;"
+             onclick="cargarModuloAislado('almacen/proveedores')">
+            <span class="adm-card-num">01</span>
+            <div class="adm-card-icon"><i class="bi bi-building-fill"></i></div>
+            <div>
+                <div class="adm-card-name">Proveedores</div>
+                <div class="adm-card-desc">Gestión de proveedores y contactos</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#7c3aed;--adm-bg:#f3e8ff;"
+             onclick="cargarModuloAislado('almacen/familias')">
+            <span class="adm-card-num">02</span>
+            <div class="adm-card-icon"><i class="bi bi-tags-fill"></i></div>
+            <div>
+                <div class="adm-card-name">Familias</div>
+                <div class="adm-card-desc">Categorías de artículos del inventario</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#0891b2;--adm-bg:#cffafe;"
+             onclick="cargarModuloAislado('almacen/unidades')">
+            <span class="adm-card-num">03</span>
+            <div class="adm-card-icon"><i class="bi bi-rulers"></i></div>
+            <div>
+                <div class="adm-card-name">Unidades de Medida</div>
+                <div class="adm-card-desc">Unidades para cantidades y stocks</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#ea580c;--adm-bg:#ffedd5;"
+             onclick="cargarModuloAislado('almacen/sistemas')">
+            <span class="adm-card-num">04</span>
+            <div class="adm-card-icon"><i class="bi bi-diagram-3-fill"></i></div>
+            <div>
+                <div class="adm-card-name">Sistemas</div>
+                <div class="adm-card-desc">Sistemas y subsistemas de vehículos</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#db2777;--adm-bg:#fce7f3;"
+             onclick="cargarModuloAislado('almacen/marcas')">
+            <span class="adm-card-num">05</span>
+            <div class="adm-card-icon"><i class="bi bi-award-fill"></i></div>
+            <div>
+                <div class="adm-card-name">Marcas</div>
+                <div class="adm-card-desc">Marcas de repuestos y materiales</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <!-- ── MANTENIMIENTO ── -->
+        <div class="adm-section-label">
+            <i class="bi bi-tools" style="color:#d97706;"></i>Mantenimiento
+        </div>
+
+        <div class="adm-card" style="--adm-color:#2563eb;--adm-bg:#eff6ff;"
+             onclick="cargarModuloAislado('mantenimiento/configuracion-mp')">
+            <span class="adm-card-num">06</span>
+            <div class="adm-card-icon"><i class="bi bi-sliders"></i></div>
+            <div>
+                <div class="adm-card-name">Frecuencias MP</div>
+                <div class="adm-card-desc">Intervalos de mantenimiento preventivo</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#d97706;--adm-bg:#fef3c7;"
+             onclick="cargarModuloAislado('mantenimiento/kits-mp')">
+            <span class="adm-card-num">07</span>
+            <div class="adm-card-icon"><i class="bi bi-tools"></i></div>
+            <div>
+                <div class="adm-card-name">Kits MP</div>
+                <div class="adm-card-desc">Kits de materiales por tipo de servicio</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#0284c7;--adm-bg:#e0f2fe;"
+             onclick="cargarModuloAislado('mantenimiento/tipos-mp')">
+            <span class="adm-card-num">08</span>
+            <div class="adm-card-icon"><i class="bi bi-card-list"></i></div>
+            <div>
+                <div class="adm-card-name">Tipos MP</div>
+                <div class="adm-card-desc">Tipos de mantenimiento del taller</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#dc2626;--adm-bg:#fee2e2;"
+             onclick="cargarModuloAislado('mantenimiento/config-metrica')">
+            <span class="adm-card-num">09</span>
+            <div class="adm-card-icon"><i class="bi bi-speedometer2"></i></div>
+            <div>
+                <div class="adm-card-name">Config. Métrica</div>
+                <div class="adm-card-desc">Parámetros de métricas y KPIs</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+        <div class="adm-card" style="--adm-color:#4f46e5;--adm-bg:#eef2ff;"
+             onclick="cargarModuloAislado('preferencias/situaciones')">
+            <span class="adm-card-num">10</span>
+            <div class="adm-card-icon"><i class="bi bi-flag-fill"></i></div>
+            <div>
+                <div class="adm-card-name">Situaciones</div>
+                <div class="adm-card-desc">Estados y situaciones de flota</div>
+            </div>
+            <div class="adm-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </div>
+
+    </div>
+
+</div>

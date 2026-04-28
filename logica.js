@@ -268,6 +268,11 @@ window.verificarSesionGuardada = function() {
     safe('nav-sistemas-inv',     vCfgAlm);
     safe('nav-marcas-inv',       vCfgAlm);
 
+    // ADMINISTRACIÓN — hub visible si tiene algún permiso de configuración
+    var showAdm = vCfgMant || vCfgAlm || isAdm;
+    safe('wrap-administracion', showAdm);
+    safe('nav-administracion',  showAdm);
+
     // Sub-labels de Preferencias
     var elSubCfgPrev   = document.getElementById('nav-sub-cfg-prev');
     var elSubCfgTaller = document.getElementById('nav-sub-cfg-taller');
@@ -1123,7 +1128,7 @@ window.restoreNavSections = function() {
     try {
         const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
         // HTML ya arranca colapsado. Solo expandir secciones guardadas como 'expanded'.
-        const all = ['mantenimiento','almacen','flota','directorio','sistema','configuracion'];
+        const all = ['mantenimiento','almacen','flota','directorio','sistema','configuracion','administracion'];
         all.forEach(function(id) {
             const items = document.getElementById('section-items-' + id);
             const btn   = document.querySelector('.nav-section-toggle[data-section="' + id + '"]');
@@ -2343,6 +2348,7 @@ const TITULOS_MODULOS = {
     'directorio/conductores':      'Directorio de Personal',
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
+    'administracion':              'Administración',
 };
 
 const MENU_IDS = {
@@ -2351,10 +2357,10 @@ const MENU_IDS = {
     'mantenimiento/placas':        'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
     'mantenimiento/planificacion': 'nav-planificacion',
-    'mantenimiento/configuracion-mp':  'nav-configuracion-mp',
-    'mantenimiento/kits-mp':           'nav-kits-mp',
-    'mantenimiento/tipos-mp':          'nav-tipos-mp',
-    'mantenimiento/config-metrica':    'nav-config-metrica',
+    'mantenimiento/configuracion-mp':  'nav-administracion',
+    'mantenimiento/kits-mp':           'nav-administracion',
+    'mantenimiento/tipos-mp':          'nav-administracion',
+    'mantenimiento/config-metrica':    'nav-administracion',
     'mantenimiento/ordenes':           'nav-ordenes',
     'mantenimiento/status-rampa':      'nav-status-rampa',
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
@@ -2367,14 +2373,15 @@ const MENU_IDS = {
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/salidas':             'nav-salidas-inv',
-    'almacen/proveedores':         'nav-proveedores-inv',
+    'almacen/proveedores':         'nav-administracion',
     'almacen/kardex':              'nav-kardex',
     'almacen/costos':              'nav-costos-inv',
-    'almacen/unidades':            'nav-unidades-inv',
-    'almacen/sistemas':            'nav-sistemas-inv',
-    'almacen/familias':            'nav-familias-inv',
-    'almacen/marcas':              'nav-marcas-inv',
-    'preferencias/situaciones':    'nav-situaciones',
+    'almacen/unidades':            'nav-administracion',
+    'almacen/sistemas':            'nav-administracion',
+    'almacen/familias':            'nav-administracion',
+    'almacen/marcas':              'nav-administracion',
+    'preferencias/situaciones':    'nav-administracion',
+    'administracion':              'nav-administracion',
     'flota/status':                'nav-status-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'directorio/conductores':      'nav-conductores',
@@ -2392,15 +2399,16 @@ const MENU_SECTION = {
     'almacen/proveedores':        'almacen',
     'almacen/kardex':             'almacen',
     'almacen/costos':             'almacen',
-    'almacen/unidades':           'preferencias',
-    'almacen/sistemas':           'preferencias',
-    'almacen/familias':           'preferencias',
-    'almacen/marcas':             'preferencias',
-    'preferencias/situaciones':   'preferencias',
-    'mantenimiento/configuracion-mp': 'preferencias',
-    'mantenimiento/kits-mp':          'preferencias',
-    'mantenimiento/tipos-mp':         'preferencias',
-    'mantenimiento/config-metrica':   'preferencias',
+    'almacen/unidades':           'almacen',
+    'almacen/sistemas':           'almacen',
+    'almacen/familias':           'almacen',
+    'almacen/marcas':             'almacen',
+    'preferencias/situaciones':   'administracion',
+    'administracion':             'administracion',
+    'mantenimiento/configuracion-mp': 'administracion',
+    'mantenimiento/kits-mp':          'administracion',
+    'mantenimiento/tipos-mp':         'administracion',
+    'mantenimiento/config-metrica':   'administracion',
     'mantenimiento/status-rampa':     'mantenimiento',
     'mantenimiento/reportes-ot':      'mantenimiento',
     'mantenimiento/trabajos-ot':      'mantenimiento',
@@ -2422,14 +2430,14 @@ const BREADCRUMB_MAP = {
     'mantenimiento/placas':       ['Mantenimiento','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
     'almacen/inventario':         ['Almacén','Inventario'],
-    'almacen/unidades':           ['Preferencias','Unidades'],
-    'almacen/sistemas':           ['Preferencias','Sistemas'],
-    'almacen/familias':           ['Preferencias','Familias'],
-    'almacen/marcas':             ['Preferencias','Marcas'],
-    'preferencias/situaciones':   ['Preferencias','Situaciones'],
-    'mantenimiento/configuracion-mp': ['Preferencias','Frecuencias MP'],
-    'mantenimiento/kits-mp':          ['Preferencias','Kits MP'],
-    'mantenimiento/tipos-mp':         ['Preferencias','Tipos MP'],
+    'almacen/unidades':           ['Administración','Unidades de Medida'],
+    'almacen/sistemas':           ['Administración','Sistemas'],
+    'almacen/familias':           ['Administración','Familias'],
+    'almacen/marcas':             ['Administración','Marcas'],
+    'preferencias/situaciones':   ['Administración','Situaciones'],
+    'mantenimiento/configuracion-mp': ['Administración','Frecuencias MP'],
+    'mantenimiento/kits-mp':          ['Administración','Kits MP'],
+    'mantenimiento/tipos-mp':         ['Administración','Tipos MP'],
     'mantenimiento/config-metrica':   ['Preferencias','Config. Métrica'],
     'mantenimiento/ordenes':          ['Mantenimiento','Órdenes de Mto.'],
     'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],

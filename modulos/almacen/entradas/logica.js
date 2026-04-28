@@ -243,6 +243,77 @@ window._entQuitarItem = function(idx) {
     window._entActualizarTotal();
 };
 
+// ── QR Scanner ────────────────────────────────────────────────────
+window._entQrScanner = window._entQrScanner || null;
+
+window._entAbrirQR = function() {
+    var overlay = document.getElementById('ent-qr-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    var status = document.getElementById('ent-qr-status');
+
+    if (typeof Html5Qrcode === 'undefined') {
+        if (status) status.innerHTML = '<span style="color:#ef4444;">Librería QR no cargada. Recarga la página.</span>';
+        return;
+    }
+
+    // Limpiar reader anterior si existe
+    var readerEl = document.getElementById('ent-qr-reader');
+    if (readerEl) readerEl.innerHTML = '';
+
+    try {
+        window._entQrScanner = new Html5Qrcode('ent-qr-reader');
+        window._entQrScanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1 },
+            function(decodedText) {
+                window._entCerrarQR();
+                window._entAgregarItemPorQR(decodedText.trim());
+            },
+            function() { /* errores de frame — ignorar */ }
+        ).catch(function(err) {
+            if (status) status.innerHTML = '<span style="color:#ef4444;">No se pudo acceder a la cámara.<br>Permite el permiso e intenta de nuevo.</span>';
+        });
+    } catch(e) {
+        if (status) status.innerHTML = '<span style="color:#ef4444;">Error al iniciar el escáner.</span>';
+    }
+};
+
+window._entCerrarQR = function() {
+    if (window._entQrScanner) {
+        window._entQrScanner.stop().catch(function() {});
+        window._entQrScanner = null;
+    }
+    var overlay = document.getElementById('ent-qr-overlay');
+    if (overlay) overlay.style.display = 'none';
+    var readerEl = document.getElementById('ent-qr-reader');
+    if (readerEl) readerEl.innerHTML = '';
+};
+
+window._entAgregarItemPorQR = function(invId) {
+    var doAdd = function() {
+        var item = (window._entInvData || []).find(function(d) { return d.id === invId; });
+        if (!item) {
+            alert('Artículo no encontrado en inventario: ' + invId);
+            return;
+        }
+        // Capturar el idx que usará _entAgregarItem (antes del incremento)
+        var futureIdx = window._entItemIdx;
+        var futureCbId = 'ent-art-' + futureIdx;
+        window._entAgregarItem(); // _entInvData ya está cargado → sincrónico
+        // Auto-seleccionar el artículo en el combobox recién creado
+        var lbl = item.id + ' — ' + (item.descripcion || '');
+        window._cbSet(futureCbId, item.id, lbl);
+        if (window._cbCallbacks && window._cbCallbacks[futureCbId]) {
+            window._cbCallbacks[futureCbId](item.id, lbl);
+        }
+    };
+    if (!(window._entInvData || []).length) {
+        window._entCargarInv(doAdd);
+    } else {
+        doAdd();
+    }
+};
+
 window._entActualizarTotal = function() {
     var imps = document.querySelectorAll('.ent-item-imp');
     var total = 0;
@@ -343,6 +414,7 @@ window.abrirModalEntrada = function() {
 
 // ── Cerrar panel ──────────────────────────────────────────────────
 window._entCerrarModal = function() {
+    if (window._entQrScanner) window._entCerrarQR();
     var panel = document.getElementById('modal-entrada');
     var bd    = document.getElementById('ent-entrada-bd');
     if (panel) panel.classList.remove('open');
