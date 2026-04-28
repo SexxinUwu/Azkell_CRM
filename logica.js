@@ -370,15 +370,15 @@ window._abrirEscaner = function(callback, titulo) {
 
     // Limpiar instancia previa
     if (window._gscannerInstance) {
-        try { window._gscannerInstance.stop(); } catch(e) {}
+        try { window._gscannerInstance.stop().catch(function(){}); } catch(e) {}
         window._gscannerInstance = null;
     }
     var reader = document.getElementById('gscanner-reader');
     if (reader) reader.innerHTML = '';
 
-    // Mostrar overlay INVISIBLE hasta que la cámara fluya (evita pantalla gris)
-    overlay.style.visibility = 'hidden';
+    // Mostrar overlay inmediatamente — fondo negro mientras arranca la cámara (comportamiento nativo)
     overlay.style.display    = 'block';
+    overlay.style.visibility = 'visible';
     window._gscannerTorch    = false;
     var torchBtn = document.getElementById('gscanner-torch-btn');
     if (torchBtn) torchBtn.style.background = 'rgba(0,0,0,.45)';
@@ -435,18 +435,15 @@ window._abrirEscaner = function(callback, titulo) {
                         'z-index:1!important', 'background:#000!important'
                     ].join(';');
                 }
-                overlay.style.visibility = 'visible';
             }, 150);
         })
         .catch(function(err) {
-            overlay.style.display    = 'none';
-            overlay.style.visibility = 'visible';
+            overlay.style.display = 'none';
             alert('No se pudo acceder a la cámara: ' + (err.message || err));
         });
 
     } catch(e) {
-        overlay.style.display    = 'none';
-        overlay.style.visibility = 'visible';
+        overlay.style.display = 'none';
     }
 };
 
