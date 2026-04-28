@@ -174,15 +174,6 @@
                     </div>
                 </div>
 
-                <!-- ADMINISTRACIÓN -->
-                <div id="wrap-administracion">
-                    <a id="nav-administracion" class="nav-item" onclick="cargarModuloAislado('administracion')">
-                        <i class="bi bi-grid-fill nav-icon"></i>
-                        <span class="link-text">Administración</span>
-                        <span class="section-badge" style="margin-left:auto;">10</span>
-                    </a>
-                </div>
-
                 <!-- DIRECTORIO -->
                 <div id="wrap-directorio">
                     <button class="nav-section-toggle" data-section="directorio" aria-expanded="false" onclick="window.toggleNavSection('directorio')">
@@ -234,6 +225,14 @@
                             <i class="bi bi-translate nav-icon"></i>
                             <span class="link-text" data-i18n="cfg.nav.language">Idioma</span>
                         </a>
+                        <!-- Administración -->
+                        <div id="wrap-administracion">
+                            <a id="nav-administracion" class="nav-item" onclick="cargarModuloAislado('administracion')">
+                                <i class="bi bi-grid-fill nav-icon"></i>
+                                <span class="link-text">Administración</span>
+                                <span class="section-badge" style="margin-left:auto;">10</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -549,15 +548,6 @@
     <nav class="bottom-nav d-flex d-md-none" id="bottom-nav">
         <a class="bottom-nav-item active" id="bnav-dashboard" onclick="cargarModuloAislado('dashboard'); setBottomNavActive('bnav-dashboard')">
             <i class="bi bi-grid-1x2-fill"></i><span data-i18n="bnav.home">Inicio</span>
-        </a>
-        <a class="bottom-nav-item" id="bnav-inspecciones" onclick="cargarModuloAislado('mantenimiento/inspecciones'); setBottomNavActive('bnav-inspecciones')">
-            <i class="bi bi-clipboard2-pulse-fill"></i><span data-i18n="bnav.insp">Insp.</span>
-        </a>
-        <a class="bottom-nav-item" id="bnav-placas" onclick="cargarModuloAislado('mantenimiento/placas'); setBottomNavActive('bnav-placas')">
-            <i class="bi bi-truck"></i><span data-i18n="bnav.plates">Placas</span>
-        </a>
-        <a class="bottom-nav-item" id="bnav-gps" onclick="cargarModuloAislado('flota/ubicacion'); setBottomNavActive('bnav-gps')">
-            <i class="bi bi-geo-alt-fill"></i><span data-i18n="bnav.gps">GPS</span>
         </a>
         <a class="bottom-nav-item" id="bnav-mas" onclick="toggleSidebar()">
             <i class="bi bi-grid-3x3-gap-fill"></i><span data-i18n="bnav.modules">Módulos</span>
