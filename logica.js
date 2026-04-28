@@ -353,65 +353,147 @@ window.verificarSesionGuardada = function() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// SCANNER GLOBAL — único scanner para toda la app (AppSheet style)
+// SCANNER GLOBAL — getUserMedia + BarcodeDetector / jsQR (sin html5-qrcode)
 // Uso: window._abrirEscaner(callback, titulo)
 // ══════════════════════════════════════════════════════════════════
-window._gscannerInstance = window._gscannerInstance || null;
+window._gscannerStream   = window._gscannerStream   || null;
+window._gscannerRAF      = window._gscannerRAF      || null;
 window._gscannerCB       = window._gscannerCB       || null;
+window._gscannerCanvas   = window._gscannerCanvas   || null;
+window._gscannerCtx      = window._gscannerCtx      || null;
+window._gscannerDetector = window._gscannerDetector || null;
+window._gscannerTorch    = window._gscannerTorch    || false;
 
 window._abrirEscaner = function(callback, titulo) {
     window._gscannerCB = callback;
     var overlay = document.getElementById('gscanner-overlay');
-    if (!overlay) { console.warn('Global scanner overlay no encontrado'); return; }
+    if (!overlay) { console.warn('Scanner overlay no encontrado'); return; }
     var tit = document.getElementById('gscanner-titulo');
     if (tit) tit.textContent = titulo || 'Escanear código';
-    // Limpiar instancia anterior
-    var reader = document.getElementById('gscanner-reader');
-    if (reader) reader.innerHTML = '';
     overlay.style.display = 'block';
 
-    if (typeof Html5Qrcode === 'undefined') {
-        overlay.style.display = 'none';
-        alert('Scanner no disponible — recarga la página.');
-        return;
-    }
-    try {
-        window._gscannerInstance = new Html5Qrcode('gscanner-reader');
-        var w = Math.round(Math.min(window.innerWidth * 0.68, 270));
-        var h = Math.round(w * 0.75);
-        window._gscannerInstance.start(
-            { facingMode: 'environment' },
-            {
-                fps: 15,
-                qrbox: { width: w, height: h },
-                aspectRatio: window.innerHeight / window.innerWidth,
-                rememberLastUsedCamera: true,
-                showTorchButtonIfSupported: false
-            },
-            function(text) {
-                window._cerrarEscaner();
-                if (typeof window._gscannerCB === 'function') window._gscannerCB(text.trim());
-            },
-            function() { /* frames sin código — ignorar */ }
-        ).catch(function(err) {
-            overlay.style.display = 'none';
-            alert('No se pudo acceder a la cámara: ' + err);
+    // Pedir cámara trasera
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: { ideal: 'environment' },
+            width:  { ideal: 1920 },
+            height: { ideal: 1080 }
+        }
+    }).then(function(stream) {
+        window._gscannerStream = stream;
+        window._gscannerTorch  = false;
+        var video = document.getElementById('gscanner-video');
+        if (!video) { window._cerrarEscaner(); return; }
+        video.srcObject = stream;
+        // playsinline+autoplay ya están en el HTML; forzar play igual
+        video.play().catch(function(){});
+        video.addEventListener('loadedmetadata', function onMeta() {
+            video.removeEventListener('loadedmetadata', onMeta);
+            window._gscannerStartDecode(video);
         });
-    } catch(e) {
+        // Fallback por si loadedmetadata ya pasó
+        if (video.readyState >= 2) window._gscannerStartDecode(video);
+    }).catch(function(err) {
         overlay.style.display = 'none';
+        alert('No se pudo acceder a la cámara: ' + (err.message || err));
+    });
+};
+
+window._gscannerStartDecode = function(video) {
+    if (!window._gscannerCanvas) {
+        window._gscannerCanvas = document.createElement('canvas');
+        window._gscannerCtx    = window._gscannerCanvas.getContext('2d', { willReadFrequently: true });
     }
+
+    // BarcodeDetector nativo (Android Chrome 83+, Edge, Safari 17+)
+    if ('BarcodeDetector' in window) {
+        if (!window._gscannerDetector) {
+            try {
+                window._gscannerDetector = new BarcodeDetector({
+                    formats: ['qr_code','code_128','code_39','ean_13','ean_8',
+                              'upc_a','upc_e','itf','data_matrix','pdf417','aztec','codabar']
+                });
+            } catch(e) { window._gscannerDetector = null; }
+        }
+        if (window._gscannerDetector) {
+            var detectLoop = function() {
+                if (!window._gscannerStream) return;
+                window._gscannerDetector.detect(video)
+                    .then(function(codes) {
+                        if (codes && codes.length > 0) {
+                            var val = codes[0].rawValue;
+                            window._cerrarEscaner();
+                            if (typeof window._gscannerCB === 'function') window._gscannerCB(val.trim());
+                        } else {
+                            window._gscannerRAF = requestAnimationFrame(detectLoop);
+                        }
+                    })
+                    .catch(function() {
+                        window._gscannerRAF = requestAnimationFrame(detectLoop);
+                    });
+            };
+            window._gscannerRAF = requestAnimationFrame(detectLoop);
+            return;
+        }
+    }
+
+    // Fallback: jsQR (carga dinámica)
+    window._gscannerLoadJsQR(function() {
+        var scanLoop = function() {
+            if (!window._gscannerStream) return;
+            var cv  = window._gscannerCanvas;
+            var ctx = window._gscannerCtx;
+            var vw  = video.videoWidth  || 640;
+            var vh  = video.videoHeight || 480;
+            cv.width  = vw;
+            cv.height = vh;
+            ctx.drawImage(video, 0, 0, vw, vh);
+            var img  = ctx.getImageData(0, 0, vw, vh);
+            var code = jsQR(img.data, vw, vh, { inversionAttempts: 'dontInvert' });
+            if (code && code.data) {
+                window._cerrarEscaner();
+                if (typeof window._gscannerCB === 'function') window._gscannerCB(code.data.trim());
+            } else {
+                window._gscannerRAF = requestAnimationFrame(scanLoop);
+            }
+        };
+        window._gscannerRAF = requestAnimationFrame(scanLoop);
+    });
+};
+
+window._gscannerLoadJsQR = function(cb) {
+    if (typeof jsQR !== 'undefined') { cb(); return; }
+    var s   = document.createElement('script');
+    s.src   = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload = cb;
+    document.head.appendChild(s);
+};
+
+window._gscannerToggleTorch = function() {
+    if (!window._gscannerStream) return;
+    var track = window._gscannerStream.getVideoTracks()[0];
+    if (!track) return;
+    window._gscannerTorch = !window._gscannerTorch;
+    track.applyConstraints({ advanced: [{ torch: window._gscannerTorch }] })
+        .catch(function(){});
+    var btn = document.getElementById('gscanner-torch-btn');
+    if (btn) btn.style.background = window._gscannerTorch ? 'rgba(253,224,71,.6)' : 'rgba(0,0,0,.4)';
 };
 
 window._cerrarEscaner = function() {
+    if (window._gscannerRAF) { cancelAnimationFrame(window._gscannerRAF); window._gscannerRAF = null; }
+    if (window._gscannerStream) {
+        window._gscannerStream.getTracks().forEach(function(t) { t.stop(); });
+        window._gscannerStream = null;
+    }
+    var video = document.getElementById('gscanner-video');
+    if (video) { video.srcObject = null; }
     var overlay = document.getElementById('gscanner-overlay');
     if (overlay) overlay.style.display = 'none';
-    if (window._gscannerInstance) {
-        window._gscannerInstance.stop().catch(function() {});
-        window._gscannerInstance = null;
-    }
-    window._gscannerCB = null;
-    var reader = document.getElementById('gscanner-reader');
-    if (reader) reader.innerHTML = '';
+    window._gscannerCB    = null;
+    window._gscannerTorch = false;
+    var btn = document.getElementById('gscanner-torch-btn');
+    if (btn) btn.style.background = 'rgba(0,0,0,.4)';
 };
 
 function cerrarSesion() {
