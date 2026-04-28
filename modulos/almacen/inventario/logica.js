@@ -1381,9 +1381,25 @@ window._invAbrirScanner = function(target) {
 
 window._invOnScanResult = function(valor) {
     if (window._invScannerTarget === 'form') {
+        // En el formulario: solo rellenar el campo de código de barras
         var campo = document.getElementById('inv-f-codigo-barras');
         if (campo) { campo.value = valor; campo.dispatchEvent(new Event('input')); }
+        return;
+    }
+
+    // En la lista: buscar artículo por ID o código de barras
+    var found = (window._invData || []).find(function(d) {
+        return String(d.id).trim() === valor ||
+               (d.codigo_barras && d.codigo_barras.trim() === valor);
+    });
+
+    if (found) {
+        // Abrir directamente el detalle del artículo encontrado
+        window.abrirDetalleInv(found.id);
+        // Toast breve con el nombre
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Artículo: ' + (found.descripcion || found.articulo || found.id), 'success');
     } else {
+        // Intentar búsqueda parcial en el buscador por si el código es parcial
         var inv     = document.getElementById('inv-buscar');
         var mob     = document.getElementById('inv-m-buscar');
         var compact = document.getElementById('inv-search-input');
@@ -1391,6 +1407,13 @@ window._invOnScanResult = function(valor) {
         if (mob)     mob.value     = valor;
         if (compact) compact.value = valor;
         window.filtrarInventario();
+
+        // Si tras filtrar no hay resultados, mostrar mensaje
+        setTimeout(function() {
+            if (!(window._invFiltrados || []).length) {
+                if (typeof window.mostrarToast === 'function') window.mostrarToast('Código no encontrado: ' + valor, 'danger');
+            }
+        }, 100);
     }
 };
 

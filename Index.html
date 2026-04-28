@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -710,77 +711,103 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- ═══ GLOBAL SCANNER — único scanner para toda la app ══════════════ -->
 <style>
-#gscanner-video {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover; z-index: 1;
-    background: #000;
-    display: block;
+/* === Overlay principal negro === */
+#gscanner-overlay {
+    display: none; position: fixed; inset: 0;
+    z-index: 9998; overflow: hidden; background: #000;
+}
+/* === html5-qrcode: forzar video a llenar pantalla completa === */
+#gscanner-reader {
+    position: absolute; inset: 0; overflow: hidden;
+}
+#gscanner-reader > div {
+    position: absolute !important; inset: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    background: transparent !important; border: none !important;
+    padding: 0 !important; margin: 0 !important; overflow: hidden !important;
+}
+#gscanner-reader video {
+    position: absolute !important;
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%,-50%) !important;
+    min-width: 100vw !important; min-height: 100vh !important;
+    width: auto !important; height: auto !important;
+    object-fit: cover !important; z-index: 1 !important; background: #000 !important;
+}
+/* Eliminar UI interna de html5-qrcode */
+#gscanner-reader canvas, #gscanner-reader img, #gscanner-reader span,
+#gscanner-reader button, #gscanner-reader select, #gscanner-reader p,
+#qr-shaded-region { display: none !important; }
+
+/* Hollow-out: box-shadow gigante crea mascara oscura fuera del visor */
+.gscanner-viewfinder {
+    position: relative;
+    border: 2.5px solid rgba(255,255,255,.85);
+    border-radius: 16px;
+    box-shadow: 0 0 0 1000px rgba(0,0,0,.62);
 }
 @keyframes gscan-line {
-  0%   { top: 8%; }
-  50%  { top: 85%; }
-  100% { top: 8%; }
+  0%   { top: 7%; } 50%  { top: 88%; } 100% { top: 7%; }
 }
 </style>
 
-<div id="gscanner-overlay"
-     style="display:none;position:fixed;inset:0;background:#000;z-index:9998;overflow:hidden;">
+<div id="gscanner-overlay">
+  <!-- html5-qrcode inyecta aqui — z-index base -->
+  <div id="gscanner-reader" style="z-index:2;"></div>
 
-  <!-- Video nativo — autoplay, sin controles, sin botón play -->
-  <video id="gscanner-video" autoplay muted playsinline></video>
-
-  <!-- Iconos superiores -->
-  <div style="position:absolute;top:0;left:0;right:0;
-              padding-top:calc(env(safe-area-inset-top,0px) + .9rem);
+  <!-- Header: linterna | titulo | cerrar -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:20;
+              padding-top:calc(env(safe-area-inset-top,0px) + .85rem);
               padding-left:1rem;padding-right:1rem;
-              display:flex;align-items:center;justify-content:space-between;z-index:10;">
-    <button id="gscanner-torch-btn" onclick="window._gscannerToggleTorch()"
-            style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);
-                   backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.3);
+              display:flex;align-items:center;justify-content:space-between;">
+    <button id="gscanner-torch-btn" onclick="window._gscannerToggleTorch()" title="Linterna"
+            style="width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.45);
+                   backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.25);
                    color:#fff;font-size:1.2rem;display:flex;align-items:center;
-                   justify-content:center;cursor:pointer;">
+                   justify-content:center;cursor:pointer;flex-shrink:0;">
       <i class="bi bi-lightning-fill"></i>
     </button>
     <span id="gscanner-titulo"
-          style="color:#fff;font-weight:800;font-size:.9rem;letter-spacing:.04em;
-                 text-shadow:0 1px 6px rgba(0,0,0,.8);">Escanear código</span>
-    <button onclick="window._cerrarEscaner()"
-            style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);
-                   backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.3);
+          style="color:#fff;font-weight:800;font-size:.9rem;letter-spacing:.05em;
+                 text-align:center;text-shadow:0 1px 8px rgba(0,0,0,.9);">
+      Escanear codigo
+    </span>
+    <button onclick="window._cerrarEscaner()" title="Cerrar"
+            style="width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.45);
+                   backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.25);
                    color:#fff;font-size:1.1rem;display:flex;align-items:center;
-                   justify-content:center;cursor:pointer;">
+                   justify-content:center;cursor:pointer;flex-shrink:0;">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
 
-  <!-- Marco de escaneo — solo borde blanco limpio, sin oscurecer fondo -->
-  <div style="position:absolute;inset:0;z-index:5;pointer-events:none;
+  <!-- Hollow-out viewfinder centrado -->
+  <div style="position:absolute;inset:0;z-index:15;pointer-events:none;
               display:flex;align-items:center;justify-content:center;">
-    <div style="width:78vw;max-width:300px;height:78vw;max-height:300px;
-                border-radius:20px;border:2px solid rgba(255,255,255,.8);position:relative;">
-      <!-- Esquinas verdes -->
-      <div style="position:absolute;top:-3px;left:-3px;width:32px;height:32px;
-                  border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:18px 0 0 0;"></div>
-      <div style="position:absolute;top:-3px;right:-3px;width:32px;height:32px;
-                  border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 18px 0 0;"></div>
-      <div style="position:absolute;bottom:-3px;left:-3px;width:32px;height:32px;
-                  border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 18px;"></div>
-      <div style="position:absolute;bottom:-3px;right:-3px;width:32px;height:32px;
-                  border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 18px 0;"></div>
-      <!-- Línea de escaneo animada -->
-      <div style="position:absolute;left:6px;right:6px;height:2px;background:#22c55e;
-                  box-shadow:0 0 10px #22c55e,0 0 22px rgba(34,197,94,.5);
-                  animation:gscan-line 1.8s ease-in-out infinite;top:10%;"></div>
+    <div class="gscanner-viewfinder"
+         style="width:76vw;max-width:290px;height:76vw;max-height:290px;">
+      <div style="position:absolute;top:-3px;left:-3px;width:34px;height:34px;
+                  border-top:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:16px 0 0 0;"></div>
+      <div style="position:absolute;top:-3px;right:-3px;width:34px;height:34px;
+                  border-top:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 16px 0 0;"></div>
+      <div style="position:absolute;bottom:-3px;left:-3px;width:34px;height:34px;
+                  border-bottom:4px solid #22c55e;border-left:4px solid #22c55e;border-radius:0 0 0 16px;"></div>
+      <div style="position:absolute;bottom:-3px;right:-3px;width:34px;height:34px;
+                  border-bottom:4px solid #22c55e;border-right:4px solid #22c55e;border-radius:0 0 16px 0;"></div>
+      <div style="position:absolute;left:6px;right:6px;height:2.5px;
+                  background:linear-gradient(90deg,transparent,#22c55e,transparent);
+                  box-shadow:0 0 12px #22c55e,0 0 28px rgba(34,197,94,.6);
+                  animation:gscan-line 2s ease-in-out infinite;top:7%;border-radius:99px;"></div>
     </div>
   </div>
 
   <!-- Texto inferior -->
-  <div style="position:absolute;bottom:3.5rem;left:0;right:0;text-align:center;z-index:10;pointer-events:none;">
-    <p style="color:rgba(255,255,255,.85);font-size:.75rem;font-weight:700;
-              letter-spacing:.12em;text-transform:uppercase;margin:0;
-              text-shadow:0 1px 6px rgba(0,0,0,.7);">
-      Apunta el código al recuadro
+  <div style="position:absolute;bottom:3.5rem;left:0;right:0;z-index:20;
+              text-align:center;pointer-events:none;">
+    <p style="color:rgba(255,255,255,.8);font-size:.72rem;font-weight:700;
+              letter-spacing:.14em;text-transform:uppercase;margin:0;
+              text-shadow:0 1px 8px rgba(0,0,0,.8);">
+      Apunta el codigo al recuadro
     </p>
   </div>
 </div>
