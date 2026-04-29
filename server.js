@@ -4252,7 +4252,7 @@ app.put('/api/almacen/inventario/:id', (req, res) => {
          anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
          estado_art||'Activo', codigo_barras||null, req.params.id],
         (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
             res.json({ ok: true });
         });
 });
