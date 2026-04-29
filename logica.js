@@ -396,8 +396,7 @@ window._abrirEscaner = function(callback, titulo) {
             {
                 fps: 25,
                 qrbox: function(w, h) {
-                    var side = Math.round(Math.min(w, h) * 0.78);
-                    return { width: side, height: side };
+                    return { width: Math.round(w * 0.85), height: Math.round(h * 0.72) };
                 },
                 rememberLastUsedCamera: true,
                 showTorchButtonIfSupported: false
