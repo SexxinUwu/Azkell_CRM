@@ -219,7 +219,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-status-rampa',    vOT);
     safe('nav-reportes-ot',     vOT);
     safe('nav-trabajos-ot',     vOT);
-    safe('nav-almacen-ot',      vOT);
+
     safe('nav-backlog-taller',  vOT);
     safe('nav-kpis-taller',     vOT);
     safe('nav-productividad',   vOT);
@@ -2486,7 +2486,7 @@ const MENU_IDS = {
     'mantenimiento/status-rampa':      'nav-status-rampa',
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
     'mantenimiento/trabajos-ot':       'nav-trabajos-ot',
-    'mantenimiento/almacen-ot':        'nav-almacen-ot',
+
     'mantenimiento/backlog-taller':    'nav-backlog-taller',
     'mantenimiento/kpis-taller':       'nav-kpis-taller',
     'mantenimiento/productividad':     'nav-productividad',
@@ -2533,7 +2533,7 @@ const MENU_SECTION = {
     'mantenimiento/status-rampa':     'mantenimiento',
     'mantenimiento/reportes-ot':      'mantenimiento',
     'mantenimiento/trabajos-ot':      'mantenimiento',
-    'mantenimiento/almacen-ot':       'mantenimiento',
+
     'mantenimiento/backlog-taller':   'mantenimiento',
     'mantenimiento/kpis-taller':      'mantenimiento',
     'mantenimiento/productividad':    'mantenimiento',
@@ -2564,7 +2564,7 @@ const BREADCRUMB_MAP = {
     'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],
     'mantenimiento/reportes-ot':      ['Mantenimiento','Reportes OT'],
     'mantenimiento/trabajos-ot':      ['Mantenimiento','Trabajos Anexos'],
-    'mantenimiento/almacen-ot':       ['Mantenimiento','Almacén (Req/Salidas)'],
+
     'mantenimiento/backlog-taller':   ['Mantenimiento','Backlog Pendientes'],
     'mantenimiento/kpis-taller':      ['Mantenimiento','Métricas y KPIs'],
     'mantenimiento/productividad':    ['Mantenimiento','Productividad Personal'],
