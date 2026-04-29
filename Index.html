@@ -80,37 +80,22 @@
                 <div id="wrap-mantenimiento">
                     <button class="nav-section-toggle" data-section="mantenimiento" aria-expanded="false" onclick="window.toggleNavSection('mantenimiento')">
                         <span class="link-text" data-i18n="nav.mantenimiento">Mantenimiento</span>
-                        <span class="section-badge">12</span>
+                        <span class="section-badge">6</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
-                        <!-- Inspecciones & Placas -->
-                        <div class="nav-sub-label"><i class="bi bi-clipboard2-pulse me-1"></i>Inspecciones</div>
-                        <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
-                            <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.inspecciones">Análisis Insp.</span>
-                            <span class="nav-item-badge" id="badge-insp-alerta"></span>
-                        </a>
-                        <a id="nav-placas" class="nav-item" onclick="cargarModuloAislado('mantenimiento/placas')">
-                            <i class="bi bi-truck nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.placas">Placas</span>
-                            <span class="nav-item-badge success" id="badge-placas-activas"></span>
-                        </a>
-                        <!-- Sub-grupo Preventivo -->
-                        <div class="nav-sub-label"><i class="bi bi-tools me-1"></i>Preventivo</div>
-                        <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
-                            <i class="bi bi-speedometer2 nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.fleetrun">Fleetrun</span>
-                        </a>
-                        <a id="nav-planificacion" class="nav-item" onclick="cargarModuloAislado('mantenimiento/planificacion')">
-                            <i class="bi bi-calendar2-check nav-icon"></i>
-                            <span class="link-text">Planificación</span>
-                        </a>
-                        <!-- Sub-grupo Operativa Taller -->
-                        <div class="nav-sub-label" id="nav-sub-operativa"><i class="bi bi-grid-3x3-gap me-1"></i>Operativa</div>
                         <a id="nav-status-rampa" class="nav-item" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
                             <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
                             <span class="link-text">Status Rampa</span>
+                        </a>
+                        <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
+                            <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.inspecciones">Análisis de Insp.</span>
+                            <span class="nav-item-badge" id="badge-insp-alerta"></span>
+                        </a>
+                        <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
+                            <i class="bi bi-speedometer2 nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.fleetrun">Sistema Fleetrun</span>
                         </a>
                         <a id="nav-reportes-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/reportes-ot')">
                             <i class="bi bi-file-earmark-text nav-icon"></i>
@@ -120,24 +105,16 @@
                             <i class="bi bi-person-gear nav-icon"></i>
                             <span class="link-text">Trabajos Anexos</span>
                         </a>
-                        <a id="nav-backlog-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/backlog-taller')">
-                            <i class="bi bi-hourglass-split nav-icon"></i>
-                            <span class="link-text">Backlog Pendientes</span>
+                        <a id="nav-otros-mant" class="nav-item" onclick="cargarModuloAislado('mantenimiento/otros')">
+                            <i class="bi bi-grid-fill nav-icon"></i>
+                            <span class="link-text">Otros</span>
                         </a>
-                        <!-- Sub-grupo Gestión e Informes -->
-                        <div class="nav-sub-label" id="nav-sub-gestion"><i class="bi bi-bar-chart me-1"></i>Gestión e Informes</div>
-                        <a id="nav-kpis-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/kpis-taller')">
-                            <i class="bi bi-activity nav-icon"></i>
-                            <span class="link-text">Métricas y KPIs</span>
-                        </a>
-                        <a id="nav-productividad" class="nav-item" onclick="cargarModuloAislado('mantenimiento/productividad')">
-                            <i class="bi bi-person-lines-fill nav-icon"></i>
-                            <span class="link-text">Productividad Personal</span>
-                        </a>
-                        <a id="nav-finanzas-taller" class="nav-item" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')">
-                            <i class="bi bi-cash-coin nav-icon"></i>
-                            <span class="link-text">Reporte Financiero</span>
-                        </a>
+                        <!-- Ítems accesibles vía hub "Otros" (ocultos del sidebar) -->
+                        <a id="nav-planificacion"   class="nav-item d-none" onclick="cargarModuloAislado('mantenimiento/planificacion')"></a>
+                        <a id="nav-backlog-taller"  class="nav-item d-none" onclick="cargarModuloAislado('mantenimiento/backlog-taller')"></a>
+                        <a id="nav-kpis-taller"     class="nav-item d-none" onclick="cargarModuloAislado('mantenimiento/kpis-taller')"></a>
+                        <a id="nav-productividad"   class="nav-item d-none" onclick="cargarModuloAislado('mantenimiento/productividad')"></a>
+                        <a id="nav-finanzas-taller" class="nav-item d-none" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')"></a>
                     </div>
                 </div>
 
@@ -227,6 +204,11 @@
                                 <i class="bi bi-grid-fill nav-icon"></i>
                                 <span class="link-text">Administración</span>
                                 <span class="section-badge" style="margin-left:auto;">10</span>
+                            </a>
+                            <a id="nav-placas" class="nav-item ps-4" onclick="cargarModuloAislado('mantenimiento/placas')">
+                                <i class="bi bi-truck nav-icon"></i>
+                                <span class="link-text">Placas</span>
+                                <span class="nav-item-badge success" id="badge-placas-activas"></span>
                             </a>
                         </div>
                     </div>
