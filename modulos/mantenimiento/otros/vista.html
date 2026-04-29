@@ -1,0 +1,148 @@
+<!-- Módulo Otros — Hub de herramientas de Mantenimiento -->
+<style>
+/* ─── Mant-Otros Hub ──────────────────────────────────────────────── */
+#moduloOtrosMant {
+    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+    overflow-y: auto; background: var(--bg);
+}
+.otro-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    padding: 2rem 2rem 1.6rem;
+    flex-shrink: 0;
+}
+@media (max-width: 767.98px) {
+    .otro-hero { padding: 1.25rem 1rem 1rem; }
+}
+.otro-hero-title {
+    font-size: 1.45rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: .3rem;
+}
+.otro-hero-sub {
+    font-size: .75rem; color: #94a3b8; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .1em;
+}
+
+/* Grid 2 columnas */
+.otro-grid {
+    padding: 1.5rem 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+@media (max-width: 767.98px) {
+    .otro-grid { padding: .85rem; gap: .75rem; }
+}
+
+/* Card */
+.otro-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem 1rem 1.25rem;
+    cursor: pointer;
+    transition: transform .18s cubic-bezier(.4,0,.2,1),
+                box-shadow .18s cubic-bezier(.4,0,.2,1),
+                border-color .18s;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: .65rem;
+    position: relative; overflow: hidden;
+    min-height: 130px;
+}
+.otro-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.1);
+    border-color: var(--otro-color, #7c3aed);
+}
+.otro-card:active { transform: translateY(-1px); }
+
+.otro-card-icon {
+    width: 64px; height: 64px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem;
+    background: var(--otro-bg, #f3e8ff);
+    color: var(--otro-color, #7c3aed);
+    flex-shrink: 0;
+}
+.otro-card-name {
+    font-size: .88rem; font-weight: 800; color: var(--text); line-height: 1.2;
+}
+
+/* Section label */
+.otro-section-label {
+    grid-column: 1 / -1;
+    font-size: .6rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--subtext);
+    display: flex; align-items: center; gap: .5rem;
+    padding-top: .25rem;
+}
+.otro-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+}
+</style>
+
+<div id="moduloOtrosMant">
+
+    <!-- Hero -->
+    <div class="otro-hero">
+        <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.6rem;">
+            <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.1);
+                        display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-tools" style="font-size:1.3rem;color:#f59e0b;"></i>
+            </div>
+            <div>
+                <div class="otro-hero-title">Otros — Mantenimiento</div>
+                <div class="otro-hero-sub">Gestión, análisis y reportes del taller</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;">
+            <div style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);
+                        border-radius:10px;padding:.35rem .75rem;">
+                <i class="bi bi-grid-fill" style="color:#a78bfa;font-size:.85rem;"></i>
+                <span style="font-size:.72rem;color:#e2e8f0;font-weight:700;">5 herramientas</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards grid -->
+    <div class="otro-grid">
+
+        <div class="otro-section-label">
+            <i class="bi bi-calendar2-check" style="color:#2563eb;"></i>Planificación
+        </div>
+
+        <div class="otro-card" style="--otro-color:#2563eb;--otro-bg:#eff6ff;"
+             onclick="cargarModuloAislado('mantenimiento/planificacion')">
+            <div class="otro-card-icon"><i class="bi bi-calendar2-check-fill"></i></div>
+            <div class="otro-card-name">Planificación de Mantenimientos</div>
+        </div>
+
+        <div class="otro-card" style="--otro-color:#d97706;--otro-bg:#fef3c7;"
+             onclick="cargarModuloAislado('mantenimiento/backlog-taller')">
+            <div class="otro-card-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="otro-card-name">Backlog Pendientes</div>
+        </div>
+
+        <div class="otro-section-label">
+            <i class="bi bi-bar-chart-fill" style="color:#0891b2;"></i>Análisis y Reportes
+        </div>
+
+        <div class="otro-card" style="--otro-color:#0891b2;--otro-bg:#cffafe;"
+             onclick="cargarModuloAislado('mantenimiento/kpis-taller')">
+            <div class="otro-card-icon"><i class="bi bi-activity"></i></div>
+            <div class="otro-card-name">Métricas y KPIs</div>
+        </div>
+
+        <div class="otro-card" style="--otro-color:#7c3aed;--otro-bg:#f3e8ff;"
+             onclick="cargarModuloAislado('mantenimiento/productividad')">
+            <div class="otro-card-icon"><i class="bi bi-person-lines-fill"></i></div>
+            <div class="otro-card-name">Productividad Personal</div>
+        </div>
+
+        <div class="otro-card" style="--otro-color:#16a34a;--otro-bg:#dcfce7;"
+             onclick="cargarModuloAislado('mantenimiento/finanzas-taller')">
+            <div class="otro-card-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="otro-card-name">Reporte Financiero</div>
+        </div>
+
+    </div>
+</div>

@@ -214,26 +214,19 @@ window.verificarSesionGuardada = function() {
     safe('nav-inspecciones',    vInsp);
     safe('nav-placas',          vPlacas);
     safe('nav-fleetrun',        vFleet);
-    safe('nav-planificacion',   vPlan);
-    safe('nav-ordenes',         vOT);
     safe('nav-status-rampa',    vOT);
     safe('nav-reportes-ot',     vOT);
     safe('nav-trabajos-ot',     vOT);
+    safe('nav-otros-mant',      vOT || vPlan);
+    safe('nav-ordenes',         vOT);
 
+    // Ítems ocultos del sidebar (accesibles via hub Otros) — controlar solo RBAC
+    safe('nav-planificacion',   vPlan);
     safe('nav-backlog-taller',  vOT);
     safe('nav-kpis-taller',     vOT);
     safe('nav-productividad',   vOT);
     safe('nav-finanzas-taller', vOT);
 
-    // Sub-labels del grupo Mantenimiento (por ID — robustos a reordenamiento)
-    var elSubPrev    = document.querySelector('#section-items-mantenimiento .nav-sub-label:not([id])');
-    var elSubOper    = document.getElementById('nav-sub-operativa');
-    var elSubGestion = document.getElementById('nav-sub-gestion');
-    var elSubCorr    = document.getElementById('nav-sub-correctivo');
-    if (elSubPrev)    elSubPrev.style.display    = (vFleet || vPlan) ? '' : 'none';
-    if (elSubOper)    elSubOper.style.display    = vOT ? '' : 'none';
-    if (elSubGestion) elSubGestion.style.display = vOT ? '' : 'none';
-    if (elSubCorr)    elSubCorr.style.display    = vOT ? '' : 'none';
 
     var showMant = vInsp || vPlacas || vFleet || vPlan || vOT;
     safe('wrap-mantenimiento', showMant);
@@ -2327,6 +2320,7 @@ var NOMBRES_MODULOS_RECIENTES = {
     'mantenimiento/inspecciones': 'Inspecciones',
     'mantenimiento/placas':       'Placas',
     'mantenimiento/fleetrun':     'Fleetrun',
+    'mantenimiento/otros':        'Otros Mant.',
     'mantenimiento/planificacion':'Planificación',
     'mantenimiento/configuracion-mp': 'Frecuencias MP',
     'mantenimiento/kits-mp':          'Kits MP',
@@ -2355,6 +2349,7 @@ var ICONOS_MODULOS_RECIENTES = {
     'mantenimiento/inspecciones': 'bi-clipboard2-pulse-fill',
     'mantenimiento/placas':       'bi-truck',
     'mantenimiento/fleetrun':     'bi-speedometer2',
+    'mantenimiento/otros':        'bi-grid-fill',
     'mantenimiento/planificacion':'bi-calendar2-check',
     'mantenimiento/configuracion-mp': 'bi-sliders',
     'mantenimiento/kits-mp':          'bi-tools',
@@ -2453,6 +2448,7 @@ const TITULOS_MODULOS = {
     'mantenimiento/inspecciones':  'Análisis de Inspecciones',
     'mantenimiento/placas':        'Gestión de Placas',
     'mantenimiento/fleetrun':      'Sistema Fleetrun',
+    'mantenimiento/otros':         'Otros — Mantenimiento',
     'mantenimiento/planificacion': 'Planificación de Mantenimientos',
     'mantenimiento/configuracion-mp': 'Frecuencias de Mantenimiento',
     'mantenimiento/kits-mp':          'Kits de Mantenimiento',
@@ -2477,7 +2473,8 @@ const MENU_IDS = {
     'mantenimiento/inspecciones':  'nav-inspecciones',
     'mantenimiento/placas':        'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
-    'mantenimiento/planificacion': 'nav-planificacion',
+    'mantenimiento/otros':         'nav-otros-mant',
+    'mantenimiento/planificacion': 'nav-otros-mant',
     'mantenimiento/configuracion-mp':  'nav-administracion',
     'mantenimiento/kits-mp':           'nav-administracion',
     'mantenimiento/tipos-mp':          'nav-administracion',
@@ -2487,10 +2484,10 @@ const MENU_IDS = {
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
     'mantenimiento/trabajos-ot':       'nav-trabajos-ot',
 
-    'mantenimiento/backlog-taller':    'nav-backlog-taller',
-    'mantenimiento/kpis-taller':       'nav-kpis-taller',
-    'mantenimiento/productividad':     'nav-productividad',
-    'mantenimiento/finanzas-taller':   'nav-finanzas-taller',
+    'mantenimiento/backlog-taller':    'nav-otros-mant',
+    'mantenimiento/kpis-taller':       'nav-otros-mant',
+    'mantenimiento/productividad':     'nav-otros-mant',
+    'mantenimiento/finanzas-taller':   'nav-otros-mant',
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/salidas':             'nav-salidas-inv',
@@ -2512,7 +2509,7 @@ const MENU_IDS = {
 
 const MENU_SECTION = {
     'mantenimiento/inspecciones': 'mantenimiento',
-    'mantenimiento/placas':       'mantenimiento',
+    'mantenimiento/placas':       'administracion',
     'mantenimiento/fleetrun':     'mantenimiento',
     'almacen/inventario':         'almacen',
     'almacen/entradas':           'almacen',
@@ -2533,11 +2530,12 @@ const MENU_SECTION = {
     'mantenimiento/status-rampa':     'mantenimiento',
     'mantenimiento/reportes-ot':      'mantenimiento',
     'mantenimiento/trabajos-ot':      'mantenimiento',
-
+    'mantenimiento/otros':            'mantenimiento',
     'mantenimiento/backlog-taller':   'mantenimiento',
     'mantenimiento/kpis-taller':      'mantenimiento',
     'mantenimiento/productividad':    'mantenimiento',
     'mantenimiento/finanzas-taller':  'mantenimiento',
+    'mantenimiento/planificacion':    'mantenimiento',
     'mantenimiento/ordenes':          'mantenimiento',
     'flota/ubicacion':            'flota',
     'directorio/conductores':     'directorio',
@@ -2548,8 +2546,9 @@ const MENU_SECTION = {
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
-    'mantenimiento/placas':       ['Mantenimiento','Placas'],
+    'mantenimiento/placas':       ['Administración','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
+    'mantenimiento/otros':        ['Mantenimiento','Otros'],
     'almacen/inventario':         ['Almacén','Inventario'],
     'almacen/unidades':           ['Administración','Unidades de Medida'],
     'almacen/sistemas':           ['Administración','Sistemas'],
@@ -2564,11 +2563,11 @@ const BREADCRUMB_MAP = {
     'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],
     'mantenimiento/reportes-ot':      ['Mantenimiento','Reportes OT'],
     'mantenimiento/trabajos-ot':      ['Mantenimiento','Trabajos Anexos'],
-
-    'mantenimiento/backlog-taller':   ['Mantenimiento','Backlog Pendientes'],
-    'mantenimiento/kpis-taller':      ['Mantenimiento','Métricas y KPIs'],
-    'mantenimiento/productividad':    ['Mantenimiento','Productividad Personal'],
-    'mantenimiento/finanzas-taller':  ['Mantenimiento','Reporte Financiero'],
+    'mantenimiento/backlog-taller':   ['Otros','Backlog Pendientes'],
+    'mantenimiento/kpis-taller':      ['Otros','Métricas y KPIs'],
+    'mantenimiento/productividad':    ['Otros','Productividad Personal'],
+    'mantenimiento/finanzas-taller':  ['Otros','Reporte Financiero'],
+    'mantenimiento/planificacion':    ['Otros','Planificación de Mantenimientos'],
     'flota/status':               ['Flota','Status'],
     'flota/ubicacion':            ['Flota','GPS'],
     'directorio/conductores':     ['Directorio','Personal'],
