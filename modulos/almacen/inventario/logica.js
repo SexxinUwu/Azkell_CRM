@@ -348,12 +348,11 @@ window._invRenderKPIs = function(data) {
         var sx = parseFloat(d.stock_max || 0);
         return sm > 0 && sx > 0 && sa >= sm && sa < sx;
     }).length;
-    var valorPEN = data.reduce(function(s, d) {
-        var moneda = (d.moneda || 'PEN').toUpperCase();
-        return moneda !== 'USD' ? s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0)) : s;
-    }, 0);
-    var valorUSD = data.reduce(function(s, d) {
-        return (d.moneda || '').toUpperCase() === 'USD' ? s + (parseFloat(d.stock_actual || 0) * parseFloat(d.costo_referencial || 0)) : s;
+    var valorSoles = data.reduce(function(s, d) {
+        var stock = parseFloat(d.stock_actual || 0);
+        if (stock <= 0.1) return s;
+        var cs = parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0);
+        return s + stock * cs;
     }, 0);
     function fmtV(v, pre) {
         return pre + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -373,13 +372,9 @@ window._invRenderKPIs = function(data) {
           '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
           '<div class="bento-kpi-icon"><i class="bi bi-exclamation-circle-fill fs-4"></i></div>' +
         '</div>' +
-        '<div class="bento-kpi accent-dark">' +
-          '<div><div class="bento-kpi-label">Valor S/ (PEN)</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorPEN, 'S/ ') + '</div></div>' +
+        '<div class="bento-kpi accent-dark" style="grid-column:span 1">' +
+          '<div><div class="bento-kpi-label">Valorizado S/</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorSoles, 'S/ ') + '</div></div>' +
           '<div class="bento-kpi-icon"><i class="bi bi-coin fs-4" style="color:#fbbf24"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi accent-dark">' +
-          '<div><div class="bento-kpi-label">Valor $ (USD)</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorUSD, '$ ') + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-currency-dollar fs-4" style="color:#60a5fa"></i></div>' +
         '</div>';
 };
 
@@ -501,7 +496,7 @@ function _invRenderCard(d) {
     var desc   = _invEsc(d.descripcion || d.articulo || '');
     var familia= _invEsc(d.familia || '—');
     var unidad = _invEsc(d.unidad || 'ud.');
-    var costo  = 'S/ ' + parseFloat(d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var costo  = 'S/ ' + parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
     return '<div class="inv-list-card" data-id="' + id + '" ' + clickAttr + '>' +
         chkHtml +
@@ -664,7 +659,19 @@ window.abrirDetalleInv = function(id) {
                '</div>';
     }
 
-    var costo = 'S/ ' + parseFloat(item.costo_referencial || 0).toLocaleString('es-PE', {minimumFractionDigits: 2});
+    var costoHtml = (function() {
+        var moneda = (item.moneda || 'PEN').toUpperCase();
+        var costoRef  = parseFloat(item.costo_referencial || 0);
+        var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : costoRef);
+        var tc = parseFloat(item.tipo_cambio || 0);
+        if (moneda === 'USD') {
+            return '$ ' + costoRef.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4}) +
+                   (tc ? ' &nbsp;<span style="color:var(--subtext);font-size:.78rem">(T/C: ' + tc.toFixed(4) + ')</span>' : '') +
+                   '<br><span style="font-size:.82rem;color:#16a34a;font-weight:800">= S/ ' +
+                   costoSoles.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
+        }
+        return 'S/ ' + costoSoles.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    })();
 
     body.innerHTML =
         imgHtml +
@@ -689,7 +696,7 @@ window.abrirDetalleInv = function(id) {
             row('Almacén', item.almacen) +
             row('Ubicación', item.ubicacion) +
             row('Unidad', item.unidad) +
-            row('Costo Ref.', costo) +
+            row('Costo', costoHtml) +
             row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) +
             row('Estado', '<span style="background:' + (item.estado_art === 'Inactivo' ? '#fee2e2' : '#dcfce7') + ';color:' + (item.estado_art === 'Inactivo' ? '#dc2626' : '#16a34a') + ';font-size:.7rem;font-weight:800;padding:.2rem .65rem;border-radius:99px;">' + _invEsc(item.estado_art || 'Activo') + '</span>') +
             (item.observaciones ? row('Observaciones', _invEsc(item.observaciones), true) : '') +
@@ -761,7 +768,7 @@ window.abrirModalInventario = function(id) {
         var tcRowE = document.getElementById('inv-tc-row');
         if (tcRowE) tcRowE.style.display = monVal === 'USD' ? 'block' : 'none';
         var tcElE = document.getElementById('inv-f-tc');
-        if (tcElE && monVal === 'USD' && !tcElE.value) tcElE.value = window._invTC || 3.70;
+        if (tcElE && monVal === 'USD') tcElE.value = item.tipo_cambio || window._invTC || 3.70;
         _invSetField('inv-f-costo',             item.costo_referencial);
         window._cbSet('inv-f-estado-art', item.estado_art || 'Activo', item.estado_art || 'Activo');
         _invSetField('inv-f-obs',               item.observaciones);
@@ -997,11 +1004,11 @@ window.guardarArticuloInv = function(event) {
         familia:        g('inv-f-familia') || null,
         unidad:         g('inv-f-unidad') || null,
         moneda:         g('inv-f-moneda') || 'PEN',
-        costo_referencial: (function(){
+        costo_referencial: gN('inv-f-costo'),
+        tipo_cambio: (function(){
             var moneda = g('inv-f-moneda') || 'PEN';
-            var costo  = gN('inv-f-costo');
-            var tc     = parseFloat((document.getElementById('inv-f-tc')||{}).value) || window._invTC || 3.70;
-            return moneda === 'USD' ? costo * tc : costo;
+            if (moneda !== 'USD') return null;
+            return parseFloat((document.getElementById('inv-f-tc')||{}).value) || window._invTC || 3.70;
         })(),
         marca:          marca || null,
         marca_unidad:   JSON.stringify(window._invMarcasSeleccionadas || []),

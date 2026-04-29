@@ -587,7 +587,7 @@ window._salSeleccionarItemPorQR = function(valor, idx) {
     var cuEl   = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
     if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
     if (hidEl)  hidEl.value  = item.id;
-    if (cuEl)   { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._salCalcItem(idx); }
+    if (cuEl)   { cuEl.value = parseFloat(item.costo_soles != null ? item.costo_soles : item.costo_referencial || 0).toFixed(2); window._salCalcItem(idx); }
     // Enfocar cantidad
     var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
     if (cantEl) { cantEl.focus(); cantEl.select(); }
@@ -602,7 +602,8 @@ window._salBuscarArt = function(input, idx) {
         var hidEl = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
         if (hidEl) hidEl.value = item.id;
         var cuEl = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
-        if (cuEl) { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._salCalcItem(idx); }
+        var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : item.costo_referencial || 0);
+        if (cuEl) { cuEl.value = costoSoles.toFixed(2); window._salCalcItem(idx); }
     }
 };
 

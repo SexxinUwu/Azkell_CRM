@@ -4177,9 +4177,15 @@ app.get('/api/almacen/marcas-placas', (req, res) => {
 
 app.post('/api/almacen/inventario', (req, res) => {
     const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
+            tipo_cambio,
             proveedor_id, marca, observaciones,
             codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo,
             ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+
+    const costoRef   = parseFloat(costo_referencial) || 0;
+    const tc         = parseFloat(tipo_cambio) || null;
+    const monedaVal  = moneda || 'PEN';
+    const costoSoles = (monedaVal === 'USD' && tc) ? costoRef * tc : costoRef;
 
     // Generar descripcion concatenada desde los campos individuales
     let marcasArr = [];
@@ -4193,13 +4199,13 @@ app.post('/api/almacen/inventario', (req, res) => {
     _generarCodigoAlmacen('INV', null, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query(`INSERT INTO inventario
-            (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,
+            (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,costo_soles,tipo_cambio,
              proveedor_id,marca,observaciones,
              codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
              ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, moneda||'PEN',
-             parseFloat(costo_referencial)||0,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, monedaVal,
+             costoRef, costoSoles, tc,
              proveedor_id||null, marca||null, observaciones||null,
              codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
              tipo||null, sub_tipo||null, ubicacion||null,
@@ -4213,9 +4219,15 @@ app.post('/api/almacen/inventario', (req, res) => {
 });
 app.put('/api/almacen/inventario/:id', (req, res) => {
     const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
+            tipo_cambio,
             proveedor_id, marca, observaciones, activo,
             codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo,
             ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
+
+    const costoRef   = parseFloat(costo_referencial) || 0;
+    const tc         = parseFloat(tipo_cambio) || null;
+    const monedaVal  = moneda || 'PEN';
+    const costoSoles = (monedaVal === 'USD' && tc) ? costoRef * tc : costoRef;
 
     let marcasArr = [];
     try { marcasArr = JSON.parse(marca_unidad || '[]'); } catch(e) { marcasArr = marca_unidad ? [marca_unidad] : []; }
@@ -4226,13 +4238,13 @@ app.put('/api/almacen/inventario/:id', (req, res) => {
     const descFinal = descGenerada || descripcion || 'Sin nombre';
 
     db.query(`UPDATE inventario SET
-        descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,
+        descripcion=?,articulo=?,codigo_articulo=?,familia=?,almacen=?,unidad=?,moneda=?,costo_referencial=?,costo_soles=?,tipo_cambio=?,
         proveedor_id=?,marca=?,observaciones=?,activo=?,
         codigo_item=?,marca_unidad=?,sistema=?,sub_sistema=?,tipo=?,sub_tipo=?,ubicacion=?,
         anaquel=?,stock_min=?,stock_max=?,estado_art=?,codigo_barras=?
         WHERE id=?`,
-        [descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, moneda||'PEN',
-         parseFloat(costo_referencial)||0,
+        [descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, monedaVal,
+         costoRef, costoSoles, tc,
          proveedor_id||null, marca||null, observaciones||null,
          activo != null ? activo : 1,
          codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
@@ -4607,13 +4619,13 @@ app.post('/api/almacen/entradas', (req, res) => {
                         if (!toUpdate.length) return res.json({ ok: true, id });
                         let done = 0;
                         toUpdate.forEach(d => {
-                            const invId = d.inventario_id || mapaInvEnt[d.descripcion];
-                            const costoPEN = (d.moneda === 'USD' || moneda === 'USD')
-                                ? parseFloat(d.costo_unitario) * tc
-                                : parseFloat(d.costo_unitario);
+                            const invId      = d.inventario_id || mapaInvEnt[d.descripcion];
+                            const isUSD      = d.moneda === 'USD' || moneda === 'USD';
+                            const costoOrig  = parseFloat(d.costo_unitario);
+                            const costoSoles = isUSD ? costoOrig * tc : costoOrig;
                             db.query(
-                                'UPDATE inventario SET costo_referencial = ? WHERE id = ? AND activo = 1',
-                                [costoPEN, invId],
+                                'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
+                                [costoOrig, costoSoles, isUSD ? tc : null, invId],
                                 () => { if (++done === toUpdate.length) res.json({ ok: true, id }); }
                             );
                         });
