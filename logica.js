@@ -411,15 +411,16 @@ window._abrirEscaner = function(callback, titulo) {
         window._gscannerInstance = new Html5Qrcode('gscanner-reader', initCfg);
 
         window._gscannerInstance.start(
-            {
-                facingMode: { ideal: 'environment' },
-                width:      { ideal: 1920 },
-                height:     { ideal: 1080 }
-            },
+            { facingMode: 'environment' },
             {
                 fps: 25,
                 qrbox: function(w, h) {
                     return { width: Math.round(w * 0.85), height: Math.round(h * 0.72) };
+                },
+                videoConstraints: {
+                    facingMode: { ideal: 'environment' },
+                    width:      { ideal: 1920 },
+                    height:     { ideal: 1080 }
                 },
                 rememberLastUsedCamera: true,
                 showTorchButtonIfSupported: false
