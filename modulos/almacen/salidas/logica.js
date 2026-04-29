@@ -546,8 +546,14 @@ window._salAgregarItem = function() {
     tr.id = 'sal-item-' + idx;
     tr.innerHTML =
         '<td>' +
-            '<input type="text" class="form-control form-control-sm sal-item-desc" list="sal-inv-list" placeholder="Buscar artículo…" ' +
-                'data-idx="' + idx + '" oninput="window._salBuscarArt(this,' + idx + ')">' +
+            '<div style="display:flex;gap:4px;align-items:center;">' +
+                '<input type="text" class="form-control form-control-sm sal-item-desc" list="sal-inv-list" placeholder="Buscar artículo…" ' +
+                    'data-idx="' + idx + '" oninput="window._salBuscarArt(this,' + idx + ')">' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
+                    'onclick="window._salAbrirQR(' + idx + ')" title="Escanear código de barras">' +
+                    '<i class="bi bi-upc-scan"></i>' +
+                '</button>' +
+            '</div>' +
             '<input type="hidden" class="sal-item-inv-id" data-idx="' + idx + '">' +
         '</td>' +
         '<td><input type="number" class="form-control form-control-sm sal-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._salCalcItem(' + idx + ')"></td>' +
@@ -555,6 +561,37 @@ window._salAgregarItem = function() {
         '<td><input type="number" class="form-control form-control-sm sal-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
         '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._salQuitarItem(' + idx + ')"><i class="bi bi-x"></i></button></td>';
     tbody.appendChild(tr);
+};
+
+window._salQrTargetIdx = window._salQrTargetIdx || null;
+
+window._salAbrirQR = function(idx) {
+    window._salQrTargetIdx = idx;
+    window._abrirEscaner(function(valor) {
+        window._salSeleccionarItemPorQR(valor, window._salQrTargetIdx);
+    }, 'Escanear Artículo');
+};
+
+window._salSeleccionarItemPorQR = function(valor, idx) {
+    var item = (window._salInvData || []).find(function(d) {
+        return String(d.id).trim() === valor.trim() ||
+               (d.codigo_barras && d.codigo_barras.trim() === valor.trim());
+    });
+    if (!item) {
+        if (typeof window.mostrarToast === 'function') window.mostrarToast('Artículo no encontrado: ' + valor, 'danger');
+        else alert('Artículo no encontrado: ' + valor);
+        return;
+    }
+    var descEl = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
+    var hidEl  = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
+    var cuEl   = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
+    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
+    if (hidEl)  hidEl.value  = item.id;
+    if (cuEl)   { cuEl.value = parseFloat(item.costo_referencial || 0).toFixed(2); window._salCalcItem(idx); }
+    // Enfocar cantidad
+    var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
+    if (cantEl) { cantEl.focus(); cantEl.select(); }
+    if (typeof window.mostrarToast === 'function') window.mostrarToast('Artículo: ' + (item.descripcion || item.id), 'success');
 };
 
 window._salBuscarArt = function(input, idx) {
