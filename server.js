@@ -1818,6 +1818,20 @@ app.delete('/api/cat-situaciones/:id', (req, res) => {
     });
 });
 
+// Buscar OT por ticket_entrada (para autocompletar placa en Salidas)
+app.get('/api/ordenes/by-ticket', (req, res) => {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Falta id' });
+    db.query(
+        'SELECT ticket_entrada, placa FROM ordenes_trabajo WHERE ticket_entrada = ? LIMIT 1',
+        [id.trim()],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows[0] || null);
+        }
+    );
+});
+
 app.get('/api/ordenes', (req, res) => {
     db.query("SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC", (err, results) => {
         if (err) return res.status(500).json({ error: "Error MySQL: " + err.message });

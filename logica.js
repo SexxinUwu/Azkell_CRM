@@ -219,13 +219,8 @@ window.verificarSesionGuardada = function() {
     safe('nav-trabajos-ot',     vOT);
     safe('nav-otros-mant',      vOT || vPlan);
     safe('nav-ordenes',         vOT);
-
-    // Ítems ocultos del sidebar (accesibles via hub Otros) — controlar solo RBAC
-    safe('nav-planificacion',   vPlan);
-    safe('nav-backlog-taller',  vOT);
-    safe('nav-kpis-taller',     vOT);
-    safe('nav-productividad',   vOT);
-    safe('nav-finanzas-taller', vOT);
+    // planificacion/backlog/kpis/productividad/finanzas están ocultos del sidebar
+    // (accesibles vía hub Otros) — no llamar safe() sobre ellos
 
 
     var showMant = vInsp || vPlacas || vFleet || vPlan || vOT;
