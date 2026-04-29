@@ -1031,7 +1031,12 @@ window.guardarArticuloInv = function(event) {
     var method = id ? 'PUT' : 'POST';
 
     fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(r) {
+            return r.json().then(function(data) {
+                if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
+                return data;
+            });
+        })
         .then(function() {
             window._invCerrarDrawer();
             window.cargarInventario();
