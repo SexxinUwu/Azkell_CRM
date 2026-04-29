@@ -524,6 +524,13 @@ window.salAbrirNuevo = function() {
     if (totalEl) totalEl.textContent = 'S/. 0.00';
     _salAgregarItem();
 
+    // Listener OT → auto-completar Placa
+    var otEl = document.getElementById('sal-f-ot');
+    if (otEl) {
+        otEl.onblur = null;
+        otEl.onblur = function() { window._salBuscarPlacaPorOT(); };
+    }
+
     var drawer = document.getElementById('sal-drawer-nuevo');
     if (drawer) drawer.classList.add('open');
     var bd = document.getElementById('salNuevoBackdrop');
@@ -535,6 +542,29 @@ window.salCerrarNuevo = function() {
     if (drawer) drawer.classList.remove('open');
     var bd = document.getElementById('salNuevoBackdrop');
     if (bd) bd.classList.remove('open');
+};
+
+// ── Auto-completar Placa al ingresar N° OT ────────────────────
+window._salBuscarPlacaPorOT = function() {
+    var otEl = document.getElementById('sal-f-ot');
+    var otVal = otEl ? otEl.value.trim() : '';
+    if (!otVal) return;
+    fetch('/api/ordenes/by-ticket?id=' + encodeURIComponent(otVal))
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(ot) {
+            if (!ot || !ot.placa) return;
+            // Asegurar tipo = Vehículo para mostrar el campo placa
+            var tipoEl = document.getElementById('sal-f-tipo');
+            if (tipoEl && tipoEl.value !== 'Vehiculo') {
+                tipoEl.value = 'Vehiculo';
+                window.salToggleTipo();
+            }
+            // Rellenar combobox placa
+            if (typeof window._cbSet === 'function') {
+                window._cbSet('sal-f-placa', ot.placa, ot.placa);
+            }
+        })
+        .catch(function() {});
 };
 
 // ── Items del formulario ──────────────────────────────────────

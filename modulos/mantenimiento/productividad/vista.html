@@ -133,6 +133,16 @@
 
 <div id="moduloProductividad">
 
+    <!-- Botón volver a Otros -->
+    <div style="padding:.5rem 1.25rem .1rem;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);">
+        <button onclick="cargarModuloAislado('mantenimiento/otros')"
+                style="background:none;border:none;font-size:.8rem;font-weight:700;color:var(--subtext);cursor:pointer;display:inline-flex;align-items:center;gap:.2rem;padding:.3rem .5rem;border-radius:8px;transition:background .15s,color .15s;"
+                onmouseover="this.style.background='var(--bg)';this.style.color='var(--text)'"
+                onmouseout="this.style.background='none';this.style.color='var(--subtext)'">
+            <i class="bi bi-arrow-left-short" style="font-size:1.1rem;"></i>Otros
+        </button>
+    </div>
+
     <!-- Barra de controles -->
     <div class="prod-controls">
         <!-- Buscador -->

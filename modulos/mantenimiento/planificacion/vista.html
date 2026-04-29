@@ -126,6 +126,16 @@
 
 <div id="moduloPlanificacion" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
+    <!-- Botón volver a Otros -->
+    <div style="padding:.5rem 1.25rem .1rem;flex-shrink:0;">
+        <button onclick="cargarModuloAislado('mantenimiento/otros')"
+                style="background:none;border:none;font-size:.8rem;font-weight:700;color:var(--subtext);cursor:pointer;display:inline-flex;align-items:center;gap:.2rem;padding:.3rem .5rem;border-radius:8px;transition:background .15s,color .15s;"
+                onmouseover="this.style.background='var(--bg)';this.style.color='var(--text)'"
+                onmouseout="this.style.background='none';this.style.color='var(--subtext)'">
+            <i class="bi bi-arrow-left-short" style="font-size:1.1rem;"></i>Otros
+        </button>
+    </div>
+
     <!-- HEADER CONTROLS -->
     <div class="controls-row">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
