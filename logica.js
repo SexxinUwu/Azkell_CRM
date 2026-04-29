@@ -426,8 +426,9 @@ window._abrirEscaner = function(callback, titulo) {
                 showTorchButtonIfSupported: false
             },
             function(decodedText) {
+                var cb = window._gscannerCB;   // guardar ANTES de cerrar
                 window._cerrarEscaner();
-                if (typeof window._gscannerCB === 'function') window._gscannerCB(decodedText.trim());
+                if (typeof cb === 'function') cb(decodedText.trim());
             },
             function() { /* frame sin código — ignorar */ }
         )
