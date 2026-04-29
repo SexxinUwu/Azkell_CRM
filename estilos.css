@@ -3089,3 +3089,102 @@ body.modo-revisor .btn-dots { display: none !important; }
 
 /* Offcanvas footer (WhatsApp) */
 .offcanvas-footer { flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎨 MODERN CONTROLS — Pill inputs + rounded buttons (global)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Search pill: unifica el input-group en una cápsula redondeada */
+.controls-row .input-group,
+.sr-controls .input-group,
+.rot-search-bar .input-group,
+.tot-controls .input-group,
+.sit-controls .input-group,
+.bkt-controls .input-group,
+.prod-controls .input-group {
+    border-radius: 99px !important;
+    overflow: hidden !important;
+    border: 1.5px solid var(--border) !important;
+    background: var(--surface) !important;
+    box-shadow: none !important;
+    flex-wrap: nowrap !important;
+}
+.controls-row .input-group .input-group-text,
+.sr-controls .input-group .input-group-text,
+.rot-search-bar .input-group .input-group-text,
+.tot-controls .input-group .input-group-text,
+.sit-controls .input-group .input-group-text,
+.bkt-controls .input-group .input-group-text,
+.prod-controls .input-group .input-group-text {
+    border: none !important;
+    background: transparent !important;
+    padding-left: .9rem !important;
+}
+.controls-row .input-group .form-control,
+.sr-controls .input-group .form-control,
+.rot-search-bar .input-group .form-control,
+.tot-controls .input-group .form-control,
+.sit-controls .input-group .form-control,
+.bkt-controls .input-group .form-control,
+.prod-controls .input-group .form-control {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-right: .9rem !important;
+}
+
+/* Standalone search inputs (no input-group) */
+.sr-controls input[type="text"],
+.tot-controls input[type="text"],
+.tot-controls input[type="month"],
+.bkt-controls input[type="text"] {
+    border-radius: 99px !important;
+    border: 1.5px solid var(--border) !important;
+    padding: .35rem .85rem !important;
+    font-size: .83rem !important;
+}
+
+/* Standalone filter inputs (rot-filters, tot-controls) */
+.rot-filters .form-control,
+.rot-filters .form-select,
+.tot-controls .form-control,
+.tot-controls .form-select {
+    border-radius: 12px !important;
+    border: 1.5px solid var(--border) !important;
+    font-size: .82rem !important;
+}
+
+/* Buttons rounded globally inside controls */
+.controls-row .btn-sm,
+.controls-row .btn.btn-sm,
+.sr-controls .btn,
+.rot-filters .btn,
+.tot-controls .btn,
+.sit-controls .btn,
+.bkt-controls .btn,
+.prod-controls .btn {
+    border-radius: 99px !important;
+    font-weight: 700 !important;
+    padding: .35rem .85rem !important;
+    font-size: .82rem !important;
+}
+.controls-row .btn-reload-cache,
+.sr-controls .btn-reload-cache,
+.bkt-controls .btn-reload-cache {
+    border-radius: 99px !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Dropdown toggles in controls */
+.controls-row .dropdown-toggle,
+.sr-controls .dropdown-toggle,
+.tot-controls .dropdown-toggle,
+.bkt-controls .dropdown-toggle,
+.prod-controls .dropdown-toggle {
+    border-radius: 99px !important;
+}
