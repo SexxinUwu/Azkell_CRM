@@ -5406,10 +5406,12 @@ app.post('/api/taller-rampas', (req, res) => {
 app.put('/api/taller-rampas/:id', (req, res) => {
     const { accion } = req.body;
     if (accion === 'liberar') {
-        const { liberado_por } = req.body;
+        const { liberado_por, fecha_salida_real, hora_salida_real, situacion } = req.body;
         db.query(
-            `UPDATE taller_rampas SET estado='Liberado', fecha_liberado=NOW(), liberado_por=? WHERE id=?`,
-            [liberado_por || null, req.params.id],
+            `UPDATE taller_rampas SET estado='Liberado', fecha_liberado=NOW(), liberado_por=?,
+             fecha_salida_real=?, hora_salida_real=?, situacion=COALESCE(?, situacion) WHERE id=?`,
+            [liberado_por || null, fecha_salida_real || null, hora_salida_real || null,
+             situacion || null, req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ ok: true });
