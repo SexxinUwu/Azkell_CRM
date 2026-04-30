@@ -320,7 +320,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td style="max-width:200px;"><div style="max-width:180px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</div></td>';
+            html += '<td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td>' + otsTxt + '</td>';
@@ -341,10 +341,17 @@ function srRenderTabla() {
 
 // ── Buscador ─────────────────────────────────────────────────────
 window.srBuscar = function() {
-    srRenderTabla();
-    if (window.srDetalleId !== null) {
-        // cerrar panel si la entrada activa ya no es visible
-        if (!document.querySelector('#sr-tbody tr.sr-activa')) window.srCerrarDetalle();
+    var q = ((document.getElementById('sr-buscador') || {}).value || '').toLowerCase().trim();
+    var tab = window.srTabActual || 'rampas';
+    if (tab === 'historial') {
+        window.srHistFiltroTexto = q;
+        window.srHistPage = 1;
+        srRenderHistorial();
+    } else {
+        srRenderTabla();
+        if (window.srDetalleId !== null) {
+            if (!document.querySelector('#sr-tbody tr.sr-activa')) window.srCerrarDetalle();
+        }
     }
 };
 
@@ -502,7 +509,8 @@ window.srLiberarRampa = function(id) {
             accion: 'liberar',
             liberado_por: localStorage.getItem('fleet_user') || '',
             fecha_salida_real: e.fechaSalida || fechaHoy,
-            hora_salida_real: e.horaSalida || horaAhora
+            hora_salida_real: e.horaSalida || horaAhora,
+            situacion: 'Finalizado'
         })
     })
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -626,7 +634,20 @@ function srRenderHistorial() {
     }) : all;
 
     var infoEl = document.getElementById('sr-hist-filtro-info');
-    if (infoEl) infoEl.textContent = (filtDesde || filtHasta)
+
+    // Aplicar filtro de texto (buscador)
+    var q = (window.srHistFiltroTexto || '').toLowerCase().trim();
+    if (q) {
+        rows = rows.filter(function(r) {
+            return (r.placa     || '').toLowerCase().includes(q)
+                || (r.situacion || '').toLowerCase().includes(q)
+                || (r.obs       || '').toLowerCase().includes(q)
+                || String(r.rampa || '').includes(q)
+                || (r.liberado_por || '').toLowerCase().includes(q);
+        });
+    }
+
+    if (infoEl) infoEl.textContent = (filtDesde || filtHasta || q)
         ? rows.length + ' de ' + all.length + ' registros'
         : '';
 
@@ -660,7 +681,7 @@ function srRenderHistorial() {
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + (r.situacion || '—') + '</td>'
-            + '<td style="padding:5px 8px;max-width:180px;"><div style="max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</div></td>'
+            + '<td style="padding:5px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
             + '<td style="padding:5px 8px;" onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
             + '</tr>';

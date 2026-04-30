@@ -272,6 +272,7 @@
 #moduloStatusRampa .sr-hist-table-wrap {
     flex: 1 1 0;
     overflow-y: auto;
+    overflow-x: auto;
     background: var(--surface);
 }
 #moduloStatusRampa .sr-hist-pag {
@@ -328,6 +329,70 @@
 .sr-drawer-global.open { transform: translateX(0); }
 /* El drawer de materiales es más ancho para ver mejor los artículos */
 #sr-drawer-material { width: 560px; }
+/* ── Drawer header ─────────────────────────────────────────────── */
+
+/* ── FAB — sólo móvil ──────────────────────────────────────────── */
+#sr-fab {
+    display: none;
+    position: fixed;
+    bottom: 76px;
+    right: 18px;
+    z-index: 900;
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: var(--primary, #5865F2);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 20px rgba(88,101,242,.45);
+    font-size: 1.55rem;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+}
+#sr-fab:active { transform: scale(.91); box-shadow: 0 2px 10px rgba(88,101,242,.35); }
+
+/* ── Responsive móvil ─────────────────────────────────────────── */
+@media (max-width: 767px) {
+    /* Mostrar FAB, ocultar botón de registrar en barra */
+    #sr-fab { display: flex !important; }
+    #sr-btn-registrar { display: none !important; }
+
+    /* Barra de controles compacta */
+    #moduloStatusRampa .sr-controls {
+        padding: 0.45rem 0.75rem;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+    /* Search se expande */
+    #moduloStatusRampa .sr-controls .input-group {
+        max-width: none !important;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    /* Ocultar texto "Excel" en móvil */
+    #sr-btn-excel .sr-excel-txt { display: none; }
+
+    /* Tabla compacta */
+    #moduloStatusRampa table { font-size: 0.73rem; }
+    #moduloStatusRampa thead th { padding: 5px 5px; font-size: 0.62rem; }
+    #moduloStatusRampa tbody td { padding: 5px 5px; }
+    #moduloStatusRampa .sr-badge-rampa { width: 26px; height: 26px; font-size: 0.7rem; }
+    #moduloStatusRampa .sr-semaforo  { padding: 2px 7px; font-size: 0.68rem; }
+    #moduloStatusRampa .sr-sit       { padding: 2px 7px; font-size: 0.68rem; }
+
+    /* Scroll horizontal en tabla */
+    #moduloStatusRampa .sr-table-wrap { overflow-x: auto; }
+
+    /* Tabs compactas */
+    #moduloStatusRampa .sr-tabs { padding: 0 0.75rem; }
+    #moduloStatusRampa .sr-tab  { margin-right: 1rem; padding: 9px 0; font-size: 0.79rem; }
+
+    /* Filtro historial ajustado */
+    #sr-pane-historial > div:first-child { padding: 0.4rem 0.65rem; }
+}
+
 .sr-drawer-hd {
     display: flex;
     align-items: center;
@@ -360,10 +425,10 @@
         <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
         </button>
-        <button class="btn btn-sm btn-outline-success" onclick="window.srExportarExcel()" title="Exportar Excel">
-            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
+            <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
         </button>
-        <button class="btn btn-sm btn-primary" onclick="window.srRegistrar()">
+        <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()">
             <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
         </button>
     </div>
@@ -391,7 +456,7 @@
                         <th style="width:52px">Hora</th>
                         <th style="width:72px">Placa</th>
                         <th style="width:108px">Situación</th>
-                        <th style="min-width:160px;max-width:200px">Observaciones</th>
+                        <th style="width:180px">Observaciones</th>
                         <th style="width:90px">Fecha Salida (Est.)</th>
                         <th style="width:52px">Hora</th>
                         <th style="width:118px">OT Relacionadas</th>
@@ -440,7 +505,7 @@
                             <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Ingreso</th>
                             <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">F/H Liberado</th>
                             <th style="width:108px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Situación</th>
-                            <th style="padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
+                            <th style="width:160px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Observaciones</th>
                             <th style="width:110px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;">Liberado por</th>
                             <th style="width:100px; padding:6px 8px; color:var(--text); font-size:0.67rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:2;"></th>
                         </tr>
@@ -471,6 +536,11 @@
     </div>
 
 </div><!-- fin moduloStatusRampa -->
+
+<!-- FAB: Registrar Unidad (sólo móvil) -->
+<button id="sr-fab" onclick="window.srRegistrar()" title="Registrar Unidad">
+    <i class="bi bi-plus-lg"></i>
+</button>
 
 
 <!-- ═══════════════ DRAWER: Registrar / Editar Unidad ═══════════════ -->
