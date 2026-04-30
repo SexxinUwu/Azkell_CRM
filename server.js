@@ -5414,7 +5414,11 @@ app.put('/api/taller-rampas/:id', (req, res) => {
     if (accion === 'liberar') {
         const { liberado_por, fecha_salida_real, hora_salida_real, situacion } = req.body;
         db.query(
-            `UPDATE taller_rampas SET estado='Liberado', fecha_liberado=NOW(), liberado_por=?,
+            `UPDATE taller_rampas SET estado='Liberado',
+             fecha_liberado = CASE WHEN fecha_salida IS NOT NULL AND hora_salida IS NOT NULL
+                              THEN CONCAT(fecha_salida, ' ', hora_salida)
+                              ELSE NOW() END,
+             liberado_por=?,
              fecha_salida_real=?, hora_salida_real=?, situacion=COALESCE(?, situacion) WHERE id=?`,
             [liberado_por || null, fecha_salida_real || null, hora_salida_real || null,
              situacion || null, req.params.id],
