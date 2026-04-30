@@ -271,6 +271,22 @@ function srCargarOTs() {
         .catch(function() { window.srOtData = []; srRenderTabla(); });
 }
 
+// ── Calcular horas en taller ─────────────────────────────────────
+function srCalcHorasTaller(e) {
+    if (!e.fechaIngreso || !e.horaIngreso) return '—';
+    var start = new Date(e.fechaIngreso + 'T' + e.horaIngreso + ':00');
+    var end;
+    if (e.fechaSalida && e.horaSalida) {
+        end = new Date(e.fechaSalida + 'T' + e.horaSalida + ':00');
+    } else {
+        end = new Date();
+    }
+    var diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return '—';
+    var hrs = diffMs / 3600000;
+    return hrs.toFixed(1) + 'h';
+}
+
 // ── Render tabla ─────────────────────────────────────────────────
 function srRenderTabla() {
     var tbody = document.getElementById('sr-tbody');
@@ -324,6 +340,7 @@ function srRenderTabla() {
             html += '<td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
+            html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
             html += '<td>' + otsTxt + '</td>';
             html += '<td>';
             if (window.checkPerm('ot', 'e')) {
@@ -335,7 +352,7 @@ function srRenderTabla() {
     }
 
     if (!html) {
-        html = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</td></tr>';
+        html = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</td></tr>';
     }
     tbody.innerHTML = html;
 }
@@ -681,11 +698,20 @@ function srRenderHistorial() {
         // Mostrar fecha/hora de salida programada (no fecha_liberado que es timestamp del servidor)
         var fLibDate = r.fecha_salida ? String(r.fecha_salida).split('T')[0] : (r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : '—');
         var fLibTime = r.hora_salida ? String(r.hora_salida).slice(0,5) : (r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '');
+        // Horas en taller para historial
+        var hTaller = '—';
+        if (r.fecha_ingreso && r.hora_ingreso && fLibDate !== '—' && fLibTime) {
+            var hStart = new Date(String(r.fecha_ingreso).split('T')[0] + 'T' + String(r.hora_ingreso).slice(0,5) + ':00');
+            var hEnd   = new Date(fLibDate + 'T' + fLibTime + ':00');
+            var diffH  = (hEnd - hStart) / 3600000;
+            if (diffH > 0) hTaller = diffH.toFixed(1) + 'h';
+        }
         return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
             + '<td style="padding:5px 8px;"><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
             + '<td style="padding:5px 8px;font-weight:700;">' + (r.placa || '—') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
+            + '<td style="padding:5px 8px;font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + hTaller + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + (r.situacion || '—') + '</td>'
             + '<td style="padding:5px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
