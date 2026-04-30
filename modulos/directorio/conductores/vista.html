@@ -2,37 +2,24 @@
 <style>
 /* ── Directorio de Personal — Card Grid ────────────────────────── */
 #cond-grid {
-    display: flex;
-    flex-direction: column;
-    gap: .45rem;
-    padding: .25rem .1rem .75rem;
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
+    display: flex; flex-direction: column; gap: .45rem;
+    padding: .25rem .1rem .75rem; flex: 1; overflow-y: auto; min-height: 0;
 }
 @media (min-width: 680px) {
     #cond-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: .65rem;
-        padding: .25rem .25rem .75rem;
-        align-content: start;
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: .65rem; padding: .25rem .25rem .75rem; align-content: start;
     }
     .cond-group-lbl { grid-column: 1 / -1; }
 }
-@media (min-width: 1100px) {
-    #cond-grid { grid-template-columns: repeat(3, 1fr); }
-}
+@media (min-width: 1100px) { #cond-grid { grid-template-columns: repeat(3, 1fr); } }
+
 .cond-card {
-    display: flex; align-items: center; gap: .75rem;
-    padding: .8rem .9rem;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 16px;
-    cursor: pointer;
+    display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 16px; cursor: pointer;
     transition: box-shadow .15s, border-color .15s, transform .15s;
-    position: relative; overflow: hidden;
-    min-height: 72px;
+    position: relative; overflow: hidden; min-height: 72px;
 }
 .cond-card:hover  { box-shadow: 0 4px 18px rgba(0,0,0,.08); border-color: #2563eb55; transform: translateY(-1px); }
 .cond-card:active { transform: scale(.984); }
@@ -80,13 +67,96 @@
 }
 .cond-group-lbl:hover { background: var(--border); }
 .cond-group-cnt { border-radius: 99px; padding: 1px 9px; font-size: .68rem; font-weight: 800; }
+
+/* ── Modal modernizado ──────────────────────────────────────────── */
+#modalConductor .modal-content {
+    border-radius: 20px; border: none; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.18);
+}
+#modalConductor .cond-mhd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; flex-shrink: 0;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+}
+#modalConductor .cond-mhd.verde  { background: linear-gradient(135deg, #065f46, #059669); }
+#modalConductor .cond-mhd.gris   { background: linear-gradient(135deg, #334155, #64748b); }
+#modalConductor .cond-mhd.rojo   { background: linear-gradient(135deg, #7f1d1d, #dc2626); }
+.cond-mhd-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: rgba(255,255,255,.2); display: flex;
+    align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+}
+.cond-msec {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 1rem; margin-bottom: .85rem;
+}
+.cond-msec-title {
+    font-size: .63rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .1em; margin-bottom: .65rem;
+    display: flex; align-items: center; gap: .35rem;
+}
+.cond-mlabel {
+    font-size: .72rem; font-weight: 700; color: var(--subtext);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 4px; display: block;
+}
+.cond-mfield {
+    border-radius: 10px; background: var(--bg);
+    border-color: var(--border); color: var(--text);
+}
+/* Vista lectura: campos parecen chips */
+.cond-mfield[readonly], .cond-mfield:disabled {
+    background: var(--bg) !important; opacity: 1; cursor: default;
+    border-color: transparent; font-weight: 700;
+}
+/* Hero ficha (modo vista) */
+.cond-ficha-hero {
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--bg); border-radius: 14px;
+    padding: .85rem 1rem; margin-bottom: 1rem;
+    border: 1.5px solid var(--border);
+}
+.cond-ficha-avatar {
+    width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; font-weight: 900; color: #fff;
+}
+.cond-ficha-tel-row { display: flex; gap: 8px; margin-top: .75rem; }
+.cond-ficha-tel-btn {
+    flex: 1; padding: .55rem; border-radius: 12px; border: none;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+    font-size: .82rem; font-weight: 700; cursor: pointer;
+    text-decoration: none; transition: opacity .15s;
+}
+.cond-ficha-tel-btn:hover { opacity: .85; }
+
+/* ── FAB ────────────────────────────────────────────────────────── */
+#cond-fab {
+    display: none; position: fixed; bottom: 76px; right: 18px; z-index: 900;
+    width: 54px; height: 54px; border-radius: 16px;
+    background: #2563eb; color: #fff; border: none;
+    box-shadow: 0 4px 20px rgba(37,99,235,.45);
+    font-size: 1.55rem; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+}
+#cond-fab:active { transform: scale(.91); }
+
+/* ── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+    #cond-fab { display: flex !important; }
+    #cond-btn-nuevo { display: none !important; }
+    #modalConductor .modal-dialog { margin: 0; max-width: 100%; }
+    #modalConductor .modal-content { border-radius: 20px 20px 0 0; }
+    #modalConductor .modal-dialog { align-items: flex-end; min-height: 100%; }
+}
 </style>
 
 <div id="moduloConductores" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
     <!-- Barra de controles -->
     <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
-        <div class="input-group input-group-sm" style="max-width: 300px;">
+        <div class="input-group input-group-sm" style="max-width:300px;">
             <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
             <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores"
                    oninput="window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
@@ -107,7 +177,9 @@
             </div>
             <input type="file" id="inputFileConductores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelConductores(event)">
             <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span></button>
-            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="abrirModalConductor()" data-perm-crear="flota"><i class="bi bi-person-plus-fill"></i> <span class="d-none d-sm-inline">Nuevo</span></button>
+            <button class="btn btn-primary fw-bold text-white btn-sm" id="cond-btn-nuevo" onclick="abrirModalConductor()" data-perm-crear="flota">
+                <i class="bi bi-person-plus-fill"></i> <span class="d-none d-sm-inline">Nuevo</span>
+            </button>
         </div>
     </div>
 
@@ -118,48 +190,131 @@
         </div>
     </div>
 
-    <!-- Tabla oculta para exportar Excel (mantiene IDs originales) -->
+    <!-- Tabla oculta para exportar Excel -->
     <table id="tablaConductores" style="display:none;">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Empresa</th>
-                <th>Licencia</th>
-                <th>Teléfono</th>
-                <th>Estado</th>
-                <th></th>
-            </tr>
-        </thead>
+        <thead><tr><th>Nombre</th><th>Empresa</th><th>Licencia</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
         <tbody id="cuerpoTablaConductores"></tbody>
     </table>
 
 </div>
 
-<!-- Modal Nuevo/Editar Conductor -->
-<div class="modal fade" id="modalConductor" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold" id="tituloModalConductor"><i class="bi bi-person-badge"></i> Ficha de Personal</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-<form id="formConductor" onsubmit="guardarConductor(event, this)">
-    <input type="hidden" name="idConductor" id="c_id">
-    <input type="hidden" name="c_foto_base64" id="c_foto_base64">
-    <div class="modal-body">
-        <div class="text-center mb-3">
-            <img id="c_foto_preview" src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20120%20120'%3E%3Ccircle%20cx%3D'60'%20cy%3D'60'%20r%3D'60'%20fill%3D'%23e2e8f0'%2F%3E%3Ccircle%20cx%3D'60'%20cy%3D'45'%20r%3D'22'%20fill%3D'%2394a3b8'%2F%3E%3Cellipse%20cx%3D'60'%20cy%3D'105'%20rx%3D'38'%20ry%3D'32'%20fill%3D'%2394a3b8'%2F%3E%3C%2Fsvg%3E" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid #cbd5e1;cursor:pointer;" onclick="document.getElementById('c_foto_input').click()" title="Toca para cambiar foto">
-            <input type="file" id="c_foto_input" accept="image/*" style="display:none;" onchange="previsualizarFotoConductor(this)">
-            <div class="small text-muted mt-1">Toca la imagen para subir foto</div>
+<!-- FAB: Nuevo Personal (móvil) -->
+<button id="cond-fab" onclick="abrirModalConductor()" title="Nuevo Personal" data-perm-crear="flota">
+    <i class="bi bi-plus-lg"></i>
+</button>
+
+<!-- ═══════════════ MODAL: Nuevo / Ficha de Personal ═══════════════ -->
+<div class="modal fade" id="modalConductor" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content">
+
+            <!-- Header dinámico -->
+            <div class="cond-mhd" id="cond-modal-header">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <div class="cond-mhd-icon" id="cond-modal-icon"><i class="bi bi-person-plus-fill"></i></div>
+                    <div>
+                        <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;opacity:.75;" id="cond-modal-subt">Directorio de Personal</div>
+                        <div style="font-size:1rem;font-weight:900;" id="tituloModalConductor">Nuevo Personal</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="color:#fff;opacity:.75;"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <form id="formConductor" onsubmit="guardarConductor(event, this)">
+                <input type="hidden" name="idConductor" id="c_id">
+                <input type="hidden" name="c_foto_base64" id="c_foto_base64">
+
+                <div class="modal-body" style="padding:1.25rem;max-height:70vh;overflow-y:auto;">
+
+                    <!-- Hero ficha (solo modo vista) -->
+                    <div class="cond-ficha-hero" id="cond-ficha-hero" style="display:none;">
+                        <div class="cond-ficha-avatar" id="cond-ficha-avatar-hero">BL</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:900;font-size:1rem;color:var(--text);line-height:1.2;" id="cond-ficha-nombre-hero">—</div>
+                            <div style="font-size:.72rem;color:var(--subtext);font-weight:600;margin-top:2px;" id="cond-ficha-emp-hero">—</div>
+                            <div style="margin-top:.4rem;" id="cond-ficha-badges-hero"></div>
+                        </div>
+                    </div>
+                    <!-- Botones contacto (solo modo vista con teléfono) -->
+                    <div class="cond-ficha-tel-row" id="cond-ficha-tel-row" style="display:none;">
+                        <a id="cond-ficha-btn-tel" href="#" class="cond-ficha-tel-btn" style="background:#eff6ff;color:#2563eb;">
+                            <i class="bi bi-telephone-fill"></i> Llamar
+                        </a>
+                        <a id="cond-ficha-btn-wsp" href="#" target="_blank" class="cond-ficha-tel-btn" style="background:#f0fdf4;color:#16a34a;">
+                            <i class="bi bi-whatsapp"></i> WhatsApp
+                        </a>
+                    </div>
+
+                    <!-- Avatar editable (modo edición/nuevo) -->
+                    <div id="cond-avatar-edit" style="text-align:center;margin-bottom:1.1rem;">
+                        <div style="position:relative;display:inline-block;">
+                            <img id="c_foto_preview" src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20120%20120'%3E%3Ccircle%20cx%3D'60'%20cy%3D'60'%20r%3D'60'%20fill%3D'%23e2e8f0'%2F%3E%3Ccircle%20cx%3D'60'%20cy%3D'45'%20r%3D'22'%20fill%3D'%2394a3b8'%2F%3E%3Cellipse%20cx%3D'60'%20cy%3D'105'%20rx%3D'38'%20ry%3D'32'%20fill%3D'%2394a3b8'%2F%3E%3C%2Fsvg%3E"
+                                style="width:88px;height:88px;object-fit:cover;border-radius:50%;border:3px solid var(--border);cursor:pointer;display:block;"
+                                onclick="document.getElementById('c_foto_input').click()" title="Toca para cambiar foto">
+                            <div style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;cursor:pointer;border:2.5px solid var(--surface);"
+                                 onclick="document.getElementById('c_foto_input').click()">
+                                <i class="bi bi-camera-fill"></i>
+                            </div>
+                        </div>
+                        <input type="file" id="c_foto_input" accept="image/*" style="display:none;" onchange="previsualizarFotoConductor(this)">
+                        <div style="font-size:.68rem;color:var(--subtext);margin-top:.3rem;">Toca la foto para cambiarla</div>
+                    </div>
+
+                    <!-- Sección: Identidad -->
+                    <div class="cond-msec" style="border-left:4px solid #2563eb;">
+                        <div class="cond-msec-title" style="color:#2563eb;"><i class="bi bi-person-fill"></i> Identidad</div>
+                        <label class="cond-mlabel">Nombre Completo *</label>
+                        <input type="text" class="form-control form-control-sm cond-mfield" name="c_nombre" id="c_nombre" required style="font-weight:700;">
+                    </div>
+
+                    <!-- Sección: Empresa y Contacto -->
+                    <div class="cond-msec" style="border-left:4px solid #7c3aed;">
+                        <div class="cond-msec-title" style="color:#7c3aed;"><i class="bi bi-building"></i> Empresa y Contacto</div>
+                        <div class="mb-2">
+                            <label class="cond-mlabel">Empresa</label>
+                            <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC">
+                            <datalist id="dl-clientes"></datalist>
+                        </div>
+                        <div>
+                            <label class="cond-mlabel">Teléfono</label>
+                            <input type="text" class="form-control form-control-sm cond-mfield" name="c_telefono" id="c_telefono">
+                        </div>
+                    </div>
+
+                    <!-- Sección: Documentos -->
+                    <div class="cond-msec" style="border-left:4px solid #0891b2;">
+                        <div class="cond-msec-title" style="color:#0891b2;"><i class="bi bi-card-text"></i> Documentos</div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="cond-mlabel">DNI</label>
+                                <input type="text" class="form-control form-control-sm cond-mfield" name="c_dni" id="c_dni">
+                            </div>
+                            <div class="col-6">
+                                <label class="cond-mlabel">Licencia</label>
+                                <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_licencia" id="c_licencia">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección: Estado -->
+                    <div class="cond-msec" style="border-left:4px solid #059669;margin-bottom:0;">
+                        <div class="cond-msec-title" style="color:#059669;"><i class="bi bi-circle-fill" style="font-size:.55rem;"></i> Estado</div>
+                        <select class="form-select form-select-sm cond-mfield" name="c_estado" id="c_estado">
+                            <option value="Activo">Activo</option>
+                            <option value="Cesado">Cesado</option>
+                            <option value="Bloqueado">Bloqueado</option>
+                        </select>
+                    </div>
+
+                </div><!-- /modal-body -->
+
+                <div class="modal-footer" style="padding:.75rem 1.25rem;border-top:1px solid var(--border);gap:.5rem;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" data-bs-dismiss="modal" style="border-radius:10px;">Cerrar</button>
+                    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()" style="border-radius:10px;"><i class="bi bi-pencil-square me-1"></i>Editar</button>
+                    <button type="submit" class="btn btn-sm fw-bold" id="btnGuardarConductor" style="border-radius:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;color:#fff;padding:.45rem 1.1rem;box-shadow:0 3px 10px rgba(37,99,235,.3);"><i class="bi bi-save me-1"></i>Guardar</button>
+                </div>
+            </form>
+
         </div>
-        <div class="mb-3"><label class="fw-bold text-primary">Nombre Completo</label><input type="text" class="form-control fw-bold" name="c_nombre" id="c_nombre" required></div>
-        <div class="row">
-            <div class="col-md-6 mb-3"><label class="fw-bold">Empresa</label><input type="text" class="form-control text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC"><datalist id="dl-clientes"></datalist></div>
-            <div class="col-md-6 mb-3"><label class="fw-bold">Teléfono</label><input type="text" class="form-control" name="c_telefono" id="c_telefono"></div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3"><label class="fw-bold">DNI</label><input type="text" class="form-control" name="c_dni" id="c_dni"></div>
-            <div class="col-md-6 mb-3"><label class="fw-bold">Licencia</label><input type="text" class="form-control text-uppercase" name="c_licencia" id="c_licencia"></div>
-        </div>
-        <div class="mb-3"><label class="fw-bold">Estado</label><select class="form-select" name="c_estado" id="c_estado"><option value="Activo">Activo</option><option value="Cesado">Cesado</option><option value="Bloqueado">Bloqueado</option></select></div>
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        <button type="button" class="btn btn-warning fw-bold text-dark" id="btnEditarConductor" onclick="activarEdicionConductor()"><i class="bi bi-pencil-square"></i> Editar</button>
-        <button type="submit" class="btn btn-primary" id="btnGuardarConductor"><i class="bi bi-save"></i> Guardar Personal</button>
-    </div>
-</form></div></div></div>
+</div>

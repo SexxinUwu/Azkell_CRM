@@ -143,21 +143,80 @@ function abrirModalConductor(f = null) {
     document.getElementById('c_foto_base64').value = "";
     document.getElementById('c_foto_preview').src = "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20120%20120'%3E%3Ccircle%20cx%3D'60'%20cy%3D'60'%20r%3D'60'%20fill%3D'%23e2e8f0'%2F%3E%3Ccircle%20cx%3D'60'%20cy%3D'45'%20r%3D'22'%20fill%3D'%2394a3b8'%2F%3E%3Cellipse%20cx%3D'60'%20cy%3D'105'%20rx%3D'38'%20ry%3D'32'%20fill%3D'%2394a3b8'%2F%3E%3C%2Fsvg%3E";
 
-    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
+    var colorMap = { 'Activo': '#2563eb', 'Cesado': '#64748b', 'Bloqueado': '#dc2626' };
+    const camposText   = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
     const camposSelect = ['c_estado'];
+    var hdr = document.getElementById('cond-modal-header');
+    if (hdr) hdr.classList.remove('verde', 'gris', 'rojo');
 
     if (f) {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-badge"></i> Ficha de Personal';
-
         const limpiar = t => t ? t.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
+        var nombre   = toTitleCase(limpiar(f.nombre || ''));
+        var empresa  = f.empresa || '';
+        var telf     = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : '';
+        var estado   = f.estado || 'Activo';
+        var colorEst = colorMap[estado] || '#2563eb';
+        var parts    = nombre.trim().split(/\s+/);
+        var initials = ((parts[0] || '')[0] || '') + ((parts[1] || '')[0] || '');
 
-        document.getElementById('c_id').value = f.idConductor;
-        document.getElementById('c_nombre').value = toTitleCase(limpiar(f.nombre));
-        document.getElementById('c_empresa').value = f.empresa || "";
+        // Header color según estado
+        if (hdr) {
+            if (estado === 'Activo')    hdr.classList.add('verde');
+            else if (estado === 'Cesado')    hdr.classList.add('gris');
+            else if (estado === 'Bloqueado') hdr.classList.add('rojo');
+        }
+        var iconEl = document.getElementById('cond-modal-icon');
+        if (iconEl) iconEl.innerHTML = '<i class="bi bi-person-badge-fill"></i>';
+        var subtEl = document.getElementById('cond-modal-subt');
+        if (subtEl) subtEl.textContent = 'Ficha de Personal';
+        var titEl = document.getElementById('tituloModalConductor');
+        if (titEl) titEl.textContent = nombre || 'Conductor';
+
+        // Hero ficha (modo vista)
+        var hero = document.getElementById('cond-ficha-hero');
+        if (hero) hero.style.display = 'flex';
+        var avatarHero = document.getElementById('cond-ficha-avatar-hero');
+        if (avatarHero) {
+            avatarHero.textContent = initials.toUpperCase() || '?';
+            avatarHero.style.background = colorEst;
+        }
+        var nombreHero = document.getElementById('cond-ficha-nombre-hero');
+        if (nombreHero) nombreHero.textContent = nombre || '—';
+        var empHero = document.getElementById('cond-ficha-emp-hero');
+        if (empHero) empHero.textContent = empresa || '—';
+        var badgesHero = document.getElementById('cond-ficha-badges-hero');
+        if (badgesHero) {
+            var badgeBg  = estado === 'Activo' ? '#dcfce7' : estado === 'Bloqueado' ? '#fee2e2' : '#f1f5f9';
+            var badgeClr = estado === 'Activo' ? '#15803d' : estado === 'Bloqueado' ? '#dc2626' : '#475569';
+            badgesHero.innerHTML = '<span style="display:inline-block;font-size:.6rem;font-weight:800;padding:2px 9px;border-radius:99px;background:' + badgeBg + ';color:' + badgeClr + ';text-transform:uppercase;letter-spacing:.06em;">' + estado + '</span>';
+        }
+
+        // Botones contacto
+        var telRow = document.getElementById('cond-ficha-tel-row');
+        if (telRow) {
+            if (telf.length >= 9) {
+                telRow.style.display = 'flex';
+                var btnTel = document.getElementById('cond-ficha-btn-tel');
+                if (btnTel) btnTel.href = 'tel:' + telf;
+                var btnWsp = document.getElementById('cond-ficha-btn-wsp');
+                if (btnWsp) btnWsp.href = 'https://wa.me/51' + telf;
+            } else {
+                telRow.style.display = 'none';
+            }
+        }
+
+        // Avatar edit oculto en modo vista
+        var avatarEdit = document.getElementById('cond-avatar-edit');
+        if (avatarEdit) avatarEdit.style.display = 'none';
+
+        // Rellenar campos (para edición posterior)
+        document.getElementById('c_id').value       = f.idConductor;
+        document.getElementById('c_nombre').value   = nombre;
+        document.getElementById('c_empresa').value  = empresa;
         document.getElementById('c_telefono').value = f.telefono || "";
-        document.getElementById('c_dni').value = f.dni || "";
+        document.getElementById('c_dni').value      = f.dni || "";
         document.getElementById('c_licencia').value = f.licencia || "";
-        document.getElementById('c_estado').value = f.estado || "Activo";
+        document.getElementById('c_estado').value   = estado;
         if (f.foto) {
             document.getElementById('c_foto_preview').src = f.foto;
             document.getElementById('c_foto_base64').value = f.foto;
@@ -171,9 +230,22 @@ function abrirModalConductor(f = null) {
         document.getElementById('btnGuardarConductor').style.display = 'none';
 
     } else {
-        document.getElementById('tituloModalConductor').innerHTML = '<i class="bi bi-person-plus-fill"></i> Nuevo Personal';
-        document.getElementById('c_id').value = "";
+        // Modo nuevo
+        var iconElN = document.getElementById('cond-modal-icon');
+        if (iconElN) iconElN.innerHTML = '<i class="bi bi-person-plus-fill"></i>';
+        var subtElN = document.getElementById('cond-modal-subt');
+        if (subtElN) subtElN.textContent = 'Directorio de Personal';
+        var titElN = document.getElementById('tituloModalConductor');
+        if (titElN) titElN.textContent = 'Nuevo Personal';
 
+        var heroN = document.getElementById('cond-ficha-hero');
+        if (heroN) heroN.style.display = 'none';
+        var telRowN = document.getElementById('cond-ficha-tel-row');
+        if (telRowN) telRowN.style.display = 'none';
+        var avatarEditN = document.getElementById('cond-avatar-edit');
+        if (avatarEditN) avatarEditN.style.display = 'block';
+
+        document.getElementById('c_id').value = "";
         camposText.forEach(id => document.getElementById(id).readOnly = false);
         camposSelect.forEach(id => document.getElementById(id).disabled = false);
         document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
@@ -186,12 +258,26 @@ function abrirModalConductor(f = null) {
 }
 
 function activarEdicionConductor() {
-    const camposText = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
+    const camposText   = ['c_nombre', 'c_empresa', 'c_telefono', 'c_dni', 'c_licencia'];
     const camposSelect = ['c_estado'];
 
     camposText.forEach(id => document.getElementById(id).readOnly = false);
     camposSelect.forEach(id => document.getElementById(id).disabled = false);
     document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
+
+    // Cambiar a modo edición: ocultar hero, mostrar avatar editable
+    var hero = document.getElementById('cond-ficha-hero');
+    if (hero) hero.style.display = 'none';
+    var telRow = document.getElementById('cond-ficha-tel-row');
+    if (telRow) telRow.style.display = 'none';
+    var avatarEdit = document.getElementById('cond-avatar-edit');
+    if (avatarEdit) avatarEdit.style.display = 'block';
+
+    // Restaurar header a azul (modo edición)
+    var hdr = document.getElementById('cond-modal-header');
+    if (hdr) hdr.classList.remove('verde', 'gris', 'rojo');
+    var subtEl = document.getElementById('cond-modal-subt');
+    if (subtEl) subtEl.textContent = 'Editando Personal';
 
     document.getElementById('btnEditarConductor').style.display = 'none';
     document.getElementById('btnGuardarConductor').style.display = 'inline-block';
