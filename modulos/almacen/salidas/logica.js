@@ -111,6 +111,35 @@ function _salCargarSelectores() {
         })
         .catch(function() {});
 
+    fetch('/api/ordenes-trabajo')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            window._salOTs = d || [];
+            var items = (d || []).map(function(o) {
+                var idOt  = (o.id_ot || '').toUpperCase();
+                var placa = (o.placa || '').toUpperCase();
+                if (!idOt) return null;
+                return { value: idOt, label: placa ? idOt + ' — ' + placa : idOt };
+            }).filter(Boolean);
+            window._cbInit('sal-f-ot', items, 'Buscar N° OT o placa…');
+            window._cbOnSelect('sal-f-ot', function(val) {
+                var ot = (window._salOTs || []).find(function(o) {
+                    return (o.id_ot || '').toUpperCase() === val;
+                });
+                if (ot && ot.placa) {
+                    var tipoEl = document.getElementById('sal-f-tipo');
+                    if (tipoEl && tipoEl.value !== 'Vehiculo') {
+                        tipoEl.value = 'Vehiculo';
+                        if (typeof window.salToggleTipo === 'function') window.salToggleTipo();
+                    }
+                    if (typeof window._cbSet === 'function') {
+                        window._cbSet('sal-f-placa', ot.placa.toUpperCase(), ot.placa.toUpperCase());
+                    }
+                }
+            });
+        })
+        .catch(function() {});
+
     var fechaEl = document.getElementById('sal-f-fecha');
     if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
 }
@@ -509,8 +538,9 @@ window.salVerPDF = function(m) {
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.salAbrirNuevo = function() {
     if (!window.guardAction('sal_inv', 'c')) return;
-    var ids = ['sal-f-ot','sal-f-obs'];
+    var ids = ['sal-f-obs'];
     ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    window._cbReset('sal-f-ot');
     window._cbReset('sal-f-placa');
     window._cbReset('sal-f-responsable');
     var fechaEl = document.getElementById('sal-f-fecha');
@@ -524,12 +554,7 @@ window.salAbrirNuevo = function() {
     if (totalEl) totalEl.textContent = 'S/. 0.00';
     _salAgregarItem();
 
-    // Listener OT → auto-completar Placa
-    var otEl = document.getElementById('sal-f-ot');
-    if (otEl) {
-        otEl.onblur = null;
-        otEl.onblur = function() { window._salBuscarPlacaPorOT(); };
-    }
+    // Listener OT → auto-completar Placa (manejado por _cbOnSelect en _salCargarSelectores)
 
     var drawer = document.getElementById('sal-drawer-nuevo');
     if (drawer) drawer.classList.add('open');
