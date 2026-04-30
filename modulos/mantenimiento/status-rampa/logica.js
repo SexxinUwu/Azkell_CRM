@@ -97,19 +97,20 @@ function srCargarCatalogos() {
         .catch(function() {});
 }
 
-// ── Placas SS widget ─────────────────────────────────────────────
+// ── Placas combobox ──────────────────────────────────────────────
 function srPoblarPlacas() {
-    if (!window.SS) return;
     var lista = [];
     var vistas = {};
     (window.dataGlobalPlacas || []).forEach(function(r) {
         var p = String(Array.isArray(r) ? (r[0] || '') : (r.placa || r[0] || '')).trim().toUpperCase();
         if (!p || p === 'PLACA' || vistas[p]) return;
         vistas[p] = true;
-        lista.push(p);
+        lista.push({ value: p, label: p });
     });
-    lista.sort();
-    window.SS.init('sr-placa', 'sr-f-placa', lista, '', null, 'Buscar placa...');
+    lista.sort(function(a, b) { return a.label.localeCompare(b.label); });
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('sr-f-placa', lista, 'Buscar placa...');
+    }
 }
 
 // ── Personal / Supervisor ────────────────────────────────────────
@@ -481,7 +482,11 @@ window.srEditarRampa = function(id) {
     if (sR) { sR.value = String(e.rampa); sR.disabled = true; }
 
     var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
-    set('sr-f-placa',     e.placa);
+    if (typeof window._cbSet === 'function') {
+        window._cbSet('sr-f-placa', e.placa, e.placa);
+    } else {
+        var el = document.getElementById('sr-f-placa'); if (el) el.value = e.placa || '';
+    }
     set('sr-f-km',        e.km);
     set('sr-f-fecha-ing', e.fechaIngreso);
     set('sr-f-hora-ing',  e.horaIngreso);
@@ -673,8 +678,9 @@ function srRenderHistorial() {
     }
     tbody.innerHTML = slice.map(function(r) {
         var fIng     = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '—';
-        var fLibDate = r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : (r.fecha_salida ? String(r.fecha_salida).split('T')[0] : '—');
-        var fLibTime = r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '';
+        // Mostrar fecha/hora de salida programada (no fecha_liberado que es timestamp del servidor)
+        var fLibDate = r.fecha_salida ? String(r.fecha_salida).split('T')[0] : (r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : '—');
+        var fLibTime = r.hora_salida ? String(r.hora_salida).slice(0,5) : (r.fecha_liberado ? String(r.fecha_liberado).slice(11, 16) : '');
         return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
             + '<td style="padding:5px 8px;"><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
             + '<td style="padding:5px 8px;font-weight:700;">' + (r.placa || '—') + '</td>'
@@ -1780,10 +1786,11 @@ window.srGuardarEdicionOT = function() {
 };
 
 function srLimpiarFormRegistro() {
-    ['sr-f-idx','sr-f-placa','sr-f-km','sr-f-fecha-ing','sr-f-hora-ing',
+    ['sr-f-idx','sr-f-km','sr-f-fecha-ing','sr-f-hora-ing',
      'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
+    if (typeof window._cbReset === 'function') window._cbReset('sr-f-placa');
     var sSit = document.getElementById('sr-f-situacion');
     if (sSit) sSit.value = sSit.options[0] ? sSit.options[0].value : '';
     var sR = document.getElementById('sr-f-rampa');
