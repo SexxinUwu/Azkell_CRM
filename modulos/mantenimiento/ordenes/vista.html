@@ -134,6 +134,8 @@
 #moduloOrdenes .badge-en-atencion { background: rgba(22,163,74,0.1);   color: #16a34a; }
 #moduloOrdenes .badge-espera      { background: rgba(217,119,6,0.1);   color: #d97706; }
 #moduloOrdenes .badge-finalizado  { background: rgba(88,101,242,0.1);  color: var(--primary, #5865F2); }
+#moduloOrdenes .badge-en-proceso  { background: rgba(34,197,94,0.12);  color: #22c55e; }
+#moduloOrdenes .badge-pausada     { background: rgba(251,146,60,0.12); color: #fb923c; }
 #moduloOrdenes .badge-tipo-prev   { background: rgba(8,145,178,0.1);   color: #0891b2; border: 1px solid rgba(8,145,178,0.25); }
 #moduloOrdenes .badge-tipo-corr   { background: rgba(220,38,38,0.08);  color: #dc2626; border: 1px solid rgba(220,38,38,0.2); }
 
@@ -536,6 +538,16 @@
                 <option value="Espera de repuesto">Espera de Repuesto</option>
                 <option value="Espera de autorización">Espera de Autorización</option>
             </select>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Sistema</label>
+                <input type="text" class="form-control form-control-sm" id="ot-f-sistema" placeholder="Ej. Motor, Transmisión, Frenos">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Sub-Sistema</label>
+                <input type="text" class="form-control form-control-sm" id="ot-f-sub-sistema" placeholder="Detalle específico">
+            </div>
         </div>
         <div class="mb-4">
             <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Motivo / Observaciones Iniciales</label>

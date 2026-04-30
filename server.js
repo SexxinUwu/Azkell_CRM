@@ -4689,6 +4689,26 @@ app.get('/api/almacen/salidas', (req, res) => {
 });
 app.post('/api/almacen/salidas', (req, res) => {
     const { fecha, tipo_destino, placa, responsable, responsable_id, moneda, tipo_cambio, observaciones, creado_por, items, ticket_ot } = req.body;
+
+    // Validar estado de la OT antes de permitir salida
+    if (ticket_ot) {
+        db.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
+            if (errOT) return res.status(500).json({ error: errOT.message });
+            if (!rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
+            const estadoOT = rowsOT[0].estado;
+            if (estadoOT !== 'En Proceso' && estadoOT !== 'Pausada') {
+                const msg = estadoOT === 'Finalizado'
+                    ? 'La OT ' + ticket_ot + ' ya está cerrada. No se pueden registrar salidas.'
+                    : 'La OT ' + ticket_ot + ' no ha sido iniciada. Debes iniciar la OT antes de registrar salidas.';
+                return res.status(400).json({ error: msg });
+            }
+            crearSalida();
+        });
+    } else {
+        crearSalida();
+    }
+
+    function crearSalida() {
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
     _generarCodigoAlmacen('SAL', anio, (err, id) => {
@@ -4722,6 +4742,7 @@ app.post('/api/almacen/salidas', (req, res) => {
                 });
             });
     });
+    } // fin crearSalida
 });
 app.put('/api/almacen/salidas/:id', (req, res) => {
     const { id } = req.params;
@@ -4987,6 +5008,65 @@ app.put('/api/ordenes-trabajo/:id', (req, res) => {
     const ticketId = req.params.id;
     const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
 
+    if (accion === 'iniciar') {
+        const { iniciado_por } = req.body;
+        db.query(
+            "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=NOW(), iniciado_por=? WHERE ticket_entrada=?",
+            [iniciado_por || null, ticketId],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true });
+            }
+        );
+        return;
+    }
+
+    if (accion === 'pausar') {
+        const { motivo, pausado_por } = req.body;
+        if (!motivo || !motivo.trim()) return res.status(400).json({ error: 'El motivo de pausa es requerido' });
+        db.query('SELECT fecha_pausa1,fecha_pausa2,fecha_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
+            const r = rows[0];
+            let slot = 0;
+            if (!r.fecha_pausa1) slot = 1;
+            else if (!r.fecha_pausa2) slot = 2;
+            else if (!r.fecha_pausa3) slot = 3;
+            else return res.status(400).json({ error: 'Límite de 3 pausas alcanzado' });
+            db.query(
+                `UPDATE ordenes_trabajo SET estado='Pausada', fecha_pausa${slot}=NOW(), motivo_pausa${slot}=?, pausado_por${slot}=? WHERE ticket_entrada=?`,
+                [motivo.trim(), pausado_por || null, ticketId],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ ok: true, slot });
+                }
+            );
+        });
+        return;
+    }
+
+    if (accion === 'reanudar') {
+        db.query('SELECT fecha_pausa1,fecha_fin_pausa1,fecha_pausa2,fecha_fin_pausa2,fecha_pausa3,fecha_fin_pausa3 FROM ordenes_trabajo WHERE ticket_entrada=?', [ticketId], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
+            const r = rows[0];
+            let slot = 0;
+            if (r.fecha_pausa1 && !r.fecha_fin_pausa1) slot = 1;
+            else if (r.fecha_pausa2 && !r.fecha_fin_pausa2) slot = 2;
+            else if (r.fecha_pausa3 && !r.fecha_fin_pausa3) slot = 3;
+            else return res.status(400).json({ error: 'No hay pausa activa' });
+            db.query(
+                `UPDATE ordenes_trabajo SET estado='En Proceso', fecha_fin_pausa${slot}=NOW() WHERE ticket_entrada=?`,
+                [ticketId],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ ok: true, slot });
+                }
+            );
+        });
+        return;
+    }
+
     if (accion === 'anular') {
         db.query("UPDATE ordenes_trabajo SET estado = 'Anulado' WHERE ticket_entrada = ?", [ticketId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -5014,6 +5094,7 @@ app.put('/api/ordenes-trabajo/:id', (req, res) => {
     }
 
     if (accion === 'cerrar') {
+        const { comentario_cierre, cerrado_por } = req.body;
         db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
@@ -5027,8 +5108,10 @@ app.put('/api/ordenes-trabajo/:id', (req, res) => {
             const fhSalidaRaw = fecha_hora_salida ? new Date(fecha_hora_salida) : new Date();
             const fhSalida = fhSalidaRaw.toISOString().slice(0, 19).replace('T', ' ');
             db.query(
-                'UPDATE ordenes_trabajo SET estado = ?, detalles_json = ?, fecha_hora_salida = ? WHERE ticket_entrada = ?',
-                ['Finalizado', JSON.stringify(det), fhSalida, ticketId],
+                'UPDATE ordenes_trabajo SET estado=?, detalles_json=?, fecha_hora_salida=?, comentario_cierre=?, cerrado_por=? WHERE ticket_entrada=?',
+                ['Finalizado', JSON.stringify(det), fhSalida,
+                 comentario_cierre || (detalles_cierre || {}).obs_cierre || null,
+                 cerrado_por || null, ticketId],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     res.json({ ok: true });
@@ -5382,6 +5465,33 @@ db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_salida_real DATE NULL`, (e)
 });
 db.query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) => {
     if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas hora_salida_real:', e.message);
+});
+
+// ── Migraciones ordenes_trabajo: flujo OT (iniciar / pausar / cerrar) ─────────
+[
+    'sistema VARCHAR(100) NULL',
+    'sub_sistema VARCHAR(100) NULL',
+    'fecha_inicio_ot DATETIME NULL',
+    'iniciado_por VARCHAR(100) NULL',
+    'fecha_pausa1 DATETIME NULL',
+    'fecha_fin_pausa1 DATETIME NULL',
+    'motivo_pausa1 VARCHAR(255) NULL',
+    'pausado_por1 VARCHAR(100) NULL',
+    'fecha_pausa2 DATETIME NULL',
+    'fecha_fin_pausa2 DATETIME NULL',
+    'motivo_pausa2 VARCHAR(255) NULL',
+    'pausado_por2 VARCHAR(100) NULL',
+    'fecha_pausa3 DATETIME NULL',
+    'fecha_fin_pausa3 DATETIME NULL',
+    'motivo_pausa3 VARCHAR(255) NULL',
+    'pausado_por3 VARCHAR(100) NULL',
+    'comentario_cierre TEXT NULL',
+    'cerrado_por VARCHAR(100) NULL'
+].forEach(function(colDef) {
+    var colName = colDef.split(' ')[0];
+    db.query('ALTER TABLE ordenes_trabajo ADD COLUMN ' + colDef, function(e) {
+        if (e && !e.message.includes('Duplicate column')) console.warn('ALTER ordenes_trabajo ' + colName + ':', e.message);
+    });
 });
 
 app.get('/api/taller-rampas', (req, res) => {
