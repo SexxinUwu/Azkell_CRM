@@ -26,87 +26,117 @@ function toggleAllCondGroups() {
 
 function mostrarConductores(datos) {
     dataGlobalConductores = datos;
-    window.dataGlobalConductores = datos;  // expose to global scope
-    let html = '';
-    let listOpciones = new Set();
+    window.dataGlobalConductores = datos;
 
-    const limpiarN = (txt) => {
-        if (!txt) return "";
+    var grid  = document.getElementById('cond-grid');
+    var tbody = document.getElementById('cuerpoTablaConductores');
+    var listOpciones = new Set();
+
+    var limpiarN = function(txt) {
+        if (!txt) return '';
         return txt.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ');
     };
 
-    if (!datos || datos.length === 0) {
-        html = '<tr><td colspan="7" class="text-center py-4">No hay personal registrado.</td></tr>';
-    } else {
-        let mapEstados = new Map();
-
-        datos.forEach(fila => {
-            let estado = fila.estado || "Desconocido";
-            if (!mapEstados.has(estado)) mapEstados.set(estado, []);
-            mapEstados.get(estado).push(fila);
-
-            if(estado.toLowerCase() === 'activo' && fila.nombre) {
-                listOpciones.add(toTitleCase(limpiarN(fila.nombre.toString())));
-            }
-        });
-
-        mapEstados.forEach((registros, estado) => {
-            let claseE = normalizarClase(estado.toString());
-            if (expandCondMap[claseE] === undefined) expandCondMap[claseE] = expandAllCondState;
-            let isExpandido = expandCondMap[claseE];
-            let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
-            let colorEstado = estado === 'Activo' ? 'text-success' : (estado === 'Cesado' ? 'text-secondary' : 'text-danger');
-
-            html += `<tr class="group-header" style="cursor:pointer;" onclick="toggleGroupRowCond('${claseE}')">
-                <td colspan="7" class="text-start" style="padding-left: 20px;">
-                    <i class="bi ${iconClass} ms-1 me-2 ${colorEstado}"></i>
-                    <i class="bi bi-people-fill ${colorEstado} me-2"></i><span class="text-uppercase fw-bold">${estado}</span>
-                    <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
-                </td>
-            </tr>`;
-
-            if (isExpandido) {
-                registros.forEach(f => {
-                    let nombreLimpio = limpiarN(f.nombre || "-");
-                    let nombre = toTitleCase(nombreLimpio);
-                    let empresa = f.empresa ? f.empresa.toString().replace(/TERCERO/gi, '3ro') : "-";
-                    let telf = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : "";
-                    let dni = f.dni ? f.dni.toString() : "-";
-                    let licencia = f.licencia ? f.licencia.toString() : "-";
-
-                    let linkTelf = "-";
-                    if (telf.length >= 9) {
-                        let wspLink = `https://wa.me/51${telf}`;
-                        linkTelf = `
-                            <div class="d-flex gap-1">
-                                <a href="tel:${telf}" class="btn btn-sm btn-outline-primary p-1 px-2 shadow-sm" title="Llamar" onclick="event.stopPropagation();"><i class="bi bi-telephone-fill"></i></a>
-                                <a href="${wspLink}" target="_blank" class="btn btn-sm btn-success p-1 px-2 shadow-sm" title="WhatsApp" onclick="event.stopPropagation();"><i class="bi bi-whatsapp"></i></a>
-                                <span class="align-self-center ms-1 fw-bold" style="font-size:0.85rem;">${telf}</span>
-                            </div>
-                        `;
-                    } else if (telf) {
-                        linkTelf = `<span class="text-muted">${telf}</span>`;
-                    }
-
-                    let bEst = estado === 'Activo' ? '<span class="badge bg-success">Activo</span>' : (estado === 'Cesado' ? '<span class="badge bg-secondary">Cesado</span>' : '<span class="badge bg-danger">Bloqueado</span>');
-                    let jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
-
-                    html += `<tr class="clickable-row" onclick='abrirModalConductor(${jsonSeguro})'>
-                        <td class="fw-bold" style="color: #1e293b;" data-value="${nombre}"><i class="bi bi-person-circle text-muted me-2"></i> ${nombre}</td>
-                        <td class="d-none" data-value="${empresa}">${empresa}</td>
-                        <td class="d-none" data-value="${licencia}">${licencia}</td>
-                        <td data-value="${telf}">${linkTelf}</td>
-                        <td class="d-none" data-value="${estado}">${estado}</td>
-                        <td></td>
-                    </tr>`;
-                });
-            }
-        });
+    if (!datos || !datos.length) {
+        if (grid)  grid.innerHTML  = '<div style="text-align:center;padding:3rem 1rem;color:var(--subtext);font-size:.9rem;">No hay personal registrado.</div>';
+        if (tbody) tbody.innerHTML = '';
+        return;
     }
 
-    document.getElementById('cuerpoTablaConductores').innerHTML = html;
+    var mapEstados = new Map();
+    datos.forEach(function(f) {
+        var estado = f.estado || 'Desconocido';
+        if (!mapEstados.has(estado)) mapEstados.set(estado, []);
+        mapEstados.get(estado).push(f);
+        if (estado.toLowerCase() === 'activo' && f.nombre) {
+            listOpciones.add(toTitleCase(limpiarN(f.nombre.toString())));
+        }
+    });
+
+    var colorMap = { 'Activo': '#2563eb', 'Cesado': '#64748b', 'Bloqueado': '#dc2626' };
+    var htmlGrid  = '';
+    var htmlTable = '';
+
+    mapEstados.forEach(function(registros, estado) {
+        var claseE   = normalizarClase(estado.toString());
+        if (expandCondMap[claseE] === undefined) expandCondMap[claseE] = expandAllCondState;
+        var isExp    = expandCondMap[claseE];
+        var colorEst = colorMap[estado] || '#94a3b8';
+        var chevron  = isExp ? 'bi-chevron-down' : 'bi-chevron-right';
+
+        htmlGrid += '<div class="cond-group-lbl" onclick="toggleGroupRowCond(\'' + claseE + '\')">'
+            + '<i class="bi ' + chevron + '" style="font-size:.78rem;color:' + colorEst + '"></i>'
+            + '<i class="bi bi-people-fill" style="color:' + colorEst + '"></i>'
+            + '<span style="color:' + colorEst + '">' + estado + '</span>'
+            + '<span class="cond-group-cnt" style="background:' + colorEst + '22;color:' + colorEst + '">' + registros.length + '</span>'
+            + '</div>';
+
+        if (isExp) {
+            registros.forEach(function(f) {
+                var nombre   = toTitleCase(limpiarN(f.nombre || '-'));
+                var empresa  = f.empresa  ? f.empresa.toString().replace(/TERCERO/gi, '3ro') : '';
+                var telf     = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : '';
+                var dni      = f.dni      ? f.dni.toString() : '';
+                var licencia = f.licencia ? f.licencia.toString() : '';
+
+                var parts    = nombre.trim().split(/\s+/);
+                var initials = ((parts[0] || '')[0] || '') + ((parts[1] || '')[0] || '');
+
+                var subParts = [];
+                if (empresa) subParts.push(empresa);
+                if (dni)     subParts.push('DNI ' + dni);
+
+                var actHtml;
+                if (telf.length >= 9) {
+                    actHtml = '<div class="cond-actions">'
+                        + '<a href="tel:' + telf + '" class="cond-btn cond-call" onclick="event.stopPropagation()" title="Llamar"><i class="bi bi-telephone-fill"></i></a>'
+                        + '<a href="https://wa.me/51' + telf + '" target="_blank" class="cond-btn cond-wsp" onclick="event.stopPropagation()" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>'
+                        + '</div>';
+                } else {
+                    actHtml = '<div class="cond-no-tel"><i class="bi bi-telephone-slash" title="Sin teléfono"></i></div>';
+                }
+
+                var jsonSeguro = JSON.stringify(f).replace(/'/g, "&#39;");
+                htmlGrid += '<div class="cond-card" onclick=\'abrirModalConductor(' + jsonSeguro + ')\'>'
+                    + '<div class="cond-avatar" style="background:' + colorEst + '">' + initials.toUpperCase() + '</div>'
+                    + '<div class="cond-info">'
+                        + '<div class="cond-name" title="' + nombre + '">' + nombre + '</div>'
+                        + (subParts.length ? '<div class="cond-sub">' + subParts.join(' · ') + '</div>' : '')
+                        + (licencia ? '<span class="cond-lic">' + licencia + '</span>' : '')
+                    + '</div>'
+                    + actHtml
+                    + '</div>';
+
+                htmlTable += '<tr>'
+                    + '<td data-value="' + nombre + '">' + nombre + '</td>'
+                    + '<td>' + (empresa || '-') + '</td>'
+                    + '<td>' + (licencia || '-') + '</td>'
+                    + '<td>' + (telf || '-') + '</td>'
+                    + '<td>' + estado + '</td>'
+                    + '<td></td>'
+                    + '</tr>';
+            });
+        }
+    });
+
+    if (grid)  grid.innerHTML  = htmlGrid;
+    if (tbody) tbody.innerHTML = htmlTable;
     rellenarDatalist('dl-conductores', listOpciones);
 }
+
+window.filtrarConductores = function() {
+    var el = document.getElementById('buscadorConductores');
+    var q  = el ? el.value.toLowerCase().trim() : '';
+    if (!q) { mostrarConductores(dataGlobalConductores); return; }
+    var filtered = (dataGlobalConductores || []).filter(function(f) {
+        var n = (f.nombre   || '').toLowerCase();
+        var d = (f.dni      || '').toLowerCase();
+        var e = (f.empresa  || '').toLowerCase();
+        var t = (f.telefono || '').toString().toLowerCase();
+        return n.includes(q) || d.includes(q) || e.includes(q) || t.includes(q);
+    });
+    mostrarConductores(filtered);
+};
 
 function abrirModalConductor(f = null) {
     document.getElementById('formConductor').reset();
