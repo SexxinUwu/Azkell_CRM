@@ -418,6 +418,17 @@
 
     <!-- PANE: HISTORIAL -->
     <div id="sr-pane-historial" style="display:none; flex:1 1 0; min-height:0; flex-direction:column; overflow:hidden;">
+
+        <!-- Filtro de fecha -->
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .85rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface);">
+            <i class="bi bi-funnel" style="color:var(--subtext);font-size:.8rem;"></i>
+            <span style="font-size:.72rem;font-weight:700;color:var(--subtext);white-space:nowrap;">Desde</span>
+            <input type="date" id="sr-hist-desde" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroDesde=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
+            <span style="font-size:.72rem;color:var(--subtext);">—</span>
+            <input type="date" id="sr-hist-hasta" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroHasta=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
+            <button onclick="window.srHistFiltroDesde='';window.srHistFiltroHasta='';var d=document.getElementById('sr-hist-desde');if(d)d.value='';var h=document.getElementById('sr-hist-hasta');if(h)h.value='';window.srHistPage=1;window.srAplicarFiltroHist();" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.72rem;padding:3px 10px;font-weight:700;cursor:pointer;">Limpiar</button>
+            <span style="font-size:.72rem;color:var(--subtext);margin-left:auto;" id="sr-hist-filtro-info"></span>
+        </div>
         <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
             <!-- TABLA HISTORIAL -->
             <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
@@ -580,15 +591,18 @@
         </button>
     </div>
     <div class="sr-drawer-body">
-        <!-- Mini header placa / rampa -->
-        <div style="background:rgba(88,101,242,0.06);border:1px solid rgba(88,101,242,0.2);border-radius:8px;padding:10px 14px;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px;">
-            <i class="bi bi-geo-alt-fill" style="color:var(--primary,#5865F2);font-size:1.1rem;"></i>
-            <div>
-                <div style="font-size:0.68rem;font-weight:700;color:var(--primary,#5865F2);text-transform:uppercase;letter-spacing:0.04em;">Placa</div>
-                <div style="font-size:1.05rem;font-weight:800;color:var(--text);" id="sr-ot-placa-disp">—</div>
+
+        <!-- Hero: Placa / Rampa -->
+        <div style="background:linear-gradient(135deg,rgba(88,101,242,.12),rgba(88,101,242,.04));border:1.5px solid rgba(88,101,242,.25);border-radius:16px;padding:1rem 1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.85rem;">
+            <div style="width:44px;height:44px;border-radius:12px;background:rgba(88,101,242,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-truck-front-fill" style="color:var(--primary,#5865F2);font-size:1.2rem;"></i>
             </div>
-            <div style="margin-left:auto;text-align:right;">
-                <div style="font-size:0.68rem;font-weight:700;color:var(--subtext);text-transform:uppercase;">Rampa</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--primary,#5865F2);margin-bottom:1px;">Placa</div>
+                <div style="font-size:1.15rem;font-weight:900;color:var(--text);" id="sr-ot-placa-disp">—</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--subtext);margin-bottom:1px;">Rampa</div>
                 <div style="font-size:1rem;font-weight:800;color:var(--text);" id="sr-ot-rampa-disp">—</div>
             </div>
         </div>
@@ -596,58 +610,79 @@
         <input type="hidden" id="sr-ot-placa-hid">
         <input type="hidden" id="sr-ot-rampa-hid">
 
-        <div class="row g-2 mb-3">
-            <div class="col-7">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Ingreso</label>
-                <input type="text" class="form-control form-control-sm" id="sr-ot-fecha-ing" readonly style="background:var(--bg);">
+        <!-- Sección: Datos del Ingreso -->
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #2563eb;">
+            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#2563eb;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
+                <i class="bi bi-calendar2-check-fill"></i> Datos del Ingreso
             </div>
-            <div class="col-5">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Kilometraje</label>
-                <input type="number" class="form-control form-control-sm" id="sr-ot-km" placeholder="0" min="0">
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Motivo de Ingreso / Observaciones</label>
-            <textarea class="form-control form-control-sm" id="sr-ot-motivo" rows="2" placeholder="Describe el motivo..."></textarea>
-        </div>
-
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo OT *</label>
-                <select class="form-select form-select-sm" id="sr-ot-tipo" onchange="window.srCambiarTipoOT()">
-                    <option value="">— Seleccionar —</option>
-                    <option value="Preventivo">Preventivo</option>
-                    <option value="Correctivo">Correctivo</option>
-                    <option value="Predictivo">Predictivo</option>
-                    <option value="Proactivo">Proactivo</option>
-                    <option value="Servicio">Servicio</option>
-                </select>
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Sub Tipo OT *</label>
-                <select class="form-select form-select-sm" id="sr-ot-subtipo" disabled>
-                    <option value="">— Seleccionar tipo primero —</option>
-                </select>
+            <div class="row g-2">
+                <div class="col-7">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Fecha y Hora Ingreso</label>
+                    <input type="text" class="form-control form-control-sm" id="sr-ot-fecha-ing" readonly style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;opacity:.8;">
+                </div>
+                <div class="col-5">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Kilometraje</label>
+                    <input type="number" class="form-control form-control-sm" id="sr-ot-km" placeholder="0" min="0" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                </div>
             </div>
         </div>
 
-        <div class="row g-2 mb-4">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Supervisor Responsable</label>
-                <select class="form-select form-select-sm" id="sr-ot-supervisor">
-                    <option value="">— Seleccionar —</option>
-                </select>
+        <!-- Sección: Motivo -->
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #d97706;">
+            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#d97706;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
+                <i class="bi bi-chat-square-text-fill"></i> Motivo / Observaciones
             </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Situación Inicial</label>
-                <select class="form-select form-select-sm" id="sr-ot-situacion">
-                    <option value="">— Seleccionar —</option>
-                </select>
+            <textarea class="form-control form-control-sm" id="sr-ot-motivo" rows="3" placeholder="Describe el motivo del ingreso..." style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;resize:vertical;"></textarea>
+        </div>
+
+        <!-- Sección: Clasificación OT -->
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #0891b2;">
+            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#0891b2;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
+                <i class="bi bi-tags-fill"></i> Clasificación
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Tipo OT *</label>
+                    <select class="form-select form-select-sm" id="sr-ot-tipo" onchange="window.srCambiarTipoOT()" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                        <option value="">— Seleccionar —</option>
+                        <option value="Preventivo">Preventivo</option>
+                        <option value="Correctivo">Correctivo</option>
+                        <option value="Predictivo">Predictivo</option>
+                        <option value="Proactivo">Proactivo</option>
+                        <option value="Servicio">Servicio</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Sub Tipo OT *</label>
+                    <select class="form-select form-select-sm" id="sr-ot-subtipo" disabled style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                        <option value="">— Seleccionar tipo primero —</option>
+                    </select>
+                </div>
             </div>
         </div>
 
-        <button class="btn btn-success w-100 fw-bold" onclick="window.srEnviarOT()">
+        <!-- Sección: Asignación -->
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:1.25rem;border-left:4px solid #059669;">
+            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#059669;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
+                <i class="bi bi-person-badge-fill"></i> Asignación
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Supervisor Responsable</label>
+                    <select class="form-select form-select-sm" id="sr-ot-supervisor" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                        <option value="">— Seleccionar —</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Situación Inicial</label>
+                    <select class="form-select form-select-sm" id="sr-ot-situacion" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                        <option value="">— Seleccionar —</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn w-100 fw-bold" onclick="window.srEnviarOT()" style="border-radius:12px;padding:.65rem 1rem;background:linear-gradient(135deg,#059669,#047857);border:none;color:#fff;font-size:.88rem;letter-spacing:.03em;box-shadow:0 4px 14px rgba(5,150,105,.35);">
             <i class="bi bi-file-earmark-plus me-1"></i>Generar Orden de Trabajo
         </button>
     </div>

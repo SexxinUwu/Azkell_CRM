@@ -320,7 +320,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td style="max-width:200px;white-space:normal;word-break:break-word;overflow-wrap:break-word;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '') + '</td>';
+            html += '<td style="max-width:200px;"><div style="max-width:180px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td>' + otsTxt + '</td>';
@@ -518,43 +518,56 @@ window.srLiberarRampa = function(id) {
 
 // ── Exportar Excel ────────────────────────────────────────────────
 window.srExportarExcel = function() {
-    var tab = window.srTabActual || 'rampas';
-    if (tab === 'rampas') {
-        if (typeof window.descargarExcelDinamico === 'function') {
-            window.descargarExcelDinamico('sr-tabla', 'Status-Rampas');
-        }
-        return;
+    var wb = XLSX.utils.book_new();
+
+    // ── Hoja 1: Estado actual de Rampas ──────────────────────────
+    var tbl = document.getElementById('sr-tabla');
+    if (tbl) {
+        var data1 = [];
+        tbl.querySelectorAll('tr').forEach(function(row) {
+            if (row.style.display === 'none') return;
+            var rowData = [];
+            var cells = row.querySelectorAll('th, td');
+            for (var i = 0; i < cells.length - 1; i++) {
+                var val = cells[i].getAttribute('data-value');
+                if (val === null || val === undefined) val = cells[i].textContent.trim();
+                val = val.replace(/^∟/g, '').trim();
+                rowData.push(val);
+            }
+            if (rowData.length) data1.push(rowData);
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data1), 'Rampas');
     }
-    // Historial — exportar todos los datos (no solo la página actual)
-    var data = window.srHistorialData || [];
-    var tmp = document.createElement('table');
-    tmp.id = 'sr-hist-export-tmp';
-    tmp.style.display = 'none';
-    tmp.innerHTML = '<thead><tr>'
-        + '<th>Rampa</th><th>Placa</th><th>Ingreso</th><th>Liberado</th>'
-        + '<th>Situación</th><th>Observaciones</th><th>Liberado por</th>'
-        + '</tr></thead><tbody>'
-        + data.map(function(r) {
-            var fIng = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '';
-            var hIng = r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '';
-            var fLib = r.fecha_liberado ? String(r.fecha_liberado).split('T')[0] : (r.fecha_salida ? String(r.fecha_salida).split('T')[0] : '');
-            var hLib = r.fecha_liberado ? String(r.fecha_liberado).slice(11,16) : '';
-            return '<tr>'
-                + '<td>' + (r.rampa || '') + '</td>'
-                + '<td>' + (r.placa || '') + '</td>'
-                + '<td>' + fIng + (hIng ? ' ' + hIng : '') + '</td>'
-                + '<td>' + fLib + (hLib ? ' ' + hLib : '') + '</td>'
-                + '<td>' + (r.situacion || '') + '</td>'
-                + '<td>' + (r.obs || '') + '</td>'
-                + '<td>' + (r.liberado_por || '') + '</td>'
-                + '</tr>';
-        }).join('')
-        + '</tbody>';
-    document.body.appendChild(tmp);
-    if (typeof window.descargarExcelDinamico === 'function') {
-        window.descargarExcelDinamico('sr-hist-export-tmp', 'Historial-Rampas');
+
+    // ── Hoja 2: Historial (respeta filtro de fecha si está activo) ──
+    var hist = window.srHistorialData || [];
+    var filtDesde = window.srHistFiltroDesde || '';
+    var filtHasta = window.srHistFiltroHasta || '';
+    if (filtDesde || filtHasta) {
+        hist = hist.filter(function(r) {
+            var f = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '';
+            if (filtDesde && f < filtDesde) return false;
+            if (filtHasta && f > filtHasta) return false;
+            return true;
+        });
     }
-    setTimeout(function() { if (tmp.parentNode) tmp.parentNode.removeChild(tmp); }, 1000);
+    var data2 = [['Rampa','Placa','F/H Ingreso','F/H Liberado','Situación','Observaciones','Liberado por']];
+    hist.forEach(function(r) {
+        var fIng = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '';
+        var hIng = r.hora_ingreso  ? String(r.hora_ingreso).slice(0,5)    : '';
+        var fLib = r.fecha_liberado ? String(r.fecha_liberado).split('T')[0]
+                 : (r.fecha_salida ? String(r.fecha_salida).split('T')[0] : '');
+        var hLib = r.fecha_liberado ? String(r.fecha_liberado).slice(11,16) : '';
+        data2.push([
+            r.rampa || '', r.placa || '',
+            fIng + (hIng ? ' ' + hIng : ''),
+            fLib + (hLib ? ' ' + hLib : ''),
+            r.situacion || '', r.obs || '', r.liberado_por || ''
+        ]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data2), 'Historial');
+
+    XLSX.writeFile(wb, 'Status-Rampas.xlsx');
 };
 
 // ── Tabs ──────────────────────────────────────────────────────────
@@ -600,7 +613,23 @@ function srCargarHistorial() {
 function srRenderHistorial() {
     var tbody = document.getElementById('sr-historial-tbody');
     if (!tbody) return;
-    var rows = window.srHistorialData || [];
+    var all = window.srHistorialData || [];
+
+    // Aplicar filtro de fecha
+    var filtDesde = window.srHistFiltroDesde || '';
+    var filtHasta = window.srHistFiltroHasta || '';
+    var rows = (filtDesde || filtHasta) ? all.filter(function(r) {
+        var f = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '';
+        if (filtDesde && f < filtDesde) return false;
+        if (filtHasta && f > filtHasta) return false;
+        return true;
+    }) : all;
+
+    var infoEl = document.getElementById('sr-hist-filtro-info');
+    if (infoEl) infoEl.textContent = (filtDesde || filtHasta)
+        ? rows.length + ' de ' + all.length + ' registros'
+        : '';
+
     var pageSize = window.srHistPageSize || 20;
     var page     = window.srHistPage    || 1;
     var total    = rows.length;
@@ -631,17 +660,27 @@ function srRenderHistorial() {
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + (r.situacion || '—') + '</td>'
-            + '<td style="padding:5px 8px;font-size:0.78rem;max-width:180px;white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</td>'
+            + '<td style="padding:5px 8px;max-width:180px;"><div style="max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;line-height:1.4;" title="' + (r.obs || '').replace(/"/g,'&quot;') + '">' + (r.obs || '—') + '</div></td>'
             + '<td style="padding:5px 8px;font-size:0.75rem;color:var(--subtext);">' + (r.liberado_por || '—') + '</td>'
             + '<td style="padding:5px 8px;" onclick="event.stopPropagation();"><button class="btn btn-xs btn-outline-warning" style="font-size:0.72rem;padding:2px 8px;" onclick="window.srReactivarRampa(' + r.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar</button></td>'
             + '</tr>';
     }).join('');
 }
 
+window.srAplicarFiltroHist = function() { srRenderHistorial(); };
+
 window.srHistPaginar = function(dir) {
-    var total    = (window.srHistorialData || []).length;
+    var all      = window.srHistorialData || [];
+    var filtDesde = window.srHistFiltroDesde || '';
+    var filtHasta = window.srHistFiltroHasta || '';
+    var filtered  = (filtDesde || filtHasta) ? all.filter(function(r) {
+        var f = r.fecha_ingreso ? String(r.fecha_ingreso).split('T')[0] : '';
+        if (filtDesde && f < filtDesde) return false;
+        if (filtHasta && f > filtHasta) return false;
+        return true;
+    }) : all;
     var pageSize = window.srHistPageSize || 20;
-    var totalPag = Math.max(1, Math.ceil(total / pageSize));
+    var totalPag = Math.max(1, Math.ceil(filtered.length / pageSize));
     window.srHistPage = Math.max(1, Math.min(totalPag, (window.srHistPage || 1) + dir));
     srRenderHistorial();
 };
