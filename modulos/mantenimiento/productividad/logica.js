@@ -101,11 +101,20 @@ window.prodAplicarFiltros = function() {
     }
 };
 
+// ── Parsear fecha sin conversión UTC→local ───────────────────────
+function prodParseDate(iso) {
+    if (!iso) return null;
+    var s = String(iso).replace('Z', '').replace('+00:00', '');
+    if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
 // ── Calcular horas efectivas de un trabajo ───────────────────────
 window.prodGetHoras = function(t) {
-    var fInicio = t.fecha_trabajo ? new Date(t.fecha_trabajo) : null;
-    var fFin    = t.fecha_salida  ? new Date(t.fecha_salida)  : null;
-    if (!fInicio || !fFin || isNaN(fInicio) || isNaN(fFin)) return 0;
+    var fInicio = prodParseDate(t.fecha_trabajo);
+    var fFin    = prodParseDate(t.fecha_salida);
+    if (!fInicio || !fFin) return 0;
     var durMs = fFin.getTime() - fInicio.getTime();
     if (durMs <= 0) return 0;
     var durHrs = durMs / 3600000;
@@ -229,8 +238,8 @@ window.prodAbrirDetalle = function(row) {
             var hT = window.prodGetHoras(t);
             var fmtFecha = function(iso) {
                 if (!iso) return '—';
-                var d = new Date(iso);
-                if (isNaN(d)) return String(iso).split('T')[0];
+                var d = prodParseDate(iso);
+                if (!d) return String(iso).split('T')[0];
                 return d.toLocaleDateString('es-PE', { day:'2-digit', month:'short' }) + ' ' +
                        d.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' });
             };
