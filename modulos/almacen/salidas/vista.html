@@ -434,8 +434,16 @@
       <div class="row g-2 mb-3">
         <div class="col-6">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
-          <input type="text" class="form-control form-control-sm" id="sal-f-ot"
-                 placeholder="Ej. OT-2026-0001" style="border-radius:12px;min-height:44px;">
+          <div class="position-relative">
+            <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm"
+                   placeholder="Buscar N° OT o placa…" autocomplete="off"
+                   style="border-radius:12px;min-height:44px;text-transform:uppercase;"
+                   oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
+                   onfocus="window._cbFiltrar('sal-f-ot')"
+                   onblur="window._cbHide('sal-f-ot')">
+            <input type="hidden" id="sal-f-ot" name="sal-f-ot">
+            <div id="sal-f-ot-dd" class="cb-dropdown"></div>
+          </div>
         </div>
         <div class="col-6">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>

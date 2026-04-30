@@ -404,6 +404,29 @@
 }
 .sr-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
 .sr-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+
+/* ── Inputs modernizados (estilo app nativa) en drawers de registro ── */
+#sr-drawer-registro .form-control,
+#sr-drawer-registro .form-select,
+#sr-drawer-registro .ss-box {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: .88rem !important;
+}
+#sr-drawer-registro textarea.form-control {
+    min-height: 80px !important;
+}
+#sr-drawer-registro .form-label,
+#sr-drawer-registro label {
+    font-size: .62rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .08em !important;
+}
+#sr-drawer-registro .row .form-control,
+#sr-drawer-registro .row .form-select {
+    min-height: 44px !important;
+}
 </style>
 
 <!-- Backdrop drawers -->
@@ -637,6 +660,7 @@
                     <option value="En espera">En espera</option>
                     <option value="En proceso">En proceso</option>
                     <option value="Listo">Listo</option>
+                    <option value="Finalizado">Finalizado</option>
                 </select>
             </div>
 
