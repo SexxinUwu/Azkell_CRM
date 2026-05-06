@@ -732,7 +732,10 @@ window.salGuardarNuevo = function() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'HTTP ' + r.status); });
+        return r.json();
+    })
     .then(function(d) {
         window.salCerrarNuevo();
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + (d.id || '') + ' registrada', 'success');
@@ -740,7 +743,7 @@ window.salGuardarNuevo = function() {
     })
     .catch(function(err) {
         console.error('Error guardando salida:', err);
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar la salida', 'danger');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta(err.message || 'Error al guardar la salida', 'danger');
     });
 };
 
