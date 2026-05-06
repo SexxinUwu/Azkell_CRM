@@ -59,7 +59,7 @@ function mostrarStatusInspecciones(inspecciones) {
   inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
   let dataFinal = [];
 
-  let placasActivasEnUso = dataGlobalPlacas.filter(p => {
+  let placasActivasEnUso = (window.dataGlobalPlacas || []).filter(p => {
       if((p[0]||'').toUpperCase() === 'PLACA') return false;
       let estado = normalizeStr(p[18] || p[8] || '');
       let enUso  = normalizeStr(p[22] || p[13] || '');
@@ -76,7 +76,7 @@ function mostrarStatusInspecciones(inspecciones) {
   } else {
       inspeccionesOrdenadas.forEach(insp => {
           let placaStr = normalizeStr(insp.placa);
-          let p = dataGlobalPlacas.find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"];
+          let p = (window.dataGlobalPlacas || []).find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"];
           dataFinal.push({ infoPlaca: p, insp: insp });
       });
   }
@@ -186,7 +186,13 @@ function mostrarStatusInspecciones(inspecciones) {
                       items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${insp.id}', 'Inspecciones')"><i class="bi bi-trash"></i> Eliminar Definitivo</a></li>`;
                   }
                   menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
-              } else { menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>'; }
+              } else {
+                  if (window.checkPerm && window.checkPerm('insp','c')) {
+                      menuAcciones = `<button class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalNuevaInspeccion('${placa}')" title="Registrar primera inspección"><i class="bi bi-plus-lg"></i> Registrar</button>`;
+                  } else {
+                      menuAcciones = '<span class="text-muted"><i class="bi bi-dash"></i></span>';
+                  }
+              }
 
               html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
               <td class="fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
@@ -597,7 +603,7 @@ window.moverWizard = function(step) {
     if(n >= 0 && n < WIZARD_SCHEMA.length) window.cambiarPestana(n);
 };
 
-window.abrirModalNuevaInspeccion = function() {
+window.abrirModalNuevaInspeccion = function(placaPreselect) {
     document.getElementById('formNuevaInspeccion').reset();
     document.getElementById('i_id_inspeccion').value = "";
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
@@ -610,6 +616,11 @@ window.abrirModalNuevaInspeccion = function() {
     });
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    if (placaPreselect) {
+        let iPlaca = document.getElementById('i_placa');
+        if (iPlaca) iPlaca.value = placaPreselect;
+    }
 
     window.cambiarPestana(0);
     new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
