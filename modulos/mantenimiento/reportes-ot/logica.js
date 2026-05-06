@@ -88,31 +88,62 @@ window.rotFiltrar = function() {
     window.rotRenderTabla(resultado);
 };
 
-// ── Botones de acción por estado ─────────────────────────────────
-function rotBotonesAccion(ot) {
-    var idOT  = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
-    var estado = ot.estado || 'Pendiente';
-    var canEdit = window.checkPerm && window.checkPerm('ot', 'e');
-    if (!canEdit) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+// ── Permiso edición OT (lectura directa, sin depender de checkPerm global) ───
+function rotPuedeEditar() {
+    try {
+        var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+        if (p.admin === true) return true;
+        return !!(p.ot && (p.ot.e === 1 || p.ot.e === true));
+    } catch(e) { return false; }
+}
 
-    var btns = '';
-    if (estado === 'Pendiente') {
-        btns = '<button class="btn btn-sm btn-info text-white fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'iniciar\',\'' + idOT + '\')">'
-             + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
-    } else if (estado === 'En Proceso') {
-        btns = '<button class="btn btn-sm btn-warning fw-bold" style="font-size:0.72rem;padding:2px 8px;margin-right:3px;" onclick="window.rotAccion(\'pausar\',\'' + idOT + '\')">'
-             + '<i class="bi bi-pause-fill me-1"></i>Pausar</button>'
-             + '<button class="btn btn-sm btn-danger fw-bold text-white" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'cerrar\',\'' + idOT + '\')">'
-             + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
-    } else if (estado === 'Pausada') {
-        btns = '<button class="btn btn-sm btn-success fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'reanudar\',\'' + idOT + '\')">'
-             + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>';
-    } else if (estado === 'Finalizado' || estado === 'Cerrada') {
-        btns = '<span class="badge" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);font-size:0.7rem;">Finalizado</span>';
-    } else if (estado === 'Anulado') {
-        btns = '<span class="badge bg-danger bg-opacity-10 text-danger" style="font-size:0.7rem;">Anulado</span>';
+// ── Botones de acción modernos por estado ─────────────────────────
+function rotBotonesAccion(ot) {
+    var idOT   = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
+    var estado = ot.estado || 'Pendiente';
+    if (!rotPuedeEditar()) return '';
+
+    var b = function(cls, icon, txt, accion) {
+        return '<button class="rot-btn ' + cls + '" onclick="event.stopPropagation();window.rotAccion(\'' + accion + '\',\'' + idOT + '\')">'
+             + '<i class="bi ' + icon + '"></i>' + txt + '</button>';
+    };
+
+    if (estado === 'Pendiente' || (!['En Proceso','Pausada','Finalizado','Cerrada','Anulado'].includes(estado))) {
+        return b('rot-btn-iniciar', 'bi-play-fill', 'Iniciar', 'iniciar');
     }
-    return btns;
+    if (estado === 'En Proceso') {
+        return b('rot-btn-pausar',  'bi-pause-fill', 'Pausar', 'pausar')
+             + ' '
+             + b('rot-btn-cerrar',  'bi-lock-fill',  'Cerrar', 'cerrar');
+    }
+    if (estado === 'Pausada') {
+        return b('rot-btn-reanudar', 'bi-play-fill', 'Reanudar', 'reanudar')
+             + ' '
+             + b('rot-btn-cerrar',   'bi-lock-fill', 'Cerrar',   'cerrar');
+    }
+    if (estado === 'Finalizado' || estado === 'Cerrada') {
+        return '<span class="rot-badge rot-b-finalizado">Finalizado</span>';
+    }
+    if (estado === 'Anulado') {
+        return '<span class="rot-badge rot-b-anulado">Anulado</span>';
+    }
+    return '';
+}
+
+// ── Badge de estado OT ────────────────────────────────────────────
+function rotBadgeEstado(estado) {
+    var map = {
+        'Pendiente':  ['rot-b-pendiente',  'Pendiente'],
+        'En Proceso': ['rot-b-en-proceso', 'En Proceso'],
+        'Pausada':    ['rot-b-pausada',    'Pausada'],
+        'Finalizado': ['rot-b-finalizado', 'Finalizado'],
+        'Cerrada':    ['rot-b-finalizado', 'Cerrada'],
+        'Aprobada':   ['rot-b-aprobada',   'Aprobada'],
+        'Anulado':    ['rot-b-anulado',    'Anulado']
+    };
+    var e = estado || 'Pendiente';
+    var v = map[e] || ['rot-b-pendiente', e];
+    return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
 // ── Render tabla ─────────────────────────────────────────────────
@@ -121,7 +152,7 @@ window.rotRenderTabla = function(lista) {
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
         return;
     }
 
@@ -131,24 +162,29 @@ window.rotRenderTabla = function(lista) {
         var det = rotDetalles(ot);
         var esActiva = (window.rotDetalleId !== null && String(window.rotDetalleId) === String(ot.ticket_entrada || ot.id_ot));
         var idOT = ot.ticket_entrada || ot.id_ot || '—';
+        var obs  = rotEscHtml((det.motivo || ot.observaciones || '').substring(0, 80)) + ((det.motivo || ot.observaciones || '').length > 80 ? '…' : '');
 
         html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(ot.ticket_entrada || ot.id_ot || '')) + '\')">';
+        // Acciones — primera columna, sin propagación
+        html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
         // N° OT
-        html += '<td style="font-weight:800;color:var(--primary,#5865F2);">' + rotEscHtml(String(idOT)) + '</td>';
+        html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
         // Placa
         html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>';
+        // Estado OT
+        html += '<td>' + rotBadgeEstado(ot.estado) + '</td>';
         // Tipo / Sub Tipo
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         // Supervisor
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
-        // Situación
+        // Situación (situacion_inicial del detalles_json)
         html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
+        // Observaciones
+        html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(det.motivo || ot.observaciones || '') + '">' + (obs || '—') + '</td>';
         // Costo total
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         // Fecha
-        html += '<td style="font-size:0.78rem;color:var(--subtext);">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
-        // Acciones
-        html += '<td onclick="event.stopPropagation();" style="text-align:center;white-space:nowrap;">' + rotBotonesAccion(ot) + '</td>';
+        html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
         html += '</tr>';
     }
 
@@ -173,7 +209,15 @@ window.rotAbrirDetalle = function(idOT) {
         return '<div class="rot-field"><span class="rot-field-lbl">' + esc(lbl) + '</span><span class="rot-field-val">' + val + '</span></div>';
     }
     function badge(e) {
-        var map = { 'Pendiente':['rot-b-pendiente','Pendiente'], 'Aprobada':['rot-b-aprobada','Aprobada'], 'Cerrada':['rot-b-cerrada','Cerrada'], 'Anulado':['rot-b-anulado','Anulado'] };
+        var map = {
+            'Pendiente':  ['rot-b-pendiente',  'Pendiente'],
+            'En Proceso': ['rot-b-en-proceso', 'En Proceso'],
+            'Pausada':    ['rot-b-pausada',    'Pausada'],
+            'Aprobada':   ['rot-b-aprobada',   'Aprobada'],
+            'Cerrada':    ['rot-b-finalizado', 'Cerrada'],
+            'Finalizado': ['rot-b-finalizado', 'Finalizado'],
+            'Anulado':    ['rot-b-anulado',    'Anulado']
+        };
         var v = map[e] || ['rot-b-pendiente', e || '—'];
         return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
     }

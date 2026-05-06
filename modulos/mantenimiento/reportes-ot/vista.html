@@ -112,10 +112,35 @@
 #moduloReportesOT .rot-b-aprobada    { background: rgba(22,163,74,0.12);   color: #16a34a; }
 #moduloReportesOT .rot-b-cerrada     { background: rgba(88,101,242,0.12);  color: var(--primary, #5865F2); }
 #moduloReportesOT .rot-b-anulado     { background: rgba(220,38,38,0.12);   color: #dc2626; }
+#moduloReportesOT .rot-b-en-proceso  { background: rgba(14,165,233,0.12);  color: #0ea5e9; }
+#moduloReportesOT .rot-b-pausada     { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+#moduloReportesOT .rot-b-finalizado  { background: rgba(88,101,242,0.10);  color: var(--primary, #5865F2); }
 #moduloReportesOT .rot-b-en-atencion { background: rgba(22,163,74,0.1);   color: #16a34a; }
 #moduloReportesOT .rot-b-espera      { background: rgba(217,119,6,0.1);   color: #d97706; }
 #moduloReportesOT .rot-b-tipo-prev   { background: rgba(8,145,178,0.1);   color: #0891b2; border:1px solid rgba(8,145,178,0.25); }
 #moduloReportesOT .rot-b-tipo-corr   { background: rgba(220,38,38,0.08);  color: #dc2626; border:1px solid rgba(220,38,38,0.2); }
+
+/* ── Botones de acción en tabla ───────────────────────────────── */
+#moduloReportesOT .rot-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border-radius: 8px;
+    font-size: 0.71rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+#moduloReportesOT .rot-btn:hover  { filter: brightness(0.9); }
+#moduloReportesOT .rot-btn:active { transform: scale(0.96); }
+#moduloReportesOT .rot-btn-iniciar  { background: #0ea5e9; color: #fff; }
+#moduloReportesOT .rot-btn-pausar   { background: #f59e0b; color: #fff; }
+#moduloReportesOT .rot-btn-reanudar { background: #22c55e; color: #fff; }
+#moduloReportesOT .rot-btn-cerrar   { background: #ef4444; color: #fff; }
 
 /* ── Drawer lateral de detalle ────────────────────────────────── */
 #rotDrawerBackdrop {
@@ -329,14 +354,16 @@
         <table id="rot-tabla">
             <thead>
                 <tr>
+                    <th style="width:130px;">Acciones</th>
                     <th>N° OT</th>
                     <th>Placa</th>
+                    <th>Estado</th>
                     <th>Tipo / Sub Tipo</th>
                     <th>Supervisor</th>
                     <th>Situación</th>
+                    <th style="max-width:200px;">Observaciones</th>
                     <th>Costo Total</th>
                     <th>Fecha</th>
-                    <th style="text-align:center;">Acciones</th>
                 </tr>
             </thead>
             <tbody id="rot-tbody"></tbody>
