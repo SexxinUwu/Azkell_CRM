@@ -130,7 +130,6 @@ function rotBotonesAccion(ot) {
     return '';
 }
 
-// ── Badge de estado OT ────────────────────────────────────────────
 function rotBadgeEstado(estado) {
     var map = {
         'Pendiente':  ['rot-b-pendiente',  'Pendiente'],
@@ -146,13 +145,52 @@ function rotBadgeEstado(estado) {
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
+// ── Cálculo de tiempos de OT ──────────────────────────────────────
+function rotFmtDuracion(ms) {
+    if (!ms || ms <= 0) return '0 min';
+    var mins = Math.floor(ms / 60000);
+    var hrs  = Math.floor(mins / 60);
+    var m    = mins % 60;
+    if (hrs === 0) return m + ' min';
+    return hrs + 'h ' + (m > 0 ? m + 'min' : '');
+}
+
+function rotCalcularTiempos(ot) {
+    var inicio = ot.fecha_inicio_ot    ? new Date(ot.fecha_inicio_ot)    : null;
+    var fin    = ot.fecha_hora_salida  ? new Date(ot.fecha_hora_salida)  : null;
+    var pausas = [];
+    for (var i = 1; i <= 3; i++) {
+        if (ot['fecha_pausa' + i]) {
+            pausas.push({
+                inicio: new Date(ot['fecha_pausa' + i]),
+                fin:    ot['fecha_fin_pausa' + i] ? new Date(ot['fecha_fin_pausa' + i]) : null,
+                motivo: ot['motivo_pausa' + i] || ''
+            });
+        }
+    }
+    var ahora = new Date();
+    var finCalc = fin || ((ot.estado === 'En Proceso' || ot.estado === 'Pausada') ? ahora : null);
+    var totalMs = (inicio && finCalc) ? Math.max(0, finCalc - inicio) : 0;
+    var tiempoMuertoMs = pausas.reduce(function(acc, p) {
+        var fp = p.fin || (ot.estado === 'Pausada' && !p.fin ? ahora : null);
+        return fp ? acc + Math.max(0, fp - p.inicio) : acc;
+    }, 0);
+    return {
+        inicio: inicio, fin: fin,
+        pausas: pausas,
+        totalMs: totalMs,
+        tiempoMuertoMs: tiempoMuertoMs,
+        tiempoTrabajadoMs: Math.max(0, totalMs - tiempoMuertoMs)
+    };
+}
+
 // ── Render tabla ─────────────────────────────────────────────────
 window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
         return;
     }
 
@@ -165,25 +203,14 @@ window.rotRenderTabla = function(lista) {
         var obs  = rotEscHtml((det.motivo || ot.observaciones || '').substring(0, 80)) + ((det.motivo || ot.observaciones || '').length > 80 ? '…' : '');
 
         html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(ot.ticket_entrada || ot.id_ot || '')) + '\')">';
-        // Acciones — primera columna, sin propagación
         html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
-        // N° OT
         html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
-        // Placa
         html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>';
-        // Estado OT
-        html += '<td>' + rotBadgeEstado(ot.estado) + '</td>';
-        // Tipo / Sub Tipo
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
-        // Supervisor
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
-        // Situación (situacion_inicial del detalles_json)
         html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
-        // Observaciones
         html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(det.motivo || ot.observaciones || '') + '">' + (obs || '—') + '</td>';
-        // Costo total
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
-        // Fecha
         html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
         html += '</tr>';
     }
@@ -203,6 +230,7 @@ window.rotAbrirDetalle = function(idOT) {
     var det    = rotDetalles(ot);
     var estado = ot.estado || 'Pendiente';
     var esAprobada = (estado === 'Aprobada');
+    var puedeAgregarMaterial = (estado === 'En Proceso' || estado === 'Pausada' || estado === 'Aprobada');
 
     function esc(s) { return rotEscHtml(String(s||'')); }
     function fld(lbl, val) {
@@ -240,10 +268,44 @@ window.rotAbrirDetalle = function(idOT) {
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
-    // Fechas
-    html += '<div class="rot-sec"><div class="rot-sec-hd">Fechas y Tiempos</div>';
-    html += fld('Fecha Creación', rotFmtFecha(ot.creado_en || ot.fecha_ingreso));
+    // Tiempos de la OT
+    var t = rotCalcularTiempos(ot);
+    html += '<div class="rot-sec"><div class="rot-sec-hd">Tiempos de la Orden</div>';
+    html += fld('Ingreso a Taller', rotFmtFecha(ot.fecha_ingreso || ot.creado_en));
     if (det.km) html += fld('Kilometraje', esc(Number(det.km).toLocaleString('es-PE') + ' km'));
+    html += fld('Estado OT', rotBadgeEstado(ot.estado));
+    if (t.inicio) {
+        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.iniciado_por) + '</span>' : ''));
+    }
+    if (t.fin) {
+        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.cerrado_por) + '</span>' : ''));
+    }
+    if (t.inicio) {
+        html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
+              + '<span style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:8px;padding:5px 12px;font-size:0.75rem;font-weight:700;"><i class="bi bi-play-fill me-1"></i>Trabajado: ' + rotFmtDuracion(t.tiempoTrabajadoMs) + '</span>'
+              + '<span style="background:rgba(239,68,68,0.1);color:#ef4444;border-radius:8px;padding:5px 12px;font-size:0.75rem;font-weight:700;"><i class="bi bi-pause-fill me-1"></i>T. Muerto: ' + rotFmtDuracion(t.tiempoMuertoMs) + '</span>'
+              + '</div>';
+    }
+    if (t.pausas.length > 0) {
+        html += '<div style="padding:4px 12px 12px;">'
+              + '<div style="font-size:0.68rem;font-weight:800;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Detalle de pausas</div>';
+        t.pausas.forEach(function(p, idx) {
+            var dur = p.fin ? rotFmtDuracion(p.fin - p.inicio) : 'En curso';
+            html += '<div style="border-left:3px solid #f59e0b;padding:5px 10px;margin-bottom:6px;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">'
+                  + '<div style="font-size:0.74rem;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+                  + '<span>' + rotFmtFecha(p.inicio.toISOString()) + '</span>'
+                  + '<span style="opacity:0.6;">→</span>'
+                  + '<span>' + (p.fin ? rotFmtFecha(p.fin.toISOString()) : '<em>Sin reanudar</em>') + '</span>'
+                  + '<span style="background:rgba(245,158,11,0.2);border-radius:6px;padding:1px 7px;">' + dur + '</span>'
+                  + '</div>'
+                  + (p.motivo ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:3px;"><i class="bi bi-chat-left-text me-1"></i>' + esc(p.motivo) + '</div>' : '')
+                  + '</div>';
+        });
+        html += '</div>';
+    }
+    if (ot.comentario_cierre) {
+        html += fld('Comentario Cierre', '<span style="font-style:italic;color:var(--subtext);">' + esc(ot.comentario_cierre) + '</span>');
+    }
     html += '</div>';
 
     // Motivo
@@ -337,7 +399,7 @@ window.rotAbrirDetalle = function(idOT) {
         window.rotOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
         rotRenderSecTrabajos(idOT, esAprobada);
-        rotRenderSecMateriales(idOT, esAprobada);
+        rotRenderSecMateriales(idOT, puedeAgregarMaterial);
         rotRenderSecBacklog(backlogItems);
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
@@ -561,27 +623,44 @@ window.rotExportar = function() {
         return;
     }
 
-    // Usar helper global si existe
-    if (typeof window.descargarExcelDinamico === 'function') {
-        window.descargarExcelDinamico('rot-tabla', 'Reportes_OT');
-        return;
-    }
-
-    // Fallback: exportar CSV
-    var cols = ['N° OT', 'Placa', 'Tipo OT', 'Sub Tipo', 'Supervisor', 'Técnico', 'Situación', 'Aprobación', 'Costo Total', 'Fecha'];
+    // CSV con columnas completas incluyendo tiempos
+    var cols = [
+        'N° OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
+        'Supervisor', 'Situación Inicial', 'Observaciones', 'Costo Total',
+        'Ingreso Taller', 'Inicio OT', 'Iniciado Por',
+        'Pausa 1', 'Motivo Pausa 1', 'Fin Pausa 1',
+        'Pausa 2', 'Motivo Pausa 2', 'Fin Pausa 2',
+        'Pausa 3', 'Motivo Pausa 3', 'Fin Pausa 3',
+        'Cierre OT', 'Cerrado Por', 'Comentario Cierre',
+        'Tiempo Trabajado (min)', 'Tiempo Muerto (min)'
+    ];
     var filas = lista.map(function(ot) {
         var det = rotDetalles(ot);
+        var t   = rotCalcularTiempos(ot);
+        var fmtD = function(d) { return d ? d.toISOString().replace('T',' ').substring(0,16) : ''; };
         return [
             ot.ticket_entrada || ot.id_ot || '',
             ot.placa || '',
+            ot.estado || 'Pendiente',
             det.tipo_ot || ot.tipo || '',
             det.sub_tipo || '',
-            ot.supervisor || '',
-            ot.tecnico || '',
-            ot.situacion || '',
-            ot.aprobacion || '',
+            det.sistema || '',
+            det.sub_sistema || '',
+            det.supervisor || ot.supervisor || '',
+            det.situacion_inicial || ot.situacion || '',
+            det.motivo || ot.observaciones || '',
             parseFloat(ot.costo_total || 0).toFixed(2),
-            rotFechaISO(ot.creado_en)
+            rotFechaISO(ot.fecha_ingreso || ot.creado_en),
+            fmtD(t.inicio),
+            ot.iniciado_por || '',
+            fmtD(t.pausas[0] ? t.pausas[0].inicio : null), t.pausas[0] ? t.pausas[0].motivo : '', fmtD(t.pausas[0] ? t.pausas[0].fin : null),
+            fmtD(t.pausas[1] ? t.pausas[1].inicio : null), t.pausas[1] ? t.pausas[1].motivo : '', fmtD(t.pausas[1] ? t.pausas[1].fin : null),
+            fmtD(t.pausas[2] ? t.pausas[2].inicio : null), t.pausas[2] ? t.pausas[2].motivo : '', fmtD(t.pausas[2] ? t.pausas[2].fin : null),
+            fmtD(t.fin),
+            ot.cerrado_por || '',
+            ot.comentario_cierre || '',
+            Math.round(t.tiempoTrabajadoMs / 60000),
+            Math.round(t.tiempoMuertoMs   / 60000)
         ].map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
     });
 
@@ -1193,6 +1272,16 @@ window.rotEliminarTrabajo = function() {
 
 // ── Agregar Salida (material) — form rico multi-artículo ──────────
 window.rotAgregarSalida = function(idOt) {
+    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
+    if (estadoOT === 'Finalizado' || estadoOT === 'Cerrada' || estadoOT === 'Anulado') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT está cerrada. No se pueden agregar salidas de material.', 'warning');
+        return;
+    }
+    if (estadoOT === 'Pendiente') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT debe estar iniciada para registrar salidas de material.', 'warning');
+        return;
+    }
     var lbl = document.getElementById('rot-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
     var hid = document.getElementById('rot-mat-ot-id');  if (hid) hid.value = idOt;
     var vis = document.getElementById('rot-mat-ot-vis'); if (vis) vis.value = idOt;
