@@ -222,7 +222,10 @@ function otBadgeSituacion(sit) {
         'En atención':               ['badge-en-atencion', 'En Atención'],
         'Espera de repuesto':        ['badge-espera',      'Espera Repuesto'],
         'Espera de autorización':    ['badge-espera',      'Espera Autor.'],
-        'Finalizado':                ['badge-finalizado',  'Finalizado']
+        'Finalizado':                ['badge-finalizado',  'Finalizado'],
+        'Pendiente':                 ['badge-pendiente',   'Pendiente'],
+        'En Proceso':                ['badge-en-proceso',  'En Proceso'],
+        'Pausada':                   ['badge-pausada',     'Pausada']
     };
     var v = map[sit] || [null, sit];
     return v[0] ? '<span class="ot-badge ' + v[0] + '">' + v[1] + '</span>' : sit;
@@ -257,6 +260,68 @@ function otDetallesTrb(trb) {
     if (!trb) return {};
     try { return (typeof trb.detalles_json === 'string') ? JSON.parse(trb.detalles_json) : (trb.detalles_json || {}); }
     catch(e) { return {}; }
+}
+
+// ── Cálculos de tiempos OT ────────────────────────────────────────
+function otCalcTiempoTotal(ot) {
+    if (!ot || !ot.fecha_inicio_ot) return null;
+    var fin = ot.fecha_hora_salida ? new Date(ot.fecha_hora_salida.replace('Z','').replace(/\+00:00/,'')) : new Date();
+    var ini = new Date(ot.fecha_inicio_ot.replace('Z','').replace(/\+00:00/,''));
+    var difMs = fin - ini;
+    return difMs > 0 ? difMs : 0;
+}
+
+function otCalcTiempoMuerto(ot) {
+    if (!ot) return 0;
+    var total = 0;
+    for (var i = 1; i <= 3; i++) {
+        var fPausa = ot['fecha_pausa' + i];
+        var fFin   = ot['fecha_fin_pausa' + i];
+        if (fPausa && fFin) {
+            var pIni = new Date(fPausa.replace('Z','').replace(/\+00:00/,''));
+            var pFin = new Date(fFin.replace('Z','').replace(/\+00:00/,''));
+            total += (pFin - pIni);
+        }
+    }
+    return total > 0 ? total : 0;
+}
+
+function otCalcTiempoEfectivo(ot) {
+    var total = otCalcTiempoTotal(ot);
+    if (total === null) return null;
+    var muerto = otCalcTiempoMuerto(ot);
+    return (total - muerto) > 0 ? (total - muerto) : 0;
+}
+
+function otFmtTiempo(ms) {
+    if (ms === null || ms === undefined) return '—';
+    var totalMins = Math.floor(ms / 60000);
+    var h = Math.floor(totalMins / 60);
+    var m = totalMins % 60;
+    return h + 'h ' + m + 'm';
+}
+
+function otRenderPausasHistorial(ot) {
+    if (!ot) return '';
+    var html = '';
+    for (var i = 1; i <= 3; i++) {
+        var fPausa = ot['fecha_pausa' + i];
+        if (!fPausa) continue;
+        var fFin = ot['fecha_fin_pausa' + i];
+        var motivo = ot['motivo_pausa' + i] || '—';
+        var pausadoPor = ot['pausado_por' + i] || '—';
+        var fPausaFmt = otFmtDateTime(fPausa);
+        var fFinFmt = fFin ? otFmtDateTime(fFin) : 'En pausa';
+        var durMs = fFin ? (new Date(fFin.replace('Z','').replace(/\+00:00/,'')) - new Date(fPausa.replace('Z','').replace(/\+00:00/,''))) : 0;
+        var durTxt = durMs > 0 ? otFmtTiempo(durMs) : '—';
+        html += '<div style="margin-bottom:0.75rem; padding:10px; background:var(--surface2, var(--bg)); border-radius:8px;">';
+        html += '<div style="font-weight:700; font-size:0.85rem; color:var(--text); margin-bottom:4px;">Pausa ' + i + ' — ' + motivo + '</div>';
+        html += '<div style="font-size:0.75rem; color:var(--subtext); margin-bottom:2px;">Iniciada: ' + fPausaFmt + ' por ' + pausadoPor + '</div>';
+        html += '<div style="font-size:0.75rem; color:var(--subtext); margin-bottom:2px;">Finalizada: ' + fFinFmt + '</div>';
+        html += '<div style="font-size:0.75rem; color:var(--subtext);">Duración: ' + durTxt + '</div>';
+        html += '</div>';
+    }
+    return html;
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────
@@ -429,12 +494,44 @@ function otAbrirDetalle(ticketId) {
     html += '<div class="ot-field"><div class="ot-field-lbl">F. Ingreso</div><div class="ot-field-val">' + otFmtDateTime(ot.fecha_ingreso) + '</div></div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">Kilometraje</div><div class="ot-field-val">' + (d.km ? d.km + ' km' : '—') + '</div></div>';
     if (d.motivo) html += '<div class="ot-field"><div class="ot-field-lbl">Motivo</div><div class="ot-field-val" style="white-space:normal;">' + d.motivo + '</div></div>';
+    if (d.sistema) html += '<div class="ot-field"><div class="ot-field-lbl">Sistema</div><div class="ot-field-val">' + d.sistema + '</div></div>';
+    if (d.sub_sistema) html += '<div class="ot-field"><div class="ot-field-lbl">Sub-Sistema</div><div class="ot-field-val">' + d.sub_sistema + '</div></div>';
     html += '</div>';
 
-    // Sección II: Cierre (si aplica)
+    // Sección II: Flujo de Trabajo y Tiempos
+    if (ot.estado && ['En Proceso', 'Pausada', 'Finalizado'].indexOf(ot.estado) !== -1) {
+        html += '<div class="ot-sec" style="border-color:rgba(88,101,242,0.3);">';
+        html += '<div class="ot-sec-hd" style="background:rgba(88,101,242,0.08);">II. Flujo de Trabajo</div>';
+        html += '<div class="ot-field"><div class="ot-field-lbl">Estado Flujo</div><div class="ot-field-val">' + otBadgeSituacion(ot.estado) + '</div></div>';
+        if (ot.fecha_inicio_ot) {
+            html += '<div class="ot-field"><div class="ot-field-lbl">Iniciado</div><div class="ot-field-val">' + otFmtDateTime(ot.fecha_inicio_ot) + ' por ' + (ot.iniciado_por || '—') + '</div></div>';
+            var tiempoTotal = otCalcTiempoTotal(ot);
+            if (tiempoTotal !== null) {
+                html += '<div class="ot-field"><div class="ot-field-lbl">Tiempo Total</div><div class="ot-field-val" style="color:var(--primary);font-weight:700;">' + otFmtTiempo(tiempoTotal) + '</div></div>';
+            }
+            var tiempoMuerto = otCalcTiempoMuerto(ot);
+            if (tiempoMuerto > 0) {
+                html += '<div class="ot-field"><div class="ot-field-lbl">Tiempo Muerto (Pausas)</div><div class="ot-field-val" style="color:#f59e0b;font-weight:700;">' + otFmtTiempo(tiempoMuerto) + '</div></div>';
+            }
+            var tiempoEfectivo = otCalcTiempoEfectivo(ot);
+            if (tiempoEfectivo !== null) {
+                html += '<div class="ot-field"><div class="ot-field-lbl">Tiempo Efectivo</div><div class="ot-field-val" style="color:#10b981;font-weight:700;">' + otFmtTiempo(tiempoEfectivo) + '</div></div>';
+            }
+        }
+        if (ot.estado === 'Finalizado' && ot.fecha_hora_salida) {
+            html += '<div class="ot-field"><div class="ot-field-lbl">Finalizado</div><div class="ot-field-val">' + otFmtDateTime(ot.fecha_hora_salida) + ' por ' + (ot.cerrado_por || '—') + '</div></div>';
+        }
+        var pausasHtml = otRenderPausasHistorial(ot);
+        if (pausasHtml) {
+            html += '<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);"><div style="font-weight:700; font-size:0.85rem; color:var(--text); margin-bottom:8px;">Historial de Pausas</div>' + pausasHtml + '</div>';
+        }
+        html += '</div>';
+    }
+
+    // Sección III: Cierre (si aplica)
     if (apr === 'Cerrada') {
         html += '<div class="ot-sec">';
-        html += '<div class="ot-sec-hd">II. Cierre y Finalización</div>';
+        html += '<div class="ot-sec-hd">III. Cierre y Finalización</div>';
         html += '<div class="ot-field"><div class="ot-field-lbl">Técnico Cierre</div><div class="ot-field-val">' + (d.tecnico_cierre || '—') + '</div></div>';
         html += '<div class="ot-field"><div class="ot-field-lbl">F. Salida</div><div class="ot-field-val">' + otFmtDateTime(ot.fecha_hora_salida) + '</div></div>';
         if (d.obs_cierre) html += '<div class="ot-field"><div class="ot-field-lbl">Obs. Finales</div><div class="ot-field-val" style="white-space:normal;">' + d.obs_cierre + '</div></div>';
@@ -442,9 +539,9 @@ function otAbrirDetalle(ticketId) {
         html += '</div>';
     }
 
-    // Sección III: Trabajos
+    // Sección IV: Trabajos
     html += '<div class="ot-sec">';
-    html += '<div class="ot-sec-hd">Trabajos <span style="background:var(--surface); border:1px solid var(--border); color:var(--subtext); padding:1px 6px; border-radius:10px; font-size:0.7rem;">' + trabajos.length + '</span></div>';
+    html += '<div class="ot-sec-hd">IV. Trabajos <span style="background:var(--surface); border:1px solid var(--border); color:var(--subtext); padding:1px 6px; border-radius:10px; font-size:0.7rem;">' + trabajos.length + '</span></div>';
     if (trabajos.length > 0) {
         html += '<table class="ot-mini-table"><thead><tr><th>ID</th><th>Descripción</th><th>Estado</th><th>Costo</th></tr></thead><tbody>';
         trabajos.forEach(function(t) {
@@ -464,9 +561,9 @@ function otAbrirDetalle(ticketId) {
     }
     html += '</div>';
 
-    // Sección IV: Materiales
+    // Sección V: Materiales
     html += '<div class="ot-sec">';
-    html += '<div class="ot-sec-hd">Materiales <span style="background:var(--surface); border:1px solid var(--border); color:var(--subtext); padding:1px 6px; border-radius:10px; font-size:0.7rem;">' + materiales.length + '</span></div>';
+    html += '<div class="ot-sec-hd">V. Materiales <span style="background:var(--surface); border:1px solid var(--border); color:var(--subtext); padding:1px 6px; border-radius:10px; font-size:0.7rem;">' + materiales.length + '</span></div>';
     if (materiales.length > 0) {
         html += '<table class="ot-mini-table"><thead><tr><th>Producto</th><th>Cant.</th><th>Estado</th><th>Total</th></tr></thead><tbody>';
         materiales.forEach(function(m) {
@@ -485,9 +582,9 @@ function otAbrirDetalle(ticketId) {
     }
     html += '</div>';
 
-    // Sección V: Costos totales
+    // Sección VI: Costos totales
     html += '<div class="ot-sec" style="border-color:rgba(22,163,74,0.3);">';
-    html += '<div class="ot-sec-hd" style="background:rgba(22,163,74,0.08); color:#16a34a;">Costos Totales (Aprobados)</div>';
+    html += '<div class="ot-sec-hd" style="background:rgba(22,163,74,0.08); color:#16a34a;">VI. Costos Totales (Aprobados)</div>';
     html += '<div class="ot-field"><div class="ot-field-lbl">Costo OT</div><div class="ot-field-val"><span style="font-size:1.1rem; color:#16a34a;">' + otFmtMoney(costo) + '</span></div></div>';
     html += '</div>';
 
@@ -499,16 +596,35 @@ function otAbrirDetalle(ticketId) {
     if (footer) {
         footer.style.display = 'flex';
         var footHtml = '';
-        if (apr === 'Pendiente') {
-            if (canDelete) footHtml += '<button class="btn btn-sm btn-outline-danger" onclick="otEliminarOT(\'' + ticketId + '\')" style="flex:0.4;">🗑 Eliminar</button>';
-            if (canEdit)   footHtml += '<button class="btn btn-sm btn-success flex-fill" onclick="otAprobarOT(\'' + ticketId + '\')">✔ Aprobar OT</button>';
-        } else if (apr === 'Aprobada') {
-            if (canEdit) footHtml += '<button class="btn btn-sm btn-warning flex-fill" onclick="window.otAbrirFormCierre(\'' + ticketId + '\')"><i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>';
-            footHtml += '<button class="btn btn-sm btn-primary" onclick="otGenerarPDF(\'' + ticketId + '\')"><i class="bi bi-file-pdf me-1"></i>PDF</button>';
-            if (canDelete) footHtml += '<button class="btn btn-sm btn-outline-danger" onclick="otEliminarOT(\'' + ticketId + '\')">🗑</button>';
-        } else if (apr === 'Cerrada') {
-            footHtml += '<button class="btn btn-sm btn-primary flex-fill" onclick="otGenerarPDF(\'' + ticketId + '\')"><i class="bi bi-file-pdf me-1"></i>Imprimir PDF Final</button>';
+        var estado = ot.estado || 'Pendiente';
+
+        // Botones de flujo de trabajo (si OT está aprobada)
+        if (apr === 'Aprobada' && canEdit) {
+            if (estado === 'Pendiente') {
+                footHtml += '<button class="btn btn-sm btn-info" style="flex:1;" onclick="otIniciarOT(\'' + ticketId + '\')"><i class="bi bi-play-fill me-1"></i>Iniciar OT</button>';
+            } else if (estado === 'En Proceso') {
+                footHtml += '<button class="btn btn-sm btn-warning" onclick="otPausarOT(\'' + ticketId + '\')"><i class="bi bi-pause-fill me-1"></i>Pausar</button>';
+                footHtml += '<button class="btn btn-sm btn-danger" style="flex:1;" onclick="otCerrarOT(\'' + ticketId + '\')"><i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+            } else if (estado === 'Pausada') {
+                footHtml += '<button class="btn btn-sm btn-success" onclick="otReanudaOT(\'' + ticketId + '\')"><i class="bi bi-play-fill me-1"></i>Reanudar</button>';
+                footHtml += '<button class="btn btn-sm btn-warning" onclick="otPausarOT(\'' + ticketId + '\')"><i class="bi bi-pause-fill me-1"></i>Pausa</button>';
+                footHtml += '<button class="btn btn-sm btn-danger" style="flex:1;" onclick="otCerrarOT(\'' + ticketId + '\')"><i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+            } else if (estado === 'Finalizado') {
+                footHtml += '<button class="btn btn-sm btn-primary" style="flex:1;" onclick="otGenerarPDF(\'' + ticketId + '\')"><i class="bi bi-file-pdf me-1"></i>PDF</button>';
+            }
         }
+
+        // Botones de aprobación
+        if (apr === 'Pendiente') {
+            if (canDelete) footHtml += '<button class="btn btn-sm btn-outline-danger" onclick="otEliminarOT(\'' + ticketId + '\')">🗑</button>';
+            if (canEdit)   footHtml += '<button class="btn btn-sm btn-success" style="flex:1;" onclick="otAprobarOT(\'' + ticketId + '\')">✔ Aprobar OT</button>';
+        } else if (apr === 'Aprobada') {
+            footHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="otGenerarPDF(\'' + ticketId + '\')"><i class="bi bi-file-pdf"></i></button>';
+            if (canDelete && estado !== 'Finalizado') footHtml += '<button class="btn btn-sm btn-outline-danger" onclick="otEliminarOT(\'' + ticketId + '\')">🗑</button>';
+        } else if (apr === 'Cerrada') {
+            footHtml += '<button class="btn btn-sm btn-primary" style="flex:1;" onclick="otGenerarPDF(\'' + ticketId + '\')"><i class="bi bi-file-pdf me-1"></i>Imprimir PDF Final</button>';
+        }
+
         footer.innerHTML = footHtml;
     }
 
@@ -712,6 +828,93 @@ function otEliminarOT(ticketId) {
         });
 }
 
+// ── Flujo de Trabajo: Iniciar ────────────────────────────────────
+window.otIniciarOT = function(ticketId) {
+    if (!window.guardAction('ot', 'e')) return;
+    var usuario = localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'iniciar', iniciado_por: usuario })
+    }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }).then(function() {
+        window.otCargarTodo();
+        window.mostrarAlerta('OT iniciada', 'success');
+        if (window.otDetalleId) otAbrirDetalle(window.otDetalleId);
+    }).catch(function(err) {
+        console.error(err);
+        window.mostrarAlerta('Error al iniciar OT', 'danger');
+    });
+};
+
+// ── Flujo de Trabajo: Pausar ─────────────────────────────────────
+window.otPausarOT = function(ticketId) {
+    if (!window.guardAction('ot', 'e')) return;
+    var motivo = prompt('Motivo de la pausa:');
+    if (!motivo || !motivo.trim()) return;
+    var usuario = localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'pausar', motivo: motivo.trim(), pausado_por: usuario })
+    }).then(function(r) {
+        if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'HTTP ' + r.status); });
+        return r.json();
+    }).then(function() {
+        window.otCargarTodo();
+        window.mostrarAlerta('OT pausada', 'success');
+        if (window.otDetalleId) otAbrirDetalle(window.otDetalleId);
+    }).catch(function(err) {
+        console.error(err);
+        window.mostrarAlerta(err.message || 'Error al pausar OT', 'danger');
+    });
+};
+
+// ── Flujo de Trabajo: Reanudar ───────────────────────────────────
+window.otReanudaOT = function(ticketId) {
+    if (!window.guardAction('ot', 'e')) return;
+    fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'reanudar' })
+    }).then(function(r) {
+        if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'HTTP ' + r.status); });
+        return r.json();
+    }).then(function() {
+        window.otCargarTodo();
+        window.mostrarAlerta('OT reanudada', 'success');
+        if (window.otDetalleId) otAbrirDetalle(window.otDetalleId);
+    }).catch(function(err) {
+        console.error(err);
+        window.mostrarAlerta(err.message || 'Error al reanudar OT', 'danger');
+    });
+};
+
+// ── Flujo de Trabajo: Cerrar ─────────────────────────────────────
+window.otCerrarOT = function(ticketId) {
+    if (!window.guardAction('ot', 'e')) return;
+    var comentario = prompt('Comentario al cerrar la OT (opcional):');
+    if (comentario === null) return;
+    var usuario = localStorage.getItem('fleet_correo') || '';
+    fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'cerrar', comentario_cierre: comentario.trim(), cerrado_por: usuario })
+    }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }).then(function() {
+        window.otCargarTodo();
+        window.mostrarAlerta('OT cerrada y finalizada', 'success');
+        if (window.otDetalleId) otAbrirDetalle(window.otDetalleId);
+    }).catch(function(err) {
+        console.error(err);
+        window.mostrarAlerta('Error al cerrar OT', 'danger');
+    });
+};
+
 function otAprobarTrabajo(idTrabajo) {
     if (!window.guardAction('ot', 'e')) return;
     fetch('/api/ot-trabajos/' + encodeURIComponent(idTrabajo), {
@@ -804,6 +1007,8 @@ window.otAbrirFormNuevo = function() {
     el = document.getElementById('ot-f-supervisor');  if (el) el.value = '';
     el = document.getElementById('ot-f-km');          if (el) el.value = '';
     el = document.getElementById('ot-f-motivo');      if (el) el.value = '';
+    el = document.getElementById('ot-f-sistema');     if (el) el.value = '';
+    el = document.getElementById('ot-f-sub-sistema'); if (el) el.value = '';
     el = document.getElementById('ot-f-situacion');   if (el) el.value = 'En atención';
     var now = new Date();
     el = document.getElementById('ot-f-fecha-ing');   if (el) el.value = now.toISOString().slice(0,10);
@@ -839,6 +1044,8 @@ window.otGuardar = function() {
             supervisor: get('ot-f-supervisor'),
             km:         parseInt(get('ot-f-km')) || 0,
             motivo:     get('ot-f-motivo'),
+            sistema:    get('ot-f-sistema'),
+            sub_sistema: get('ot-f-sub-sistema'),
             aprobacion: 'Pendiente',
             costo_total: 0
         }
@@ -1196,3 +1403,55 @@ function otGenerarPDF(ticketId) {
     }
     doc.save('OT_' + ot.id_ot + '.pdf');
 }
+
+// ── Exportar Excel ─────────────────────────────────────────────────
+window.otExportarExcel = function() {
+    var filtros = otGetFiltros();
+    var datos = window.otData.filter(function(ot) {
+        var d = otDetalles(ot);
+        var apr = d.aprobacion || 'Pendiente';
+        if (filtros.tipo && d.tipo_ot !== filtros.tipo) return false;
+        if (filtros.apr && apr !== filtros.apr) return false;
+        if (filtros.mes && !ot.fecha_ingreso.startsWith(filtros.mes)) return false;
+        if (filtros.search) {
+            var q = filtros.search.toLowerCase();
+            var s = [ot.id_ot, ot.placa, d.supervisor || ''].join(' ').toLowerCase();
+            if (!s.includes(q)) return false;
+        }
+        return true;
+    });
+
+    var headers = ['N° OT', 'Placa', 'Fecha Ingreso', 'Tipo OT', 'Supervisor', 'Estado Aprobación',
+                   'Estado Flujo', 'Sistema', 'Sub-Sistema', 'Fecha Inicio', 'Tiempo Total',
+                   'Tiempo Muerto', 'Tiempo Efectivo', 'Costo'];
+    var rows = [];
+    datos.forEach(function(ot) {
+        var d = otDetalles(ot);
+        var apr = d.aprobacion || 'Pendiente';
+        var tiempoTotal = otCalcTiempoTotal(ot);
+        var tiempoMuerto = otCalcTiempoMuerto(ot);
+        var tiempoEfectivo = otCalcTiempoEfectivo(ot);
+        rows.push([
+            ot.id_ot || '',
+            ot.placa || '',
+            otFmtFecha(ot.fecha_ingreso) || '',
+            d.tipo_ot || '',
+            d.supervisor || '',
+            apr,
+            ot.estado || 'Pendiente',
+            d.sistema || '',
+            d.sub_sistema || '',
+            ot.fecha_inicio_ot ? otFmtDateTime(ot.fecha_inicio_ot) : '',
+            tiempoTotal !== null ? otFmtTiempo(tiempoTotal) : '',
+            tiempoMuerto > 0 ? otFmtTiempo(tiempoMuerto) : '',
+            tiempoEfectivo !== null ? otFmtTiempo(tiempoEfectivo) : '',
+            otFmtMoney(otCalcCosto(ot.ticket_entrada))
+        ]);
+    });
+
+    if (typeof window.descargarExcelDinamico === 'function') {
+        window.descargarExcelDinamico([{ headers: headers, rows: rows }], 'Ordenes_Trabajo');
+    } else {
+        alert('Función de descarga no disponible');
+    }
+};
