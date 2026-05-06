@@ -107,9 +107,6 @@ function rotBotonesAccion(ot) {
     } else if (estado === 'Pausada') {
         btns = '<button class="btn btn-sm btn-success fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'reanudar\',\'' + idOT + '\')">'
              + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>';
-    } else if (estado === 'Aprobada') {
-        btns = '<button class="btn btn-sm btn-primary fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'cerrar\',\'' + idOT + '\')">'
-             + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
     } else if (estado === 'Finalizado' || estado === 'Cerrada') {
         btns = '<span class="badge" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);font-size:0.7rem;">Finalizado</span>';
     } else if (estado === 'Anulado') {
@@ -258,8 +255,6 @@ window.rotAbrirDetalle = function(idOT) {
         if (estado === 'Pendiente') {
             ftHtml += '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
                     + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
-                    + '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'aprobar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-check2-circle me-1"></i>Aprobar</button>'
                     + '<button class="btn btn-sm btn-info text-white" onclick="window.rotAccion(\'iniciar\',\'' + esc(idOT) + '\')">'
                     + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
         } else if (estado === 'En Proceso') {
@@ -328,7 +323,48 @@ window.rotCerrarDetalle = function() {
     window.rotRenderTabla(window.rotDatosFiltrados);
 };
 
-// ── Acciones del drawer (Editar, Eliminar, Aprobar, Cerrar, PDF) ──
+// ── Modal de comentario (pausar / cerrar) ─────────────────────────
+function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
+    var existente = document.getElementById('rot-modal-comentario');
+    if (existente) existente.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'rot-modal-comentario';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
+
+    overlay.innerHTML =
+        '<div style="background:var(--surface,#fff);border-radius:12px;padding:24px;width:420px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,0.22);">'
+      + '<div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:14px;">' + titulo + '</div>'
+      + '<textarea id="rot-mc-input" rows="4" style="width:100%;border:1px solid var(--border,#e0e0e0);border-radius:8px;padding:8px 10px;font-size:0.85rem;resize:vertical;color:var(--text);background:var(--bg,#f8f8f8);outline:none;" placeholder="' + placeholder + '"></textarea>'
+      + (requerido ? '<div id="rot-mc-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Este campo es obligatorio.</div>' : '')
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+      + '<button id="rot-mc-cancel" class="btn btn-sm btn-outline-secondary">Cancelar</button>'
+      + '<button id="rot-mc-ok" class="btn btn-sm btn-primary">Confirmar</button>'
+      + '</div></div>';
+
+    document.body.appendChild(overlay);
+    var ta   = document.getElementById('rot-mc-input');
+    var err  = document.getElementById('rot-mc-err');
+    var ok   = document.getElementById('rot-mc-ok');
+    var can  = document.getElementById('rot-mc-cancel');
+    if (ta) ta.focus();
+
+    function cerrar() { overlay.remove(); }
+    can.addEventListener('click', cerrar);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) cerrar(); });
+    ok.addEventListener('click', function() {
+        var val = ta ? ta.value.trim() : '';
+        if (requerido && !val) {
+            if (err) err.style.display = 'block';
+            if (ta) ta.focus();
+            return;
+        }
+        cerrar();
+        onConfirm(val);
+    });
+}
+
+// ── Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ──
 window.rotAccion = function(accion, idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot && accion !== 'pdf') return;
@@ -373,21 +409,22 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'pausar') {
         if (!window.guardAction('ot', 'e')) return;
-        var motivo = prompt('Motivo de la pausa (opcional):') || '';
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'pausar', motivo: motivo, usuario: localStorage.getItem('fleet_correo') || '' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT pausada', 'warning');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error pausando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al pausar la OT', 'danger');
+        rotModalComentario('Motivo de la pausa', 'Escribe el motivo (obligatorio)…', true, function(motivo) {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'pausar', motivo: motivo, pausado_por: localStorage.getItem('fleet_correo') || '' })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT pausada', 'warning');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error pausando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al pausar la OT', 'danger');
+            });
         });
         return;
     }
@@ -412,44 +449,29 @@ window.rotAccion = function(accion, idOT) {
         return;
     }
 
-    if (accion === 'aprobar') {
-        if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Aprobar la OT ' + idOT + '?')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'aprobar' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT aprobada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error aprobando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al aprobar la OT', 'danger');
-        });
-        return;
-    }
-
     if (accion === 'cerrar') {
         if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Cerrar la OT ' + idOT + '? Se marcará como Finalizada.')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'cerrar', detalles_cierre: {}, fecha_hora_salida: new Date().toISOString() })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT cerrada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error cerrando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al cerrar la OT', 'danger');
+        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)…', true, function(comentario) {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accion: 'cerrar',
+                    comentario_cierre: comentario,
+                    cerrado_por: localStorage.getItem('fleet_correo') || '',
+                    fecha_hora_salida: new Date().toISOString()
+                })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT cerrada', 'success');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error cerrando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al cerrar la OT', 'danger');
+            });
         });
         return;
     }
