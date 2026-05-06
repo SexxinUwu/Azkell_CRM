@@ -88,10 +88,10 @@ window.intgProbarWialon = function() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Probando…'; }
     if (result) { result.className = 'intg-test-result'; result.textContent = ''; }
 
-    fetch('/api/gemini', {
+    fetch('/api/script/obtenerDatosWialon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ metodo: 'obtenerDatosWialon' })
+        body: JSON.stringify({})
     })
     .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'Error'); }); })
     .then(function(res) {
