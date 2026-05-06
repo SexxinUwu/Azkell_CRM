@@ -9,6 +9,7 @@ window.rotData               = window.rotData               || [];
 window.rotDatosFiltrados     = window.rotDatosFiltrados     || [];
 window.rotDetalleId          = window.rotDetalleId          || null;
 window.rotOtTrabajosActivos  = window.rotOtTrabajosActivos  || [];
+window._rotFiltroEstado      = window._rotFiltroEstado      || '';
 window.rotOtMaterialesActivos= window.rotOtMaterialesActivos|| [];
 window.rotOtActivaId         = window.rotOtActivaId         || null;
 window._rotMatIdx            = window._rotMatIdx            || 0;
@@ -16,6 +17,7 @@ window._rotInvData           = window._rotInvData           || [];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
+    window._rotFiltroEstado = '';
     window.rotCargar();
 };
 
@@ -41,6 +43,14 @@ window.rotCargar = function() {
         });
 };
 
+// ── Chips de estado ───────────────────────────────────────────────
+window.rotChipEstado = function(btn, estado) {
+    document.querySelectorAll('#moduloReportesOT .rot-chip').forEach(function(c) { c.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    window._rotFiltroEstado = estado;
+    window.rotFiltrar();
+};
+
 // ── Filtrar ──────────────────────────────────────────────────────
 window.rotFiltrar = function() {
     var libre   = rotVal('rot-busqueda-libre').toLowerCase();
@@ -49,7 +59,7 @@ window.rotFiltrar = function() {
     var filMes  = rotVal('rot-fil-mes');        // 'YYYY-MM'
     var filDesde= rotVal('rot-fil-desde');       // 'YYYY-MM-DD'
     var filHasta= rotVal('rot-fil-hasta');
-    var filEst  = rotVal('rot-fil-estado');
+    var filEst  = window._rotFiltroEstado || '';
 
     var resultado = window.rotData.filter(function(ot) {
         var det = rotDetalles(ot);
@@ -498,7 +508,7 @@ window.rotAccion = function(accion, idOT) {
         fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'iniciar', usuario: localStorage.getItem('fleet_correo') || '' })
+            body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
         })
         .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
         .then(function() {
@@ -729,7 +739,7 @@ window.rotExportarPDF = function() {
     var filMes   = rotVal('rot-fil-mes');
     var filDesde = rotVal('rot-fil-desde');
     var filHasta = rotVal('rot-fil-hasta');
-    var filEst   = rotVal('rot-fil-estado');
+    var filEst   = window._rotFiltroEstado || '';
     var filLibre = rotVal('rot-busqueda-libre');
     if (filLibre) filtros.push('Búsqueda: ' + filLibre);
     if (filOT)    filtros.push('N° OT: ' + filOT);
@@ -970,7 +980,8 @@ function rotActualizarKPIs(lista) {
         var det = rotDetalles(o);
         return (det.tipo_ot || o.tipo || '') === 'Preventivo';
     }).length;
-    var cerrada = lista.filter(function(o){ return o.aprobacion === 'Cerrada' || o.estado === 'Finalizado'; }).length;
+    var cerrada   = lista.filter(function(o){ return o.aprobacion === 'Cerrada' || o.estado === 'Finalizado'; }).length;
+    var enProceso = lista.filter(function(o){ return o.estado === 'En Proceso'; }).length;
     var costo   = lista.reduce(function(s,o){ return s + parseFloat(o.costo_total || 0); }, 0);
     var costoCorr = lista
         .filter(function(o){ var det = rotDetalles(o); return (det.tipo_ot || o.tipo || '') === 'Correctivo'; })
@@ -983,6 +994,7 @@ function rotActualizarKPIs(lista) {
     rotSetKPI('rot-kpi-correctivos',       correctivos);
     rotSetKPI('rot-kpi-preventivos',       preventivos);
     rotSetKPI('rot-kpi-cerrada',           cerrada);
+    rotSetKPI('rot-kpi-enproceso',         enProceso);
     rotSetKPI('rot-kpi-costo',             'S/' + costo.toFixed(2));
     rotSetKPI('rot-kpi-costo-correctivo',  'S/' + costoCorr.toFixed(2));
     rotSetKPI('rot-kpi-costo-preventivo',  'S/' + costoPrev.toFixed(2));

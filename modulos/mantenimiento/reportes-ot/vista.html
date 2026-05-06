@@ -6,244 +6,300 @@
     flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
+    background: var(--bg);
 }
 
-/* ── Barra de búsqueda libre ─────────────────────────────────── */
-#moduloReportesOT .rot-search-bar {
-    padding: 0.65rem 1.25rem;
+/* ── Header barra ─────────────────────────────────────────────── */
+#moduloReportesOT .rot-header {
+    padding: .75rem 1.25rem .6rem;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
 }
 
-/* ── Fila de filtros ──────────────────────────────────────────── */
+/* Búsqueda libre */
+#moduloReportesOT .rot-search-pill {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 99px;
+    padding: .35rem .85rem;
+    transition: border-color .2s;
+}
+#moduloReportesOT .rot-search-pill:focus-within {
+    border-color: var(--primary, #5865F2);
+    box-shadow: 0 0 0 3px rgba(88,101,242,.1);
+}
+#moduloReportesOT .rot-search-pill i { color: var(--subtext); font-size: .85rem; }
+#moduloReportesOT .rot-search-pill input {
+    border: none; background: transparent; outline: none;
+    font-size: .84rem; color: var(--text); flex: 1;
+}
+#moduloReportesOT .rot-search-pill input::placeholder { color: var(--subtext); }
+
+/* Fila de filtros */
 #moduloReportesOT .rot-filters {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0.45rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    gap: .5rem;
     flex-wrap: wrap;
 }
+#moduloReportesOT .rot-filters .rot-input {
+    height: 32px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: .78rem;
+    padding: 0 .65rem;
+    outline: none;
+    transition: border-color .2s;
+}
+#moduloReportesOT .rot-filters .rot-input:focus {
+    border-color: var(--primary, #5865F2);
+    box-shadow: 0 0 0 3px rgba(88,101,242,.08);
+}
+#moduloReportesOT .rot-filters .rot-input-date {
+    height: 32px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: .78rem;
+    padding: 0 .5rem;
+    outline: none;
+    transition: border-color .2s;
+    cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .5rem center;
+    padding-right: 1.8rem;
+}
+#moduloReportesOT .rot-filters .rot-input-date:focus {
+    border-color: var(--primary, #5865F2);
+}
+#moduloReportesOT .rot-filters .rot-sep {
+    font-size: .72rem; color: var(--subtext); font-weight: 700;
+}
+
+/* Estado chips */
+#moduloReportesOT .rot-estado-wrap {
+    display: flex; gap: 4px; flex-wrap: wrap;
+}
+#moduloReportesOT .rot-chip {
+    height: 30px;
+    padding: 0 .75rem;
+    border-radius: 99px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--subtext);
+    font-size: .72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+#moduloReportesOT .rot-chip:hover { border-color: var(--primary,#5865F2); color: var(--primary,#5865F2); }
+#moduloReportesOT .rot-chip.active { background: var(--primary,#5865F2); color: #fff; border-color: var(--primary,#5865F2); }
+#moduloReportesOT .rot-chip.c-pend.active  { background:#d97706; border-color:#d97706; }
+#moduloReportesOT .rot-chip.c-proc.active  { background:#0ea5e9; border-color:#0ea5e9; }
+#moduloReportesOT .rot-chip.c-paus.active  { background:#f59e0b; border-color:#f59e0b; }
+#moduloReportesOT .rot-chip.c-fin.active   { background:#5865F2; border-color:#5865F2; }
+#moduloReportesOT .rot-chip.c-anul.active  { background:#ef4444; border-color:#ef4444; }
 
 /* ── KPI bar ──────────────────────────────────────────────────── */
 #moduloReportesOT .rot-kpi-bar {
-    display: flex;
-    gap: 1rem;
-    padding: 0.65rem 1.25rem;
+    display: flex; gap: .6rem;
+    padding: .6rem 1.25rem;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
+    flex-shrink: 0; flex-wrap: wrap;
 }
 #moduloReportesOT .rot-kpi {
     background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 9px 16px;
-    min-width: 120px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: .65rem 1rem .55rem;
+    min-width: 110px;
+    display: flex; flex-direction: column; gap: 2px;
+    transition: box-shadow .15s;
+    position: relative; overflow: hidden;
 }
-#moduloReportesOT .rot-kpi-lbl { font-size: 0.67rem; font-weight: 700; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
-#moduloReportesOT .rot-kpi-val { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+#moduloReportesOT .rot-kpi::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--kpi-color, #94a3b8);
+    border-radius: 14px 14px 0 0;
+}
+#moduloReportesOT .rot-kpi-lbl {
+    font-size: .62rem; font-weight: 700; color: var(--subtext);
+    text-transform: uppercase; letter-spacing: .06em;
+}
+#moduloReportesOT .rot-kpi-val {
+    font-size: 1.45rem; font-weight: 900; color: var(--kpi-color, var(--text)); line-height: 1.1;
+}
+#moduloReportesOT .rot-kpi-sub {
+    font-size: .65rem; font-weight: 600; color: var(--subtext);
+}
 
 /* ── Tabla ────────────────────────────────────────────────────── */
 #moduloReportesOT .rot-table-wrap {
-    flex: 1 1 0;
-    overflow-y: auto;
-    background: var(--surface);
+    flex: 1 1 0; overflow-y: auto; background: var(--surface);
 }
 #moduloReportesOT table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.83rem;
+    width: 100%; border-collapse: collapse; font-size: .82rem;
 }
 #moduloReportesOT thead th {
-    background: var(--bg);
-    color: var(--subtext);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    white-space: nowrap;
+    background: var(--bg); color: var(--subtext);
+    font-size: .67rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 9px 12px; border-bottom: 1.5px solid var(--border);
+    position: sticky; top: 0; z-index: 2; white-space: nowrap;
 }
 #moduloReportesOT tbody tr {
     border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.1s;
+    cursor: pointer; transition: background .1s;
 }
-#moduloReportesOT tbody tr:hover { background: var(--bg); }
+#moduloReportesOT tbody tr:hover { background: rgba(88,101,242,.04); }
 #moduloReportesOT tbody tr.rot-row-activa {
-    background: rgba(88,101,242,0.06);
+    background: rgba(88,101,242,.06);
     border-left: 3px solid var(--primary, #5865F2);
 }
-#moduloReportesOT tbody td { padding: 10px 12px; color: var(--text); }
-#moduloReportesOT .td-empty { text-align:center; color:var(--subtext); font-size:0.82rem; padding:2rem; }
+#moduloReportesOT tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; }
+#moduloReportesOT .td-empty { text-align:center; color:var(--subtext); font-size:.82rem; padding:2.5rem; }
+
+/* OT number link */
+#moduloReportesOT .rot-ot-num {
+    font-weight: 800; font-size: .82rem;
+    color: var(--primary, #5865F2); text-decoration: none;
+}
+/* Placa pill */
+#moduloReportesOT .rot-placa-pill {
+    display: inline-block;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 2px 8px;
+    font-weight: 800; font-size: .78rem; letter-spacing: .04em;
+    color: var(--text);
+}
 
 /* ── Badges de estado ─────────────────────────────────────────── */
 #moduloReportesOT .rot-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 9px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: .68rem; font-weight: 700; white-space: nowrap;
 }
 #moduloReportesOT .rot-badge::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.8;
+    content: ''; width: 5px; height: 5px;
+    border-radius: 50%; background: currentColor; opacity: .8;
 }
-#moduloReportesOT .rot-b-pendiente   { background: rgba(217,119,6,0.12);  color: #d97706; }
-#moduloReportesOT .rot-b-aprobada    { background: rgba(22,163,74,0.12);   color: #16a34a; }
-#moduloReportesOT .rot-b-cerrada     { background: rgba(88,101,242,0.12);  color: var(--primary, #5865F2); }
-#moduloReportesOT .rot-b-anulado     { background: rgba(220,38,38,0.12);   color: #dc2626; }
-#moduloReportesOT .rot-b-en-proceso  { background: rgba(14,165,233,0.12);  color: #0ea5e9; }
-#moduloReportesOT .rot-b-pausada     { background: rgba(245,158,11,0.12);  color: #f59e0b; }
-#moduloReportesOT .rot-b-finalizado  { background: rgba(88,101,242,0.10);  color: var(--primary, #5865F2); }
-#moduloReportesOT .rot-b-en-atencion { background: rgba(22,163,74,0.1);   color: #16a34a; }
-#moduloReportesOT .rot-b-espera      { background: rgba(217,119,6,0.1);   color: #d97706; }
-#moduloReportesOT .rot-b-tipo-prev   { background: rgba(8,145,178,0.1);   color: #0891b2; border:1px solid rgba(8,145,178,0.25); }
-#moduloReportesOT .rot-b-tipo-corr   { background: rgba(220,38,38,0.08);  color: #dc2626; border:1px solid rgba(220,38,38,0.2); }
+#moduloReportesOT .rot-b-pendiente   { background: rgba(217,119,6,.12);  color: #d97706; }
+#moduloReportesOT .rot-b-aprobada    { background: rgba(22,163,74,.12);   color: #16a34a; }
+#moduloReportesOT .rot-b-cerrada     { background: rgba(88,101,242,.12);  color: var(--primary,#5865F2); }
+#moduloReportesOT .rot-b-anulado     { background: rgba(220,38,38,.12);   color: #dc2626; }
+#moduloReportesOT .rot-b-en-proceso  { background: rgba(14,165,233,.12);  color: #0ea5e9; }
+#moduloReportesOT .rot-b-pausada     { background: rgba(245,158,11,.12);  color: #f59e0b; }
+#moduloReportesOT .rot-b-finalizado  { background: rgba(88,101,242,.10);  color: var(--primary,#5865F2); }
+#moduloReportesOT .rot-b-en-atencion { background: rgba(22,163,74,.10);   color: #16a34a; }
+#moduloReportesOT .rot-b-espera      { background: rgba(217,119,6,.10);   color: #d97706; }
+#moduloReportesOT .rot-b-tipo-prev   { background: rgba(8,145,178,.10);   color: #0891b2; border:1px solid rgba(8,145,178,.25); }
+#moduloReportesOT .rot-b-tipo-corr   { background: rgba(220,38,38,.08);   color: #dc2626; border:1px solid rgba(220,38,38,.20); }
 
 /* ── Botones de acción en tabla ───────────────────────────────── */
 #moduloReportesOT .rot-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 11px;
-    border-radius: 8px;
-    font-size: 0.71rem;
-    font-weight: 700;
-    border: none;
-    cursor: pointer;
-    transition: filter 0.15s, transform 0.1s;
-    white-space: nowrap;
-    line-height: 1.4;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 11px; border-radius: 8px;
+    font-size: .70rem; font-weight: 700;
+    border: none; cursor: pointer;
+    transition: filter .15s, transform .1s;
+    white-space: nowrap; line-height: 1.4;
 }
-#moduloReportesOT .rot-btn:hover  { filter: brightness(0.9); }
-#moduloReportesOT .rot-btn:active { transform: scale(0.96); }
+#moduloReportesOT .rot-btn:hover  { filter: brightness(.9); }
+#moduloReportesOT .rot-btn:active { transform: scale(.96); }
 #moduloReportesOT .rot-btn-iniciar  { background: #0ea5e9; color: #fff; }
 #moduloReportesOT .rot-btn-pausar   { background: #f59e0b; color: #fff; }
 #moduloReportesOT .rot-btn-reanudar { background: #22c55e; color: #fff; }
 #moduloReportesOT .rot-btn-cerrar   { background: #ef4444; color: #fff; }
 
+/* Botones de acción en toolbar */
+#moduloReportesOT .rot-toolbar-btn {
+    height: 32px; padding: 0 .85rem; border-radius: 10px;
+    font-size: .76rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: .35rem;
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--text); cursor: pointer; transition: all .15s;
+    white-space: nowrap;
+}
+#moduloReportesOT .rot-toolbar-btn:hover { border-color: var(--primary,#5865F2); color: var(--primary,#5865F2); }
+#moduloReportesOT .rot-toolbar-btn.green { background:#16a34a; color:#fff; border-color:#16a34a; }
+#moduloReportesOT .rot-toolbar-btn.green:hover { filter: brightness(.9); }
+#moduloReportesOT .rot-toolbar-btn.red-outline { color:#ef4444; border-color:rgba(239,68,68,.4); }
+#moduloReportesOT .rot-toolbar-btn.red-outline:hover { background:rgba(239,68,68,.07); border-color:#ef4444; }
+
 /* ── Drawer lateral de detalle ────────────────────────────────── */
 #rotDrawerBackdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 1059;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.35); z-index: 1059;
 }
 #rotDrawerBackdrop.open { display: block; }
-
 .rot-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 500px;
-    max-width: 96vw;
-    height: 100vh;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    box-shadow: -8px 0 30px rgba(0,0,0,0.14);
-    transform: translateX(100%);
-    transition: transform 0.28s ease;
-    z-index: 1060;
-    display: flex;
-    flex-direction: column;
+    position: fixed; top: 0; right: 0;
+    width: 500px; max-width: 96vw; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,.14);
+    transform: translateX(100%); transition: transform .28s ease;
+    z-index: 1060; display: flex; flex-direction: column;
 }
 .rot-drawer.open { transform: translateX(0); }
 .rot-drawer-hd {
-    display: flex;
-    align-items: center;
+    display: flex; align-items: center;
     justify-content: space-between;
-    padding: 0 1.25rem;
-    height: 52px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    padding: 0 1.25rem; height: 52px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.rot-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.rot-drawer-title { font-size: .95rem; font-weight: 800; color: var(--text); }
 .rot-drawer-body  { flex: 1; overflow-y: auto; padding: 1.25rem; }
 .rot-drawer-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    padding: .75rem 1rem; border-top: 1px solid var(--border);
+    display: flex; gap: .5rem; flex-wrap: wrap;
 }
-
 /* Secciones en el drawer */
-#moduloReportesOT .rot-sec,
-.rot-sec {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-top: 1rem;
-    overflow: hidden;
+#moduloReportesOT .rot-sec, .rot-sec {
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-top: 1rem; overflow: hidden;
 }
 .rot-sec-hd {
-    background: var(--bg);
-    padding: 7px 12px;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--subtext);
-    border-bottom: 1px solid var(--border);
+    background: var(--bg); padding: 7px 12px;
+    font-size: .72rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .05em;
+    color: var(--subtext); border-bottom: 1px solid var(--border);
 }
-.rot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.rot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: .82rem; }
 .rot-field:last-child { border-bottom: none; }
-.rot-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: 0.77rem; padding-right: 6px; }
+.rot-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: .77rem; padding-right: 6px; }
 .rot-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
-
-/* OT ID bar en drawer */
 .rot-id-bar {
-    background: rgba(88,101,242,0.06);
-    border: 1px solid rgba(88,101,242,0.2);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    background: rgba(88,101,242,.06); border: 1px solid rgba(88,101,242,.2);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 1.25rem;
+    display: flex; align-items: center; justify-content: space-between;
 }
-.rot-id-num { font-size: 1.1rem; font-weight: 800; color: var(--primary, #5865F2); }
-.rot-id-lbl { font-size: 0.7rem; font-weight: 700; color: var(--primary, #5865F2); text-transform: uppercase; }
-
-/* Sub-drawers (encima del drawer principal) */
+.rot-id-num { font-size: 1.1rem; font-weight: 800; color: var(--primary,#5865F2); }
+.rot-id-lbl { font-size: .7rem; font-weight: 700; color: var(--primary,#5865F2); text-transform: uppercase; }
+/* Sub-drawers */
 .rot-sub-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 440px;
-    max-width: 96vw;
-    height: 100vh;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    box-shadow: -8px 0 40px rgba(0,0,0,0.22);
-    transform: translateX(100%);
-    transition: transform 0.25s ease;
-    z-index: 1062;
-    display: flex;
-    flex-direction: column;
+    position: fixed; top: 0; right: 0;
+    width: 440px; max-width: 96vw; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 40px rgba(0,0,0,.22);
+    transform: translateX(100%); transition: transform .25s ease;
+    z-index: 1062; display: flex; flex-direction: column;
 }
 .rot-sub-drawer.open { transform: translateX(0); }
-/* El drawer de materiales es más ancho para ver mejor los artículos */
 #rot-drawer-material { width: 560px; }
 </style>
 
@@ -252,100 +308,103 @@
 
 <div id="moduloReportesOT">
 
-    <!-- BARRA DE BÚSQUEDA LIBRE -->
-    <div class="rot-search-bar">
-        <div class="input-group input-group-sm">
-            <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-search" style="color:var(--subtext)"></i>
-            </span>
-            <input type="text" class="form-control border-start-0 ps-0"
-                id="rot-busqueda-libre"
-                placeholder="Búsqueda Libre (N° OT, Técnico, Supervisor, Placa...)"
-                oninput="window.rotFiltrar()">
-        </div>
-    </div>
+    <!-- HEADER: búsqueda + filtros + botones -->
+    <div class="rot-header">
 
-    <!-- FILA 1 DE FILTROS -->
-    <div class="rot-filters">
-        <div>
-            <input type="text" class="form-control form-control-sm" id="rot-fil-ot"
-                placeholder="N° OT" style="max-width:120px;"
+        <!-- Fila 1: búsqueda libre -->
+        <div class="rot-search-pill">
+            <i class="bi bi-search"></i>
+            <input type="text" id="rot-busqueda-libre"
+                placeholder="Búsqueda libre — N° OT, Placa, Supervisor, Técnico…"
                 oninput="window.rotFiltrar()">
         </div>
-        <div>
-            <input type="text" class="form-control form-control-sm" id="rot-fil-placa"
-                placeholder="PLACA" style="max-width:110px; text-transform:uppercase;"
+
+        <!-- Fila 2: filtros + acciones -->
+        <div class="rot-filters">
+            <input type="text" class="rot-input" id="rot-fil-ot"
+                placeholder="N° OT" style="width:105px;"
+                oninput="window.rotFiltrar()">
+
+            <input type="text" class="rot-input" id="rot-fil-placa"
+                placeholder="PLACA" style="width:95px; text-transform:uppercase;"
                 oninput="this.value=this.value.toUpperCase(); window.rotFiltrar()">
-        </div>
-        <div>
-            <input type="month" class="form-control form-control-sm" id="rot-fil-mes"
-                style="max-width:150px;" title="Filtrar por mes"
+
+            <input type="month" class="rot-input rot-input-date" id="rot-fil-mes"
+                style="width:140px;" title="Filtrar por mes"
                 onchange="window.rotFiltrar()">
+
+            <div style="display:flex;align-items:center;gap:4px;">
+                <input type="date" class="rot-input rot-input-date" id="rot-fil-desde"
+                    style="width:135px;" title="Desde"
+                    onchange="window.rotFiltrar()">
+                <span class="rot-sep">→</span>
+                <input type="date" class="rot-input rot-input-date" id="rot-fil-hasta"
+                    style="width:135px;" title="Hasta"
+                    onchange="window.rotFiltrar()">
+            </div>
+
+            <div style="flex:1"></div>
+
+            <!-- Estado chips -->
+            <div class="rot-estado-wrap">
+                <button class="rot-chip active" data-estado="" onclick="window.rotChipEstado(this,'')">Todos</button>
+                <button class="rot-chip c-pend" data-estado="Pendiente" onclick="window.rotChipEstado(this,'Pendiente')">Pendiente</button>
+                <button class="rot-chip c-proc" data-estado="En Proceso" onclick="window.rotChipEstado(this,'En Proceso')">En Proceso</button>
+                <button class="rot-chip c-paus" data-estado="Pausada" onclick="window.rotChipEstado(this,'Pausada')">Pausada</button>
+                <button class="rot-chip c-fin" data-estado="Finalizado" onclick="window.rotChipEstado(this,'Finalizado')">Finalizado</button>
+                <button class="rot-chip c-anul" data-estado="Anulado" onclick="window.rotChipEstado(this,'Anulado')">Anulado</button>
+            </div>
+
+            <!-- Acciones -->
+            <button class="rot-toolbar-btn green" onclick="window.rotExportar()">
+                <i class="bi bi-file-earmark-excel"></i>Excel
+            </button>
+            <button class="rot-toolbar-btn red-outline" onclick="window.rotExportarPDF()">
+                <i class="bi bi-filetype-pdf"></i>PDF
+            </button>
+            <button class="rot-toolbar-btn" onclick="window.rotCargar()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
         </div>
-        <div>
-            <input type="date" class="form-control form-control-sm" id="rot-fil-desde"
-                style="max-width:145px;" title="Desde"
-                onchange="window.rotFiltrar()">
-        </div>
-        <div>
-            <input type="date" class="form-control form-control-sm" id="rot-fil-hasta"
-                style="max-width:145px;" title="Hasta"
-                onchange="window.rotFiltrar()">
-        </div>
-        <div style="flex:1"></div>
-        <select class="form-select form-select-sm" id="rot-fil-estado"
-            style="max-width:160px;" onchange="window.rotFiltrar()">
-            <option value="">Todos los estados</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Aprobada">Aprobada</option>
-            <option value="Cerrada">Cerrada</option>
-            <option value="Anulado">Anulado</option>
-        </select>
-        <button class="btn btn-sm" style="background:#16a34a;color:#fff;font-weight:700;"
-            onclick="window.rotExportar()">
-            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="window.rotExportarPDF()" title="Exportar a PDF">
-            <i class="bi bi-filetype-pdf me-1"></i>PDF
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.rotCargar()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
-        </button>
     </div>
 
     <!-- KPI BAR -->
     <div class="rot-kpi-bar" id="rot-kpi-bar">
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#5865F2">
             <div class="rot-kpi-lbl">Total OTs</div>
             <div class="rot-kpi-val" id="rot-kpi-total">0</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#dc2626">
             <div class="rot-kpi-lbl">Correctivos</div>
-            <div class="rot-kpi-val" id="rot-kpi-correctivos" style="color:#dc2626">0</div>
+            <div class="rot-kpi-val" id="rot-kpi-correctivos">0</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#2563eb">
             <div class="rot-kpi-lbl">Preventivos</div>
-            <div class="rot-kpi-val" id="rot-kpi-preventivos" style="color:#2563eb">0</div>
+            <div class="rot-kpi-val" id="rot-kpi-preventivos">0</div>
         </div>
-        <div class="rot-kpi">
-            <div class="rot-kpi-lbl">Cerradas</div>
-            <div class="rot-kpi-val" id="rot-kpi-cerrada" style="color:var(--primary,#5865F2)">0</div>
+        <div class="rot-kpi" style="--kpi-color:#5865F2">
+            <div class="rot-kpi-lbl">Finalizadas</div>
+            <div class="rot-kpi-val" id="rot-kpi-cerrada">0</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#0ea5e9">
+            <div class="rot-kpi-lbl">En Proceso</div>
+            <div class="rot-kpi-val" id="rot-kpi-enproceso">0</div>
+        </div>
+        <div class="rot-kpi" style="--kpi-color:#16a34a">
             <div class="rot-kpi-lbl">Costo Total</div>
-            <div class="rot-kpi-val" id="rot-kpi-costo" style="color:#16a34a;font-size:1.1rem">S/0.00</div>
+            <div class="rot-kpi-val" style="font-size:1.1rem" id="rot-kpi-costo">S/0.00</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#dc2626">
             <div class="rot-kpi-lbl">Costo Correctivo</div>
-            <div class="rot-kpi-val" id="rot-kpi-costo-correctivo" style="color:#dc2626;font-size:1.1rem">S/0.00</div>
+            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-costo-correctivo">S/0.00</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#2563eb">
             <div class="rot-kpi-lbl">Costo Preventivo</div>
-            <div class="rot-kpi-val" id="rot-kpi-costo-preventivo" style="color:#2563eb;font-size:1.1rem">S/0.00</div>
+            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-costo-preventivo">S/0.00</div>
         </div>
-        <div class="rot-kpi">
+        <div class="rot-kpi" style="--kpi-color:#94a3b8">
             <div class="rot-kpi-lbl">Mostrando</div>
-            <div class="rot-kpi-val" id="rot-kpi-filtradas" style="font-size:1.1rem">0</div>
+            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-filtradas">0</div>
         </div>
     </div>
 
@@ -354,7 +413,7 @@
         <table id="rot-tabla">
             <thead>
                 <tr>
-                    <th style="width:130px;">Acciones</th>
+                    <th style="width:145px;">Acciones</th>
                     <th>N° OT</th>
                     <th>Placa</th>
                     <th>Tipo / Sub Tipo</th>
@@ -380,12 +439,8 @@
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body" id="rot-drawer-body">
-        <!-- contenido inyectado por JS -->
-    </div>
-    <div class="rot-drawer-footer" id="rot-drawer-footer">
-        <!-- botones inyectados por JS -->
-    </div>
+    <div class="rot-drawer-body" id="rot-drawer-body"></div>
+    <div class="rot-drawer-footer" id="rot-drawer-footer"></div>
 </div>
 
 
@@ -394,7 +449,7 @@
     <div class="rot-drawer-hd">
         <div>
             <div class="rot-drawer-title" id="rot-tr-drawer-titulo">Agregar Trabajo</div>
-            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="rot-tr-ot-lbl"></div>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-tr-ot-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -403,50 +458,45 @@
     <div class="rot-drawer-body">
         <input type="hidden" id="rot-tr-ot-id">
         <input type="hidden" id="rot-tr-ticket-hid">
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Descripción del Trabajo *</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Trabajo *</label>
             <textarea class="form-control form-control-sm" id="rot-tr-desc" rows="3" placeholder="Detalla el trabajo realizado..."></textarea>
         </div>
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Personal / Técnico</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Personal / Técnico</label>
             <input type="hidden" id="rot-tr-personal">
             <div style="position:relative;" id="rot-ms-wrapper">
                 <div id="rot-ms-box" onclick="rotMsToggle()"
                     style="background:var(--bg); border:1.5px solid var(--border); border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
-                    <span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>
+                    <span style="color:var(--subtext); font-size:.85rem;">Selecciona técnico(s)...</span>
                 </div>
-                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--subtext); pointer-events:none; font-size:0.8rem;">▾</span>
-                <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--surface); border:1.5px solid var(--border); border-radius:8px; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,0.18); overflow:hidden;">
+                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--subtext); pointer-events:none; font-size:.8rem;">▾</span>
+                <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--surface); border:1.5px solid var(--border); border-radius:8px; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,.18); overflow:hidden;">
                     <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
                         oninput="rotMsFiltrar(this.value)"
-                        style="width:100%; border:none; border-bottom:1px solid var(--border); background:var(--bg); color:var(--text); padding:9px 12px; font-size:0.84rem; outline:none;">
+                        style="width:100%; border:none; border-bottom:1px solid var(--border); background:var(--bg); color:var(--text); padding:9px 12px; font-size:.84rem; outline:none;">
                     <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
                     <div style="padding:7px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                        <span id="rot-ms-count" style="font-size:0.76rem; color:var(--subtext);">0 seleccionados</span>
-                        <span onclick="rotMsLimpiar()" style="font-size:0.76rem; color:#f87171; cursor:pointer;">Limpiar todo</span>
+                        <span id="rot-ms-count" style="font-size:.76rem; color:var(--subtext);">0 seleccionados</span>
+                        <span onclick="rotMsLimpiar()" style="font-size:.76rem; color:#f87171; cursor:pointer;">Limpiar todo</span>
                     </div>
                 </div>
             </div>
         </div>
-
         <div class="row g-2 mb-3">
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Inicio</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Inicio</label>
                 <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-ini">
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha y Hora Fin</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Fin</label>
                 <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-fin">
             </div>
         </div>
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Costo del Trabajo (S/)</label>
-            <input type="number" class="form-control form-control-sm" id="rot-tr-costo" value="0" min="0" step="0.01" placeholder="0.00">
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Costo del Trabajo (S/)</label>
+            <input type="number" class="form-control form-control-sm" id="rot-tr-costo" value="0" min="0" step="0.01">
         </div>
-
         <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarTrabajo()">
             <i class="bi bi-check-lg me-1"></i>Guardar Trabajo
         </button>
@@ -462,7 +512,7 @@
     <div class="rot-drawer-hd">
         <div>
             <div class="rot-drawer-title">Nueva Solicitud de Materiales</div>
-            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="rot-mat-ot-lbl"></div>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-mat-ot-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -470,50 +520,45 @@
     </div>
     <div class="rot-drawer-body">
         <input type="hidden" id="rot-mat-ot-id">
-
         <div class="row g-2 mb-3">
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">N° OT</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">N° OT</label>
                 <input type="text" class="form-control form-control-sm" id="rot-mat-ot-vis" readonly style="background:var(--bg);color:var(--subtext);">
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Fecha *</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha *</label>
                 <input type="date" class="form-control form-control-sm" id="rot-mat-fecha">
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo Destino</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Tipo Destino</label>
                 <select class="form-select form-select-sm" id="rot-mat-tipo">
                     <option value="Vehiculo">Vehículo</option>
                     <option value="Personal">Personal</option>
                 </select>
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Placa</label>
-                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:0.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Placa</label>
+                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
             </div>
             <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Responsable / Solicitante</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Responsable / Solicitante</label>
                 <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable" list="rot-mat-list-personal" autocomplete="off">
                 <datalist id="rot-mat-list-personal"></datalist>
             </div>
             <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Observaciones</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Observaciones</label>
                 <input type="text" class="form-control form-control-sm" id="rot-mat-obs" placeholder="Motivo, notas…">
             </div>
         </div>
-
         <hr style="border-color:var(--border);">
-
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="font-size:0.83rem;color:var(--text);">
-                <i class="bi bi-list-ul me-1"></i>Artículos
-            </span>
+            <span class="fw-bold" style="font-size:.83rem;color:var(--text);"><i class="bi bi-list-ul me-1"></i>Artículos</span>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._rotAgregarItemMat()">
                 <i class="bi bi-plus"></i> Agregar
             </button>
         </div>
         <div style="overflow-x:auto;">
-            <table class="table table-sm table-bordered" style="font-size:0.8rem;min-width:420px;">
+            <table class="table table-sm table-bordered" style="font-size:.8rem;min-width:420px;">
                 <thead style="background:var(--bg);">
                     <tr>
                         <th style="min-width:180px;">Artículo</th>
@@ -526,7 +571,7 @@
                 <tbody id="rot-mat-items-tbody"></tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" style="text-align:right;font-weight:700;font-size:0.82rem;color:var(--subtext);">Total:</td>
+                        <td colspan="3" style="text-align:right;font-weight:700;font-size:.82rem;color:var(--subtext);">Total:</td>
                         <td style="font-weight:800;color:#16a34a;" id="rot-mat-items-total">S/. 0.00</td>
                         <td></td>
                     </tr>
@@ -534,7 +579,6 @@
             </table>
         </div>
         <datalist id="rot-mat-inv-list"></datalist>
-
         <button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.rotGuardarMaterial()">
             <i class="bi bi-save me-1"></i>Guardar Solicitud
         </button>
@@ -547,7 +591,7 @@
     <div class="rot-drawer-hd">
         <div>
             <div class="rot-drawer-title">Nuevo Mantenimiento Pendiente</div>
-            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="rot-bkg-placa-lbl"></div>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-bkg-placa-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -555,20 +599,18 @@
     </div>
     <div class="rot-drawer-body">
         <input type="hidden" id="rot-bkg-placa-hid">
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Categoría / Tema</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
             <input type="text" class="form-control form-control-sm" id="rot-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
         </div>
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Descripción del Mantenimiento *</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Mantenimiento *</label>
             <textarea class="form-control form-control-sm" id="rot-bkg-tarea" rows="3" placeholder="Describe el trabajo pendiente…"></textarea>
         </div>
         <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Reportado por</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Reportado por</label>
             <input type="text" class="form-control form-control-sm" id="rot-bkg-reportado-por" placeholder="Nombre de quien reporta">
         </div>
-
         <button class="btn btn-warning w-100 fw-bold" style="color:#fff;" onclick="window.rotGuardarBacklog()">
             <i class="bi bi-plus-lg me-1"></i>Agregar Pendiente
         </button>
@@ -581,7 +623,7 @@
     <div class="rot-drawer-hd">
         <div>
             <div class="rot-drawer-title">Editar Orden de Trabajo</div>
-            <div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;" id="rot-eot-id-lbl"></div>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-eot-id-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -589,10 +631,9 @@
     </div>
     <div class="rot-drawer-body">
         <input type="hidden" id="rot-eot-id">
-
         <div class="row g-2 mb-3">
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Tipo OT</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Tipo OT</label>
                 <select class="form-select form-select-sm" id="rot-eot-tipo" onchange="window.rotCambiarTipoEOT()">
                     <option value="">— Seleccionar —</option>
                     <option value="Preventivo">Preventivo</option>
@@ -603,20 +644,18 @@
                 </select>
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Sub Tipo</label>
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Sub Tipo</label>
                 <select class="form-select form-select-sm" id="rot-eot-subtipo" disabled>
                     <option value="">— Seleccionar tipo primero —</option>
                 </select>
             </div>
         </div>
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Supervisor</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Supervisor</label>
             <input type="text" class="form-control form-control-sm" id="rot-eot-supervisor" placeholder="Nombre del supervisor">
         </div>
-
         <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Situación Inicial</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Situación Inicial</label>
             <select class="form-select form-select-sm" id="rot-eot-situacion">
                 <option value="">— Seleccionar —</option>
                 <option value="En atención">En atención</option>
@@ -625,12 +664,10 @@
                 <option value="Finalizado">Finalizado</option>
             </select>
         </div>
-
         <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:0.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:0.04em;">Motivo / Observaciones</label>
+            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Motivo / Observaciones</label>
             <textarea class="form-control form-control-sm" id="rot-eot-motivo" rows="3" placeholder="Describe el motivo de la OT..."></textarea>
         </div>
-
         <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarEdicionOT()">
             <i class="bi bi-check-lg me-1"></i>Guardar Cambios
         </button>
