@@ -110,6 +110,7 @@ const CACHE = { placas: null, fleetrun: null, usuarios: null, statusMant: null, 
 const CACHE_TIME = {};
 
 let dataGlobalFleetrun = []; let dataGlobalInspecciones = [];
+window.dataGlobalPlacas = window.dataGlobalPlacas || [];
 let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState = false;
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = {};
@@ -313,7 +314,7 @@ window.verificarSesionGuardada = function() {
     // --- Iniciar sincronización SSE en tiempo real ---
     if (typeof window.initSSE === 'function') window.initSSE();
     google.script.run.withSuccessHandler(d => {
-        dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
+        dataGlobalPlacas = d; window.dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
         let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
         rellenarDatalist('dl-placas', placasSet);
         if (typeof poblarSelectsFormularios === 'function') {
