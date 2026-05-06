@@ -88,6 +88,36 @@ window.rotFiltrar = function() {
     window.rotRenderTabla(resultado);
 };
 
+// ── Botones de acción por estado ─────────────────────────────────
+function rotBotonesAccion(ot) {
+    var idOT  = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
+    var estado = ot.estado || 'Pendiente';
+    var canEdit = window.checkPerm && window.checkPerm('ot', 'e');
+    if (!canEdit) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+
+    var btns = '';
+    if (estado === 'Pendiente') {
+        btns = '<button class="btn btn-sm btn-info text-white fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'iniciar\',\'' + idOT + '\')">'
+             + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
+    } else if (estado === 'En Proceso') {
+        btns = '<button class="btn btn-sm btn-warning fw-bold" style="font-size:0.72rem;padding:2px 8px;margin-right:3px;" onclick="window.rotAccion(\'pausar\',\'' + idOT + '\')">'
+             + '<i class="bi bi-pause-fill me-1"></i>Pausar</button>'
+             + '<button class="btn btn-sm btn-danger fw-bold text-white" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'cerrar\',\'' + idOT + '\')">'
+             + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+    } else if (estado === 'Pausada') {
+        btns = '<button class="btn btn-sm btn-success fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'reanudar\',\'' + idOT + '\')">'
+             + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>';
+    } else if (estado === 'Aprobada') {
+        btns = '<button class="btn btn-sm btn-primary fw-bold" style="font-size:0.72rem;padding:2px 8px;" onclick="window.rotAccion(\'cerrar\',\'' + idOT + '\')">'
+             + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+    } else if (estado === 'Finalizado' || estado === 'Cerrada') {
+        btns = '<span class="badge" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);font-size:0.7rem;">Finalizado</span>';
+    } else if (estado === 'Anulado') {
+        btns = '<span class="badge bg-danger bg-opacity-10 text-danger" style="font-size:0.7rem;">Anulado</span>';
+    }
+    return btns;
+}
+
 // ── Render tabla ─────────────────────────────────────────────────
 window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
@@ -120,6 +150,8 @@ window.rotRenderTabla = function(lista) {
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         // Fecha
         html += '<td style="font-size:0.78rem;color:var(--subtext);">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
+        // Acciones
+        html += '<td onclick="event.stopPropagation();" style="text-align:center;white-space:nowrap;">' + rotBotonesAccion(ot) + '</td>';
         html += '</tr>';
     }
 
@@ -212,7 +244,6 @@ window.rotAbrirDetalle = function(idOT) {
     // Footer
     var puedeEditar   = window.checkPerm('ot', 'e');
     var puedeEliminar = window.checkPerm('ot', 'd');
-    var puedeAprobar  = puedeEditar;
     var ftHtml = (puedeEditar
         ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
         + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
@@ -221,21 +252,34 @@ window.rotAbrirDetalle = function(idOT) {
         ? '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'eliminar\',\'' + esc(idOT) + '\')">'
         + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
         : '');
-    if (puedeAprobar && estado !== 'Anulado' && estado !== 'Aprobada' && estado !== 'Cerrada') {
-        ftHtml += '<div class="ms-auto d-flex gap-2">'
-               + '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
-               + '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'aprobar\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-check2-circle me-1"></i>Aprobar OT</button>'
-               + '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button></div>';
-    } else {
-        ftHtml += '<div class="ms-auto d-flex gap-2">'
-               + (estado === 'Aprobada' ? '<button class="btn btn-sm btn-primary" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>' : '')
-               + '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
-               + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button></div>';
+
+    ftHtml += '<div class="ms-auto d-flex gap-2">';
+    if (puedeEditar) {
+        if (estado === 'Pendiente') {
+            ftHtml += '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
+                    + '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'aprobar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-check2-circle me-1"></i>Aprobar</button>'
+                    + '<button class="btn btn-sm btn-info text-white" onclick="window.rotAccion(\'iniciar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
+        } else if (estado === 'En Proceso') {
+            ftHtml += '<button class="btn btn-sm btn-warning" onclick="window.rotAccion(\'pausar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-pause-fill me-1"></i>Pausar</button>'
+                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+        } else if (estado === 'Pausada') {
+            ftHtml += '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'reanudar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>'
+                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
+        } else if (estado === 'Aprobada') {
+            ftHtml += '<button class="btn btn-sm btn-primary" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>';
+        }
     }
+    ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
+            + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>';
+    ftHtml += '</div>';
     footer.innerHTML = ftHtml;
     footer.style.display = 'flex';
 
@@ -303,6 +347,68 @@ window.rotAccion = function(accion, idOT) {
                 console.error('Error eliminando OT:', err);
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la OT', 'danger');
             });
+        return;
+    }
+
+    if (accion === 'iniciar') {
+        if (!window.guardAction('ot', 'e')) return;
+        if (!confirm('¿Iniciar la OT ' + idOT + '?')) return;
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'iniciar', usuario: localStorage.getItem('fleet_correo') || '' })
+        })
+        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+        .then(function() {
+            window.rotCerrarDetalle();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
+            window.rotCargar();
+        })
+        .catch(function(err) {
+            console.error('Error iniciando OT:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al iniciar la OT', 'danger');
+        });
+        return;
+    }
+
+    if (accion === 'pausar') {
+        if (!window.guardAction('ot', 'e')) return;
+        var motivo = prompt('Motivo de la pausa (opcional):') || '';
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'pausar', motivo: motivo, usuario: localStorage.getItem('fleet_correo') || '' })
+        })
+        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+        .then(function() {
+            window.rotCerrarDetalle();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT pausada', 'warning');
+            window.rotCargar();
+        })
+        .catch(function(err) {
+            console.error('Error pausando OT:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al pausar la OT', 'danger');
+        });
+        return;
+    }
+
+    if (accion === 'reanudar') {
+        if (!window.guardAction('ot', 'e')) return;
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'reanudar' })
+        })
+        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+        .then(function() {
+            window.rotCerrarDetalle();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT reanudada', 'success');
+            window.rotCargar();
+        })
+        .catch(function(err) {
+            console.error('Error reanudando OT:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al reanudar la OT', 'danger');
+        });
         return;
     }
 
