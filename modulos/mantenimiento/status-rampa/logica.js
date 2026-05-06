@@ -1054,27 +1054,14 @@ window.srAbrirDetalleOT = function(idOt) {
     var titulo = document.getElementById('sr-ot-det-titulo'); if (titulo) titulo.textContent = idOt;
     var sub    = document.getElementById('sr-ot-det-placa');  if (sub)    sub.textContent    = ot.placa || '';
 
-    var permisos = {};
-    try { permisos = JSON.parse(localStorage.getItem('fleet_permisos') || '{}'); } catch(ex) {}
-    var puedeAprobar = permisos.admin === true || !!(permisos.ot && permisos.ot.aprobar);
-
     var ftHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarOT(\'' + esc(idOt) + '\')">'
                + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
                + '<button class="btn btn-sm btn-outline-danger" onclick="window.srEliminarOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-trash me-1"></i>Eliminar</button>';
-    if (puedeAprobar && estado !== 'Anulado' && estado !== 'Aprobada' && estado !== 'Cerrada') {
-        ftHtml += '<div class="ms-auto d-flex gap-2">'
-               + '<button class="btn btn-sm btn-outline-danger" onclick="window.srAnularOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
-               + '<button class="btn btn-sm btn-success" onclick="window.srAprobarOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-check2-circle me-1"></i>Aprobar OT</button>'
+               + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
+               + '<div class="ms-auto d-flex gap-2">'
                + '<button class="btn btn-sm btn-outline-secondary" onclick="window.srPDFOT(\'' + esc(idOt) + '\')">'
                + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
                + '</div>';
-    } else if (!puedeAprobar && estado !== 'Aprobada' && estado !== 'Anulado' && estado !== 'Cerrada') {
-        ftHtml += '<span class="ms-auto" style="font-size:0.75rem;color:var(--subtext);align-self:center;">'
-               + '<i class="bi bi-lock me-1"></i>Sin permiso para aprobar</span>';
-    }
     footer.innerHTML = ftHtml;
 
     window.srOtActiva = idOt;
@@ -1106,29 +1093,6 @@ window.srAbrirDetalleOT = function(idOt) {
             .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
         var elCosto = document.getElementById('sr-ot-costo-total');
         if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
-    });
-};
-
-window.srAprobarOT = function(idOt) {
-    if (!confirm('¿Aprobar la OT ' + idOt + '?')) return;
-    fetch('/api/ordenes-trabajo/' + idOt, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ accion: 'aprobar' })
-    })
-    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function() {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT aprobada', 'success');
-        // Recargar OTs y reabrir el detalle con el estado actualizado
-        fetch('/api/ordenes-trabajo')
-            .then(function(r) { return r.ok ? r.json() : []; })
-            .then(function(data) {
-                window.srOtData = Array.isArray(data) ? data : [];
-                srRenderTabla();
-                window.srAbrirDetalleOT(idOt);
-            }).catch(function() {});
-    })
-    .catch(function() {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al aprobar', 'danger');
     });
 };
 
