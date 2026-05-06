@@ -1,0 +1,217 @@
+<!-- Módulo Integraciones — Azkell Fleet -->
+<style>
+#moduloIntegraciones {
+    padding: 24px;
+    max-width: 780px;
+    margin: 0 auto;
+}
+#moduloIntegraciones .intg-header {
+    margin-bottom: 28px;
+}
+#moduloIntegraciones .intg-header h2 {
+    font-size: 1.18rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 4px 0;
+}
+#moduloIntegraciones .intg-header p {
+    font-size: 0.82rem;
+    color: var(--subtext);
+    margin: 0;
+}
+#moduloIntegraciones .intg-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+}
+#moduloIntegraciones .intg-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+#moduloIntegraciones .intg-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+#moduloIntegraciones .intg-card-icon.wialon  { background: rgba(243,156,18,0.12); color: #f39c12; }
+#moduloIntegraciones .intg-card-icon.gemini  { background: rgba(88,101,242,0.12); color: var(--primary,#5865F2); }
+#moduloIntegraciones .intg-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+#moduloIntegraciones .intg-card-subtitle {
+    font-size: 0.76rem;
+    color: var(--subtext);
+    margin: 2px 0 0 0;
+}
+#moduloIntegraciones .intg-status {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+#moduloIntegraciones .intg-status.ok       { background: rgba(34,197,94,0.12); color: #16a34a; }
+#moduloIntegraciones .intg-status.error    { background: rgba(220,38,38,0.12); color: #dc2626; }
+#moduloIntegraciones .intg-status.pending  { background: rgba(120,120,120,0.1); color: var(--subtext); }
+#moduloIntegraciones .intg-field {
+    margin-bottom: 14px;
+}
+#moduloIntegraciones .intg-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--subtext);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+#moduloIntegraciones .intg-field .input-wrap {
+    position: relative;
+}
+#moduloIntegraciones .intg-field input {
+    width: 100%;
+    padding: 9px 42px 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--bg, #f8f8f8);
+    font-family: monospace;
+    transition: border-color 0.15s;
+}
+#moduloIntegraciones .intg-field input:focus {
+    outline: none;
+    border-color: var(--primary, #5865F2);
+}
+#moduloIntegraciones .intg-field .btn-toggle-pwd {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--subtext);
+    padding: 2px;
+    font-size: 0.95rem;
+}
+#moduloIntegraciones .intg-field .intg-hint {
+    font-size: 0.73rem;
+    color: var(--subtext);
+    margin-top: 4px;
+}
+#moduloIntegraciones .intg-meta {
+    font-size: 0.73rem;
+    color: var(--subtext);
+    margin-top: 4px;
+}
+#moduloIntegraciones .intg-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+#moduloIntegraciones .intg-test-result {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: none;
+}
+#moduloIntegraciones .intg-test-result.ok    { background: rgba(34,197,94,0.12); color: #16a34a; display:inline-block; }
+#moduloIntegraciones .intg-test-result.error { background: rgba(220,38,38,0.12); color: #dc2626; display:inline-block; }
+</style>
+
+<div id="moduloIntegraciones">
+    <div class="intg-header">
+        <h2><i class="bi bi-plug-fill me-2" style="color:var(--primary,#5865F2);"></i>Integraciones</h2>
+        <p>Configura los tokens y credenciales de servicios externos. Los valores se guardan en la base de datos de forma segura.</p>
+    </div>
+
+    <!-- Wialon -->
+    <div class="intg-card" id="intg-card-wialon">
+        <div class="intg-card-header">
+            <div class="intg-card-icon wialon"><i class="bi bi-geo-alt-fill"></i></div>
+            <div>
+                <p class="intg-card-title">Wialon — GPS / Flota</p>
+                <p class="intg-card-subtitle">Plataforma de rastreo vehicular. Se usa en el módulo GPS Flota.</p>
+            </div>
+            <span class="intg-status pending" id="intg-wialon-status">Sin probar</span>
+        </div>
+
+        <div class="intg-field">
+            <label>Token de autenticación</label>
+            <div class="input-wrap">
+                <input type="password" id="intg-wialon-token" placeholder="Pega aquí tu token de Wialon…" autocomplete="off" />
+                <button class="btn-toggle-pwd" onclick="intgTogglePwd('intg-wialon-token', this)" title="Mostrar/Ocultar">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+            <div class="intg-hint">Obten el token desde tu cuenta Wialon → Recursos → Usuario → Token de acceso.</div>
+            <div class="intg-meta" id="intg-wialon-meta"></div>
+        </div>
+
+        <div class="intg-field">
+            <label>URL base API <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
+            <div class="input-wrap">
+                <input type="text" id="intg-wialon-url" placeholder="https://hst-api.wialon.us/wialon/ajax.html" autocomplete="off" />
+            </div>
+            <div class="intg-hint">Dejar vacío para usar el servidor por defecto (hst-api.wialon.us).</div>
+        </div>
+
+        <div class="intg-actions">
+            <button class="btn btn-sm btn-primary" onclick="intgGuardar('wialon')">
+                <i class="bi bi-floppy me-1"></i>Guardar
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="intgProbarWialon()">
+                <i class="bi bi-lightning me-1"></i>Probar conexión
+            </button>
+            <span class="intg-test-result" id="intg-wialon-testresult"></span>
+        </div>
+    </div>
+
+    <!-- Gemini -->
+    <div class="intg-card" id="intg-card-gemini">
+        <div class="intg-card-header">
+            <div class="intg-card-icon gemini"><i class="bi bi-stars"></i></div>
+            <div>
+                <p class="intg-card-title">Google Gemini — IA</p>
+                <p class="intg-card-subtitle">Motor de inteligencia artificial para el asistente Azkell.</p>
+            </div>
+            <span class="intg-status pending" id="intg-gemini-status">Sin probar</span>
+        </div>
+
+        <div class="intg-field">
+            <label>API Key</label>
+            <div class="input-wrap">
+                <input type="password" id="intg-gemini-apikey" placeholder="AIza…" autocomplete="off" />
+                <button class="btn-toggle-pwd" onclick="intgTogglePwd('intg-gemini-apikey', this)" title="Mostrar/Ocultar">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+            <div class="intg-hint">Obtén tu API Key en <strong>Google AI Studio</strong> (aistudio.google.com).</div>
+            <div class="intg-meta" id="intg-gemini-meta"></div>
+        </div>
+
+        <div class="intg-actions">
+            <button class="btn btn-sm btn-primary" onclick="intgGuardar('gemini')">
+                <i class="bi bi-floppy me-1"></i>Guardar
+            </button>
+        </div>
+    </div>
+</div>

@@ -282,6 +282,31 @@ db.query(
         else   console.log('✅ Tabla destinatarios_alertas verificada');
     }
 );
+// ── Tabla integraciones_api (tokens/credenciales externas) ──────────
+db.query(
+    `CREATE TABLE IF NOT EXISTS integraciones_api (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        clave           VARCHAR(100)  NOT NULL UNIQUE,
+        valor           TEXT,
+        descripcion     VARCHAR(255),
+        actualizado_por VARCHAR(100),
+        actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) COMMENT 'Credenciales y tokens de integraciones externas (Wialon, Gemini, etc.)'`,
+    (e) => {
+        if (e) console.warn('CREATE integraciones_api:', e.message);
+        else {
+            console.log('✅ Tabla integraciones_api verificada');
+            db.query(
+                `INSERT IGNORE INTO integraciones_api (clave, descripcion) VALUES
+                 ('wialon_token',   'Token de autenticación API Wialon'),
+                 ('wialon_url',     'URL base API Wialon (vacío = usar por defecto)'),
+                 ('gemini_api_key', 'Clave API Google Gemini (IA)')`,
+                () => {}
+            );
+        }
+    }
+);
 // ── Tabla histórico KM GPS (snapshot diario por placa) ────────────
 db.query(
     `CREATE TABLE IF NOT EXISTS km_snapshots (
@@ -1440,12 +1465,33 @@ app.post('/api/script/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosWialon') {
-        const token = process.env.WIALON_TOKEN;
-        const baseUrl = "https://hst-api.wialon.us/wialon/ajax.html";
+        // Lee token desde DB; si no hay, cae en .env como fallback
+        const obtenerTokenWialon = () => new Promise((resolve) => {
+            db.query(
+                "SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1",
+                (err, rows) => {
+                    const tokenDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
+                    resolve(tokenDB || process.env.WIALON_TOKEN || '');
+                }
+            );
+        });
+        const obtenerUrlWialon = () => new Promise((resolve) => {
+            db.query(
+                "SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1",
+                (err, rows) => {
+                    const urlDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
+                    resolve(urlDB || 'https://hst-api.wialon.us/wialon/ajax.html');
+                }
+            );
+        });
+
         try {
+            const [token, baseUrl] = await Promise.all([obtenerTokenWialon(), obtenerUrlWialon()]);
+            if (!token) return res.json({ data: { error: 'Token Wialon no configurado. Configúralo en Sistema → Integraciones.' } });
+
             const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token: token}))}`);
             const loginData = await loginRes.json();
-            if (!loginData.eid) return res.json({ data: { error: "Fallo Login Wialon." }});
+            if (!loginData.eid) return res.json({ data: { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." }});
 
             const sid = loginData.eid;
             const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
@@ -5566,6 +5612,29 @@ app.delete('/api/taller-rampas/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
     });
+});
+
+// ── Integraciones API (GET / PUT) ────────────────────────────────
+app.get('/api/integraciones', (req, res) => {
+    db.query('SELECT clave, valor, descripcion, actualizado_por, actualizado_en FROM integraciones_api ORDER BY id', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.put('/api/integraciones', (req, res) => {
+    const { clave, valor, actualizado_por } = req.body;
+    if (!clave) return res.status(400).json({ error: 'clave requerida' });
+    db.query(
+        `INSERT INTO integraciones_api (clave, valor, actualizado_por)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`,
+        [clave, valor || null, actualizado_por || null],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
 });
 
 // 4. Encender Servidor
