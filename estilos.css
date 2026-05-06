@@ -3188,3 +3188,18 @@ body.modo-revisor .btn-dots { display: none !important; }
 .prod-controls .dropdown-toggle {
     border-radius: 99px !important;
 }
+
+/* Ocultar nav-placas completamente del sidebar */
+#nav-placas {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    height: 0 !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}

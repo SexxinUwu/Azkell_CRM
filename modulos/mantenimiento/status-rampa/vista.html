@@ -405,6 +405,31 @@
 .sr-drawer-title { font-size: 0.95rem; font-weight: 800; color: var(--text); }
 .sr-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
 
+/* ── Dropdown buscable custom ─────────────────────────────────── */
+.sr-custom-drop {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    z-index: 999;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.sr-custom-drop .sr-drop-item {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+}
+.sr-custom-drop .sr-drop-item:last-child { border-bottom: none; }
+.sr-custom-drop .sr-drop-item:hover { background: var(--bg); }
+.sr-custom-drop .sr-drop-empty { padding: 10px 12px; font-size: 0.8rem; color: var(--subtext); text-align: center; }
+
 /* ── Inputs modernizados (estilo app nativa) en drawers de registro ── */
 #sr-drawer-registro .form-control,
 #sr-drawer-registro .form-select,
@@ -763,6 +788,14 @@
                         <option value="">— Seleccionar tipo primero —</option>
                     </select>
                 </div>
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Sistema</label>
+                    <input type="text" class="form-control form-control-sm" id="sr-ot-sistema" placeholder="Ej: Motor, Frenos…" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                </div>
+                <div class="col-6">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Sub Sistema</label>
+                    <input type="text" class="form-control form-control-sm" id="sr-ot-subsistema" placeholder="Ej: Culata, Pastillas…" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
+                </div>
             </div>
         </div>
 
@@ -774,15 +807,19 @@
             <div class="row g-2">
                 <div class="col-6">
                     <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Supervisor Responsable</label>
-                    <select class="form-select form-select-sm" id="sr-ot-supervisor" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
-                        <option value="">— Seleccionar —</option>
-                    </select>
+                    <div style="position:relative;">
+                        <input type="text" class="form-control form-control-sm" id="sr-ot-supervisor-inp" placeholder="Buscar supervisor…" autocomplete="off" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;" oninput="srFiltrarOpciones('sr-ot-supervisor-drop',this.value)" onfocus="srMostrarDrop('sr-ot-supervisor-drop')" onblur="setTimeout(function(){srOcultarDrop('sr-ot-supervisor-drop')},180)">
+                        <input type="hidden" id="sr-ot-supervisor">
+                        <div id="sr-ot-supervisor-drop" class="sr-custom-drop" style="display:none;"></div>
+                    </div>
                 </div>
                 <div class="col-6">
                     <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Situación Inicial</label>
-                    <select class="form-select form-select-sm" id="sr-ot-situacion" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;">
-                        <option value="">— Seleccionar —</option>
-                    </select>
+                    <div style="position:relative;">
+                        <input type="text" class="form-control form-control-sm" id="sr-ot-situacion-inp" placeholder="Buscar situación…" autocomplete="off" style="background:var(--bg);border-color:var(--border);color:var(--text);border-radius:10px;" oninput="srFiltrarOpciones('sr-ot-situacion-drop',this.value)" onfocus="srMostrarDrop('sr-ot-situacion-drop')" onblur="setTimeout(function(){srOcultarDrop('sr-ot-situacion-drop')},180)">
+                        <input type="hidden" id="sr-ot-situacion">
+                        <div id="sr-ot-situacion-drop" class="sr-custom-drop" style="display:none;"></div>
+                    </div>
                 </div>
             </div>
         </div>

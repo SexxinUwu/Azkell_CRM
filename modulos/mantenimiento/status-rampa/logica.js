@@ -76,7 +76,7 @@ function srCargarCatalogos() {
             if (!d) return;
             window.srCatSituaciones = d.situaciones || [];
 
-            // Selector Registrar
+            // Selector Registrar (situación de rampa)
             var sel = document.getElementById('sr-f-situacion');
             if (sel && window.srCatSituaciones.length) {
                 sel.innerHTML = window.srCatSituaciones.map(function(s) {
@@ -84,14 +84,15 @@ function srCargarCatalogos() {
                     return '<option value="' + l + '">' + l + '</option>';
                 }).join('');
             }
-            // Selector Situación Inicial en OT
-            var selOT = document.getElementById('sr-ot-situacion');
-            if (selOT && window.srCatSituaciones.length) {
-                selOT.innerHTML = '<option value="">— Seleccionar —</option>' +
-                    window.srCatSituaciones.map(function(s) {
-                        var l = s.descripcion || s.nombre || '';
-                        return '<option value="' + l + '">' + l + '</option>';
-                    }).join('');
+            // Dropdown buscable Situación Inicial en OT
+            var nombres = window.srCatSituaciones.map(function(s) { return s.descripcion || s.nombre || ''; }).filter(Boolean);
+            window._srDropData['sr-ot-situacion-drop'] = nombres;
+            var drop = document.getElementById('sr-ot-situacion-drop');
+            if (drop) {
+                drop.innerHTML = nombres.map(function(n) {
+                    var nEsc = n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                    return '<div class="sr-drop-item" onmousedown="srSeleccionarDrop(\'sr-ot-situacion-drop\',\'' + n.replace(/'/g,"\\'") + '\')">' + nEsc + '</div>';
+                }).join('');
             }
         })
         .catch(function() {});
@@ -115,17 +116,21 @@ function srPoblarPlacas() {
 
 // ── Personal / Supervisor ────────────────────────────────────────
 function srPoblarPersonal() {
-    var selSupervisor = document.getElementById('sr-ot-supervisor');
-    if (!selSupervisor) return;
     fetch('/api/conductores')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
             var lista = Array.isArray(d) ? d : (d.data || []);
-            var opts = lista.map(function(p) {
-                var n = (p.nombre_completo || p.nombre || (p[1] ? p[1] + ' ' + (p[2] || '') : '')).trim();
-                return n ? '<option value="' + n + '">' + n + '</option>' : '';
-            }).join('');
-            if (selSupervisor) selSupervisor.innerHTML = '<option value="">— Seleccionar supervisor —</option>' + opts;
+            var nombres = lista.map(function(p) {
+                return (p.nombre_completo || p.nombre || (p[1] ? p[1] + ' ' + (p[2] || '') : '')).trim();
+            }).filter(Boolean).sort();
+            window._srDropData['sr-ot-supervisor-drop'] = nombres;
+            var drop = document.getElementById('sr-ot-supervisor-drop');
+            if (drop) {
+                drop.innerHTML = nombres.map(function(n) {
+                    var nEsc = n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                    return '<div class="sr-drop-item" onmousedown="srSeleccionarDrop(\'sr-ot-supervisor-drop\',\'' + n.replace(/'/g,"\\'") + '\')">' + nEsc + '</div>';
+                }).join('');
+            }
         })
         .catch(function() {});
 }
@@ -885,6 +890,13 @@ window.srGenerarOT = function(id) {
     if (tipoEl) tipoEl.value = '';
     var subEl  = document.getElementById('sr-ot-subtipo');
     if (subEl)  { subEl.innerHTML = '<option value="">— Seleccionar tipo primero —</option>'; subEl.disabled = true; }
+    // Limpiar supervisor y situación
+    var supInp = document.getElementById('sr-ot-supervisor-inp'); if (supInp) supInp.value = '';
+    var supHid = document.getElementById('sr-ot-supervisor');     if (supHid) supHid.value = '';
+    var sitInp = document.getElementById('sr-ot-situacion-inp');  if (sitInp) sitInp.value = '';
+    var sitHid = document.getElementById('sr-ot-situacion');      if (sitHid) sitHid.value = '';
+    var sisEl  = document.getElementById('sr-ot-sistema');        if (sisEl)  sisEl.value  = '';
+    var subSEl = document.getElementById('sr-ot-subsistema');     if (subSEl) subSEl.value = '';
 
     srAbrirDrawer('sr-drawer-ot');
 };
@@ -919,6 +931,8 @@ window.srEnviarOT = function() {
     var motivo     = (document.getElementById('sr-ot-motivo')     || {}).value || '';
     var km         = (document.getElementById('sr-ot-km')         || {}).value || '0';
     var sitIni     = (document.getElementById('sr-ot-situacion')  || {}).value || '';
+    var sistema    = ((document.getElementById('sr-ot-sistema')   || {}).value || '').trim();
+    var subsistema = ((document.getElementById('sr-ot-subsistema')|| {}).value || '').trim();
 
     if (!tipo)    { alert('Selecciona el tipo de OT.');     return; }
     if (!subtipo) { alert('Selecciona el sub tipo de OT.'); return; }
@@ -937,7 +951,9 @@ window.srEnviarOT = function() {
                 rampa_origen:      rampa,
                 supervisor:        supervisor,
                 km:                km,
-                situacion_inicial: sitIni
+                situacion_inicial: sitIni,
+                sistema:           sistema,
+                sub_sistema:       subsistema
             })
         })
     })
@@ -1508,6 +1524,53 @@ function srRenderSecMateriales(idOt, esAprobada) {
     }
     body.innerHTML = html;
 }
+
+// ── Helpers dropdown buscable ─────────────────────────────────────
+window._srDropData = window._srDropData || {};
+
+function srMostrarDrop(dropId) {
+    var el = document.getElementById(dropId);
+    if (el) el.style.display = 'block';
+}
+
+function srOcultarDrop(dropId) {
+    var el = document.getElementById(dropId);
+    if (el) el.style.display = 'none';
+}
+
+function srFiltrarOpciones(dropId, query) {
+    var el = document.getElementById(dropId);
+    if (!el) return;
+    var q = (query || '').toLowerCase().trim();
+    var lista = window._srDropData[dropId] || [];
+    var filtrada = q ? lista.filter(function(n) { return n.toLowerCase().indexOf(q) !== -1; }) : lista;
+    if (!filtrada.length) {
+        el.innerHTML = '<div class="sr-drop-empty">Sin resultados</div>';
+    } else {
+        el.innerHTML = filtrada.map(function(n) {
+            var nEsc = n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            return '<div class="sr-drop-item" onmousedown="srSeleccionarDrop(\'' + dropId + '\',\'' + n.replace(/'/g,"\\'") + '\')">' + nEsc + '</div>';
+        }).join('');
+    }
+    el.style.display = 'block';
+}
+
+window.srSeleccionarDrop = function(dropId, valor) {
+    var el = document.getElementById(dropId);
+    if (el) el.style.display = 'none';
+    // Determinar qué campos llenar según el dropdown
+    if (dropId === 'sr-ot-supervisor-drop') {
+        var inp = document.getElementById('sr-ot-supervisor-inp');
+        var hid = document.getElementById('sr-ot-supervisor');
+        if (inp) inp.value = valor;
+        if (hid) hid.value = valor;
+    } else if (dropId === 'sr-ot-situacion-drop') {
+        var inp2 = document.getElementById('sr-ot-situacion-inp');
+        var hid2 = document.getElementById('sr-ot-situacion');
+        if (inp2) inp2.value = valor;
+        if (hid2) hid2.value = valor;
+    }
+};
 
 // ── Helpers UI ───────────────────────────────────────────────────
 function srBadgeSituacion(sit, ocupada) {
