@@ -623,10 +623,12 @@ window.rotExportar = function() {
         return;
     }
 
-    // CSV con columnas completas incluyendo tiempos
-    var cols = [
+    var fmtD = function(d) { return d ? d.toISOString().replace('T',' ').substring(0,16) : ''; };
+    var str  = function(v) { return String(v == null ? '' : v); };
+
+    var encabezado = [
         'N° OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
-        'Supervisor', 'Situación Inicial', 'Observaciones', 'Costo Total',
+        'Supervisor', 'Situación Inicial', 'Observaciones', 'Costo Total (S/)',
         'Ingreso Taller', 'Inicio OT', 'Iniciado Por',
         'Pausa 1', 'Motivo Pausa 1', 'Fin Pausa 1',
         'Pausa 2', 'Motivo Pausa 2', 'Fin Pausa 2',
@@ -634,46 +636,56 @@ window.rotExportar = function() {
         'Cierre OT', 'Cerrado Por', 'Comentario Cierre',
         'Tiempo Trabajado (min)', 'Tiempo Muerto (min)'
     ];
+
     var filas = lista.map(function(ot) {
         var det = rotDetalles(ot);
         var t   = rotCalcularTiempos(ot);
-        var fmtD = function(d) { return d ? d.toISOString().replace('T',' ').substring(0,16) : ''; };
         return [
-            ot.ticket_entrada || ot.id_ot || '',
-            ot.placa || '',
-            ot.estado || 'Pendiente',
-            det.tipo_ot || ot.tipo || '',
-            det.sub_tipo || '',
-            det.sistema || '',
-            det.sub_sistema || '',
-            det.supervisor || ot.supervisor || '',
-            det.situacion_inicial || ot.situacion || '',
-            det.motivo || ot.observaciones || '',
-            parseFloat(ot.costo_total || 0).toFixed(2),
-            rotFechaISO(ot.fecha_ingreso || ot.creado_en),
+            str(ot.ticket_entrada || ot.id_ot),
+            str(ot.placa),
+            str(ot.estado || 'Pendiente'),
+            str(det.tipo_ot || ot.tipo),
+            str(det.sub_tipo),
+            str(det.sistema),
+            str(det.sub_sistema),
+            str(det.supervisor || ot.supervisor),
+            str(det.situacion_inicial || ot.situacion),
+            str(det.motivo || ot.observaciones),
+            parseFloat(ot.costo_total || 0),
+            str(rotFechaISO(ot.fecha_ingreso || ot.creado_en)),
             fmtD(t.inicio),
-            ot.iniciado_por || '',
-            fmtD(t.pausas[0] ? t.pausas[0].inicio : null), t.pausas[0] ? t.pausas[0].motivo : '', fmtD(t.pausas[0] ? t.pausas[0].fin : null),
-            fmtD(t.pausas[1] ? t.pausas[1].inicio : null), t.pausas[1] ? t.pausas[1].motivo : '', fmtD(t.pausas[1] ? t.pausas[1].fin : null),
-            fmtD(t.pausas[2] ? t.pausas[2].inicio : null), t.pausas[2] ? t.pausas[2].motivo : '', fmtD(t.pausas[2] ? t.pausas[2].fin : null),
+            str(ot.iniciado_por),
+            fmtD(t.pausas[0] ? t.pausas[0].inicio : null),
+            str(t.pausas[0] ? t.pausas[0].motivo : ''),
+            fmtD(t.pausas[0] ? t.pausas[0].fin   : null),
+            fmtD(t.pausas[1] ? t.pausas[1].inicio : null),
+            str(t.pausas[1] ? t.pausas[1].motivo : ''),
+            fmtD(t.pausas[1] ? t.pausas[1].fin   : null),
+            fmtD(t.pausas[2] ? t.pausas[2].inicio : null),
+            str(t.pausas[2] ? t.pausas[2].motivo : ''),
+            fmtD(t.pausas[2] ? t.pausas[2].fin   : null),
             fmtD(t.fin),
-            ot.cerrado_por || '',
-            ot.comentario_cierre || '',
+            str(ot.cerrado_por),
+            str(ot.comentario_cierre),
             Math.round(t.tiempoTrabajadoMs / 60000),
             Math.round(t.tiempoMuertoMs   / 60000)
-        ].map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+        ];
     });
 
-    var csv = '\uFEFF' + cols.map(function(c){ return '"' + c + '"'; }).join(',') + '\n' + filas.join('\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var url  = URL.createObjectURL(blob);
-    var a    = document.createElement('a');
-    a.href     = url;
-    a.download = 'Reportes_OT_' + new Date().toISOString().slice(0,10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    var datos = [encabezado].concat(filas);
+    var ws = XLSX.utils.aoa_to_sheet(datos);
+
+    // Ancho automático por columna
+    var wscols = encabezado.map(function(h, i) {
+        var maxLen = h.length;
+        filas.forEach(function(f) { var v = str(f[i]); if (v.length > maxLen) maxLen = v.length; });
+        return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws['!cols'] = wscols;
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reportes OT');
+    XLSX.writeFile(wb, 'Reportes_OT_' + new Date().toISOString().slice(0,10) + '.xlsx');
 };
 
 // ── PDF de una OT (jsPDF + autoTable) ────────────────────────────
