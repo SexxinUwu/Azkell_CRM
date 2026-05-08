@@ -110,6 +110,7 @@ function mostrarConductores(datos) {
                 htmlTable += '<tr>'
                     + '<td data-value="' + nombre + '">' + nombre + '</td>'
                     + '<td>' + (empresa || '-') + '</td>'
+                    + '<td>' + (dni || '-') + '</td>'
                     + '<td>' + (licencia || '-') + '</td>'
                     + '<td>' + (telf || '-') + '</td>'
                     + '<td>' + estado + '</td>'

@@ -176,7 +176,7 @@
                 </ul>
             </div>
             <input type="file" id="inputFileConductores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelConductores(event)">
-            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Conductores')"><i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span></button>
+            <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaConductores', 'Directorio_Personal')"><i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span></button>
             <button class="btn btn-primary fw-bold text-white btn-sm" id="cond-btn-nuevo" onclick="abrirModalConductor()" data-perm-crear="flota">
                 <i class="bi bi-person-plus-fill"></i> <span class="d-none d-sm-inline">Nuevo</span>
             </button>
@@ -192,7 +192,7 @@
 
     <!-- Tabla oculta para exportar Excel -->
     <table id="tablaConductores" style="display:none;">
-        <thead><tr><th>Nombre</th><th>Empresa</th><th>Licencia</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Empresa</th><th>DNI</th><th>Licencia</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
         <tbody id="cuerpoTablaConductores"></tbody>
     </table>
 
