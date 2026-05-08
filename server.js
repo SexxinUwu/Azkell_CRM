@@ -4264,7 +4264,7 @@ app.post('/api/almacen/inventario', (req, res) => {
              proveedor_id,marca,observaciones,
              codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
              ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, monedaVal,
              costoRef, costoSoles, tc,
              proveedor_id||null, marca||null, observaciones||null,
