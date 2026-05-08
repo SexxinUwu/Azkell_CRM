@@ -2,16 +2,20 @@
 // MÓDULO ALMACÉN / ENTRADAS — Lógica SPA Aislada
 // ================================================================
 
-// ── _entCbFiltrar: wrapper con position:fixed (evita clipping por overflow:auto)
+// ── _entCbFiltrar: wrapper con position:fixed corregido para modal con transform
 window._entCbFiltrar = function(id) {
     window._cbFiltrar(id);
     var dd  = document.getElementById(id + '-dd');
     var txt = document.getElementById(id + '-txt');
     if (!dd || !txt || dd.style.display === 'none') return;
-    var r = txt.getBoundingClientRect();
+    var r  = txt.getBoundingClientRect();
+    // El modal tiene transform, por lo que position:fixed es relativo al modal.
+    // Restamos la posición del modal para obtener coordenadas correctas.
+    var modal = document.getElementById('modal-entrada');
+    var mr = modal ? modal.getBoundingClientRect() : { left: 0, top: 0 };
     dd.style.position = 'fixed';
-    dd.style.top      = (r.bottom + 2) + 'px';
-    dd.style.left     = r.left + 'px';
+    dd.style.top      = (r.bottom - mr.top + 2) + 'px';
+    dd.style.left     = (r.left - mr.left) + 'px';
     dd.style.width    = r.width + 'px';
     dd.style.maxWidth = r.width + 'px';
     dd.style.zIndex   = '99999';
