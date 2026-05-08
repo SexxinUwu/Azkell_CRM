@@ -40,6 +40,7 @@ app.use('/api/', limiterGeneral);
 app.use('/api/login', limiterLogin);
 const ALLOWED_ORIGINS = [
     'https://azkell-crm.onrender.com',
+    'https://azkellcrm-production.up.railway.app',
     process.env.APP_URL,
     'capacitor://localhost',
     'http://localhost',
