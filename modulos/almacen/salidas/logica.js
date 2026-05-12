@@ -56,7 +56,7 @@ window._salSyncMTabs = function(tab) {
 // ── Carga de datos ─────────────────────────────────────────────
 window.salCargar = function() {
     var tbody = document.getElementById('sal-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="sal-td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="sal-td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/almacen/salidas')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -167,6 +167,13 @@ function salBadge(estado) {
     return '<span class="sal-badge badge-pendiente">Pendiente</span>';
 }
 
+function salDescLimpia(desc, invId) {
+    if (!desc) return '—';
+    if (invId && desc.indexOf(invId + ' — ') === 0) return desc.slice(invId.length + 3);
+    var sep = desc.indexOf(' — ');
+    return sep !== -1 ? desc.slice(sep + 3) : desc;
+}
+
 // ── Badges de tabs ────────────────────────────────────────────
 function salActualizarBadges() {
     var pend   = window.salData.filter(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; }).length;
@@ -252,7 +259,7 @@ window.salRenderTabla = function() {
         var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
                 : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
                 : 'Sin salidas registradas';
-        tbody.innerHTML = '<tr><td colspan="8" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
         return;
     }
 
@@ -275,11 +282,13 @@ window.salRenderTabla = function() {
             if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
             tr.innerHTML =
                 '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
-                + '<td><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
+                + '<td>' + salFmtDate(m.fecha) + '</td>'
+                + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
-                + '<td>' + salEsc(m.responsable || '—') + '</td>'
-                + '<td colspan="2" style="color:var(--subtext);font-size:0.78rem;">Sin artículos</td>'
-                + '<td class="text-end"><strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong></td>'
+                + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
+                + '<td colspan="3" style="color:var(--subtext);font-size:0.78rem;">Sin artículos</td>'
+                + '<td class="col-hide-mob"></td>'
+                + '<td class="col-hide-mob"></td>'
                 + '<td>' + salBadge(m.estado) + '</td>';
             tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
             tbody.appendChild(tr);
@@ -293,14 +302,20 @@ window.salRenderTabla = function() {
             if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
             if (!isFirst) tr.classList.add('sal-item-sub');
             if (isLast && filteredItems.length > 1) tr.classList.add('sal-item-last');
+            var nombre = salDescLimpia(it.descripcion, it.inventario_id);
+            var cant   = parseFloat(it.cantidad || 0);
+            var cu     = parseFloat(it.costo_unitario || 0);
             tr.innerHTML =
-                '<td>' + (isFirst ? '<span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span>' : '') + '</td>'
-                + '<td class="col-hide-mob">' + (isFirst ? '<strong>' + salEsc(m.ticket_ot || '—') + '</strong>' : '') + '</td>'
-                + '<td>' + (isFirst ? salEsc(m.placa || '—') : '') + '</td>'
-                + '<td class="col-hide-mob">' + (isFirst ? salEsc(m.responsable || '—') : '') + '</td>'
+                '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
+                + '<td style="white-space:nowrap;">' + salFmtDate(m.fecha) + '</td>'
+                + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
+                + '<td>' + salEsc(m.placa || '—') + '</td>'
+                + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
                 + '<td class="col-hide-mob" style="font-size:0.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + salEsc(it.inventario_id || '—') + '</td>'
-                + '<td style="font-size:0.82rem;">' + salEsc(it.descripcion || '—') + '</td>'
-                + '<td class="text-end">' + (isFirst ? '<strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong>' : '') + '</td>'
+                + '<td style="font-size:0.82rem;">' + salEsc(nombre) + '</td>'
+                + '<td class="text-end" style="font-size:0.82rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>'
+                + '<td class="text-end col-hide-mob" style="font-size:0.82rem;">' + salFmtMoney(cu) + '</td>'
+                + '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong>' : '') + '</td>'
                 + '<td>' + (isFirst ? salBadge(m.estado) : '') + '</td>';
             tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
             tbody.appendChild(tr);
@@ -800,26 +815,35 @@ window.salExportar = function() {
         var ex = document.getElementById(tmpId); if (ex) ex.remove();
         var tbl = document.createElement('table');
         tbl.id = tmpId; tbl.style.display = 'none';
-        var thead = '<thead><tr><th>ID</th><th>N° OT</th><th>Fecha</th><th>Placa</th><th>Responsable</th><th>Artículo</th><th>Cantidad</th><th>Costo Unit.</th><th>Importe</th><th>Total</th><th>Estado</th></tr></thead>';
+        var thead = '<thead><tr><th>ID Solicitud</th><th>Fecha</th><th>N° OT</th><th>Placa</th><th>Responsable</th><th>Código</th><th>Artículo</th><th>Cantidad</th><th>Costo Unit.</th><th>Estado</th></tr></thead>';
         var rows = [];
         datos.forEach(function(m) {
             var items = m.items || [];
+            var fecha = salFmtDate(m.fecha);
             if (!items.length) {
-                rows.push('<tr><td>' + salEsc(m.id||'') + '</td><td>' + salEsc(m.ticket_ot||'') + '</td><td>' + salFmtDate(m.fecha) + '</td><td>' + salEsc(m.placa||'') + '</td><td>' + salEsc(m.responsable||'') + '</td><td>—</td><td></td><td></td><td></td><td>' + salFmtMoney(m.total_pen) + '</td><td>' + salEsc(m.estado||'') + '</td></tr>');
+                rows.push('<tr>'
+                    + '<td>' + salEsc(m.id||'') + '</td>'
+                    + '<td>' + fecha + '</td>'
+                    + '<td>' + salEsc(m.ticket_ot||'') + '</td>'
+                    + '<td>' + salEsc(m.placa||'') + '</td>'
+                    + '<td>' + salEsc(m.responsable||'') + '</td>'
+                    + '<td></td><td>Sin artículos</td><td></td><td></td>'
+                    + '<td>' + salEsc(m.estado||'') + '</td>'
+                    + '</tr>');
             } else {
-                items.forEach(function(it, idx) {
+                items.forEach(function(it) {
+                    var nombre = salDescLimpia(it.descripcion, it.inventario_id);
                     rows.push('<tr>'
-                        + '<td>' + (idx===0 ? salEsc(m.id||'') : '') + '</td>'
-                        + '<td>' + (idx===0 ? salEsc(m.ticket_ot||'') : '') + '</td>'
-                        + '<td>' + (idx===0 ? salFmtDate(m.fecha) : '') + '</td>'
-                        + '<td>' + (idx===0 ? salEsc(m.placa||'') : '') + '</td>'
-                        + '<td>' + (idx===0 ? salEsc(m.responsable||'') : '') + '</td>'
-                        + '<td>' + salEsc(it.descripcion||it.inventario_id||'') + '</td>'
+                        + '<td>' + salEsc(m.id||'') + '</td>'
+                        + '<td>' + fecha + '</td>'
+                        + '<td>' + salEsc(m.ticket_ot||'') + '</td>'
+                        + '<td>' + salEsc(m.placa||'') + '</td>'
+                        + '<td>' + salEsc(m.responsable||'') + '</td>'
+                        + '<td>' + salEsc(it.inventario_id||'') + '</td>'
+                        + '<td>' + salEsc(nombre) + '</td>'
                         + '<td>' + (it.cantidad||0) + '</td>'
-                        + '<td>' + salFmtMoney(it.costo_unitario) + '</td>'
-                        + '<td>' + salFmtMoney(it.importe) + '</td>'
-                        + '<td>' + (idx===0 ? salFmtMoney(m.total_pen) : '') + '</td>'
-                        + '<td>' + (idx===0 ? salEsc(m.estado||'') : '') + '</td>'
+                        + '<td>' + parseFloat(it.costo_unitario||0).toFixed(2) + '</td>'
+                        + '<td>' + salEsc(m.estado||'') + '</td>'
                         + '</tr>');
                 });
             }
@@ -831,18 +855,19 @@ window.salExportar = function() {
         return;
     }
 
-    var cabecera = ['ID','N° OT','Fecha','Placa','Responsable','Artículo','Cantidad','Costo Unit.','Importe','Total','Estado'];
+    var cabecera = ['ID Solicitud','Fecha','N° OT','Placa','Responsable','Código','Artículo','Cantidad','Costo Unit.','Estado'];
     var csvRows = [cabecera];
     datos.forEach(function(m) {
         var items = m.items || [];
+        var fecha = salFmtDate(m.fecha);
         if (!items.length) {
-            csvRows.push([m.id||'', m.ticket_ot||'', salFmtDate(m.fecha), m.placa||'', m.responsable||'', '', '', '', '', salFmtMoney(m.total_pen), m.estado||'']);
+            csvRows.push([m.id||'', fecha, m.ticket_ot||'', m.placa||'', m.responsable||'', '', 'Sin artículos', '', '', m.estado||'']);
         } else {
-            items.forEach(function(it, idx) {
-                csvRows.push([idx===0?m.id||'':'', idx===0?m.ticket_ot||'':'', idx===0?salFmtDate(m.fecha):'',
-                    idx===0?m.placa||'':'', idx===0?m.responsable||'':'',
-                    it.descripcion||it.inventario_id||'', it.cantidad||0, salFmtMoney(it.costo_unitario),
-                    salFmtMoney(it.importe), idx===0?salFmtMoney(m.total_pen):'', idx===0?m.estado||'':'']);
+            items.forEach(function(it) {
+                var nombre = salDescLimpia(it.descripcion, it.inventario_id);
+                csvRows.push([m.id||'', fecha, m.ticket_ot||'', m.placa||'', m.responsable||'',
+                    it.inventario_id||'', nombre, it.cantidad||0,
+                    parseFloat(it.costo_unitario||0).toFixed(2), m.estado||'']);
             });
         }
     });
