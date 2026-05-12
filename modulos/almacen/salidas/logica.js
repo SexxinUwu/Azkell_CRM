@@ -56,7 +56,7 @@ window._salSyncMTabs = function(tab) {
 // ── Carga de datos ─────────────────────────────────────────────
 window.salCargar = function() {
     var tbody = document.getElementById('sal-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="sal-td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/almacen/salidas')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -252,29 +252,59 @@ window.salRenderTabla = function() {
         var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
                 : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
                 : 'Sin salidas registradas';
-        tbody.innerHTML = '<tr><td colspan="7" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
         return;
     }
 
     tbody.innerHTML = '';
     datos.forEach(function(m) {
-        var artResumen = (m.items || []).map(function(it) { return salEsc(it.descripcion || ''); }).filter(Boolean).join(', ') || '—';
-        var nItems = (m.items || []).length;
-        var tr = document.createElement('tr');
-        if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
-        tr.innerHTML =
-            '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
-            + '<td><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
-            + '<td>' + salEsc(m.placa || '—') + '</td>'
-            + '<td>' + salEsc(m.responsable || '—') + '</td>'
-            + '<td style="max-width:200px; font-size:0.79rem; white-space:normal;">'
-                + artResumen
-                + (nItems > 1 ? ' <span style="color:var(--subtext);font-size:0.72rem;">(' + nItems + ' art.)</span>' : '')
-            + '</td>'
-            + '<td><strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong></td>'
-            + '<td>' + salBadge(m.estado) + '</td>';
-        tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
-        tbody.appendChild(tr);
+        var items = m.items || [];
+
+        var filteredItems = items;
+        if (f.search) {
+            var salidaText = [m.id, m.ticket_ot, m.placa, m.responsable].join(' ').toLowerCase();
+            if (salidaText.indexOf(f.search) === -1) {
+                filteredItems = items.filter(function(it) {
+                    return [(it.inventario_id || ''), (it.descripcion || '')].join(' ').toLowerCase().indexOf(f.search) !== -1;
+                });
+            }
+        }
+
+        if (!filteredItems.length) {
+            var tr = document.createElement('tr');
+            if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
+            tr.innerHTML =
+                '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
+                + '<td><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
+                + '<td>' + salEsc(m.placa || '—') + '</td>'
+                + '<td>' + salEsc(m.responsable || '—') + '</td>'
+                + '<td colspan="2" style="color:var(--subtext);font-size:0.78rem;">Sin artículos</td>'
+                + '<td class="text-end"><strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong></td>'
+                + '<td>' + salBadge(m.estado) + '</td>';
+            tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
+            tbody.appendChild(tr);
+            return;
+        }
+
+        filteredItems.forEach(function(it, idx) {
+            var tr = document.createElement('tr');
+            var isFirst = idx === 0;
+            var isLast  = idx === filteredItems.length - 1;
+            if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
+            if (!isFirst) tr.classList.add('sal-item-sub');
+            if (isLast && filteredItems.length > 1) tr.classList.add('sal-item-last');
+            tr.innerHTML =
+                '<td>' + (isFirst ? '<span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span>' : '') + '</td>'
+                + '<td class="col-hide-mob">' + (isFirst ? '<strong>' + salEsc(m.ticket_ot || '—') + '</strong>' : '') + '</td>'
+                + '<td>' + (isFirst ? salEsc(m.placa || '—') : '') + '</td>'
+                + '<td class="col-hide-mob">' + (isFirst ? salEsc(m.responsable || '—') : '') + '</td>'
+                + '<td class="col-hide-mob" style="font-size:0.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + salEsc(it.inventario_id || '—') + '</td>'
+                + '<td style="font-size:0.82rem;">' + salEsc(it.descripcion || '—') + '</td>'
+                + '<td class="text-end">' + (isFirst ? '<strong style="color:#16a34a;">' + salFmtMoney(m.total_pen) + '</strong>' : '') + '</td>'
+                + '<td>' + (isFirst ? salBadge(m.estado) : '') + '</td>';
+            tr.onclick = (function(row) { return function() { salAbrirDetalle(row); }; })(m);
+            tbody.appendChild(tr);
+        });
     });
 };
 

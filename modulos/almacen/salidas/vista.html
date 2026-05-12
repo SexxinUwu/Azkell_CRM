@@ -118,6 +118,9 @@
 #moduloSalidas tbody tr:hover { background: var(--bg); }
 #moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,.06); border-left: 3px solid #5865F2; }
 #moduloSalidas tbody td { padding: 10px 12px; color: var(--text); }
+#moduloSalidas tbody tr.sal-item-sub { border-bottom: 1px dashed var(--border); }
+#moduloSalidas tbody tr.sal-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
+#moduloSalidas tbody tr.sal-item-last { border-bottom: 2px solid var(--border); }
 #moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
 
 /* Badges */
@@ -398,7 +401,8 @@
             <th class="col-hide-mob">N° OT</th>
             <th>Placa</th>
             <th class="col-hide-mob">Responsable</th>
-            <th class="text-center">Arts.</th>
+            <th class="col-hide-mob">Código</th>
+            <th>Artículo</th>
             <th class="text-end">Total</th>
             <th>Estado</th>
           </tr>
