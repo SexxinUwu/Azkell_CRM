@@ -409,6 +409,7 @@ window._entSetIgvMode = function(mode) {
 };
 
 // ── Guardar ───────────────────────────────────────────────────────
+window.guardarEntrada = function() {
     if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
     var provId     = window._cbGet('ent-f-proveedor');
