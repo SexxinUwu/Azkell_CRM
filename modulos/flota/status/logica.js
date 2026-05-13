@@ -250,7 +250,7 @@ function mostrarStatusFlota(datos) {
             html += `<tr class="group-header data-row-sf" style="cursor:pointer;" onclick="toggleGroupRowSF('${claseZ}')" data-group-clase="${claseZ}">
                 <td colspan="10" class="text-start" style="padding-left: 20px;">
                     <i class="bi ${iconClass} ms-1 me-2 text-warning"></i>
-                    <i class="bi bi-truck text-primary me-2"></i><span class="fw-bold">${tipoName}</span>
+                    <i class="bi bi-truck text-primary me-2"></i><span class="fw-bold sf-group-label">${tipoName}</span>
                     <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
                 </td>
             </tr>`;
@@ -298,6 +298,7 @@ function mostrarStatusFlota(datos) {
                 };
 
                 let kmCell = km ? `<span class="fw-bold"><i class="bi bi-speedometer2 text-muted me-1"></i>${parseInt(km).toLocaleString()}</span>` : '<span class="text-muted">-</span>';
+                const toTC = s => s ? s.toLowerCase().replace(/(^|[\s])(\S)/g, (_, sp, ch) => sp + ch.toUpperCase()) : '-';
                 let bEst = `<span class="fw-bold text-primary">${estado || '-'}</span>`;
                 let bZona = zona === 'Lavado'
                     ? '<span class="badge bg-info text-dark">Lavado</span>'
@@ -321,7 +322,7 @@ function mostrarStatusFlota(datos) {
                     <td>${getDias(motora)}</td>
                     <td class="fw-bold text-secondary">${nomotora || '-'}</td>
                     <td>${getDias(nomotora)}</td>
-                    <td>${conductor || '-'}</td>
+                    <td>${toTC(conductor)}</td>
                     <td>${bEst}</td>
                     <td>${bZona}</td>
                     <td class="text-wrap" style="max-width: 150px;">${obs}</td>
@@ -349,7 +350,7 @@ function filtrarStatusFlotaAvanzado() {
     const headers = document.querySelectorAll('#cuerpoTablaStatusFlota tr.group-header');
     headers.forEach(header => {
         const claseZ = header.getAttribute('data-group-clase');
-        const childRows = document.querySelectorAll(`.child-row-sf[data-zona="${header.querySelector('.text-uppercase')?.innerText || ''}"]`);
+        const childRows = document.querySelectorAll(`.child-row-sf[data-zona="${header.querySelector('.sf-group-label')?.innerText || ''}"]`);
         let hasVisibleChild = false;
         let isExpanded = expandSFMap[claseZ] !== false;
 
