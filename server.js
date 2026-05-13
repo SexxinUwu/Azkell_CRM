@@ -4648,15 +4648,15 @@ app.get('/api/almacen/entradas', (req, res) => {
     });
 });
 app.post('/api/almacen/entradas', (req, res) => {
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, observaciones, creado_por, items } = req.body;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items } = req.body;
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,creado_por) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null],
+             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) return res.json({ ok: true, id });

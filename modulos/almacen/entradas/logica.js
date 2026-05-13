@@ -627,6 +627,16 @@ window._entAbrirDetalle = function(id) {
     html += '<div class="ent-field"><div class="ent-field-lbl">Doc. Referencia</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '—') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Moneda</div><div class="ent-field-val">' + monSim + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Total PEN</div><div class="ent-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div></div>';
+    // Desglose IGV
+    var igvMode = d.tipo_igv || 'sin_igv';
+    var igvLabel = igvMode === 'incluido' ? 'Incluido IGV' : igvMode === 'mas_igv' ? '+ IGV 18%' : 'Sin IGV';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Tipo IGV</div><div class="ent-field-val"><span style="font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;background:' + (igvMode==='sin_igv'?'#f1f5f9;color:#64748b':'#fef3c7;color:#92400e') + ';">' + igvLabel + '</span></div></div>';
+    if (igvMode !== 'sin_igv') {
+        var gravado = tp / 1.18;
+        var igvMonto = tp - gravado;
+        html += '<div class="ent-field" style="background:#fffbeb;"><div class="ent-field-lbl" style="color:#92400e;">Gravado</div><div class="ent-field-val" style="color:#92400e;font-weight:700;">S/ ' + gravado.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>';
+        html += '<div class="ent-field" style="background:#fffbeb;"><div class="ent-field-lbl" style="color:#92400e;">IGV 18%</div><div class="ent-field-val" style="color:#d97706;font-weight:700;">S/ ' + igvMonto.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>';
+    }
     if (d.observaciones) {
         html += '<div class="ent-field"><div class="ent-field-lbl">Observaciones</div><div class="ent-field-val" style="font-size:0.78rem; white-space:normal;">' + _entEsc(d.observaciones) + '</div></div>';
     }
@@ -762,11 +772,28 @@ window.generarComprobanteEntrada = function(id) {
 
         // Total
         '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">' +
-            '<div style="min-width:220px">' +
-                '<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px;color:#64748b">' +
-                    '<span>Subtotal (' + (d.items||[]).length + ' art.)</span>' +
-                    '<span>' + monSimbolo + ' ' + totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
-                '</div>' +
+            '<div style="min-width:240px">' +
+                (function() {
+                    var igvM = d.tipo_igv || 'sin_igv';
+                    var rows = '';
+                    if (igvM !== 'sin_igv') {
+                        var grav = totalPen / 1.18;
+                        var igvA = totalPen - grav;
+                        rows +=
+                            '<div style="display:flex;justify-content:space-between;padding:5px 12px;font-size:12px;color:#64748b;border-bottom:1px solid #f1f5f9;">' +
+                                '<span>Total Gravado</span><span>S/ ' + grav.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+                            '</div>' +
+                            '<div style="display:flex;justify-content:space-between;padding:5px 12px;font-size:12px;color:#d97706;border-bottom:1px solid #f1f5f9;font-weight:600;">' +
+                                '<span>IGV 18%</span><span>S/ ' + igvA.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+                            '</div>';
+                    } else {
+                        rows += '<div style="display:flex;justify-content:space-between;padding:5px 12px;font-size:12px;color:#64748b;">' +
+                            '<span>Subtotal (' + (d.items||[]).length + ' art.)</span>' +
+                            '<span>' + monSimbolo + ' ' + totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+                        '</div>';
+                    }
+                    return rows;
+                })() +
                 '<div style="display:flex;justify-content:space-between;padding:10px 12px;background:#2563eb;color:#fff;border-radius:6px;font-size:14px;font-weight:700">' +
                     '<span>TOTAL PEN</span>' +
                     '<span>S/ ' + totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
