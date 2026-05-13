@@ -45,6 +45,16 @@
 .sf-sub { font-size: .75rem; color: var(--subtext, #64748b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Campo KM bloqueado */
 .sf-km-locked { opacity: .45; pointer-events: none; }
+
+/* ─── FAB Status Flota (solo mobile) ─── */
+#sf-fab-btn { transition: all .4s cubic-bezier(.175,.885,.32,1.275) !important; }
+#sf-fab-btn.fab-open { transform: rotate(135deg) !important; background: #1e293b !important; box-shadow: 0 8px 24px rgba(30,41,59,.4) !important; }
+#sf-fab-menu { transition: opacity .25s ease, transform .3s cubic-bezier(.4,0,.2,1) !important; transform: translateY(20px); opacity: 0; pointer-events: none; }
+#sf-fab-menu.fab-menu-open { transform: translateY(0) !important; opacity: 1 !important; pointer-events: auto !important; }
+#sf-fab-menu > div:nth-child(1) { transition-delay: .05s; }
+#sf-fab-menu > div:nth-child(2) { transition-delay: .1s; }
+#sf-fab-menu > div:nth-child(3) { transition-delay: .15s; }
+@media (max-width: 767.98px) { #sf-fab-wrap { display: flex !important; } }
 </style>
 
 <div id="moduloStatusFlota" class="modulo-wrapper">
@@ -55,7 +65,7 @@
             <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatusFlota" onkeyup="filtrarStatusFlotaAvanzado()" placeholder="Buscar Placa, Conductor..."></div>
             <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-i18n="common.clients">Clientes</button><ul class="dropdown-menu shadow dropdown-menu-filter" id="filtroSFCliente"></ul></div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-none d-sm-flex align-items-center gap-2">
             <span id="cache-badge-statusFlota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusFlota" data-i18n="common.sinCargar">Sin cargar</span></span>
             <button class="btn-reload-cache" id="btn-reload-statusFlota" onclick="resetearYRecargarStatusFlota()" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
             <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllSFGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
@@ -68,6 +78,60 @@
         <thead><tr><th data-i18n="fstatus.col.tracto">Tracto / Camión</th><th data-i18n="fstatus.col.insp.tc">Prox Insp. T/C</th><th data-i18n="fstatus.col.carreta">Carreta / Remolque</th><th data-i18n="fstatus.col.insp.cr">Prox Insp. C/R</th><th data-i18n="fstatus.col.driver">Conductor</th><th data-i18n="common.status">Estado</th><th data-i18n="common.zone">Zona</th><th data-i18n="fstatus.col.obs">Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
         <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5" data-i18n="common.loading">Cargando Status Flota...</td></tr></tbody>
     </table></div></div>
+</div>
+
+<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+<div id="sf-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1rem;z-index:1041;align-items:flex-end;flex-direction:column;">
+  <!-- Backdrop blur -->
+  <div id="sf-fab-backdrop" onclick="window._sfFABClose()"
+       style="display:none;position:fixed;inset:0;backdrop-filter:blur(5px);
+              -webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
+  <!-- Menú expandido -->
+  <div id="sf-fab-menu" style="display:flex;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">
+    <!-- EXPORTAR PDF -->
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">EXPORTAR PDF</span>
+      <button onclick="window._sfFABClose();generarPDFStatusFlota()"
+              style="width:56px;height:56px;border-radius:18px;background:#ef4444;border:2px solid #fff;
+                     color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(239,68,68,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-file-pdf"></i>
+      </button>
+    </div>
+    <!-- EXPORTAR EXCEL -->
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">EXPORTAR EXCEL</span>
+      <button onclick="window._sfFABClose();descargarExcelDinamico('tablaStatusFlota','Status_Flota')"
+              style="width:56px;height:56px;border-radius:18px;background:#22c55e;border:2px solid #fff;
+                     color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(34,197,94,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-file-earmark-excel"></i>
+      </button>
+    </div>
+    <!-- AGREGAR STATUS -->
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;
+                   font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+                   box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">AGREGAR STATUS</span>
+      <button onclick="window._sfFABClose();abrirModalNuevoStatusFlota()"
+              style="width:56px;height:56px;border-radius:18px;background:#2563eb;border:2px solid #fff;
+                     color:#fff!important;font-size:1.2rem;display:flex;align-items:center;justify-content:center;
+                     box-shadow:0 6px 20px rgba(37,99,235,.4);cursor:pointer;transition:transform .15s;">
+        <i class="bi bi-truck-front-fill"></i>
+      </button>
+    </div>
+  </div>
+  <!-- Botón principal — cuadrado con bordes redondeados -->
+  <button id="sf-fab-btn" onclick="window._sfFABToggle()"
+          style="width:60px;height:60px;border-radius:18px;background:#f97316;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(249,115,22,.5);
+                 display:flex;align-items:center;justify-content:center;margin-top:.5rem;flex-shrink:0;">
+    <i class="bi bi-plus-lg" id="sf-fab-icon"></i>
+  </button>
 </div>
 
 <!-- Offcanvas Agregar/Editar Status Flota (desliza desde la derecha) -->
