@@ -154,8 +154,10 @@ window._entAgregarItem = function() {
     var card = document.createElement('div');
     card.id        = 'ent-item-' + idx;
     card.className = 'ent-item-card';
+    var mode = window._entIgvMode || 'incluido';
+    var vuRo = (mode === 'incluido' || mode === 'sin_igv') ? 'background:#f8fafc;color:#64748b;' : '';
+    var puRo = (mode === 'mas_igv' || mode === 'sin_igv') ? 'background:#f8fafc;color:#64748b;' : '';
     card.innerHTML =
-        // Fila 1: búsqueda artículo + botón QR + botón eliminar
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">' +
             '<div style="flex:1;position:relative;">' +
                 '<input type="text" id="' + cbId + '-txt" class="ent-input-sm ent-item-desc" data-idx="' + idx + '"' +
@@ -166,8 +168,7 @@ window._entAgregarItem = function() {
                 '<input type="hidden" id="' + cbId + '" class="ent-item-inv-id" data-idx="' + idx + '">' +
                 '<div id="' + cbId + '-dd" class="cb-dropdown"></div>' +
             '</div>' +
-            '<button type="button" onclick="window._entAbrirQR(' + idx + ')"' +
-                ' title="Escanear QR"' +
+            '<button type="button" onclick="window._entAbrirQR(' + idx + ')" title="Escanear QR"' +
                 ' style="width:32px;height:32px;border-radius:10px;border:1.5px solid #2563eb;background:#eff6ff;' +
                 'color:#2563eb;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;">' +
                 '<i class="bi bi-qr-code-scan"></i>' +
@@ -178,25 +179,30 @@ window._entAgregarItem = function() {
                 '<i class="bi bi-x-lg"></i>' +
             '</button>' +
         '</div>' +
-        // Fila 2: Cant / Costo / Importe
-        '<div style="display:grid;grid-template-columns:80px 1fr 1fr;gap:8px;">' +
-            '<div>' +
-                '<div class="ent-field-label">Cant.</div>' +
+        '<div style="display:grid;grid-template-columns:55px 1fr 1fr 1fr 1fr;gap:5px;">' +
+            '<div><div class="ent-field-label">Cant.</div>' +
                 '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
-                    ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ')">' +
+                    ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
             '</div>' +
-            '<div>' +
-                '<div class="ent-field-label">Costo Unit.</div>' +
-                '<input type="number" class="ent-input-sm ent-item-cu" data-idx="' + idx + '"' +
-                    ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ')">' +
+            '<div><div class="ent-field-label ent-lbl-vu" data-idx="' + idx + '">Valor Unit.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-vu" data-idx="' + idx + '"' +
+                    ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ',\'vu\')"' +
+                    ' style="' + vuRo + '">' +
             '</div>' +
-            '<div>' +
-                '<div class="ent-field-label">Importe</div>' +
+            '<div><div class="ent-field-label ent-lbl-pu" data-idx="' + idx + '">Precio Unit.</div>' +
+                '<input type="number" class="ent-input-sm ent-item-pu" data-idx="' + idx + '"' +
+                    ' value="0" min="0" step="0.0001" oninput="window._entCalcImporte(' + idx + ',\'pu\')"' +
+                    ' style="' + puRo + '">' +
+            '</div>' +
+            '<div><div class="ent-field-label">IGV</div>' +
+                '<input type="number" class="ent-input-sm ent-item-igv" data-idx="' + idx + '"' +
+                    ' value="0" readonly style="background:#f1f5f9;color:#94a3b8;">' +
+            '</div>' +
+            '<div><div class="ent-field-label">Importe</div>' +
                 '<input type="number" class="ent-input-sm ent-item-imp" data-idx="' + idx + '"' +
-                    ' value="0" readonly style="background:#f1f5f9;color:#64748b;">' +
+                    ' value="0" step="0.01" oninput="window._entCalcImporte(' + idx + ',\'imp\')">' +
             '</div>' +
         '</div>' +
-        // Fila 3: alerta de precio (oculta por defecto)
         '<div id="ent-price-alert-' + idx + '" style="display:none;margin-top:6px;align-items:center;gap:.4rem;"></div>';
     container.appendChild(card);
 
@@ -215,12 +221,16 @@ window._entInitCbItem = function(idx, cbId) {
     window._cbOnSelect(cbId, function(val) {
         var item = (window._entInvData || []).find(function(d) { return d.id === val; });
         if (item) {
-            var oldCost = parseFloat(item.costo_referencial || 0);
-            var cuEl = document.querySelector('.ent-item-cu[data-idx="' + idx + '"]');
-            if (cuEl) {
-                cuEl.value = oldCost.toFixed(2);
-                cuEl.dataset.oldCost = oldCost;
-                window._entCalcImporte(idx);
+            var ref = parseFloat(item.costo_referencial || 0);
+            var puEl = document.querySelector('.ent-item-pu[data-idx="' + idx + '"]');
+            var vuEl = document.querySelector('.ent-item-vu[data-idx="' + idx + '"]');
+            var mode = window._entIgvMode || 'incluido';
+            if (mode === 'mas_igv') {
+                if (vuEl) { vuEl.value = (ref / 1.18).toFixed(4); vuEl.dataset.oldCost = ref; }
+                window._entCalcImporte(idx, 'vu');
+            } else {
+                if (puEl) { puEl.value = ref.toFixed(2); puEl.dataset.oldCost = ref; }
+                window._entCalcImporte(idx, 'pu');
             }
         }
     });
@@ -236,47 +246,76 @@ window._entCargarInv = function(cb) {
         }).catch(function() { if (cb) cb(); });
 };
 
-window._entCalcImporte = function(idx) {
-    var cant  = parseFloat((document.querySelector('.ent-item-cant[data-idx="'+idx+'"]') || {}).value) || 0;
-    var cuEl  = document.querySelector('.ent-item-cu[data-idx="'+idx+'"]');
-    var cu    = parseFloat((cuEl || {}).value) || 0;
-    var impEl = document.querySelector('.ent-item-imp[data-idx="'+idx+'"]');
-    var mode  = window._entIgvMode || 'sin_igv';
-    var importe;
-    if (mode === 'mas_igv') {
-        importe = cant * cu * 1.18;
-    } else {
-        importe = cant * cu;
-    }
-    if (impEl) impEl.value = importe.toFixed(2);
+window._entCalcImporte = function(idx, source) {
+    var r2 = function(v) { return Math.round(v * 100) / 100; };
+    var r4 = function(v) { return Math.round(v * 10000) / 10000; };
+    var mode = window._entIgvMode || 'incluido';
+    var cantEl = document.querySelector('.ent-item-cant[data-idx="'+idx+'"]');
+    var vuEl   = document.querySelector('.ent-item-vu[data-idx="'+idx+'"]');
+    var puEl   = document.querySelector('.ent-item-pu[data-idx="'+idx+'"]');
+    var igvEl  = document.querySelector('.ent-item-igv[data-idx="'+idx+'"]');
+    var impEl  = document.querySelector('.ent-item-imp[data-idx="'+idx+'"]');
+    if (!cantEl || !vuEl || !puEl || !igvEl || !impEl) return;
 
-    // Alerta comparación de precio
+    var cant = parseFloat(cantEl.value) || 0;
+    var vu   = parseFloat(vuEl.value)   || 0;
+    var pu   = parseFloat(puEl.value)   || 0;
+    var imp  = parseFloat(impEl.value)  || 0;
+
+    if (mode === 'sin_igv') {
+        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); vu = pu; }
+        else if (source === 'pu')   { vu = pu; }
+        else if (source === 'vu')   { pu = vu; }
+        imp = r2(cant * pu);
+        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
+        igvEl.value = (0).toFixed(2); impEl.value = imp.toFixed(2);
+
+    } else if (mode === 'incluido') {
+        // PU es el precio con IGV; VU = PU/1.18 (auto)
+        if (source === 'imp')       { pu = r2(cant > 0 ? imp / cant : 0); }
+        else if (source === 'vu')   { pu = r2(vu * 1.18); }
+        // source='pu' or 'cant': pu stays
+        vu  = r4(pu / 1.18);
+        imp = r2(cant * pu);
+        var igvRow = r2(imp - cant * vu);
+        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
+        igvEl.value = igvRow.toFixed(2); impEl.value = imp.toFixed(2);
+
+    } else { // mas_igv
+        // VU es el precio base; PU = VU*1.18 (auto); IMP = cant*PU
+        if (source === 'imp')       { pu = r2(cant > 0 ? imp / cant : 0); vu = r4(pu / 1.18); }
+        else if (source === 'pu')   { vu = r4(pu / 1.18); }
+        else if (source === 'vu')   { pu = r2(vu * 1.18); }
+        // source='cant': pu/vu stay, recalc imp
+        imp = r2(cant * pu);
+        var igvRow2 = r2(imp - cant * vu);
+        vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
+        igvEl.value = igvRow2.toFixed(2); impEl.value = imp.toFixed(2);
+    }
+
+    // Alerta comparación de precio vs referencia
     var alertEl = document.getElementById('ent-price-alert-' + idx);
     var card    = document.getElementById('ent-item-' + idx);
-    var oldCost = parseFloat((cuEl || {}).dataset && (cuEl || {}).dataset.oldCost);
-    if (alertEl && !isNaN(oldCost) && oldCost > 0 && Math.abs(cu - oldCost) > 0.001) {
-        var diff = cu - oldCost;
+    var oldCost = parseFloat((puEl.dataset && puEl.dataset.oldCost) || (vuEl.dataset && vuEl.dataset.oldCost));
+    var compare = pu;
+    if (alertEl && !isNaN(oldCost) && oldCost > 0 && Math.abs(compare - oldCost) > 0.001) {
+        var diff = compare - oldCost;
         var pct  = (diff / oldCost * 100).toFixed(1);
         var isUp = diff > 0;
-        alertEl.style.display   = 'flex';
-        alertEl.style.alignItems = 'center';
-        alertEl.style.gap       = '.4rem';
+        alertEl.style.display = 'flex';
         alertEl.innerHTML =
-            '<span style="display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;' +
-            'border-radius:99px;font-size:.65rem;font-weight:800;' +
+            '<span style="display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:99px;font-size:.65rem;font-weight:800;' +
             'background:' + (isUp ? '#fee2e2;color:#ef4444' : '#dcfce7;color:#16a34a') + ';">' +
             '<i class="bi bi-arrow-' + (isUp ? 'up' : 'down') + '"></i>' +
-            (isUp ? '¡Sube Precio!' : 'Baja Precio') + '</span>' +
-            '<span style="font-size:.65rem;color:#94a3b8;font-weight:600;">' +
-            'Ref: S/ ' + oldCost.toFixed(2) + ' → ' + (isUp ? '+' : '') + pct + '%</span>';
-        if (card) {
-            card.classList.remove('price-up', 'price-down');
-            card.classList.add(isUp ? 'price-up' : 'price-down');
-        }
+            (isUp ? '¡Sube!' : 'Baja') + '</span>' +
+            '<span style="font-size:.65rem;color:#94a3b8;font-weight:600;">Ref: S/ ' + oldCost.toFixed(2) + ' → ' + (isUp ? '+' : '') + pct + '%</span>';
+        if (card) { card.classList.remove('price-up','price-down'); card.classList.add(isUp ? 'price-up' : 'price-down'); }
     } else if (alertEl) {
         alertEl.style.display = 'none';
-        if (card) card.classList.remove('price-up', 'price-down');
+        if (card) card.classList.remove('price-up','price-down');
     }
+    window._entActualizarTotal();
+};
     window._entActualizarTotal();
 };
 
@@ -352,24 +391,22 @@ window._entAgregarItemPorQR = function(invId) {
 };
 
 window._entActualizarTotal = function() {
-    var imps = document.querySelectorAll('.ent-item-imp');
-    var total = 0;
-    imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
-    var moneda = (document.getElementById('ent-f-moneda') || {}).value;
-    var mode   = window._entIgvMode || 'sin_igv';
+    var totalImp = 0, totalIgv = 0;
+    document.querySelectorAll('.ent-item-imp').forEach(function(el) { totalImp += parseFloat(el.value) || 0; });
+    document.querySelectorAll('.ent-item-igv').forEach(function(el) { totalIgv += parseFloat(el.value) || 0; });
+    var totalGravado = totalImp - totalIgv;
+    var moneda = (document.getElementById('ent-f-moneda') || {}).value || 'PEN';
+    var mode   = window._entIgvMode || 'incluido';
     var mon    = moneda === 'USD' ? '$' : 'S/';
     var el     = document.getElementById('ent-total-display');
     if (!el) return;
 
-    // Mostrar desglose IGV
     var desglose = document.getElementById('ent-igv-desglose');
     if (mode !== 'sin_igv') {
-        var gravado = total / 1.18;
-        var igv     = total - gravado;
-        var gravEl  = document.getElementById('ent-total-gravado');
-        var igvEl   = document.getElementById('ent-total-igv');
-        if (gravEl) gravEl.textContent = mon + ' ' + gravado.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-        if (igvEl)  igvEl.textContent  = mon + ' ' + igv.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        var gravEl = document.getElementById('ent-total-gravado');
+        var igvEl  = document.getElementById('ent-total-igv');
+        if (gravEl) gravEl.textContent = mon + ' ' + totalGravado.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (igvEl)  igvEl.textContent  = mon + ' ' + totalIgv.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
         if (desglose) desglose.style.display = 'block';
     } else {
         if (desglose) desglose.style.display = 'none';
@@ -377,13 +414,11 @@ window._entActualizarTotal = function() {
 
     if (moneda === 'USD') {
         var tc = parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70;
-        var pen = total * tc;
-        el.innerHTML = '<span style="font-weight:900;">$ ' +
-            total.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +
-            '</span><span style="font-size:.75rem;color:var(--subtext);margin-left:.4rem;">\u2248 S/ ' +
-            pen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
+        var pen = totalImp * tc;
+        el.innerHTML = '<span style="font-weight:900;">$ ' + totalImp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +
+            '</span><span style="font-size:.75rem;color:var(--subtext);margin-left:.4rem;">\u2248 S/ ' + pen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
     } else {
-        el.textContent = 'S/ ' + total.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        el.textContent = 'S/ ' + totalImp.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     }
 };
 
@@ -403,8 +438,21 @@ window._entSetIgvMode = function(mode) {
         if (m === mode) { btn.style.background = '#16a34a'; btn.style.color = '#fff'; btn.style.borderColor = '#16a34a'; }
         else { btn.style.background = '#f1f5f9'; btn.style.color = '#64748b'; btn.style.borderColor = '#e2e8f0'; }
     });
+    // Actualizar readonly de VU y PU en todos los items existentes
+    document.querySelectorAll('.ent-item-vu').forEach(function(el) {
+        var isRo = (mode === 'incluido' || mode === 'sin_igv');
+        el.readOnly = isRo;
+        el.style.background = isRo ? '#f8fafc' : '';
+        el.style.color = isRo ? '#64748b' : '';
+    });
+    document.querySelectorAll('.ent-item-pu').forEach(function(el) {
+        var isRo = (mode === 'mas_igv' || mode === 'sin_igv');
+        el.readOnly = isRo;
+        el.style.background = isRo ? '#f8fafc' : '';
+        el.style.color = isRo ? '#64748b' : '';
+    });
     document.querySelectorAll('.ent-item-cant').forEach(function(el) {
-        window._entCalcImporte(parseInt(el.dataset.idx));
+        window._entCalcImporte(parseInt(el.dataset.idx), 'cant');
     });
 };
 
@@ -424,7 +472,7 @@ window.guardarEntrada = function() {
     var invIds = document.querySelectorAll('.ent-item-inv-id');
     var descs  = document.querySelectorAll('.ent-item-desc');
     var cants  = document.querySelectorAll('.ent-item-cant');
-    var cus    = document.querySelectorAll('.ent-item-cu');
+    var pus    = document.querySelectorAll('.ent-item-pu');
     var imps   = document.querySelectorAll('.ent-item-imp');
     var items  = [];
     for (var i = 0; i < cants.length; i++) {
@@ -432,13 +480,11 @@ window.guardarEntrada = function() {
         var desc  = descs[i]  ? descs[i].value  : '';
         if (!invId && !desc) continue;
         var cant = parseFloat(cants[i].value) || 0;
-        var cu   = parseFloat(cus[i].value)   || 0;
-        var imp  = parseFloat(imps[i].value)  || cant * cu;
+        var pu   = parseFloat(pus[i] ? pus[i].value : 0) || 0;
+        var imp  = parseFloat(imps[i].value) || cant * pu;
         if (cant <= 0) { alert('Cantidad inválida en fila '+(i+1)); return; }
-        // Guardar costo final (con IGV) para que Mantenimiento vea el costo real pagado
-        var cuBase = cu;
-        if (window._entIgvMode === 'mas_igv') cuBase = parseFloat((cu * 1.18).toFixed(4));
-        items.push({ inventario_id: invId||null, descripcion: desc, cantidad: cant, costo_unitario: cuBase, moneda: moneda, importe: imp });
+        // costo_unitario = precio unitario final (con IGV incluido)
+        items.push({ inventario_id: invId||null, descripcion: desc, cantidad: cant, costo_unitario: pu, moneda: moneda, importe: imp });
     }
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
@@ -485,7 +531,7 @@ window.abrirModalEntrada = function() {
 
     window._entAgregarItem();
 
-    window._entSetIgvMode('sin_igv');
+    window._entSetIgvMode('incluido');
 
     var panel = document.getElementById('modal-entrada');
     var bd    = document.getElementById('ent-entrada-bd');
