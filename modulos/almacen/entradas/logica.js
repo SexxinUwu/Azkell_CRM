@@ -28,6 +28,7 @@ window._entTC        = window._entTC        || 3.70;
 window._entItemIdx   = window._entItemIdx   || 0;
 window._entInvData   = window._entInvData   || [];
 window._entDetalleId = window._entDetalleId || null;
+window._entIgvMode   = window._entIgvMode   || 'sin_igv';
 var _ENT_POR_PAG = 20;
 
 window.init_entradas = function() {
@@ -117,6 +118,31 @@ window._entActualizarTC = function() {
     var mon = moneda === 'USD' ? '$' : 'S/';
     var el = document.getElementById('ent-total-display');
     if (el) { var old = el.textContent.replace(/^[S\$\/\s\.]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
+};
+
+window._entSetIgvMode = function(mode) {
+    window._entIgvMode = mode;
+    var cfg = {
+        'sin_igv': 'ent-igv-btn-sin',
+        'incluido': 'ent-igv-btn-inc',
+        'mas_igv':  'ent-igv-btn-mas'
+    };
+    Object.keys(cfg).forEach(function(m) {
+        var btn = document.getElementById(cfg[m]);
+        if (!btn) return;
+        if (m === mode) {
+            btn.style.background   = '#16a34a';
+            btn.style.color        = '#fff';
+            btn.style.borderColor  = '#16a34a';
+        } else {
+            btn.style.background   = '#f1f5f9';
+            btn.style.color        = '#64748b';
+            btn.style.borderColor  = '#e2e8f0';
+        }
+    });
+    document.querySelectorAll('.ent-item-cant').forEach(function(el) {
+        window._entCalcImporte(parseInt(el.dataset.idx));
+    });
 };
 
 // ── Grid items (card-based) ───────────────────────────────────────
@@ -215,7 +241,14 @@ window._entCalcImporte = function(idx) {
     var cuEl  = document.querySelector('.ent-item-cu[data-idx="'+idx+'"]');
     var cu    = parseFloat((cuEl || {}).value) || 0;
     var impEl = document.querySelector('.ent-item-imp[data-idx="'+idx+'"]');
-    if (impEl) impEl.value = (cant * cu).toFixed(2);
+    var mode  = window._entIgvMode || 'sin_igv';
+    var importe;
+    if (mode === 'mas_igv') {
+        importe = cant * cu * 1.18;
+    } else {
+        importe = cant * cu;
+    }
+    if (impEl) impEl.value = importe.toFixed(2);
 
     // Alerta comparación de precio
     var alertEl = document.getElementById('ent-price-alert-' + idx);
@@ -323,8 +356,25 @@ window._entActualizarTotal = function() {
     var total = 0;
     imps.forEach(function(el) { total += parseFloat(el.value) || 0; });
     var moneda = (document.getElementById('ent-f-moneda') || {}).value;
-    var el = document.getElementById('ent-total-display');
+    var mode   = window._entIgvMode || 'sin_igv';
+    var mon    = moneda === 'USD' ? '$' : 'S/';
+    var el     = document.getElementById('ent-total-display');
     if (!el) return;
+
+    // Mostrar desglose IGV
+    var desglose = document.getElementById('ent-igv-desglose');
+    if (mode !== 'sin_igv') {
+        var gravado = total / 1.18;
+        var igv     = total - gravado;
+        var gravEl  = document.getElementById('ent-total-gravado');
+        var igvEl   = document.getElementById('ent-total-igv');
+        if (gravEl) gravEl.textContent = mon + ' ' + gravado.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (igvEl)  igvEl.textContent  = mon + ' ' + igv.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (desglose) desglose.style.display = 'block';
+    } else {
+        if (desglose) desglose.style.display = 'none';
+    }
+
     if (moneda === 'USD') {
         var tc = parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70;
         var pen = total * tc;
@@ -337,7 +387,7 @@ window._entActualizarTotal = function() {
     }
 };
 
-// ── Guardar ───────────────────────────────────────────────────────
+window._entActualizarTC = function() {
 window.guardarEntrada = function() {
     if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
@@ -364,12 +414,16 @@ window.guardarEntrada = function() {
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
         if (cant <= 0) { alert('Cantidad inválida en fila '+(i+1)); return; }
-        items.push({ inventario_id: invId||null, descripcion: desc, cantidad: cant, costo_unitario: cu, moneda: moneda, importe: imp });
+        // Para el inventario, guardar siempre el costo base sin IGV
+        var cuBase = cu;
+        if (window._entIgvMode === 'incluido') cuBase = cu / 1.18;
+        items.push({ inventario_id: invId||null, descripcion: desc, cantidad: cant, costo_unitario: cuBase, moneda: moneda, importe: imp });
     }
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
     var payload = { fecha, proveedor_id: provId||null, proveedor_nombre: provNombre||null,
         documento_referencia: docRef||null, moneda,
+        tipo_igv: window._entIgvMode || 'sin_igv',
         tipo_cambio: moneda === 'USD'
             ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70)
             : 1,
@@ -409,6 +463,8 @@ window.abrirModalEntrada = function() {
     window._entOnMonedaChange();
 
     window._entAgregarItem();
+
+    window._entSetIgvMode('sin_igv');
 
     var panel = document.getElementById('modal-entrada');
     var bd    = document.getElementById('ent-entrada-bd');
