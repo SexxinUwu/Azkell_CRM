@@ -106,7 +106,7 @@
           <input type="text" class="form-control text-uppercase border-primary fw-bold"
                  name="sf_motora" id="sf_motora"
                  placeholder="Buscar placa..." autocomplete="off"
-                 oninput="sfSearch('motora',this.value)"
+                 oninput="sfSearch('motora',this.value); if(window.autocompletarStatus) window.autocompletarStatus('motora');"
                  onfocus="sfSearch('motora',this.value)"
                  onblur="sfHide('motora')">
           <div class="sf-panel" id="sfPanel_motora"></div>
@@ -123,7 +123,7 @@
           <input type="text" class="form-control text-uppercase border-info fw-bold"
                  name="sf_nomotora" id="sf_nomotora"
                  placeholder="Buscar placa..." autocomplete="off"
-                 oninput="sfSearch('nomotora',this.value)"
+                 oninput="sfSearch('nomotora',this.value); if(window.autocompletarStatus) window.autocompletarStatus('nomotora');"
                  onfocus="sfSearch('nomotora',this.value)"
                  onblur="sfHide('nomotora')">
           <div class="sf-panel" id="sfPanel_nomotora"></div>
