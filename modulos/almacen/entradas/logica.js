@@ -388,7 +388,27 @@ window._entActualizarTotal = function() {
 };
 
 window._entActualizarTC = function() {
-window.guardarEntrada = function() {
+    var moneda = (document.getElementById('ent-f-moneda') || {}).value || 'PEN';
+    var mon = moneda === 'USD' ? '$' : 'S/';
+    var el = document.getElementById('ent-total-display');
+    if (el) { var old = el.textContent.replace(/^[S\$\/\s\.]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
+};
+
+window._entSetIgvMode = function(mode) {
+    window._entIgvMode = mode;
+    var cfg = { 'sin_igv': 'ent-igv-btn-sin', 'incluido': 'ent-igv-btn-inc', 'mas_igv': 'ent-igv-btn-mas' };
+    Object.keys(cfg).forEach(function(m) {
+        var btn = document.getElementById(cfg[m]);
+        if (!btn) return;
+        if (m === mode) { btn.style.background = '#16a34a'; btn.style.color = '#fff'; btn.style.borderColor = '#16a34a'; }
+        else { btn.style.background = '#f1f5f9'; btn.style.color = '#64748b'; btn.style.borderColor = '#e2e8f0'; }
+    });
+    document.querySelectorAll('.ent-item-cant').forEach(function(el) {
+        window._entCalcImporte(parseInt(el.dataset.idx));
+    });
+};
+
+// ── Guardar ───────────────────────────────────────────────────────
     if (!window.guardAction('ent_inv', 'c')) return;
     var fecha      = (document.getElementById('ent-f-fecha')  || {}).value || '';
     var provId     = window._cbGet('ent-f-proveedor');
@@ -414,9 +434,9 @@ window.guardarEntrada = function() {
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
         if (cant <= 0) { alert('Cantidad inválida en fila '+(i+1)); return; }
-        // Para el inventario, guardar siempre el costo base sin IGV
+        // Guardar costo final (con IGV) para que Mantenimiento vea el costo real pagado
         var cuBase = cu;
-        if (window._entIgvMode === 'incluido') cuBase = cu / 1.18;
+        if (window._entIgvMode === 'mas_igv') cuBase = parseFloat((cu * 1.18).toFixed(4));
         items.push({ inventario_id: invId||null, descripcion: desc, cantidad: cant, costo_unitario: cuBase, moneda: moneda, importe: imp });
     }
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
