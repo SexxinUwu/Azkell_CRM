@@ -267,7 +267,10 @@ window.guardarProveedor = function(event) {
     var url    = id ? '/api/almacen/proveedores/'+encodeURIComponent(id) : '/api/almacen/proveedores';
     var method = id ? 'PUT' : 'POST';
     fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-        .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(function(r) {
+            if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(body) { throw new Error('HTTP '+r.status+(body.error ? ': '+body.error : '')); });
+            return r.json();
+        })
         .then(function() {
             bootstrap.Modal.getInstance(document.getElementById('modal-proveedor'))?.hide();
             window.cargarProveedores();
