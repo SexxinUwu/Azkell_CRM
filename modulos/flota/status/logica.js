@@ -43,7 +43,9 @@ function sfPickThis(el) {
     if (inp) inp.value = val;
     const p = document.getElementById('sfPanel_' + tipo);
     if (p) p.classList.remove('show');
-    if (tipo === 'motora' || tipo === 'nomotora') autocompletarStatus(tipo);
+    if (tipo === 'motora' || tipo === 'nomotora') {
+        if (window.autocompletarStatus) window.autocompletarStatus(tipo);
+    }
 }
 
 function sfPick(tipo, val) {
@@ -135,7 +137,10 @@ function abrirModalNuevoStatusFlota() {
         .catch(e => console.error("Error cargando conductores:", e));
 
     new bootstrap.Offcanvas(document.getElementById('modalStatusFlota')).show();
-} - EXPANDIR / COLAPSAR
+}
+
+// ================================================================
+// 🔀 GRUPOS - EXPANDIR / COLAPSAR
 // ================================================================
 function toggleGroupRowSF(claseZ) {
     expandSFMap[claseZ] = !expandSFMap[claseZ];
