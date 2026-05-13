@@ -618,6 +618,31 @@ window.init_status = function() {
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('status','c') ? '' : 'none';
     if(typeof cargarStatusFlota === 'function') cargarStatusFlota();
 
+    // FAB mobile — toggle
+    window._sfFABToggle = function() {
+        const btn      = document.getElementById('sf-fab-btn');
+        const menu     = document.getElementById('sf-fab-menu');
+        const backdrop = document.getElementById('sf-fab-backdrop');
+        const isOpen   = btn && btn.classList.contains('fab-open');
+        if (isOpen) {
+            btn      && btn.classList.remove('fab-open');
+            menu     && menu.classList.remove('fab-menu-open');
+            if (backdrop) backdrop.style.display = 'none';
+        } else {
+            btn      && btn.classList.add('fab-open');
+            menu     && menu.classList.add('fab-menu-open');
+            if (backdrop) backdrop.style.display = 'block';
+        }
+    };
+    window._sfFABClose = function() {
+        const btn      = document.getElementById('sf-fab-btn');
+        const menu     = document.getElementById('sf-fab-menu');
+        const backdrop = document.getElementById('sf-fab-backdrop');
+        btn      && btn.classList.remove('fab-open');
+        menu     && menu.classList.remove('fab-menu-open');
+        if (backdrop) backdrop.style.display = 'none';
+    };
+
     setTimeout(() => {
         if(typeof initMapaFlota === 'function') initMapaFlota();
         if(window.mapaFlota) window.mapaFlota.invalidateSize();
