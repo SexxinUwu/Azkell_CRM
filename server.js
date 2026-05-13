@@ -3979,14 +3979,18 @@ function _generarCodigoAlmacen(tipo, anio, cb) {
     const tablas = { INV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
     const tabla = tablas[tipo];
     const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
-    db.query(`SELECT MAX(id) AS max_id FROM \`${tabla}\` WHERE id LIKE ?`, [prefix + '%'], (err, rows) => {
-        if (err) return cb(err);
-        let num = 1;
-        const last = rows[0]?.max_id;
-        if (last) { const p = last.split('-'); num = parseInt(p[p.length - 1], 10) + 1; }
-        const pad = anio ? 5 : 4;
-        cb(null, prefix + String(num).padStart(pad, '0'));
-    });
+    db.query(
+        `SELECT id FROM \`${tabla}\` WHERE id LIKE ? ORDER BY CAST(SUBSTRING_INDEX(id, '-', -1) AS UNSIGNED) DESC LIMIT 1`,
+        [prefix + '%'],
+        (err, rows) => {
+            if (err) return cb(err);
+            let num = 1;
+            const last = rows[0]?.id;
+            if (last) { const p = last.split('-'); num = parseInt(p[p.length - 1], 10) + 1; }
+            const pad = anio ? 5 : 4;
+            cb(null, prefix + String(num).padStart(pad, '0'));
+        }
+    );
 }
 
 // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
@@ -4109,7 +4113,7 @@ app.post('/api/almacen/importarProveedoresMasivo', async (req, res) => {
 
         // 4. INSERT nuevos en paralelo (IDs pre-asignados, sin race condition)
         await Promise.all(nuevos.map((p, i) => {
-            const id = 'PROV-' + String(startNum + i).padStart(3, '0');
+            const id = 'PROV-' + String(startNum + i).padStart(4, '0');
             const marcasArr = mkMarcas(p);
             return dbq(
                 'INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
