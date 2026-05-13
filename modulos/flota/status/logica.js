@@ -58,15 +58,13 @@ function sfInitCombos() {
     window.sfComboData.motora   = allPlacas;
     window.sfComboData.nomotora = allPlacas;
 
-    // Zonas: base + existentes en datos
-    const zonasBase = ['Lavado','Mantenimiento','Ruta','Terminal','Patio','Taller','Puerto','Almacén'];
-    const zonasExist = [...new Set((window.dataGlobalStatusFlota || []).map(f => f[7]).filter(Boolean))];
-    window.sfComboData.zona = [...new Set([...zonasBase, ...zonasExist])].sort().map(z => ({ v: z, s: '' }));
+    // Zonas: solo las 3 definidas
+    window.sfComboData.zona = ['Lavado', 'Mantenimiento', 'Patio'].map(z => ({ v: z, s: '' }));
 
-    // Estados: base + existentes
-    const estadosBase = ['Vacío','Cargado','Con Devolución','En Mantenimiento','En Ruta','Disponible','Inactivo'];
+    // Estados definidos
+    const estadosBase = ['Cargado', 'Con Devolución', 'Disponible', 'En Mantenimiento', 'Vacío'];
     const estadosExist = [...new Set((window.dataGlobalStatusFlota || []).map(f => f[9]).filter(Boolean))];
-    window.sfComboData.estado = [...new Set([...estadosBase, ...estadosExist])].sort().map(e => ({ v: e, s: '' }));
+    window.sfComboData.estado = [...new Set([...estadosBase, ...estadosExist])].map(e => ({ v: e, s: '' }));
 }
 
 function sfResetKm() {
@@ -163,11 +161,12 @@ function toggleAllSFGroups() {
 window.obtenerTipoCompuesto = function(motora, nomotora) {
     const limpiarTexto = (txt) => {
         if (!txt) return "";
-        return txt.toUpperCase()
-            .replace(/Ã³/g, 'Ó')
-            .replace(/Ã"/g, 'Ó')
-            .replace(/CAMIÃ³N/g, 'CAMIÓN')
-            .replace(/CAMIÃ"N/g, 'CAMIÓN');
+        // Corregir encoding y pasar a title case
+        return txt
+            .replace(/Ã³/g, 'ó').replace(/Ã"/g, 'Ó')
+            .replace(/Ã¡/g, 'á').replace(/Ã©/g, 'é').replace(/Ã­/g, 'í').replace(/Ã±/g, 'ñ')
+            .toLowerCase()
+            .replace(/(^|[\s\-])(\S)/g, (_, sep, ch) => sep + ch.toUpperCase());
     };
 
     let tMot = "", tNoMot = "";
@@ -249,9 +248,9 @@ function mostrarStatusFlota(datos) {
             let iconClass = isExpandido ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
 
             html += `<tr class="group-header data-row-sf" style="cursor:pointer;" onclick="toggleGroupRowSF('${claseZ}')" data-group-clase="${claseZ}">
-                <td colspan="9" class="text-start" style="padding-left: 20px;">
+                <td colspan="10" class="text-start" style="padding-left: 20px;">
                     <i class="bi ${iconClass} ms-1 me-2 text-warning"></i>
-                    <i class="bi bi-truck text-primary me-2"></i><span class="text-uppercase fw-bold">${tipoName}</span>
+                    <i class="bi bi-truck text-primary me-2"></i><span class="fw-bold">${tipoName}</span>
                     <span class="group-count badge bg-secondary ms-2">${registros.length}</span>
                 </td>
             </tr>`;
@@ -298,9 +297,15 @@ function mostrarStatusFlota(datos) {
                     else return `<span class="badge bg-success text-white shadow-sm" title="Faltan ${dias} días">${dias}d</span>`;
                 };
 
-                let kmBadge = km ? `<br><small class="text-muted fw-normal"><i class="bi bi-speedometer2"></i> ${parseInt(km).toLocaleString()} km</small>` : '';
-                let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
-                let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : (zona ? `<span class="text-muted">${zona}</span>` : '<span class="text-muted">-</span>'));
+                let kmCell = km ? `<span class="fw-bold"><i class="bi bi-speedometer2 text-muted me-1"></i>${parseInt(km).toLocaleString()}</span>` : '<span class="text-muted">-</span>';
+                let bEst = `<span class="fw-bold text-primary">${estado || '-'}</span>`;
+                let bZona = zona === 'Lavado'
+                    ? '<span class="badge bg-info text-dark">Lavado</span>'
+                    : zona === 'Mantenimiento'
+                        ? '<span class="badge bg-warning text-dark">Mantenimiento</span>'
+                        : zona === 'Patio'
+                            ? '<span class="badge bg-secondary text-white">Patio</span>'
+                            : (zona ? `<span class="badge bg-light text-dark border">${zona}</span>` : '<span class="text-muted">-</span>');
 
                 let canEditSF = window.checkPerm('status','e');
                 let canDeleteSF = window.checkPerm('status','d');
@@ -311,11 +316,12 @@ function mostrarStatusFlota(datos) {
                 let menuAcciones = itemsSF ? `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemsSF}</ul></div>` : `<span class="text-muted"><i class="bi bi-dash"></i></span>`;
 
                 html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${tipoName}" data-fecha="${fecha}" data-corte="${corte}">
-                    <td class="fw-bold text-secondary">${motora || '-'}${kmBadge}</td>
+                    <td class="fw-bold text-secondary">${motora || '-'}</td>
+                    <td>${kmCell}</td>
                     <td>${getDias(motora)}</td>
                     <td class="fw-bold text-secondary">${nomotora || '-'}</td>
                     <td>${getDias(nomotora)}</td>
-                    <td class="text-uppercase">${conductor || '-'}</td>
+                    <td>${conductor || '-'}</td>
                     <td>${bEst}</td>
                     <td>${bZona}</td>
                     <td class="text-wrap" style="max-width: 150px;">${obs}</td>
@@ -567,17 +573,19 @@ window.generarPDFStatusFlota = function(event) {
             if (row.classList.contains('group-header')) {
                 let txtTipo = row.querySelector('span.text-uppercase');
                 if (txtTipo) {
-                    htmlCuerpo += `<tr><td colspan="6" style="background-color: #cbd5e1; font-weight: bold; padding: 4px 8px; color:#1e293b; text-align:left; font-size: 11px;">${txtTipo.innerText}</td></tr>`;
+                    htmlCuerpo += `<tr><td colspan="7" style="background-color: #cbd5e1; font-weight: bold; padding: 4px 8px; color:#1e293b; text-align:left; font-size: 11px;">${txtTipo.innerText}</td></tr>`;
                 }
             } else if (row.classList.contains('child-row-sf')) {
                 let celdas = row.querySelectorAll('td');
+                // Orden nuevo: motora(0) | km(1) | inspMot(2) | nomotora(3) | inspNoMot(4) | conductor(5) | estado(6) | zona(7) | obs(8)
                 htmlCuerpo += `<tr>
                     <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2563eb; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[0]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[2]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 22%;">${celdas[4]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[5]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[6]?.innerText || ''}</td>
-                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 9px; line-height: 1.1; width: 30%; word-break: break-word;">${celdas[7]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 8%;">${celdas[1]?.innerText || '-'}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[3]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 20%;">${celdas[5]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-size: 9px; line-height: 1.1; width: 12%;">${celdas[6]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 9px; line-height: 1.1; width: 10%;">${celdas[7]?.innerText || ''}</td>
+                    <td style="padding: 3px 4px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 9px; line-height: 1.1; width: 26%; word-break: break-word;">${celdas[8]?.innerText || ''}</td>
                 </tr>`;
             }
         }
