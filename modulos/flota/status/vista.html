@@ -75,8 +75,8 @@
         </div>
     </div>
     <div class="card p-0"><div class="table-container"><table class="table table-custom m-0" id="tablaStatusFlota">
-        <thead><tr><th data-i18n="fstatus.col.tracto">Tracto / Camión</th><th data-i18n="fstatus.col.insp.tc">Prox Insp. T/C</th><th data-i18n="fstatus.col.carreta">Carreta / Remolque</th><th data-i18n="fstatus.col.insp.cr">Prox Insp. C/R</th><th data-i18n="fstatus.col.driver">Conductor</th><th data-i18n="common.status">Estado</th><th data-i18n="common.zone">Zona</th><th data-i18n="fstatus.col.obs">Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="9" class="text-center py-5" data-i18n="common.loading">Cargando Status Flota...</td></tr></tbody>
+        <thead><tr><th>U. Motora</th><th style="white-space:nowrap">Km</th><th>Prox Insp. T/C</th><th>U. No Motora</th><th>Prox Insp. C/R</th><th>Conductor</th><th>Estado</th><th>Zona</th><th>Observaciones</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+        <tbody id="cuerpoTablaStatusFlota"><tr><td colspan="10" class="text-center py-5" data-i18n="common.loading">Cargando Status Flota...</td></tr></tbody>
     </table></div></div>
 </div>
 
@@ -241,7 +241,7 @@
       <div class="mb-3">
         <label class="form-label fw-bold"><i class="bi bi-activity"></i> Estado</label>
         <div class="sf-combo">
-          <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado"
+          <input type="text" class="form-control" name="sf_estado" id="sf_estado"
                  placeholder="Elige o escribe nuevo..." autocomplete="off"
                  oninput="sfSearch('estado',this.value)"
                  onfocus="sfSearch('estado',this.value)"
@@ -271,19 +271,27 @@
 <div id="contenedor-pdf-status-flota" style="display: none;">
     <div id="pdf-status-flota" style="background: white; padding: 30px; font-family: Arial, sans-serif; color: #000;">
         <div style="text-align: center; border-bottom: 3px solid #d32f2f; padding-bottom: 20px; margin-bottom: 30px;">
-            <h2 style="margin: 0; color: #d32f2f; font-size: 28px; font-weight: bold;">AZKELL CRM</h2>
+            <h2 style="margin: 0; color: #d32f2f; font-size: 28px; font-weight: bold;">Azkell Fleet</h2>
             <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Reporte de Status de Flota</p>
         </div>
         <div style="margin-bottom: 25px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
                 <thead style="background-color: #1e293b; color: white;">
-                    <tr><th style="padding: 10px;">TRACTO/CAMIÓN</th><th style="padding: 10px;">CARRETA/REMOLQUE</th><th style="padding: 10px;">CONDUCTOR</th><th style="padding: 10px;">ESTADO</th><th style="padding: 10px;">ZONA</th><th style="padding: 10px;">OBSERVACIONES</th></tr>
+                    <tr>
+                      <th style="padding: 10px;">U. Motora</th>
+                      <th style="padding: 10px;">Km</th>
+                      <th style="padding: 10px;">U. No Motora</th>
+                      <th style="padding: 10px;">Conductor</th>
+                      <th style="padding: 10px;">Estado</th>
+                      <th style="padding: 10px;">Zona</th>
+                      <th style="padding: 10px;">Observaciones</th>
+                    </tr>
                 </thead>
                 <tbody id="pdf-sf-body"></tbody>
             </table>
         </div>
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; font-size: 9px; color: #666;">
-            <p style="margin: 0;">Documento generado automáticamente por AZKELL CRM</p>
+            <p style="margin: 0;">Documento generado automáticamente por Azkell Fleet</p>
             <p style="margin: 0;">Fecha: <span id="pdf-sf-fecha-gen"></span></p>
         </div>
     </div>
