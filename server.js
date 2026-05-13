@@ -1065,7 +1065,7 @@ app.post('/api/script/:metodo', async (req, res) => {
                 r.unidad_motora || '', r.unidad_no_motora || '',
                 r.cliente_motora || '', r.cliente_nomotora || '',
                 r.zona || '', r.conductor || '',
-                r.estado || '', r.observaciones || '', r.foto || ''
+                r.estado || '', r.observaciones || '', r.kilometraje || '', r.foto || ''
             ]);
             return res.json({ data });
         });
@@ -1085,17 +1085,18 @@ app.post('/api/script/:metodo', async (req, res) => {
         const conductor = form.sf_conductor || "";
         const estado = form.sf_estado || "";
         const obs = form.sf_obs || "";
+        const km = form.sf_kilometraje ? parseInt(form.sf_kilometraje) : null;
         const usuario = form.usuarioAutor || "";
 
         const query = `
             INSERT INTO status_flota
-            (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, usuario)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            fecha=?, corte=?, unidad_motora=?, unidad_no_motora=?, cliente_motora=?, cliente_nomotora=?, zona=?, conductor=?, estado=?, observaciones=?, usuario=?
+            fecha=?, corte=?, unidad_motora=?, unidad_no_motora=?, cliente_motora=?, cliente_nomotora=?, zona=?, conductor=?, estado=?, observaciones=?, kilometraje=?, usuario=?
         `;
-        const values = [id, fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, usuario,
-                        fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, usuario];
+        const values = [id, fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario,
+                        fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario];
         db.query(query, values, (err) => {
             if (err) { console.error("❌ Error BD Status Flota:", err); return res.json({ data: "Error al guardar en Base de Datos" }); }
             console.log("✅ Status Flota guardado correctamente");

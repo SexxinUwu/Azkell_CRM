@@ -5,6 +5,77 @@
 window.dataGlobalStatusFlota = window.dataGlobalStatusFlota || [];
 window.expandSFMap         = window.expandSFMap         || {};
 window.expandAllSFState    = window.expandAllSFState    || false;
+window.sfComboData         = window.sfComboData         || {};
+
+// ================================================================
+// 🔽 COMBOS MODERNOS - reemplaza datalists nativos
+// ================================================================
+function sfSearch(tipo, val) {
+    const panel = document.getElementById('sfPanel_' + tipo);
+    if (!panel) return;
+    const q = (val || '').toUpperCase().trim();
+    const items = window.sfComboData[tipo] || [];
+    const filtered = q
+        ? items.filter(i => i.v.toUpperCase().includes(q) || (i.s || '').toUpperCase().includes(q))
+        : items.slice(0, 60);
+    if (!filtered.length) { panel.classList.remove('show'); return; }
+    panel.innerHTML = filtered.slice(0, 50).map(i =>
+        `<div class="sf-opt" onmousedown="sfPick('${tipo}',${JSON.stringify(i.v)})">
+            <span class="fw-bold">${i.v}</span>
+            ${i.s ? `<span class="sf-sub">${i.s}</span>` : ''}
+        </div>`
+    ).join('');
+    panel.classList.add('show');
+}
+
+function sfHide(tipo) {
+    setTimeout(() => {
+        const p = document.getElementById('sfPanel_' + tipo);
+        if (p) p.classList.remove('show');
+    }, 180);
+}
+
+function sfPick(tipo, val) {
+    const inp = document.getElementById('sf_' + tipo);
+    if (inp) inp.value = val;
+    const p = document.getElementById('sfPanel_' + tipo);
+    if (p) p.classList.remove('show');
+    if (tipo === 'motora' || tipo === 'nomotora') autocompletarStatus(tipo);
+}
+
+function sfInitCombos() {
+    // Placas para motora y no motora
+    const allPlacas = (window.dataGlobalPlacas || []).map(p => ({ v: p[0] || '', s: p[1] || '' })).filter(p => p.v);
+    window.sfComboData.motora   = allPlacas;
+    window.sfComboData.nomotora = allPlacas;
+
+    // Zonas: base + existentes en datos
+    const zonasBase = ['Lavado','Mantenimiento','Ruta','Terminal','Patio','Taller','Puerto','Almacén'];
+    const zonasExist = [...new Set((window.dataGlobalStatusFlota || []).map(f => f[7]).filter(Boolean))];
+    window.sfComboData.zona = [...new Set([...zonasBase, ...zonasExist])].sort().map(z => ({ v: z, s: '' }));
+
+    // Estados: base + existentes
+    const estadosBase = ['Vacío','Cargado','Con Devolución','En Mantenimiento','En Ruta','Disponible','Inactivo'];
+    const estadosExist = [...new Set((window.dataGlobalStatusFlota || []).map(f => f[9]).filter(Boolean))];
+    window.sfComboData.estado = [...new Set([...estadosBase, ...estadosExist])].sort().map(e => ({ v: e, s: '' }));
+}
+
+function sfResetKm() {
+    const km = document.getElementById('sf_kilometraje');
+    if (!km) return;
+    km.disabled = true;
+    km.value = '';
+    km.placeholder = 'Elige primero la Motora';
+    km.classList.add('sf-km-locked');
+}
+
+function sfEnableKm() {
+    const km = document.getElementById('sf_kilometraje');
+    if (!km) return;
+    km.disabled = false;
+    km.placeholder = 'Ej: 125000';
+    km.classList.remove('sf-km-locked');
+}
 
 // ================================================================
 // 🔄 RECARGAR Y RESETEAR
@@ -32,6 +103,7 @@ function abrirModalNuevoStatusFlota() {
     document.getElementById('sf_cliente_motora').value = '';
     document.getElementById('sf_cliente_nomotora').value = '';
     document.getElementById('sf_zona').value = '';
+    sfResetKm();
 
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
     document.getElementById('sf_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
@@ -41,24 +113,21 @@ function abrirModalNuevoStatusFlota() {
     else if (hora >= 12 && hora < 16) document.getElementById('corte2').checked = true;
     else document.getElementById('corte3').checked = true;
 
-    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
+    sfInitCombos();
 
-    // 🧠 Jalar conductores al abrir el modal
-    const dlConductores = document.getElementById('dl-conductores-status');
-    if (dlConductores) {
-        fetch('/api/conductores-lista')
+    // Cargar conductores en combo
+    fetch('/api/conductores-lista')
         .then(res => res.json())
         .then(data => {
-            let htmlOptions = '';
             if (Array.isArray(data)) {
-                data.forEach(c => {
-                    if (c.nombre) htmlOptions += `<option value="${c.nombre}">`;
-                });
+                window.sfComboData.conductor = data
+                    .filter(c => c.nombre)
+                    .map(c => ({ v: c.nombre, s: c.licencia || '' }));
             }
-            dlConductores.innerHTML = htmlOptions;
         })
-        .catch(e => console.error("Error cargando lista de conductores:", e));
-    }
+        .catch(e => console.error("Error cargando conductores:", e));
+
+    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
 }
 
 // ================================================================
@@ -184,6 +253,7 @@ function mostrarStatusFlota(datos) {
                 let cliMot = fila[5]; let cliNoMot = fila[6];
                 let zona = fila[7] || '';
                 let conductor = fila[8]; let estado = fila[9]; let obs = fila[10] || 'Sin observaciones';
+                let km = fila[11] || '';
 
                 let getDias = (placa) => {
                     if (!placa || placa === "-") return "-";
@@ -219,8 +289,9 @@ function mostrarStatusFlota(datos) {
                     else return `<span class="badge bg-success text-white shadow-sm" title="Faltan ${dias} días">${dias}d</span>`;
                 };
 
+                let kmBadge = km ? `<br><small class="text-muted fw-normal"><i class="bi bi-speedometer2"></i> ${parseInt(km).toLocaleString()} km</small>` : '';
                 let bEst = estado === 'Vacío' ? '<span class="text-muted fw-bold">VACÍO</span>' : `<span class="text-primary fw-bold text-uppercase">${estado}</span>`;
-                let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : '<span class="text-muted">-</span>');
+                let bZona = zona === 'Lavado' ? '<span class="badge bg-info text-dark">LAVADO</span>' : (zona === 'Mantenimiento' ? '<span class="badge bg-warning text-dark">MANTENIMIENTO</span>' : (zona ? `<span class="text-muted">${zona}</span>` : '<span class="text-muted">-</span>'));
 
                 let canEditSF = window.checkPerm('status','e');
                 let canDeleteSF = window.checkPerm('status','d');
@@ -231,7 +302,7 @@ function mostrarStatusFlota(datos) {
                 let menuAcciones = itemsSF ? `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${itemsSF}</ul></div>` : `<span class="text-muted"><i class="bi bi-dash"></i></span>`;
 
                 html += `<tr class="child-row-sf data-row-status-flota" style="display:${isExpandido ? '' : 'none'};" data-climot="${cliMot}" data-clinomot="${cliNoMot}" data-zona="${tipoName}" data-fecha="${fecha}" data-corte="${corte}">
-                    <td class="fw-bold text-secondary">${motora || '-'}</td>
+                    <td class="fw-bold text-secondary">${motora || '-'}${kmBadge}</td>
                     <td>${getDias(motora)}</td>
                     <td class="fw-bold text-secondary">${nomotora || '-'}</td>
                     <td>${getDias(nomotora)}</td>
@@ -301,7 +372,7 @@ function filtrarStatusFlotaAvanzado() {
 }
 
 // ================================================================
-// 🔄 AUTOCOMPLETAR PLACA → CLIENTE
+// 🔄 AUTOCOMPLETAR PLACA → CLIENTE (+ control km)
 // ================================================================
 window.autocompletarStatus = function(tipo) {
     let placaInput = normalizeStr(document.getElementById('sf_' + tipo).value);
@@ -309,10 +380,12 @@ window.autocompletarStatus = function(tipo) {
 
     if (!placaInput) {
         fieldCli.value = '';
+        if (tipo === 'motora') sfResetKm();
         return;
     }
     let matchPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placaInput);
     fieldCli.value = matchPlaca ? (matchPlaca[1] || 'Sin Cliente') : 'No Registrada';
+    if (tipo === 'motora') sfEnableKm();
 };
 
 // ================================================================
@@ -348,6 +421,7 @@ function enviarStatusFlota(event, formObj) {
             sf_conductor: formData.get('sf_conductor'),
             sf_estado: formData.get('sf_estado'),
             sf_obs: formData.get('sf_obs'),
+            sf_kilometraje: formData.get('sf_kilometraje') || null,
             usuarioAutor: usuarioLogueado
         }
     };
@@ -365,6 +439,7 @@ function enviarStatusFlota(event, formObj) {
             document.getElementById('corte' + corteGuardado).checked = true;
             document.getElementById('sf_id').value = '';
             document.querySelectorAll('[id^="sf_cliente_"]').forEach(el => el.value = '');
+            sfResetKm();
 
             btn.innerHTML = '<i class="bi bi-check-circle"></i> ¡Guardado!';
             btn.classList.replace('btn-primary', 'btn-success');
@@ -402,6 +477,9 @@ function abrirModalEditarStatusFlota(id) {
     if (!fila) { alert("No se encontró el registro para editar."); return; }
 
     document.getElementById('formStatusFlota')?.reset();
+    sfResetKm();
+    sfInitCombos();
+
     document.getElementById('sf_id').value = fila[0];
 
     let dDate = new Date(fila[1] + "T00:00:00");
@@ -419,6 +497,30 @@ function abrirModalEditarStatusFlota(id) {
     document.getElementById('sf_conductor').value = fila[8] || '';
     document.getElementById('sf_estado').value = fila[9] || '';
     document.getElementById('sf_obs').value = fila[10] || '';
+
+    // Km: índice 11 tras añadir la columna al array
+    let kmVal = fila[11] || '';
+    const kmEl = document.getElementById('sf_kilometraje');
+    if (kmEl) {
+        if (fila[3]) {
+            sfEnableKm();
+            kmEl.value = kmVal;
+        } else {
+            sfResetKm();
+        }
+    }
+
+    // Cargar conductores en combo para edición
+    fetch('/api/conductores-lista')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                window.sfComboData.conductor = data
+                    .filter(c => c.nombre)
+                    .map(c => ({ v: c.nombre, s: c.licencia || '' }));
+            }
+        })
+        .catch(() => {});
 
     autocompletarStatus('motora');
     autocompletarStatus('nomotora');
@@ -503,12 +605,10 @@ window.init_status = function() {
         window.showNoPermMsg('mod-status-flota');
         return;
     }
-    // Ocultar botón nuevo si no tiene permiso crear
     var btnNuevo = document.querySelector('[onclick*="abrirModalNuevoStatusFlota"]');
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('status','c') ? '' : 'none';
     if(typeof cargarStatusFlota === 'function') cargarStatusFlota();
 
-    // FIX LEAFLET: Esperar a que el DOM se pinte para inicializar el mapa correctamente
     setTimeout(() => {
         if(typeof initMapaFlota === 'function') initMapaFlota();
         if(window.mapaFlota) window.mapaFlota.invalidateSize();
