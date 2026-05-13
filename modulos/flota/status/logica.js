@@ -19,12 +19,13 @@ function sfSearch(tipo, val) {
         ? items.filter(i => i.v.toUpperCase().includes(q) || (i.s || '').toUpperCase().includes(q))
         : items.slice(0, 60);
     if (!filtered.length) { panel.classList.remove('show'); return; }
-    panel.innerHTML = filtered.slice(0, 50).map(i =>
-        `<div class="sf-opt" onmousedown="sfPick('${tipo}',${JSON.stringify(i.v)})">
+    panel.innerHTML = filtered.slice(0, 50).map(i => {
+        const esc = (i.v || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+        return `<div class="sf-opt" data-sf-tipo="${tipo}" data-sf-val="${esc}" onmousedown="sfPickThis(this)">
             <span class="fw-bold">${i.v}</span>
             ${i.s ? `<span class="sf-sub">${i.s}</span>` : ''}
-        </div>`
-    ).join('');
+        </div>`;
+    }).join('');
     panel.classList.add('show');
 }
 
@@ -35,12 +36,18 @@ function sfHide(tipo) {
     }, 180);
 }
 
-function sfPick(tipo, val) {
-    const inp = document.getElementById('sf_' + tipo);
+function sfPickThis(el) {
+    const tipo = el.getAttribute('data-sf-tipo');
+    const val  = el.getAttribute('data-sf-val');
+    const inp  = document.getElementById('sf_' + tipo);
     if (inp) inp.value = val;
     const p = document.getElementById('sfPanel_' + tipo);
     if (p) p.classList.remove('show');
     if (tipo === 'motora' || tipo === 'nomotora') autocompletarStatus(tipo);
+}
+
+function sfPick(tipo, val) {
+    sfPickThis({ getAttribute: (k) => k === 'data-sf-tipo' ? tipo : val });
 }
 
 function sfInitCombos() {
@@ -127,11 +134,8 @@ function abrirModalNuevoStatusFlota() {
         })
         .catch(e => console.error("Error cargando conductores:", e));
 
-    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
-}
-
-// ================================================================
-// 🔀 GRUPOS - EXPANDIR / COLAPSAR
+    new bootstrap.Offcanvas(document.getElementById('modalStatusFlota')).show();
+} - EXPANDIR / COLAPSAR
 // ================================================================
 function toggleGroupRowSF(claseZ) {
     expandSFMap[claseZ] = !expandSFMap[claseZ];
@@ -530,7 +534,7 @@ function abrirModalEditarStatusFlota(id) {
     btn.classList.remove('btn-primary');
     btn.classList.add('btn-warning', 'text-dark');
 
-    new bootstrap.Modal(document.getElementById('modalStatusFlota')).show();
+    new bootstrap.Offcanvas(document.getElementById('modalStatusFlota')).show();
 }
 
 // ================================================================

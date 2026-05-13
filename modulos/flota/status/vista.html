@@ -1,6 +1,19 @@
 <!-- Módulo Status Flota - Aislado en SPA -->
 <style>
-/* ── Combo moderno Status Flota ── */
+/* ── Offcanvas Status Flota ── */
+#modalStatusFlota { width: min(520px, 100vw); }
+#modalStatusFlota .offcanvas-body { overflow-y: auto; padding-bottom: 80px; }
+.sf-offcanvas-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface, #fff);
+    border-top: 1px solid var(--border-color, #dee2e6);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    z-index: 10;
+}
 .sf-combo { position: relative; }
 .sf-panel {
     display: none;
@@ -57,138 +70,137 @@
     </table></div></div>
 </div>
 
-<!-- Modal Agregar/Editar Status Flota -->
-<div class="modal fade" id="modalStatusFlota" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold"><i class="bi bi-truck-front text-primary"></i> <span data-i18n="fstatus.modal.title">Agregar Status Flota</span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)">
-        <input type="hidden" name="usuarioAutor">
-        <input type="hidden" name="sf_id" id="sf_id">
-        <div class="modal-body">
-
-          <!-- Fila 1: Fecha + Corte -->
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold text-primary" data-i18n="fstatus.form.cutdate">Fecha de Corte</label>
-              <input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold text-primary" data-i18n="fstatus.form.shift">Corte (Turno)</label>
-              <div class="d-flex gap-3 mt-1">
-                <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div>
-                <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div>
-                <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Fila 2: Motora + No Motora -->
-          <div class="row">
-            <!-- MOTORA -->
-            <div class="col-md-6 mb-2">
-              <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> <span data-i18n="fstatus.form.motora">Motora *</span></label>
-              <div class="sf-combo">
-                <input type="text" class="form-control text-uppercase border-primary fw-bold"
-                       name="sf_motora" id="sf_motora"
-                       placeholder="Buscar placa..." autocomplete="off"
-                       oninput="sfSearch('motora',this.value)"
-                       onfocus="sfSearch('motora',this.value)"
-                       onblur="sfHide('motora')">
-                <div class="sf-panel" id="sfPanel_motora"></div>
-              </div>
-              <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2"
-                     name="sf_cliente_motora" id="sf_cliente_motora"
-                     placeholder="Cliente Auto-completado..." readonly>
-            </div>
-            <!-- NO MOTORA -->
-            <div class="col-md-6 mb-2">
-              <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> <span data-i18n="fstatus.form.nomotora">No Motora</span></label>
-              <div class="sf-combo">
-                <input type="text" class="form-control text-uppercase border-info fw-bold"
-                       name="sf_nomotora" id="sf_nomotora"
-                       placeholder="Buscar placa..." autocomplete="off"
-                       oninput="sfSearch('nomotora',this.value)"
-                       onfocus="sfSearch('nomotora',this.value)"
-                       onblur="sfHide('nomotora')">
-                <div class="sf-panel" id="sfPanel_nomotora"></div>
-              </div>
-              <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2"
-                     name="sf_cliente_nomotora" id="sf_cliente_nomotora"
-                     placeholder="Cliente Auto-completado..." readonly>
-            </div>
-          </div>
-
-          <!-- Fila 3: Kilometraje (opcional, ligado a Motora) -->
-          <div class="row mb-3">
-            <div class="col-md-5" id="wrap_km">
-              <label class="form-label fw-bold text-muted" id="lbl_km">
-                <i class="bi bi-speedometer2"></i> Kilometraje Actual
-              </label>
-              <input type="number" class="form-control sf-km-locked"
-                     name="sf_kilometraje" id="sf_kilometraje"
-                     placeholder="Elige primero la Motora"
-                     min="0" max="9999999" disabled>
-              <div class="form-text text-muted small">Opcional — se habilita al elegir la Motora</div>
-            </div>
-          </div>
-
-          <!-- Zona -->
-          <div class="mb-3">
-            <label class="form-label fw-bold"><i class="bi bi-geo-alt"></i> Zona</label>
-            <div class="sf-combo">
-              <input type="text" class="form-control" name="sf_zona" id="sf_zona"
-                     placeholder="Elige o escribe nueva..." autocomplete="off"
-                     oninput="sfSearch('zona',this.value)"
-                     onfocus="sfSearch('zona',this.value)"
-                     onblur="sfHide('zona')">
-              <div class="sf-panel" id="sfPanel_zona"></div>
-            </div>
-          </div>
-
-          <!-- Conductor -->
-          <div class="mb-3">
-            <label class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> <span data-i18n="fstatus.form.driver">Conductor</span></label>
-            <div class="sf-combo">
-              <input type="text" class="form-control" id="sf_conductor" name="sf_conductor"
-                     placeholder="Buscar conductor..." autocomplete="off"
-                     oninput="sfSearch('conductor',this.value)"
-                     onfocus="sfSearch('conductor',this.value)"
-                     onblur="sfHide('conductor')">
-              <div class="sf-panel" id="sfPanel_conductor"></div>
-            </div>
-          </div>
-
-          <!-- Estado + Observaciones -->
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold"><i class="bi bi-activity"></i> Estado</label>
-              <div class="sf-combo">
-                <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado"
-                       placeholder="Elige o escribe nuevo..." autocomplete="off"
-                       oninput="sfSearch('estado',this.value)"
-                       onfocus="sfSearch('estado',this.value)"
-                       onblur="sfHide('estado')">
-                <div class="sf-panel" id="sfPanel_estado"></div>
-              </div>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold">Observaciones</label>
-              <textarea class="form-control" name="sf_obs" id="sf_obs" rows="2"></textarea>
-            </div>
-          </div>
-
-        </div><!-- /modal-body -->
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btnGuardarSF" data-i18n="common.saverec">Guardar Registro</button>
-        </div>
-      </form>
-    </div>
+<!-- Offcanvas Agregar/Editar Status Flota (desliza desde la derecha) -->
+<div class="offcanvas offcanvas-end" id="modalStatusFlota" tabindex="-1" data-bs-scroll="true" data-bs-backdrop="true">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold"><i class="bi bi-truck-front text-primary me-2"></i><span data-i18n="fstatus.modal.title">Agregar Status Flota</span></h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
+  <form id="formStatusFlota" onsubmit="enviarStatusFlota(event, this)" class="d-flex flex-column h-100">
+    <input type="hidden" name="usuarioAutor">
+    <input type="hidden" name="sf_id" id="sf_id">
+    <div class="offcanvas-body">
+
+      <!-- Fecha + Corte -->
+      <div class="row">
+        <div class="col-12 mb-3">
+          <label class="form-label fw-bold text-primary" data-i18n="fstatus.form.cutdate">Fecha de Corte</label>
+          <input type="date" class="form-control fw-bold" name="sf_fecha" id="sf_fecha" required>
+        </div>
+        <div class="col-12 mb-3">
+          <label class="form-label fw-bold text-primary" data-i18n="fstatus.form.shift">Corte (Turno)</label>
+          <div class="d-flex gap-3 mt-1">
+            <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte1" value="1" required><label class="form-check-label fw-bold" for="corte1">1 (4am-12pm)</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte2" value="2"><label class="form-check-label fw-bold" for="corte2">2 (12pm-4pm)</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="sf_corte" id="corte3" value="3"><label class="form-check-label fw-bold" for="corte3">3 (4pm-4am)</label></div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-2">
+
+      <!-- MOTORA -->
+      <div class="mb-2">
+        <label class="fw-bold text-primary"><i class="bi bi-truck-front"></i> <span data-i18n="fstatus.form.motora">Motora *</span></label>
+        <div class="sf-combo">
+          <input type="text" class="form-control text-uppercase border-primary fw-bold"
+                 name="sf_motora" id="sf_motora"
+                 placeholder="Buscar placa..." autocomplete="off"
+                 oninput="sfSearch('motora',this.value)"
+                 onfocus="sfSearch('motora',this.value)"
+                 onblur="sfHide('motora')">
+          <div class="sf-panel" id="sfPanel_motora"></div>
+        </div>
+        <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2"
+               name="sf_cliente_motora" id="sf_cliente_motora"
+               placeholder="Cliente Auto-completado..." readonly>
+      </div>
+
+      <!-- NO MOTORA -->
+      <div class="mb-2">
+        <label class="fw-bold text-info"><i class="bi bi-truck-flatbed"></i> <span data-i18n="fstatus.form.nomotora">No Motora</span></label>
+        <div class="sf-combo">
+          <input type="text" class="form-control text-uppercase border-info fw-bold"
+                 name="sf_nomotora" id="sf_nomotora"
+                 placeholder="Buscar placa..." autocomplete="off"
+                 oninput="sfSearch('nomotora',this.value)"
+                 onfocus="sfSearch('nomotora',this.value)"
+                 onblur="sfHide('nomotora')">
+          <div class="sf-panel" id="sfPanel_nomotora"></div>
+        </div>
+        <input type="text" class="form-control form-control-sm bg-light text-secondary mt-2"
+               name="sf_cliente_nomotora" id="sf_cliente_nomotora"
+               placeholder="Cliente Auto-completado..." readonly>
+      </div>
+
+      <!-- KILOMETRAJE -->
+      <div class="mb-3" id="wrap_km">
+        <label class="form-label fw-bold text-muted">
+          <i class="bi bi-speedometer2"></i> Kilometraje Actual
+        </label>
+        <input type="number" class="form-control sf-km-locked"
+               name="sf_kilometraje" id="sf_kilometraje"
+               placeholder="Elige primero la Motora"
+               min="0" max="9999999" disabled>
+        <div class="form-text text-muted small">Opcional — se habilita al elegir la Motora</div>
+      </div>
+
+      <hr class="my-2">
+
+      <!-- ZONA -->
+      <div class="mb-3">
+        <label class="form-label fw-bold"><i class="bi bi-geo-alt"></i> Zona</label>
+        <div class="sf-combo">
+          <input type="text" class="form-control" name="sf_zona" id="sf_zona"
+                 placeholder="Elige o escribe nueva..." autocomplete="off"
+                 oninput="sfSearch('zona',this.value)"
+                 onfocus="sfSearch('zona',this.value)"
+                 onblur="sfHide('zona')">
+          <div class="sf-panel" id="sfPanel_zona"></div>
+        </div>
+      </div>
+
+      <!-- CONDUCTOR -->
+      <div class="mb-3">
+        <label class="form-label fw-bold"><i class="bi bi-person-badge-fill"></i> <span data-i18n="fstatus.form.driver">Conductor</span></label>
+        <div class="sf-combo">
+          <input type="text" class="form-control" id="sf_conductor" name="sf_conductor"
+                 placeholder="Buscar conductor..." autocomplete="off"
+                 oninput="sfSearch('conductor',this.value)"
+                 onfocus="sfSearch('conductor',this.value)"
+                 onblur="sfHide('conductor')">
+          <div class="sf-panel" id="sfPanel_conductor"></div>
+        </div>
+      </div>
+
+      <!-- ESTADO -->
+      <div class="mb-3">
+        <label class="form-label fw-bold"><i class="bi bi-activity"></i> Estado</label>
+        <div class="sf-combo">
+          <input type="text" class="form-control text-uppercase" name="sf_estado" id="sf_estado"
+                 placeholder="Elige o escribe nuevo..." autocomplete="off"
+                 oninput="sfSearch('estado',this.value)"
+                 onfocus="sfSearch('estado',this.value)"
+                 onblur="sfHide('estado')">
+          <div class="sf-panel" id="sfPanel_estado"></div>
+        </div>
+      </div>
+
+      <!-- OBSERVACIONES -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Observaciones</label>
+        <textarea class="form-control" name="sf_obs" id="sf_obs" rows="3" placeholder="Observaciones opcionales..."></textarea>
+      </div>
+
+    </div><!-- /offcanvas-body -->
+
+    <!-- Footer fijo al fondo -->
+    <div class="sf-offcanvas-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas" data-i18n="common.cancel">Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="btnGuardarSF" data-i18n="common.saverec">Guardar Registro</button>
+    </div>
+
+  </form>
 </div>
 
 <!-- Plantilla PDF Status Flota -->
