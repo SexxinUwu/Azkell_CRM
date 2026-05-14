@@ -316,8 +316,6 @@ window._entCalcImporte = function(idx, source) {
     }
     window._entActualizarTotal();
 };
-    window._entActualizarTotal();
-};
 
 window._entQuitarItem = function(idx) {
     var tr = document.getElementById('ent-item-'+idx);
