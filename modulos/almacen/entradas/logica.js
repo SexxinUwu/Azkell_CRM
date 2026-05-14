@@ -179,7 +179,7 @@ window._entAgregarItem = function() {
                 '<i class="bi bi-x-lg"></i>' +
             '</button>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:55px 1fr 1fr 1fr 1fr;gap:5px;">' +
+        '<div style="display:grid;grid-template-columns:72px 1fr 1fr 80px 1fr;gap:5px;">' +
             '<div><div class="ent-field-label">Cant.</div>' +
                 '<input type="number" class="ent-input-sm ent-item-cant" data-idx="' + idx + '"' +
                     ' value="1" min="0.001" step="0.001" oninput="window._entCalcImporte(' + idx + ',\'cant\')">' +
@@ -266,31 +266,27 @@ window._entCalcImporte = function(idx, source) {
         if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); vu = pu; }
         else if (source === 'pu')   { vu = pu; }
         else if (source === 'vu')   { pu = vu; }
-        imp = r2(cant * pu);
         vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
-        igvEl.value = (0).toFixed(2); impEl.value = imp.toFixed(2);
+        igvEl.value = (0).toFixed(2);
+        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
 
     } else if (mode === 'incluido') {
-        // PU es el precio con IGV; VU = PU/1.18 (auto)
-        if (source === 'imp')       { pu = r2(cant > 0 ? imp / cant : 0); }
+        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); }
         else if (source === 'vu')   { pu = r2(vu * 1.18); }
-        // source='pu' or 'cant': pu stays
         vu  = r4(pu / 1.18);
-        imp = r2(cant * pu);
-        var igvRow = r2(imp - cant * vu);
+        var igvRow = r2((source === 'imp' ? imp : r2(cant * pu)) - cant * vu);
         vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
-        igvEl.value = igvRow.toFixed(2); impEl.value = imp.toFixed(2);
+        igvEl.value = igvRow.toFixed(2);
+        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
 
     } else { // mas_igv
-        // VU es el precio base; PU = VU*1.18 (auto); IMP = cant*PU
-        if (source === 'imp')       { pu = r2(cant > 0 ? imp / cant : 0); vu = r4(pu / 1.18); }
+        if (source === 'imp')       { pu = r4(cant > 0 ? imp / cant : 0); vu = r4(pu / 1.18); }
         else if (source === 'pu')   { vu = r4(pu / 1.18); }
         else if (source === 'vu')   { pu = r2(vu * 1.18); }
-        // source='cant': pu/vu stay, recalc imp
-        imp = r2(cant * pu);
-        var igvRow2 = r2(imp - cant * vu);
+        var igvRow2 = r2((source === 'imp' ? imp : r2(cant * pu)) - cant * vu);
         vuEl.value  = vu.toFixed(4); puEl.value  = pu.toFixed(2);
-        igvEl.value = igvRow2.toFixed(2); impEl.value = imp.toFixed(2);
+        igvEl.value = igvRow2.toFixed(2);
+        if (source !== 'imp') impEl.value = r2(cant * pu).toFixed(2);
     }
 
     // Alerta comparación de precio vs referencia
