@@ -239,8 +239,8 @@ window.rotAbrirDetalle = function(idOT) {
 
     var det    = rotDetalles(ot);
     var estado = ot.estado || 'Pendiente';
-    var esAprobada = (estado === 'Aprobada');
-    var puedeAgregarMaterial = (estado === 'En Proceso' || estado === 'Pausada' || estado === 'Aprobada');
+    var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada');
+    var puedeAgregarMaterial = esAprobada;
 
     function esc(s) { return rotEscHtml(String(s||'')); }
     function fld(lbl, val) {
@@ -341,7 +341,7 @@ window.rotAbrirDetalle = function(idOT) {
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
               + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button></div>'
+              + (esAprobada ? '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -1265,7 +1265,7 @@ window.rotGuardarTrabajo = function() {
             .then(function(rows) {
                 window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
                 var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecTrabajos(idOt, ot ? ot.estado === 'Aprobada' : false);
+                rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
             }).catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
@@ -1288,7 +1288,7 @@ window.rotEliminarTrabajo = function() {
             .then(function(rows) {
                 window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
                 var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecTrabajos(idOt, ot ? ot.estado === 'Aprobada' : false);
+                rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
             }).catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
@@ -1515,7 +1515,7 @@ window.rotGuardarMaterial = function() {
             .then(function(rows) {
                 window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
                 var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecMateriales(idOt, ot ? ot.estado === 'Aprobada' : false);
+                rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
             }).catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar solicitud', 'danger'); });
@@ -1533,7 +1533,7 @@ window.rotEliminarMaterial = function(idSolicitud, idOt) {
             .then(function(rows) {
                 window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
                 var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecMateriales(idOt, ot ? ot.estado === 'Aprobada' : false);
+                rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
             }).catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger'); });

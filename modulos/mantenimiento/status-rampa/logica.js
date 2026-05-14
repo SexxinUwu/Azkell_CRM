@@ -78,6 +78,10 @@ function srCargarCatalogos() {
             window.srCatRampas    = d.rampas    || [];
             window.srCatSituaciones = d.situaciones || [];
 
+            // Si el panel config está abierto, actualizarlo
+            var cfgPanel = document.getElementById('sr-config-rampas');
+            if (cfgPanel && cfgPanel.classList.contains('open')) srRenderConfigRampas();
+
             // Poblar select de rampas en el formulario (dinámico)
             var sel = document.getElementById('sr-f-rampa');
             if (sel) {
@@ -325,7 +329,7 @@ function srRenderTabla() {
         if (!entradas.length) {
             if (!busq || rampaNom.toLowerCase().indexOf(busq) !== -1 || String(rampaId).indexOf(busq) !== -1) {
                 html += '<tr class="sr-row-vacia">';
-                html += '<td><span class="sr-badge-rampa" style="background:' + color + '" title="' + _srEsc(rampaNom) + '">' + _srEsc(rampaNom) + '</span></td>';
+                html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
                 html += '<td></td><td></td><td></td>';
                 html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
                 html += '<td></td><td></td><td></td><td></td>';
@@ -355,7 +359,7 @@ function srRenderTabla() {
                 : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
             html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
-            html += '<td><span class="sr-badge-rampa" style="background:' + color + '" title="' + _srEsc(rampaNom) + '">' + _srEsc(rampaNom) + '</span></td>';
+            html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
@@ -410,7 +414,10 @@ window.srAbrirDetalle = function(id) {
     if (!panel || !scroll || !footer) return;
     panel.classList.add('open');
 
-    var color = SR_COLORES[e.rampa - 1];
+    var rampaIdx = window.srCatRampas.findIndex(function(r) { return r.id === e.rampa; });
+    var color = SR_COLORES[(rampaIdx >= 0 ? rampaIdx : e.rampa - 1) % SR_COLORES.length];
+    var rampaDetObj = rampaIdx >= 0 ? window.srCatRampas[rampaIdx] : null;
+    var rampaNomDet = rampaDetObj ? rampaDetObj.nombre_rampa : ('Rampa ' + e.rampa);
 
     // Horas: entre ingreso y salida estimada (o hasta ahora si no hay salida)
     var horasTexto = '';
@@ -431,15 +438,16 @@ window.srAbrirDetalle = function(id) {
     var html = '';
     // Hero
     html += '<div class="sr-hero">';
-    html += '<div class="sr-hero-badge" style="background:' + color + '">' + e.rampa + '</div>';
+    html += '<div class="sr-hero-badge" style="background:' + color + '">' + (rampaIdx + 1) + '</div>';
     html += '<div style="flex:1"><div class="sr-hero-placa">' + e.placa + '</div>';
+    html += '<div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;">' + _srEsc(rampaNomDet) + '</div>';
     html += '<div class="sr-hero-sub">' + srSemaforo(e.situacion, true) + '</div></div>';
     html += '</div>';
     if (horasTexto) html += '<div style="margin-bottom:0.75rem;">' + horasTexto + '</div>';
 
     // I. Recepción
     html += '<div class="sr-sec"><div class="sr-sec-hd">I. Recepción</div>';
-    html += srField('Rampa',         'N° ' + e.rampa);
+    html += srField('Rampa',         _srEsc(rampaNomDet));
     html += srField('Ingreso a Taller', (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—') + (e.horaIngreso ? ' ' + e.horaIngreso : ''));
     html += srField('Situación',     e.situacion ? srSemaforo(e.situacion, true) : '—');
     html += srField('Observaciones', e.obs || '—');
@@ -1635,12 +1643,21 @@ function _srEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 
 // ── Configurar Rampas ─────────────────────────────────────────────
 window.srAbrirConfigRampas = function() {
-    srCargarCatalogos();
-    srRenderConfigRampas();
     var panel = document.getElementById('sr-config-rampas');
     var bd    = document.getElementById('sr-config-bd');
     if (panel) panel.classList.add('open');
     if (bd)    bd.style.display = 'block';
+    if (window.srCatRampas && window.srCatRampas.length) {
+        srRenderConfigRampas();
+    } else {
+        fetch('/api/cat-rampas')
+            .then(function(r) { return r.ok ? r.json() : []; })
+            .then(function(d) {
+                window.srCatRampas = Array.isArray(d) ? d : [];
+                srRenderConfigRampas();
+            })
+            .catch(function() { srRenderConfigRampas(); });
+    }
 };
 
 window.srCerrarConfigRampas = function() {
