@@ -7,6 +7,7 @@
 window.srDetalleId            = window.srDetalleId            || null;
 window.srOtData               = window.srOtData               || [];
 window.srCatSituaciones       = window.srCatSituaciones       || [];
+window.srCatRampas            = window.srCatRampas            || [];
 window.srOtTrabajosActivos    = window.srOtTrabajosActivos    || [];
 window.srOtMaterialesActivos  = window.srOtMaterialesActivos  || [];
 window.srHistorialData        = window.srHistorialData        || [];
@@ -74,17 +75,26 @@ function srCargarCatalogos() {
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) {
             if (!d) return;
+            window.srCatRampas    = d.rampas    || [];
             window.srCatSituaciones = d.situaciones || [];
 
-            // Selector Registrar (situación de rampa)
-            var sel = document.getElementById('sr-f-situacion');
-            if (sel && window.srCatSituaciones.length) {
-                sel.innerHTML = window.srCatSituaciones.map(function(s) {
+            // Poblar select de rampas en el formulario (dinámico)
+            var sel = document.getElementById('sr-f-rampa');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+                    window.srCatRampas.map(function(r) {
+                        return '<option value="' + r.id + '">' + _srEsc(r.nombre_rampa) + '</option>';
+                    }).join('');
+            }
+
+            // Selector situación de rampa
+            var selSit = document.getElementById('sr-f-situacion');
+            if (selSit && window.srCatSituaciones.length) {
+                selSit.innerHTML = window.srCatSituaciones.map(function(s) {
                     var l = s.descripcion || s.nombre || '';
                     return '<option value="' + l + '">' + l + '</option>';
                 }).join('');
             }
-            // Dropdown buscable Situación Inicial en OT
             var nombres = window.srCatSituaciones.map(function(s) { return s.descripcion || s.nombre || ''; }).filter(Boolean);
             window._srDropData['sr-ot-situacion-drop'] = nombres;
             var drop = document.getElementById('sr-ot-situacion-drop');
@@ -94,6 +104,8 @@ function srCargarCatalogos() {
                     return '<div class="sr-drop-item" onmousedown="srSeleccionarDrop(\'sr-ot-situacion-drop\',\'' + n.replace(/'/g,"\\'") + '\')">' + nEsc + '</div>';
                 }).join('');
             }
+
+            srRenderTabla();
         })
         .catch(function() {});
 }
@@ -300,27 +312,33 @@ function srRenderTabla() {
     var busq = ((document.getElementById('sr-buscador') || {}).value || '').trim().toLowerCase();
     var html  = '';
 
-    for (var rampa = 1; rampa <= 12; rampa++) {
-        var color    = SR_COLORES[rampa - 1];
-        var entradas = window.srEntradas.filter(function(e) { return e.rampa === rampa; });
+    var rampas = window.srCatRampas.length
+        ? window.srCatRampas
+        : Array.from({length:12}, function(_,i) { return { id: i+1, nombre_rampa: 'Rampa '+(i+1) }; });
+
+    rampas.forEach(function(rampaObj, idx) {
+        var rampaId   = rampaObj.id;
+        var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
+        var color     = SR_COLORES[idx % SR_COLORES.length];
+        var entradas  = window.srEntradas.filter(function(e) { return e.rampa === rampaId; });
 
         if (!entradas.length) {
-            // Fila vacía
-            if (!busq || String(rampa).indexOf(busq) !== -1) {
+            if (!busq || rampaNom.toLowerCase().indexOf(busq) !== -1 || String(rampaId).indexOf(busq) !== -1) {
                 html += '<tr class="sr-row-vacia">';
-                html += '<td><span class="sr-badge-rampa" style="background:' + color + '">' + rampa + '</span></td>';
+                html += '<td><span class="sr-badge-rampa" style="background:' + color + '" title="' + _srEsc(rampaNom) + '">' + _srEsc(rampaNom) + '</span></td>';
                 html += '<td></td><td></td><td></td>';
                 html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
                 html += '<td></td><td></td><td></td><td></td>';
-                html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + rampa + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
+                html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
                 html += '</tr>';
             }
-            continue;
+            return;
         }
 
         entradas.forEach(function(e) {
             if (busq) {
-                var match = String(e.rampa).indexOf(busq) !== -1 ||
+                var match = rampaNom.toLowerCase().indexOf(busq) !== -1 ||
+                    String(e.rampa).indexOf(busq) !== -1 ||
                     (e.placa || '').toLowerCase().indexOf(busq) !== -1 ||
                     (e.situacion || '').toLowerCase().indexOf(busq) !== -1 ||
                     (e.obs || '').toLowerCase().indexOf(busq) !== -1;
@@ -337,7 +355,7 @@ function srRenderTabla() {
                 : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
             html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
-            html += '<td><span class="sr-badge-rampa" style="background:' + color + '">' + rampa + '</span></td>';
+            html += '<td><span class="sr-badge-rampa" style="background:' + color + '" title="' + _srEsc(rampaNom) + '">' + _srEsc(rampaNom) + '</span></td>';
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
@@ -354,7 +372,7 @@ function srRenderTabla() {
             }
             html += '</td></tr>';
         });
-    }
+    });
 
     if (!html) {
         html = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</td></tr>';
@@ -1612,6 +1630,106 @@ function srFmtFecha(iso) {
     var m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return p[2] + ' ' + m[parseInt(p[1],10)-1] + ' ' + p[0].slice(2);
 }
+
+function _srEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Configurar Rampas ─────────────────────────────────────────────
+window.srAbrirConfigRampas = function() {
+    srCargarCatalogos();
+    srRenderConfigRampas();
+    var panel = document.getElementById('sr-config-rampas');
+    var bd    = document.getElementById('sr-config-bd');
+    if (panel) panel.classList.add('open');
+    if (bd)    bd.style.display = 'block';
+};
+
+window.srCerrarConfigRampas = function() {
+    var panel = document.getElementById('sr-config-rampas');
+    var bd    = document.getElementById('sr-config-bd');
+    if (panel) panel.classList.remove('open');
+    if (bd)    bd.style.display = 'none';
+};
+
+function srRenderConfigRampas() {
+    var list = document.getElementById('sr-config-list');
+    if (!list) return;
+    var rampas = window.srCatRampas || [];
+    if (!rampas.length) {
+        list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--subtext);font-size:.85rem;">Sin rampas. Agrega la primera.</div>';
+        return;
+    }
+    list.innerHTML = rampas.map(function(r) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<input type="text" value="' + _srEsc(r.nombre_rampa) + '" id="sr-cfg-nom-' + r.id + '" ' +
+                'style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.85rem;" ' +
+                'onblur="window.srGuardarNombreRampa(' + r.id + ')" ' +
+                'onkeydown="if(event.key===\'Enter\')this.blur()">' +
+            '<button onclick="window.srEliminarRampa(' + r.id + ')" title="Eliminar" ' +
+                'style="border:none;background:none;color:#ef4444;cursor:pointer;padding:4px 6px;border-radius:6px;" ' +
+                'onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'none\'">' +
+                '<i class="bi bi-trash"></i></button>' +
+        '</div>';
+    }).join('');
+}
+
+window.srGuardarNombreRampa = function(id) {
+    var inp = document.getElementById('sr-cfg-nom-' + id);
+    if (!inp) return;
+    var nombre = inp.value.trim();
+    if (!nombre) { inp.value = (window.srCatRampas.find(function(r){return r.id===id;})||{}).nombre_rampa || ''; return; }
+    fetch('/api/cat-rampas/' + id, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ nombre_rampa: nombre })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+        var r = window.srCatRampas.find(function(x){return x.id===id;});
+        if (r) r.nombre_rampa = nombre;
+        srRenderTabla();
+        var sel = document.getElementById('sr-f-rampa');
+        if (sel) {
+            var opt = sel.querySelector('option[value="'+id+'"]');
+            if (opt) opt.textContent = nombre;
+        }
+    })
+    .catch(function() { inp.style.borderColor='#ef4444'; });
+};
+
+window.srAgregarRampa = function() {
+    var inp = document.getElementById('sr-cfg-nueva');
+    if (!inp) return;
+    var nombre = inp.value.trim();
+    if (!nombre) { inp.focus(); return; }
+    fetch('/api/cat-rampas', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ nombre_rampa: nombre })
+    })
+    .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function(res) {
+        inp.value = '';
+        window.srCatRampas.push({ id: res.id, nombre_rampa: nombre, sede: 'Principal', estado: 'Disponible' });
+        srRenderConfigRampas();
+        srRenderTabla();
+        var sel = document.getElementById('sr-f-rampa');
+        if (sel) sel.innerHTML += '<option value="'+res.id+'">'+_srEsc(nombre)+'</option>';
+    })
+    .catch(function() { alert('Error al agregar rampa.'); });
+};
+
+window.srEliminarRampa = function(id) {
+    if (!confirm('¿Eliminar esta rampa? Solo se puede si está libre.')) return;
+    fetch('/api/cat-rampas/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.error) { alert(res.error); return; }
+            window.srCatRampas = window.srCatRampas.filter(function(r){return r.id !== id;});
+            srRenderConfigRampas();
+            srRenderTabla();
+        })
+        .catch(function() { alert('Error al eliminar.'); });
+};
 
 function srAbrirDrawer(id) {
     var back = document.getElementById('srDrawerBackdrop');

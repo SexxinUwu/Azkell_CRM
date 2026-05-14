@@ -1819,8 +1819,63 @@ app.post('/api/eliminarMasivo', (req, res) => {
 // 🔥 MÓDULO TALLER V2 (CATÁLOGOS E IDs INTELIGENTES)
 // ============================================================
 
+// ── CRUD cat_rampas ──────────────────────────────────────────────
+// Auto-seed: si la tabla está vacía, insertar 12 rampas por defecto
+function _seedRampasIfEmpty(cb) {
+    db.query('SELECT COUNT(*) AS cnt FROM cat_rampas', (err, rows) => {
+        if (err || rows[0].cnt > 0) return cb();
+        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible']);
+        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado) VALUES ?', [vals], cb);
+    });
+}
+
+app.get('/api/cat-rampas', (req, res) => {
+    _seedRampasIfEmpty(() => {
+        db.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        });
+    });
+});
+
+app.post('/api/cat-rampas', (req, res) => {
+    const { nombre_rampa, sede } = req.body;
+    if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
+    db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado) VALUES (?,?,?)',
+        [nombre_rampa.trim(), sede || 'Principal', 'Disponible'], (err, r) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true, id: r.insertId });
+    });
+});
+
+app.put('/api/cat-rampas/:id', (req, res) => {
+    const { nombre_rampa, estado } = req.body;
+    const sets = [];
+    const vals = [];
+    if (nombre_rampa !== undefined) { sets.push('nombre_rampa=?'); vals.push(nombre_rampa.trim()); }
+    if (estado !== undefined) { sets.push('estado=?'); vals.push(estado); }
+    if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
+    vals.push(req.params.id);
+    db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
+
+app.delete('/api/cat-rampas/:id', (req, res) => {
+    db.query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND estado="Activo"', [req.params.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (rows[0].cnt > 0) return res.status(400).json({ error: 'La rampa tiene unidades activas. Libéralas primero.' });
+        db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ ok: true });
+        });
+    });
+});
+
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
 app.get('/api/catalogos_taller', (req, res) => {
+    _seedRampasIfEmpty(() => {
     const sqlRampas = "SELECT * FROM cat_rampas ORDER BY id ASC";
     const sqlSituaciones = "SELECT * FROM cat_situaciones ORDER BY id ASC";
     db.query(sqlRampas, (err1, rampas) => {
@@ -1830,6 +1885,7 @@ app.get('/api/catalogos_taller', (req, res) => {
             res.json({ rampas, situaciones });
         });
     });
+    }); // fin _seedRampasIfEmpty
 });
 
 // CRUD cat_situaciones  (columnas reales: id, codigo, descripcion)

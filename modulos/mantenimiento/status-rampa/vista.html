@@ -473,6 +473,9 @@
         <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
         </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas">
+            <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
+        </button>
         <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
             <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
         </button>
@@ -587,6 +590,31 @@
 
 </div><!-- fin moduloStatusRampa -->
 
+<!-- ═══════════════ PANEL: Configurar Rampas ═══════════════ -->
+<div id="sr-config-bd" onclick="window.srCerrarConfigRampas()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1050;"></div>
+<div id="sr-config-rampas" style="position:fixed;top:0;right:0;height:100%;width:360px;max-width:95vw;background:var(--surface);border-left:1px solid var(--border);z-index:1051;transform:translateX(100%);transition:.3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <span style="font-size:1rem;font-weight:800;color:var(--text);"><i class="bi bi-gear me-2"></i>Configurar Rampas</span>
+        <button onclick="window.srCerrarConfigRampas()" style="border:none;background:none;font-size:1.2rem;color:var(--subtext);cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px;">
+        <p style="font-size:.82rem;color:var(--subtext);margin-bottom:16px;">Edita el nombre de cada espacio directamente o agrega nuevos. Solo puedes eliminar rampas que estén libres.</p>
+        <div id="sr-config-list"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+            <input type="text" id="sr-cfg-nueva" placeholder="Ej: Zona espera, Auxilio mecánico…"
+                style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:.85rem;"
+                onkeydown="if(event.key==='Enter')window.srAgregarRampa()">
+            <button onclick="window.srAgregarRampa()"
+                style="padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.85rem;">
+                <i class="bi bi-plus-lg me-1"></i>Agregar
+            </button>
+        </div>
+    </div>
+</div>
+<style>
+#sr-config-rampas.open { transform: translateX(0); }
+</style>
+
 <!-- FAB: Registrar Unidad (sólo móvil) -->
 <button id="sr-fab" onclick="window.srRegistrar()" title="Registrar Unidad">
     <i class="bi bi-plus-lg"></i>
@@ -614,18 +642,6 @@
                 <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Rampa *</label>
                 <select class="form-select form-select-sm" id="sr-f-rampa" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
                     <option value="">— Seleccionar —</option>
-                    <option value="1">Rampa 1</option>
-                    <option value="2">Rampa 2</option>
-                    <option value="3">Rampa 3</option>
-                    <option value="4">Rampa 4</option>
-                    <option value="5">Rampa 5</option>
-                    <option value="6">Rampa 6</option>
-                    <option value="7">Rampa 7</option>
-                    <option value="8">Rampa 8</option>
-                    <option value="9">Rampa 9</option>
-                    <option value="10">Rampa 10</option>
-                    <option value="11">Rampa 11</option>
-                    <option value="12">Rampa 12</option>
                 </select>
             </div>
 
