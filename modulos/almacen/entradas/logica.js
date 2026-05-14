@@ -631,17 +631,18 @@ window._entRender = function() {
 
             var cant  = parseFloat(it.cantidad || 0);
             var cu    = parseFloat(it.costo_unitario || 0);
-            var nombre = _entEsc(it.descripcion || '—');
+            var nombre = _entEsc(_entDescLimpia(it.descripcion, it.inventario_id));
             var invId  = _entEsc(it.inventario_id || '—');
+            var provHtml = d.proveedor_nombre ? '<span style="font-size:.78rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
-                '<td style="white-space:nowrap;font-size:.82rem;">' + (isFirst ? fecha : '') + '</td>' +
-                '<td class="col-hide-mob">' + (isFirst ? (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') : '') + '</td>' +
-                '<td class="col-hide-mob" style="font-size:.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
-                '<td style="font-size:.82rem;">' + nombre + '</td>' +
-                '<td class="text-end" style="font-size:.82rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
-                '<td class="text-end col-hide-mob" style="font-size:.82rem;">S/ ' + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;">' + (isFirst ? fecha : '') + '</td>' +
+                '<td class="col-hide-mob">' + provHtml + '</td>' +
+                '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
+                '<td style="font-size:.80rem;">' + nombre + '</td>' +
+                '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+                '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
                 '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + totalFmt + '</strong>' : '') + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
@@ -765,6 +766,12 @@ window._entCerrarDetalle = function() {
 
 
 function _entEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _entDescLimpia(desc, invId) {
+    if (!desc) return '—';
+    if (invId && desc.indexOf(invId + ' — ') === 0) return desc.slice(invId.length + 3);
+    var sep = desc.indexOf(' — ');
+    return sep !== -1 ? desc.slice(sep + 3) : desc;
+}
 
 // ── Comprobante PDF ───────────────────────────────────────────────
 window.generarComprobanteEntrada = function(id) {
