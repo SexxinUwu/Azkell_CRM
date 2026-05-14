@@ -17,9 +17,12 @@ window.poblarSelectsFormularios = function(datos) {
     const filas = datos.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
 
     function unicos(idx) {
-        const set = new Set();
-        filas.forEach(f => { const v = (f[idx]||'').toString().trim().toUpperCase(); if (v) set.add(v); });
-        return [...set].sort();
+        const seen = new Map();
+        filas.forEach(f => {
+            const v = (f[idx]||'').toString().trim();
+            if (v) { const key = v.toUpperCase(); if (!seen.has(key)) seen.set(key, v); }
+        });
+        return [...seen.values()].sort((a, b) => a.localeCompare(b, 'es'));
     }
 
     function poblar(id, valores) {
@@ -90,9 +93,10 @@ window.cambiarFilasPlacas = function(filas) {
 // ── Autocompleta RUC al seleccionar cliente ──────────────────────────────────
 window.autocompletarRucSelect = function(clienteNombre, rucFieldId) {
     if (!clienteNombre || !dataGlobalPlacas) return;
-    const match = dataGlobalPlacas.find(f => (f[1]||'').toString().trim() === clienteNombre);
+    const nombre = clienteNombre.toString().trim().toUpperCase();
+    const match = dataGlobalPlacas.find(f => (f[1]||'').toString().trim().toUpperCase() === nombre);
     const rucEl = document.getElementById(rucFieldId);
-    if (rucEl) rucEl.value = match ? (match[2] || '') : '';
+    if (rucEl && match) rucEl.value = match[2] || '';
 };
 
 // ── Abre modal para agregar nuevo cliente ────────────────────────────────────
@@ -774,7 +778,7 @@ window.abrirModalEditarPlaca = function(index) {
         const valorLimpio = p[i] ? p[i].toString().trim() : '';
         // Si el campo usa combobox, actualizar con _cbSet
         if (typeof window._cbSet === 'function' && document.getElementById(id + '-txt')) {
-            window._cbSet(id, valorLimpio.toUpperCase(), valorLimpio.toUpperCase());
+            window._cbSet(id, valorLimpio, valorLimpio);
             return;
         }
         const el = document.getElementById(id);
@@ -785,9 +789,9 @@ window.abrirModalEditarPlaca = function(index) {
                 if (match) {
                     el.value = match.value;
                 } else if (el.classList.contains('sel-inteligente')) {
-                    const nuevaOpcion = new Option(valorLimpio.toUpperCase(), valorLimpio.toUpperCase());
+                    const nuevaOpcion = new Option(valorLimpio, valorLimpio);
                     el.insertBefore(nuevaOpcion, el.lastElementChild);
-                    el.value = valorLimpio.toUpperCase();
+                    el.value = valorLimpio;
                 } else {
                     el.value = valorLimpio;
                 }
