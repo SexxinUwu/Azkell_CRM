@@ -65,7 +65,7 @@ window._entToggleFiltrosMobile = function() {
 
 window.cargarEntradas = function() {
     var tbody = document.getElementById('tbody-entradas');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
     fetch('/api/almacen/entradas')
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(data) {
@@ -76,7 +76,7 @@ window.cargarEntradas = function() {
         })
         .catch(function(err) {
             var t = document.getElementById('tbody-entradas');
-            if (t) t.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
+            if (t) t.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Error: '+err.message+'</td></tr>';
         });
 };
 
@@ -582,30 +582,80 @@ window._entRender = function() {
     var tbody = document.getElementById('tbody-entradas');
     if (!tbody) return;
     if (!pagina.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin entradas encontradas</td></tr>';
-    } else {
-        tbody.innerHTML = pagina.map(function(d) {
-            var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
-            var tp = parseFloat(d.total_pen || 0);
-            var totalFmt = 'S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            var nitems = (d.items || []).length;
-            var isActive = d.id === window._entDetalleId;
-            return '<tr' + (isActive ? ' class="ent-row-active"' : '') + ' onclick="window._entAbrirDetalle(\'' + _entEsc(d.id) + '\')" style="cursor:pointer;">' +
+        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-inbox" style="font-size:1.5rem;opacity:0.3"></i><br>Sin entradas encontradas</td></tr>';
+        var paginEl2 = document.getElementById('ent-paginacion');
+        if (paginEl2) paginEl2.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    pagina.forEach(function(d) {
+        var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+        var tp = parseFloat(d.total_pen || 0);
+        var totalFmt = 'S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var items = d.items || [];
+        var isActive = d.id === window._entDetalleId;
+        var activeCls = isActive ? ' ent-row-active' : '';
+
+        if (!items.length) {
+            var tr0 = document.createElement('tr');
+            tr0.className = activeCls.trim();
+            tr0.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
-                '<td style="font-size:0.82rem;">' + fecha + '</td>' +
-                '<td>' + (d.proveedor_nombre ? '<span style="font-size:0.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
-                '<td><small class="text-muted">' + _entEsc(d.documento_referencia || '—') + '</small></td>' +
-                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.68rem;">' + nitems + ' art.</span></td>' +
-                '<td class="text-end fw-semibold" style="color:#16a34a;">' + totalFmt + '</td>' +
+                '<td style="white-space:nowrap;font-size:.82rem;">' + fecha + '</td>' +
+                '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
+                '<td class="col-hide-mob" colspan="2" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
+                '<td class="text-end"></td>' +
+                '<td class="text-end col-hide-mob"></td>' +
+                '<td class="text-end col-hide-mob"><strong style="color:#16a34a;">' + totalFmt + '</strong></td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
-                        '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Previsualizar"><i class="bi bi-eye"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Descargar PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
                         (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                     '</div>' +
-                '</td></tr>';
-        }).join('');
-    }
+                '</td>';
+            tr0.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
+            tbody.appendChild(tr0);
+            return;
+        }
+
+        items.forEach(function(it, idx) {
+            var isFirst = idx === 0;
+            var isLast  = idx === items.length - 1;
+            var tr = document.createElement('tr');
+            var cls = activeCls;
+            if (!isFirst) cls += ' ent-item-sub';
+            if (isLast && items.length > 1) cls += ' ent-item-last';
+            tr.className = cls.trim();
+
+            var cant  = parseFloat(it.cantidad || 0);
+            var cu    = parseFloat(it.costo_unitario || 0);
+            var nombre = _entEsc(it.descripcion || '—');
+            var invId  = _entEsc(it.inventario_id || '—');
+
+            tr.innerHTML =
+                '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                '<td style="white-space:nowrap;font-size:.82rem;">' + (isFirst ? fecha : '') + '</td>' +
+                '<td class="col-hide-mob">' + (isFirst ? (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') : '') + '</td>' +
+                '<td class="col-hide-mob" style="font-size:.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
+                '<td style="font-size:.82rem;">' + nombre + '</td>' +
+                '<td class="text-end" style="font-size:.82rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
+                '<td class="text-end col-hide-mob" style="font-size:.82rem;">S/ ' + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+                '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + totalFmt + '</strong>' : '') + '</td>' +
+                '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
+                    (isFirst ?
+                        '<div class="d-flex gap-1 justify-content-center">' +
+                            '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                            (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                        '</div>'
+                    : '') +
+                '</td>';
+            tr.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
+            tbody.appendChild(tr);
+        });
+    });
 
     var paginEl = document.getElementById('ent-paginacion');
     if (paginEl) {
