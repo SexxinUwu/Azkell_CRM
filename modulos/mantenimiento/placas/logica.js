@@ -496,10 +496,13 @@ window.abrirDetallePlaca = function(event, index) {
     document.getElementById('det-placa-titulo').innerText = p[0] || 'SIN PLACA';
 
     const ids = ['det-cliente','det-ruc','det-marca','det-modelo','det-tipo','det-sub_tipo','det-color','det-nro_motor','det-nro_caja','det-nro_corona','det-nro_vin','det-conf','det-anio','det-comb','det-carga_util','det-peso_neto','det-peso_bruto','det-estado','det-uts','det-motora','det-llantas','det-enuso'];
+    var _detTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
+    var _detTcIds = ['det-marca','det-tipo','det-sub_tipo','det-color','det-conf'];
     ids.forEach((id, i) => {
         const el = document.getElementById(id);
         if (el) {
-            el.innerText = p[i + 1] ? p[i + 1] : '-';
+            var raw = p[i + 1] ? p[i + 1] : '-';
+            el.innerText = (_detTcIds.indexOf(id) >= 0 && raw !== '-') ? _detTc(raw) : raw;
             if (id === 'det-estado') {
                 el.className = 'badge-premium ' + (p[i + 1] === 'Activa' ? 'badge-green' : 'badge-red');
             }
@@ -774,11 +777,15 @@ window.abrirModalEditarPlaca = function(index) {
         'e_uts', 'e_motora', 'e_llantas', 'e_enuso'
     ];
 
+    var _editTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
+    var _editTcIds = ['e_marca','e_tipo','e_sub_tipo','e_color','e_conf'];
+
     ids.forEach((id, i) => {
         const valorLimpio = p[i] ? p[i].toString().trim() : '';
         // Si el campo usa combobox, actualizar con _cbSet
         if (typeof window._cbSet === 'function' && document.getElementById(id + '-txt')) {
-            window._cbSet(id, valorLimpio, valorLimpio);
+            var labelCb = (_editTcIds.indexOf(id) >= 0 && valorLimpio) ? _editTc(valorLimpio) : valorLimpio;
+            window._cbSet(id, valorLimpio, labelCb);
             return;
         }
         const el = document.getElementById(id);
