@@ -602,7 +602,7 @@ window._entRender = function() {
             tr0.className = activeCls.trim();
             tr0.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
-                '<td style="white-space:nowrap;font-size:.82rem;">' + fecha + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
                 '<td class="col-hide-mob" colspan="2" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
@@ -620,13 +620,25 @@ window._entRender = function() {
             return;
         }
 
-        items.forEach(function(it, idx) {
+        // Si la búsqueda no coincide con la cabecera, filtrar solo los items que coincidan
+        var buscar = ((document.getElementById('ent-buscar') || {}).value || '').toLowerCase().trim();
+        var itemsFiltrados = items;
+        if (buscar) {
+            var cabText = [d.id, d.proveedor_nombre, d.documento_referencia].join(' ').toLowerCase();
+            if (cabText.indexOf(buscar) === -1) {
+                itemsFiltrados = items.filter(function(it) {
+                    return [(it.inventario_id || ''), (it.descripcion || '')].join(' ').toLowerCase().indexOf(buscar) !== -1;
+                });
+            }
+        }
+
+        itemsFiltrados.forEach(function(it, idx) {
             var isFirst = idx === 0;
-            var isLast  = idx === items.length - 1;
+            var isLast  = idx === itemsFiltrados.length - 1;
             var tr = document.createElement('tr');
             var cls = activeCls;
             if (!isFirst) cls += ' ent-item-sub';
-            if (isLast && items.length > 1) cls += ' ent-item-last';
+            if (isLast && itemsFiltrados.length > 1) cls += ' ent-item-last';
             tr.className = cls.trim();
 
             var cant  = parseFloat(it.cantidad || 0);
@@ -637,7 +649,7 @@ window._entRender = function() {
 
             tr.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
-                '<td style="white-space:nowrap;font-size:.80rem;">' + (isFirst ? fecha : '') + '</td>' +
+                '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="col-hide-mob">' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
                 '<td style="font-size:.80rem;">' + nombre + '</td>' +
