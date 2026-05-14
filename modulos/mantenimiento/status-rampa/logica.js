@@ -1645,7 +1645,7 @@ function _srEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 window.srAbrirConfigRampas = function() {
     var panel = document.getElementById('sr-config-rampas');
     var bd    = document.getElementById('sr-config-bd');
-    if (panel) panel.classList.add('open');
+    if (panel) { panel.classList.add('open'); panel.style.transform = 'translateX(0)'; }
     if (bd)    bd.style.display = 'block';
     if (window.srCatRampas && window.srCatRampas.length) {
         srRenderConfigRampas();
@@ -1663,7 +1663,7 @@ window.srAbrirConfigRampas = function() {
 window.srCerrarConfigRampas = function() {
     var panel = document.getElementById('sr-config-rampas');
     var bd    = document.getElementById('sr-config-bd');
-    if (panel) panel.classList.remove('open');
+    if (panel) { panel.classList.remove('open'); panel.style.transform = 'translateX(100%)'; }
     if (bd)    bd.style.display = 'none';
 };
 
