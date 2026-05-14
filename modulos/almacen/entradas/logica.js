@@ -113,38 +113,6 @@ window._entCargarProveedores = function() {
     if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
 };
 
-window._entActualizarTC = function() {
-    var moneda = (document.getElementById('ent-f-moneda') || {}).value || 'PEN';
-    var mon = moneda === 'USD' ? '$' : 'S/';
-    var el = document.getElementById('ent-total-display');
-    if (el) { var old = el.textContent.replace(/^[S\$\/\s\.]+/,''); el.textContent = mon + ' ' + (old || '0.00'); }
-};
-
-window._entSetIgvMode = function(mode) {
-    window._entIgvMode = mode;
-    var cfg = {
-        'sin_igv': 'ent-igv-btn-sin',
-        'incluido': 'ent-igv-btn-inc',
-        'mas_igv':  'ent-igv-btn-mas'
-    };
-    Object.keys(cfg).forEach(function(m) {
-        var btn = document.getElementById(cfg[m]);
-        if (!btn) return;
-        if (m === mode) {
-            btn.style.background   = '#16a34a';
-            btn.style.color        = '#fff';
-            btn.style.borderColor  = '#16a34a';
-        } else {
-            btn.style.background   = '#f1f5f9';
-            btn.style.color        = '#64748b';
-            btn.style.borderColor  = '#e2e8f0';
-        }
-    });
-    document.querySelectorAll('.ent-item-cant').forEach(function(el) {
-        window._entCalcImporte(parseInt(el.dataset.idx));
-    });
-};
-
 // ── Grid items (card-based) ───────────────────────────────────────
 window._entAgregarItem = function() {
     var container = document.getElementById('ent-items-cards');
@@ -424,6 +392,7 @@ window._entActualizarTC = function() {
 };
 
 window._entSetIgvMode = function(mode) {
+    var prevMode = window._entIgvMode || 'incluido';
     window._entIgvMode = mode;
     var cfg = { 'sin_igv': 'ent-igv-btn-sin', 'incluido': 'ent-igv-btn-inc', 'mas_igv': 'ent-igv-btn-mas' };
     Object.keys(cfg).forEach(function(m) {
@@ -432,21 +401,29 @@ window._entSetIgvMode = function(mode) {
         if (m === mode) { btn.style.background = '#16a34a'; btn.style.color = '#fff'; btn.style.borderColor = '#16a34a'; }
         else { btn.style.background = '#f1f5f9'; btn.style.color = '#64748b'; btn.style.borderColor = '#e2e8f0'; }
     });
-    // Actualizar readonly de VU y PU en todos los items existentes
-    document.querySelectorAll('.ent-item-vu').forEach(function(el) {
-        var isRo = (mode === 'incluido' || mode === 'sin_igv');
-        el.readOnly = isRo;
-        el.style.background = isRo ? '#f8fafc' : '';
-        el.style.color = isRo ? '#64748b' : '';
-    });
-    document.querySelectorAll('.ent-item-pu').forEach(function(el) {
-        var isRo = (mode === 'mas_igv' || mode === 'sin_igv');
-        el.readOnly = isRo;
-        el.style.background = isRo ? '#f8fafc' : '';
-        el.style.color = isRo ? '#64748b' : '';
-    });
     document.querySelectorAll('.ent-item-cant').forEach(function(el) {
-        window._entCalcImporte(parseInt(el.dataset.idx), 'cant');
+        var idx = parseInt(el.dataset.idx);
+        var vuEl = document.querySelector('.ent-item-vu[data-idx="'+idx+'"]');
+        var puEl = document.querySelector('.ent-item-pu[data-idx="'+idx+'"]');
+        if (vuEl && puEl && prevMode !== mode) {
+            if (mode === 'mas_igv') {
+                // PU actual pasa a ser el nuevo VU (base)
+                vuEl.value = puEl.value;
+            } else if (mode === 'incluido' && prevMode === 'mas_igv') {
+                // VU actual pasa a ser el nuevo PU (precio inclusive)
+                puEl.value = vuEl.value;
+            }
+        }
+        if (vuEl) {
+            var vuRo = (mode === 'incluido' || mode === 'sin_igv');
+            vuEl.readOnly = vuRo; vuEl.style.background = vuRo ? '#f8fafc' : ''; vuEl.style.color = vuRo ? '#64748b' : '';
+        }
+        if (puEl) {
+            var puRo = (mode === 'mas_igv' || mode === 'sin_igv');
+            puEl.readOnly = puRo; puEl.style.background = puRo ? '#f8fafc' : ''; puEl.style.color = puRo ? '#64748b' : '';
+        }
+        var src = mode === 'mas_igv' ? 'vu' : mode === 'sin_igv' ? 'pu' : 'pu';
+        window._entCalcImporte(idx, src);
     });
 };
 
