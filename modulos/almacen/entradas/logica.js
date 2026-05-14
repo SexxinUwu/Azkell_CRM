@@ -27,6 +27,7 @@ window._entPagActual = window._entPagActual || 1;
 window._entTC        = window._entTC        || 3.70;
 window._entItemIdx   = window._entItemIdx   || 0;
 window._entInvData   = window._entInvData   || [];
+window._entProvItems = window._entProvItems || [];
 window._entDetalleId = window._entDetalleId || null;
 window._entIgvMode   = window._entIgvMode   || 'sin_igv';
 var _ENT_POR_PAG = 20;
@@ -38,6 +39,8 @@ window.init_entradas = function() {
     window._entCargarProveedores();
     window._entCargarConfig();
     window._entMobileInit();
+    // Pre-cargar inventario en segundo plano para que esté listo al abrir el formulario
+    if (!window._entInvData.length) window._entCargarInv();
 };
 
 // ── Mobile Init ───────────────────────────────────────────────────
@@ -98,19 +101,20 @@ window._entCargarConfig = function() {
 };
 
 window._entCargarProveedores = function() {
+    var fechaEl = document.getElementById('ent-f-fecha');
+    if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
+    if (window._entProvItems.length) {
+        window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
+        return;
+    }
     fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            var items = data.map(function(p) {
-                return {
-                    value: p.id,
-                    label: p.nombre + (p.numero_documento ? ' (' + p.numero_documento + ')' : '')
-                };
+            window._entProvItems = data.map(function(p) {
+                return { value: p.id, label: p.nombre + (p.numero_documento ? ' (' + p.numero_documento + ')' : '') };
             });
-            window._cbInit('ent-f-proveedor', items, 'Buscar proveedor…');
+            window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
         }).catch(function() {});
-    var fechaEl = document.getElementById('ent-f-fecha');
-    if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
 };
 
 // ── Grid items (card-based) ───────────────────────────────────────
