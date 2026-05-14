@@ -138,6 +138,9 @@
 #moduloEntradas tbody tr:hover { background: var(--bg); }
 #moduloEntradas tbody tr.ent-row-active { background: rgba(22,163,74,.06); border-left: 3px solid #16a34a; }
 #moduloEntradas tbody td { padding: 10px 12px; color: var(--text); }
+#moduloEntradas tbody tr.ent-item-sub { border-bottom: 1px dashed var(--border); }
+#moduloEntradas tbody tr.ent-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
+#moduloEntradas tbody tr.ent-item-last { border-bottom: 2px solid var(--border); }
 #moduloEntradas .td-placeholder { text-align:center; color:var(--subtext); font-size:0.82rem; padding:2rem; }
 /* Panel detalle desktop */
 #moduloEntradas .ent-detail-panel {
@@ -356,14 +359,16 @@
             <th>Código</th>
             <th>Fecha</th>
             <th class="col-hide-mob">Proveedor</th>
-            <th class="col-hide-mob">Doc. Referencia</th>
-            <th class="text-center">Arts.</th>
-            <th class="text-end">Total PEN</th>
+            <th class="col-hide-mob" style="font-size:0.65rem;">Cód. Art.</th>
+            <th>Artículo</th>
+            <th class="text-end">Cant.</th>
+            <th class="text-end col-hide-mob">Costo Unit.</th>
+            <th class="text-end col-hide-mob">Total</th>
             <th style="width:80px;"></th>
           </tr>
         </thead>
         <tbody id="tbody-entradas">
-          <tr><td colspan="7" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+          <tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
         </tbody>
       </table>
       <div id="ent-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
