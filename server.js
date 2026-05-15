@@ -4906,20 +4906,24 @@ app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
         db.query(`
             SELECT 'Entrada' AS tipo, e.fecha, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
-            WHERE d.inventario_id=? AND (? IS NULL OR DATE(e.fecha) >= ?)
+            WHERE d.inventario_id=?
             UNION ALL
             SELECT 'Salida' AS tipo, s.fecha, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
             WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
-              AND (? IS NULL OR DATE(s.fecha) >= ?)
             ORDER BY fecha ASC, doc_id ASC
-        `, [id, regDate, regDate, id, regDate, regDate], (err, rows) => {
+        `, [id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            let saldo = base;
+            // Calcular saldo acumulado desde cero (sin stock_base); pre-reg es histórico
+            let saldo = 0;
+            const regDateStr = regDate ? String(regDate).split('T')[0] : null;
             rows.forEach(r => {
+                const fechaStr = r.fecha ? String(r.fecha).split('T')[0] : null;
+                const esPreReg = regDateStr && fechaStr && fechaStr < regDateStr;
                 if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad);
                 else saldo -= parseFloat(r.cantidad);
                 r.saldo = parseFloat(saldo.toFixed(4));
+                r.pre_reg = esPreReg ? true : undefined;
             });
             res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
         });
