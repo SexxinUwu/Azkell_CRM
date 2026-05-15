@@ -312,14 +312,45 @@ window._kdxRenderKardex = function(res, item) {
 
 // ── Export Excel ──────────────────────────────────────────────────
 window.exportarKardexExcel = function() {
-    var movs = window._kdxMovData || [];
-    if (!movs.length) { alert('No hay movimientos para exportar.'); return; }
-    var cab = ['Fecha','Tipo','Documento','Contraparte','Cantidad','Costo Unit.','Importe','Saldo'];
-    var filas = movs.map(function(m) {
-        return [m.fecha ? String(m.fecha).split('T')[0] : '', m.tipo, m.doc_id || '', m.contraparte || '',
-                parseFloat(m.cantidad || 0), parseFloat(m.costo_unitario || 0),
-                parseFloat(m.importe || 0), m.saldo != null ? m.saldo : ''];
+    var movs    = window._kdxMovData  || [];
+    var fechaReg = window._kdxFechaReg || null;
+    var stockBase = window._kdxStockBase || 0;
+
+    if (!movs.length && !fechaReg) { alert('No hay movimientos para exportar.'); return; }
+
+    var fechaRegStr = fechaReg ? _kdxFmtISO(fechaReg) : null;
+    var cab = ['Fecha','Tipo','Documento','Contraparte','Cantidad','Costo Unit.','Importe','Saldo','Nota'];
+
+    var filas = [];
+
+    // Movimientos pre-regularización
+    var saldoPre = 0;
+    var movsPreReg = fechaRegStr ? movs.filter(function(m){ return _kdxFmtISO(m.fecha) < fechaRegStr; }) : [];
+    movsPreReg.forEach(function(m) {
+        var cant = parseFloat(m.cantidad || 0);
+        saldoPre += m.tipo === 'Entrada' ? cant : -cant;
+        filas.push([_kdxFmtISO(m.fecha), m.tipo, m.doc_id || '', m.contraparte || '',
+                    cant, parseFloat(m.costo_unitario || 0), parseFloat(m.importe || 0),
+                    parseFloat(saldoPre.toFixed(4)), 'Pre-regularización']);
     });
+
+    // Fila de regularización
+    if (fechaReg) {
+        filas.push([fechaRegStr, 'Regularización', '', 'Stock físico verificado',
+                    stockBase, '', '', stockBase, 'Saldo de apertura']);
+    }
+
+    // Movimientos post-regularización
+    var saldoPost = stockBase;
+    var movsPostReg = fechaRegStr ? movs.filter(function(m){ return _kdxFmtISO(m.fecha) >= fechaRegStr; }) : movs;
+    movsPostReg.forEach(function(m) {
+        var cant = parseFloat(m.cantidad || 0);
+        saldoPost += m.tipo === 'Entrada' ? cant : -cant;
+        filas.push([_kdxFmtISO(m.fecha), m.tipo, m.doc_id || '', m.contraparte || '',
+                    cant, parseFloat(m.costo_unitario || 0), parseFloat(m.importe || 0),
+                    parseFloat(saldoPost.toFixed(4)), '']);
+    });
+
     var ws = XLSX.utils.aoa_to_sheet([cab].concat(filas));
     var wb = XLSX.utils.book_new();
     var sheet = 'Kardex_' + (window._kdxSelId || 'articulo');
