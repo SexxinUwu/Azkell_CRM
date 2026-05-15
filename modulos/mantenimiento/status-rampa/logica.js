@@ -1676,7 +1676,10 @@ function srRenderConfigRampas() {
         return;
     }
     list.innerHTML = rampas.map(function(r) {
-        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        return '<div class="sr-cfg-row" data-id="' + r.id + '" draggable="true" ' +
+               'style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:default;">' +
+            '<span class="sr-cfg-drag" title="Arrastrar para reordenar" ' +
+               'style="cursor:grab;color:var(--subtext);padding:0 4px;font-size:1rem;flex-shrink:0;">⠿</span>' +
             '<input type="text" value="' + _srEsc(r.nombre_rampa) + '" id="sr-cfg-nom-' + r.id + '" ' +
                 'style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.85rem;" ' +
                 'onblur="window.srGuardarNombreRampa(' + r.id + ')" ' +
@@ -1687,6 +1690,56 @@ function srRenderConfigRampas() {
                 '<i class="bi bi-trash"></i></button>' +
         '</div>';
     }).join('');
+    srInitDragRampas(list);
+}
+
+function srInitDragRampas(list) {
+    var dragSrc = null;
+    list.querySelectorAll('.sr-cfg-row').forEach(function(row) {
+        row.addEventListener('dragstart', function(e) {
+            dragSrc = row;
+            e.dataTransfer.effectAllowed = 'move';
+            row.style.opacity = '.4';
+        });
+        row.addEventListener('dragend', function() {
+            row.style.opacity = '';
+            list.querySelectorAll('.sr-cfg-row').forEach(function(r) {
+                r.style.borderTop = '';
+            });
+        });
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            list.querySelectorAll('.sr-cfg-row').forEach(function(r) { r.style.borderTop = ''; });
+            if (row !== dragSrc) row.style.borderTop = '2px solid #2563eb';
+        });
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (dragSrc && dragSrc !== row) {
+                // Reordenar en DOM y en array
+                var rows = Array.from(list.querySelectorAll('.sr-cfg-row'));
+                var fromIdx = rows.indexOf(dragSrc);
+                var toIdx   = rows.indexOf(row);
+                // Mover en window.srCatRampas
+                var arr = window.srCatRampas;
+                var moved = arr.splice(fromIdx, 1)[0];
+                arr.splice(toIdx, 0, moved);
+                srRenderConfigRampas();
+                srGuardarOrdenRampas();
+            }
+        });
+    });
+}
+
+function srGuardarOrdenRampas() {
+    var items = window.srCatRampas.map(function(r, i) { return { id: r.id, orden: i + 1 }; });
+    fetch('/api/cat-rampas/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items)
+    })
+    .then(function() { srRenderTabla(); })
+    .catch(function() {});
 }
 
 window.srGuardarNombreRampa = function(id) {

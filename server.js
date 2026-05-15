@@ -1820,18 +1820,23 @@ app.post('/api/eliminarMasivo', (req, res) => {
 // ============================================================
 
 // ── CRUD cat_rampas ──────────────────────────────────────────────
+// Migración: agregar columna orden si no existe
+db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) => {
+    if (!e) db.query(`UPDATE cat_rampas SET orden=id WHERE orden=0`);
+});
+
 // Auto-seed: si la tabla está vacía, insertar 12 rampas por defecto
 function _seedRampasIfEmpty(cb) {
     db.query('SELECT COUNT(*) AS cnt FROM cat_rampas', (err, rows) => {
         if (err || rows[0].cnt > 0) return cb();
-        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible']);
-        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado) VALUES ?', [vals], cb);
+        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible', i+1]);
+        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado, orden) VALUES ?', [vals], cb);
     });
 }
 
 app.get('/api/cat-rampas', (req, res) => {
     _seedRampasIfEmpty(() => {
-        db.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err, rows) => {
+        db.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -1873,10 +1878,25 @@ app.delete('/api/cat-rampas/:id', (req, res) => {
     });
 });
 
+// Reordenar rampas: body = [{id, orden}, ...]
+app.put('/api/cat-rampas/reorder', (req, res) => {
+    const items = req.body;
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
+    const updates = items.map(item =>
+        new Promise((resolve, reject) =>
+            db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
+                (err) => err ? reject(err) : resolve())
+        )
+    );
+    Promise.all(updates)
+        .then(() => res.json({ ok: true }))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
 app.get('/api/catalogos_taller', (req, res) => {
     _seedRampasIfEmpty(() => {
-    const sqlRampas = "SELECT * FROM cat_rampas ORDER BY id ASC";
+    const sqlRampas = "SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC";
     const sqlSituaciones = "SELECT * FROM cat_situaciones ORDER BY id ASC";
     db.query(sqlRampas, (err1, rampas) => {
         if (err1) return res.status(500).json({ error: err1.message });
