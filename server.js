@@ -1893,7 +1893,7 @@ app.post('/api/cat-situaciones', (req, res) => {
     const { nombre } = req.body;
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es requerido' });
     const desc = nombre.trim();
-    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 20);
     db.query('INSERT INTO cat_situaciones (codigo, descripcion) VALUES (?, ?)',
         [cod, desc],
         (err, r) => {
@@ -1906,7 +1906,7 @@ app.put('/api/cat-situaciones/:id', (req, res) => {
     const { nombre } = req.body;
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es requerido' });
     const desc = nombre.trim();
-    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const cod  = desc.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 20);
     db.query('UPDATE cat_situaciones SET codigo=?, descripcion=? WHERE id=?',
         [cod, desc, req.params.id],
         (err) => {
