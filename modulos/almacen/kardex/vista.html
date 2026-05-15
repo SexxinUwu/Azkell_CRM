@@ -13,26 +13,30 @@
     </button>
   </div>
 
-  <!-- Búsqueda de artículo -->
+  <!-- Búsqueda de artículo — autocomplete moderno -->
   <div class="p-3 rounded border mb-3" style="background:var(--surface);">
     <label class="fw-semibold small mb-1 d-block">Buscar artículo por código o descripción</label>
-    <div class="d-flex gap-2">
-      <input type="text" id="kdx-buscar-art" class="form-control" list="kdx-art-list" placeholder="INV-0001 o descripción parcial…" style="max-width:420px;">
-      <datalist id="kdx-art-list"></datalist>
+    <div class="d-flex gap-2 position-relative">
+      <div style="position:relative;flex:1;max-width:460px;">
+        <input type="text" id="kdx-buscar-art" class="form-control pe-4"
+               placeholder="INV-0001 o descripción parcial…"
+               autocomplete="off"
+               oninput="window._kdxFiltrarDropdown()"
+               onkeydown="window._kdxNavDropdown(event)"
+               onfocus="window._kdxFiltrarDropdown()">
+        <span id="kdx-buscar-clear" onclick="window._kdxLimpiarBuscar()"
+              style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:1.1rem;line-height:1;">×</span>
+        <!-- Dropdown -->
+        <div id="kdx-art-dropdown"
+             style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;
+                    background:var(--surface);border:1px solid #e2e8f0;border-radius:14px;
+                    box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:320px;overflow-y:auto;">
+        </div>
+      </div>
       <button class="btn btn-info text-white" onclick="window._kdxCargarKardex()">
         <i class="bi bi-search me-1"></i>Ver Kardex
       </button>
     </div>
-  </div>
-
-  <!-- Info del artículo (elementos ocultos, referenciados por JS) -->
-  <div id="kdx-info-art" style="display:none!important;">
-    <span id="kdx-art-nombre"></span>
-    <span id="kdx-art-codigo"></span>
-    <span id="kdx-stock-base"></span>
-    <span id="kdx-fecha-reg"></span>
-    <span id="kdx-total-entradas"></span>
-    <span id="kdx-stock-actual"></span>
   </div>
 
   <!-- KPI Row Bento (visible tras consulta) -->
@@ -40,12 +44,12 @@
 
   <!-- Encabezado del artículo seleccionado -->
   <div id="kdx-art-header" style="display:none;margin-bottom:.75rem;">
-    <div style="background:#fff;border:1px solid #eef2f6;border-radius:18px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;">
+    <div style="background:var(--surface);border:1px solid #eef2f6;border-radius:18px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;">
       <div style="width:42px;height:42px;background:#eff6ff;color:#2563eb;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
         <i class="bi bi-journal-text"></i>
       </div>
       <div>
-        <div style="font-weight:800;font-size:.95rem;" id="kdx-art-header-nombre">—</div>
+        <div style="font-weight:800;font-size:.95rem;color:var(--text);" id="kdx-art-header-nombre">—</div>
         <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;" id="kdx-art-header-info">—</div>
       </div>
     </div>
@@ -57,6 +61,17 @@
       <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
       Selecciona un artículo para ver su kardex
     </div>
-    <div id="kdx-timeline" class="kdx-timeline" style="background:#fff;border:1px solid #eef2f6;border-radius:20px;overflow:hidden;display:none;"></div>
+    <div id="kdx-timeline" class="kdx-timeline" style="background:var(--surface);border:1px solid #eef2f6;border-radius:20px;overflow:hidden;display:none;"></div>
   </div>
 </div>
+
+<script>
+// Cierra dropdown al hacer click fuera
+document.addEventListener('click', function(e) {
+    var dd = document.getElementById('kdx-art-dropdown');
+    var inp = document.getElementById('kdx-buscar-art');
+    if (dd && inp && !dd.contains(e.target) && e.target !== inp) {
+        dd.style.display = 'none';
+    }
+});
+</script>
