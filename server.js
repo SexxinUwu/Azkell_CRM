@@ -4914,16 +4914,12 @@ app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
             ORDER BY fecha ASC, doc_id ASC
         `, [id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Calcular saldo acumulado desde cero (sin stock_base); pre-reg es histórico
+            // Solo normalizar saldo; el split pre/post-reg lo hace el frontend
             let saldo = 0;
-            const regDateStr = regDate ? String(regDate).split('T')[0] : null;
             rows.forEach(r => {
-                const fechaStr = r.fecha ? String(r.fecha).split('T')[0] : null;
-                const esPreReg = regDateStr && fechaStr && fechaStr < regDateStr;
                 if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad);
                 else saldo -= parseFloat(r.cantidad);
                 r.saldo = parseFloat(saldo.toFixed(4));
-                r.pre_reg = esPreReg ? true : undefined;
             });
             res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
         });

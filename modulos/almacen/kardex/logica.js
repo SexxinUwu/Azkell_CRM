@@ -174,11 +174,11 @@ window._kdxRenderKardex = function(res, item) {
     var movs      = res.movimientos || [];
     var stockBase = parseFloat(res.stock_base || 0);
     var fechaReg  = res.fecha_regularizacion || null;
-    var fechaRegStr = fechaReg ? String(fechaReg).split('T')[0] : null;
+    var fechaRegStr = fechaReg ? _kdxFmtISO(fechaReg) : null;
 
-    // Separar pre y post regularización
-    var movsPreReg  = fechaRegStr ? movs.filter(function(m) { return m.pre_reg; }) : [];
-    var movsPostReg = fechaRegStr ? movs.filter(function(m) { return !m.pre_reg; }) : movs;
+    // Separar pre y post regularización (comparación en frontend, evita bugs de parsing MySQL)
+    var movsPreReg  = fechaRegStr ? movs.filter(function(m) { return _kdxFmtISO(m.fecha) < fechaRegStr; }) : [];
+    var movsPostReg = fechaRegStr ? movs.filter(function(m) { return _kdxFmtISO(m.fecha) >= fechaRegStr; }) : movs;
 
     // KPIs: solo movimientos post-regularización (o todos si no hay reg)
     var totalEntradas = 0, totalSalidas = 0;
@@ -328,6 +328,14 @@ window.exportarKardexExcel = function() {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
+function _kdxFmtISO(f) {
+    if (!f) return '';
+    if (f instanceof Date) return f.toISOString().split('T')[0];
+    var s = String(f);
+    if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    return s.split('T')[0] || s;
+}
+
 function _kdxFmtFecha(f) {
     if (!f) return '';
     try { return new Date(String(f).split('T')[0] + 'T00:00').toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'}); }
