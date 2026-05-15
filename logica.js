@@ -2690,13 +2690,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
             var backBtn = document.createElement('div');
             backBtn.style.cssText = 'flex-shrink:0;padding:.45rem 1rem .25rem;';
             backBtn.innerHTML = '<button onclick="cargarModuloAislado(\'administracion\')" ' +
-                'style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;' +
-                'border-radius:10px;border:1.5px solid var(--border);background:var(--surface);' +
-                'color:var(--subtext);font-size:.72rem;font-weight:700;cursor:pointer;' +
-                'transition:background .15s;"' +
-                ' onmouseover="this.style.background=\'var(--bg)\'"' +
-                ' onmouseout="this.style.background=\'var(--surface)\'">' +
-                '<i class="bi bi-arrow-left"></i>Administración</button>';
+                'style="display:inline-flex;align-items:center;gap:.45rem;padding:.42rem 1rem;' +
+                'border-radius:10px;border:none;background:#1e293b;' +
+                'color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;' +
+                'box-shadow:0 2px 8px rgba(0,0,0,.18);transition:background .15s,transform .1s;"' +
+                ' onmouseover="this.style.background=\'#0f172a\';this.style.transform=\'translateX(-2px)\'"' +
+                ' onmouseout="this.style.background=\'#1e293b\';this.style.transform=\'\'">' +
+                '<i class="bi bi-arrow-left" style="font-size:.9rem;"></i>Administración</button>';
             root.insertBefore(backBtn, root.firstChild);
         }
         if (typeof window.applyI18n === 'function') window.applyI18n();

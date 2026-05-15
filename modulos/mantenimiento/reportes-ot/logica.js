@@ -14,12 +14,37 @@ window.rotOtMaterialesActivos= window.rotOtMaterialesActivos|| [];
 window.rotOtActivaId         = window.rotOtActivaId         || null;
 window._rotMatIdx            = window._rotMatIdx            || 0;
 window._rotInvData           = window._rotInvData           || [];
+window._rotCatSituaciones    = window._rotCatSituaciones    || [];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
     window._rotFiltroEstado = '';
     window.rotCargar();
+    rotCargarSituaciones();
 };
+
+// ── Carga catálogo de situaciones ────────────────────────────────
+function rotCargarSituaciones() {
+    fetch('/api/catalogos_taller')
+        .then(function(r) { return r.ok ? r.json() : {}; })
+        .then(function(d) {
+            window._rotCatSituaciones = (d && d.situaciones) ? d.situaciones : [];
+            rotPoblarSelectSituacion();
+        })
+        .catch(function() {});
+}
+
+function rotPoblarSelectSituacion() {
+    var sel = document.getElementById('rot-eot-situacion');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+        window._rotCatSituaciones.map(function(s) {
+            var l = s.descripcion || s.nombre || '';
+            return '<option value="' + l.replace(/"/g,'&quot;') + '">' + l + '</option>';
+        }).join('');
+    if (current) sel.value = current;
+}
 
 // ── Carga desde API ──────────────────────────────────────────────
 window.rotCargar = function() {
@@ -1805,6 +1830,9 @@ function rotAbrirEditarOT(idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot) return;
     var det = rotDetalles(ot);
+
+    // Asegurar que el select de situaciones tenga las opciones cargadas
+    rotPoblarSelectSituacion();
 
     var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
     set('rot-eot-id',         idOT);
