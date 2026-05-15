@@ -6,6 +6,7 @@ window._kdxInvData   = window._kdxInvData   || [];
 window._kdxMovData   = window._kdxMovData   || [];
 window._kdxSelId     = window._kdxSelId     || null;
 window._kdxStockBase = window._kdxStockBase || 0;
+window._kdxFechaReg  = window._kdxFechaReg  || null;
 
 window.init_kardex = function() {
     // Inyectar CSS Bento Grid
@@ -83,7 +84,8 @@ window._kdxCargarKardex = function() {
     fetch('/api/almacen/kardex/' + encodeURIComponent(item.id))
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(res) {
-            window._kdxMovData = res.movimientos || [];
+            window._kdxMovData   = res.movimientos || [];
+            window._kdxFechaReg  = res.fecha_regularizacion || null;
             window._kdxRenderKardex(res, item);
         })
         .catch(function(err) {
@@ -93,15 +95,17 @@ window._kdxCargarKardex = function() {
 };
 
 window._kdxRenderKardex = function(res, item) {
-    var movs = res.movimientos || [];
+    var movs      = res.movimientos || [];
+    var stockBase = parseFloat(res.stock_base || 0);
+    var fechaReg  = res.fecha_regularizacion || null;
 
-    // Calcular totales
+    // Totales (solo movimientos reales, sin contar la regularización)
     var totalEntradas = 0, totalSalidas = 0;
     movs.forEach(function(m) {
         if (m.tipo === 'Entrada') totalEntradas += parseFloat(m.cantidad) || 0;
         else totalSalidas += parseFloat(m.cantidad) || 0;
     });
-    var stockActual = window._kdxStockBase + totalEntradas - totalSalidas;
+    var stockActual = stockBase + totalEntradas - totalSalidas;
 
     // KPI row
     var kpiEl = document.getElementById('kdx-kpi-row');
@@ -122,30 +126,55 @@ window._kdxRenderKardex = function(res, item) {
             '</div>';
     }
 
-    // Actualizar elementos legacy (ocultos, para exportación)
     var elEnt = document.getElementById('kdx-total-entradas');
     if (elEnt) elEnt.textContent = '+' + totalEntradas.toFixed(2) + ' / −' + totalSalidas.toFixed(2);
     var elAct = document.getElementById('kdx-stock-actual');
     if (elAct) elAct.textContent = stockActual.toFixed(2) + ' ' + (item.unidad || '');
 
+    var totalMovDisplay = movs.length + (fechaReg ? 1 : 0);
     var btnExp = document.getElementById('btn-export-kardex');
-    if (btnExp) btnExp.style.display = movs.length ? '' : 'none';
+    if (btnExp) btnExp.style.display = totalMovDisplay ? '' : 'none';
 
     var timeline = document.getElementById('kdx-timeline');
     if (!timeline) return;
 
-    if (!movs.length) {
+    // ── Fila de regularización (saldo de apertura) ─────────────────
+    var regHtml = '';
+    if (fechaReg) {
+        var fechaRegFmt = '';
+        try { fechaRegFmt = new Date(String(fechaReg).split('T')[0] + 'T00:00').toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'}); }
+        catch(e) { fechaRegFmt = String(fechaReg).split('T')[0]; }
+        regHtml =
+            '<div class="kdx-item" style="background:linear-gradient(90deg,rgba(99,102,241,0.07),transparent);border-left:3px solid #6366f1;">' +
+                '<div class="kdx-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">' +
+                    '<i class="bi bi-clipboard2-check"></i>' +
+                '</div>' +
+                '<div style="flex:1;min-width:0">' +
+                    '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
+                        '<span style="font-size:.85rem;font-weight:700;color:#6366f1">Regularización de Inventario</span>' +
+                        '<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:.62rem;font-weight:700;padding:.12rem .5rem;border-radius:6px">REG</span>' +
+                    '</div>' +
+                    '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-top:.15rem">Saldo de apertura — stock físico verificado</div>' +
+                '</div>' +
+                '<div style="text-align:center;min-width:80px">' +
+                    '<div style="font-size:1.2rem;font-weight:900;color:#6366f1;">⊙ ' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                    '<div style="font-size:.6rem;color:#94a3b8">' + fechaRegFmt + '</div>' +
+                '</div>' +
+                '<div class="kdx-saldo" style="color:#6366f1;">' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+            '</div>';
+    }
+
+    if (!totalMovDisplay) {
         timeline.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin movimientos registrados para este artículo</div>';
         return;
     }
 
-    // Encabezado del timeline
     var headerHtml = '<div style="padding:.75rem 1.25rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">' +
         '<span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#64748b">Registro Maestro de Flujos</span>' +
-        '<span style="font-size:.7rem;color:#94a3b8;font-weight:600">' + movs.length + ' movimiento' + (movs.length !== 1 ? 's' : '') + '</span>' +
+        '<span style="font-size:.7rem;color:#94a3b8;font-weight:600">' + totalMovDisplay + ' movimiento' + (totalMovDisplay !== 1 ? 's' : '') + '</span>' +
     '</div>';
 
-    var saldoAcum = window._kdxStockBase;
+    var saldoAcum = stockBase;
     var timelineHtml = movs.map(function(m) {
         var esEntrada = m.tipo === 'Entrada';
         var cant = parseFloat(m.cantidad || 0);
@@ -174,7 +203,7 @@ window._kdxRenderKardex = function(res, item) {
         '</div>';
     }).join('');
 
-    timeline.innerHTML = headerHtml + timelineHtml;
+    timeline.innerHTML = headerHtml + regHtml + timelineHtml;
 };
 
 // ── Export Excel ──────────────────────────────────────────────────
