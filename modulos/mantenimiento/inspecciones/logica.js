@@ -619,7 +619,11 @@ window.abrirModalNuevaInspeccion = function(placaPreselect) {
 
     if (placaPreselect) {
         let iPlaca = document.getElementById('i_placa');
-        if (iPlaca) iPlaca.value = placaPreselect;
+        if (iPlaca) {
+            iPlaca.value = placaPreselect;
+            if (window.SS) window.SS.setValue('insp-placa', placaPreselect);
+            autocompletarInfoInsp();
+        }
     }
 
     window.cambiarPestana(0);

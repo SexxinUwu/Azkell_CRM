@@ -7,6 +7,7 @@
     border-radius: 16px; padding: .85rem 1rem; cursor: pointer;
     transition: box-shadow .18s, border-color .18s;
     position: relative; overflow: hidden;
+    touch-action: manipulation;
 }
 .inv-list-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.09); border-color: #2563eb55; }
 .inv-list-card:active { opacity: .85; }
@@ -98,7 +99,7 @@
     /* Ocultar SPA topbar mientras inventario está activo */
     .topbar { display: none !important; }
     /* Quitar padding lateral de main-area para usar el espacio completo */
-    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
+    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
     /* Ocultar controles de escritorio */
     #inv-desktop-controls, #inv-filter-row { display: none !important; }
     /* Mostrar header + search mobile */
