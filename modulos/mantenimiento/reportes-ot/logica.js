@@ -21,6 +21,18 @@ window.init_reportes_ot = function() {
     window._rotFiltroEstado = '';
     window.rotCargar();
     rotCargarSituaciones();
+    if (typeof window.initColPicker === 'function') {
+        window.initColPicker('col-picker-rot', 'rot-tabla', [
+            {label: 'N° OT',        idx: 1, visible: true},
+            {label: 'Placa',        idx: 2, visible: true},
+            {label: 'Tipo / Sub',   idx: 3, visible: true},
+            {label: 'Supervisor',   idx: 4, visible: true},
+            {label: 'Situación',    idx: 5, visible: true},
+            {label: 'Observaciones',idx: 6, visible: true},
+            {label: 'Costo Total',  idx: 7, visible: true},
+            {label: 'Fecha',        idx: 8, visible: true}
+        ], 'fleet_cols_rot');
+    }
 };
 
 // ── Carga catálogo de situaciones ────────────────────────────────

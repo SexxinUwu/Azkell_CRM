@@ -15,6 +15,18 @@ window.init_backlog_taller = function() {
     var panel = document.getElementById('bkt-panel-detalle');
     if (panel) panel.classList.remove('open');
     bktCargar();
+    if (typeof window.initColPicker === 'function') {
+        window.initColPicker('col-picker-bkt', 'bkt-tabla', [
+            {label: 'F. Registro',   idx: 1, visible: true},
+            {label: 'Tema',          idx: 2, visible: true},
+            {label: 'Placa',         idx: 3, visible: true},
+            {label: 'Kilometraje',   idx: 4, visible: true},
+            {label: 'Reportado Por', idx: 5, visible: true},
+            {label: 'MP Pendiente',  idx: 6, visible: true},
+            {label: 'OT',            idx: 7, visible: true},
+            {label: 'Estado',        idx: 8, visible: true}
+        ], 'fleet_cols_bkt');
+    }
 };
 
 // ── Carga de datos ────────────────────────────────────────────────

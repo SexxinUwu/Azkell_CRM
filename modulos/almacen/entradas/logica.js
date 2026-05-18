@@ -39,8 +39,18 @@ window.init_entradas = function() {
     window._entCargarProveedores();
     window._entCargarConfig();
     window._entMobileInit();
-    // Pre-cargar inventario en segundo plano para que esté listo al abrir el formulario
     if (!window._entInvData.length) window._entCargarInv();
+    if (typeof window.initColPicker === 'function') {
+        window.initColPicker('col-picker-ent', 'tabla-entradas', [
+            {label: 'Fecha',       idx: 1, visible: true},
+            {label: 'Proveedor',   idx: 2, visible: true},
+            {label: 'Cód. Art.',   idx: 3, visible: true},
+            {label: 'Artículo',    idx: 4, visible: true},
+            {label: 'Cantidad',    idx: 5, visible: true},
+            {label: 'Costo Unit.', idx: 6, visible: true},
+            {label: 'Total',       idx: 7, visible: true}
+        ], 'fleet_cols_entradas');
+    }
 };
 
 // ── Mobile Init ───────────────────────────────────────────────────
