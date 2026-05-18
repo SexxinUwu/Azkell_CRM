@@ -656,4 +656,17 @@ window.init_status = function() {
         if(typeof initMapaFlota === 'function') initMapaFlota();
         if(window.mapaFlota) window.mapaFlota.invalidateSize();
     }, 300);
+
+    if (typeof window.initColPicker === 'function') {
+        window.initColPicker('col-picker-sf', 'tablaStatusFlota', [
+            {label: 'Km',           idx: 1, visible: true},
+            {label: 'Insp. M.',     idx: 2, visible: true},
+            {label: 'U. No Motora', idx: 3, visible: true},
+            {label: 'Insp. N.M.',   idx: 4, visible: true},
+            {label: 'Conductor',    idx: 5, visible: true},
+            {label: 'Estado',       idx: 6, visible: true},
+            {label: 'Zona',         idx: 7, visible: true},
+            {label: 'Observaciones',idx: 8, visible: true}
+        ], 'fleet_cols_status_flota');
+    }
 };

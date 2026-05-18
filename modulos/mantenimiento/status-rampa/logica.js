@@ -39,6 +39,18 @@ window.init_status_rampa = function() {
     srCargarOTs();
     srPoblarPlacas();
     srPoblarPersonal();
+    if (typeof window.initColPicker === 'function') {
+        window.initColPicker('col-picker-sr', 'sr-tabla', [
+            {label: 'Fecha Ingreso',  idx: 1, visible: true},
+            {label: 'Hora',           idx: 2, visible: true},
+            {label: 'Situación',      idx: 4, visible: true},
+            {label: 'Observaciones',  idx: 5, visible: true},
+            {label: 'Fecha Salida',   idx: 6, visible: true},
+            {label: 'Hora Salida',    idx: 7, visible: true},
+            {label: 'H. Taller',      idx: 8, visible: true},
+            {label: 'OT Relacionadas',idx: 9, visible: true}
+        ], 'fleet_cols_status_rampa');
+    }
 };
 
 // ── Carga entradas desde BD ──────────────────────────────────────
