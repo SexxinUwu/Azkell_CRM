@@ -3030,19 +3030,20 @@ body.dark .kpi-metric-icon-wrap.warning { color: #eab308; }
 }
 
 /* ================================================================
-   OFFCANVAS — Fondo desenfocado (backdrop blur)
+   OFFCANVAS & MODAL — Fondo oscuro (sin blur para máximo rendimiento)
    ================================================================ */
 .offcanvas-backdrop {
-    backdrop-filter: blur(4px) !important;
-    -webkit-backdrop-filter: blur(4px) !important;
-    background-color: rgba(15, 23, 42, 0.45) !important;
+    background-color: rgba(15, 23, 42, 0.55) !important;
     opacity: 1 !important;
 }
 .modal-backdrop {
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    background-color: rgba(15, 23, 42, 0.45) !important;
+    background-color: rgba(15, 23, 42, 0.55) !important;
     opacity: 1 !important;
+}
+/* Offcanvas: GPU-acelerado con will-change para animación fluida */
+.offcanvas {
+    will-change: transform;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* ================================================================
