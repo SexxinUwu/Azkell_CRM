@@ -2170,53 +2170,31 @@ window.actualizarBadgesSidebar = function() {
     }
 };
 
-// ── Pull-to-refresh (mobile) ────────────────────────────────────────────────
+// ── Pull-to-refresh (mobile) — ELIMINADO ──────────────────────────────────────
+
+// ── History API — botón atrás nativo en móvil ─────────────────────────────────
+window._navFromPopstate = false;
+window.addEventListener('popstate', function(e) {
+    // Si hay un offcanvas o modal abierto, cerrarlo en lugar de navegar
+    var openOffcanvas = document.querySelector('.offcanvas.show');
+    if (openOffcanvas) {
+        var bsOffcanvas = bootstrap.Offcanvas.getInstance(openOffcanvas);
+        if (bsOffcanvas) { bsOffcanvas.hide(); }
+        // Reinsert state para no retroceder más
+        var ruta = localStorage.getItem('fleet_rutaActual') || 'dashboard';
+        history.pushState({ ruta: ruta }, '', '#' + ruta.replace(/\//g, '-'));
+        return;
+    }
+    var ruta = (e.state && e.state.ruta) ? e.state.ruta : (localStorage.getItem('fleet_rutaActual') || 'dashboard');
+    window._navFromPopstate = true;
+    cargarModuloAislado(ruta);
+});
+// Estado inicial en history al cargar la app
 (function() {
-    var _sY = 0, _pulling = false, _THRESHOLD = 72;
-    document.addEventListener('touchstart', function(e) {
-        if (e.touches.length !== 1) return;
-        // Recorrer ancestros desde el punto de toque hasta root-dinamico
-        // Si alguno está scrolleado, NO activar PTR
-        var el = e.target;
-        while (el) {
-            if (el.id === 'sidebarMenu' || el.id === 'sidebarBackdrop') return;
-            if (el.scrollTop > 0) return; // contenido scrolleado hacia abajo
-            if (el.id === 'root-dinamico') break;
-            el = el.parentElement;
-        }
-        _sY = e.touches[0].clientY; _pulling = true;
-    }, { passive: true });
-    document.addEventListener('touchmove', function(e) {
-        if (!_pulling) return;
-        var dy = e.touches[0].clientY - _sY;
-        var ind = document.getElementById('ptr-indicator');
-        var ico = document.getElementById('ptr-icon');
-        if (dy > 10 && ind) {
-            ind.classList.add('ptr-visible');
-            var pct = Math.min(dy / _THRESHOLD, 1);
-            if (ico) ico.style.transform = 'rotate(' + (pct * 200) + 'deg)';
-            var txt = document.getElementById('ptr-text');
-            if (txt) txt.textContent = dy >= _THRESHOLD ? 'Suelta para actualizar' : 'Desliza para refrescar';
-        }
-    }, { passive: true });
-    document.addEventListener('touchend', function(e) {
-        if (!_pulling) return; _pulling = false;
-        var dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : _sY) - _sY;
-        var ind = document.getElementById('ptr-indicator');
-        var ico = document.getElementById('ptr-icon');
-        if (ind) ind.classList.remove('ptr-visible');
-        if (ico) { ico.style.transform = ''; ico.classList.remove('ptr-spinning'); }
-        if (dy >= _THRESHOLD) {
-            if (ico) ico.classList.add('ptr-spinning');
-            var ruta = localStorage.getItem('fleet_rutaActual') || '';
-            var mod = ruta.split('/').pop();
-            setTimeout(function() {
-                if (ico) ico.classList.remove('ptr-spinning');
-                if (mod && typeof window['recargarModulo'] === 'function') window.recargarModulo(mod);
-                else if (typeof window.recargarDashboard === 'function') window.recargarDashboard();
-            }, 650);
-        }
-    }, { passive: true });
+    var rutaActual = localStorage.getItem('fleet_rutaActual') || 'dashboard';
+    if (!history.state) {
+        history.replaceState({ ruta: rutaActual }, '', '#' + rutaActual.replace(/\//g, '-'));
+    }
 })();
 
 // ─── Modal de confirmación elegante ─────────────────────────────
@@ -2629,6 +2607,12 @@ window.cargarModuloAislado = async function(rutaModulo) {
     if (rutaModulo !== 'login') {
         localStorage.setItem('fleet_rutaActual', rutaModulo);
         pushReciente(rutaModulo);
+        // 📍 HISTORY API — botón atrás nativo en móvil
+        if (!window._navFromPopstate) {
+            var hashRuta = '#' + rutaModulo.replace(/\//g, '-');
+            history.pushState({ ruta: rutaModulo }, '', hashRuta);
+        }
+        window._navFromPopstate = false;
     }
 
     // 🧹 LIMPIEZA BOOTSTRAP — elimina backdrops huérfanos y clases del body
@@ -2684,7 +2668,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
             'almacen/sistemas','almacen/marcas',
             'mantenimiento/configuracion-mp','mantenimiento/kits-mp',
             'mantenimiento/tipos-mp','mantenimiento/config-metrica',
-            'preferencias/situaciones'
+            'preferencias/situaciones','sistema/integraciones'
         ];
         if (ADMIN_SUBRUTAS.includes(rutaModulo)) {
             var backBtn = document.createElement('div');
