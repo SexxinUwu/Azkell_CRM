@@ -4924,14 +4924,14 @@ app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
         const regDate = inv[0]?.fecha_regularizacion || null;
 
         db.query(`
-            SELECT 'Entrada' AS tipo, e.fecha, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+            SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=?
             UNION ALL
-            SELECT 'Salida' AS tipo, s.fecha, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
+            SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
             WHERE d.inventario_id=? AND (s.estado IS NULL OR s.estado = 'Despachado')
-            ORDER BY fecha ASC, doc_id ASC
+            ORDER BY fecha ASC, created_at ASC, doc_id ASC
         `, [id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             // Saldo inicial = stock_regularizado (base post-regularización)
