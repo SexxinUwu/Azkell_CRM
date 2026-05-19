@@ -512,8 +512,8 @@
 <div class="rot-sub-drawer" id="rot-drawer-material">
     <div class="rot-drawer-hd">
         <div>
-            <div class="rot-drawer-title">Nueva Solicitud de Materiales</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-mat-ot-lbl"></div>
+            <span class="rot-drawer-title"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud de Materiales</span>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:4px;" id="rot-mat-ot-lbl"></div>
         </div>
         <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -523,65 +523,72 @@
         <input type="hidden" id="rot-mat-ot-id">
         <div class="row g-2 mb-3">
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">N° OT</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-ot-vis" readonly style="background:var(--bg);color:var(--subtext);">
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
+                <input type="text" class="form-control form-control-sm" id="rot-mat-ot-vis" readonly style="border-radius:12px;min-height:44px;background:var(--bg);color:var(--subtext);">
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha *</label>
-                <input type="date" class="form-control form-control-sm" id="rot-mat-fecha">
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
+                <input type="date" class="form-control form-control-sm" id="rot-mat-fecha" style="border-radius:12px;min-height:44px;">
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Tipo Destino</label>
-                <select class="form-select form-select-sm" id="rot-mat-tipo">
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
+                <select class="form-select form-select-sm" id="rot-mat-tipo" style="border-radius:12px;min-height:44px;">
                     <option value="Vehiculo">Vehículo</option>
                     <option value="Personal">Personal</option>
                 </select>
             </div>
             <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Placa</label>
-                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box border-primary shadow-sm" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--primary,#5865F2);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.18);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off" style="border-color:var(--primary,#5865F2);"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
+                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:12px;min-height:44px;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
             </div>
             <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Responsable / Solicitante</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable" list="rot-mat-list-personal" autocomplete="off">
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable / Solicitante</label>
+                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable" list="rot-mat-list-personal" autocomplete="off" style="border-radius:12px;min-height:44px;">
                 <datalist id="rot-mat-list-personal"></datalist>
             </div>
             <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Observaciones</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-obs" placeholder="Motivo, notas…">
+                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
+                <input type="text" class="form-control form-control-sm" id="rot-mat-obs" placeholder="Motivo, notas…" style="border-radius:12px;min-height:44px;">
             </div>
         </div>
         <hr style="border-color:var(--border);">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="font-size:.83rem;color:var(--text);"><i class="bi bi-list-ul me-1"></i>Artículos</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window._rotAgregarItemMat()">
-                <i class="bi bi-plus"></i> Agregar
+            <span class="fw-bold" style="font-size:.83rem;color:var(--text);">
+              <i class="bi bi-list-ul me-1"></i>Artículos
+            </span>
+            <button type="button"
+                    style="padding:.4rem .9rem;border-radius:12px;border:1.5px solid #5865F2;
+                           background:transparent;color:#5865F2;font-weight:700;font-size:.78rem;cursor:pointer;"
+                    onclick="window._rotAgregarItemMat()">
+              <i class="bi bi-plus-lg me-1"></i>Agregar
             </button>
         </div>
-        <div style="overflow-x:auto;">
-            <table class="table table-sm table-bordered" style="font-size:.8rem;min-width:420px;">
+        <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
                 <thead style="background:var(--bg);">
                     <tr>
-                        <th style="min-width:180px;">Artículo</th>
-                        <th style="width:70px;">Cant.</th>
-                        <th style="width:90px;">Costo U.</th>
-                        <th style="width:85px;">Importe</th>
-                        <th style="width:34px;"></th>
+                        <th style="min-width:220px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
+                        <th style="width:80px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cantidad</th>
+                        <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Costo Unit.</th>
+                        <th style="width:100px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Importe</th>
+                        <th style="width:38px;"></th>
                     </tr>
                 </thead>
                 <tbody id="rot-mat-items-tbody"></tbody>
-                <tfoot>
+                <tfoot style="background:var(--bg);">
                     <tr>
-                        <td colspan="3" style="text-align:right;font-weight:700;font-size:.82rem;color:var(--subtext);">Total:</td>
-                        <td style="font-weight:800;color:#16a34a;" id="rot-mat-items-total">S/. 0.00</td>
+                        <td colspan="3" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">Total:</td>
+                        <td style="font-weight:800;color:#16a34a;padding:10px 12px;" id="rot-mat-items-total">S/. 0.00</td>
                         <td></td>
                     </tr>
                 </tfoot>
             </table>
         </div>
         <datalist id="rot-mat-inv-list"></datalist>
-        <button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.rotGuardarMaterial()">
-            <i class="bi bi-save me-1"></i>Guardar Solicitud
+        <button class="btn fw-bold w-100 mt-3"
+                style="border-radius:14px;border:none;background:#5865F2;color:#fff;font-size:.9rem;min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"
+                onclick="window.rotGuardarMaterial()">
+            <i class="bi bi-save"></i>Guardar Solicitud
         </button>
     </div>
 </div>
