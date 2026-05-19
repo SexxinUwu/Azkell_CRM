@@ -4934,8 +4934,8 @@ app.get('/api/almacen/kardex/:inventario_id', (req, res) => {
             ORDER BY fecha ASC, doc_id ASC
         `, [id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Solo normalizar saldo; el split pre/post-reg lo hace el frontend
-            let saldo = 0;
+            // Saldo inicial = stock_regularizado (base post-regularización)
+            let saldo = base;
             rows.forEach(r => {
                 if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad);
                 else saldo -= parseFloat(r.cantidad);
