@@ -4243,12 +4243,12 @@ const _stockSQL = `
       + COALESCE((SELECT SUM(d.cantidad) FROM detalle_entradas_inv d
                   JOIN entradas_inv e ON e.id=d.entrada_id
                   WHERE d.inventario_id=i.id
-                    AND (i.fecha_regularizacion IS NULL OR DATE(e.fecha) >= DATE(i.fecha_regularizacion))),0)
+                    AND (i.fecha_regularizacion IS NULL OR DATE(e.created_at) >= DATE(i.fecha_regularizacion))),0)
       - COALESCE((SELECT SUM(d.cantidad) FROM detalle_salidas_inv d
                   JOIN salidas_inv s ON s.id=d.salida_id
                   WHERE (d.inventario_id=i.id OR (d.inventario_id IS NULL AND LEFT(d.descripcion, CHAR_LENGTH(i.id)) = i.id))
                     AND s.estado = 'Despachado'
-                    AND (i.fecha_regularizacion IS NULL OR DATE(s.fecha) >= DATE(i.fecha_regularizacion))),0)
+                    AND (i.fecha_regularizacion IS NULL OR DATE(s.created_at) >= DATE(i.fecha_regularizacion))),0)
     , 4) AS stock_actual
   FROM inventario i
   WHERE i.activo=1
@@ -4464,11 +4464,11 @@ app.post('/api/almacen/inventario/:id/regularizar', (req, res) => {
         + COALESCE((SELECT SUM(d.cantidad) FROM detalle_entradas_inv d
                     JOIN entradas_inv e ON e.id=d.entrada_id
                     WHERE d.inventario_id=i.id
-                    AND (i.fecha_regularizacion IS NULL OR e.fecha >= i.fecha_regularizacion)),0)
+                    AND (i.fecha_regularizacion IS NULL OR DATE(e.created_at) >= DATE(i.fecha_regularizacion))),0)
         - COALESCE((SELECT SUM(d.cantidad) FROM detalle_salidas_inv d
                     JOIN salidas_inv s ON s.id=d.salida_id
                     WHERE d.inventario_id=i.id
-                    AND (i.fecha_regularizacion IS NULL OR s.fecha >= i.fecha_regularizacion)),0)
+                    AND (i.fecha_regularizacion IS NULL OR DATE(s.created_at) >= DATE(i.fecha_regularizacion))),0)
         AS stock_virtual,
         i.stock_regularizado AS stock_ant,
         i.fecha_regularizacion AS fecha_reg_ant
