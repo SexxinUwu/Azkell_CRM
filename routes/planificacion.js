@@ -157,7 +157,7 @@ function generarProximaMP(placa, tipoMp, createdBy) {
 }
 
 // GET /api/configuracion-flota
-app.get('/api/configuracion-flota', (req, res) => {
+router.get('/configuracion-flota', (req, res) => {
     db.query(
         `SELECT id, marca, uts_categoria, km_mensuales, dias_operativos,
                 CASE WHEN dias_operativos > 0 THEN ROUND(km_mensuales / dias_operativos, 2) ELSE 0 END AS km_diarios,
@@ -171,7 +171,7 @@ app.get('/api/configuracion-flota', (req, res) => {
 });
 
 // PUT /api/configuracion-flota/:id  (Gerencia ajusta km/mes e intervalos)
-app.put('/api/configuracion-flota/:id', (req, res) => {
+router.put('/configuracion-flota/:id', (req, res) => {
     const { id } = req.params;
     const { km_mensuales, dias_operativos, mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones, activa } = req.body;
     db.query(
@@ -188,7 +188,7 @@ app.put('/api/configuracion-flota/:id', (req, res) => {
 });
 
 // GET /api/mantenimiento-kits?marca=X&tipo_mp=Y
-app.get('/api/mantenimiento-kits', (req, res) => {
+router.get('/mantenimiento-kits', (req, res) => {
     const { marca, tipo_mp } = req.query;
     let sql = `SELECT id, marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
                       cantidad, unidad_medida, costo_unitario, costo_total, orden
@@ -736,7 +736,7 @@ router.get('/planificacion-sugerir', (req, res) => {
 });
 
 // GET /api/fleetrun/buscar/:id — buscar un registro por idRegistro (para completar plan)
-app.get('/api/fleetrun/buscar/:id', (req, res) => {
+router.get('/fleetrun/buscar/:id', (req, res) => {
     db.query(
         `SELECT idRegistro, fecha, placa, tipo_mp, km_actual, km_proximo, frecuencia_km, tecnico, observacion
          FROM fleetrun WHERE idRegistro = ? LIMIT 1`,
@@ -750,7 +750,7 @@ app.get('/api/fleetrun/buscar/:id', (req, res) => {
 });
 
 // POST /api/fleetrun-backfill-codigos — migra IDs tipo FL-1713000000000 al formato legible
-app.post('/api/fleetrun-backfill-codigos', (req, res) => {
+router.post('/fleetrun-backfill-codigos', (req, res) => {
     // Buscar registros con el antiguo formato timestamp (FL-13dígitos)
     db.query(
         `SELECT idRegistro, placa, tipo_mp, fecha FROM fleetrun
@@ -791,7 +791,7 @@ app.post('/api/fleetrun-backfill-codigos', (req, res) => {
 });
 
 // GET /api/requerimientos-resumen?mes=X&anio=Y — vista consolidada por marca/tipo
-app.get('/api/requerimientos-resumen', (req, res) => {
+router.get('/requerimientos-resumen', (req, res) => {
     const { mes, anio } = req.query;
     if (!mes || !anio) return res.status(400).json({ error: 'mes y anio son requeridos' });
     const sql = `
@@ -821,7 +821,7 @@ app.get('/api/requerimientos-resumen', (req, res) => {
 // ============================================================
 // CRUD TIPOS PREVENTIVO (tabla maestra de tipos de MP)
 // ============================================================
-app.get('/api/tipos-preventivo', (req, res) => {
+router.get('/tipos-preventivo', (req, res) => {
     db.query(
         `SELECT id, nombre, descripcion, activo FROM tipos_preventivo WHERE activo=1 ORDER BY nombre`,
         (err, rows) => {
@@ -831,7 +831,7 @@ app.get('/api/tipos-preventivo', (req, res) => {
     );
 });
 
-app.post('/api/tipos-preventivo', (req, res) => {
+router.post('/tipos-preventivo', (req, res) => {
     const { nombre, descripcion } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre es requerido' });
     db.query(
@@ -844,7 +844,7 @@ app.post('/api/tipos-preventivo', (req, res) => {
     );
 });
 
-app.put('/api/tipos-preventivo/:id', (req, res) => {
+router.put('/tipos-preventivo/:id', (req, res) => {
     const { nombre, descripcion } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre es requerido' });
     db.query(
@@ -857,7 +857,7 @@ app.put('/api/tipos-preventivo/:id', (req, res) => {
     );
 });
 
-app.delete('/api/tipos-preventivo/:id', (req, res) => {
+router.delete('/tipos-preventivo/:id', (req, res) => {
     db.query(`DELETE FROM tipos_preventivo WHERE id=?`, [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
@@ -865,7 +865,7 @@ app.delete('/api/tipos-preventivo/:id', (req, res) => {
 });
 
 // Sync: importa tipos distintos de tipos_mantenimiento hacia tipos_preventivo
-app.post('/api/tipos-preventivo/sync-desde-frecuencias', (req, res) => {
+router.post('/tipos-preventivo/sync-desde-frecuencias', (req, res) => {
     db.query(
         `INSERT IGNORE INTO tipos_preventivo (nombre)
          SELECT DISTINCT UPPER(TRIM(tipo_mp)) FROM tipos_mantenimiento
@@ -882,7 +882,7 @@ app.post('/api/tipos-preventivo/sync-desde-frecuencias', (req, res) => {
 // ============================================================
 
 // Últimos N días de snapshots + km/día promedio
-app.get('/api/km-historico/:placa', (req, res) => {
+router.get('/km-historico/:placa', (req, res) => {
     const placa = (req.params.placa || '').toUpperCase().trim();
     const dias  = Math.min(parseInt(req.query.dias) || 30, 90);
     if (!placa) return res.status(400).json({ error: 'Placa requerida' });
@@ -913,7 +913,7 @@ app.get('/api/km-historico/:placa', (req, res) => {
 });
 
 // Resumen general: km/día de todas las placas (últimos 30 días)
-app.get('/api/km-historico', (req, res) => {
+router.get('/km-historico', (req, res) => {
     db.query(
         `SELECT
             s1.placa,
@@ -937,7 +937,7 @@ app.get('/api/km-historico', (req, res) => {
 // ============================================================
 // CONFIG MÉTRICA POR PLACA (km vs horas motor)
 // ============================================================
-app.get('/api/config-metrica', (req, res) => {
+router.get('/config-metrica', (req, res) => {
     db.query(
         `SELECT placa, marca, metrica FROM placas ORDER BY placa`,
         (err, rows) => {
@@ -947,7 +947,7 @@ app.get('/api/config-metrica', (req, res) => {
     );
 });
 
-app.put('/api/config-metrica/:placa', (req, res) => {
+router.put('/config-metrica/:placa', (req, res) => {
     const { placa } = req.params;
     const metrica = (req.body.metrica || 'km').toLowerCase() === 'horas' ? 'horas' : 'km';
     db.query(
@@ -964,7 +964,7 @@ app.put('/api/config-metrica/:placa', (req, res) => {
 // ============================================================
 // CRUD TIPOS MANTENIMIENTO
 // ============================================================
-app.get('/api/tipos-mantenimiento', (req, res) => {
+router.get('/tipos-mantenimiento', (req, res) => {
     const { marca, uts } = req.query;
     let sql = `SELECT id, marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias,
                       tipo, sistema, descripcion
@@ -979,7 +979,7 @@ app.get('/api/tipos-mantenimiento', (req, res) => {
     });
 });
 
-app.post('/api/tipos-mantenimiento', (req, res) => {
+router.post('/tipos-mantenimiento', (req, res) => {
     const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     if (!marca || !tipo_mp) return res.status(400).json({ error: 'Marca y tipo_mp son requeridos' });
     db.query(
@@ -993,7 +993,7 @@ app.post('/api/tipos-mantenimiento', (req, res) => {
     );
 });
 
-app.put('/api/tipos-mantenimiento/:id', (req, res) => {
+router.put('/tipos-mantenimiento/:id', (req, res) => {
     const { id } = req.params;
     const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     db.query(
@@ -1007,7 +1007,7 @@ app.put('/api/tipos-mantenimiento/:id', (req, res) => {
     );
 });
 
-app.delete('/api/tipos-mantenimiento/:id', (req, res) => {
+router.delete('/tipos-mantenimiento/:id', (req, res) => {
     db.query('DELETE FROM tipos_mantenimiento WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
@@ -1015,7 +1015,7 @@ app.delete('/api/tipos-mantenimiento/:id', (req, res) => {
 });
 
 // POST /api/tipos-mantenimiento/bulk-delete — eliminación masiva por IDs
-app.post('/api/tipos-mantenimiento/bulk-delete', (req, res) => {
+router.post('/tipos-mantenimiento/bulk-delete', (req, res) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || !ids.length)
         return res.status(400).json({ error: 'Sin IDs' });
@@ -1027,7 +1027,7 @@ app.post('/api/tipos-mantenimiento/bulk-delete', (req, res) => {
 });
 
 // POST /api/tipos-mantenimiento/importar — importación masiva (upsert por marca+tipo_mp+uts)
-app.post('/api/tipos-mantenimiento/importar', async (req, res) => {
+router.post('/tipos-mantenimiento/importar', async (req, res) => {
     const { registros } = req.body;
     if (!Array.isArray(registros) || !registros.length)
         return res.status(400).json({ error: 'Sin registros' });
@@ -1074,14 +1074,14 @@ app.post('/api/tipos-mantenimiento/importar', async (req, res) => {
 // ============================================================
 // CRUD DESTINATARIOS ALERTAS
 // ============================================================
-app.get('/api/destinatarios-alertas', (req, res) => {
+router.get('/destinatarios-alertas', (req, res) => {
     db.query('SELECT * FROM destinatarios_alertas ORDER BY nombre', (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: rows });
     });
 });
 
-app.post('/api/destinatarios-alertas', (req, res) => {
+router.post('/destinatarios-alertas', (req, res) => {
     const { nombre, correo, cargo, notif_1d, notif_3d, notif_7d, notif_completada } = req.body;
     if (!nombre || !correo) return res.status(400).json({ error: 'Nombre y correo son requeridos' });
     db.query(
@@ -1099,7 +1099,7 @@ app.post('/api/destinatarios-alertas', (req, res) => {
     );
 });
 
-app.put('/api/destinatarios-alertas/:id', (req, res) => {
+router.put('/destinatarios-alertas/:id', (req, res) => {
     const { id } = req.params;
     const { nombre, correo, cargo, notif_1d, notif_3d, notif_7d, notif_completada, activo } = req.body;
     db.query(
@@ -1116,7 +1116,7 @@ app.put('/api/destinatarios-alertas/:id', (req, res) => {
     );
 });
 
-app.delete('/api/destinatarios-alertas/:id', (req, res) => {
+router.delete('/destinatarios-alertas/:id', (req, res) => {
     db.query('DELETE FROM destinatarios_alertas WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
@@ -1124,7 +1124,7 @@ app.delete('/api/destinatarios-alertas/:id', (req, res) => {
 });
 
 // Disparo manual de alertas (para probar o forzar envío)
-app.post('/api/dispararAlertas', async (req, res) => {
+router.post('/dispararAlertas', async (req, res) => {
     try {
         await verificarAlertasRetraso();
         res.json({ ok: true, msg: 'Verificación ejecutada' });
@@ -1134,7 +1134,7 @@ app.post('/api/dispararAlertas', async (req, res) => {
 });
 
 // Test de email (envía a un correo de prueba)
-app.post('/api/testEmail', async (req, res) => {
+router.post('/testEmail', async (req, res) => {
     const { correo } = req.body;
     if (!correo) return res.status(400).json({ error: 'Correo requerido' });
     try {
@@ -1157,7 +1157,7 @@ app.post('/api/testEmail', async (req, res) => {
 // ============================================================
 // CRUD CONFIGURACION FLOTA (ya tiene GET y PUT, falta DELETE y POST)
 // ============================================================
-app.post('/api/configuracion-flota', (req, res) => {
+router.post('/configuracion-flota', (req, res) => {
     const { marca, uts_categoria, km_mensuales, dias_operativos,
             mp1_intervalo_km, mp2_intervalo_km, mp3_intervalo_km, observaciones } = req.body;
     if (!marca || !uts_categoria) return res.status(400).json({ error: 'Marca y UTS son requeridos' });
@@ -1176,7 +1176,7 @@ app.post('/api/configuracion-flota', (req, res) => {
     );
 });
 
-app.delete('/api/configuracion-flota/:id', (req, res) => {
+router.delete('/configuracion-flota/:id', (req, res) => {
     db.query('DELETE FROM configuracion_flota WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
@@ -1186,7 +1186,7 @@ app.delete('/api/configuracion-flota/:id', (req, res) => {
 // ============================================================
 // CRUD MANTENIMIENTO KITS (ya tiene GET, falta POST/PUT/DELETE)
 // ============================================================
-app.post('/api/mantenimiento-kits', (req, res) => {
+router.post('/mantenimiento-kits', (req, res) => {
     const { marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
             cantidad, unidad_medida, costo_unitario, costo_total, orden } = req.body;
     if (!marca_vehiculo || !tipo_mp || !item_nombre)
@@ -1207,7 +1207,7 @@ app.post('/api/mantenimiento-kits', (req, res) => {
     );
 });
 
-app.put('/api/mantenimiento-kits/:id', (req, res) => {
+router.put('/mantenimiento-kits/:id', (req, res) => {
     const { id } = req.params;
     const { nombre_kit, item_codigo, item_nombre, cantidad,
             unidad_medida, costo_unitario, costo_total, orden, activo } = req.body;
@@ -1227,7 +1227,7 @@ app.put('/api/mantenimiento-kits/:id', (req, res) => {
     );
 });
 
-app.delete('/api/mantenimiento-kits/:id', (req, res) => {
+router.delete('/mantenimiento-kits/:id', (req, res) => {
     db.query('DELETE FROM mantenimiento_kits WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ ok: true });
@@ -1235,7 +1235,7 @@ app.delete('/api/mantenimiento-kits/:id', (req, res) => {
 });
 
 // POST /api/mantenimiento-kits/importarMasivo
-app.post('/api/mantenimiento-kits/importarMasivo', (req, res) => {
+router.post('/mantenimiento-kits/importarMasivo', (req, res) => {
     const items = req.body.items;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'Sin datos' });
     let insertados = 0, errores = 0;

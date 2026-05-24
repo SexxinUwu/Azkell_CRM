@@ -188,7 +188,7 @@ const _stockSQL = `
   WHERE i.activo=1
   ORDER BY i.id`;
 
-app.get('/api/notificaciones/resumen', (req, res) => {
+router.get('/notificaciones/resumen', (req, res) => {
     const qInspVencidas = `
         SELECT COUNT(*) AS cnt FROM inspecciones
         WHERE estado IS NULL OR estado != 'Eliminada'
