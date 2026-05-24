@@ -45,7 +45,6 @@
     flex-shrink: 0;
 }
 #moduloIntegraciones .intg-card-icon.wialon  { background: rgba(243,156,18,0.12); color: #f39c12; }
-#moduloIntegraciones .intg-card-icon.gemini  { background: rgba(88,101,242,0.12); color: var(--primary,#5865F2); }
 #moduloIntegraciones .intg-card-title {
     font-size: 0.95rem;
     font-weight: 700;
@@ -182,36 +181,6 @@
                 <i class="bi bi-lightning me-1"></i>Probar conexión
             </button>
             <span class="intg-test-result" id="intg-wialon-testresult"></span>
-        </div>
-    </div>
-
-    <!-- Gemini -->
-    <div class="intg-card" id="intg-card-gemini">
-        <div class="intg-card-header">
-            <div class="intg-card-icon gemini"><i class="bi bi-stars"></i></div>
-            <div>
-                <p class="intg-card-title">Google Gemini — IA</p>
-                <p class="intg-card-subtitle">Motor de inteligencia artificial para el asistente Azkell.</p>
-            </div>
-            <span class="intg-status pending" id="intg-gemini-status">Sin probar</span>
-        </div>
-
-        <div class="intg-field">
-            <label>API Key</label>
-            <div class="input-wrap">
-                <input type="password" id="intg-gemini-apikey" placeholder="AIza…" autocomplete="off" />
-                <button class="btn-toggle-pwd" onclick="intgTogglePwd('intg-gemini-apikey', this)" title="Mostrar/Ocultar">
-                    <i class="bi bi-eye"></i>
-                </button>
-            </div>
-            <div class="intg-hint">Obtén tu API Key en <strong>Google AI Studio</strong> (aistudio.google.com).</div>
-            <div class="intg-meta" id="intg-gemini-meta"></div>
-        </div>
-
-        <div class="intg-actions">
-            <button class="btn btn-sm btn-primary" onclick="intgGuardar('gemini')">
-                <i class="bi bi-floppy me-1"></i>Guardar
-            </button>
         </div>
     </div>
 </div>

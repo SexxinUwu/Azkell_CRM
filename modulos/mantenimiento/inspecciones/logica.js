@@ -1053,5 +1053,8 @@ window.init_inspecciones = function() {
 // Alias global para recargarModulo (main logica.js)
 window.recargarInspecciones = function() {
     dataGlobalInspecciones = null;
-    google.script.run.withSuccessHandler(mostrarStatusInspecciones).obtenerDatosInspecciones();
+    fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) { mostrarStatusInspecciones(r.data || []); })
+        .catch(function() { mostrarStatusInspecciones([]); });
 };

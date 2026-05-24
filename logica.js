@@ -313,32 +313,36 @@ window.verificarSesionGuardada = function() {
 
     // --- Iniciar sincronización SSE en tiempo real ---
     if (typeof window.initSSE === 'function') window.initSSE();
-    google.script.run.withSuccessHandler(d => {
-        dataGlobalPlacas = d; window.dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
-        let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
-        rellenarDatalist('dl-placas', placasSet);
-        if (typeof poblarSelectsFormularios === 'function') {
-            poblarSelectsFormularios(d);
-        }
-        recargarWialon();
-        // Si el usuario llegó a Fleetrun antes que las placas cargaran, re-renderizar ahora con el filtro correcto
-        if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
-            && typeof mostrarFleetrun === 'function'
-            && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
-            mostrarFleetrun(dataGlobalFleetrun);
-        }
-    }).obtenerDatosPlacas();
-    google.script.run.withSuccessHandler(d => { dataTiposMant = d; }).obtenerTiposMantenimiento();
-    google.script.run.withSuccessHandler(tipos => { rellenarDatalist('dl-tpmp', new Set(tipos)); }).obtenerTPMP();
+    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(r => r.json()).then(r => {
+            let d = r.data || [];
+            dataGlobalPlacas = d; window.dataGlobalPlacas = d; CACHE['placas'] = d; CACHE_TIME['placas'] = Date.now();
+            let placasSet = new Set(); d.forEach(r => { if (r[0] && r[0] !== 'Placa' && r[0] !== 'PLACA') placasSet.add(r[0]); });
+            rellenarDatalist('dl-placas', placasSet);
+            if (typeof poblarSelectsFormularios === 'function') {
+                poblarSelectsFormularios(d);
+            }
+            recargarWialon();
+            // Si el usuario llegó a Fleetrun antes que las placas cargaran, re-renderizar ahora con el filtro correcto
+            if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
+                && typeof mostrarFleetrun === 'function'
+                && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
+                mostrarFleetrun(dataGlobalFleetrun);
+            }
+        });
+    fetch('/api/script/obtenerTiposMantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { dataTiposMant = r.data || []; });
+    fetch('/api/script/obtenerTPMP', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { rellenarDatalist('dl-tpmp', new Set(r.data || [])); });
 
     // Precarga Fleetrun: llenar window.dataGlobalFleetrun y disparar re-render si el usuario ya está en ese módulo
-    google.script.run.withSuccessHandler(d => {
+    fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(r => r.json()).then(r => {
+        let d = r.data || [];
         window.dataGlobalFleetrun = d;
         dataGlobalFleetrun = d;
         if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun') {
             if (typeof window.init_fleetrun === 'function') window.init_fleetrun();
         }
-    }).obtenerDatosFleetrun();
+    });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1661,7 +1665,8 @@ function recargarWialon(forzarVista = false) {
     let txt = document.getElementById('wialon-text');
     if(btn) { btn.className = 'btn btn-sm btn-outline-warning ms-3'; txt.innerText = 'Conectando...'; }
     
-    google.script.run.withSuccessHandler(d => {
+    fetch('/api/script/obtenerDatosWialon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => {
+        let d = r.data || {};
         if(d && !d.error) {
             CACHE['wialon'] = d;
             if(btn) { btn.className = 'btn btn-sm ms-3 btn-primary'; txt.innerText = 'GPS Activo'; }
@@ -1677,7 +1682,9 @@ function recargarWialon(forzarVista = false) {
             if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
             console.error("Error Wialon:", d.error);
         }
-    }).obtenerDatosWialon();
+    }).catch(e => {
+        if(btn) { btn.className = 'btn btn-sm btn-danger ms-3 text-white'; txt.innerText = 'Error GPS'; }
+    });
 }
 
 function buscarWialonPorPlaca(placa) {
@@ -1797,16 +1804,19 @@ function cargarModulo(nombre, fnRender, fnBackend) {
       if (tb) tb.innerHTML = generarSkeletonHtml(tablaInfo[nombre].cols);
   }
 
-  google.script.run.withSuccessHandler(datos => {
+  fetch('/api/script/' + fnBackend, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+    .then(r => r.json())
+    .then(r => {
+      let datos = r.data || [];
       if (typeof datos === 'string' && datos.includes('Quota exceeded')) { datos = "🚨 Límite Diario de Firebase (50,000 lecturas) Alcanzado por hoy. El sistema reanudará a medianoche."; }
       CACHE[nombre] = typeof datos === 'string' ? [] : datos;
       CACHE_TIME[nombre] = Date.now();
       setBtnLoading(nombre, false);
       fnRender(datos);
       actualizarBadge(nombre, true);
-    }).withFailureHandler(err => {
+    }).catch(err => {
       setBtnLoading(nombre, false); if(label) label.textContent = 'Error Red';
-    })[fnBackend]();
+    });
 }
 
 function recargarModulo(nombre) {
@@ -2980,7 +2990,7 @@ function cargarTablaFleetrun(forzarRefresh = false) {
     }
     let cuerpoTablaFleetrunEl = document.getElementById('cuerpoTablaFleetrun');
     if (cuerpoTablaFleetrunEl) cuerpoTablaFleetrunEl.innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
-    google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun();
+    fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => mostrarFleetrun(r.data || []));
 }
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
 function toggleGroupRow(className, trElement) { let rows = document.querySelectorAll('.' + className); let icon = trElement.querySelector('i'); let isHidden = false; if(rows.length > 0) isHidden = rows[0].style.display === 'none'; rows.forEach(row => { row.style.display = isHidden ? '' : 'none'; }); if(icon) { icon.className = isHidden ? "bi bi-chevron-down ms-1 me-2 text-warning" : "bi bi-chevron-right ms-1 me-2 text-warning"; } }
@@ -3298,8 +3308,8 @@ window.mostrarDetalleFleetrun = function(index) {
     }
 };
 function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = p[3]; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
-function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
-function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).actualizarFleetrun(formObj); }
+function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Guardar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }); }
+function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }); }
 
 // TRADUCTOR DE COORDENADAS A CALLES (OpenStreetMap)
 window.obtenerDireccion = async function(lat, lng, btn) {
@@ -3661,49 +3671,7 @@ function procesarGuardadoUsuario(event, formObj) {
         btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Guardar Accesos';
     });
 }
-function enviarPreguntaIA() {
-    const input = document.getElementById('inputPregunta');
-    const pregunta = input.value.trim();
-    if (!pregunta) return;
 
-    const historial = document.getElementById('chat-historial');
-    historial.innerHTML += `<div class="mb-2 text-end"><span class="border p-2 rounded d-inline-block chat-bubble bg-warning text-dark">${pregunta}</span></div>`;
-    input.value = '';
-
-    const btn = document.getElementById('btnEnviarIA');
-    btn.disabled = true;
-
-    // Contexto enriquecido con estado real de la flota
-    var placasActivas = (dataGlobalPlacas||[]).filter(function(p){ return p[18]==='Activa'; }).length;
-    var hoy2 = new Date(); hoy2.setHours(0,0,0,0);
-    var inspV=0, inspPV=0, inspVig=0;
-    (dataGlobalInspecciones||[]).filter(function(i){ return i.estado!=='Eliminada'; }).forEach(function(i) {
-        if (!i.fecha_ingreso) return;
-        try {
-            var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { fi=new Date(i.fecha_ingreso+'T00:00:00'); }
-            var fp=new Date(fi.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
-            var d=Math.ceil((fp-hoy2)/864e5);
-            if (d<0) inspV++; else if (d<=7) inspPV++; else inspVig++;
-        } catch(e) {}
-    });
-    var mpV=0, mpPV=0;
-    (dataGlobalFleetrun||[]).forEach(function(r) {
-        var falta=(parseFloat(r[11])||0)-(parseFloat(r[14])||0);
-        if(falta<=0) mpV++; else if(falta<=1500) mpPV++;
-    });
-    var resumenContexto = 'Contexto Azkell Fleet: '+dataGlobalPlacas.length+' placas totales, '
-        +placasActivas+' activas. Inspecciones: '+inspVig+' vigentes, '+inspPV+' por vencer (≤7d), '
-        +inspV+' vencidas. MPs Fleetrun: '+mpV+' vencidos, '+mpPV+' por vencer.';
-
-    google.script.run.withSuccessHandler(r => {
-        historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble" style="background-color: var(--surface); color: var(--text);">${r}</span></div>`;
-        historial.scrollTop = historial.scrollHeight;
-        btn.disabled = false;
-    }).withFailureHandler(e => {
-        historial.innerHTML += `<div class="mb-2 text-start"><span class="border p-2 rounded d-inline-block chat-bubble text-danger">Error: ${e.message}</span></div>`;
-        btn.disabled = false;
-    }).consultarGemini(pregunta, resumenContexto);
-}
 // 🚀 RESTAURADO: LÓGICA DE BOTONES OK / FALLA Y PORCENTAJES
 // ============================================================
 
@@ -3967,11 +3935,12 @@ function inicializarConductoresDatalist(inputID, datalistID) {
             CACHE['conductores'].forEach(r => { if (r[1]) driversSet.add(r[1]); });
             rellenarDatalist(datalistID, driversSet);
         } else {
-            google.script.run.withSuccessHandler(d => {
+            fetch('/api/script/obtenerDatosConductores', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => {
+                let d = r.data || [];
                 let driversSet = new Set();
                 d.forEach(r => { if (r[1]) driversSet.add(r[1]); });
                 rellenarDatalist(datalistID, driversSet);
-            }).obtenerDatosConductores();
+            });
         }
     }, { once: true });
 }
