@@ -69,7 +69,10 @@ function cargarTablaPlacas(forzarRefresh = false) {
         const c = document.getElementById('contenedorPlacasDinamico');
         if (c) c.innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>';
     }
-    google.script.run.withSuccessHandler(mostrarPlacas).obtenerDatosPlacas();
+    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) { mostrarPlacas(r.data || []); })
+        .catch(function() { mostrarPlacas([]); });
 }
 
 window.cambiarColumnasPlacas = function(cols) {
@@ -827,7 +830,30 @@ window.abrirModalEditarPlaca = function(index) {
     new bootstrap.Modal(document.getElementById('modalEditarPlaca')).show();
 };
 
-function enviarPlaca(event, formObj) { event.preventDefault(); if (!window.guardAction('placas', 'c')) return; const btn = document.getElementById('btnGuardarPlaca'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide(); cargarTablaPlacas(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarPlaca(formObj); }
+function enviarPlaca(event, formObj) {
+    event.preventDefault();
+    if (!window.guardAction('placas', 'c')) return;
+    const btn = document.getElementById('btnGuardarPlaca');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+    formObj.usuarioAutor.value = usuarioLogueado;
+    const data = {};
+    for (let i = 0; i < formObj.elements.length; i++) {
+        const el = formObj.elements[i];
+        if (el.name) data[el.name] = el.value;
+    }
+    fetch('/api/script/guardarPlaca', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (r.data === 'Éxito') {
+                formObj.reset();
+                bootstrap.Modal.getInstance(document.getElementById('modalPlaca')).hide();
+                cargarTablaPlacas(true);
+            } else { alert(r.data); }
+            btn.disabled = false; btn.innerHTML = 'Guardar';
+        })
+        .catch(function(e) { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; });
+}
 
 function enviarEdicionPlaca(event, formObj) {
     event.preventDefault();

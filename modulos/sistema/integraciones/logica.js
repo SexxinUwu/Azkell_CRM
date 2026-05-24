@@ -29,13 +29,6 @@ function intgCargar() {
                 } else if (row.clave === 'wialon_url') {
                     var el2 = document.getElementById('intg-wialon-url');
                     if (el2) el2.value = val;
-                } else if (row.clave === 'gemini_api_key') {
-                    var el3 = document.getElementById('intg-gemini-apikey');
-                    if (el3) el3.value = val;
-                    var m3 = document.getElementById('intg-gemini-meta');
-                    if (m3) m3.textContent = meta;
-                    var st3 = document.getElementById('intg-gemini-status');
-                    if (st3) { st3.textContent = val ? 'Configurado' : 'Sin configurar'; st3.className = 'intg-status ' + (val ? 'ok' : 'pending'); }
                 }
             });
         })
@@ -54,9 +47,6 @@ window.intgGuardar = function(cual) {
             { clave: 'wialon_token', valor: token.trim() },
             { clave: 'wialon_url',   valor: url.trim()   }
         ];
-    } else if (cual === 'gemini') {
-        var key = (document.getElementById('intg-gemini-apikey') || {}).value || '';
-        pares = [{ clave: 'gemini_api_key', valor: key.trim() }];
     }
 
     if (!pares.length) return;

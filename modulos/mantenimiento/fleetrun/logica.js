@@ -20,7 +20,10 @@ function cargarTablaFleetrun(forzarRefresh = false) {
             ? generarSkeletonHtml(10, 6)
             : '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
     }
-    google.script.run.withSuccessHandler(mostrarFleetrun).obtenerDatosFleetrun();
+    fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) { mostrarFleetrun(r.data || []); })
+        .catch(function() { mostrarFleetrun([]); });
 }
 
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
@@ -499,9 +502,55 @@ window.mostrarDetalleFleetrun = function(index) {
 
 function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; frPlacaInit('eF', p[4]); frTipoInit('eF', p[8]);const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Offcanvas(document.getElementById('drawerEditarFleetrun')).show(); }
 
-function enviarFleetrun(event, formObj) { event.preventDefault(); if (!window.guardAction('fleet','c')) return; const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { formObj.reset(); bootstrap.Offcanvas.getInstance(document.getElementById('drawerFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Guardar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }).guardarFleetrun(formObj); }
+function enviarFleetrun(event, formObj) {
+    event.preventDefault();
+    if (!window.guardAction('fleet','c')) return;
+    const btn = document.getElementById('btnGuardarFleetrun');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+    if (!formObj.f_id.value) formObj.f_id.value = 'FL-' + Date.now();
+    formObj.usuarioAutor.value = usuarioLogueado;
+    const data = {};
+    for (let i = 0; i < formObj.elements.length; i++) {
+        const el = formObj.elements[i];
+        if (el.name) data[el.name] = el.value;
+    }
+    fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (r.data === 'Éxito') {
+                formObj.reset();
+                bootstrap.Offcanvas.getInstance(document.getElementById('drawerFleetrun')).hide();
+                cargarTablaFleetrun(true);
+            } else { alert(r.data); }
+            btn.disabled = false; btn.innerHTML = 'Guardar';
+        })
+        .catch(function(e) { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; });
+}
 
-function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); if (!window.guardAction('fleet','e')) return; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; google.script.run.withSuccessHandler(r => { if (r === 'Éxito') { bootstrap.Offcanvas.getInstance(document.getElementById('drawerEditarFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).withFailureHandler(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).actualizarFleetrun(formObj); }
+function enviarEdicionFleetrun(event, formObj) {
+    event.preventDefault();
+    if (!window.guardAction('fleet','e')) return;
+    const btn = document.getElementById('btnActualizarFleetrun');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...';
+    formObj.usuarioAutor.value = usuarioLogueado;
+    const data = {};
+    for (let i = 0; i < formObj.elements.length; i++) {
+        const el = formObj.elements[i];
+        if (el.name) data[el.name] = el.value;
+    }
+    fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
+        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (r.data === 'Éxito') {
+                bootstrap.Offcanvas.getInstance(document.getElementById('drawerEditarFleetrun')).hide();
+                cargarTablaFleetrun(true);
+            } else { alert(r.data); }
+            btn.disabled = false; btn.innerHTML = 'Actualizar';
+        })
+        .catch(function(e) { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; });
+}
 
 // ── Bulk selection helper (local al módulo) ───────────────────────────────
 window.toggleBulkBtn = function(contexto) {
