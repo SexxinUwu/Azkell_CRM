@@ -1902,10 +1902,7 @@ app.use('/api/almacen', almacenRoutes);
 // ============================================================
 const tallerRoutes = require('./routes/taller')(db);
 app.use('/api', tallerRoutes);
-const authRoutes = require('./routes/auth')(db);
-app.use('/api', authRoutes);
-const auditoriaRoutes = require('./routes/auditoria')(db);
-app.use('/api', auditoriaRoutes);
+
 
 // ── Integraciones API (GET / PUT) ────────────────────────────────
 app.get('/api/integraciones', (req, res) => {
