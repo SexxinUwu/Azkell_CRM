@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (db, _multerInv) => {
+module.exports = (db, _multerInv, logAudit) => {
 
 // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
 function _calcularTotalPen(detalles, tc) {
@@ -24,12 +24,12 @@ router.get('/configuracion', (req, res) => {
 });
 router.put('/configuracion', (req, res) => {
     const entries = Object.entries(req.body);
-    if (!entries.length) return res.json({ ok: true });
+    if (!entries.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     const vals = entries.map(([k, v]) => [k, String(v)]);
     db.query('INSERT INTO configuracion_almacen (clave,valor) VALUES ? ON DUPLICATE KEY UPDATE valor=VALUES(valor)',
         [vals], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
 });
 
@@ -55,7 +55,7 @@ router.post('/proveedores', (req, res) => {
                     const mVals = marcas.map(m => [id, m]);
                     db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
                 }
-                res.json({ ok: true, id });
+                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
             });
     });
 });
@@ -71,14 +71,14 @@ router.put('/proveedores/:id', (req, res) => {
                     const mVals = marcas.map(m => [id, m]);
                     db.query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => {});
                 }
-                res.json({ ok: true });
+                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         });
 });
 router.delete('/proveedores/:id', (req, res) => {
     db.query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -163,7 +163,7 @@ router.post('/proveedores/bulk-delete', (req, res) => {
     const placeholders = ids.map(() => '?').join(',');
     db.query('DELETE FROM proveedores_inv WHERE id IN (' + placeholders + ')', ids, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true, eliminados: result.affectedRows });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, eliminados: result.affectedRows });
     });
 });
 
@@ -289,7 +289,7 @@ router.post('/inventario', (req, res) => {
              estado_art||'Activo', codigo_barras||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                res.json({ ok: true, id });
+                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
             });
     });
 });
@@ -329,13 +329,13 @@ router.put('/inventario/:id', (req, res) => {
          estado_art||'Activo', codigo_barras||null, req.params.id],
         (err) => {
             if (err) { console.error('[PUT inventario]', err.message); return res.status(500).json({ error: err.message }); }
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
 });
 router.delete('/inventario/:id', (req, res) => {
     db.query('UPDATE inventario SET activo=0 WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -345,7 +345,7 @@ router.post('/inventario/bulk-delete', (req, res) => {
     const placeholders = ids.map(() => '?').join(',');
     db.query(`UPDATE inventario SET activo=0 WHERE id IN (${placeholders})`, ids, (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true, eliminados: ids.length });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, eliminados: ids.length });
     });
 });
 
@@ -363,7 +363,7 @@ router.post('/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) =>
             const url = result.secure_url;
             db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ ok: true, imagen_url: url });
+                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, imagen_url: url });
             });
         }
     );
@@ -377,7 +377,7 @@ router.delete('/inventario/:id/imagen', (req, res) => {
         if (error) console.error('Cloudinary destroy error:', error.message);
         db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
 });
@@ -422,7 +422,7 @@ router.post('/inventario/:id/regularizar', (req, res) => {
             db.query(`UPDATE inventario SET observaciones = CONCAT(COALESCE(observaciones,''), ?)
                       WHERE id=?`,
                 ['\n[REG ' + fechaHoy + '] ' + obsAudit, id], () => {});
-            res.json({ ok: true, fecha_regularizacion: fechaHoy, stock_anterior: stockAnt, stock_nuevo: stockVal });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, fecha_regularizacion: fechaHoy, stock_anterior: stockAnt, stock_nuevo: stockVal });
         });
     });
 });
@@ -430,7 +430,7 @@ router.post('/inventario/:id/regularizar', (req, res) => {
 // Import masivo desde Excel
 router.post('/inventario/importar', async (req, res) => {
     const { filas } = req.body;
-    if (!filas || !filas.length) return res.json({ ok: true, insertados: 0 });
+    if (!filas || !filas.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, insertados: 0 });
     let insertados = 0;
     const errors = [];
     for (let i = 0; i < filas.length; i++) {
@@ -475,7 +475,7 @@ router.post('/inventario/importar', async (req, res) => {
             });
         } catch(e) { errors.push(`Fila ${i+2}: ${e.message}`); }
     }
-    res.json({ ok: true, insertados, errores: errors });
+    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, insertados, errores: errors });
 });
 
 // ── Clientes de placas (para Empresa en conductores) ──────────────────────
@@ -503,7 +503,7 @@ router.post('/unidades', (req, res) => {
         [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true, id: result.insertId });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
         });
 });
 
@@ -513,14 +513,14 @@ router.put('/unidades/:id', (req, res) => {
         [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
 });
 
 router.delete('/unidades/:id', (req, res) => {
     db.query('DELETE FROM almacen_unidades WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -546,7 +546,7 @@ router.post('/sistemas', (req, res) => {
         [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true, id: result.insertId });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
         });
 });
 
@@ -556,14 +556,14 @@ router.put('/sistemas/:id', (req, res) => {
         [nombre.toUpperCase().trim(), JSON.stringify(sub_sistemas || []), activo != null ? activo : 1, orden || 0, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
 });
 
 router.delete('/sistemas/:id', (req, res) => {
     db.query('DELETE FROM almacen_sistemas WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -584,7 +584,7 @@ router.post('/familias', (req, res) => {
         [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true, id: result.insertId });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
         });
 });
 
@@ -594,14 +594,14 @@ router.put('/familias/:id', (req, res) => {
         [nombre.toUpperCase().trim(), descripcion || null, activo != null ? activo : 1, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
 });
 
 router.delete('/familias/:id', (req, res) => {
     db.query('DELETE FROM almacen_familias WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -620,7 +620,7 @@ router.post('/marcas', (req, res) => {
     db.query('INSERT INTO almacen_marcas (nombre, descripcion, activo) VALUES (?,?,?)',
         [nombre.toUpperCase(), descripcion || null, activo ?? 1], (err, r) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true, id: r.insertId });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: r.insertId });
     });
 });
 router.put('/marcas/:id', (req, res) => {
@@ -628,13 +628,13 @@ router.put('/marcas/:id', (req, res) => {
     db.query('UPDATE almacen_marcas SET nombre=?, descripcion=?, activo=? WHERE id=?',
         [nombre.toUpperCase(), descripcion || null, activo ?? 1, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 router.delete('/marcas/:id', (req, res) => {
     db.query('DELETE FROM almacen_marcas WHERE id=?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -669,7 +669,7 @@ router.post('/entradas', (req, res) => {
              documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) return res.json({ ok: true, id });
+                if (!items || !items.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                 // Resolver inventario_id por descripción para items sin código
                 const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverEntrada = (cb) => {
@@ -692,7 +692,7 @@ router.post('/entradas', (req, res) => {
                         const toUpdate = items.filter(d =>
                             (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
                         );
-                        if (!toUpdate.length) return res.json({ ok: true, id });
+                        if (!toUpdate.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                         let done = 0;
                         toUpdate.forEach(d => {
                             const invId      = d.inventario_id || mapaInvEnt[d.descripcion];
@@ -702,7 +702,7 @@ router.post('/entradas', (req, res) => {
                             db.query(
                                 'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
                                 [costoOrig, costoSoles, isUSD ? tc : null, invId],
-                                () => { if (++done === toUpdate.length) res.json({ ok: true, id }); }
+                                () => { if (++done === toUpdate.length) if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
                             );
                         });
                     });
@@ -716,7 +716,7 @@ router.delete('/entradas/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query('DELETE FROM entradas_inv WHERE id=?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
 });
@@ -781,7 +781,7 @@ router.post('/salidas', (req, res) => {
              responsable_id||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null, ticket_ot||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) return res.json({ ok: true, id });
+                if (!items || !items.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                 // Resolver inventario_id por descripción para items sin código
                 const descsSalida = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverSalida = (cb) => {
@@ -800,7 +800,7 @@ router.post('/salidas', (req, res) => {
                             parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
                     });
                     db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
-                    res.json({ ok: true, id });
+                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                 });
             });
     });
@@ -815,7 +815,7 @@ router.put('/salidas/:id', (req, res) => {
             ['Anulado', String(motivo).trim(), id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
-                res.json({ ok: true });
+                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
     } else if (accion === 'despachar') {
         db.query("UPDATE salidas_inv SET estado='Despachado' WHERE id=?", [id], (err, result) => {
@@ -829,7 +829,7 @@ router.put('/salidas/:id', (req, res) => {
                  WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
                 [id], () => {}
             );
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     } else {
         res.status(400).json({ error: 'Acción no válida' });
@@ -841,7 +841,7 @@ router.delete('/salidas/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
-            res.json({ ok: true });
+            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
 });

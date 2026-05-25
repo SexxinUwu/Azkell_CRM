@@ -90,8 +90,7 @@
             </div>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <button class="btn-reload-cache" onclick="window.guCargarTodo && window.guCargarTodo(true)" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-primary btn-sm fw-bold" onclick="window.guNuevoMiembro && window.guNuevoMiembro()"><i class="bi bi-person-plus me-1"></i>Nuevo Miembro</button>
+            <div id="top-actions-placeholder"></div>
         </div>
     </div>
 
@@ -119,6 +118,23 @@
                 <div id="guPanelContent" style="display:none;"></div>
             </div>
             <div class="gu-panel-actions" id="guPanelActions" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+    <!-- FAB Menu Usuarios -->
+    <div class="fab-menu" id="us-fab-menu">
+        <button class="fab-main" onclick="document.getElementById('us-fab-menu').classList.toggle('fab-menu-open')">
+            <i class="bi bi-plus" style="font-size: 32px;"></i>
+        </button>
+        <div class="fab-options">
+            <div class="fab-item" onclick="document.getElementById('us-fab-menu').classList.remove('fab-menu-open'); window.guNuevoMiembro && window.guNuevoMiembro()">
+                <span class="fab-item-label">Nuevo Usuario</span>
+                <div class="fab-item-btn"><i class="bi bi-person-plus"></i></div>
+            </div>
+            <div class="fab-item" onclick="document.getElementById('us-fab-menu').classList.remove('fab-menu-open'); window.guNuevoRol && window.guNuevoRol()">
+                <span class="fab-item-label">Nuevo Rol</span>
+                <div class="fab-item-btn"><i class="bi bi-shield-plus"></i></div>
+            </div>
         </div>
     </div>
 </div>
