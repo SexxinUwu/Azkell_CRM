@@ -3461,3 +3461,59 @@ body.dark .fab-item-label {
         border-radius: 20px;
     }
 }
+
+
+/* Botones de acción (Guardar/Eliminar) para Módulo Usuarios y otros */
+.btn-gu-save {
+    background: var(--crm-accent, #2563eb);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-gu-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+.btn-gu-danger {
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.4);
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-gu-danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+}
+
+/* Modificamos gu-panel-actions en desktop */
+.gu-panel-actions {
+    background: var(--surface);
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-radius: 0 0 24px 0;
+}
