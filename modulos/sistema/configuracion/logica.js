@@ -171,7 +171,8 @@ window.applyFontFamily = function(key, save) {
         inter:  "'Inter', system-ui, sans-serif",
         system: "system-ui, -apple-system, sans-serif",
         serif:  "Georgia, 'Times New Roman', serif",
-        mono:   "'Consolas', 'Courier New', monospace"
+        mono:   "'Consolas', 'Courier New', monospace",
+        oswald: "'Oswald', sans-serif"
     };
     const family = FONTS[key] || FONTS.inter;
     document.documentElement.style.setProperty('--font-family', family);
