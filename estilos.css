@@ -3230,35 +3230,31 @@ body.modo-revisor .btn-dots { display: none !important; }
 }
 
 
+
 /* ============================================================
-   💎 FASE 5: REDISEÑO MODERNO (FLOTANTE & ESMERALDA)
+   💎 FASE 5.1: REDISEÑO MINIMALISTA PRO (Corregido)
    ============================================================ */
 
-/* 1. Nueva Paleta de Colores (Emerald Green Moderno) */
+/* 1. Fondos Generales (Mejora de Contraste) */
 :root {
-    --crm-accent: #059669 !important; /* Verde Esmeralda */
-    --crm-accent-light: rgba(5, 150, 105, 0.15) !important;
-    --bg-modern: #f1f5f9;
+    /* Gris perla ligeramente más profundo para contrastar con las tarjetas blancas */
+    --bg-modern: #e2e8f0; 
 }
 body.dark {
-    --crm-accent: #10b981 !important; /* Verde más claro para Dark Mode */
-    --crm-accent-light: rgba(16, 185, 129, 0.2) !important;
+    /* Gris casi negro oscuro, y tarjetas un poco más claras */
     --bg-modern: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #f8fafc;
 }
 
-/* 2. Rediseño del Layout (Fondo) */
-body {
-    background-color: var(--bg-modern) !important;
-}
-.content {
-    background-color: transparent !important;
-}
+/* 2. Rediseño del Layout (Aplicado a Light y Dark Mode) */
+body { background-color: var(--bg-modern) !important; }
+.content { background-color: transparent !important; }
+.main-area { padding: 0 12px 12px 0 !important; }
+#app-crm { padding: 12px; background-color: var(--bg-modern); }
 
-/* 3. Sidebar Flotante (Efecto Cápsula) */
-#app-crm {
-    padding: 12px;
-    background-color: var(--bg-modern);
-}
+/* 3. Sidebar Flotante (Efecto Cápsula en Escritorio y MÓVIL) */
 .sidebar {
     height: calc(100vh - 24px) !important;
     border-radius: 24px !important;
@@ -3268,14 +3264,20 @@ body {
     overflow: hidden;
 }
 body.dark .sidebar {
+    background-color: var(--surface) !important;
     border: 1px solid rgba(255,255,255,0.05) !important;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
 }
 
-/* En móviles, la sidebar ocupa toda la pantalla de todas formas, ajustamos */
+/* Aplicando el diseño cápsula también en teléfonos móviles */
 @media (max-width: 768px) {
-    #app-crm { padding: 0; }
-    .sidebar { height: 100% !important; border-radius: 0 !important; margin: 0 !important; }
+    #app-crm { padding: 8px; }
+    .sidebar { 
+        height: calc(100% - 16px) !important; 
+        border-radius: 20px !important; 
+        margin: 8px !important; 
+    }
+    .main-area { padding: 0 8px 8px 8px !important; }
 }
 
 /* 4. Topbar Glassmorphism y Flotante */
@@ -3296,16 +3298,9 @@ body.dark .topbar {
     .topbar { margin: 8px !important; border-radius: 12px !important; }
 }
 
-/* 5. Área Principal (Main Area) Espaciado */
-.main-area {
-    padding: 0 12px 12px 0 !important;
-}
-@media (max-width: 768px) {
-    .main-area { padding: 0 8px 8px 8px !important; }
-}
-
-/* 6. Refinamiento de Tarjetas y Sombras */
+/* 5. Refinamiento de Tarjetas y Tablas (Sombreado Premium) */
 .card, .kpi-card, .pregunta-box, .detalle-item {
+    background-color: var(--surface) !important;
     border-radius: 20px !important;
     border: 1px solid rgba(0,0,0,0.04) !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.04) !important;
@@ -3314,21 +3309,18 @@ body.dark .card, body.dark .kpi-card, body.dark .pregunta-box, body.dark .detall
     border: 1px solid rgba(255,255,255,0.04) !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
 }
-.kpi-card { border-left-width: 6px !important; border-left-color: var(--crm-accent) !important; }
-
-/* 7. Eliminar bordes duros de tablas */
 .table-custom th {
     border-bottom: 2px solid rgba(0,0,0,0.03) !important;
     background-color: transparent !important;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;
 }
 body.dark .table-custom th { border-bottom-color: rgba(255,255,255,0.03) !important; }
 .table-custom td { border-top: 1px solid rgba(0,0,0,0.02) !important; }
 body.dark .table-custom td { border-top: 1px solid rgba(255,255,255,0.02) !important; }
-.clickable-row:hover td { background-color: var(--crm-accent-light) !important; }
 
-/* 8. Botones suaves */
-.btn { border-radius: 12px !important; }
-.btn-sm { border-radius: 8px !important; }
+/* Legibilidad de color de texto en botones modo oscuro */
+body.dark .btn-primary, body.dark .btn-outline-primary, body.dark .btn-outline-info {
+    color: #ffffff !important;
+}
+
+/* Fin del override */
