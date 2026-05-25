@@ -922,14 +922,7 @@ app.post('/api/login', (req, res) => {
 const tallerRoutes = require('./routes/taller')(db, logAudit);
 app.use('/api', tallerRoutes);
 
-// ============================================================
-// 🚀 EL PUENTE DE LECTURA A MYSQL
-// ============================================================
-
-const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
-app.use('/api/script', legacyRoutes);
-// Legacy Masivos (necesitan usar /api/ directo)
-app.use('/api', legacyRoutes);
+// (legacyRoutes se movió más abajo para no interceptar los endpoints que siguen)
 
 app.get('/api/cat-rampas', (req, res) => {
     db.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
@@ -1924,6 +1917,15 @@ app.put('/api/integraciones', (req, res) => {
         }
     );
 });
+
+// ============================================================
+// 🚀 EL PUENTE DE LECTURA A MYSQL (Legacy)
+// Debe ir DESPUÉS de todas las rutas específicas de /api/ 
+// para que el wildcard /:metodo no intercepte los POSTs correctos.
+// ============================================================
+const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
+app.use('/api/script', legacyRoutes);
+app.use('/api', legacyRoutes);
 
 // 4. Encender Servidor
 app.listen(process.env.PORT || 3000, () => {
