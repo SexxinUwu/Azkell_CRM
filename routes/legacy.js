@@ -200,10 +200,10 @@ router.post('/:metodo', async (req, res) => {
             placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?
         `;
         const values = [
-            datos.id, datos.placa, datos.fecha_ingreso, datos.cliente, datos.tecnico,
-            datos.km_tablero, datos.dias_propuestos, datos.detalles_json, datos.firma_base64,
-            datos.placa, datos.fecha_ingreso, datos.cliente, datos.tecnico,
-            datos.km_tablero, datos.dias_propuestos, datos.detalles_json, datos.firma_base64
+            datos.id, datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
+            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64,
+            datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
+            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64
         ];
         db.query(query, values, (err) => {
             if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }
