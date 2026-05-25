@@ -24,7 +24,7 @@ router.get('/configuracion', (req, res) => {
 });
 router.put('/configuracion', (req, res) => {
     const entries = Object.entries(req.body);
-    if (!entries.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+    if (!entries.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true }); }
     const vals = entries.map(([k, v]) => [k, String(v)]);
     db.query('INSERT INTO configuracion_almacen (clave,valor) VALUES ? ON DUPLICATE KEY UPDATE valor=VALUES(valor)',
         [vals], (err) => {
@@ -430,7 +430,7 @@ router.post('/inventario/:id/regularizar', (req, res) => {
 // Import masivo desde Excel
 router.post('/inventario/importar', async (req, res) => {
     const { filas } = req.body;
-    if (!filas || !filas.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, insertados: 0 });
+    if (!filas || !filas.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, insertados: 0 }); }
     let insertados = 0;
     const errors = [];
     for (let i = 0; i < filas.length; i++) {
@@ -669,7 +669,7 @@ router.post('/entradas', (req, res) => {
              documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                if (!items || !items.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
                 // Resolver inventario_id por descripción para items sin código
                 const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverEntrada = (cb) => {
@@ -692,7 +692,7 @@ router.post('/entradas', (req, res) => {
                         const toUpdate = items.filter(d =>
                             (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
                         );
-                        if (!toUpdate.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                        if (!toUpdate.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
                         let done = 0;
                         toUpdate.forEach(d => {
                             const invId      = d.inventario_id || mapaInvEnt[d.descripcion];
@@ -781,7 +781,7 @@ router.post('/salidas', (req, res) => {
              responsable_id||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null, ticket_ot||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) return if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                if (!items || !items.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
                 // Resolver inventario_id por descripción para items sin código
                 const descsSalida = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
                 const resolverSalida = (cb) => {
