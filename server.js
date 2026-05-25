@@ -917,6 +917,12 @@ app.post('/api/login', (req, res) => {
 });
 
 // ============================================================
+// 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)
+// ============================================================
+const tallerRoutes = require('./routes/taller')(db, logAudit);
+app.use('/api', tallerRoutes);
+
+// ============================================================
 // 🚀 EL PUENTE DE LECTURA A MYSQL
 // ============================================================
 
@@ -1893,11 +1899,7 @@ function _generarCodigoAlmacen(tipo, anio, cb) {
 const almacenRoutes = require('./routes/almacen')(db, _multerInv, logAudit);
 app.use('/api/almacen', almacenRoutes);
 
-// ============================================================
-// RUTAS TALLER Y MANTENIMIENTO
-// ============================================================
-const tallerRoutes = require('./routes/taller')(db, logAudit);
-app.use('/api', tallerRoutes);
+// (tallerRoutes ya fue montado antes del legacy wildcard — ver arriba)
 
 
 // ── Integraciones API (GET / PUT) ────────────────────────────────
