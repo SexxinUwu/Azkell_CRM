@@ -537,6 +537,9 @@ db.query(`ALTER TABLE taller_rampas ADD COLUMN fecha_salida_real DATE NULL`, (e)
 db.query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) => {
     if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas hora_salida_real:', e.message);
 });
+db.query(`ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas creado_en:', e.message);
+});
 
 // ── Migraciones ordenes_trabajo: flujo OT (iniciar / pausar / cerrar) ─────────
 [

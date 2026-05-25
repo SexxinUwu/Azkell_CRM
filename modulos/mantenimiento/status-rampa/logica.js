@@ -78,7 +78,11 @@ function srCargarEntradas() {
             if (badgeR) badgeR.textContent = window.srEntradas.length;
             if (window.srDetalleId !== null) window.srAbrirDetalle(window.srDetalleId);
         })
-        .catch(function() { window.srEntradas = []; srRenderTabla(); });
+        .catch(function(err) { 
+            console.error('Error al cargar status rampa:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error cargando datos de la tabla. Revisa tu conexión.', 'danger');
+            window.srEntradas = []; srRenderTabla(); 
+        });
 }
 
 // ── Catálogos ────────────────────────────────────────────────────
@@ -336,7 +340,7 @@ function srRenderTabla() {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
         var color     = SR_COLORES[idx % SR_COLORES.length];
-        var entradas  = window.srEntradas.filter(function(e) { return e.rampa === rampaId; });
+        var entradas  = window.srEntradas.filter(function(e) { return e.rampa == rampaId; });
 
         if (!entradas.length) {
             if (!busq || rampaNom.toLowerCase().indexOf(busq) !== -1 || String(rampaId).indexOf(busq) !== -1) {
