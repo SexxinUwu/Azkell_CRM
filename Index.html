@@ -586,7 +586,7 @@
 window._notifData = [];
 
 window.cargarNotificaciones = function() {
-    fetch('/api/notificaciones/resumen')
+    fetch('/api/almacen/notificaciones/resumen')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._notifData = data || [];

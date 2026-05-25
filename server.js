@@ -926,11 +926,9 @@ app.use('/api/script', legacyRoutes);
 app.use('/api', legacyRoutes);
 
 app.get('/api/cat-rampas', (req, res) => {
-    _seedRampasIfEmpty(() => {
-        db.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-        });
+    db.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
     });
 });
 
@@ -986,7 +984,6 @@ app.put('/api/cat-rampas/reorder', (req, res) => {
 
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
 app.get('/api/catalogos_taller', (req, res) => {
-    _seedRampasIfEmpty(() => {
     const sqlRampas = "SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC";
     const sqlSituaciones = "SELECT * FROM cat_situaciones ORDER BY id ASC";
     db.query(sqlRampas, (err1, rampas) => {
@@ -996,7 +993,6 @@ app.get('/api/catalogos_taller', (req, res) => {
             res.json({ rampas, situaciones });
         });
     });
-    }); // fin _seedRampasIfEmpty
 });
 
 // CRUD cat_situaciones  (columnas reales: id, codigo, descripcion)
