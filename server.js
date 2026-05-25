@@ -1948,4 +1948,13 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
+    // Migración: añadir url_firma a inspecciones si no existe
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspecciones' AND COLUMN_NAME='url_firma'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE inspecciones ADD COLUMN url_firma LONGTEXT DEFAULT NULL", () => {});
+            }
+        }
+    );
 });
