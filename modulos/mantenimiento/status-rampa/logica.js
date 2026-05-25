@@ -862,6 +862,7 @@ window.srGuardarRegistro = function() {
     var hidEl   = document.getElementById('sr-f-idx');
     var sRampa  = document.getElementById('sr-f-rampa');
     var sPlaca  = document.getElementById('sr-f-placa');
+    var sPlacaTxt = document.getElementById('sr-f-placa-txt');
     var sKm     = document.getElementById('sr-f-km');
     var sFecIng = document.getElementById('sr-f-fecha-ing');
     var sHorIng = document.getElementById('sr-f-hora-ing');
@@ -870,7 +871,7 @@ window.srGuardarRegistro = function() {
     var sSit    = document.getElementById('sr-f-situacion');
     var sObs    = document.getElementById('sr-f-obs');
 
-    var placa    = (sPlaca  ? sPlaca.value.trim().toUpperCase() : '');
+    var placa    = (sPlaca && sPlaca.value ? sPlaca.value.trim().toUpperCase() : (sPlacaTxt ? sPlacaTxt.value.trim().toUpperCase() : ''));
     var rampaNum = (sRampa  ? parseInt(sRampa.value, 10) : 0);
     var eid      = (hidEl   ? parseInt(hidEl.value, 10) : NaN);
 
