@@ -281,6 +281,18 @@
 }
 
 /* ── Historial paginación ──────────────────────────────────────── */
+#moduloStatusRampa .sr-hist-wrap {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin: 1rem 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
 #moduloStatusRampa .sr-hist-table-wrap {
     flex: 1 1 0;
     overflow-y: auto;
@@ -551,19 +563,21 @@
     <!-- PANE: HISTORIAL -->
     <div id="sr-pane-historial" style="display:none; flex:1 1 0; min-height:0; flex-direction:column; overflow:hidden;">
 
-        <!-- Filtro de fecha -->
-        <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .85rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface);">
-            <i class="bi bi-funnel" style="color:var(--subtext);font-size:.8rem;"></i>
-            <span style="font-size:.72rem;font-weight:700;color:var(--subtext);white-space:nowrap;">Desde</span>
-            <input type="date" id="sr-hist-desde" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroDesde=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
-            <span style="font-size:.72rem;color:var(--subtext);">—</span>
-            <input type="date" id="sr-hist-hasta" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroHasta=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
-            <button onclick="window.srHistFiltroDesde='';window.srHistFiltroHasta='';var d=document.getElementById('sr-hist-desde');if(d)d.value='';var h=document.getElementById('sr-hist-hasta');if(h)h.value='';window.srHistPage=1;window.srAplicarFiltroHist();" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.72rem;padding:3px 10px;font-weight:700;cursor:pointer;">Limpiar</button>
-            <span style="font-size:.72rem;color:var(--subtext);margin-left:auto;" id="sr-hist-filtro-info"></span>
-        </div>
-        <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
-            <!-- TABLA HISTORIAL -->
-            <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
+        <!-- Contenedor con bordes redondeados igual que en Rampas -->
+        <div class="sr-hist-wrap">
+            <!-- Filtro de fecha -->
+            <div style="display:flex;align-items:center;gap:.5rem;padding:.6rem 1.25rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;background:var(--surface);">
+                <i class="bi bi-funnel" style="color:var(--subtext);font-size:.8rem;"></i>
+                <span style="font-size:.72rem;font-weight:700;color:var(--subtext);white-space:nowrap;">Desde</span>
+                <input type="date" id="sr-hist-desde" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroDesde=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
+                <span style="font-size:.72rem;color:var(--subtext);">—</span>
+                <input type="date" id="sr-hist-hasta" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:.75rem;padding:3px 8px;outline:none;" oninput="window.srHistFiltroHasta=this.value;window.srHistPage=1;window.srAplicarFiltroHist()">
+                <button onclick="window.srHistFiltroDesde='';window.srHistFiltroHasta='';var d=document.getElementById('sr-hist-desde');if(d)d.value='';var h=document.getElementById('sr-hist-hasta');if(h)h.value='';window.srHistPage=1;window.srAplicarFiltroHist();" style="border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.72rem;padding:3px 10px;font-weight:700;cursor:pointer;">Limpiar</button>
+                <span style="font-size:.72rem;color:var(--subtext);margin-left:auto;" id="sr-hist-filtro-info"></span>
+            </div>
+            <div style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
+                <!-- TABLA HISTORIAL -->
+                <div class="sr-hist-table-wrap" id="sr-hist-tabla-wrap">
                 <table style="width:100%; border-collapse:collapse; font-size:0.79rem; table-layout:fixed;">
                     <thead>
                         <tr style="background:var(--bg);">
@@ -582,26 +596,27 @@
                         <tr><td colspan="8" class="td-placeholder">Cargando...</td></tr>
                     </tbody>
                 </table>
-            </div>
-            <!-- PANEL DETALLE HISTORIAL -->
-            <div class="sr-detail-panel" id="sr-panel-detalle-hist">
-                <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
-                    <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle Historial</span>
-                    <button class="btn btn-sm" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
                 </div>
-                <div class="sr-detail-scroll" id="sr-hist-detalle-scroll"></div>
-                <div class="sr-detail-footer" id="sr-hist-detalle-footer"></div>
+                <!-- PANEL DETALLE HISTORIAL -->
+                <div class="sr-detail-panel" id="sr-panel-detalle-hist">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                        <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle Historial</span>
+                        <button class="btn btn-sm" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="sr-detail-scroll" id="sr-hist-detalle-scroll"></div>
+                    <div class="sr-detail-footer" id="sr-hist-detalle-footer"></div>
+                </div>
             </div>
-        </div>
-        <!-- PAGINACIÓN HISTORIAL -->
-        <div class="sr-hist-pag" id="sr-hist-pag-bar">
+            <!-- PAGINACIÓN HISTORIAL -->
+            <div class="sr-hist-pag" id="sr-hist-pag-bar">
             <button class="btn btn-sm btn-outline-secondary" id="sr-hist-prev" onclick="window.srHistPaginar(-1)"><i class="bi bi-chevron-left"></i></button>
             <span id="sr-hist-pag-info" style="font-size:0.8rem; color:var(--subtext);"></span>
             <button class="btn btn-sm btn-outline-secondary" id="sr-hist-next" onclick="window.srHistPaginar(1)"><i class="bi bi-chevron-right"></i></button>
         </div>
-    </div>
+        </div><!-- fin sr-hist-wrap -->
+    </div><!-- fin sr-pane-historial -->
 
 </div><!-- fin moduloStatusRampa -->
 
