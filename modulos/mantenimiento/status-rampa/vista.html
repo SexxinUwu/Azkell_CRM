@@ -9,14 +9,22 @@
 }
 
 /* ── Barra de controles ──────────────────────────────────────── */
+#moduloStatusRampa .sr-top-wrap {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin: 1rem 1.25rem 0 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    overflow: hidden;
+    flex-shrink: 0;
+}
 #moduloStatusRampa .sr-controls {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 0.6rem 1.25rem;
-    background: var(--surface);
+    background: transparent;
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
     flex-wrap: wrap;
 }
 
@@ -463,31 +471,32 @@
 
 <div id="moduloStatusRampa">
 
-    <!-- BARRA DE CONTROLES -->
-    <div class="sr-controls">
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text bg-transparent border-end-0">
-                <i class="bi bi-search" style="color:var(--subtext)"></i>
-            </span>
-            <input type="text" class="form-control border-start-0 ps-0" id="sr-buscador"
-                placeholder="Buscar por placa, rampa, situación..."
-                oninput="window.srBuscar()">
+    <!-- CONTROLES SUPERIORES (BARRA + PESTAÑAS) -->
+    <div class="sr-top-wrap">
+        <div class="sr-controls">
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-search" style="color:var(--subtext)"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 ps-0" id="sr-buscador"
+                    placeholder="Buscar por placa, rampa, situación..."
+                    oninput="window.srBuscar()">
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas">
+                <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
+            </button>
+            <div id="col-picker-sr"></div>
+            <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
+                <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
+            </button>
+            <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()">
+                <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
+            </button>
         </div>
-        <div style="flex:1"></div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas">
-            <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
-        </button>
-        <div id="col-picker-sr"></div>
-        <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
-            <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
-        </button>
-        <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()">
-            <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
-        </button>
-    </div>
 
     <!-- PESTAÑAS -->
     <div class="sr-tabs">
@@ -497,6 +506,7 @@
         <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
             Historial <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
         </div>
+    </div>
     </div>
 
     <!-- PANE: RAMPAS -->

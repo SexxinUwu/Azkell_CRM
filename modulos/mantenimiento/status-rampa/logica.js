@@ -55,7 +55,7 @@ window.init_status_rampa = function() {
 
 // ── Carga entradas desde BD ──────────────────────────────────────
 function srCargarEntradas() {
-    fetch('/api/taller-rampas')
+    fetch('/api/taller-rampas?_t=' + Date.now())
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(rows) {
             window.srEntradas = rows.map(function(r) {
