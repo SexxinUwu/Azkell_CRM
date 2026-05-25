@@ -1240,20 +1240,13 @@ window.toggleNavSection = function(sectionId) {
 
 window.restoreNavSections = function() {
     try {
-        const saved = JSON.parse(localStorage.getItem('fleet_nav_sections') || '{}');
-        // HTML ya arranca colapsado. Solo expandir secciones guardadas como 'expanded'.
         const all = ['mantenimiento','almacen','flota','directorio','sistema','configuracion','administracion'];
         all.forEach(function(id) {
             const items = document.getElementById('section-items-' + id);
             const btn   = document.querySelector('.nav-section-toggle[data-section="' + id + '"]');
             if (!items) return;
-            if (saved[id] === 'expanded') {
-                items.classList.remove('nav-section-collapsed');
-                if (btn) btn.setAttribute('aria-expanded', 'true');
-            } else {
-                items.classList.add('nav-section-collapsed');
-                if (btn) btn.setAttribute('aria-expanded', 'false');
-            }
+            items.classList.add('nav-section-collapsed');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         });
     } catch(e) {}
 };
