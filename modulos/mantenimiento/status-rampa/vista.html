@@ -670,7 +670,10 @@
 
             <div class="mb-3">
                 <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Rampa *</label>
-                <select class="form-select form-select-sm" id="sr-f-rampa" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
+                <input type="hidden" id="sr-f-rampa-id">
+                <select class="form-select form-select-sm" id="sr-f-rampa"
+                    style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);"
+                    onchange="var h=document.getElementById('sr-f-rampa-id');if(h)h.value=this.value;">
                     <option value="">— Seleccionar —</option>
                 </select>
             </div>
