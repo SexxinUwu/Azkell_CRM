@@ -523,6 +523,9 @@ window.srRegistrar = function(rampaNr) {
     if (rampaNr) {
         var selRampa = document.getElementById('sr-f-rampa');
         if (selRampa) selRampa.value = String(rampaNr);
+        // Sync del hidden siempre
+        var hidRampa = document.getElementById('sr-f-rampa-id');
+        if (hidRampa) hidRampa.value = String(rampaNr);
     }
     var hoy = new Date();
     var fecIng = document.getElementById('sr-f-fecha-ing');
@@ -544,6 +547,8 @@ window.srEditarRampa = function(id) {
 
     var sR = document.getElementById('sr-f-rampa');
     if (sR) { sR.value = String(e.rampa); sR.disabled = true; }
+    var hidR = document.getElementById('sr-f-rampa-id');
+    if (hidR) hidR.value = String(e.rampa);
 
     var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
     if (typeof window._cbSet === 'function') {
@@ -876,7 +881,11 @@ window.srGuardarRegistro = function() {
     var sObs    = document.getElementById('sr-f-obs');
 
     var placa    = (sPlaca && sPlaca.value ? sPlaca.value.trim().toUpperCase() : (sPlacaTxt ? sPlacaTxt.value.trim().toUpperCase() : ''));
-    var rampaNum = (sRampa  ? parseInt(sRampa.value, 10) : 0);
+    // Leer el id de la rampa del campo hidden sr-f-rampa-id, o del select si existe
+    var rampaHid = document.getElementById('sr-f-rampa-id');
+    var rampaNum = rampaHid && rampaHid.value
+        ? parseInt(rampaHid.value, 10)
+        : (sRampa ? parseInt(sRampa.value, 10) : 0);
     var eid      = (hidEl   ? parseInt(hidEl.value, 10) : NaN);
 
     if (!placa)    { alert('La placa es obligatoria.'); return; }
@@ -2045,7 +2054,7 @@ window.srGuardarEdicionOT = function() {
 
 function srLimpiarFormRegistro() {
     ['sr-f-idx','sr-f-km','sr-f-fecha-ing','sr-f-hora-ing',
-     'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs'].forEach(function(id) {
+     'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs','sr-f-rampa-id'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
     if (typeof window._cbReset === 'function') window._cbReset('sr-f-placa');
