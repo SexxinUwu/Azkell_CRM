@@ -27,6 +27,16 @@
 .audit-badge-del { background:rgba(239,68,68,.18); color:#dc2626; }
 .audit-badge-mod-name { background:rgba(99,102,241,.15); color:#6366f1; }
 .audit-detail { background:var(--surface); border-left:3px solid var(--border); border-radius:0 6px 6px 0; padding:5px 10px; font-size:0.82rem; color:var(--text); margin-top:2px; max-width:100%; word-break:break-word; }
+/* Estilos de Timeline */
+.audit-feed { flex:1 1 0; overflow-y:auto; padding:20px 20px 60px; position:relative; }
+.audit-feed::before { content:''; position:absolute; top:20px; bottom:20px; left:48px; width:2px; background:var(--border); z-index:0; }
+.audit-msg { display:flex; gap:20px; padding:0 0 24px; align-items:flex-start; position:relative; z-index:1; }
+.audit-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:#fff; flex-shrink:0; border:4px solid var(--bg); box-shadow:0 0 0 1px var(--border); margin-left:14px; position:relative; z-index:2; }
+.audit-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; background:var(--surface); padding:10px 14px; border-radius:12px; border:1px solid var(--border); width:100%; }
+.audit-detail { background:transparent; padding:0 14px; font-size:0.82rem; color:var(--text); word-break:break-word; border-left:2px solid var(--border); margin-left:14px; opacity:0.85; }
+.audit-content-wrapper { flex:1; min-width:0; }
+.audit-day-sep { display:inline-block; padding:6px 16px; background:var(--surface); border:1px solid var(--border); border-radius:20px; font-size:0.72rem; font-weight:bold; color:var(--text); position:relative; z-index:2; margin-left:0px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-transform:uppercase; letter-spacing:1px; }
+
 </style>
 
 <div id="moduloAuditoria">

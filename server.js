@@ -1894,13 +1894,13 @@ function _generarCodigoAlmacen(tipo, anio, cb) {
 // ============================================================
 // RUTAS MODULARIZADAS
 // ============================================================
-const almacenRoutes = require('./routes/almacen')(db, _multerInv);
+const almacenRoutes = require('./routes/almacen')(db, _multerInv, logAudit);
 app.use('/api/almacen', almacenRoutes);
 
 // ============================================================
 // RUTAS TALLER Y MANTENIMIENTO
 // ============================================================
-const tallerRoutes = require('./routes/taller')(db);
+const tallerRoutes = require('./routes/taller')(db, logAudit);
 app.use('/api', tallerRoutes);
 
 

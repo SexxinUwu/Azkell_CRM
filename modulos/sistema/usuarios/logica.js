@@ -163,7 +163,7 @@ window.guRenderLista = function() {
                     + '<i class="bi bi-chevron-right gu-list-chevron"></i></div>';
             });
         }
-        html += '<button class="gu-add-btn" onclick="window.guNuevoRol()"><i class="bi bi-plus-lg"></i> Crear Rol</button>';
+        // html += '<button class="gu-add-btn" onclick="window.guNuevoRol()"><i class="bi bi-plus-lg"></i> Crear Rol</button>';
     } else {
         if (!window.dataGlobalUsuarios.length) {
             html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay miembros.</div>';
