@@ -942,6 +942,21 @@ app.post('/api/cat-rampas', (req, res) => {
     });
 });
 
+// Reordenar rampas: body = [{id, orden}, ...]
+app.put('/api/cat-rampas/reorder', (req, res) => {
+    const items = req.body;
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
+    const updates = items.map(item =>
+        new Promise((resolve, reject) =>
+            db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
+                (err) => err ? reject(err) : resolve())
+        )
+    );
+    Promise.all(updates)
+        .then(() => res.json({ ok: true }))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
 app.put('/api/cat-rampas/:id', (req, res) => {
     const { nombre_rampa, estado } = req.body;
     const sets = [];
@@ -965,21 +980,6 @@ app.delete('/api/cat-rampas/:id', (req, res) => {
             res.json({ ok: true });
         });
     });
-});
-
-// Reordenar rampas: body = [{id, orden}, ...]
-app.put('/api/cat-rampas/reorder', (req, res) => {
-    const items = req.body;
-    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
-    const updates = items.map(item =>
-        new Promise((resolve, reject) =>
-            db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
-                (err) => err ? reject(err) : resolve())
-        )
-    );
-    Promise.all(updates)
-        .then(() => res.json({ ok: true }))
-        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
@@ -1954,6 +1954,15 @@ app.listen(process.env.PORT || 3000, () => {
         (e, r) => {
             if (!e && r && r[0] && r[0].cnt === 0) {
                 db.query("ALTER TABLE inspecciones ADD COLUMN url_firma LONGTEXT DEFAULT NULL", () => {});
+            }
+        }
+    );
+    // Migración: añadir orden a cat_rampas si no existe
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='cat_rampas' AND COLUMN_NAME='orden'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0", () => {});
             }
         }
     );
