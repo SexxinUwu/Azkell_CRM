@@ -3538,9 +3538,9 @@ body.dark .fab-item-label {
 
 @media (max-width: 768px) {
     #layout-content > div {
-        margin: 10px;
-        height: calc(100% - 20px) !important;
-        border-radius: 20px;
+        margin: 6px 6px 86px 6px;
+        height: calc(100% - 92px) !important;
+        border-radius: 28px;
     }
 }
 
@@ -3554,7 +3554,7 @@ body.dark .fab-item-label {
     #layout-content > div > .gu-header,
     #layout-content > div > .audit-header,
     #layout-content > div > .inv-header {
-        border-radius: 20px 20px 0 0;
+        border-radius: 28px 28px 0 0;
     }
 }
 
