@@ -1,8 +1,8 @@
 <div id="pantalla-login">
     <style>
         :root {
-            --login-primary: #3b5ef6;
-            --login-primary-hover: #2548e0;
+            --login-primary: #10b981;
+            --login-primary-hover: #059669;
             --login-bg-body: #f3f4f6; /* Usado como fallback, pero dejaremos transparente en web */
             --login-bg-color: #ffffff;
             --login-text-main: #111827;
@@ -15,8 +15,8 @@
             --login-success: #10b981;
         }
 
-        /* Tema Oscuro (Azul Azkell) */
-        [data-theme="dark"] {
+        /* Tema Oscuro Local al Login */
+        #pantalla-login[data-login-theme="dark"] {
             --login-bg-body: #020617;
             --login-bg-color: #0a1128;
             --login-text-main: #f8fafc;
@@ -29,7 +29,7 @@
 
         #pantalla-login {
             background-color: transparent; /* Que continúe el fondo por defecto del body de la app */
-            background: linear-gradient(135deg, #020b1f 0%, #071430 40%, #0c1e4a 100%);
+            background: linear-gradient(135deg, #022c22 0%, #064e3b 40%, #0f172a 100%);
             width: 100vw;
             height: 100vh;
             display: flex;
@@ -415,21 +415,17 @@
 
             // Tema claro/oscuro local al login
             if(themeToggleBtn) {
-                // Recuperar estado desde localStorage o el <html>
-                const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
-                if (currentTheme === 'dark') {
-                    themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
-                }
-
+                const loginContainer = document.getElementById('pantalla-login');
+                let currentLoginTheme = 'light';
+                
                 themeToggleBtn.addEventListener('click', () => {
-                    let theme = document.documentElement.getAttribute('data-theme');
-                    if (theme === 'dark') {
-                        document.documentElement.removeAttribute('data-theme');
-                        localStorage.setItem('theme', 'light');
+                    if (currentLoginTheme === 'dark') {
+                        loginContainer.removeAttribute('data-login-theme');
+                        currentLoginTheme = 'light';
                         themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
                     } else {
-                        document.documentElement.setAttribute('data-theme', 'dark');
-                        localStorage.setItem('theme', 'dark');
+                        loginContainer.setAttribute('data-login-theme', 'dark');
+                        currentLoginTheme = 'dark';
                         themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
                     }
                 });
