@@ -30,30 +30,108 @@
         #pantalla-login {
             background-color: var(--login-bg-body);
             transition: background-color 0.3s ease;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
         }
 
-        #pantalla-login .mobile-view {
-            background-color: var(--login-bg-color);
+        /* Contenedor principal que se divide en 2 en escritorio */
+        #pantalla-login .login-container {
+            display: flex;
             width: 100%;
-            max-width: 400px;
-            height: 100vh;
-            max-height: 850px;
-            position: relative;
+            height: 100%;
+            background-color: var(--login-bg-color);
+        }
+
+        /* Lado Izquierdo - Branding (Solo Escritorio) */
+        #pantalla-login .login-branding-side {
+            display: none;
+        }
+
+        /* Lado Derecho - Formulario */
+        #pantalla-login .login-form-side {
+            flex: 1;
             display: flex;
             flex-direction: column;
             padding: 24px;
             overflow-y: auto;
-            border-radius: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
         }
 
-        @media (max-width: 420px) {
-            #pantalla-login .mobile-view {
-                border-radius: 0;
-                height: 100vh;
-                max-height: none;
-                box-shadow: none;
+        /* Contenido del formulario centrado */
+        #pantalla-login .login-form-content {
+            margin: auto;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Diseño para Escritorio (Desktop) */
+        @media (min-width: 768px) {
+            #pantalla-login .login-container {
+                background-color: transparent;
+            }
+
+            #pantalla-login .login-branding-side {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                flex: 1;
+                background: linear-gradient(135deg, var(--login-primary), #1e3a8a);
+                color: white;
+                padding: 40px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Círculos decorativos */
+            #pantalla-login .login-branding-side::before {
+                content: "";
+                position: absolute;
+                top: -10%;
+                left: -10%;
+                width: 50vh;
+                height: 50vh;
+                background: rgba(255,255,255,0.05);
+                border-radius: 50%;
+            }
+            #pantalla-login .login-branding-side::after {
+                content: "";
+                position: absolute;
+                bottom: -15%;
+                right: -10%;
+                width: 60vh;
+                height: 60vh;
+                background: rgba(255,255,255,0.08);
+                border-radius: 50%;
+            }
+
+            #pantalla-login .branding-text {
+                position: relative;
+                z-index: 2;
+                text-align: center;
+                max-width: 500px;
+            }
+
+            #pantalla-login .branding-text h2 {
+                font-size: 2.5rem;
+                font-weight: 800;
+                margin-bottom: 16px;
+            }
+
+            #pantalla-login .branding-text p {
+                font-size: 1.1rem;
+                opacity: 0.9;
+                line-height: 1.6;
+            }
+
+            #pantalla-login .login-form-side {
+                flex: 0 0 500px;
+                background-color: var(--login-bg-color);
+                box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+                border-radius: 40px 0 0 40px;
             }
         }
 
@@ -309,65 +387,79 @@
         }
     </style>
 
-    <main class="mobile-view">
+    <div class="login-container">
         
-        <!-- Notificación -->
-        <div id="toast" class="toast">
-            <i class="bi bi-info-circle-fill" id="toast-icon"></i>
-            <span id="toast-message">Mensaje</span>
-        </div>
-
-        <!-- Botón de Tema -->
-        <div class="header">
-            <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Cambiar tema">
-                <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-        </div>
-
-        <!-- Branding -->
-        <div class="branding">
-            <div class="logo-box">
-                <i class="bi bi-wrench-adjustable" style="font-size: 32px;"></i>
+        <!-- Lado izquierdo (Solo Escritorio) -->
+        <div class="login-branding-side">
+            <div class="branding-text">
+                <h2>Gestión de Flotas Simplificada</h2>
+                <p>Monitorea, controla y optimiza tus recursos con Azkell CRM. Todo el poder de tu operación en una sola pantalla, ahora con una interfaz moderna y rápida.</p>
             </div>
-            <h1>Iniciar sesión</h1>
-            <p>Ingresa para gestionar tu flota de manera inteligente con Azkell</p>
         </div>
 
-        <!-- Formulario -->
-        <form id="loginForm" onsubmit="iniciarSesion(event, this)">
+        <!-- Lado derecho (Formulario, o pantalla completa en móvil) -->
+        <div class="login-form-side">
             
-            <div class="form-group">
-                <label class="form-label" for="email">Correo electrónico<span>*</span></label>
-                <div class="input-wrapper">
-                    <input type="email" id="email" name="correo" class="input-field" placeholder="ejemplo@azkell.com" required autocomplete="email">
-                </div>
+            <!-- Notificación -->
+            <div id="toast" class="toast">
+                <i class="bi bi-info-circle-fill" id="toast-icon"></i>
+                <span id="toast-message">Mensaje</span>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="password">Contraseña<span>*</span></label>
-                <div class="input-wrapper">
-                    <input type="password" id="password" name="password" class="input-field" placeholder="••••••••" required autocomplete="current-password">
-                    <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">
-                        <i class="bi bi-eye-slash-fill" id="eyeIcon"></i>
+            <!-- Botón de Tema -->
+            <div class="header">
+                <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+                    <i class="bi bi-moon-fill" id="themeIcon"></i>
+                </button>
+            </div>
+
+            <div class="login-form-content">
+                <!-- Branding -->
+                <div class="branding">
+                    <div class="logo-box">
+                        <i class="bi bi-wrench-adjustable" style="font-size: 32px;"></i>
+                    </div>
+                    <h1>Iniciar sesión</h1>
+                    <p>Ingresa para gestionar tu flota de manera inteligente con Azkell</p>
+                </div>
+
+                <!-- Formulario -->
+                <form id="loginForm" onsubmit="iniciarSesion(event, this)">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="email">Correo electrónico<span>*</span></label>
+                        <div class="input-wrapper">
+                            <input type="email" id="email" name="correo" class="input-field" placeholder="ejemplo@azkell.com" required autocomplete="email">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Contraseña<span>*</span></label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" name="password" class="input-field" placeholder="••••••••" required autocomplete="current-password">
+                            <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">
+                                <i class="bi bi-eye-slash-fill" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <label class="remember-me">
+                            <input type="checkbox" class="custom-checkbox" id="remember">
+                            Recordarme
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btn-login">
+                        <span class="btn-text" id="btn-text-content">Iniciar sesión</span>
+                        <div class="loader"></div>
                     </button>
-                </div>
+                    <div id="mensaje-login" class="text-danger mt-3 fw-bold text-center" style="display:none; font-size: 0.9rem;"></div>
+                </form>
             </div>
+        </div>
 
-            <div class="form-actions">
-                <label class="remember-me">
-                    <input type="checkbox" class="custom-checkbox" id="remember">
-                    Recordarme
-                </label>
-            </div>
-
-            <button type="submit" class="btn-primary" id="btn-login">
-                <span class="btn-text" id="btn-text-content">Iniciar sesión</span>
-                <div class="loader"></div>
-            </button>
-            <div id="mensaje-login" class="text-danger mt-3 fw-bold text-center" style="display:none; font-size: 0.9rem;"></div>
-        </form>
-
-    </main>
+    </div>
 
     <script>
         // Funcionalidad extra de UI local (el core está en logica.js)

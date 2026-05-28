@@ -1380,11 +1380,6 @@ body.dark .wizard-tab h5.text-primary {
     justify-content: center;
     z-index: 9999;
     font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
-    background:
-        radial-gradient(ellipse at 15% 20%, #1a4a8a 0%, transparent 50%),
-        radial-gradient(ellipse at 85% 75%, #0c2f6e 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 50%, #0a1f5c 0%, transparent 70%),
-        linear-gradient(135deg, #020b1f 0%, #071430 40%, #0c1e4a 100%);
 }
 
 /* Tarjeta glassmorphism */
