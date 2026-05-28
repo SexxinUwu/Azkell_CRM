@@ -2606,8 +2606,8 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 10px;
-    gap: 4px;
+    padding: 6px 8px;
+    gap: 2px;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
 }
@@ -2616,7 +2616,7 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     justify-content: center;
     align-items: center;
     height: 48px;
-    width: 52px;
+    width: 48px;
     border-radius: 12px;
     position: relative;
     z-index: 1;
@@ -2646,7 +2646,7 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
 }
 /* Ítem activo: expandido permanentemente */
 .bottom-nav-item.active {
-    width: 112px;
+    width: 98px;
     color: #fff !important;
 }
 .bottom-nav-item.active::before {
@@ -2663,7 +2663,7 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
 .bottom-nav-item:not(.active):hover,
 .bottom-nav-item:not(.active):focus {
     outline: 0;
-    width: 112px;
+    width: 98px;
     color: var(--crm-accent) !important;
 }
 .bottom-nav-item:not(.active):hover::before,
@@ -2677,13 +2677,13 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
 }
 /* Ícono: posicionado a la izquierda, fijo */
 .bottom-nav-item i {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     width: 24px;
     height: 24px;
     display: block;
     flex-shrink: 0;
     position: absolute;
-    left: 14px;
+    left: 12px;
     line-height: 1;
 }
 /* Texto: oculto por defecto, se desliza */
@@ -2693,9 +2693,6 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     opacity: 0;
     display: block;
     text-align: center;
-    text-indent: 22px;
-    width: 100%;
-    font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
     letter-spacing: 0.01em;
@@ -3334,11 +3331,8 @@ body.dark .btn-primary, body.dark .btn-outline-primary, body.dark .btn-outline-i
 /* 1. Solución de Desbordamiento del Menú en Móvil */
 @media (max-width: 768px) {
     .sidebar {
-        /* Cuando está oculto, que se esconda completamente incluyendo la sombra y márgenes */
-        transform: translateX(calc(-100% - 40px)) !important; 
-    }
-    .sidebar.mobile-open {
-        transform: translateX(0) !important;
+        /* Se oculta completamente del layout flex para que el área principal ocupe todo el ancho sin desplazarse */
+        display: none !important; 
     }
 }
 

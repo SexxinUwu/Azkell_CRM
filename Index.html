@@ -609,9 +609,13 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body px-4 pb-4">
-            <div id="mbnav-flota" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/vehiculos'); setBottomNavActive('bnav-flota');">
-                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-truck"></i></div>
-                <div><p class="bnav-card-title">Vehículos</p><p class="bnav-card-desc">Gestión y estado de la flota</p></div>
+            <div id="mbnav-ubicacion" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/ubicacion'); setBottomNavActive('bnav-flota');">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-geo-alt-fill"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.gps">GPS</p><p class="bnav-card-desc">Rastreo de unidades</p></div>
+            </div>
+            <div id="mbnav-status-flota" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/status'); setBottomNavActive('bnav-flota');">
+                <div class="bnav-card-icon" style="background: rgba(59,130,246,.1); color: #3b82f6;"><i class="bi bi-activity"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.status">Status Flota</p><p class="bnav-card-desc">Estado en tiempo real</p></div>
             </div>
         </div>
     </div>
@@ -624,12 +628,28 @@
         </div>
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-status-rampa" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/status-rampa'); setBottomNavActive('bnav-mantenimiento');">
-                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-cone-striped"></i></div>
-                <div><p class="bnav-card-title">Status Rampa</p><p class="bnav-card-desc">Ocupación y estado del taller</p></div>
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                <div><p class="bnav-card-title">Status Rampa</p><p class="bnav-card-desc">Estado de ocupación</p></div>
             </div>
-            <div id="mbnav-otros-mant" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/tablero'); setBottomNavActive('bnav-mantenimiento');">
-                <div class="bnav-card-icon" style="background: rgba(234,88,12,.1); color: #ea580c;"><i class="bi bi-clipboard-check-fill"></i></div>
-                <div><p class="bnav-card-title">Tablero de Control</p><p class="bnav-card-desc">OTs y tareas en curso</p></div>
+            <div id="mbnav-inspecciones" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/inspecciones'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-clipboard2-pulse-fill"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.inspecciones">Análisis de Insp.</p><p class="bnav-card-desc">Inspecciones vehiculares</p></div>
+            </div>
+            <div id="mbnav-fleetrun" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/fleetrun'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-speedometer2"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.fleetrun">Sistema Fleetrun</p><p class="bnav-card-desc">Monitoreo de componentes</p></div>
+            </div>
+            <div id="mbnav-reportes-ot" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/reportes-ot'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-file-earmark-text"></i></div>
+                <div><p class="bnav-card-title">Reportes OT</p><p class="bnav-card-desc">Historial de trabajos</p></div>
+            </div>
+            <div id="mbnav-trabajos-ot" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/trabajos-ot'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-person-gear"></i></div>
+                <div><p class="bnav-card-title">Trabajos Anexos</p><p class="bnav-card-desc">Tareas adicionales</p></div>
+            </div>
+            <div id="mbnav-otros-mant" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/otros'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-fill"></i></div>
+                <div><p class="bnav-card-title">Otros</p><p class="bnav-card-desc">Módulos complementarios</p></div>
             </div>
         </div>
     </div>
@@ -642,8 +662,8 @@
         </div>
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-inventario" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/inventario'); setBottomNavActive('bnav-almacen');">
-                <div class="bnav-card-icon" style="background: rgba(22,163,74,.1); color: #16a34a;"><i class="bi bi-boxes"></i></div>
-                <div><p class="bnav-card-title">Inventario</p><p class="bnav-card-desc">Stock actual y valoración</p></div>
+                <div class="bnav-card-icon" style="background: rgba(22,163,74,.1); color: #16a34a;"><i class="bi bi-box-fill"></i></div>
+                <div><p class="bnav-card-title">Inventario</p><p class="bnav-card-desc">Stock actual</p></div>
             </div>
             <div id="mbnav-entradas-inv" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/entradas'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(34,197,94,.1); color: #22c55e;"><i class="bi bi-arrow-down-circle-fill"></i></div>
@@ -652,6 +672,10 @@
             <div id="mbnav-salidas-inv" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/salidas'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-arrow-up-circle-fill"></i></div>
                 <div><p class="bnav-card-title">Salidas</p><p class="bnav-card-desc">Despachos y egresos</p></div>
+            </div>
+            <div id="mbnav-kardex" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/kardex'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(20,184,166,.1); color: #14b8a6;"><i class="bi bi-journal-text"></i></div>
+                <div><p class="bnav-card-title">Kardex</p><p class="bnav-card-desc">Movimientos de artículos</p></div>
             </div>
         </div>
     </div>
@@ -679,15 +703,31 @@
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-usuarios" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('sistema/usuarios'); setBottomNavActive('bnav-config');">
                 <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-people-fill"></i></div>
-                <div><p class="bnav-card-title">Usuarios</p><p class="bnav-card-desc">Accesos y permisos</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.usuarios">Usuarios</p><p class="bnav-card-desc">Accesos y permisos</p></div>
             </div>
-            <div id="mbnav-configuracion" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('sistema/configuracion'); setBottomNavActive('bnav-config');">
-                <div class="bnav-card-icon" style="background: rgba(148,163,184,.1); color: #94a3b8;"><i class="bi bi-palette-fill"></i></div>
-                <div><p class="bnav-card-title">Apariencia y Sistema</p><p class="bnav-card-desc">Ajustes generales</p></div>
+            <div id="mbnav-auditoria" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('sistema/auditoria'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-journal-code"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.auditoria">Auditoría</p><p class="bnav-card-desc">Logs del sistema</p></div>
+            </div>
+            <div id="mbnav-cfg-perfil" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('perfil'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-person-circle"></i></div>
+                <div><p class="bnav-card-title" data-i18n="cfg.nav.profile">Mi Perfil</p><p class="bnav-card-desc">Ajustes personales</p></div>
+            </div>
+            <div id="mbnav-cfg-apariencia" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('apariencia'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-palette2"></i></div>
+                <div><p class="bnav-card-title" data-i18n="cfg.nav.appearance">Apariencia</p><p class="bnav-card-desc">Tema y colores</p></div>
+            </div>
+            <div id="mbnav-cfg-accesibilidad" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('accesibilidad'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-universal-access"></i></div>
+                <div><p class="bnav-card-title" data-i18n="cfg.nav.accessibility">Accesibilidad</p><p class="bnav-card-desc">Ajustes visuales</p></div>
+            </div>
+            <div id="mbnav-cfg-idioma" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('idioma'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-translate"></i></div>
+                <div><p class="bnav-card-title" data-i18n="cfg.nav.language">Idioma</p><p class="bnav-card-desc">Configuración regional</p></div>
             </div>
             <div id="mbnav-administracion" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('administracion'); setBottomNavActive('bnav-config');">
                 <div class="bnav-card-icon" style="background: rgba(71,85,105,.1); color: #475569;"><i class="bi bi-grid-fill"></i></div>
-                <div><p class="bnav-card-title">Administración Central</p><p class="bnav-card-desc">Catálogos y mantenimientos</p></div>
+                <div><p class="bnav-card-title">Administración</p><p class="bnav-card-desc">Catálogos y mantenimientos</p></div>
             </div>
         </div>
     </div>

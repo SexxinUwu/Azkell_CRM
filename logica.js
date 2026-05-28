@@ -213,12 +213,16 @@ window.verificarSesionGuardada = function() {
     var vCfgMant = _cL('cfg_mant');
 
     safe('nav-inspecciones',    vInsp);
+    safe('mbnav-inspecciones',  vInsp);
     safe('nav-placas',          vPlacas);
     safe('nav-fleetrun',        vFleet);
+    safe('mbnav-fleetrun',      vFleet);
     safe('nav-status-rampa',    vOT);
     safe('mbnav-status-rampa',  vOT);
     safe('nav-reportes-ot',     vOT);
+    safe('mbnav-reportes-ot',   vOT);
     safe('nav-trabajos-ot',     vOT);
+    safe('mbnav-trabajos-ot',   vOT);
     safe('nav-otros-mant',      vOT || vPlan);
     safe('mbnav-otros-mant',    vOT || vPlan);
     safe('nav-ordenes',         vOT);
@@ -246,6 +250,7 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-salidas-inv',   vSal);
     safe('nav-proveedores-inv', vProv);
     safe('nav-kardex',          vKardex);
+    safe('mbnav-kardex',        vKardex);
     safe('nav-costos-inv',      vCostos);
 
     var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos;
@@ -286,8 +291,9 @@ window.verificarSesionGuardada = function() {
     var vCond   = _cL('cond');
 
     safe('nav-ubicacion',    vGps);
+    safe('mbnav-ubicacion',  vGps);
     safe('nav-status-flota', vStatus);
-    safe('mbnav-flota',      vGps || vStatus);
+    safe('mbnav-status-flota', vStatus);
     safe('nav-conductores',  vCond);
     safe('mbnav-conductores', vCond);
     safe('nav-talleres',     false); // no implementado aún
@@ -303,6 +309,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-usuarios',  vSeg);
     safe('mbnav-usuarios', vSeg);
     safe('nav-auditoria', vAudit);
+    safe('mbnav-auditoria', vAudit);
     safe('wrap-usuarios',  vSeg);
     safe('wrap-auditoria', vAudit);
     // ─────────────────────────────────────────────────────────────────
