@@ -1,44 +1,450 @@
-<!-- ================================================================ -->
-<!-- MÓDULO: LOGIN (vista aislada — sin <html>, <head> ni <body>)    -->
-<!-- ================================================================ -->
-
 <div id="pantalla-login">
-    <div class="login-glass-card">
+    <style>
+        :root {
+            --login-primary: #3b5ef6;
+            --login-primary-hover: #2548e0;
+            --login-bg-body: #f3f4f6;
+            --login-bg-color: #ffffff;
+            --login-text-main: #111827;
+            --login-text-muted: #6b7280;
+            --login-border-color: #e5e7eb;
+            --login-input-bg: #ffffff;
+            --login-icon-bg: #f1f5f9;
+            --login-icon-hover: #e2e8f0;
+            --login-danger: #ef4444;
+            --login-success: #10b981;
+        }
 
-        <div class="avatar-logo">
-            <img src="./icon-192.png" alt="Azkell Logo" style="width: 60px; height: 60px; object-fit: contain; border-radius: 12px;">
+        /* Tema Oscuro (Azul Azkell) */
+        [data-theme="dark"] {
+            --login-bg-body: #020617;
+            --login-bg-color: #0a1128;
+            --login-text-main: #f8fafc;
+            --login-text-muted: #94a3b8;
+            --login-border-color: #1e293b;
+            --login-input-bg: #111c3a;
+            --login-icon-bg: #1e293b;
+            --login-icon-hover: #334155;
+        }
+
+        #pantalla-login {
+            background-color: var(--login-bg-body);
+            transition: background-color 0.3s ease;
+        }
+
+        #pantalla-login .mobile-view {
+            background-color: var(--login-bg-color);
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            max-height: 850px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        @media (max-width: 420px) {
+            #pantalla-login .mobile-view {
+                border-radius: 0;
+                height: 100vh;
+                max-height: none;
+                box-shadow: none;
+            }
+        }
+
+        #pantalla-login .header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-top: 10px;
+        }
+
+        #pantalla-login .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--login-icon-bg);
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--login-text-main);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #pantalla-login .icon-btn:hover {
+            background-color: var(--login-icon-hover);
+        }
+
+        #pantalla-login .branding {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        #pantalla-login .logo-box {
+            width: 64px;
+            height: 64px;
+            background-color: var(--login-primary);
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 32px;
+            margin: 0 auto 16px auto;
+            box-shadow: 0 10px 20px -10px var(--login-primary);
+        }
+
+        #pantalla-login .branding h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--login-text-main);
+            margin-bottom: 6px;
+            transition: color 0.3s ease;
+        }
+
+        #pantalla-login .branding p {
+            font-size: 14px;
+            color: var(--login-text-muted);
+            max-width: 80%;
+            margin: 0 auto;
+            line-height: 1.4;
+            transition: color 0.3s ease;
+        }
+
+        #pantalla-login form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #pantalla-login .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        #pantalla-login .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--login-text-main);
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+        }
+
+        #pantalla-login .form-label span {
+            color: var(--login-primary);
+        }
+
+        #pantalla-login .input-wrapper {
+            position: relative;
+        }
+
+        #pantalla-login .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background-color: var(--login-input-bg);
+            border: 1px solid var(--login-border-color);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--login-text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        #pantalla-login .input-field::placeholder {
+            color: #9ca3af;
+        }
+
+        #pantalla-login .input-field:focus {
+            border-color: var(--login-primary);
+            box-shadow: 0 0 0 4px rgba(59, 94, 246, 0.15);
+        }
+
+        #pantalla-login .toggle-password {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 20px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px;
+            display: flex;
+        }
+
+        #pantalla-login .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            margin-bottom: 24px;
+        }
+
+        #pantalla-login .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--login-text-muted);
+            cursor: pointer;
+            transition: color 0.3s ease;
+            margin-bottom: 0;
+        }
+
+        #pantalla-login .custom-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--login-border-color);
+            border-radius: 4px;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: var(--login-input-bg);
+            margin: 0;
+        }
+
+        #pantalla-login .custom-checkbox::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        #pantalla-login .custom-checkbox:checked {
+            background-color: var(--login-primary);
+            border-color: var(--login-primary);
+        }
+
+        #pantalla-login .custom-checkbox:checked::before {
+            transform: scale(1);
+        }
+
+        #pantalla-login .btn-primary {
+            width: 100%;
+            background-color: var(--login-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #pantalla-login .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        #pantalla-login .btn-primary.loading .btn-text {
+            opacity: 0;
+        }
+
+        #pantalla-login .loader {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        #pantalla-login .btn-primary.loading .loader {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #pantalla-login .toast {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--login-bg-color);
+            color: var(--login-text-main);
+            border: 1px solid var(--login-border-color);
+            padding: 12px 20px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 100;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            width: max-content;
+            max-width: 90%;
+        }
+
+        #pantalla-login .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+
+    <main class="mobile-view">
+        
+        <!-- Notificación -->
+        <div id="toast" class="toast">
+            <i class="bi bi-info-circle-fill" id="toast-icon"></i>
+            <span id="toast-message">Mensaje</span>
         </div>
 
-        <div class="brand fw-bold mb-4 text-white" style="font-size: 1.8rem; letter-spacing: 1px;">
-            AZKELL <span style="color: #60a5fa;">FLEET</span>
+        <!-- Botón de Tema -->
+        <div class="header">
+            <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+                <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
         </div>
 
-        <form onsubmit="iniciarSesion(event, this)">
+        <!-- Branding -->
+        <div class="branding">
+            <div class="logo-box">
+                <i class="bi bi-wrench-adjustable" style="font-size: 32px;"></i>
+            </div>
+            <h1>Iniciar sesión</h1>
+            <p>Ingresa para gestionar tu flota de manera inteligente con Azkell</p>
+        </div>
 
-            <div class="field-glass">
-                <span class="field-icon"><i class="bi bi-envelope-fill"></i></span>
-                <input type="email" name="correo" placeholder="Correo electrónico" autocomplete="email" required />
+        <!-- Formulario -->
+        <form id="loginForm" onsubmit="iniciarSesion(event, this)">
+            
+            <div class="form-group">
+                <label class="form-label" for="email">Correo electrónico<span>*</span></label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" name="correo" class="input-field" placeholder="ejemplo@azkell.com" required autocomplete="email">
+                </div>
             </div>
 
-            <div class="field-glass">
-                <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
-                <input id="login-password" name="password" type="password" placeholder="Contraseña" autocomplete="current-password" required />
-                <button type="button" class="btn-toggle-pwd" onclick="togglePassword('login-password', this)" aria-label="Mostrar contraseña">
-                    <i class="bi bi-eye-fill"></i>
-                </button>
+            <div class="form-group">
+                <label class="form-label" for="password">Contraseña<span>*</span></label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" class="input-field" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">
+                        <i class="bi bi-eye-slash-fill" id="eyeIcon"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="meta-row">
-                <label class="remember">
-                    <input type="checkbox" checked />
-                    <span data-i18n="login.remember">Recordarme</span>
+            <div class="form-actions">
+                <label class="remember-me">
+                    <input type="checkbox" class="custom-checkbox" id="remember">
+                    Recordarme
                 </label>
-                <a class="forgot" href="#">¿Olvidaste tu contraseña?</a>
             </div>
 
-            <div id="mensaje-login" class="text-danger mb-3 fw-bold text-center" style="display:none; font-size: 0.9rem; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 8px;"></div>
-
-            <button type="submit" id="btn-login" class="btn-login-glass" data-i18n="login.btn">Ingresar</button>
+            <button type="submit" class="btn-primary" id="btn-login">
+                <span class="btn-text" id="btn-text-content">Iniciar sesión</span>
+                <div class="loader"></div>
+            </button>
+            <div id="mensaje-login" class="text-danger mt-3 fw-bold text-center" style="display:none; font-size: 0.9rem;"></div>
         </form>
-    </div>
+
+    </main>
+
+    <script>
+        // Funcionalidad extra de UI local (el core está en logica.js)
+        (function() {
+            const passwordInput = document.getElementById('password');
+            const togglePasswordBtn = document.getElementById('togglePassword');
+            const eyeIcon = document.getElementById('eyeIcon');
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const rememberCheckbox = document.getElementById('remember');
+            const emailInput = document.getElementById('email');
+
+            // Mostrar/Ocultar contraseña
+            if(togglePasswordBtn) {
+                togglePasswordBtn.addEventListener('click', () => {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    if (type === 'text') {
+                        eyeIcon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+                        eyeIcon.style.color = 'var(--login-primary)';
+                    } else {
+                        eyeIcon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+                        eyeIcon.style.color = '#9ca3af';
+                    }
+                });
+            }
+
+            // Tema claro/oscuro local al login
+            if(themeToggleBtn) {
+                // Recuperar estado desde localStorage o el <html>
+                const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
+                if (currentTheme === 'dark') {
+                    themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                }
+
+                themeToggleBtn.addEventListener('click', () => {
+                    let theme = document.documentElement.getAttribute('data-theme');
+                    if (theme === 'dark') {
+                        document.documentElement.removeAttribute('data-theme');
+                        localStorage.setItem('theme', 'light');
+                        themeIcon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        localStorage.setItem('theme', 'dark');
+                        themeIcon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+                    }
+                });
+            }
+
+            // Recordarme
+            const savedEmail = localStorage.getItem('azkell_saved_email');
+            if (savedEmail && emailInput) {
+                emailInput.value = savedEmail;
+                if(rememberCheckbox) rememberCheckbox.checked = true;
+            }
+        })();
+        
+        window.showLoginToast = function(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastMessage.textContent = message;
+            
+            if (type === 'error') {
+                toastIcon.className = 'bi bi-exclamation-circle-fill';
+                toastIcon.style.color = 'var(--login-danger)';
+            } else {
+                toastIcon.className = 'bi bi-check-circle-fill';
+                toastIcon.style.color = 'var(--login-success)';
+            }
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
 </div>
