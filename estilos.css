@@ -2612,16 +2612,17 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     -webkit-backdrop-filter: blur(16px);
 }
 .bottom-nav-item {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 48px;
-    width: 48px;
-    border-radius: 12px;
+    height: 54px;
+    width: 58px;
+    border-radius: 16px;
     position: relative;
     z-index: 1;
     overflow: hidden;
-    transition: width 0.22s ease-in, color 0.2s;
+    transition: color 0.2s, background-color 0.2s;
     text-decoration: none !important;
     color: var(--subtext) !important;
     cursor: pointer;
@@ -2629,67 +2630,71 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     border: none;
     flex-shrink: 0;
 }
-/* Fondo deslizante en hover/active */
+/* Fondo deslizante en hover/active (ahora se expande un poco) */
 .bottom-nav-item::before {
     position: absolute;
     z-index: -1;
     content: "";
     display: block;
-    border-radius: 12px;
+    border-radius: 16px;
     width: 100%;
     height: 100%;
     top: 0;
-    transform: translateX(100%);
-    transition: transform 0.22s ease-in;
-    transform-origin: center right;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: all 0.2s ease-out;
     background: rgba(37,99,235,0.12);
 }
 /* Ítem activo: expandido permanentemente */
 .bottom-nav-item.active {
-    width: 98px;
     color: #fff !important;
 }
 .bottom-nav-item.active::before {
-    transform: translateX(0);
+    transform: scale(1);
+    opacity: 0.95;
     background: var(--crm-accent);
     box-shadow: 0 4px 16px color-mix(in srgb, var(--crm-accent) 50%, transparent);
-    opacity: 0.95;
 }
 .bottom-nav-item.active span {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
+    max-height: 15px;
+    margin-top: 2px;
 }
-/* Hover expande (útil en tablet con stylus) */
+.bottom-nav-item.active i {
+    transform: translateY(-2px);
+}
+/* Hover expande */
 .bottom-nav-item:not(.active):hover,
 .bottom-nav-item:not(.active):focus {
     outline: 0;
-    width: 98px;
     color: var(--crm-accent) !important;
 }
 .bottom-nav-item:not(.active):hover::before,
 .bottom-nav-item:not(.active):focus::before {
-    transform: translateX(0);
+    transform: scale(1);
+    opacity: 1;
 }
 .bottom-nav-item:not(.active):hover span,
 .bottom-nav-item:not(.active):focus span {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
+    max-height: 15px;
+    margin-top: 2px;
 }
-/* Ícono: posicionado a la izquierda, fijo */
+.bottom-nav-item:not(.active):hover i,
+.bottom-nav-item:not(.active):focus i {
+    transform: translateY(-2px);
+}
+/* Ícono: centrado */
 .bottom-nav-item i {
     font-size: 1.25rem;
-    width: 24px;
-    height: 24px;
     display: block;
-    flex-shrink: 0;
-    position: absolute;
-    left: 12px;
     line-height: 1;
+    transition: transform 0.2s ease-out;
 }
-/* Texto: oculto por defecto, se desliza */
+/* Texto: oculto por defecto, se desliza de abajo */
 .bottom-nav-item span {
-    transform: translateX(100%);
-    transition: transform 0.22s ease-in, opacity 0.18s ease-in;
     opacity: 0;
     display: block;
     text-align: center;
