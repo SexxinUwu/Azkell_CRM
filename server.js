@@ -919,7 +919,7 @@ app.post('/api/login', (req, res) => {
 // ============================================================
 // 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)
 // ============================================================
-const tallerRoutes = require('./routes/taller')(db, logAudit);
+const tallerRoutes = require('./routes/taller')(db, logAudit, _generarCodigoAlmacen);
 app.use('/api', tallerRoutes);
 
 // (legacyRoutes se movió más abajo para no interceptar los endpoints que siguen)
@@ -1889,7 +1889,7 @@ function _generarCodigoAlmacen(tipo, anio, cb) {
 // ============================================================
 // RUTAS MODULARIZADAS
 // ============================================================
-const almacenRoutes = require('./routes/almacen')(db, _multerInv, logAudit);
+const almacenRoutes = require('./routes/almacen')(db, _multerInv, logAudit, _generarCodigoAlmacen);
 app.use('/api/almacen', almacenRoutes);
 
 // (tallerRoutes ya fue montado antes del legacy wildcard — ver arriba)

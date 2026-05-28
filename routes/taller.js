@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (db, logAudit) => {
+module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
 // ============================================================
 // MÓDULO: ÓRDENES DE MANTENIMIENTO (OT)

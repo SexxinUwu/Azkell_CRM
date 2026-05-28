@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (db, _multerInv, logAudit) => {
+module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
 // ── Helper: sumar total_pen de detalle (convierte USD con tipo_cambio) ───
 function _calcularTotalPen(detalles, tc) {
