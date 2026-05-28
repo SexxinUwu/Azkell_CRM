@@ -209,7 +209,7 @@ router.post('/:metodo', async (req, res) => {
             if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }
             console.log("✅ Inspección guardada correctamente");
             broadcast('inspecciones', metodo);
-            const usuario = req.body.usuario || datos.tecnico || 'sistema';
+            const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
             logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
             return res.json({ data: "Éxito" });
         });
@@ -237,7 +237,7 @@ router.post('/:metodo', async (req, res) => {
             console.log(`✅ Eliminados definitivamente ${listaIds.length} registros de ${coleccion}`);
             const COLECCION_MODULO = { Placas:'placas', Inspecciones:'inspecciones', Fleetrun:'fleetrun', StatusFlota:'status', Usuarios:'usuarios' };
             broadcast(COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'eliminar');
-            const usuario = req.body.usuario || 'sistema';
+            const usuario = (req.body && req.body.usuario) || 'sistema';
             logAudit(usuario, COLECCION_MODULO[coleccion] || coleccion.toLowerCase(), 'ELIMINÓ', `${listaIds.length} reg. de ${coleccion}`);
 
             // Al eliminar Fleetrun: revertir planes Completadas que referenciaban esos registros
@@ -372,7 +372,7 @@ router.post('/:metodo', async (req, res) => {
         db.query(query, [...valores, ...valoresUpdate], (err) => {
             if (err) return res.json({ data: "Error BD: " + err.message });
             broadcast('placas', metodo);
-            const usuario = req.body.usuario || 'sistema';
+            const usuario = (req.body && req.body.usuario) || 'sistema';
             logAudit(usuario, 'placas', metodo === 'actualizarPlaca' ? 'MODIFICÓ' : 'CREÓ', `${placa} · ${cliente || '?'}`);
             return res.json({ data: "Éxito" });
         });
@@ -410,7 +410,7 @@ router.post('/:metodo', async (req, res) => {
             db.query(query, [...values, ...values.slice(1)], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('fleetrun', metodo);
-                const usuario = req.body.usuario || 'sistema';
+                const usuario = (req.body && req.body.usuario) || 'sistema';
                 const placa   = ((isEdit ? form.editF_placa  : form.f_placa)  || '').toUpperCase();
                 const tipomp  = (isEdit ? form.editF_tipomp : form.f_tipomp) || '';
                 logAudit(usuario, 'fleetrun', isEdit ? 'MODIFICÓ' : 'CREÓ', `${tipomp || '?'} · ${placa || '?'} · ${idFinal}`);

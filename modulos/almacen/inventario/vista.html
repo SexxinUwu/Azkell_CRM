@@ -383,8 +383,8 @@
 
   <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .75rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
-    <div id="inv-grid" class="pb-3 px-1">
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .25rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
+    <div id="inv-grid" class="pb-3">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…
       </div>
@@ -750,32 +750,7 @@
   </button>
 </div>
 
-<!-- ═══ BOTTOM NAVIGATION — solo mobile ═════════════════════════ -->
-<div id="inv-bottom-nav"
-     style="display:none;position:fixed;bottom:0;left:0;right:0;height:68px;
-            background:var(--surface);border-top:1px solid var(--border);z-index:1039;
-            align-items:center;justify-content:space-around;padding:0 .25rem;">
-  <button onclick="window._invBottomNav('stock')" id="inv-bnav-stock"
-          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:#2563eb;">
-    <i class="bi bi-box-seam-fill" style="font-size:1.3rem;"></i>
-    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Stock</span>
-  </button>
-  <button onclick="window._invBottomNav('kardex')" id="inv-bnav-kardex"
-          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
-    <i class="bi bi-arrow-left-right" style="font-size:1.3rem;"></i>
-    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Kardex</span>
-  </button>
-  <button onclick="window._invBottomNav('flota')" id="inv-bnav-flota"
-          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
-    <i class="bi bi-truck-flatbed" style="font-size:1.3rem;"></i>
-    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Flota</span>
-  </button>
-  <button onclick="window._invBottomNav('mas')" id="inv-bnav-mas"
-          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;padding:.5rem 0;color:var(--subtext);">
-    <i class="bi bi-grid-3x3-gap-fill" style="font-size:1.3rem;"></i>
-    <span style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Más</span>
-  </button>
-</div>
+
 
 <!-- ═══ DETALLE ARTÍCULO — Drawer moderno ═══════════════════════ -->
 <div id="inv-det-drawer"

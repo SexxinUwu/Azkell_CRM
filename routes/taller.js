@@ -69,7 +69,7 @@ router.post('/ordenes-trabajo', (req, res) => {
             [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || new Date()],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId });
             }
         );
     });
@@ -86,7 +86,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             [iniciado_por || null, ticketId],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
         return;
@@ -109,7 +109,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
                 [motivo.trim(), pausado_por || null, ticketId],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
                 }
             );
         });
@@ -131,7 +131,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
                 [ticketId],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, slot });
                 }
             );
         });
@@ -141,7 +141,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     if (accion === 'anular') {
         db.query("UPDATE ordenes_trabajo SET estado = 'Anulado' WHERE ticket_entrada = ?", [ticketId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
         return;
     }
@@ -157,7 +157,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             db.query('UPDATE ordenes_trabajo SET estado = \'Aprobada\', detalles_json = ? WHERE ticket_entrada = ?',
                 [JSON.stringify(det), ticketId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
         });
@@ -185,7 +185,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
                  cerrado_por || null, ticketId],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
         });
@@ -208,7 +208,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
                 [JSON.stringify(det), ticketId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
         });
@@ -225,7 +225,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     params.push(ticketId);
     db.query('UPDATE ordenes_trabajo SET ' + sets.join(', ') + ' WHERE ticket_entrada = ?', params, (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -238,7 +238,7 @@ router.delete('/ordenes-trabajo/:id', (req, res) => {
             if (err2) return res.status(500).json({ error: err2.message });
             db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err3) => {
                 if (err3) return res.status(500).json({ error: err3.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
         });
     });
@@ -272,7 +272,7 @@ router.post('/ot-trabajos', (req, res) => {
             [nuevoId, ticketEntrada || '', trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
             }
         );
     });
@@ -284,7 +284,7 @@ router.put('/ot-trabajos/:id', (req, res) => {
     if (accion === 'aprobar') {
         db.query("UPDATE trabajos_ot SET estado = 'Aprobado' WHERE id_ot = ?", [idTrabajo], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
         return;
     }
@@ -298,7 +298,7 @@ router.put('/ot-trabajos/:id', (req, res) => {
             [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo, idTrabajo],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
         return;
@@ -314,7 +314,7 @@ router.delete('/ot-trabajos/:id', (req, res) => {
         [id, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         }
     );
 });
@@ -358,7 +358,7 @@ router.post('/ot-materiales', (req, res) => {
              moneda || 'PEN', tc, total_pen, observaciones || null, creado_por || null, ticket_ot, 'Pendiente'],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) { if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+                if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
                 // Resolver inventario_id por descripción para items que no lo traen
                 const descsParaResolver = items
                     .filter(d => !d.inventario_id && d.descripcion)
@@ -384,7 +384,7 @@ router.post('/ot-materiales', (req, res) => {
                             parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
                     });
                     db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
-                    if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                 });
             }
         );
@@ -408,7 +408,7 @@ router.put('/ot-materiales/:id', (req, res) => {
                  WHERE d.salida_id = ? AND (d.inventario_id IS NULL OR d.inventario_id = '')`,
                 [id], () => {}
             );
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     } else if (accion === 'anular') {
         if (!motivo || !String(motivo).trim()) return res.status(400).json({ error: 'Motivo requerido' });
@@ -416,7 +416,7 @@ router.put('/ot-materiales/:id', (req, res) => {
             ['Anulado', String(motivo).trim(), id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             });
     } else {
         res.status(400).json({ error: 'Acción desconocida: ' + (accion || 'no especificada') });
@@ -428,7 +428,7 @@ router.delete('/ot-materiales/:id', (req, res) => {
     db.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
         db.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
 });
@@ -459,7 +459,7 @@ router.post('/ot-backlog', (req, res) => {
             [nuevoId, placa.toUpperCase(), km || 0, tema || '', tarea, reportado_por || '', fecha_reporte || null, estado || 'Pendiente', creado_por || '', ticket_ot || null],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, backlog_id: nuevoId });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, backlog_id: nuevoId });
         }
         );
     });
@@ -482,14 +482,14 @@ router.put('/ot-backlog/:id', (req, res) => {
         vals.push(req.params.id);
         db.query('UPDATE ot_backlog SET ' + fields.join(', ') + ' WHERE id = ?', vals, (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     } else {
         // Modo cambio de estado simple
         if (!estado) return res.status(400).json({ error: 'estado requerido' });
         db.query('UPDATE ot_backlog SET estado = ? WHERE id = ?', [estado, req.params.id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     }
 });
@@ -497,7 +497,7 @@ router.put('/ot-backlog/:id', (req, res) => {
 router.delete('/ot-backlog/:id', (req, res) => {
     db.query('DELETE FROM ot_backlog WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
@@ -588,7 +588,7 @@ router.post('/taller-rampas', (req, res) => {
         [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || ''],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
         }
     );
 });
@@ -608,7 +608,7 @@ router.put('/taller-rampas/:id', (req, res) => {
              situacion || null, req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
         return;
@@ -619,7 +619,7 @@ router.put('/taller-rampas/:id', (req, res) => {
             [req.params.id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
             }
         );
         return;
@@ -630,7 +630,7 @@ router.put('/taller-rampas/:id', (req, res) => {
         [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         }
     );
 });
@@ -638,7 +638,7 @@ router.put('/taller-rampas/:id', (req, res) => {
 router.delete('/taller-rampas/:id', (req, res) => {
     db.query('DELETE FROM taller_rampas WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        if(typeof logAudit === 'function' && req.body.usuario) { logAudit(req.body.usuario, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
     });
 });
 
