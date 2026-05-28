@@ -216,9 +216,11 @@ window.verificarSesionGuardada = function() {
     safe('nav-placas',          vPlacas);
     safe('nav-fleetrun',        vFleet);
     safe('nav-status-rampa',    vOT);
+    safe('mbnav-status-rampa',  vOT);
     safe('nav-reportes-ot',     vOT);
     safe('nav-trabajos-ot',     vOT);
     safe('nav-otros-mant',      vOT || vPlan);
+    safe('mbnav-otros-mant',    vOT || vPlan);
     safe('nav-ordenes',         vOT);
     // planificacion/backlog/kpis/productividad/finanzas están ocultos del sidebar
     // (accesibles vía hub Otros) — no llamar safe() sobre ellos
@@ -237,8 +239,11 @@ window.verificarSesionGuardada = function() {
     var vCfgAlm  = _cL('cfg_almacen');
 
     safe('nav-inventario',      vInv);
+    safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
+    safe('mbnav-entradas-inv',  vEnt);
     safe('nav-salidas-inv',     vSal);
+    safe('mbnav-salidas-inv',   vSal);
     safe('nav-proveedores-inv', vProv);
     safe('nav-kardex',          vKardex);
     safe('nav-costos-inv',      vCostos);
@@ -261,6 +266,8 @@ window.verificarSesionGuardada = function() {
     var showAdm = vCfgMant || vCfgAlm || isAdm;
     safe('wrap-administracion', showAdm);
     safe('nav-administracion',  showAdm);
+    safe('mbnav-administracion', showAdm);
+    safe('mbnav-configuracion', showAdm);
 
     // Sub-labels de Preferencias
     var elSubCfgPrev   = document.getElementById('nav-sub-cfg-prev');
@@ -280,7 +287,9 @@ window.verificarSesionGuardada = function() {
 
     safe('nav-ubicacion',    vGps);
     safe('nav-status-flota', vStatus);
+    safe('mbnav-flota',      vGps || vStatus);
     safe('nav-conductores',  vCond);
+    safe('mbnav-conductores', vCond);
     safe('nav-talleres',     false); // no implementado aún
 
     var showFlota = vGps || vStatus || vCond;
@@ -292,6 +301,7 @@ window.verificarSesionGuardada = function() {
     var vAudit = isAdm || window.checkPerm('mod_auditoria', 'l');
 
     safe('nav-usuarios',  vSeg);
+    safe('mbnav-usuarios', vSeg);
     safe('nav-auditoria', vAudit);
     safe('wrap-usuarios',  vSeg);
     safe('wrap-auditoria', vAudit);
