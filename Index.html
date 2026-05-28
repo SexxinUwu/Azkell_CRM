@@ -520,14 +520,177 @@
     <!-- ============================================================ -->
     <!-- BOTTOM NAV MOBILE                                             -->
     <!-- ============================================================ -->
-    <nav class="bottom-nav d-flex d-md-none" id="bottom-nav">
+    <nav class="bottom-nav d-flex d-md-none justify-content-around" id="bottom-nav">
         <a class="bottom-nav-item active" id="bnav-dashboard" onclick="cargarModuloAislado('dashboard'); setBottomNavActive('bnav-dashboard')">
             <i class="bi bi-grid-1x2-fill"></i><span data-i18n="bnav.home">Inicio</span>
         </a>
-        <a class="bottom-nav-item" id="bnav-mas" onclick="toggleSidebar()">
-            <i class="bi bi-grid-3x3-gap-fill"></i><span data-i18n="bnav.modules">Módulos</span>
+        <a class="bottom-nav-item" id="bnav-flota" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetFlota">
+            <i class="bi bi-truck-front-fill"></i><span>Flota</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-mantenimiento" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetMantenimiento">
+            <i class="bi bi-tools"></i><span>Mant.</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-almacen" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetAlmacen">
+            <i class="bi bi-box-seam-fill"></i><span>Almacén</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-directorio" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetDirectorio">
+            <i class="bi bi-person-lines-fill"></i><span>Directorio</span>
+        </a>
+        <a class="bottom-nav-item" id="bnav-config" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetConfiguracion">
+            <i class="bi bi-gear-fill"></i><span>Ajustes</span>
         </a>
     </nav>
+
+    <!-- OFFCANVAS BOTTOM NAV SHEETS -->
+    <style>
+        .bnav-sheet {
+            border-radius: 28px 28px 0 0 !important;
+            border-top: 1px solid var(--border) !important;
+            box-shadow: 0 -12px 48px rgba(0,0,0,.15) !important;
+            background: var(--surface) !important;
+        }
+        .bnav-sheet-header {
+            padding: 1.25rem 1.5rem 0.5rem;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .bnav-sheet-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .bnav-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .bnav-card:active { transform: scale(0.98); background: var(--border); }
+        .bnav-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .bnav-card-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: var(--text);
+            margin: 0;
+        }
+        .bnav-card-desc {
+            font-size: 0.75rem;
+            color: var(--subtext);
+            font-weight: 600;
+            margin: 0;
+            line-height: 1.2;
+        }
+    </style>
+
+    <!-- Flota -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetFlota">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-truck-front-fill text-primary"></i> Flota</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/vehiculos'); setBottomNavActive('bnav-flota');">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-truck"></i></div>
+                <div><p class="bnav-card-title">Vehículos</p><p class="bnav-card-desc">Gestión y estado de la flota</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mantenimiento -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetMantenimiento">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-tools text-warning"></i> Mantenimiento</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/status-rampa'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-cone-striped"></i></div>
+                <div><p class="bnav-card-title">Status Rampa</p><p class="bnav-card-desc">Ocupación y estado del taller</p></div>
+            </div>
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/tablero'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(234,88,12,.1); color: #ea580c;"><i class="bi bi-clipboard-check-fill"></i></div>
+                <div><p class="bnav-card-title">Tablero de Control</p><p class="bnav-card-desc">OTs y tareas en curso</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Almacén -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetAlmacen">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-box-seam-fill text-success"></i> Almacén</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/inventario'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(22,163,74,.1); color: #16a34a;"><i class="bi bi-boxes"></i></div>
+                <div><p class="bnav-card-title">Inventario</p><p class="bnav-card-desc">Stock actual y valoración</p></div>
+            </div>
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/entradas'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(34,197,94,.1); color: #22c55e;"><i class="bi bi-arrow-down-circle-fill"></i></div>
+                <div><p class="bnav-card-title">Entradas</p><p class="bnav-card-desc">Ingresos al almacén</p></div>
+            </div>
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/salidas'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-arrow-up-circle-fill"></i></div>
+                <div><p class="bnav-card-title">Salidas</p><p class="bnav-card-desc">Despachos y egresos</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Directorio -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetDirectorio">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-person-lines-fill text-info"></i> Directorio</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetDirectorio')).hide(); cargarModuloAislado('directorio/conductores'); setBottomNavActive('bnav-directorio');">
+                <div class="bnav-card-icon" style="background: rgba(6,182,212,.1); color: #06b6d4;"><i class="bi bi-person-vcard-fill"></i></div>
+                <div><p class="bnav-card-title">Personal</p><p class="bnav-card-desc">Conductores y operarios</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetConfiguracion">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-gear-fill text-secondary"></i> Configuración</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('sistema/usuarios'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-people-fill"></i></div>
+                <div><p class="bnav-card-title">Usuarios</p><p class="bnav-card-desc">Accesos y permisos</p></div>
+            </div>
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('sistema/configuracion'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(148,163,184,.1); color: #94a3b8;"><i class="bi bi-palette-fill"></i></div>
+                <div><p class="bnav-card-title">Apariencia y Sistema</p><p class="bnav-card-desc">Ajustes generales</p></div>
+            </div>
+            <div class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('administracion'); setBottomNavActive('bnav-config');">
+                <div class="bnav-card-icon" style="background: rgba(71,85,105,.1); color: #475569;"><i class="bi bi-grid-fill"></i></div>
+                <div><p class="bnav-card-title">Administración Central</p><p class="bnav-card-desc">Catálogos y mantenimientos</p></div>
+            </div>
+        </div>
+    </div>
 
     <!-- ── OFFCANVAS DETALLE PLACA GLOBAL ──────────────────── -->
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasDetallePlacaGlobal"

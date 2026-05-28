@@ -2277,17 +2277,17 @@ window.setBottomNavActive = function(id) {
     if (el) el.classList.add('active');
 };
 
-// Mapa ruta SPA → id del ítem en la barra inferior
-var BNAV_RUTA_A_ID = {
-    'dashboard':                  'bnav-dashboard',
-    'mantenimiento/inspecciones': 'bnav-inspecciones',
-    'mantenimiento/placas':       'bnav-placas',
-    'flota/ubicacion':            'bnav-gps',
-};
 // Llama cuando cambia el módulo activo — limpia todos y activa el que corresponde (o deja todo limpio)
 function actualizarBottomNavActivo(ruta) {
     document.querySelectorAll('.bottom-nav-item').forEach(function(el) { el.classList.remove('active'); });
-    var id = BNAV_RUTA_A_ID[ruta];
+    var id = '';
+    if (ruta === 'dashboard') id = 'bnav-dashboard';
+    else if (ruta.startsWith('flota/')) id = 'bnav-flota';
+    else if (ruta.startsWith('mantenimiento/')) id = 'bnav-mantenimiento';
+    else if (ruta.startsWith('almacen/')) id = 'bnav-almacen';
+    else if (ruta.startsWith('directorio/')) id = 'bnav-directorio';
+    else if (ruta.startsWith('sistema/') || ruta.startsWith('administracion')) id = 'bnav-config';
+    
     if (id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
 }
 
