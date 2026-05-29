@@ -184,10 +184,7 @@
                                 <span class="link-text" data-i18n="nav.auditoria">Auditoría</span>
                             </a>
                         </div>
-                        <a id="nav-cfg-perfil" class="nav-item" onclick="window.cargarConfigSection('perfil')">
-                            <i class="bi bi-person-circle nav-icon"></i>
-                            <span class="link-text" data-i18n="cfg.nav.profile">Mi Perfil</span>
-                        </a>
+
                         <a id="nav-cfg-apariencia" class="nav-item" onclick="window.cargarConfigSection('apariencia')">
                             <i class="bi bi-palette2 nav-icon"></i>
                             <span class="link-text" data-i18n="cfg.nav.appearance">Apariencia</span>
@@ -709,10 +706,7 @@
                 <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-journal-code"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.auditoria">Auditoría</p><p class="bnav-card-desc">Logs del sistema</p></div>
             </div>
-            <div id="mbnav-cfg-perfil" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('perfil'); setBottomNavActive('bnav-config');">
-                <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-person-circle"></i></div>
-                <div><p class="bnav-card-title" data-i18n="cfg.nav.profile">Mi Perfil</p><p class="bnav-card-desc">Ajustes personales</p></div>
-            </div>
+
             <div id="mbnav-cfg-apariencia" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); window.cargarConfigSection('apariencia'); setBottomNavActive('bnav-config');">
                 <div class="bnav-card-icon" style="background: rgba(100,116,139,.1); color: #64748b;"><i class="bi bi-palette2"></i></div>
                 <div><p class="bnav-card-title" data-i18n="cfg.nav.appearance">Apariencia</p><p class="bnav-card-desc">Tema y colores</p></div>
