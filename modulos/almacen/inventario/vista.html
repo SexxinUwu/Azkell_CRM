@@ -192,14 +192,23 @@
 
   <!-- ═══ HEADER MOBILE (iOS Style) ══════════════════════════════ -->
   <style>
+    /* Forzar que el contenedor principal ocupe todo el espacio sin "cajas" */
+    .main-area {
+        padding: 0 !important;
+        background-color: #F2F2F7 !important;
+    }
+    #mod-inventario { background-color: #F2F2F7; }
+    
     @media (max-width: 767.98px) {
         #inv-ios-header { display: block !important; }
         #inv-desktop-controls, #inv-filter-row, #inv-kpi-row-desktop { display: none !important; }
-        #mod-inventario { background-color: #F2F2F7; }
     }
     @media (min-width: 768px) {
         #inv-ios-header { display: none !important; }
         #inv-desktop-controls, #inv-filter-row, #inv-kpi-row-desktop { display: flex !important; }
+        /* Padding interno para compensar la remoción de padding en main-area */
+        #inv-desktop-controls, #inv-kpi-row-desktop, #inv-filter-row { padding: 0 1rem; }
+        #inv-grid-container { padding: 0 1rem 6rem 1rem !important; }
     }
   </style>
 
@@ -383,9 +392,8 @@
   <!-- KPI Row Bento Desktop -->
   <div id="inv-kpi-row-desktop" class="bento-kpi-row" style="display:flex;"></div>
 
-  <!-- Cabecera + controles (escritorio) -->
   <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .25rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
+  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0; padding: 0 .25rem 120px .25rem; background:transparent; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.18) transparent; -webkit-overflow-scrolling:touch;">
     <div id="inv-grid" class="pb-3">
       <div class="col-12 text-center py-5 text-muted">
         <div class="spinner-border spinner-border-sm me-2"></div>Cargando inventario…

@@ -2621,7 +2621,8 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     overflow: hidden;
     transition: all 0.3s ease;
     text-decoration: none !important;
-    color: #8E8E93 !important;
+    color: #FFFFFF !important; /* Color blanco solicitado */
+    opacity: 0.8; /* Ligeramente tenue inactivo */
     cursor: pointer;
     background: transparent;
     border: none;
@@ -2629,17 +2630,18 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     padding: 4px 2px;
 }
 
-/* Ítem activo: fondo gris oscuro, texto blanco */
+/* Ítem activo: fondo gris oscuro, texto blanco sin opacidad */
 .bottom-nav-item.active {
     background: #3A3A3C;
     color: #FFFFFF !important;
+    opacity: 1;
 }
 
 /* Hover expande */
 .bottom-nav-item:not(.active):hover,
 .bottom-nav-item:not(.active):focus {
     outline: 0;
-    color: #FFFFFF !important;
+    opacity: 1;
 }
 
 /* Ícono */
