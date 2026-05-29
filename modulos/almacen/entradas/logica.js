@@ -687,9 +687,11 @@ window._entRender = function() {
     var paginEl = document.getElementById('ent-paginacion');
     if (paginEl) {
         if (totalPag <= 1) { paginEl.innerHTML = ''; return; }
-        paginEl.innerHTML = '<button class="btn btn-xs btn-outline-secondary" ' + (pag <= 1 ? 'disabled' : '') + ' onclick="window._entIrPag(' + (pag - 1) + ')"><i class="bi bi-chevron-left"></i></button>' +
-            '<span class="small text-muted mx-2">Pág. ' + pag + ' / ' + totalPag + '</span>' +
-            '<button class="btn btn-xs btn-outline-secondary" ' + (pag >= totalPag ? 'disabled' : '') + ' onclick="window._entIrPag(' + (pag + 1) + ')"><i class="bi bi-chevron-right"></i></button>';
+        var btns = '';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag<=1?'0.35':'1') + ';" ' + (pag<=1?'disabled':'') + ' onclick="window._entIrPag(' + (pag-1) + ')"><i class="bi bi-chevron-left"></i></button>';
+        btns += '<span style="font-size:.8rem;font-weight:700;color:var(--subtext);">Pág. <b style="color:var(--text)">' + pag + '</b> / ' + totalPag + '</span>';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag>=totalPag?'0.35':'1') + ';" ' + (pag>=totalPag?'disabled':'') + ' onclick="window._entIrPag(' + (pag+1) + ')"><i class="bi bi-chevron-right"></i></button>';
+        paginEl.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem .75rem;">' + btns + '</div>';
     }
 };
 

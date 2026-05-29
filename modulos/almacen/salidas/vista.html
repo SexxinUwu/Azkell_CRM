@@ -65,6 +65,15 @@
         width: 100vw !important; max-width: 100vw !important;
         border-radius: 0 !important;
     }
+    #moduloSalidas .sal-table-wrap {
+        border-radius: 20px;
+        margin: 0 12px 12px 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 0;
+    }
 }
 
 /* ─── Base ────────────────────────────────────────────────── */
@@ -418,6 +427,7 @@
         </thead>
         <tbody id="sal-tbody"></tbody>
       </table>
+      <div id="sal-paginacion" class="d-flex align-items-center gap-2 py-2 px-3"></div>
     </div>
 
     <!-- PANEL DETALLE LATERAL -->

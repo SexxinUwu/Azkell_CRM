@@ -14,6 +14,13 @@ window._salItemIdx   = window._salItemIdx   || 0;
 window._salPlacas    = window._salPlacas    || [];
 window._salConductores = window._salConductores || [];
 window._salInvData   = window._salInvData   || [];
+window._salPag       = window._salPag       || 1;
+window._SAL_POR_PAG  = 25;
+
+window._salIrPag = function(p) {
+    window._salPag = p;
+    window.salRenderTabla();
+};
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_salidas = function() {
@@ -255,16 +262,27 @@ window.salRenderTabla = function() {
 
     window.salDatosFil = datos;
 
+    var paginEl = document.getElementById('sal-paginacion');
+    var totalPag = Math.ceil(datos.length / window._SAL_POR_PAG);
+    if (totalPag === 0) totalPag = 1;
+    if (window._salPag > totalPag) window._salPag = totalPag;
+    if (window._salPag < 1) window._salPag = 1;
+    
+    var pag = window._salPag;
+    var inicio = (pag - 1) * window._SAL_POR_PAG;
+    var datosPag = datos.slice(inicio, inicio + window._SAL_POR_PAG);
+
     if (datos.length === 0) {
         var msg = window.salTabActiva === 'pend' ? 'Sin solicitudes pendientes'
                 : window.salTabActiva === 'anulado' ? 'Sin salidas anuladas'
                 : 'Sin salidas registradas';
         tbody.innerHTML = '<tr><td colspan="11" class="sal-td-placeholder" style="text-align:center"><i class="bi bi-box" style="font-size:1.5rem; opacity:0.3"></i><br>' + msg + '</td></tr>';
+        if (paginEl) paginEl.innerHTML = '';
         return;
     }
 
     tbody.innerHTML = '';
-    datos.forEach(function(m) {
+    datosPag.forEach(function(m) {
         var items = m.items || [];
 
         var filteredItems = items;
@@ -321,6 +339,15 @@ window.salRenderTabla = function() {
             tbody.appendChild(tr);
         });
     });
+
+    if (paginEl) {
+        if (totalPag <= 1) { paginEl.innerHTML = ''; return; }
+        var btns = '';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag<=1?'0.35':'1') + ';" ' + (pag<=1?'disabled':'') + ' onclick="window._salIrPag(' + (pag-1) + ')"><i class="bi bi-chevron-left"></i></button>';
+        btns += '<span style="font-size:.8rem;font-weight:700;color:var(--subtext);">Pág. <b style="color:var(--text)">' + pag + '</b> / ' + totalPag + '</span>';
+        btns += '<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:' + (pag>=totalPag?'0.35':'1') + ';" ' + (pag>=totalPag?'disabled':'') + ' onclick="window._salIrPag(' + (pag+1) + ')"><i class="bi bi-chevron-right"></i></button>';
+        paginEl.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem .75rem;">' + btns + '</div>';
+    }
 };
 
 // ── Detalle lateral ───────────────────────────────────────────
