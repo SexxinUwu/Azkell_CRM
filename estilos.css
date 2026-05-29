@@ -3238,13 +3238,13 @@ body.dark .sidebar {
 
 /* Aplicando el diseño cápsula también en teléfonos móviles */
 @media (max-width: 768px) {
-    #app-crm { padding: 8px; }
+    #app-crm { padding: 0 !important; background-color: var(--bg-modern); }
     .sidebar { 
         height: calc(100% - 16px) !important; 
         border-radius: 20px !important; 
         margin: 8px !important; 
     }
-    .main-area { padding: 0 8px 8px 8px !important; }
+    .main-area { padding: 0 !important; }
 }
 
 /* 4. Topbar Glassmorphism y Flotante */
@@ -3262,7 +3262,7 @@ body.dark .topbar {
     border: 1px solid rgba(255,255,255,0.05) !important;
 }
 @media (max-width: 768px) {
-    .topbar { margin: 8px !important; border-radius: 12px !important; }
+    .topbar { margin: 0 !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; }
 }
 
 /* 5. Refinamiento de Tarjetas y Tablas (Sombreado Premium) */
@@ -3502,9 +3502,9 @@ body.dark .fab-item-label {
 
 @media (max-width: 768px) {
     #layout-content > div {
-        margin: 6px 6px 86px 6px;
-        height: calc(100% - 92px) !important;
-        border-radius: 28px;
+        margin: 0 0 80px 0 !important;
+        height: 100% !important;
+        border-radius: 0 !important;
         overflow: hidden;
         isolation: isolate; /* Para forzar clip de border-radius en webkit */
     }

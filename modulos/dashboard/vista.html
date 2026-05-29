@@ -40,66 +40,6 @@
     .dash-mob-alert-item:active { background: var(--bg); }
     .dash-mob-alert-item:last-child { border-bottom: none; }
     
-    .dash-weather-container {
-        padding: 0 1.25rem;
-        width: 100%;
-        margin-bottom: 1.5rem;
-    }
-    .dash-weather-card {
-        background: linear-gradient(135deg, #8E9EAB, #EEF2F3);
-        border-radius: 24px !important;
-        padding: 1.5rem !important;
-        height: 160px !important;
-        border: none !important;
-        color: #333 !important;
-        position: relative;
-        overflow: hidden;
-    }
-    body.dark .dash-weather-card {
-        background: linear-gradient(135deg, #374151, #1f2937);
-        color: #f3f4f6 !important;
-    }
-    .dash-weather-icon {
-        position: absolute;
-        top: -10px;
-        right: 0px;
-        opacity: 0.2;
-    }
-    .dash-weather-icon i {
-        font-size: 100px !important;
-        line-height: 1;
-    }
-    .dash-weather-temp {
-        font-size: 3rem !important;
-        font-weight: 300 !important;
-        letter-spacing: -2px;
-        line-height: 1;
-        margin-top: auto;
-    }
-    .kpi-metric-card {
-        border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        border: none;
-        height: 112px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .kpi-metric-card::before {
-        height: 4px;
-        border-radius: 16px 16px 0 0;
-    }
-    .kpi-metric-value {
-        font-size: 1.8rem;
-        font-weight: 900;
-    }
-    .kpi-metric-label {
-        font-size: 0.65rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--subtext);
-    }
     .kpi-metric-icon-wrap {
         border-radius: 12px;
         width: 32px; height: 32px;
@@ -199,23 +139,16 @@
     <div class="row g-3 mb-4">
 
         <!-- Widget Clima -->
-        <div class="col-12 col-md-auto d-flex align-items-stretch">
-            <div class="dash-weather-container" id="dash-weather-container">
-                <div class="dash-weather-card" id="dash-weather-card">
-                    <div class="dash-weather-icon" id="dash-weather-icon">
-                        <i class="bi bi-cloud-sun"></i>
-                    </div>
-                    <div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">
-                        <i class="bi bi-geo-alt-fill"></i> <span id="dash-weather-city">Obteniendo...</span>
-                    </div>
-                    <div class="mb-1" style="font-size:0.85rem; font-weight:500; opacity:0.9;" id="dash-weather-desc">—</div>
-                    <div class="d-flex align-items-end gap-3 mt-auto">
-                        <div class="dash-weather-temp" id="dash-weather-temp">—°</div>
-                        <div class="pb-1" style="font-size:0.85rem; font-weight:500; opacity:0.8;">
-                            <span>Min <span id="dash-weather-min">—°</span></span>
-                            <span class="ms-2">Max <span id="dash-weather-max">—°</span></span>
-                        </div>
-                    </div>
+        <div class="col-12 col-md-4 col-xl-2 d-flex align-items-stretch">
+            <div class="kpi-card w-100 p-3 mb-0 text-center d-flex flex-column justify-content-center align-items-center" id="dash-weather-card" style="min-height:160px; position:relative; overflow:hidden;">
+                <!-- the content -->
+                <h6 class="fw-bold text-muted mb-2"><i class="bi bi-cloud-sun"></i> Clima Actual</h6>
+                <div class="fw-bold fs-6" id="dash-weather-city">Obteniendo...</div>
+                <div class="mb-2 text-muted" style="font-size:0.8rem;" id="dash-weather-desc">—</div>
+                <div class="fs-1 fw-bold text-primary mb-1" id="dash-weather-temp">—°</div>
+                <div class="text-muted" style="font-size:0.75rem;">
+                    <span>Min <span id="dash-weather-min">—°</span></span> • 
+                    <span>Max <span id="dash-weather-max">—°</span></span>
                 </div>
             </div>
         </div>
