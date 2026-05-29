@@ -2662,6 +2662,7 @@ body.reduce-motion .ripple-wave { animation: none !important; display: none !imp
     font-size: 0.62rem;
     white-space: nowrap;
     letter-spacing: 0.02em;
+    color: inherit !important;
 }
 
 /* Cuando el bottom nav está visible, añadir padding al área de contenido */
