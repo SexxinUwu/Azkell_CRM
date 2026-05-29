@@ -1,9 +1,61 @@
 <style>
 @media (max-width: 767.98px) {
+    #moduloUbicacionGPS { padding: 0 !important; background: #fff !important; }
+    #moduloUbicacionGPS .controls-row { display: none !important; }
     #gps-panel-lista { flex: 1 1 100% !important; width: 100% !important; max-width: 100% !important; }
+    .gps-search-wrap { padding: 0.5rem 1.25rem; }
+    .gps-search-box {
+        background: #f3f4f6;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+    }
+    .gps-search-box input {
+        background: transparent;
+        border: none;
+        outline: none;
+        width: 100%;
+        font-size: 15px;
+        color: #111827;
+        margin-left: 8px;
+    }
+    .gps-unit-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid #f3f4f6;
+        background: #fff;
+        text-align: left;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        transition: background 0.2s;
+    }
+    .gps-unit-btn:active { background: #f9fafb; }
+    
+    /* Offcanvas Full Screen */
+    #gpsDetalleOffcanvas {
+        height: 100vh !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+    }
+    #gpsDetalleOffcanvas .offcanvas-header {
+        padding: 1rem;
+        background: #fff !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        border-radius: 0 !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    #gpsDetalleOffcanvasBody { padding: 0 !important; background: #fff !important; }
 }
 </style>
-<div id="moduloUbicacionGPS" class="modulo-wrapper" style="display: flex;">
+<div id="moduloUbicacionGPS" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
     <!-- Barra de controles -->
     <div class="controls-row d-flex justify-content-between align-items-center mb-2">
@@ -25,17 +77,31 @@
 
         <!-- Panel izquierdo: lista de unidades — full width en móvil, 340px en desktop -->
         <div id="gps-panel-lista" style="flex: 0 0 340px; max-width: 340px; width: 100%; display: flex; flex-direction: column; min-height: 0;">
-            <div class="mb-2">
-                <div class="input-group input-group-sm">
+            
+            <div class="d-block d-md-none px-4 pt-4 pb-2">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-success shadow-sm" id="badge-wialon-ubicacion-mob" style="border-radius: 20px; padding: 6px 12px; display: none;">
+                        <i class="bi bi-broadcast"></i> <span data-i18n="gps.active">Activo</span>
+                    </span>
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" onclick="recargarWialon(true)" style="width: 32px; height: 32px; padding: 0;">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="gps-search-wrap mb-2 mb-md-3">
+                <div class="gps-search-box d-flex d-md-none">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" id="busGPSUnidadMob" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
+                </div>
+                <div class="input-group input-group-sm d-none d-md-flex">
                     <span class="input-group-text border-end-0 bg-transparent">
                         <i class="bi bi-search" style="color: var(--subtext);"></i>
                     </span>
-                    <input type="text" class="form-control border-start-0 ps-0"
-                           id="busGPSUnidad"
-                           placeholder="Buscar placa o unidad..."
-                           oninput="filtrarListaGPS(this.value)">
+                    <input type="text" class="form-control border-start-0 ps-0" id="busGPSUnidad" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
                 </div>
             </div>
+
             <div id="listaUnidadesGPS" style="flex-grow:1; overflow-y:auto; min-height:0;">
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-satellite fs-3 opacity-50"></i>
@@ -54,15 +120,17 @@
 
     </div>
 
-    <!-- Offcanvas detalle para móvil (desliza desde abajo) -->
-    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas"
-         style="height:92vh; border-radius:18px 18px 0 0; background: var(--bg);">
-        <div class="offcanvas-header" style="background: var(--surface); border-bottom: 1px solid var(--border); border-radius:18px 18px 0 0;">
-            <div>
-                <h6 class="offcanvas-title fw-bold mb-0 text-primary" id="gpsDetalleOffcanvasTitle">—</h6>
-                <small class="text-muted" id="gpsDetalleOffcanvasSubtitle"></small>
+    <!-- Offcanvas detalle para móvil (desliza desde abajo / full screen) -->
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="gpsDetalleOffcanvas" style="height:100vh; border-radius:0; background: #fff; z-index: 1055;">
+        <div class="offcanvas-header" id="gpsDetalleOffcanvasHeader" style="background: #fff; border-bottom: 1px solid #f3f4f6; border-radius:0; padding: 12px 16px;">
+            <button type="button" class="btn p-2 ms-n2 text-muted" data-bs-dismiss="offcanvas" aria-label="Cerrar"><i class="bi bi-x-lg fs-5"></i></button>
+            <div class="text-center" style="flex:1;">
+                <h2 class="fw-bold m-0 text-primary" id="gpsDetalleOffcanvasTitle" style="font-size: 17px;">—</h2>
+                <p class="text-muted m-0" id="gpsDetalleOffcanvasSubtitle" style="font-size: 12px;"></p>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+            <button class="btn btn-sm btn-success rounded-pill fw-bold" id="btn-gps-compartir-mob" style="font-size: 11px; padding: 4px 10px;">
+                <i class="bi bi-whatsapp"></i> Compartir
+            </button>
         </div>
         <div class="offcanvas-body p-3" id="gpsDetalleOffcanvasBody" style="overflow-y: auto; background: var(--bg);">
         </div>
