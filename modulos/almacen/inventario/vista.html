@@ -193,11 +193,13 @@
   <!-- ═══ HEADER MOBILE (iOS Style) ══════════════════════════════ -->
   <style>
     /* Forzar que el contenedor principal ocupe todo el espacio sin "cajas" */
-    .main-area {
+    #root-dinamico, .main-area {
         padding: 0 !important;
         background-color: #F2F2F7 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
-    #mod-inventario { background-color: #F2F2F7; }
+    #mod-inventario { background-color: #F2F2F7; flex: 1 1 0; }
     
     @media (max-width: 767.98px) {
         #inv-ios-header { display: block !important; }
@@ -402,7 +404,7 @@
   </div>
 
   <!-- Paginación -->
-  <div class="d-flex justify-content-between align-items-center mt-2 px-1" id="inv-paginacion"></div>
+  <div class="d-flex justify-content-between align-items-center mt-auto mb-5 px-1" id="inv-paginacion" style="padding-bottom: 2rem;"></div>
 </div>
 
 <!-- ═══ MODAL ADD / EDIT ═══════════════════════════════════════════ -->
