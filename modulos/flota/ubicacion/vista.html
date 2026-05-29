@@ -38,23 +38,35 @@
     }
     .gps-unit-btn:active { background: #f8fafc; }
     
-    /* Custom Mobile Header for GPS */
-    .gps-mob-header {
+    /* Custom Mobile Header for GPS (Design Match) */
+    .gps-mob-header-container {
+        background: #059669;
+        border-radius: 0 0 24px 24px;
+        padding: 1.25rem 1.25rem 1.5rem 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    .gps-mob-header-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 1rem 1.25rem 0.5rem 1.25rem;
-        background: #fff;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    .gps-mob-super-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.85);
+        margin: 0 0 4px 0;
     }
     .gps-mob-header-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #0f172a;
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #fff;
         margin: 0;
+        line-height: 1.1;
     }
     .gps-badge-active {
-        background: #dcfce7;
-        color: #16a34a;
+        background: rgba(255,255,255,0.2);
+        color: #fff;
         padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
@@ -62,8 +74,30 @@
         display: flex;
         align-items: center;
         gap: 4px;
+        border: 1px solid rgba(255,255,255,0.1);
     }
     
+    .gps-search-wrap { padding: 0; }
+    .gps-search-box {
+        background: rgba(255,255,255,0.15);
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .gps-search-box input {
+        background: transparent;
+        border: none;
+        outline: none;
+        width: 100%;
+        font-size: 15px;
+        color: #fff;
+        margin-left: 10px;
+    }
+    .gps-search-box input::placeholder { color: rgba(255,255,255,0.7); }
+    .gps-search-box i { color: rgba(255,255,255,0.8); }
     /* Offcanvas Full Screen */
     #gpsDetalleOffcanvas {
         height: 100vh !important;
@@ -105,25 +139,29 @@
         <!-- Panel izquierdo: lista de unidades — full width en móvil, 340px en desktop -->
         <div id="gps-panel-lista" style="flex: 0 0 340px; max-width: 340px; width: 100%; display: flex; flex-direction: column; min-height: 0;">
             
-            <div class="d-block d-md-none gps-mob-header">
-                <div class="d-flex align-items-center gap-3">
-                    <h1 class="gps-mob-header-title">GPS</h1>
-                    <div class="gps-badge-active" id="badge-wialon-ubicacion-mob" style="display: none;">
-                        <div style="width:6px;height:6px;border-radius:50%;background:#16a34a;"></div>
+            <div class="d-block d-md-none gps-mob-header-container">
+                <div class="gps-mob-header-top">
+                    <div>
+                        <p class="gps-mob-super-title">Monitoreo</p>
+                        <h1 class="gps-mob-header-title">GPS Flota</h1>
+                    </div>
+                    <div class="gps-badge-active" id="badge-wialon-ubicacion-mob">
+                        <div style="width:6px;height:6px;border-radius:50%;background:#a7f3d0;"></div>
                         <span data-i18n="gps.active">Activo</span>
                     </div>
                 </div>
-                <button class="btn btn-light rounded-circle shadow-sm" onclick="recargarWialon(true)" style="width: 40px; height: 40px; border: 1px solid #e2e8f0; color: #475569;">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>
+
+                <div class="gps-search-wrap mb-1">
+                    <div class="gps-search-box d-flex">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="busGPSUnidadMob" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
+                    </div>
+                </div>
             </div>
 
-            <div class="gps-search-wrap mb-2 mb-md-3">
-                <div class="gps-search-box d-flex d-md-none">
-                    <i class="bi bi-search text-muted"></i>
-                    <input type="text" id="busGPSUnidadMob" placeholder="Buscar placa o unidad..." oninput="filtrarListaGPS(this.value)">
-                </div>
-                <div class="input-group input-group-sm d-none d-md-flex">
+            <!-- Escritorio Search (Solo visible en md o mayor) -->
+            <div class="gps-search-wrap mb-2 mb-md-3 d-none d-md-block px-3 pt-3">
+                <div class="input-group input-group-sm">
                     <span class="input-group-text border-end-0 bg-transparent">
                         <i class="bi bi-search" style="color: var(--subtext);"></i>
                     </span>

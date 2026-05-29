@@ -30,35 +30,6 @@
                 </div>
             </div>
 
-        <!-- Card: Cambiar contraseña -->
-        <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--surface); border-radius: 12px; max-width: 480px;">
-            <p class="fw-semibold mb-1" style="color: var(--text);">
-                <i class="bi bi-shield-lock-fill me-2" style="color: var(--crm-accent);"></i>Cambiar contraseña
-            </p>
-            <p class="mb-3" style="color: var(--subtext); font-size: 0.8rem;">Escribe tu contraseña actual para confirmar tu identidad.</p>
-            <div class="mb-2">
-                <label class="form-label mb-1" style="font-size: 0.75rem; color: var(--subtext); text-transform: uppercase; letter-spacing: .5px;">Contraseña actual</label>
-                <div class="input-group">
-                    <input type="password" id="cfg-pass-actual" class="form-control" style="background:var(--surface);color:var(--text);">
-                    <button class="btn btn-outline-secondary" type="button" onclick="window._cfgToggleEye('cfg-pass-actual',this)"><i class="bi bi-eye"></i></button>
-                </div>
-            </div>
-            <div class="mb-2">
-                <label class="form-label mb-1" style="font-size: 0.75rem; color: var(--subtext); text-transform: uppercase; letter-spacing: .5px;">Nueva contraseña</label>
-                <div class="input-group">
-                    <input type="password" id="cfg-pass-nueva" class="form-control" style="background:var(--surface);color:var(--text);">
-                    <button class="btn btn-outline-secondary" type="button" onclick="window._cfgToggleEye('cfg-pass-nueva',this)"><i class="bi bi-eye"></i></button>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label mb-1" style="font-size: 0.75rem; color: var(--subtext); text-transform: uppercase; letter-spacing: .5px;">Confirmar nueva contraseña</label>
-                <input type="password" id="cfg-pass-confirmar" class="form-control" style="background:var(--surface);color:var(--text);">
-            </div>
-            <button class="btn btn-primary" onclick="window.cfgCambiarPassword()">
-                <i class="bi bi-check-lg me-1"></i>Guardar nueva contraseña
-            </button>
-            <div id="cfg-pass-msg" class="mt-2" style="display:none; font-size:.82rem;"></div>
-        </div>
 
         </div>
 
