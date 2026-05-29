@@ -1,4 +1,113 @@
-<div id="moduloDashboard" class="modulo-wrapper" style="display: flex;">
+<style>
+/* ─── DASHBOARD MOBILE ──────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    #moduloDashboard {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: var(--bg);
+    }
+    #moduloDashboard .controls-row {
+        padding: 1rem 1.25rem 0.5rem 1.25rem;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 0 !important;
+    }
+    #kpi-metrics-row {
+        padding: 1rem 1.25rem 0.5rem 1.25rem;
+        margin: 0 !important;
+        background: var(--bg);
+    }
+    #dash-mob-alerts-wrap {
+        padding: 0 1.25rem;
+        margin-bottom: 1rem;
+    }
+    .dash-mob-alert-list {
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    .dash-mob-alert-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        text-decoration: none;
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        transition: background 0.2s;
+    }
+    .dash-mob-alert-item:active { background: var(--bg); }
+    .dash-mob-alert-item:last-child { border-bottom: none; }
+    
+    .dash-weather-container {
+        padding: 0 1.25rem;
+        width: 100%;
+        margin-bottom: 1.5rem;
+    }
+    .dash-weather-card {
+        background: linear-gradient(135deg, #8E9EAB, #EEF2F3);
+        border-radius: 24px !important;
+        padding: 1.5rem !important;
+        height: 160px !important;
+        border: none !important;
+        color: #333 !important;
+        position: relative;
+        overflow: hidden;
+    }
+    body.dark .dash-weather-card {
+        background: linear-gradient(135deg, #374151, #1f2937);
+        color: #f3f4f6 !important;
+    }
+    .dash-weather-icon {
+        position: absolute;
+        top: -10px;
+        right: 0px;
+        opacity: 0.2;
+    }
+    .dash-weather-icon i {
+        font-size: 100px !important;
+        line-height: 1;
+    }
+    .dash-weather-temp {
+        font-size: 3rem !important;
+        font-weight: 300 !important;
+        letter-spacing: -2px;
+        line-height: 1;
+        margin-top: auto;
+    }
+    .kpi-metric-card {
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        border: none;
+        height: 112px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .kpi-metric-card::before {
+        height: 4px;
+        border-radius: 16px 16px 0 0;
+    }
+    .kpi-metric-value {
+        font-size: 1.8rem;
+        font-weight: 900;
+    }
+    .kpi-metric-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--subtext);
+    }
+    .kpi-metric-icon-wrap {
+        border-radius: 12px;
+        width: 32px; height: 32px;
+        font-size: 1rem;
+    }
+}
+</style>
+<div id="moduloDashboard" class="modulo-wrapper" style="display: flex; flex-direction: column;">
 
     <!-- Header -->
     <div class="controls-row d-flex justify-content-between align-items-center mb-3">
@@ -61,17 +170,27 @@
     </div>
 
     <!-- ── ACCIONES RÁPIDAS MÓVIL (d-block d-md-none) ─── -->
-    <div class="d-block d-md-none mb-3">
-        <div class="list-group shadow-sm rounded-3 overflow-hidden">
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#"
-               onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
-                <span><i class="bi bi-exclamation-circle-fill text-danger me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Vencidos</span></span>
-                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-danger fs-6" id="dash-mob-fleet-vencidos">—</span><i class="bi bi-chevron-right text-muted"></i></span>
+    <div class="d-block d-md-none" id="dash-mob-alerts-wrap">
+        <div class="dash-mob-alert-list">
+            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','VENCIDO'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+                    <span class="fw-semibold" style="font-size:0.85rem;">MP Fleetrun Vencidos</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-muted" id="dash-mob-fleet-vencidos">—</span>
+                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                </div>
             </a>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3" href="#"
-               onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
-                <span><i class="bi bi-clock-history text-warning me-2"></i><span class="fw-semibold" style="font-size:0.9rem;">MP Fleetrun Por Vencer</span></span>
-                <span class="d-flex align-items-center gap-3"><span class="fw-bold text-warning fs-6" id="dash-mob-fleet-porvencer">—</span><i class="bi bi-chevron-right text-muted"></i></span>
+            <a href="#" class="dash-mob-alert-item" onclick="event.preventDefault(); localStorage.setItem('fleet_fleetrun_nav_filter','POR VENCER'); cargarModuloAislado('mantenimiento/fleetrun')">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#eab308;"></div>
+                    <span class="fw-semibold" style="font-size:0.85rem;">MP Fleetrun Por Vencer</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-muted" id="dash-mob-fleet-porvencer">—</span>
+                    <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                </div>
             </a>
         </div>
     </div>
@@ -83,22 +202,18 @@
         <div class="col-12 col-md-auto d-flex align-items-stretch">
             <div class="dash-weather-container" id="dash-weather-container">
                 <div class="dash-weather-card" id="dash-weather-card">
-                    <div class="dash-weather-city" id="dash-weather-city">
-                        <i class="bi bi-geo-alt-fill me-1" style="font-size:0.7rem"></i><span>Obteniendo...</span>
-                    </div>
-                    <div class="dash-weather-desc" id="dash-weather-desc">—</div>
                     <div class="dash-weather-icon" id="dash-weather-icon">
-                        <i class="bi bi-cloud-sun" style="font-size:2.2rem;opacity:0.5"></i>
+                        <i class="bi bi-cloud-sun"></i>
                     </div>
-                    <div class="dash-weather-temp" id="dash-weather-temp">—°</div>
-                    <div class="dash-weather-minmax">
-                        <div class="dash-weather-min">
-                            <span class="dash-wlabel">Min</span>
-                            <span class="dash-wval" id="dash-weather-min">—°</span>
-                        </div>
-                        <div class="dash-weather-max">
-                            <span class="dash-wlabel">Max</span>
-                            <span class="dash-wval" id="dash-weather-max">—°</span>
+                    <div class="d-flex align-items-center gap-1 mb-2" style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">
+                        <i class="bi bi-geo-alt-fill"></i> <span id="dash-weather-city">Obteniendo...</span>
+                    </div>
+                    <div class="mb-1" style="font-size:0.85rem; font-weight:500; opacity:0.9;" id="dash-weather-desc">—</div>
+                    <div class="d-flex align-items-end gap-3 mt-auto">
+                        <div class="dash-weather-temp" id="dash-weather-temp">—°</div>
+                        <div class="pb-1" style="font-size:0.85rem; font-weight:500; opacity:0.8;">
+                            <span>Min <span id="dash-weather-min">—°</span></span>
+                            <span class="ms-2">Max <span id="dash-weather-max">—°</span></span>
                         </div>
                     </div>
                 </div>
