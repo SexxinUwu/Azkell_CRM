@@ -410,9 +410,13 @@ function salAbrirDetalle(m) {
                 ? '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.salAnular(\'' + eId + '\')"><i class="bi bi-slash-circle me-1"></i>Anular</button>'
                 : '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>')
             : (m.estado === 'Anulado' ? '<span class="sal-badge badge-anulado ms-auto" style="font-size:0.72rem;padding:5px 10px;">Anulada</span>' : '');
+        var btnEditar = puedeEditar
+            ? '<button class="btn btn-sm btn-outline-warning ms-1 fw-bold" onclick="window.salEditarSalida(\'' + eId + '\')"><i class="bi bi-pencil-square me-1"></i>Editar</button>'
+            : '';
         footer.innerHTML =
             '<button class="btn btn-sm btn-outline-secondary" onclick="window.salVerPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-eye me-1"></i>Ver</button>'
           + '<button class="btn btn-sm btn-outline-primary ms-1" onclick="window.salGenerarPDF(window.salData.find(function(x){return x.id===\'' + eId + '\';}))" style="min-width:70px;"><i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
+          + btnEditar
           + (btnDespachar ? btnDespachar : '')
           + btnAnular;
     }
@@ -626,6 +630,11 @@ window.salAbrirNuevo = function() {
     if (totalEl) totalEl.textContent = 'S/. 0.00';
     _salAgregarItem();
 
+    // Reset edit mode
+    window._salEditId = null;
+    var titleEl = document.querySelector('.sal-drawer-title');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud';
+
     // Listener OT → auto-completar Placa (manejado por _cbOnSelect en _salCargarSelectores)
 
     var drawer = document.getElementById('sal-drawer-nuevo');
@@ -799,8 +808,13 @@ window.salGuardarNuevo = function() {
         items:        items
     };
 
-    fetch('/api/almacen/salidas', {
-        method: 'POST',
+    var editId = window._salEditId || null;
+    var method = editId ? 'PUT' : 'POST';
+    var url    = editId ? '/api/almacen/salidas/' + encodeURIComponent(editId) : '/api/almacen/salidas';
+    if (editId) body.accion = 'editar';
+
+    fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     })
@@ -810,13 +824,89 @@ window.salGuardarNuevo = function() {
     })
     .then(function(d) {
         window.salCerrarNuevo();
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Salida ' + (d.id || '') + ' registrada', 'success');
+        window._salEditId = null;
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta((editId ? 'Salida actualizada' : 'Salida ' + (d.id || '') + ' registrada'), 'success');
         salCargar();
     })
     .catch(function(err) {
         console.error('Error guardando salida:', err);
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta(err.message || 'Error al guardar la salida', 'danger');
     });
+};
+
+// ── Editar salida existente ───────────────────────────────────
+window._salEditId = null;
+
+window.salEditarSalida = function(id) {
+    if (!window.guardAction('sal_inv', 'e')) return;
+    var m = (window.salData || []).find(function(x) { return x.id === id; });
+    if (!m) { alert('No se encontró la salida ' + id); return; }
+
+    // Cerrar panel detalle
+    window.salCerrarDetalle();
+
+    // Guardar ID de edición
+    window._salEditId = id;
+
+    // Limpiar formulario
+    var ids = ['sal-f-obs'];
+    ids.forEach(function(fid) { var el = document.getElementById(fid); if (el) el.value = ''; });
+    window._cbReset('sal-f-ot');
+    window._cbReset('sal-f-placa');
+    window._cbReset('sal-f-responsable');
+
+    // Rellenar campos
+    var fechaEl = document.getElementById('sal-f-fecha');
+    if (fechaEl) fechaEl.value = m.fecha ? String(m.fecha).split('T')[0] : new Date().toISOString().split('T')[0];
+
+    var tipoEl = document.getElementById('sal-f-tipo');
+    if (tipoEl) tipoEl.value = m.tipo_destino || 'Vehiculo';
+    if (typeof window.salToggleTipo === 'function') window.salToggleTipo();
+
+    // Rellenar comboboxes
+    if (m.ticket_ot && typeof window._cbSet === 'function') {
+        window._cbSet('sal-f-ot', m.ticket_ot, m.ticket_ot);
+    }
+    if (m.placa && typeof window._cbSet === 'function') {
+        window._cbSet('sal-f-placa', m.placa, m.placa);
+    }
+    if (m.responsable && typeof window._cbSet === 'function') {
+        window._cbSet('sal-f-responsable', m.responsable, m.responsable);
+    }
+
+    var obsEl = document.getElementById('sal-f-obs');
+    if (obsEl) obsEl.value = m.observaciones || '';
+
+    // Limpiar items y rellenar con los existentes
+    var tbody = document.getElementById('sal-items-tbody');
+    if (tbody) tbody.innerHTML = '';
+    window._salItemIdx = 0;
+    
+    (m.items || []).forEach(function(it) {
+        _salAgregarItem();
+        var idx = window._salItemIdx - 1;
+        var descEl = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
+        var hidEl  = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
+        var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
+        var cuEl   = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
+        var impEl  = document.querySelector('.sal-item-imp[data-idx="' + idx + '"]');
+        if (descEl) descEl.value = it.descripcion || it.inventario_id || '';
+        if (hidEl)  hidEl.value  = it.inventario_id || '';
+        if (cantEl) cantEl.value = it.cantidad || 0;
+        if (cuEl)   cuEl.value   = parseFloat(it.costo_unitario || 0).toFixed(2);
+        if (impEl)  impEl.value  = (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)).toFixed(2);
+    });
+    _salActualizarTotal();
+
+    // Cambiar título del drawer
+    var titleEl = document.querySelector('.sal-drawer-title');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i>Editar Salida ' + salEsc(id);
+
+    // Abrir drawer
+    var drawer = document.getElementById('sal-drawer-nuevo');
+    if (drawer) drawer.classList.add('open');
+    var bd = document.getElementById('salNuevoBackdrop');
+    if (bd) bd.classList.add('open');
 };
 
 // ── Toggle tipo destino ───────────────────────────────────────

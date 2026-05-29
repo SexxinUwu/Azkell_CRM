@@ -831,6 +831,32 @@ router.put('/salidas/:id', (req, res) => {
             );
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
+    } else if (accion === 'editar') {
+        const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;
+        const tc = parseFloat(tipo_cambio) || 1;
+        const total_pen = _calcularTotalPen(items || [], tc);
+        db.query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
+            [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                db.query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    if (!items || !items.length) {
+                        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
+                        return res.json({ ok: true, id });
+                    }
+                    const dVals = items.map(d => {
+                        return [id, d.inventario_id || null, d.descripcion || null,
+                            parseFloat(d.cantidad) || 0, parseFloat(d.costo_unitario) || 0, d.moneda || moneda || 'PEN',
+                            parseFloat(d.importe) || ((parseFloat(d.cantidad) || 0) * (parseFloat(d.costo_unitario) || 0))];
+                    });
+                    db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (err3) => {
+                        if (err3) return res.status(500).json({ error: err3.message });
+                        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
+                        res.json({ ok: true, id });
+                    });
+                });
+            });
     } else {
         res.status(400).json({ error: 'Acción no válida' });
     }

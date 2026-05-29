@@ -7,14 +7,40 @@
     display: flex !important;
     flex-direction: column;
 }
-/* Móvil: card llena exactamente hasta el bottom nav + lista scrolleable */
+/* Móvil: pantalla completa sin cuadros */
 @media (max-width: 767.98px) {
-    /* Altura fija con dvh: viewport - topbar(50) - padding-top(8) - bottom-nav(68) */
     #moduloPlacas {
-        height: calc(100dvh - 126px) !important;
+        height: calc(100dvh - 68px) !important;
         overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    #moduloPlacas .card.flex-grow-1 { min-height: 0 !important; }
+    /* Ocultar botón volver y controles desktop */
+    #moduloPlacas > div:first-child { display: none !important; } /* botón volver */
+    #moduloPlacas .controls-row {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    /* KPIs compactos */
+    #moduloPlacas .kpi-wrapper {
+        padding: 12px 12px 0 !important;
+        gap: 8px !important;
+    }
+    #moduloPlacas .kpi-card {
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+    }
+    /* Ocultar controles desktop en mobile */
+    #moduloPlacas .d-flex.justify-content-between {
+        display: none !important;
+    }
+    /* Card sin bordes = pantalla completa */
+    #moduloPlacas .card {
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: var(--bg) !important;
+    }
     /* Grid 3 columnas */
     #moduloPlacas .placas-grid-view,
     #moduloPlacas .placas-grid-view.grid-cols-3,
@@ -22,25 +48,67 @@
     #moduloPlacas .placas-grid-view.grid-cols-5 {
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 0.35rem !important;
-        padding: 0.4rem !important;
+        padding: 0.4rem 0.5rem !important;
     }
     /* Cards compactas: solo placa visible */
-    #moduloPlacas .card-premium { padding: 8px 8px 6px !important; min-height: 54px !important; }
+    #moduloPlacas .card-premium { padding: 8px 8px 6px !important; min-height: 54px !important; border-radius: 14px !important; }
     #moduloPlacas .card-header-theme { margin-bottom: 0 !important; }
     #moduloPlacas .card-title-prem { font-size: 0.85rem !important; letter-spacing: 0 !important; line-height: 1.2; }
     #moduloPlacas .card-client-sub,
     #moduloPlacas .card-data-row,
     #moduloPlacas .card-timeline { display: none !important; }
     /* Headers de grupo compactos */
-    #moduloPlacas .group-header-left { padding: 8px 0 4px 4px !important; font-size: 0.95rem !important; }
-    /* Paginación: siempre visible en móvil, compacta al centro */
+    #moduloPlacas .group-header-left { padding: 8px 4px 4px 8px !important; font-size: 0.95rem !important; }
+    /* Paginación: visible y compacta al centro */
     #moduloPlacas .pagination-row {
         display: flex !important;
         justify-content: center !important;
         padding: 5px 8px !important;
+        border-top: 1px solid var(--border) !important;
     }
     #moduloPlacas .pagination-row .small.text-muted,
     #moduloPlacas #sel-filas-placas { display: none !important; }
+    /* Buscador y filtros mobile */
+    #placas-m-bar {
+        display: flex !important;
+        padding: 10px 12px;
+        gap: 8px;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+    }
+    #placas-m-bar input {
+        flex: 1;
+        border-radius: 14px;
+        border: 1.5px solid var(--border);
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        background: var(--surface);
+        color: var(--text);
+        outline: none;
+    }
+    #placas-m-bar input:focus {
+        border-color: #5865F2;
+    }
+    #placas-m-bar button {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        border: 1.5px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    /* FAB para registrar */
+    #placas-fab-wrap { display: flex !important; }
+}
+@media (min-width: 768px) {
+    #placas-m-bar { display: none !important; }
+    #placas-fab-wrap { display: none !important; }
 }
 </style>
 
@@ -48,6 +116,13 @@
     <!-- Botón volver a Administración -->
     <div style="padding:.4rem 1.25rem .1rem;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);">
         <button onclick="cargarModuloAislado('administracion')" style="display:inline-flex;align-items:center;gap:.2rem;padding:.28rem .75rem;border-radius:99px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.78rem;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--subtext)'"><i class="bi bi-arrow-left-short" style="font-size:1rem;"></i>Administración</button>
+    </div>
+
+    <!-- Barra mobile: buscador + filtros -->
+    <div id="placas-m-bar" style="display:none;">
+        <input type="text" id="buscadorPlacasMob" placeholder="Buscar placa..." oninput="document.getElementById('buscadorPlacas').value=this.value;filtrarPlacasAvanzado()">
+        <button onclick="document.getElementById('btnFiltrosPlacas').click()" title="Filtros"><i class="bi bi-funnel-fill"></i></button>
+        <button onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
     </div>
     <div class="controls-row">
         <div class="kpi-wrapper">
@@ -165,6 +240,17 @@
     </div>
 
     <table id="tablaPlacasHidden" style="display:none;"></table>
+</div>
+
+<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+<div id="placas-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
+  <button onclick="document.getElementById('formPlaca').reset();bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
+          style="width:60px;height:60px;border-radius:18px;background:#5865F2;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(88,101,242,.5);
+                 display:flex;align-items:center;justify-content:center;
+                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
+    <i class="bi bi-plus-lg"></i>
+  </button>
 </div>
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA ─────────────────────────────────── -->
