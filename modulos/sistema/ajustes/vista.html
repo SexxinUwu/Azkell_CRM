@@ -1,23 +1,35 @@
 <style>
-/* ─── AJUSTES MOBILE EDGE-TO-EDGE (DISEÑO IMAGEN 3 + APARTADOS IMAGEN 1) ─── */
+/* ─── AJUSTES MOBILE EDGE-TO-EDGE (DISEÑO IMAGEN 2) ─── */
 #moduloAjustes { 
-    background: #f1f5f9; 
+    background: #f1f5f9 !important; 
     min-height: 100%; 
     display: flex; 
     flex-direction: column; 
-    padding-bottom: 2rem;
+    padding-bottom: 5rem;
+    margin: 0 !important;
+    border-radius: 0 !important;
 }
-@media (min-width: 768px) {
-    #moduloAjustes { padding: 1.5rem !important; background: transparent; }
+
+/* Forzar que el contenedor padre no tenga márgenes para que sea PANTALLA COMPLETA real */
+:root {
+    --ajustes-bg: #f1f5f9;
 }
+#layout-content > div {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+#app-crm { padding: 0 !important; }
+.main-area { padding: 0 !important; }
 
 /* Header nativo */
 .ajustes-header-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem 0.5rem 1.25rem;
-    background: #f1f5f9;
+    padding: 1rem 1rem 0.5rem 1rem;
+    background: transparent;
 }
 .ajustes-header-title {
     font-size: 1.5rem;
@@ -33,7 +45,9 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin: 0.5rem 1rem 1.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 .ajustes-avatar {
     width: 60px;
@@ -69,7 +83,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 1.25rem 0.5rem 1.25rem;
+    padding: 0 1.5rem 0.5rem 1.5rem;
 }
 .ajustes-section-title {
     font-size: 0.75rem;
@@ -90,7 +104,10 @@
 
 .ajustes-list-card {
     background: #fff;
-    margin-bottom: 1.5rem;
+    margin: 0 1rem 1.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    overflow: hidden;
 }
 
 .ajustes-item {
@@ -128,23 +145,29 @@
 /* Logout */
 .ajustes-logout-card {
     background: #fff;
-    padding: 1rem;
-    text-align: center;
-    font-weight: 800;
+    padding: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 700;
     font-size: 0.95rem;
     color: #ef4444;
     cursor: pointer;
     transition: background 0.2s;
+    margin: 0 1rem 2rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 .ajustes-logout-card:active { background: #fef2f2; }
 
 @media (min-width: 768px) {
+    .ajustes-header-nav { padding: 0 1rem 1rem 1rem; }
     .ajustes-profile-card, .ajustes-list-card, .ajustes-logout-card {
-        border-radius: 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        margin-left: 2rem;
+        margin-right: 2rem;
     }
-    .ajustes-header-nav { padding: 0 0 1rem 0; background: transparent; }
-    .ajustes-section-header { padding: 0 0.5rem 0.5rem 0.5rem; }
+    .ajustes-section-header { padding: 0 2.5rem 0.5rem 2.5rem; }
 }
 </style>
 
@@ -169,22 +192,11 @@
         </div>
     </div>
 
-    <!-- PREFERENCIAS (Nombres de Imagen 1) -->
+    <!-- PREFERENCIAS -->
     <div class="ajustes-section-header">
-        <h2 class="ajustes-section-title">CONFIGURACIÓN</h2>
-        <span class="ajustes-badge-gray">5</span>
+        <h2 class="ajustes-section-title">PREFERENCIAS</h2>
     </div>
     <div class="ajustes-list-card">
-        
-        <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('perfil')">
-            <div class="ajustes-item-icon-wrap icon-blue">
-                <i class="bi bi-person-circle"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Mi Perfil</p>
-                <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-            </div>
-        </a>
         
         <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('apariencia')">
             <div class="ajustes-item-icon-wrap icon-pink">
@@ -219,6 +231,9 @@
     </div>
 
     <!-- ADMINISTRACIÓN -->
+    <div class="ajustes-section-header">
+        <h2 class="ajustes-section-title">ADMINISTRACIÓN</h2>
+    </div>
     <div class="ajustes-list-card" id="ajustes-admin-section">
         
         <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/usuarios')">
