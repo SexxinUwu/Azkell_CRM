@@ -133,17 +133,23 @@
 
 /* ── FAB ────────────────────────────────────────────────────────── */
 #cond-fab {
-    display: none; position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 900;
+    display: none; position: fixed; bottom: 86px; right: 18px; z-index: 900;
     width: 60px; height: 60px; border-radius: 50%;
     background: #10b981; color: #fff; border: none;
     box-shadow: 0 4px 20px rgba(16,185,129,.45);
     font-size: 1.75rem; align-items: center; justify-content: center;
     cursor: pointer; transition: transform .15s, box-shadow .15s;
 }
-#cond-fab:active { transform: translateX(-50%) scale(.91); }
+#cond-fab:active { transform: scale(.91); }
 
 /* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+    .topbar { display: none !important; }
+    #layout-content { padding: 0 !important; margin: 0 !important; }
+    #layout-content > div { margin: 0 !important; border-radius: 0 !important; max-width: 100% !important; padding: 0 !important; }
+    #app-crm { padding: 0 !important; }
+    .main-area { padding: 0 !important; }
+
     #cond-fab { display: flex !important; }
     #cond-btn-nuevo { display: none !important; }
     #modalConductor .modal-dialog { margin: 0; max-width: 100%; }
@@ -151,7 +157,7 @@
     #modalConductor .modal-dialog { align-items: flex-end; min-height: 100%; }
     
     /* Edge-to-edge list for Directorio on Mobile */
-    #moduloConductores { padding: 0 !important; background: #fff !important; }
+    #moduloConductores { padding: 0 !important; margin: 0 !important; border-radius: 0 !important; background: #fff !important; width: 100% !important; max-width: 100vw !important; }
     /* Mobile Header and Search styling (Design Match) */
     .dir-mob-header-container {
         background: #059669; /* Verde esmeralda */
