@@ -133,14 +133,14 @@
 
 /* ── FAB ────────────────────────────────────────────────────────── */
 #cond-fab {
-    display: none; position: fixed; bottom: 76px; right: 18px; z-index: 900;
-    width: 54px; height: 54px; border-radius: 16px;
-    background: #2563eb; color: #fff; border: none;
-    box-shadow: 0 4px 20px rgba(37,99,235,.45);
-    font-size: 1.55rem; align-items: center; justify-content: center;
+    display: none; position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 900;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #10b981; color: #fff; border: none;
+    box-shadow: 0 4px 20px rgba(16,185,129,.45);
+    font-size: 1.75rem; align-items: center; justify-content: center;
     cursor: pointer; transition: transform .15s, box-shadow .15s;
 }
-#cond-fab:active { transform: scale(.91); }
+#cond-fab:active { transform: translateX(-50%) scale(.91); }
 
 /* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -152,47 +152,54 @@
     
     /* Edge-to-edge list for Directorio on Mobile */
     #moduloConductores { padding: 0 !important; background: #fff !important; }
-    /* Mobile Header and Search styling */
-    .dir-mob-header {
+    /* Mobile Header and Search styling (Design Match) */
+    .dir-mob-header-container {
+        background: #059669; /* Verde esmeralda */
+        border-radius: 0 0 24px 24px;
+        padding: 1.25rem 1.25rem 1.5rem 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    .dir-mob-header-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 1rem 1.25rem 0.5rem 1.25rem;
-        background: #fff;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    .dir-mob-super-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.85);
+        margin: 0 0 4px 0;
     }
     .dir-mob-header-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #0f172a;
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #fff;
         margin: 0;
-        line-height: 1.2;
+        line-height: 1.1;
     }
-    .dir-search-wrap {
-        padding: 0.5rem 1.25rem 1rem 1.25rem;
-        background: #fff;
-        border-bottom: 1px solid #f3f4f6;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
+    
+    .dir-search-wrap { padding: 0; }
     .dir-search-box {
-        background: #f1f5f9;
+        background: rgba(255,255,255,0.15);
         height: 48px;
         border-radius: 12px;
         display: flex;
         align-items: center;
         padding: 0 16px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid rgba(255,255,255,0.1);
     }
     .dir-search-box input {
         background: transparent;
         border: none;
         outline: none;
         width: 100%;
-        font-size: 16px;
-        color: #1e293b;
-        margin-left: 12px;
+        font-size: 15px;
+        color: #fff;
+        margin-left: 10px;
     }
+    .dir-search-box input::placeholder { color: rgba(255,255,255,0.7); }
+    .dir-search-box i { color: rgba(255,255,255,0.8); }
     .desktop-controls { display: none !important; }
     
     #cond-grid { padding: 0 !important; gap: 0 !important; }
@@ -216,19 +223,20 @@
 
 <div id="moduloConductores" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-    <!-- Mobile Header -->
-    <div class="d-block d-md-none dir-mob-header">
-        <h1 class="dir-mob-header-title">Directorio de<br>Personal</h1>
-        <button class="btn btn-light rounded-circle shadow-sm" onclick="window.init_conductores()" style="width: 40px; height: 40px; border: 1px solid #e2e8f0; color: #475569;">
-            <i class="bi bi-arrow-clockwise"></i>
-        </button>
-    </div>
-    
-    <!-- Mobile Search -->
-    <div class="d-block d-md-none dir-search-wrap">
-        <div class="dir-search-box">
-            <i class="bi bi-search text-muted"></i>
-            <input type="text" id="buscadorConductoresMob" oninput="document.getElementById('buscadorConductores').value = this.value; window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
+    <!-- Mobile Header Container -->
+    <div class="d-block d-md-none dir-mob-header-container">
+        <div class="dir-mob-header-top">
+            <div>
+                <p class="dir-mob-super-title">Directorio</p>
+                <h1 class="dir-mob-header-title">Personal y<br>Contactos</h1>
+            </div>
+        </div>
+        
+        <div class="dir-search-wrap">
+            <div class="dir-search-box d-flex">
+                <i class="bi bi-search"></i>
+                <input type="text" id="buscadorConductoresMob" oninput="document.getElementById('buscadorConductores').value = this.value; window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
+            </div>
         </div>
     </div>
 

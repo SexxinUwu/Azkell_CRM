@@ -102,24 +102,23 @@
     font-weight: 800;
 }
 
-.ajustes-list-card {
+.ajustes-item {
     background: #fff;
-    margin: 0 1rem 1.5rem 1rem;
+    margin: 0 1rem 1rem 1rem;
     border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    overflow: hidden;
-}
-
-.ajustes-item {
     display: flex;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 1.15rem 1.25rem;
     text-decoration: none;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background 0.2s;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
 }
-.ajustes-item:active { background: #f8fafc; }
-.ajustes-item:last-child { border-bottom: none; }
+.ajustes-item:active { 
+    background: #f8fafc;
+    transform: scale(0.98);
+}
+
+
 
 .ajustes-item-icon-wrap {
     width: 40px;
@@ -163,7 +162,7 @@
 
 @media (min-width: 768px) {
     .ajustes-header-nav { padding: 0 1rem 1rem 1rem; }
-    .ajustes-profile-card, .ajustes-list-card, .ajustes-logout-card {
+    .ajustes-profile-card, .ajustes-item, .ajustes-logout-card {
         margin-left: 2rem;
         margin-right: 2rem;
     }
@@ -196,80 +195,74 @@
     <div class="ajustes-section-header">
         <h2 class="ajustes-section-title">PREFERENCIAS</h2>
     </div>
-    <div class="ajustes-list-card">
-        
-        <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('apariencia')">
-            <div class="ajustes-item-icon-wrap icon-pink">
-                <i class="bi bi-palette2"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Apariencia</p>
-                <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-            </div>
-        </a>
-        
-        <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('accesibilidad')">
-            <div class="ajustes-item-icon-wrap icon-green">
-                <i class="bi bi-universal-access"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Accesibilidad</p>
-                <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-            </div>
-        </a>
-        
-        <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('idioma')">
-            <div class="ajustes-item-icon-wrap icon-blue">
-                <i class="bi bi-translate"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Idioma</p>
-                <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-            </div>
-        </a>
-
-    </div>
+    
+    <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('apariencia')">
+        <div class="ajustes-item-icon-wrap icon-pink">
+            <i class="bi bi-palette2"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Apariencia</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+        </div>
+    </a>
+    
+    <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('accesibilidad')">
+        <div class="ajustes-item-icon-wrap icon-green">
+            <i class="bi bi-universal-access"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Accesibilidad</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+        </div>
+    </a>
+    
+    <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('idioma')">
+        <div class="ajustes-item-icon-wrap icon-blue">
+            <i class="bi bi-translate"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Idioma</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+        </div>
+    </a>
 
     <!-- ADMINISTRACIÓN -->
-    <div class="ajustes-section-header">
+    <div class="ajustes-section-header mt-3">
         <h2 class="ajustes-section-title">ADMINISTRACIÓN</h2>
     </div>
-    <div class="ajustes-list-card" id="ajustes-admin-section">
-        
-        <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/usuarios')">
-            <div class="ajustes-item-icon-wrap icon-green">
-                <i class="bi bi-people-fill"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Usuarios</p>
+    
+    <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/usuarios')">
+        <div class="ajustes-item-icon-wrap icon-green">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Usuarios</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+        </div>
+    </a>
+    
+    <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/auditoria')">
+        <div class="ajustes-item-icon-wrap icon-orange">
+            <i class="bi bi-journal-code"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Auditoría</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron"></i>
+        </div>
+    </a>
+
+    <a href="#" class="ajustes-item" onclick="cargarModuloAislado('administracion')">
+        <div class="ajustes-item-icon-wrap icon-blue">
+            <i class="bi bi-grid-fill"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title">Administración</p>
+            <div class="d-flex align-items-center">
+                <span class="ajustes-badge-gray">11</span>
                 <i class="bi bi-chevron-right ajustes-item-chevron"></i>
             </div>
-        </a>
-        
-        <a href="#" class="ajustes-item" onclick="cargarModuloAislado('sistema/auditoria')">
-            <div class="ajustes-item-icon-wrap icon-orange">
-                <i class="bi bi-journal-code"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Auditoría</p>
-                <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-            </div>
-        </a>
-
-        <a href="#" class="ajustes-item" onclick="cargarModuloAislado('administracion')">
-            <div class="ajustes-item-icon-wrap icon-blue">
-                <i class="bi bi-grid-fill"></i>
-            </div>
-            <div class="ajustes-item-content">
-                <p class="ajustes-item-title">Administración</p>
-                <div class="d-flex align-items-center">
-                    <span class="ajustes-badge-gray">11</span>
-                    <i class="bi bi-chevron-right ajustes-item-chevron"></i>
-                </div>
-            </div>
-        </a>
-
-    </div>
+        </div>
+    </a>
 
     <!-- Cerrar Sesión -->
     <div class="ajustes-logout-card" onclick="cerrarSesion()">
