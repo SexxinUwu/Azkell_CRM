@@ -74,7 +74,13 @@
 /* ─── Mobile-First ──────────────────────────────────────── */
 @media (max-width: 767.98px) {
     .topbar { display: none !important; }
-    .main-area { padding: 0 !important; overflow: hidden !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #moduloEntradas { flex: 1 1 0; }
     #ent-desktop-header { display: none !important; }
     #ent-m-header   { display: flex !important; }
     #ent-search-compact { display: flex !important; }
@@ -398,7 +404,7 @@
             backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1054;"></div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="ent-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1rem;z-index:1041;">
+<div id="ent-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
   <button onclick="window.abrirModalEntrada()"
           style="width:60px;height:60px;border-radius:18px;background:#16a34a;border:none;color:#fff;
                  font-size:1.5rem;box-shadow:0 6px 24px rgba(22,163,74,.5);

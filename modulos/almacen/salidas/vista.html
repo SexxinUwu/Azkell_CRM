@@ -3,7 +3,13 @@
 /* ─── Mobile-First ──────────────────────────────────────── */
 @media (max-width: 767.98px) {
     .topbar { display: none !important; }
-    .main-area { padding: 0 !important; overflow: hidden !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #moduloSalidas { flex: 1 1 0; }
     #sal-desktop-header { display: none !important; }
     #sal-m-header { display: flex !important; }
     #sal-search-compact { display: flex !important; }
@@ -547,7 +553,7 @@
 </div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="sal-fab-wrap" style="display:none;position:fixed;bottom:80px;right:1rem;z-index:1041;">
+<div id="sal-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
   <button onclick="window.salAbrirNuevo()"
           style="width:60px;height:60px;border-radius:18px;background:#5865F2;border:none;color:#fff;
                  font-size:1.5rem;box-shadow:0 6px 24px rgba(88,101,242,.5);
