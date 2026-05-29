@@ -14,14 +14,15 @@
 :root {
     --ajustes-bg: #f1f5f9;
 }
-#layout-content > div {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    max-width: 100% !important;
-    padding: 0 !important;
+@media (max-width: 768px) {
+    .topbar { display: none !important; }
+    #layout-content { padding: 0 !important; margin: 0 !important; }
+    #layout-content > div { margin: 0 !important; border-radius: 0 !important; max-width: 100% !important; padding: 0 !important; }
+    #app-crm { padding: 0 !important; }
+    .main-area { padding: 0 !important; }
+
+    #moduloAjustes { margin: 0 !important; border-radius: 0 !important; width: 100% !important; max-width: 100vw !important; }
 }
-#app-crm { padding: 0 !important; }
-.main-area { padding: 0 !important; }
 
 /* Header nativo */
 .ajustes-header-nav {

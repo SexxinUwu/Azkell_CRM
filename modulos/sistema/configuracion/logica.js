@@ -3,8 +3,8 @@
 // ============================================================
 
 window.init_configuracion = function() {
-    // Navegar al panel solicitado desde el sidebar, o default 'perfil'
-    const sectionTarget = window._pendingCfgSection || 'perfil';
+    // Navegar al panel solicitado desde el sidebar, o default 'apariencia'
+    const sectionTarget = window._pendingCfgSection || 'apariencia';
     window._pendingCfgSection = null;
     window.showConfig(sectionTarget);
 
@@ -94,7 +94,7 @@ window.init_configuracion = function() {
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels  = ['perfil', 'apariencia', 'accesibilidad', 'idioma'];
+    const panels  = ['apariencia', 'accesibilidad', 'idioma'];
     const buttons = document.querySelectorAll('.config-nav-btn');
 
     panels.forEach(p => {
