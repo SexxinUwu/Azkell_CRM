@@ -69,10 +69,20 @@
         border-radius: 20px;
         margin: 0 12px 12px 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        overflow: hidden;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         flex: 1 1 0;
+    }
+    #moduloSalidas table {
+        min-width: 580px;
+    }
+    #moduloSalidas th.col-articulo,
+    #moduloSalidas td.col-articulo {
+        min-width: 200px;
+        white-space: normal;
+        word-break: break-word;
     }
 }
 
@@ -418,7 +428,7 @@
             <th>Placa</th>
             <th class="col-hide-mob">Responsable</th>
             <th class="col-hide-mob">Código</th>
-            <th>Artículo</th>
+            <th class="col-articulo">Artículo</th>
             <th class="text-end">Cant.</th>
             <th class="text-end col-hide-mob">Costo Unit.</th>
             <th class="text-end col-hide-mob">Total</th>

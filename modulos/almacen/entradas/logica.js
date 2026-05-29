@@ -666,7 +666,7 @@ window._entRender = function() {
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="col-hide-mob">' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
-                '<td style="font-size:.80rem;">' + nombre + '</td>' +
+                '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
                 '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + totalFmt + '</strong>' : '') + '</td>' +
