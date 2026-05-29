@@ -6,11 +6,20 @@ window.init_ajustes = function() {
     // Rellenar datos del usuario
     let nombreEl = document.getElementById('ajustes-user-name');
     let roleEl   = document.getElementById('ajustes-user-role');
+    let emailEl  = document.getElementById('ajustes-user-email');
+    let avatarEl = document.getElementById('ajustes-user-avatar');
     
     let userData = typeof getSessionData === 'function' ? getSessionData() : null;
     if (userData) {
-        if (nombreEl) nombreEl.textContent = userData.nombre || userData.user || 'Usuario';
+        let nombre = userData.nombre || userData.user || 'Usuario';
+        if (nombreEl) nombreEl.textContent = nombre;
         if (roleEl)   roleEl.textContent   = userData.rol || 'Rol Desconocido';
+        if (emailEl)  emailEl.textContent  = userData.correo || 'admin@azkell.com';
+        if (avatarEl) {
+            let partes = nombre.trim().split(' ');
+            let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : nombre.substring(0,2);
+            avatarEl.textContent = iniciales.toUpperCase();
+        }
     }
 
     // Configurar Switch de Tema Oscuro
