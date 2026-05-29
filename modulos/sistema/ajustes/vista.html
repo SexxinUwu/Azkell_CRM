@@ -1,7 +1,7 @@
 <style>
 /* ─── AJUSTES MOBILE EDGE-TO-EDGE (DISEÑO IMAGEN 2) ─── */
 #moduloAjustes { 
-    background: #f1f5f9 !important; 
+    background: var(--bg) !important; 
     min-height: 100%; 
     display: flex; 
     flex-direction: column; 
@@ -37,13 +37,13 @@
 .ajustes-header-title {
     font-size: 1.5rem;
     font-weight: 900;
-    color: #0f172a;
+    color: var(--text);
     margin: 0;
 }
 
 /* Tarjeta de Perfil */
 .ajustes-profile-card {
-    background: #fff;
+    background: var(--surface);
     padding: 1.25rem;
     display: flex;
     align-items: center;
@@ -51,6 +51,7 @@
     margin: 0.5rem 1rem 1.5rem 1rem;
     border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
 }
 .ajustes-avatar {
     width: 60px;
@@ -66,7 +67,7 @@
     flex-shrink: 0;
 }
 .ajustes-profile-info { flex: 1; min-width: 0; }
-.ajustes-profile-name { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }
+.ajustes-profile-name { font-size: 1.1rem; font-weight: 800; color: var(--text); margin: 0; line-height: 1.2; }
 .ajustes-profile-badge { 
     display: inline-block; 
     background: #dcfce7; 
@@ -79,7 +80,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.ajustes-profile-email { font-size: 0.8rem; color: #64748b; margin: 4px 0 0 0; }
+.ajustes-profile-email { font-size: 0.8rem; color: var(--subtext); margin: 4px 0 0 0; }
 
 /* Secciones y Listas */
 .ajustes-section-header {
@@ -91,7 +92,7 @@
 .ajustes-section-title {
     font-size: 0.75rem;
     font-weight: 800;
-    color: #64748b;
+    color: var(--subtext);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin: 0;
@@ -106,10 +107,11 @@
 }
 
 .ajustes-item {
-    background: #fff;
+    background: var(--surface);
     margin: 0 1rem 1rem 1rem;
     border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
     display: flex;
     align-items: center;
     padding: 1.15rem 1.25rem;
@@ -117,7 +119,7 @@
     transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
 }
 .ajustes-item:active { 
-    background: #f8fafc;
+    background: var(--bg);
     transform: scale(0.98);
 }
 
@@ -140,13 +142,13 @@
 .icon-orange { background: #fff7ed; color: #f97316; }
 
 .ajustes-item-content { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; }
-.ajustes-item-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; }
+.ajustes-item-title { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0; }
 
-.ajustes-item-chevron { color: #cbd5e1; font-size: 1rem; margin-left: 0.5rem; }
+.ajustes-item-chevron { color: var(--subtext); font-size: 1rem; margin-left: 0.5rem; }
 
 /* Logout */
 .ajustes-logout-card {
-    background: #fff;
+    background: var(--surface);
     padding: 1.15rem;
     display: flex;
     align-items: center;
@@ -160,6 +162,7 @@
     margin: 0 1rem 2rem 1rem;
     border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
 }
 .ajustes-logout-card:active { background: #fef2f2; }
 
