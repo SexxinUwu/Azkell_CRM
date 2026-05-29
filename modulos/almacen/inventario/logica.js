@@ -357,25 +357,63 @@ window._invRenderKPIs = function(data) {
     function fmtV(v, pre) {
         return pre + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    var el = document.getElementById('inv-kpi-row');
-    if (!el) return;
-    el.innerHTML =
-        '<div class="bento-kpi">' +
-          '<div><div class="bento-kpi-label">Total Artículos</div><div class="bento-kpi-num">' + total.toLocaleString() + '</div></div>' +
-          '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-boxes fs-4"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi" style="background:#fffbeb;border-color:#fde68a">' +
-          '<div><div class="bento-kpi-label" style="color:#92400e">Stock Bajo</div><div class="bento-kpi-num" style="color:#d97706">' + advertencia + '</div></div>' +
-          '<div class="bento-kpi-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi accent-red">' +
-          '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-exclamation-circle-fill fs-4"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi accent-dark" style="grid-column:span 1">' +
-          '<div><div class="bento-kpi-label">Valorizado S/</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorSoles, 'S/ ') + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-coin fs-4" style="color:#fbbf24"></i></div>' +
-        '</div>';
+    var elMobile = document.getElementById('inv-kpi-row');
+    var elDesktop = document.getElementById('inv-kpi-row-desktop');
+
+    // 1) Render para Mobile (iOS Style)
+    if (elMobile) {
+        elMobile.innerHTML =
+            '<div style="background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
+              '<div class="d-flex justify-content-between align-items-start mb-2">' +
+                '<span style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Total<br/>Artículos</span>' +
+                '<div style="background-color:#eff6ff; color:#3b82f6; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
+                  '<i class="bi bi-box-seam"></i>' +
+                '</div>' +
+              '</div>' +
+              '<span style="font-size:1.5rem; font-weight:700; color:#111827; letter-spacing:-0.025em;">' + total.toLocaleString() + '</span>' +
+            '</div>' +
+
+            '<div style="background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
+              '<div class="d-flex justify-content-between align-items-start mb-2">' +
+                '<span style="font-size:10px; font-weight:700; color:#f59e0b; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Stock<br/>Bajo</span>' +
+                '<div style="background-color:#fffbeb; color:#f59e0b; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
+                  '<i class="bi bi-exclamation-triangle"></i>' +
+                '</div>' +
+              '</div>' +
+              '<span style="font-size:1.5rem; font-weight:700; color:#f59e0b; letter-spacing:-0.025em;">' + advertencia + '</span>' +
+            '</div>' +
+
+            '<div style="background-color:#ef4444; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between; color:white;">' +
+              '<div class="d-flex justify-content-between align-items-start mb-2">' +
+                '<span style="font-size:10px; font-weight:700; color:#fee2e2; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Stock<br/>Crítico</span>' +
+                '<div style="background-color:rgba(248,113,113,0.5); color:white; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
+                  '<i class="bi bi-exclamation-circle"></i>' +
+                '</div>' +
+              '</div>' +
+              '<span style="font-size:1.5rem; font-weight:700; letter-spacing:-0.025em;">' + criticos + '</span>' +
+            '</div>';
+    }
+
+    // 2) Render para Escritorio (Bento Old Style)
+    if (elDesktop) {
+        elDesktop.innerHTML =
+            '<div class="bento-kpi">' +
+              '<div><div class="bento-kpi-label">Total Artículos</div><div class="bento-kpi-num">' + total.toLocaleString() + '</div></div>' +
+              '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-boxes fs-4"></i></div>' +
+            '</div>' +
+            '<div class="bento-kpi" style="background:#fffbeb;border-color:#fde68a">' +
+              '<div><div class="bento-kpi-label" style="color:#92400e">Stock Bajo</div><div class="bento-kpi-num" style="color:#d97706">' + advertencia + '</div></div>' +
+              '<div class="bento-kpi-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
+            '</div>' +
+            '<div class="bento-kpi accent-red">' +
+              '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
+              '<div class="bento-kpi-icon"><i class="bi bi-exclamation-circle-fill fs-4"></i></div>' +
+            '</div>' +
+            '<div class="bento-kpi accent-dark" style="grid-column:span 1">' +
+              '<div><div class="bento-kpi-label">Valorizado S/</div><div class="bento-kpi-num" style="font-size:1.4rem">' + fmtV(valorSoles, 'S/ ') + '</div></div>' +
+              '<div class="bento-kpi-icon"><i class="bi bi-coin fs-4" style="color:#fbbf24"></i></div>' +
+            '</div>';
+    }
 };
 
 // ── Filtrar ───────────────────────────────────────────────────────
@@ -464,12 +502,17 @@ function _invRenderCard(d) {
     // Semáforo de stock
     var stockActual = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
     var stockMin    = parseFloat(d.stock_min || 0);
-    var estado = stockActual <= stockMin ? 'critical'
-               : stockMin > 0 && stockActual <= stockMin * 1.5 ? 'warning'
-               : 'ok';
-    var badgeTxt = estado === 'critical' ? '¡Reponer!' : estado === 'warning' ? 'Stock Bajo' : 'Stock OK';
+    var estadoType = stockActual <= stockMin ? 'critical'
+                   : stockMin > 0 && stockActual <= stockMin * 1.5 ? 'warning'
+                   : 'ok';
+    var badgeTxt = estadoType === 'critical' ? '¡REPONER!' : estadoType === 'warning' ? 'STOCK BAJO' : 'STOCK OK';
 
-    // Icono según familia
+    // Badge Classes
+    var badgeClass = estadoType === 'ok' ? 'background-color:#dcfce7; color:#15803d;' :
+                     estadoType === 'warning' ? 'background-color:#fef3c7; color:#b45309;' :
+                     'background-color:#fee2e2; color:#b91c1c;';
+
+    // Icon Classes
     var iconMap = {
         'LUBRICANTES':'bi-droplet-fill','Lubricantes':'bi-droplet-fill',
         'FRENOS':'bi-disc','Frenos':'bi-disc',
@@ -479,8 +522,9 @@ function _invRenderCard(d) {
         'MOTOR':'bi-gear-fill','Motor':'bi-gear-fill'
     };
     var iconClass = iconMap[d.familia] || 'bi-box-seam';
-    var iconBg    = estado === 'critical' ? '#fee2e2' : estado === 'warning' ? '#fef9c3' : '#eff6ff';
-    var iconClr   = estado === 'critical' ? '#dc2626' : estado === 'warning' ? '#d97706' : '#2563eb';
+    var iconBoxClass = estadoType === 'ok' ? 'background-color:#eff6ff; color:#3b82f6;' :
+                       estadoType === 'warning' ? 'background-color:#fef9c3; color:#d97706;' :
+                       'background-color:#fef2f2; color:#ef4444;';
 
     // Checkbox modo selección
     var chkHtml = window._invModoSeleccion
@@ -496,24 +540,36 @@ function _invRenderCard(d) {
     var desc   = _invEsc(d.descripcion || d.articulo || '');
     var familia= _invEsc(d.familia || '—');
     var unidad = _invEsc(d.unidad || 'ud.');
-    var costo  = 'S/ ' + parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-
-    return '<div class="inv-list-card" data-id="' + id + '" ' + clickAttr + '>' +
+    var costo  = parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var stockFmt = stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    
+    // React/Tailwind to Inline CSS Translation
+    return '<div data-id="' + id + '" ' + clickAttr + ' style="position:relative; background-color:white; border-radius:1rem; padding:1rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); border:1px solid rgba(243,244,246,0.5); display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; cursor:pointer;">' +
         chkHtml +
-        '<div class="ilc-icon" style="background:' + iconBg + ';color:' + iconClr + ';">' +
-            '<i class="bi ' + iconClass + '"></i>' +
+        '<div style="width:3rem; height:3rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; ' + iconBoxClass + '">' +
+            '<i class="bi ' + iconClass + '" style="font-size:1.5rem;"></i>' +
         '</div>' +
-        '<div class="ilc-body">' +
-            '<div class="ilc-name" title="' + desc + '">' + desc + '</div>' +
-            '<div class="ilc-sub">' + familia + ' · ' + _invEsc(d.id) + '</div>' +
-            '<div style="margin-top:.3rem"><span class="ilc-badge ' + estado + '">' + badgeTxt + '</span></div>' +
+
+        '<div style="flex:1; min-width:0;">' +
+            '<h3 style="font-weight:600; font-size:0.9375rem; color:#111827; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + desc + '</h3>' +
+            '<p style="font-size:0.6875rem; font-weight:500; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0.125rem 0 0.5rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
+                familia + ' • ' + id +
+            '</p>' +
+            '<span style="display:inline-flex; padding:0.125rem 0.5rem; border-radius:0.375rem; font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; ' + badgeClass + '">' +
+                badgeTxt +
+            '</span>' +
         '</div>' +
-        '<div class="ilc-right">' +
-            '<div class="ilc-stock" style="color:' + (estado==='critical'?'#ef4444':'var(--text)') + '">' +
-                stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}) +
-                ' <span style="font-size:.6rem;font-weight:700;color:var(--subtext)">' + unidad + '</span>' +
+
+        '<div style="text-align:right; flex-shrink:0;">' +
+            '<div style="display:flex; align-items:baseline; justify-content:flex-end; gap:0.25rem;">' +
+                '<span style="font-weight:700; font-size:1.125rem; letter-spacing:-0.025em; color:' + (stockActual === 0 ? '#ef4444' : '#111827') + ';">' +
+                    stockFmt +
+                '</span>' +
+                '<span style="font-size:0.625rem; font-weight:600; color:#9ca3af; text-transform:uppercase;">' + unidad + '</span>' +
             '</div>' +
-            '<div style="font-size:.68rem;color:var(--subtext);font-weight:700;margin-top:.18rem;">' + costo + '</div>' +
+            '<p style="font-size:0.75rem; font-weight:600; color:#9ca3af; margin:0.25rem 0 0 0;">' +
+                'S/ ' + costo +
+            '</p>' +
         '</div>' +
     '</div>';
 }
@@ -748,6 +804,9 @@ window.abrirModalInventario = function(id) {
         if (titulo) titulo.innerHTML = '<i class="bi bi-pencil-fill me-1"></i>Editar Artículo — ' + id;
         if (editId) editId.value = id;
 
+        var btnEliminar = document.getElementById('inv-btn-eliminar-art');
+        if (btnEliminar) btnEliminar.style.display = 'inline-block';
+
         // Tab Artículo
         _invSetField('inv-f-articulo',          item.articulo);
         _invSetField('inv-f-codigo-articulo',   item.codigo_articulo);
@@ -799,6 +858,10 @@ window.abrirModalInventario = function(id) {
         _invResetImageUI(item);
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-box-fill me-1"></i>Nuevo Artículo';
+        
+        var btnEliminar = document.getElementById('inv-btn-eliminar-art');
+        if (btnEliminar) btnEliminar.style.display = 'none';
+
         // Default: moneda PEN → ocultar T/C
         window._cbSet('inv-f-moneda', 'PEN', 'PEN (S/)');
         var tcRow0 = document.getElementById('inv-tc-row');
@@ -811,6 +874,27 @@ window.abrirModalInventario = function(id) {
     if (modal) { modal.classList.add('open'); }
     var bd = document.getElementById('inv-drawer-backdrop');
     if (bd) bd.style.display = 'block';
+};
+
+window._invEliminarArticuloActual = function() {
+    var editId = document.getElementById('inv-edit-id');
+    var id = editId ? editId.value : '';
+    if (!id) return;
+    
+    if (!confirm('¿Estás seguro de que deseas eliminar el artículo ' + id + '? Esta acción lo desactivará o eliminará del sistema.')) return;
+    
+    fetch('/api/almacen/inventario/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(function(r) {
+        if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+        return r.json();
+    })
+    .then(function(res) {
+        window._invCerrarDrawer();
+        window.cargarInventario();
+    })
+    .catch(function(err) {
+        alert('Error al eliminar: ' + err.message);
+    });
 };
 
 function _invResetImageUI(item) {
