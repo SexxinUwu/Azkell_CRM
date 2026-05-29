@@ -143,7 +143,7 @@
 #cond-fab:active { transform: scale(.91); }
 
 /* ── Mobile ─────────────────────────────────────────────────────── */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
     #cond-fab { display: flex !important; }
     #cond-btn-nuevo { display: none !important; }
     #modalConductor .modal-dialog { margin: 0; max-width: 100%; }
@@ -152,7 +152,49 @@
     
     /* Edge-to-edge list for Directorio on Mobile */
     #moduloConductores { padding: 0 !important; background: #fff !important; }
-    #moduloConductores .controls-row { padding: 1rem 1.25rem 0.5rem; margin-bottom: 0 !important; background: #fff; border-bottom: 1px solid #f3f4f6; position: sticky; top: 0; z-index: 10; }
+    /* Mobile Header and Search styling */
+    .dir-mob-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem 0.5rem 1.25rem;
+        background: #fff;
+    }
+    .dir-mob-header-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .dir-search-wrap {
+        padding: 0.5rem 1.25rem 1rem 1.25rem;
+        background: #fff;
+        border-bottom: 1px solid #f3f4f6;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .dir-search-box {
+        background: #f1f5f9;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        border: 1px solid #e2e8f0;
+    }
+    .dir-search-box input {
+        background: transparent;
+        border: none;
+        outline: none;
+        width: 100%;
+        font-size: 16px;
+        color: #1e293b;
+        margin-left: 12px;
+    }
+    .desktop-controls { display: none !important; }
+    
     #cond-grid { padding: 0 !important; gap: 0 !important; }
     .cond-card {
         border-radius: 0 !important;
@@ -174,8 +216,24 @@
 
 <div id="moduloConductores" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
 
-    <!-- Barra de controles -->
-    <div class="controls-row d-flex justify-content-between flex-wrap gap-2 mb-3">
+    <!-- Mobile Header -->
+    <div class="d-block d-md-none dir-mob-header">
+        <h1 class="dir-mob-header-title">Directorio de<br>Personal</h1>
+        <button class="btn btn-light rounded-circle shadow-sm" onclick="window.init_conductores()" style="width: 40px; height: 40px; border: 1px solid #e2e8f0; color: #475569;">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+    
+    <!-- Mobile Search -->
+    <div class="d-block d-md-none dir-search-wrap">
+        <div class="dir-search-box">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" id="buscadorConductoresMob" oninput="document.getElementById('buscadorConductores').value = this.value; window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
+        </div>
+    </div>
+
+    <!-- Barra de controles Desktop -->
+    <div class="controls-row d-none d-md-flex justify-content-between flex-wrap gap-2 mb-3">
         <div class="input-group input-group-sm" style="max-width:300px;">
             <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
             <input type="text" class="form-control border-start-0 ps-0" id="buscadorConductores"

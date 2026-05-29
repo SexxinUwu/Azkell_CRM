@@ -5,29 +5,30 @@
     #gps-panel-lista { flex: 1 1 100% !important; width: 100% !important; max-width: 100% !important; }
     .gps-search-wrap { padding: 0.5rem 1.25rem; }
     .gps-search-box {
-        background: #f3f4f6;
-        height: 40px;
-        border-radius: 10px;
+        background: #f1f5f9;
+        height: 48px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
-        padding: 0 12px;
+        padding: 0 16px;
+        border: 1px solid #e2e8f0;
     }
     .gps-search-box input {
         background: transparent;
         border: none;
         outline: none;
         width: 100%;
-        font-size: 15px;
-        color: #111827;
-        margin-left: 8px;
+        font-size: 16px;
+        color: #1e293b;
+        margin-left: 12px;
     }
     .gps-unit-btn {
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 20px;
-        border-bottom: 1px solid #f3f4f6;
+        padding: 16px 24px;
+        border-bottom: 1px solid #f1f5f9;
         background: #fff;
         text-align: left;
         border-left: none;
@@ -35,7 +36,33 @@
         border-top: none;
         transition: background 0.2s;
     }
-    .gps-unit-btn:active { background: #f9fafb; }
+    .gps-unit-btn:active { background: #f8fafc; }
+    
+    /* Custom Mobile Header for GPS */
+    .gps-mob-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem 0.5rem 1.25rem;
+        background: #fff;
+    }
+    .gps-mob-header-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+    .gps-badge-active {
+        background: #dcfce7;
+        color: #16a34a;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
     
     /* Offcanvas Full Screen */
     #gpsDetalleOffcanvas {
@@ -78,15 +105,17 @@
         <!-- Panel izquierdo: lista de unidades — full width en móvil, 340px en desktop -->
         <div id="gps-panel-lista" style="flex: 0 0 340px; max-width: 340px; width: 100%; display: flex; flex-direction: column; min-height: 0;">
             
-            <div class="d-block d-md-none px-4 pt-4 pb-2">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-success shadow-sm" id="badge-wialon-ubicacion-mob" style="border-radius: 20px; padding: 6px 12px; display: none;">
-                        <i class="bi bi-broadcast"></i> <span data-i18n="gps.active">Activo</span>
-                    </span>
-                    <button class="btn btn-outline-secondary btn-sm rounded-circle" onclick="recargarWialon(true)" style="width: 32px; height: 32px; padding: 0;">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
+            <div class="d-block d-md-none gps-mob-header">
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="gps-mob-header-title">GPS</h1>
+                    <div class="gps-badge-active" id="badge-wialon-ubicacion-mob" style="display: none;">
+                        <div style="width:6px;height:6px;border-radius:50%;background:#16a34a;"></div>
+                        <span data-i18n="gps.active">Activo</span>
+                    </div>
                 </div>
+                <button class="btn btn-light rounded-circle shadow-sm" onclick="recargarWialon(true)" style="width: 40px; height: 40px; border: 1px solid #e2e8f0; color: #475569;">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
             </div>
 
             <div class="gps-search-wrap mb-2 mb-md-3">
