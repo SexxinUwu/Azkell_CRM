@@ -106,13 +106,11 @@
 .placas-search-input-wrap {
     flex: 1;
     background: rgba(255, 255, 255, 0.15);
-    height: 3rem;
-    border-radius: 0.75rem;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    padding: 0 1rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    padding: 0 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: none;
 }
@@ -129,12 +127,10 @@
 .placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.7) !important; }
 
 .placas-icon-btn {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.75rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
@@ -355,74 +351,16 @@
             </div>
         </div>
 
-        <!-- Buscador Integrado y Acciones -->
+        <!-- Buscador Integrado y Acciones (Mobile) -->
         <div class="placas-search-container">
             <div class="placas-search-input-wrap">
                 <i class="bi bi-search text-white-50 me-2 fs-6"></i>
-                <input type="text" id="buscadorPlacas" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo...">
+                <input type="text" id="buscadorPlacas" oninput="filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo...">
             </div>
             
             <button class="placas-icon-btn" onclick="recargarModulo('placas')" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-5"></i>
             </button>
-            
-            <!-- Dropdown de Filtros (Oculto en UI de botón pero usando Bootstrap) -->
-            <div class="dropdown">
-                <button class="placas-icon-btn" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
-                    <i class="bi bi-funnel-fill fs-5"></i>
-                </button>
-                <div class="dropdown-menu dropdown-menu-end shadow p-0" style="min-width:280px; max-height:calc(100dvh - 120px); overflow:hidden;">
-                    <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
-                        <span class="fw-bold" style="font-size:0.9rem; color:#111827;">Filtros</span>
-                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
-                    </div>
-                    <div style="max-height:calc(100dvh - 170px); overflow-y:auto;">
-                        <!-- Acordeón: Cliente -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Cliente</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroCliente" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Tipo -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Tipo</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroTipo" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Marca -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Marca</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroMarca" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Estado -->
-                        <div>
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Estado</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroEstado"></ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
