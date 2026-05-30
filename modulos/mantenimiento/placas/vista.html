@@ -2,251 +2,403 @@
 <!-- MÓDULO: PLACAS (vista aislada — sin <html>, <head> ni <body>)   -->
 <!-- ================================================================ -->
 <style>
-/* Funnel placas: flex-column solo cuando está abierto */
-#moduloPlacas #btnFiltrosPlacas ~ .dropdown-menu.show {
-    display: flex !important;
+/* Móvil y Desktop: Rediseño Placas */
+#moduloPlacas {
+    background-color: #F4F7F6;
+    height: calc(100dvh - 68px) !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ocultar barra superior en desktop para hacer full screen el rediseño */
+#moduloPlacas .btn-volver-desktop { display: none !important; }
+
+.placas-header {
+    background-color: #00875A;
+    padding: 2.5rem 1.25rem 1.5rem;
+    border-bottom-left-radius: 2.5rem;
+    border-bottom-right-radius: 2.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 20;
+}
+
+.placas-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.placas-header-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+}
+
+.placas-avatar {
+    width: 2rem;
+    height: 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.placas-main-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: white;
+    margin-bottom: 1.5rem;
+}
+
+.placas-kpi-container {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    scrollbar-width: none; /* Firefox */
+}
+.placas-kpi-container::-webkit-scrollbar { display: none; }
+
+.placas-kpi-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    padding: 0.75rem;
+    min-width: 120px;
+    flex-shrink: 0;
+    color: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.placas-search-container {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.placas-search-input-wrap {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.15);
+    height: 3rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.placas-search-input-wrap input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    color: white;
+    font-weight: 500;
+}
+.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.6); }
+
+.placas-icon-btn {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+.placas-icon-btn:active { background: rgba(255, 255, 255, 0.3); }
+
+/* List styles */
+.placas-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1rem 1rem 6rem 1rem; /* Extra padding bottom for FAB */
+    display: flex;
     flex-direction: column;
 }
-/* Móvil: pantalla completa sin cuadros */
-@media (max-width: 767.98px) {
-    #moduloPlacas {
-        height: calc(100dvh - 68px) !important;
-        overflow: hidden !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    /* Ocultar botón volver y controles desktop */
-    #moduloPlacas > div:first-child { display: none !important; } /* botón volver */
-    #moduloPlacas .controls-row {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    /* KPIs compactos */
-    #moduloPlacas .kpi-wrapper {
-        padding: 12px 12px 0 !important;
-        gap: 8px !important;
-    }
-    #moduloPlacas .kpi-card {
-        padding: 10px 12px !important;
-        border-radius: 14px !important;
-    }
-    /* Ocultar controles desktop en mobile */
-    #moduloPlacas .d-flex.justify-content-between {
-        display: none !important;
-    }
-    /* Card sin bordes = pantalla completa */
-    #moduloPlacas .card {
-        border: none !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        background: var(--bg) !important;
-    }
-    /* Grid 3 columnas */
-    #moduloPlacas .placas-grid-view,
-    #moduloPlacas .placas-grid-view.grid-cols-3,
-    #moduloPlacas .placas-grid-view.grid-cols-4,
-    #moduloPlacas .placas-grid-view.grid-cols-5 {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 0.35rem !important;
-        padding: 0.4rem 0.5rem !important;
-    }
-    /* Cards compactas: solo placa visible */
-    #moduloPlacas .card-premium { padding: 8px 8px 6px !important; min-height: 54px !important; border-radius: 14px !important; }
-    #moduloPlacas .card-header-theme { margin-bottom: 0 !important; }
-    #moduloPlacas .card-title-prem { font-size: 0.85rem !important; letter-spacing: 0 !important; line-height: 1.2; }
-    #moduloPlacas .card-client-sub,
-    #moduloPlacas .card-data-row,
-    #moduloPlacas .card-timeline { display: none !important; }
-    /* Headers de grupo compactos */
-    #moduloPlacas .group-header-left { padding: 8px 4px 4px 8px !important; font-size: 0.95rem !important; }
-    /* Paginación: visible y compacta al centro */
-    #moduloPlacas .pagination-row {
-        display: flex !important;
-        justify-content: center !important;
-        padding: 5px 8px !important;
-        border-top: 1px solid var(--border) !important;
-    }
-    #moduloPlacas .pagination-row .small.text-muted,
-    #moduloPlacas #sel-filas-placas { display: none !important; }
-    /* Buscador y filtros mobile */
-    #placas-m-bar {
-        display: flex !important;
-        padding: 10px 12px;
-        gap: 8px;
-        align-items: center;
-        border-bottom: 1px solid var(--border);
-        background: var(--bg);
-    }
-    #placas-m-bar input {
-        flex: 1;
-        border-radius: 14px;
-        border: 1.5px solid var(--border);
-        padding: 8px 14px;
-        font-size: 0.85rem;
-        background: var(--surface);
-        color: var(--text);
-        outline: none;
-    }
-    #placas-m-bar input:focus {
-        border-color: #5865F2;
-    }
-    #placas-m-bar button {
-        width: 40px;
-        height: 40px;
-        border-radius: 14px;
-        border: 1.5px solid var(--border);
-        background: var(--surface);
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 1rem;
-    }
-    /* FAB para registrar */
-    #placas-fab-wrap { display: flex !important; }
+
+.placas-modern-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.1s;
+    cursor: pointer;
 }
-@media (min-width: 768px) {
-    #placas-m-bar { display: none !important; }
-    #placas-fab-wrap { display: none !important; }
+.placas-modern-card:active { transform: scale(0.98); }
+
+.placas-modern-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.placas-modern-badge {
+    display: inline-block;
+    background: #F8F9FA;
+    border: 1px solid #E5E7EB;
+    color: #111827;
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    padding: 2px 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    margin-bottom: 4px;
+}
+
+.placas-modern-fab {
+    position: fixed;
+    bottom: 104px;
+    right: 1rem;
+    width: 60px;
+    height: 60px;
+    background: #10b981;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border: none;
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+    z-index: 1041;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    font-size: 1.5rem;
+}
+.placas-modern-fab:active { transform: scale(0.91); }
+
+/* Dropdown override */
+.placas-header .dropdown-menu {
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+}
+
+/* Modales Modernos */
+.placas-modal-content {
+    border: none;
+    border-radius: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+.placas-modal-header {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 1.5rem 1.5rem 1rem;
+    border-radius: 24px 24px 0 0;
+    background: #ffffff;
+}
+.placas-modal-body {
+    background: #f8fafc;
+    padding: 1.5rem;
+}
+.placas-form-section {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid #f1f5f9;
+}
+.placas-form-section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.placas-form-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+.placas-form-control {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 600;
+}
+.placas-form-control:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    outline: none;
 }
 </style>
 
 <div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex;">
-    <!-- Botón volver a Administración -->
-    <div style="padding:.4rem 1.25rem .1rem;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);">
-        <button onclick="cargarModuloAislado('administracion')" style="display:inline-flex;align-items:center;gap:.2rem;padding:.28rem .75rem;border-radius:99px;border:1.5px solid var(--border);background:var(--bg);color:var(--subtext);font-size:.78rem;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--subtext)'"><i class="bi bi-arrow-left-short" style="font-size:1rem;"></i>Administración</button>
-    </div>
-
-    <!-- Barra mobile: buscador + filtros -->
-    <div id="placas-m-bar" style="display:none;">
-        <input type="text" id="buscadorPlacasMob" placeholder="Buscar placa..." oninput="document.getElementById('buscadorPlacas').value=this.value;filtrarPlacasAvanzado()">
-        <button onclick="document.getElementById('btnFiltrosPlacas').click()" title="Filtros"><i class="bi bi-funnel-fill"></i></button>
-        <button onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-    </div>
-    <div class="controls-row">
-        <div class="kpi-wrapper">
-            <div class="kpi-card"><div class="kpi-title">Camiones</div><div class="kpi-value" id="kpi-camion">0</div></div>
-            <div class="kpi-card"><div class="kpi-title">Carretas</div><div class="kpi-value" id="kpi-carreta">0</div></div>
-            <div class="kpi-card"><div class="kpi-title">Semirremolques</div><div class="kpi-value" id="kpi-semi">0</div></div>
-            <div class="kpi-card"><div class="kpi-title">Tractos</div><div class="kpi-value" id="kpi-tracto">0</div></div>
+    
+    <div class="placas-header">
+        <div class="placas-header-top">
+            <span class="placas-header-title">Flota Vehicular</span>
+            <div class="placas-avatar">SA</div>
         </div>
-        <div class="d-flex justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorPlacas" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa..."></div>
-                <button class="btn btn-sm btn-outline-danger d-none" id="btn-limpiar-filtros-placas" onclick="limpiarFiltrosPlacas()" title="Limpiar filtros activos"><i class="bi bi-x-circle"></i></button>
-                <!-- Botón embudo con todos los filtros -->
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary fw-bold px-2" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
-                        <i class="bi bi-funnel-fill"></i>
-                    </button>
-                    <div class="dropdown-menu shadow p-0" style="min-width:280px; max-height:calc(100dvh - 80px); overflow:hidden;">
-                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="flex-shrink:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
-                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text);">Filtros</span>
-                            <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.78rem;" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+
+        <h1 class="placas-main-title">Gestión de Placas</h1>
+
+        <!-- Widgets de Estadísticas -->
+        <div class="placas-kpi-container">
+            <div class="placas-kpi-card">
+                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck fs-5"></i></div>
+                <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
+                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Camiones</p>
+            </div>
+            <div class="placas-kpi-card">
+                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-flatbed fs-5"></i></div>
+                <h2 id="kpi-carreta" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
+                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Carretas</p>
+            </div>
+            <div class="placas-kpi-card">
+                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-front fs-5"></i></div>
+                <h2 id="kpi-tracto" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
+                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Tractos</p>
+            </div>
+            <div class="placas-kpi-card">
+                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-flatbed fs-5"></i></div>
+                <h2 id="kpi-semi" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
+                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Semirrem.</p>
+            </div>
+        </div>
+
+        <!-- Buscador Integrado y Acciones -->
+        <div class="placas-search-container">
+            <div class="placas-search-input-wrap">
+                <i class="bi bi-search text-white-50 me-2 fs-6"></i>
+                <input type="text" id="buscadorPlacas" onkeyup="filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo...">
+            </div>
+            
+            <button class="placas-icon-btn" onclick="recargarModulo('placas')" title="Actualizar">
+                <i class="bi bi-arrow-clockwise fs-5"></i>
+            </button>
+            
+            <!-- Dropdown de Filtros (Oculto en UI de botón pero usando Bootstrap) -->
+            <div class="dropdown">
+                <button class="placas-icon-btn" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
+                    <i class="bi bi-funnel-fill fs-5"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow p-0" style="min-width:280px; max-height:calc(100dvh - 120px); overflow:hidden;">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
+                        <span class="fw-bold" style="font-size:0.9rem; color:#111827;">Filtros</span>
+                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                    </div>
+                    <div style="max-height:calc(100dvh - 170px); overflow-y:auto;">
+                        <!-- Acordeón: Cliente -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Cliente</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroCliente" style="max-height:150px;overflow-y:auto;"></ul>
+                            </div>
                         </div>
-                        <div style="max-height:calc(100dvh - 140px); overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                            <!-- Acordeón: Cliente -->
-                            <div style="border-bottom:1px solid var(--border);">
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.clients">Cliente</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 12px 8px;">
-                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                    <ul class="list-unstyled mb-0" id="filtroCliente" style="max-height:110px;overflow-y:auto;"></ul>
-                                </div>
+                        <!-- Acordeón: Tipo -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Tipo</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroTipo" style="max-height:150px;overflow-y:auto;"></ul>
                             </div>
-                            <!-- Acordeón: Tipo -->
-                            <div style="border-bottom:1px solid var(--border);">
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.type">Tipo</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 12px 8px;">
-                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                    <ul class="list-unstyled mb-0" id="filtroTipo" style="max-height:110px;overflow-y:auto;"></ul>
-                                </div>
+                        </div>
+                        <!-- Acordeón: Marca -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Marca</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroMarca" style="max-height:150px;overflow-y:auto;"></ul>
                             </div>
-                            <!-- Acordeón: Marca -->
-                            <div style="border-bottom:1px solid var(--border);">
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.brand">Marca</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 12px 8px;">
-                                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                    <ul class="list-unstyled mb-0" id="filtroMarca" style="max-height:110px;overflow-y:auto;"></ul>
-                                </div>
-                            </div>
-                            <!-- Acordeón: Estado -->
-                            <div>
-                                <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                    <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.status">Estado</span>
-                                    <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                                </button>
-                                <div style="display:none;padding:0 12px 8px;">
-                                    <ul class="list-unstyled mb-0" id="filtroEstado"></ul>
-                                </div>
+                        </div>
+                        <!-- Acordeón: Estado -->
+                        <div>
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Estado</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroEstado"></ul>
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- Reload icono -->
-                <button class="btn-reload-cache" id="btn-reload-placas" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-                <select class="form-select form-select-sm fw-bold mx-1 d-none d-md-block" style="width: auto; cursor:pointer;" onchange="cambiarColumnasPlacas(this.value)">
-                    <option value="3">3 Columnas (Ancho)</option>
-                    <option value="4" selected>4 Columnas (Normal)</option>
-                    <option value="5">5 Columnas (Compacto)</option>
-                </select>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <span id="cache-badge-placas" class="cache-badge d-none d-md-flex"><i class="bi bi-database"></i> <span id="cache-label-placas" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn btn-outline-secondary fw-bold btn-sm" id="btn-activar-sel-placas" onclick="activarModoSeleccionPlacas()"><i class="bi bi-ui-checks"></i> <span data-i18n="common.select">Seleccionar</span></button>
-                <button class="btn btn-outline-primary fw-bold btn-sm d-none" id="btn-select-all-placas" onclick="seleccionarTodasLasPlacas()"><i class="bi bi-check-square"></i> <span data-i18n="common.selectAll">Seleccionar Todo</span></button>
-                <button class="btn btn-danger fw-bold text-white btn-sm d-none" id="btn-bulk-placas" onclick="eliminarMasivo('Placas', 'placas')"><i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-placas">0</span>)</button>
-                <div class="dropdown">
-                    <button class="btn btn-outline-info fw-bold btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-upload"></i> Importar
-                    </button>
-                    <ul class="dropdown-menu shadow">
-                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaPlacas()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFilePlacas').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
-                    </ul>
-                </div>
-                <input type="file" id="inputFilePlacas" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelPlacas(event)">
-                <button class="btn btn-outline-success fw-bold btn-sm" onclick="descargarExcelDinamico('tablaPlacasHidden', 'Base_Placas')"><i class="bi bi-download"></i> <span data-i18n="common.export">Exportar</span></button>
-                <button class="btn btn-primary fw-bold text-white btn-sm" id="btnNuevaPlaca" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()" data-perm-crear="mantenimiento"><i class="bi bi-plus-lg"></i> <span data-i18n="common.register">Registrar</span></button>
             </div>
         </div>
     </div>
 
-    <div class="card p-0 d-flex flex-column flex-grow-1 overflow-hidden">
-        <div class="flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-4" id="contenedorPlacasDinamico">
-            <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
-        </div>
-        <div class="pagination-row p-2 border-top d-none d-md-flex justify-content-between align-items-center mt-auto">
-            <span class="small text-muted fw-bold ps-2" id="info-paginacion-placas" data-i18n="plates.showing">Mostrando 0 de 0</span>
-            <div class="d-flex align-items-center gap-2">
-                <select class="form-select form-select-sm" style="width:auto;font-size:0.75rem;" id="sel-filas-placas" onchange="cambiarFilasPlacas(this.value)" title="Filas por página">
-                    <option value="4">4 filas</option>
-                    <option value="6">6 filas</option>
-                    <option value="8">8 filas</option>
-                </select>
-                <div class="d-flex gap-1" id="controles-paginacion-placas"></div>
-            </div>
-        </div>
+    <!-- Contenedor Principal de la Lista -->
+    <div id="contenedorPlacasDinamico" class="placas-list-container">
+        <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
     </div>
+    
+    <!-- Paginación Oculta pero funcional para JS -->
+    <div id="controles-paginacion-placas" class="d-none"></div>
 
     <table id="tablaPlacasHidden" style="display:none;"></table>
+
+    <!-- Botón Flotante (FAB) para Nueva Placa -->
+    <button id="btnNuevaPlaca" class="placas-modern-fab" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
 </div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
 <div id="placas-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
   <button onclick="document.getElementById('formPlaca').reset();bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
-          style="width:60px;height:60px;border-radius:18px;background:#5865F2;border:none;color:#fff;
-                 font-size:1.5rem;box-shadow:0 6px 24px rgba(88,101,242,.5);
+          style="width:60px;height:60px;border-radius:18px;background:#10b981;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(16,185,129,.5);
                  display:flex;align-items:center;justify-content:center;
                  transition:transform .25s cubic-bezier(.4,0,.2,1);">
     <i class="bi bi-plus-lg"></i>
@@ -445,96 +597,104 @@
 <!-- ── MODAL: REGISTRAR FICHA TÉCNICA ─────────────────────────────── -->
 <div class="modal fade" id="modalPlaca" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="bi bi-truck text-info me-2"></i><span data-i18n="plates.modal.reg">Registrar Ficha Técnica</span></h5>
+        <div class="modal-content placas-modal-content">
+            <div class="modal-header placas-modal-header">
+                <h5 class="modal-title fw-bold" style="color:#0f172a;"><i class="bi bi-truck text-success me-2"></i><span data-i18n="plates.modal.reg">Registrar Ficha Técnica</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formPlaca" onsubmit="enviarPlaca(event, this)">
                 <input type="hidden" name="usuarioAutor">
-                <div class="modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
+                <div class="modal-body placas-modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3" data-i18n="plates.s.general">1. Datos Generales</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.plate">Placa *</label>
-                            <input type="text" class="form-control text-uppercase border-primary fw-bold" name="p_placa" placeholder="ABC-123" required>
-                        </div>
-                        <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.client">Cliente *</label>
-                            <div class="input-group">
-                                <div class="position-relative flex-grow-1">
-                                    <input type="text" id="p_cliente-txt" class="form-control border-primary fw-bold" placeholder="Buscar cliente…"
-                                        autocomplete="off" oninput="window._cbFiltrar('p_cliente')"
-                                        onfocus="window._cbFiltrar('p_cliente')" onblur="window._cbHide('p_cliente')">
-                                    <input type="hidden" id="p_cliente" name="p_cliente">
-                                    <div id="p_cliente-dd" class="cb-dropdown"></div>
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.general">1. Datos Generales</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="plates.form.plate">Placa *</label>
+                                <input type="text" class="form-control placas-form-control text-uppercase" name="p_placa" placeholder="ABC-123" required>
+                            </div>
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="plates.form.client">Cliente *</label>
+                                <div class="input-group">
+                                    <div class="position-relative flex-grow-1">
+                                        <input type="text" id="p_cliente-txt" class="form-control placas-form-control" placeholder="Buscar cliente…"
+                                            autocomplete="off" oninput="window._cbFiltrar('p_cliente')"
+                                            onfocus="window._cbFiltrar('p_cliente')" onblur="window._cbHide('p_cliente')" style="border-top-right-radius:0; border-bottom-right-radius:0;">
+                                        <input type="hidden" id="p_cliente" name="p_cliente">
+                                        <div id="p_cliente-dd" class="cb-dropdown"></div>
+                                    </div>
+                                    <button class="btn btn-success fw-bold" type="button" onclick="abrirModalNuevoCliente('p_cliente', 'p_ruc')" title="Nuevo Cliente" style="border-radius:0 10px 10px 0;"><i class="bi bi-plus-lg"></i></button>
                                 </div>
-                                <button class="btn btn-primary fw-bold" type="button" onclick="abrirModalNuevoCliente('p_cliente', 'p_ruc')" title="Nuevo Cliente"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="plates.form.ruc">RUC / DNI *</label>
+                                <input type="text" class="form-control placas-form-control" name="p_ruc" id="p_ruc" placeholder="Auto..." required readonly style="background:#e2e8f0; color:#475569;">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.ruc">RUC / DNI *</label>
-                            <input type="text" class="form-control bg-light text-primary fw-bold" name="p_ruc" id="p_ruc" placeholder="Auto..." required readonly>
+                    </div>
+
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="common.brand">Marca</label><div class="position-relative"><input type="text" id="p_marca-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar marca…" autocomplete="off" oninput="window._cbFiltrar('p_marca')" onfocus="window._cbFiltrar('p_marca')" onblur="window._cbHide('p_marca')"><input type="hidden" id="p_marca" name="p_marca"><div id="p_marca-dd" class="cb-dropdown"></div></div></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_modelo" placeholder="Ej: FH 460"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="common.type">Tipo</label><div class="position-relative"><input type="text" id="p_tipo-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar tipo…" autocomplete="off" oninput="window._cbFiltrar('p_tipo')" onfocus="window._cbFiltrar('p_tipo')" onblur="window._cbHide('p_tipo')"><input type="hidden" id="p_tipo" name="p_tipo"><div id="p_tipo-dd" class="cb-dropdown"></div></div></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.subtype">Sub Tipo</label><div class="position-relative"><input type="text" id="p_sub_tipo-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar sub tipo…" autocomplete="off" oninput="window._cbFiltrar('p_sub_tipo')" onfocus="window._cbFiltrar('p_sub_tipo')" onblur="window._cbHide('p_sub_tipo')"><input type="hidden" id="p_sub_tipo" name="p_sub_tipo"><div id="p_sub_tipo-dd" class="cb-dropdown"></div></div></div>
+                        </div>
+
+                        <button type="button" id="btnToggleAvanzadoReg" class="btn btn-light fw-bold btn-sm w-100 mt-2 mb-3" style="border-radius:10px; color:#64748b;">
+                            <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
+                        </button>
+
+                        <div id="contenedorCamposAvanzadosReg" class="d-none mt-3">
+                            <div class="row">
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="p_color-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('p_color')" onfocus="window._cbFiltrar('p_color')" onblur="window._cbHide('p_color')"><input type="hidden" id="p_color" name="p_color"><div id="p_color-dd" class="cb-dropdown"></div></div></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control placas-form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
+                                <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.config">Configuración</label><div class="position-relative"><input type="text" id="p_conf-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar config…" autocomplete="off" oninput="window._cbFiltrar('p_conf')" onfocus="window._cbFiltrar('p_conf')" onblur="window._cbHide('p_conf')"><input type="hidden" id="p_conf" name="p_conf"><div id="p_conf-dd" class="cb-dropdown"></div></div></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.year">Año</label><input type="number" class="form-control placas-form-control" name="p_anio" placeholder="2024"></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.fuel">Combustible</label>
+                                    <select class="form-select placas-form-control" name="p_comb">
+                                        <option value="Diésel" selected>Diésel</option>
+                                        <option value="Gasolina">Gasolina</option>
+                                        <option value="GNV">GNV</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.brand">Marca</label><div class="position-relative"><input type="text" id="p_marca-txt" class="form-control text-uppercase" placeholder="Buscar marca…" autocomplete="off" oninput="window._cbFiltrar('p_marca')" onfocus="window._cbFiltrar('p_marca')" onblur="window._cbHide('p_marca')"><input type="hidden" id="p_marca" name="p_marca"><div id="p_marca-dd" class="cb-dropdown"></div></div></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control text-uppercase" name="p_modelo" placeholder="Ej: FH 460"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.type">Tipo</label><div class="position-relative"><input type="text" id="p_tipo-txt" class="form-control text-uppercase" placeholder="Buscar tipo…" autocomplete="off" oninput="window._cbFiltrar('p_tipo')" onfocus="window._cbFiltrar('p_tipo')" onblur="window._cbHide('p_tipo')"><input type="hidden" id="p_tipo" name="p_tipo"><div id="p_tipo-dd" class="cb-dropdown"></div></div></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.subtype">Sub Tipo</label><div class="position-relative"><input type="text" id="p_sub_tipo-txt" class="form-control text-uppercase" placeholder="Buscar sub tipo…" autocomplete="off" oninput="window._cbFiltrar('p_sub_tipo')" onfocus="window._cbFiltrar('p_sub_tipo')" onblur="window._cbHide('p_sub_tipo')"><input type="hidden" id="p_sub_tipo" name="p_sub_tipo"><div id="p_sub_tipo-dd" class="cb-dropdown"></div></div></div>
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
+                        </div>
                     </div>
 
-                    <button type="button" id="btnToggleAvanzadoReg" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
-                        <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
-                    </button>
-
-                    <div id="contenedorCamposAvanzadosReg" class="d-none mt-3">
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.ops">4. Operatividad</h6>
                         <div class="row">
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="p_color-txt" class="form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('p_color')" onfocus="window._cbFiltrar('p_color')" onblur="window._cbHide('p_color')"><input type="hidden" id="p_color" name="p_color"><div id="p_color-dd" class="cb-dropdown"></div></div></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control text-uppercase" name="p_nro_motor" placeholder="..."></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control text-uppercase" name="p_nro_caja" placeholder="..."></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control text-uppercase" name="p_nro_corona" placeholder="..."></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control text-uppercase" name="p_nro_vin" placeholder="Chasis/Serie"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.config">Configuración</label><div class="position-relative"><input type="text" id="p_conf-txt" class="form-control text-uppercase" placeholder="Buscar config…" autocomplete="off" oninput="window._cbFiltrar('p_conf')" onfocus="window._cbFiltrar('p_conf')" onblur="window._cbHide('p_conf')"><input type="hidden" id="p_conf" name="p_conf"><div id="p_conf-dd" class="cb-dropdown"></div></div></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.year">Año</label><input type="number" class="form-control" name="p_anio" placeholder="2024"></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.fuel">Combustible</label>
-                                <select class="form-select fw-bold text-primary" name="p_comb">
-                                    <option value="Diésel" selected>Diésel</option>
-                                    <option value="Gasolina">Gasolina</option>
-                                    <option value="GNV">GNV</option>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-success" data-i18n="common.status">Estado</label><select class="form-select placas-form-control text-success" name="p_estado"><option value="Activa" selected>Activa</option><option value="Inactiva">Inactiva</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.zone">Zona UTS</label>
+                                <select class="form-select placas-form-control text-uppercase" name="p_uts">
+                                    <option value="" selected>(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
                                 </select>
                             </div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.unit">Unidad</label><select class="form-select placas-form-control" name="p_motora"><option value="Motora" selected>Motora</option><option value="No Motora">No Motora</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select placas-form-control" name="p_enuso"><option value="Si" selected>Si</option><option value="No">No</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control placas-form-control" name="p_llantas" placeholder="Ej: 10"></div>
                         </div>
-
-                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="p_carga_util" placeholder="Ej: 30.5"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_neto" placeholder="Ej: 8.2"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="p_peso_bruto" placeholder="Ej: 38.7"></div>
-                        </div>
-                    </div>
-
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.ops">4. Operatividad</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success" data-i18n="common.status">Estado</label><select class="form-select text-success fw-bold" name="p_estado"><option value="Activa" selected>Activa</option><option value="Inactiva">Inactiva</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.zone">Zona UTS</label>
-                            <select class="form-select text-uppercase" name="p_uts">
-                                <option value="" selected>(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.unit">Unidad</label><select class="form-select" name="p_motora"><option value="Motora" selected>Motora</option><option value="No Motora">No Motora</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select fw-bold" name="p_enuso"><option value="Si" selected>Si</option><option value="No">No</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control" name="p_llantas" placeholder="Ej: 10"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnGuardarPlaca"><i class="bi bi-save"></i> <span data-i18n="plates.btn.save">Guardar Ficha</span></button>
+                <div class="modal-footer border-top-0 bg-white" style="border-radius:0 0 24px 24px; padding:1.25rem 1.5rem;">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" data-i18n="common.cancel" style="border-radius:10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4" id="btnGuardarPlaca" style="border-radius:10px;"><i class="bi bi-save me-1"></i> <span data-i18n="plates.btn.save">Guardar Ficha</span></button>
                 </div>
             </form>
         </div>
@@ -544,96 +704,104 @@
 <!-- ── MODAL: EDITAR FICHA TÉCNICA ────────────────────────────────── -->
 <div class="modal fade" id="modalEditarPlaca" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-warning me-2"></i><span data-i18n="plates.modal.edit">Editar Ficha Técnica</span></h5>
+        <div class="modal-content placas-modal-content">
+            <div class="modal-header placas-modal-header">
+                <h5 class="modal-title fw-bold" style="color:#0f172a;"><i class="bi bi-pencil-square text-warning me-2"></i><span data-i18n="plates.modal.edit">Editar Ficha Técnica</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formEditarPlaca" onsubmit="enviarEdicionPlaca(event, this)">
                 <input type="hidden" name="usuarioAutor">
-                <div class="modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
+                <div class="modal-body placas-modal-body overflow-auto custom-scrollbar" style="max-height: 70vh;">
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3" data-i18n="plates.s.general">1. Datos Generales</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="common.plate">Placa</label>
-                            <input type="text" class="form-control text-uppercase bg-light fw-bold" name="editP_placa" id="e_placa" readonly>
-                        </div>
-                        <div class="col-md-5 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.client">Cliente *</label>
-                            <div class="input-group">
-                                <div class="position-relative flex-grow-1">
-                                    <input type="text" id="e_cliente-txt" class="form-control border-primary fw-bold" placeholder="Buscar cliente…"
-                                        autocomplete="off" oninput="window._cbFiltrar('e_cliente')"
-                                        onfocus="window._cbFiltrar('e_cliente')" onblur="window._cbHide('e_cliente')">
-                                    <input type="hidden" id="e_cliente" name="editP_cliente">
-                                    <div id="e_cliente-dd" class="cb-dropdown"></div>
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.general">1. Datos Generales</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="common.plate">Placa</label>
+                                <input type="text" class="form-control placas-form-control text-uppercase" name="editP_placa" id="e_placa" readonly style="background:#e2e8f0; color:#475569;">
+                            </div>
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="plates.form.client">Cliente *</label>
+                                <div class="input-group">
+                                    <div class="position-relative flex-grow-1">
+                                        <input type="text" id="e_cliente-txt" class="form-control placas-form-control" placeholder="Buscar cliente…"
+                                            autocomplete="off" oninput="window._cbFiltrar('e_cliente')"
+                                            onfocus="window._cbFiltrar('e_cliente')" onblur="window._cbHide('e_cliente')" style="border-top-right-radius:0; border-bottom-right-radius:0;">
+                                        <input type="hidden" id="e_cliente" name="editP_cliente">
+                                        <div id="e_cliente-dd" class="cb-dropdown"></div>
+                                    </div>
+                                    <button class="btn btn-warning fw-bold text-dark" type="button" onclick="abrirModalNuevoCliente('e_cliente', 'e_ruc')" title="Nuevo Cliente" style="border-radius:0 10px 10px 0;"><i class="bi bi-plus-lg"></i></button>
                                 </div>
-                                <button class="btn btn-primary fw-bold" type="button" onclick="abrirModalNuevoCliente('e_cliente', 'e_ruc')" title="Nuevo Cliente"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label placas-form-label" data-i18n="plates.form.ruc">RUC / DNI *</label>
+                                <input type="text" class="form-control placas-form-control" name="editP_ruc" id="e_ruc" required readonly style="background:#e2e8f0; color:#475569;">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold text-primary" data-i18n="plates.form.ruc">RUC / DNI *</label>
-                            <input type="text" class="form-control bg-light text-primary fw-bold" name="editP_ruc" id="e_ruc" required readonly>
+                    </div>
+
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="common.brand">Marca</label><div class="position-relative"><input type="text" id="e_marca-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar marca…" autocomplete="off" oninput="window._cbFiltrar('e_marca')" onfocus="window._cbFiltrar('e_marca')" onblur="window._cbHide('e_marca')"><input type="hidden" id="e_marca" name="editP_marca"><div id="e_marca-dd" class="cb-dropdown"></div></div></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_modelo" id="e_modelo"></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="common.type">Tipo</label><div class="position-relative"><input type="text" id="e_tipo-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar tipo…" autocomplete="off" oninput="window._cbFiltrar('e_tipo')" onfocus="window._cbFiltrar('e_tipo')" onblur="window._cbHide('e_tipo')"><input type="hidden" id="e_tipo" name="editP_tipo"><div id="e_tipo-dd" class="cb-dropdown"></div></div></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.subtype">Sub Tipo</label><div class="position-relative"><input type="text" id="e_sub_tipo-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar sub tipo…" autocomplete="off" oninput="window._cbFiltrar('e_sub_tipo')" onfocus="window._cbFiltrar('e_sub_tipo')" onblur="window._cbHide('e_sub_tipo')"><input type="hidden" id="e_sub_tipo" name="editP_sub_tipo"><div id="e_sub_tipo-dd" class="cb-dropdown"></div></div></div>
+                        </div>
+
+                        <button type="button" id="btnToggleAvanzadoEdit" class="btn btn-light fw-bold btn-sm w-100 mt-2 mb-3" style="border-radius:10px; color:#64748b;">
+                            <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
+                        </button>
+
+                        <div id="contenedorCamposAvanzadosEdit" class="d-none mt-3">
+                            <div class="row">
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="e_color-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('e_color')" onfocus="window._cbFiltrar('e_color')" onblur="window._cbHide('e_color')"><input type="hidden" id="e_color" name="editP_color"><div id="e_color-dd" class="cb-dropdown"></div></div></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
+                                <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control placas-form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
+                                <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.config">Configuración</label><div class="position-relative"><input type="text" id="e_conf-txt" class="form-control placas-form-control text-uppercase" placeholder="Buscar config…" autocomplete="off" oninput="window._cbFiltrar('e_conf')" onfocus="window._cbFiltrar('e_conf')" onblur="window._cbHide('e_conf')"><input type="hidden" id="e_conf" name="editP_conf"><div id="e_conf-dd" class="cb-dropdown"></div></div></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.year">Año</label><input type="number" class="form-control placas-form-control" name="editP_anio" id="e_anio"></div>
+                                <div class="col-md-2 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.fuel">Combustible</label>
+                                    <select class="form-select placas-form-control" name="editP_comb" id="e_comb">
+                                        <option value="Diésel">Diésel</option>
+                                        <option value="Gasolina">Gasolina</option>
+                                        <option value="GNV">GNV</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.tech">2. Especificaciones Técnicas</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.brand">Marca</label><div class="position-relative"><input type="text" id="e_marca-txt" class="form-control text-uppercase" placeholder="Buscar marca…" autocomplete="off" oninput="window._cbFiltrar('e_marca')" onfocus="window._cbFiltrar('e_marca')" onblur="window._cbHide('e_marca')"><input type="hidden" id="e_marca" name="editP_marca"><div id="e_marca-dd" class="cb-dropdown"></div></div></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.model">Modelo</label><input type="text" class="form-control text-uppercase" name="editP_modelo" id="e_modelo"></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="common.type">Tipo</label><div class="position-relative"><input type="text" id="e_tipo-txt" class="form-control text-uppercase" placeholder="Buscar tipo…" autocomplete="off" oninput="window._cbFiltrar('e_tipo')" onfocus="window._cbFiltrar('e_tipo')" onblur="window._cbHide('e_tipo')"><input type="hidden" id="e_tipo" name="editP_tipo"><div id="e_tipo-dd" class="cb-dropdown"></div></div></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.subtype">Sub Tipo</label><div class="position-relative"><input type="text" id="e_sub_tipo-txt" class="form-control text-uppercase" placeholder="Buscar sub tipo…" autocomplete="off" oninput="window._cbFiltrar('e_sub_tipo')" onfocus="window._cbFiltrar('e_sub_tipo')" onblur="window._cbHide('e_sub_tipo')"><input type="hidden" id="e_sub_tipo" name="editP_sub_tipo"><div id="e_sub_tipo-dd" class="cb-dropdown"></div></div></div>
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_carga_util" id="e_carga_util"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_neto" id="e_peso_neto"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control placas-form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
+                        </div>
                     </div>
 
-                    <button type="button" id="btnToggleAvanzadoEdit" class="btn btn-outline-secondary btn-sm w-100 mt-2 mb-3">
-                        <i class="bi bi-gear"></i> <span data-i18n="plates.btn.advanced">Mostrar Configuración Avanzada</span>
-                    </button>
-
-                    <div id="contenedorCamposAvanzadosEdit" class="d-none mt-3">
+                    <div class="placas-form-section">
+                        <h6 class="placas-form-section-title" data-i18n="plates.s.ops">4. Operatividad</h6>
                         <div class="row">
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.color">Color</label><div class="position-relative"><input type="text" id="e_color-txt" class="form-control text-uppercase" placeholder="Buscar color…" autocomplete="off" oninput="window._cbFiltrar('e_color')" onfocus="window._cbFiltrar('e_color')" onblur="window._cbHide('e_color')"><input type="hidden" id="e_color" name="editP_color"><div id="e_color-dd" class="cb-dropdown"></div></div></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.motor">Nº Motor</label><input type="text" class="form-control text-uppercase" name="editP_nro_motor" id="e_nro_motor"></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.caja">Nº Caja</label><input type="text" class="form-control text-uppercase" name="editP_nro_caja" id="e_nro_caja"></div>
-                            <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.corona">Nº Corona</label><input type="text" class="form-control text-uppercase" name="editP_nro_corona" id="e_nro_corona"></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.vin">Nº VIN</label><input type="text" class="form-control text-uppercase" name="editP_nro_vin" id="e_nro_vin"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.config">Configuración</label><div class="position-relative"><input type="text" id="e_conf-txt" class="form-control text-uppercase" placeholder="Buscar config…" autocomplete="off" oninput="window._cbFiltrar('e_conf')" onfocus="window._cbFiltrar('e_conf')" onblur="window._cbHide('e_conf')"><input type="hidden" id="e_conf" name="editP_conf"><div id="e_conf-dd" class="cb-dropdown"></div></div></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.year">Año</label><input type="number" class="form-control" name="editP_anio" id="e_anio"></div>
-                            <div class="col-md-2 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.fuel">Combustible</label>
-                                <select class="form-select fw-bold text-primary" name="editP_comb" id="e_comb">
-                                    <option value="Diésel">Diésel</option>
-                                    <option value="Gasolina">Gasolina</option>
-                                    <option value="GNV">GNV</option>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-success" data-i18n="common.status">Estado</label><select class="form-select placas-form-control text-success" name="editP_estado" id="e_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.zone">Zona UTS</label>
+                                <select class="form-select placas-form-control text-uppercase" name="editP_uts" id="e_uts">
+                                    <option value="">(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
                                 </select>
                             </div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label" data-i18n="plates.form.unit">Unidad</label><select class="form-select placas-form-control" name="editP_motora" id="e_motora"><option value="Motora">Motora</option><option value="No Motora">No Motora</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select placas-form-control" name="editP_enuso" id="e_enuso"><option value="Si">Si</option><option value="No">No</option></select></div>
+                            <div class="col-md-3 mb-3"><label class="form-label placas-form-label"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control placas-form-control" name="editP_llantas" id="e_llantas"></div>
                         </div>
-
-                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.capacity">3. Capacidades y Dimensiones</h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.cargautil">Carga Útil (TN)</label><input type="number" step="0.01" class="form-control" name="editP_carga_util" id="e_carga_util"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesoneto">Peso Neto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_neto" id="e_peso_neto"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label fw-bold text-secondary" data-i18n="plates.form.pesobruto">Peso Bruto (TN)</label><input type="number" step="0.01" class="form-control" name="editP_peso_bruto" id="e_peso_bruto"></div>
-                        </div>
-                    </div>
-
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-2" data-i18n="plates.s.ops">4. Operatividad</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-success" data-i18n="common.status">Estado</label><select class="form-select text-success fw-bold" name="editP_estado" id="e_estado"><option value="Activa">Activa</option><option value="Inactiva">Inactiva</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.zone">Zona UTS</label>
-                            <select class="form-select text-uppercase" name="editP_uts" id="e_uts">
-                                <option value="">(Blanco)</option><option value="LOCAL">LOCAL</option><option value="NACIONAL">NACIONAL</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold" data-i18n="plates.form.unit">Unidad</label><select class="form-select" name="editP_motora" id="e_motora"><option value="Motora">Motora</option><option value="No Motora">No Motora</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold text-warning" data-i18n="plates.form.inuse">En Uso?</label><select class="form-select fw-bold" name="editP_enuso" id="e_enuso"><option value="Si">Si</option><option value="No">No</option></select></div>
-                        <div class="col-md-3 mb-3"><label class="form-label fw-bold"><i class="bi bi-vinyl"></i> <span data-i18n="plates.form.tires">Llantas</span></label><input type="number" class="form-control" name="editP_llantas" id="e_llantas"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-warning text-dark fw-bold" id="btnActualizarPlaca"><i class="bi bi-pencil-square"></i> <span data-i18n="plates.btn.update">Actualizar Ficha</span></button>
+                <div class="modal-footer border-top-0 bg-white" style="border-radius:0 0 24px 24px; padding:1.25rem 1.5rem;">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal" data-i18n="common.cancel" style="border-radius:10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4" id="btnActualizarPlaca" style="border-radius:10px;"><i class="bi bi-pencil-square me-1"></i> <span data-i18n="plates.btn.update">Actualizar Ficha</span></button>
                 </div>
             </form>
         </div>

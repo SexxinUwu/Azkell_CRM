@@ -611,6 +611,70 @@ window.salVerPDF = function(m) {
     });
 };
 
+window.salEditarSalida = function(id) {
+    if (!window.guardAction('sal_inv', 'e')) return;
+    var m = window.salData.find(function(x) { return x.id === id; });
+    if (!m) return;
+    
+    // Preparar UI
+    window.salAbrirNuevo();
+    
+    // Cargar datos en drawer
+    window._salEditId = id;
+    var titleEl = document.querySelector('.sal-drawer-title');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i>Editar Solicitud ' + id;
+    
+    // Llenar campos cabecera
+    if (m.ticket_ot) window._cbSet('sal-f-ot', m.ticket_ot, m.ticket_ot);
+    var fechaEl = document.getElementById('sal-f-fecha');
+    if (fechaEl && m.fecha) fechaEl.value = m.fecha.substring(0, 10);
+    
+    var tipoEl = document.getElementById('sal-f-tipo');
+    if (tipoEl) {
+        tipoEl.value = m.placa ? 'Vehiculo' : 'Personal';
+        window.salToggleTipo();
+    }
+    
+    if (m.placa) window._cbSet('sal-f-placa', m.placa, m.placa);
+    if (m.responsable) window._cbSet('sal-f-responsable', m.responsable, m.responsable);
+    
+    var obsEl = document.getElementById('sal-f-obs');
+    if (obsEl) obsEl.value = m.observaciones || '';
+    
+    // Limpiar items creados por salAbrirNuevo y cargar los existentes
+    var tbody = document.getElementById('sal-items-tbody');
+    if (tbody) tbody.innerHTML = '';
+    
+    if (m.items && m.items.length) {
+        m.items.forEach(function(it) {
+            var idx = window._salItemIdx++;
+            var tr = document.createElement('tr');
+            tr.id = 'sal-item-' + idx;
+            tr.innerHTML =
+                '<td>' +
+                    '<div style="display:flex;gap:4px;align-items:center;">' +
+                        '<input type="text" class="form-control form-control-sm sal-item-desc" list="sal-inv-list" placeholder="Buscar artículo…" ' +
+                            'data-idx="' + idx + '" oninput="window._salBuscarArt(this,' + idx + ')" value="' + salEsc(it.inventario_id + ' — ' + (it.descripcion || '')) + '">' +
+                        '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
+                            'onclick="window._salAbrirQR(' + idx + ')" title="Escanear código de barras">' +
+                            '<i class="bi bi-upc-scan"></i>' +
+                        '</button>' +
+                    '</div>' +
+                    '<input type="hidden" class="sal-item-inv-id" data-idx="' + idx + '" value="' + salEsc(it.inventario_id) + '">' +
+                '</td>' +
+                '<td><input type="number" class="form-control form-control-sm sal-item-cant" data-idx="' + idx + '" value="' + parseFloat(it.cantidad || 0) + '" min="0.001" step="0.001" oninput="window._salCalcItem(' + idx + ')"></td>' +
+                '<td><input type="number" class="form-control form-control-sm sal-item-cu" data-idx="' + idx + '" value="' + parseFloat(it.costo_unitario || 0) + '" min="0" step="0.01" oninput="window._salCalcItem(' + idx + ')"></td>' +
+                '<td><input type="number" class="form-control form-control-sm sal-item-imp" data-idx="' + idx + '" value="' + (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)).toFixed(2) + '" readonly></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._salQuitarItem(' + idx + ')"><i class="bi bi-x"></i></button></td>';
+            if (tbody) tbody.appendChild(tr);
+        });
+        window._salCalcTotales();
+    }
+    
+    // Cerrar el detalle para mostrar el form claramente
+    window.salCerrarDetalle();
+};
+
 // ── Nueva Solicitud: Abrir / Cerrar ───────────────────────────
 window.salAbrirNuevo = function() {
     if (!window.guardAction('sal_inv', 'c')) return;
@@ -834,79 +898,9 @@ window.salGuardarNuevo = function() {
     });
 };
 
-// ── Editar salida existente ───────────────────────────────────
-window._salEditId = null;
 
-window.salEditarSalida = function(id) {
-    if (!window.guardAction('sal_inv', 'e')) return;
-    var m = (window.salData || []).find(function(x) { return x.id === id; });
-    if (!m) { alert('No se encontró la salida ' + id); return; }
 
-    // Cerrar panel detalle
-    window.salCerrarDetalle();
 
-    // Guardar ID de edición
-    window._salEditId = id;
-
-    // Limpiar formulario
-    var ids = ['sal-f-obs'];
-    ids.forEach(function(fid) { var el = document.getElementById(fid); if (el) el.value = ''; });
-    window._cbReset('sal-f-ot');
-    window._cbReset('sal-f-placa');
-    window._cbReset('sal-f-responsable');
-
-    // Rellenar campos
-    var fechaEl = document.getElementById('sal-f-fecha');
-    if (fechaEl) fechaEl.value = m.fecha ? String(m.fecha).split('T')[0] : new Date().toISOString().split('T')[0];
-
-    var tipoEl = document.getElementById('sal-f-tipo');
-    if (tipoEl) tipoEl.value = m.tipo_destino || 'Vehiculo';
-    if (typeof window.salToggleTipo === 'function') window.salToggleTipo();
-
-    // Rellenar comboboxes
-    if (m.ticket_ot && typeof window._cbSet === 'function') {
-        window._cbSet('sal-f-ot', m.ticket_ot, m.ticket_ot);
-    }
-    if (m.placa && typeof window._cbSet === 'function') {
-        window._cbSet('sal-f-placa', m.placa, m.placa);
-    }
-    if (m.responsable && typeof window._cbSet === 'function') {
-        window._cbSet('sal-f-responsable', m.responsable, m.responsable);
-    }
-
-    var obsEl = document.getElementById('sal-f-obs');
-    if (obsEl) obsEl.value = m.observaciones || '';
-
-    // Limpiar items y rellenar con los existentes
-    var tbody = document.getElementById('sal-items-tbody');
-    if (tbody) tbody.innerHTML = '';
-    window._salItemIdx = 0;
-    
-    (m.items || []).forEach(function(it) {
-        _salAgregarItem();
-        var idx = window._salItemIdx - 1;
-        var descEl = document.querySelector('.sal-item-desc[data-idx="' + idx + '"]');
-        var hidEl  = document.querySelector('.sal-item-inv-id[data-idx="' + idx + '"]');
-        var cantEl = document.querySelector('.sal-item-cant[data-idx="' + idx + '"]');
-        var cuEl   = document.querySelector('.sal-item-cu[data-idx="' + idx + '"]');
-        var impEl  = document.querySelector('.sal-item-imp[data-idx="' + idx + '"]');
-        if (descEl) descEl.value = it.descripcion || it.inventario_id || '';
-        if (hidEl)  hidEl.value  = it.inventario_id || '';
-        if (cantEl) cantEl.value = it.cantidad || 0;
-        if (cuEl)   cuEl.value   = parseFloat(it.costo_unitario || 0).toFixed(2);
-        if (impEl)  impEl.value  = (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)).toFixed(2);
-    });
-    _salActualizarTotal();
-
-    // Cambiar título del drawer
-    var titleEl = document.querySelector('.sal-drawer-title');
-    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i>Editar Salida ' + salEsc(id);
-
-    // Abrir drawer
-    var drawer = document.getElementById('sal-drawer-nuevo');
-    if (drawer) drawer.classList.add('open');
-    var bd = document.getElementById('salNuevoBackdrop');
-    if (bd) bd.classList.add('open');
 };
 
 // ── Toggle tipo destino ───────────────────────────────────────

@@ -390,36 +390,48 @@ function renderizarPaginaPlacas() {
             if (canEditP) items += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`;
             if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
             if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="event.stopPropagation(); eliminarPlacaDesdeTarjeta('${plc}')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
-            menuAcciones = `<div class="dropdown ms-1" onclick="event.stopPropagation()"><button class="btn-dots" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`;
+            menuAcciones = `<div class="dropdown ms-1" onclick="event.stopPropagation()"><button class="btn btn-sm btn-light border-0 px-2" style="background:transparent; color:#94a3b8;" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow-sm" style="border-radius:12px; font-size:0.85rem;">${items}</ul></div>`;
         }
 
-        let checkHtml = window.modoSeleccion && window.modoSeleccion['placas'] ? `<input type="checkbox" class="form-check-input chk-bulk-placas" value="${plc}" style="pointer-events: none;">` : '';
-
-        let swipeActionsHtml = '';
-        if (canEditP || canDeleteP) {
-            swipeActionsHtml = '<div class="card-swipe-actions">';
-            if (canEditP)  swipeActionsHtml += `<button class="swipe-action-btn edit" onclick="event.stopPropagation();abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil-fill"></i></button>`;
-            if (canDeleteP) swipeActionsHtml += `<button class="swipe-action-btn del" onclick="event.stopPropagation();eliminarPlacaDesdeTarjeta('${plc}')"><i class="bi bi-trash-fill"></i></button>`;
-            swipeActionsHtml += '</div>';
-        }
+        let checkHtml = window.modoSeleccion && window.modoSeleccion['placas'] ? `<input type="checkbox" class="form-check-input chk-bulk-placas me-2" value="${plc}" style="pointer-events: none; width:1.2rem; height:1.2rem;">` : '';
 
         var tl = _timelinePlaca(plc);
-        var tlHtml = `<div class="card-timeline d-none d-md-flex align-items-center gap-1 mt-2" title="Historial inspecciones (más reciente →)">${tl.map((cls,i) => `<span class="tl-dot ${cls}" title="${cls.replace('tl-','').replace('venc','Vencida').replace('pv','Por vencer').replace('ok','Vigente').replace('empty','Sin registro')}"></span>`).join('')}<span style="font-size:0.65rem;color:var(--subtext);margin-left:2px;">insp.</span></div>`;
+        var tlHtml = `<div class="d-flex align-items-center gap-1 mt-1" title="Historial inspecciones">${tl.map((cls,i) => `<span class="${cls}" style="width:6px;height:6px;border-radius:50%;display:inline-block;background-color:${cls==='tl-venc'?'#ef4444':cls==='tl-pv'?'#eab308':cls==='tl-ok'?'#22c55e':'#e2e8f0'}"></span>`).join('')}</div>`;
 
-        html += `<div class="card-premium" data-placa="${plc}" onclick="abrirDetallePlaca(event, ${indexGlobal})">
-            <div class="card-inner">
-                <div class="card-header-theme">
-                    <div class="d-flex align-items-center gap-2">${checkHtml}<div>
-                        <div class="card-title-prem">${plc}</div>
-                        <div class="card-client-sub" style="font-size:0.73rem;color:var(--subtext);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${cli}</div>
-                    </div></div>
-                    ${menuAcciones}
+        // Icon based on type
+        let icono = 'bi-truck';
+        const tipLower = tip.toLowerCase();
+        if (tipLower.includes('carreta') || tipLower.includes('semi')) icono = 'bi-truck-flatbed';
+        else if (tipLower.includes('tracto')) icono = 'bi-truck-front';
+
+        html += `
+        <div class="placas-modern-card" data-placa="${plc}" onclick="abrirDetallePlaca(event, ${indexGlobal})">
+            ${checkHtml}
+            <div class="placas-modern-icon">
+                <i class="bi ${icono} fs-5"></i>
+            </div>
+            
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span class="placas-modern-badge">${plc}</span>
                 </div>
-                <div class="card-data-row"><span>MARCA</span><span title="${mar}">${mar}</span></div>
-                <div class="card-data-row"><span>TIPO</span><span title="${tip}">${tip}</span></div>
+                <div style="display: flex; align-items: center; gap: 0.375rem; color: #64748b; font-size: 13px; font-weight: 500;">
+                    <span>${tip}</span>
+                    <span style="width: 3px; height: 3px; border-radius: 50%; background: #cbd5e1;"></span>
+                    <span>${mar}</span>
+                </div>
+                <div style="color: #94a3b8; font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${cli}
+                </div>
                 ${tlHtml}
             </div>
-            ${swipeActionsHtml}
+            
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                ${menuAcciones}
+                <button style="width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #94a3b8; border: none; background: transparent;">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
         </div>`;
     });
 

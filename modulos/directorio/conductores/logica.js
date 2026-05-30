@@ -128,18 +128,28 @@ function mostrarConductores(datos) {
 }
 
 window.filtrarConductores = function() {
-    var el = document.getElementById('buscadorConductores');
-    var q  = el ? el.value.toLowerCase().trim() : '';
+    var elDesk = document.getElementById('buscadorConductores');
+    var elMob = document.getElementById('buscadorConductoresMob');
+    var qDesk = elDesk ? elDesk.value.toLowerCase().trim() : '';
+    var qMob = elMob ? elMob.value.toLowerCase().trim() : '';
+    var q = qMob || qDesk;
+    
+    // Sync inputs if needed
+    if (elDesk && elMob) {
+        if (document.activeElement === elMob) elDesk.value = elMob.value;
+        if (document.activeElement === elDesk) elMob.value = elDesk.value;
+    }
+
     if (!q) {
         // Restaurar datos originales completos
-        dataGlobalConductores = window._masterConductores || dataGlobalConductores;
-        window.dataGlobalConductores = dataGlobalConductores;
-        mostrarConductores(dataGlobalConductores);
+        var source = (window._masterConductores && window._masterConductores.length > 0) ? window._masterConductores : window.dataGlobalConductores;
+        window.dataGlobalConductores = source;
+        mostrarConductores(source);
         return;
     }
     // Filtrar siempre desde la copia master, no desde los ya filtrados
-    var source = window._masterConductores && window._masterConductores.length ? window._masterConductores : dataGlobalConductores;
-    var filtered = source.filter(function(f) {
+    var sourceData = (window._masterConductores && window._masterConductores.length > 0) ? window._masterConductores : window.dataGlobalConductores;
+    var filtered = sourceData.filter(function(f) {
         var n = (f.nombre   || '').toLowerCase();
         var d = (f.dni      || '').toLowerCase();
         var e = (f.empresa  || '').toLowerCase();
