@@ -105,10 +105,20 @@ function mostrarStatusInspecciones(inspecciones) {
           if (expandStatusMap[classTipo] === undefined) expandStatusMap[classTipo] = false;
 
           html += `<tr class="group-header data-row-status" style="cursor:pointer;" onclick="toggleGroupRowStatus('${classTipo}')">
-              <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
+              <td colspan="10" class="d-none d-md-table-cell fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;">
                   <i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}"></i>
                   <span style="display:inline-block; min-width:80px;"><i class="bi bi-tag text-secondary"></i> <span class="text-uppercase">${tipoDisplay}</span></span>
                   <span class="badge bg-warning text-dark float-end span-conteo-${classTipo}">${registros.length} Unidades</span>
+              </td>
+              <td colspan="10" class="d-block d-md-none p-0 border-0 bg-white">
+                  <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="background-color: #ffffff;">
+                      <div class="d-flex align-items-center gap-3">
+                          <i class="bi bi-truck" style="color: #f59e0b;"></i>
+                          <span class="fw-bold text-dark" style="font-size: 14px;">${tipoDisplay}</span>
+                          <span class="badge bg-light text-secondary rounded-pill span-conteo-${classTipo}" style="font-size: 10px; border: 1px solid #e2e8f0;">${registros.length}</span>
+                      </div>
+                      <i class="bi bi-chevron-down text-secondary toggle-icon-${classTipo}"></i>
+                  </div>
               </td></tr>`;
 
           registros.forEach((item) => {
@@ -194,11 +204,53 @@ function mostrarStatusInspecciones(inspecciones) {
                   }
               }
 
+              let txtBadgeReact = diasRestantes === -9999 ? "SIN REGISTRO" : "REGISTRADO";
+              let txtKmReact = (wialonData && wialonData.lat !== 0) ? `${wialonData.km.toLocaleString()} km` : "N/A";
+              
+              let btnRegistrar = '';
+              if (!insp || !insp.id) {
+                  if (window.checkPerm && window.checkPerm('insp','c')) {
+                      btnRegistrar = `<button class="btn btn-sm d-flex align-items-center gap-1 shadow-sm" style="color: #2563eb; background-color: #eff6ff; border: 1px solid #dbeafe; font-size: 13px; font-weight: bold; padding: 0.375rem 0.75rem; border-radius: 8px;" onclick="event.stopPropagation(); abrirModalNuevaInspeccion('${placa}')"><i class="bi bi-plus-lg" style="stroke-width: 2;"></i> Registrar</button>`;
+                  }
+              } else {
+                  btnRegistrar = `<button class="btn btn-sm d-flex align-items-center gap-1 shadow-sm" style="color: #059669; background-color: #d1fae5; border: 1px solid #a7f3d0; font-size: 13px; font-weight: bold; padding: 0.375rem 0.75rem; border-radius: 8px;" onclick="event.stopPropagation(); verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye"></i> Ver</button>`;
+              }
+
+              let daysOverdueHTML = '';
+              if (diasRestantes < 0 && diasRestantes !== -9999) {
+                 daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> NO VIGENTE (-${Math.abs(diasRestantes)}d)</span>`;
+              } else if (diasRestantes >= 0 && diasRestantes !== -9999) {
+                 daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> VIGENTE (${diasRestantes}d)</span>`;
+              }
+
               html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
-              <td class="fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td>${mod}</td>
-              <td class="text-truncate" style="max-width: 100px;">${tecnico}</td><td>${fIngresoBonita}</td><td data-value="${diasRestantes}">${badgeProx}</td>
-              <td data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
-              <td>${ubicacionHtml}</td><td>${menuAcciones}</td></tr>`;
+              <td class="d-none d-md-table-cell fw-bold text-primary" data-value="${placa}">${checkHtml}${placa} ${subCli}</td><td class="d-none" data-value="${cli}">${cli}</td><td class="d-none d-md-table-cell">${mod}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width: 100px;">${tecnico}</td><td class="d-none d-md-table-cell">${fIngresoBonita}</td><td class="d-none d-md-table-cell" data-value="${diasRestantes}">${badgeProx}</td>
+              <td class="d-none d-md-table-cell" data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
+              <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
+              <td class="d-block d-md-none p-0 border-0 bg-white">
+                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc;">
+                      <div class="d-flex justify-content-between align-items-start w-100">
+                          <div class="d-flex align-items-center gap-2 flex-wrap">
+                              <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
+                              ${daysOverdueHTML}
+                          </div>
+                          ${btnRegistrar}
+                      </div>
+                      <div class="d-flex justify-content-between align-items-end w-100 mt-1">
+                          <div class="d-flex flex-column gap-1" style="font-size: 13px; color: #64748b; font-weight: 500;">
+                              <span class="text-dark">${cli} <span class="mx-1" style="color: #cbd5e1;">•</span> ${mod}</span>
+                              <div class="d-flex align-items-center gap-1">
+                                  <i class="bi bi-geo-alt text-primary" style="font-size: 13px;"></i>
+                                  ${txtKmReact}
+                              </div>
+                          </div>
+                          <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; ${diasRestantes === -9999 ? 'background-color: #e2e8f0; color: #475569;' : 'background-color: #d1fae5; color: #047857;'}">
+                              ${txtBadgeReact}
+                          </span>
+                      </div>
+                  </div>
+              </td></tr>`;
           });
       });
       rellenarFiltroCheck('filtroStatusCliente', setClis, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusMarca', setMarcas, 'filtrarStatusAvanzado'); rellenarFiltroCheck('filtroStatusEstado', setEstadosStatus, 'filtrarStatusAvanzado');
