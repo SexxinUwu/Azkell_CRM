@@ -240,11 +240,15 @@
             </div>
         </div>
         
-        <div class="dir-search-wrap">
-            <div class="dir-search-box d-flex">
+        <div class="dir-search-wrap" style="display: flex; gap: 0.5rem;">
+            <div class="dir-search-box d-flex" style="flex: 1;">
                 <i class="bi bi-search"></i>
                 <input type="text" id="buscadorConductoresMob" oninput="document.getElementById('buscadorConductores').value = this.value; window.filtrarConductores()" placeholder="Buscar por Nombre, DNI...">
             </div>
+            <button onclick="window.init_conductores()" title="Actualizar"
+                    style="width: 48px; height: 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
+                <i class="bi bi-arrow-clockwise fs-5"></i>
+            </button>
         </div>
     </div>
 
