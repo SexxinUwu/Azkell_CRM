@@ -230,7 +230,7 @@ function mostrarStatusInspecciones(inspecciones) {
               <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
               <td class="d-block d-md-none p-0 border-0 bg-white">
                   ${isHistorialStatus ? `
-                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc;">
+                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc; cursor: pointer;" onclick="verDetalleInspeccion('${insp.id}', false)">
                       <div class="d-flex justify-content-between align-items-center w-100">
                           <div class="d-flex align-items-center gap-2">
                               <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
