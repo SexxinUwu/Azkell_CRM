@@ -461,10 +461,10 @@ function renderizarPaginaPlacas() {
     if (typeof window.initSwipeCards === 'function') window.initSwipeCards('contenedorPlacasDinamico');
     const fin = Math.min(inicio + ITEMS_POR_PAGINA, datosFiltradosPlacas.length);
     if(infoPag) infoPag.innerText = `Mostrando ${inicio + 1}–${fin} de ${datosFiltradosPlacas.length} placas`;
-    let btnHtml = `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(-1)" ${paginaActualPlacas === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
-    btnHtml += `<span class="px-3 fw-bold text-primary" style="font-size:0.9rem;">Pág. ${paginaActualPlacas} / ${totalPaginas}</span>`;
-    btnHtml += `<button class="btn-pag-nav" onclick="cambiarPaginaPlacas(1)" ${paginaActualPlacas >= totalPaginas ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-    if(ctrlPag) ctrlPag.innerHTML = btnHtml;
+    let btnHtml = `<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid #e2e8f0;background:#ffffff;color:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:${paginaActualPlacas === 1 ? '0.35' : '1'};" ${paginaActualPlacas === 1 ? 'disabled' : ''} onclick="cambiarPaginaPlacas(-1)"><i class="bi bi-chevron-left"></i></button>`;
+    btnHtml += `<span style="font-size:.8rem;font-weight:700;color:#64748b;padding:0 0.5rem;">Pág. <b style="color:#0f172a">${paginaActualPlacas}</b> / ${totalPaginas}</span>`;
+    btnHtml += `<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid #e2e8f0;background:#ffffff;color:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:${paginaActualPlacas >= totalPaginas ? '0.35' : '1'};" ${paginaActualPlacas >= totalPaginas ? 'disabled' : ''} onclick="cambiarPaginaPlacas(1)"><i class="bi bi-chevron-right"></i></button>`;
+    if(ctrlPag) ctrlPag.innerHTML = `<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem .75rem;">${btnHtml}</div>`;
 
     // Sincronizar estado de checkboxes con la selección global (para páginas distintas)
     if (window.modoSeleccion && window.modoSeleccion['placas'] && window.placasSeleccionadasGlobalmente) {
