@@ -68,8 +68,8 @@
         letter-spacing: 0.05em !important;
         color: #1f2937 !important;
     }
-    #chartTotal { max-height: 150px !important; margin: 0 auto; }
-    #chartMotoras, #chartNoMotoras { max-height: 110px !important; margin: 0 auto; }
+    .col-12.col-md-4 .chart-container-status { height: 180px !important; position: relative; width: 100%; }
+    .col-6.col-md-4 .chart-container-status { height: 110px !important; position: relative; width: 100%; }
     
     .desktop-controls-wrapper { display: none !important; }
 }
@@ -86,7 +86,7 @@
                 </div>
             </div>
 
-            <h1 class="fw-bold text-white mb-4" style="font-size: 1.5rem; letter-spacing: -0.5px;">
+            <h1 id="mobile-insp-title" class="fw-bold text-white mb-4" style="font-size: 1.5rem; letter-spacing: -0.5px;">
                 Análisis de Inspecciones
             </h1>
 
@@ -98,11 +98,15 @@
                 <button class="d-flex align-items-center justify-content-center text-white border" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="document.getElementById('btnFiltrosInsp').click()">
                     <i class="bi bi-funnel" style="font-size: 18px;"></i>
                 </button>
+                <button id="btnMobileHistorial" class="d-flex align-items-center justify-content-center text-white border btn-historial-toggle" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleVistaStatus();">
+                    <i class="bi bi-clock-history" style="font-size: 18px;"></i>
+                </button>
                 <button class="d-flex align-items-center justify-content-center text-white border btn-graficos-toggle" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleGraficosStatus(); this.classList.toggle('active-graficos');">
                     <i class="bi bi-pie-chart" style="font-size: 18px;"></i>
                 </button>
             </div>
             <style>
+                .btn-historial-toggle.active-historial { background-color: #4f46e5 !important; border-color: #6366f1 !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
                 .btn-graficos-toggle.active-graficos { background-color: #f59e0b !important; border-color: #fbbf24 !important; }
             </style>
         </div>

@@ -230,6 +230,35 @@ function mostrarStatusInspecciones(inspecciones) {
               <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
               <td class="d-block d-md-none p-0 border-0 bg-white">
                   <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc;">
+                      <div class="d-flex justify-content-between align-items-center w-100">
+                          <div class="d-flex align-items-center gap-2">
+                              <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
+                              <span style="font-size: 9px; font-weight: bold; background-color: ${diasRestantes < 0 && diasRestantes !== -9999 ? '#fee2e2' : '#d1fae5'}; color: ${diasRestantes < 0 && diasRestantes !== -9999 ? '#b91c1c' : '#047857'}; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">${txtEstado}</span>
+                          </div>
+                          <span style="font-size: 11px; font-weight: bold; background-color: #10b981; color: white; padding: 4px 10px; border-radius: 6px;">
+                              ${diasRestantes === -9999 ? 'Sin Registro' : (diasRestantes < 0 ? `Vencido hace ${Math.abs(diasRestantes)}d` : `Faltan ${diasRestantes} días`)}
+                          </span>
+                      </div>
+                      <div class="d-flex align-items-center gap-3 w-100 mt-1" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px;">
+                          <div class="d-flex align-items-center gap-1" style="color: #64748b; font-size: 12px; font-weight: 600;">
+                              <i class="bi bi-person text-secondary"></i> <span class="text-truncate" style="max-width:100px;">${tecnico}</span>
+                          </div>
+                          <span style="color: #cbd5e1;">•</span>
+                          <div class="d-flex align-items-center gap-1" style="color: #64748b; font-size: 12px; font-weight: 600;">
+                              <i class="bi bi-calendar text-secondary"></i> ${fIngresoBonita}
+                          </div>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-end w-100 mt-1">
+                          <div class="d-flex flex-column gap-1" style="font-size: 13px; color: #64748b; font-weight: 500;">
+                              <span class="text-dark">${cli} <span class="mx-1" style="color: #cbd5e1;">•</span> ${mod}</span>
+                          </div>
+                          <div class="d-flex align-items-center gap-1 bg-light border px-2 py-1 rounded-pill shadow-sm" style="font-size: 11px; color: #475569; font-weight: 600;">
+                              <i class="bi bi-geo-alt text-primary"></i> ${txtKmReact}
+                          </div>
+                      </div>
+                  </div>
+                  ` : `
+                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc;">
                       <div class="d-flex justify-content-between align-items-start w-100">
                           <div class="d-flex align-items-center gap-2 flex-wrap">
                               <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
@@ -250,6 +279,7 @@ function mostrarStatusInspecciones(inspecciones) {
                           </span>
                       </div>
                   </div>
+                  `}
               </td></tr>`;
           });
       });
