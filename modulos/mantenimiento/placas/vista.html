@@ -314,12 +314,39 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
     outline: none;
 }
+
+/* Desktop Header Overrides */
+@media (min-width: 768px) {
+    .placas-header {
+        background: transparent !important;
+        padding: 1rem 1rem 0 1rem !important;
+        margin: 0 !important;
+    }
+    .placas-header-top, .placas-main-title, .placas-search-container {
+        display: none !important;
+    }
+    .placas-kpi-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 1rem !important;
+    }
+    .placas-kpi-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    .placas-kpi-card i { color: #10b981 !important; }
+    .placas-kpi-card p { color: #64748b !important; }
+}
 </style>
 
 <div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex; background: #f8fafc !important;">
     
-    <!-- Header Verde (Sólo Móvil) -->
-    <div class="placas-header d-block d-md-none">
+    <!-- Header Verde -->
+    <div class="placas-header">
         <div class="placas-header-top">
             <span class="placas-header-title">Flota Vehicular</span>
             <div class="placas-avatar">SA</div>
@@ -361,6 +388,64 @@
             <button class="placas-icon-btn" onclick="recargarModulo('placas')" title="Actualizar">
                 <i class="bi bi-arrow-clockwise fs-5"></i>
             </button>
+            
+            <!-- Dropdown de Filtros -->
+            <div class="dropdown">
+                <button class="placas-icon-btn" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
+                    <i class="bi bi-funnel-fill fs-5"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow p-0" style="min-width:280px; max-height:calc(100dvh - 120px); overflow:hidden;">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
+                        <span class="fw-bold" style="font-size:0.9rem; color:#111827;">Filtros</span>
+                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                    </div>
+                    <div style="max-height:calc(100dvh - 170px); overflow-y:auto;">
+                        <!-- Acordeón: Cliente -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Cliente</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroCliente" style="max-height:150px;overflow-y:auto;"></ul>
+                            </div>
+                        </div>
+                        <!-- Acordeón: Tipo -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Tipo</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroTipo" style="max-height:150px;overflow-y:auto;"></ul>
+                            </div>
+                        </div>
+                        <!-- Acordeón: Marca -->
+                        <div class="border-bottom">
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Marca</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroMarca" style="max-height:150px;overflow-y:auto;"></ul>
+                            </div>
+                        </div>
+                        <!-- Acordeón: Estado -->
+                        <div>
+                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
+                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Estado</span>
+                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
+                            </button>
+                            <div style="display:none;padding:0 12px 12px;">
+                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroEstado"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -383,20 +468,19 @@
     <div id="contenedorPlacasDinamico" class="placas-list-container">
         <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
     </div>
-    
-    <!-- Paginación Oculta pero funcional para JS -->
-    <div id="controles-paginacion-placas" class="d-none"></div>
+    <!-- Paginación Visible -->
+    <div id="controles-paginacion-placas" class="d-flex justify-content-center align-items-center gap-3 py-4 w-100 mb-5"></div>
 
     <table id="tablaPlacasHidden" style="display:none;"></table>
 
     <!-- Botón Flotante (FAB) para Nueva Placa -->
-    <button id="btnNuevaPlaca" class="placas-modern-fab" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()">
+    <button id="btnNuevaPlaca" class="placas-modern-fab d-block d-md-none" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()">
         <i class="bi bi-plus-lg"></i>
     </button>
 </div>
 
 <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="placas-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
+<div id="placas-fab-wrap" class="d-md-none" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
   <button onclick="document.getElementById('formPlaca').reset();bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
           style="width:60px;height:60px;border-radius:18px;background:#10b981;border:none;color:#fff;
                  font-size:1.5rem;box-shadow:0 6px 24px rgba(16,185,129,.5);
