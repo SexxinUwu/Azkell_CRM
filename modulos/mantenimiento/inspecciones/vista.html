@@ -22,29 +22,83 @@
         height: 100% !important; 
         flex: 1 1 0 !important;
         overflow: hidden !important;
-        background-color: #e2e8f0 !important;
+        background-color: #f4f7f6 !important;
     }
     #moduloStatus .controls-row {
-        padding: 0 0.5rem !important;
+        padding: 0 !important;
     }
+    /* El table-container envuelve la tabla que NO vamos a ocultar, pero en móvil las filas se muestran como cards */
     #moduloStatus .card.flex-grow-1 {
         min-height: 0 !important;
-        border-radius: 16px 16px 0 0 !important;
         border: none !important;
         margin: 0 !important;
+        background-color: transparent !important;
         padding-bottom: 6rem !important; /* Espacio para FAB */
+        overflow-y: auto !important;
     }
+    #tablaStatus { background: transparent !important; border: none !important; margin: 0 !important; }
+    #tablaStatus thead { display: none !important; }
+    #cuerpoTablaStatus, #cuerpoTablaStatus tr, #cuerpoTablaStatus td { display: block; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
+    
+    /* Mobile Header Controls */
+    .insp-header-mobile {
+        background-color: #00875A;
+        padding: 2rem 1.25rem 1rem;
+        border-radius: 0 0 1.5rem 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 20;
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    /* Gráficos en Móvil */
+    #panelGraficosStatus { margin-top: -0.5rem; position: relative; z-index: 10; padding: 0 1rem !important; }
+    #panelGraficosStatus .card {
+        border-radius: 20px !important;
+        border: 1px solid #f3f4f6 !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        margin-bottom: 0.75rem !important;
+    }
+    #panelGraficosStatus h6.fw-bold {
+        font-size: 13px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #1f2937 !important;
+    }
+    
+    .desktop-controls-wrapper { display: none !important; }
 }
 </style>
 
 <div id="moduloStatus" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
     <div class="controls-row">
         <!-- Header Móvil (solo visible en móvil) -->
-        <div class="d-flex d-md-none justify-content-between align-items-center p-3 w-100">
-            <h1 class="m-0 fw-black text-dark" style="font-size: 1.35rem; letter-spacing: -0.5px;">Análisis de Inspecciones</h1>
-            <span class="badge bg-white text-primary border rounded-pill px-2 py-1 shadow-sm d-flex align-items-center" style="font-size: 0.65rem;">
-                <i class="bi bi-geo-alt-fill me-1"></i> GPS Activo
-            </span>
+        <div class="d-md-none insp-header-mobile w-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-white" style="font-size: 14px;">Mantenimiento</span>
+                <div class="d-flex align-items-center justify-content-center text-white fw-bold shadow-inner" style="width: 32px; height: 32px; background-color: rgba(0,0,0,0.2); border-radius: 50%; font-size: 11px;">
+                    SA
+                </div>
+            </div>
+
+            <h1 class="fw-bold text-white mb-4" style="font-size: 1.5rem; letter-spacing: -0.5px;">
+                Análisis de Inspecciones
+            </h1>
+
+            <div class="d-flex gap-2 align-items-center">
+                <div class="flex-grow-1 d-flex align-items-center px-3 border" style="background-color: rgba(0,0,0,0.15); height: 44px; border-radius: 0.75rem; border-color: rgba(255,255,255,0.1) !important; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);">
+                    <i class="bi bi-search me-2" style="color: rgba(255,255,255,0.7); font-size: 18px;"></i>
+                    <input type="text" class="w-100 bg-transparent border-0 outline-none text-white" placeholder="Buscar placa..." style="font-size: 15px; outline: none; box-shadow: none;" oninput="document.getElementById('buscadorStatus').value = this.value; window.filtrarStatusAvanzado();">
+                </div>
+                <button class="d-flex align-items-center justify-content-center text-white border" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="document.getElementById('btnFiltrosInsp').click()">
+                    <i class="bi bi-funnel" style="font-size: 18px;"></i>
+                </button>
+                <button class="d-flex align-items-center justify-content-center text-white border btn-graficos-toggle" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleGraficosStatus(); this.classList.toggle('active-graficos');">
+                    <i class="bi bi-pie-chart" style="font-size: 18px;"></i>
+                </button>
+            </div>
+            <style>
+                .btn-graficos-toggle.active-graficos { background-color: #f59e0b !important; border-color: #fbbf24 !important; }
+            </style>
         </div>
         
         <div class="row mb-3 px-2 px-md-0" id="panelGraficosStatus">
@@ -55,9 +109,10 @@
 
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="input-group input-group-sm" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatus" onkeyup="filtrarStatusAvanzado()" placeholder="Buscar placa, técnico..."></div>
+                <div class="input-group input-group-sm d-none d-md-flex" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatus-desktop" onkeyup="document.getElementById('buscadorStatus').value=this.value; filtrarStatusAvanzado()" placeholder="Buscar placa, técnico..."></div>
+                <input type="hidden" id="buscadorStatus" value="">
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary fw-bold px-2" id="btnFiltrosInsp" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
+                    <button class="btn btn-sm btn-outline-secondary fw-bold px-2 d-none d-md-block" id="btnFiltrosInsp" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
                         <i class="bi bi-funnel-fill"></i>
                         <span class="badge bg-primary ms-1 d-none" id="badge-filtros-insp" style="font-size:0.65rem; vertical-align:middle;"></span>
                     </button>
@@ -102,11 +157,9 @@
                         </div>
                     </div>
                 </div>
-                <!-- Botones icono solo-móvil: gráfico + reload -->
-                <button class="btn btn-sm btn-outline-warning fw-bold px-2 d-md-none" onclick="toggleGraficosStatus()" title="Gráficos"><i class="bi bi-bar-chart-fill"></i></button>
-                <button class="btn-reload-cache d-md-none" onclick="recargarModulo('statusMant')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <!-- Botones icono solo-móvil eliminados porque ahora están en el header móvil -->
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 d-none d-md-flex">
                 <span id="cache-badge-statusMant" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-statusMant" data-i18n="common.sinCargar">Sin cargar</span></span>
                 <button class="btn-reload-cache" id="btn-reload-statusMant" onclick="recargarModulo('statusMant')" title="Actualizar Base de Datos"><i class="bi bi-arrow-clockwise"></i></button>
                 <button class="btn btn-outline-warning fw-bold btn-sm text-dark" id="btnToggleGraficos" onclick="toggleGraficosStatus()"><i class="bi bi-bar-chart-fill"></i></button>
