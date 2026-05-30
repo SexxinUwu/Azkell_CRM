@@ -420,9 +420,6 @@ function renderizarPaginaPlacas() {
                     <span style="width: 3px; height: 3px; border-radius: 50%; background: #cbd5e1;"></span>
                     <span>${mar}</span>
                 </div>
-                <div style="color: #94a3b8; font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${cli}
-                </div>
                 ${tlHtml}
             </div>
             
