@@ -119,14 +119,14 @@
 
 .placas-search-input-wrap input {
     width: 100%;
-    background: transparent;
+    background: transparent !important;
     border: none;
     outline: none;
     font-size: 16px;
     color: white;
     font-weight: 500;
 }
-.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.7); }
+.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.7) !important; }
 
 .placas-icon-btn {
     width: 3rem;
@@ -150,25 +150,27 @@
 .placas-list-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 1rem 1rem 6rem 1rem; /* Extra padding bottom for FAB */
+    padding: 0 0 6rem 0; /* No lateral padding, but keep bottom padding for FAB */
     display: flex;
     flex-direction: column;
+    background: #ffffff; /* Fondo blanco para toda la lista */
 }
 
 .placas-modern-card {
-    background: white;
-    border-radius: 20px;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.05);
-    border: 1px solid #f3f4f6;
+    background: #ffffff;
+    border-radius: 0; /* Sin bordes redondeados */
+    padding: 14px 20px;
+    margin-bottom: 0;
+    box-shadow: none; /* Sin sombra */
+    border: none;
+    border-bottom: 1px solid #f3f4f6; /* Separador de lista */
     display: flex;
     align-items: center;
     gap: 1rem;
-    transition: transform 0.1s;
+    transition: background-color 0.1s;
     cursor: pointer;
 }
-.placas-modern-card:active { transform: scale(0.98); }
+.placas-modern-card:active { background-color: #f8fafc; }
 
 .placas-modern-icon {
     width: 3rem;
