@@ -14,6 +14,17 @@
 /* Ocultar barra superior en desktop para hacer full screen el rediseño */
 #moduloPlacas .btn-volver-desktop { display: none !important; }
 
+@media (max-width: 768px) {
+    .topbar { display: none !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #moduloPlacas { height: 100% !important; flex: 1 1 0; }
+}
+
 .placas-header {
     background-color: #00875A;
     padding: 2.5rem 1.25rem 1.5rem;
@@ -94,7 +105,7 @@
 
 .placas-search-input-wrap {
     flex: 1;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.15);
     height: 3rem;
     border-radius: 0.75rem;
     display: flex;
@@ -103,7 +114,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: none;
 }
 
 .placas-search-input-wrap input {
@@ -115,7 +126,7 @@
     color: white;
     font-weight: 500;
 }
-.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.6); }
+.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.7); }
 
 .placas-icon-btn {
     width: 3rem;
