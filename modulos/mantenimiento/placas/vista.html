@@ -156,21 +156,17 @@
     background: #ffffff; /* Fondo blanco para toda la lista */
 }
 
-/* Card styles for Desktop */
+/* Card styles for Desktop (matching Directorio cond-card) */
 .placas-modern-card {
-    background: white;
-    border-radius: 20px;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.05);
-    border: 1px solid #f3f4f6;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: transform 0.1s;
-    cursor: pointer;
+    display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem;
+    background: var(--surface, #ffffff); border: 1.5px solid var(--border, #e5e7eb);
+    border-radius: 16px; cursor: pointer;
+    transition: box-shadow .15s, border-color .15s, transform .15s;
+    position: relative; overflow: hidden; min-height: 72px;
 }
-.placas-modern-card:active { transform: scale(0.98); }
+.placas-modern-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.08); border-color: #2563eb55; transform: translateY(-1px); }
+.placas-modern-card:active { transform: scale(.984); }
+
 
 /* Mobile list view overrides */
 @media (max-width: 768px) {
@@ -192,6 +188,22 @@
         background: #ffffff !important;
     }
     .placas-modern-card:active { background-color: #f8fafc !important; transform: none !important; }
+}
+
+/* Desktop grid overrides (Matching Directorio cond-grid) */
+@media (min-width: 769px) {
+    .placas-grid-view {
+        display: grid !important;
+        gap: .65rem !important;
+        padding: .25rem .25rem .75rem !important;
+        align-content: start !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+@media (min-width: 1100px) {
+    .placas-grid-view {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
 }
 
 .placas-modern-icon {
@@ -308,9 +320,10 @@
 }
 </style>
 
-<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex;">
+<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex; background: #f8fafc !important;">
     
-    <div class="placas-header">
+    <!-- Header Verde (Sólo Móvil) -->
+    <div class="placas-header d-block d-md-none">
         <div class="placas-header-top">
             <span class="placas-header-title">Flota Vehicular</span>
             <div class="placas-avatar">SA</div>
@@ -410,6 +423,21 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Barra de controles Desktop -->
+    <div class="controls-row d-none d-md-flex justify-content-between flex-wrap gap-2 mb-3 mt-3 px-3">
+        <div class="input-group input-group-sm" style="max-width:300px;">
+            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" id="buscadorPlacasDesktop"
+                   oninput="document.getElementById('buscadorPlacas').value = this.value; window.filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo...">
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn-reload-cache btn btn-light btn-sm border" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota">
+                <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Nuevo</span>
+            </button>
         </div>
     </div>
 
