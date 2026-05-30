@@ -90,20 +90,25 @@
                 Análisis de Inspecciones
             </h1>
 
-            <div class="d-flex gap-2 align-items-center">
-                <div class="flex-grow-1 d-flex align-items-center px-3 border" style="background-color: rgba(0,0,0,0.15); height: 44px; border-radius: 0.75rem; border-color: rgba(255,255,255,0.1) !important; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="flex-grow-1 d-flex align-items-center px-3 border" style="min-width: 150px; background-color: rgba(0,0,0,0.15); height: 42px; border-radius: 0.75rem; border-color: rgba(255,255,255,0.1) !important; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);">
                     <i class="bi bi-search me-2" style="color: rgba(255,255,255,0.7); font-size: 18px;"></i>
                     <input type="text" class="w-100 bg-transparent border-0 outline-none text-white" placeholder="Buscar placa..." style="font-size: 15px; outline: none; box-shadow: none;" oninput="document.getElementById('buscadorStatus').value = this.value; window.filtrarStatusAvanzado();">
                 </div>
-                <button class="d-flex align-items-center justify-content-center text-white border" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="document.getElementById('btnFiltrosInsp').click()">
-                    <i class="bi bi-funnel" style="font-size: 18px;"></i>
-                </button>
-                <button id="btnMobileHistorial" class="d-flex align-items-center justify-content-center text-white border btn-historial-toggle" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleVistaStatus();">
-                    <i class="bi bi-clock-history" style="font-size: 18px;"></i>
-                </button>
-                <button class="d-flex align-items-center justify-content-center text-white border btn-graficos-toggle" style="width: 44px; height: 44px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleGraficosStatus(); this.classList.toggle('active-graficos');">
-                    <i class="bi bi-pie-chart" style="font-size: 18px;"></i>
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="d-flex align-items-center justify-content-center text-white border" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="document.getElementById('btnFiltrosInsp').click()">
+                        <i class="bi bi-funnel" style="font-size: 17px;"></i>
+                    </button>
+                    <button class="d-flex align-items-center justify-content-center text-white border" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="recargarModulo('statusMant')">
+                        <i class="bi bi-arrow-clockwise" style="font-size: 17px;"></i>
+                    </button>
+                    <button id="btnMobileHistorial" class="d-flex align-items-center justify-content-center text-white border btn-historial-toggle" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleVistaStatus();">
+                        <i class="bi bi-clock-history" style="font-size: 17px;"></i>
+                    </button>
+                    <button class="d-flex align-items-center justify-content-center text-white border btn-graficos-toggle" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: all 0.2s;" onclick="toggleGraficosStatus(); this.classList.toggle('active-graficos');">
+                        <i class="bi bi-pie-chart" style="font-size: 17px;"></i>
+                    </button>
+                </div>
             </div>
             <style>
                 .btn-historial-toggle.active-historial { background-color: #4f46e5 !important; border-color: #6366f1 !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
@@ -111,7 +116,7 @@
             </style>
         </div>
         
-        <div class="row mb-3 px-2 px-md-0" id="panelGraficosStatus">
+        <div class="row mb-3 px-2 px-md-0" id="panelGraficosStatus" style="display: none;">
             <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.totalFleet">Flota Total</h6><div class="chart-container-status"><canvas id="chartTotal"></canvas></div></div></div>
             <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.motors">Unidades Motoras</h6><div class="chart-container-status"><canvas id="chartMotoras"></canvas></div></div></div>
             <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.nonMotors">U. No Motoras</h6><div class="chart-container-status"><canvas id="chartNoMotoras"></canvas></div></div></div>
