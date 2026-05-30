@@ -3,7 +3,7 @@
 /* ─── Admin Hub ──────────────────────────────────────────────────── */
 #moduloAdmin {
     display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
-    overflow-y: auto; background: var(--bg);
+    overflow-y: auto; background: #ffffff;
 }
 .adm-hero {
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -11,7 +11,15 @@
     flex-shrink: 0;
 }
 @media (max-width: 767.98px) {
-    .adm-hero { padding: 1.25rem 1rem 1rem; }
+    .topbar { display: none !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #moduloAdmin { border-radius: 0 !important; height: 100%; }
+    .adm-hero { padding: 1.25rem 1rem 1rem; border-radius: 0 !important; }
 }
 .adm-hero-title {
     font-size: 1.45rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: .3rem;
