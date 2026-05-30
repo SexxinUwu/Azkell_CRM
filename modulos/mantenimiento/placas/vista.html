@@ -156,21 +156,43 @@
     background: #ffffff; /* Fondo blanco para toda la lista */
 }
 
+/* Card styles for Desktop */
 .placas-modern-card {
-    background: #ffffff;
-    border-radius: 0; /* Sin bordes redondeados */
-    padding: 14px 20px;
-    margin-bottom: 0;
-    box-shadow: none; /* Sin sombra */
-    border: none;
-    border-bottom: 1px solid #f3f4f6; /* Separador de lista */
+    background: white;
+    border-radius: 20px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
     display: flex;
     align-items: center;
     gap: 1rem;
-    transition: background-color 0.1s;
+    transition: transform 0.1s;
     cursor: pointer;
 }
-.placas-modern-card:active { background-color: #f8fafc; }
+.placas-modern-card:active { transform: scale(0.98); }
+
+/* Mobile list view overrides */
+@media (max-width: 768px) {
+    /* Forzar que el grid generado por JS se comporte como lista */
+    .placas-grid-view {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+        padding: 0 0 6rem 0 !important; /* Padding inferior para FAB */
+        background: #ffffff !important;
+    }
+    .placas-modern-card {
+        border-radius: 0 !important;
+        padding: 14px 20px !important;
+        margin-bottom: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        background: #ffffff !important;
+    }
+    .placas-modern-card:active { background-color: #f8fafc !important; transform: none !important; }
+}
 
 .placas-modern-icon {
     width: 3rem;
