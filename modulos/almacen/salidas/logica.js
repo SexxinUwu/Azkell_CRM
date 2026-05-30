@@ -901,7 +901,6 @@ window.salGuardarNuevo = function() {
 
 
 
-};
 
 // ── Toggle tipo destino ───────────────────────────────────────
 window.salToggleTipo = function() {
