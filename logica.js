@@ -2791,19 +2791,7 @@ function initGrafico(canvasId) {
             plugins: {
                 legend: { position: 'right', labels: { font: {family: 'Inter', weight: 'bold', size: 11}, boxWidth: 12, padding: 8 } },
                 datalabels: {
-                    display: function(ctx) {
-                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
-                        return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
-                    },
-                    color: '#ffffff',
-                    font: { weight: 'bold', size: 11, family: 'Inter' },
-                    formatter: function(value, ctx) {
-                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
-                        return Math.round(value/total*100)+'%';
-                    },
-                    anchor: 'center', align: 'center'
+                    display: false
                 }
             }
         }
@@ -2821,7 +2809,14 @@ function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVi
     function refrescarDatos(chart, v, nv) {
         if(!chart) return;
         if(v + nv === 0) { chart.data.labels = ['Sin Datos']; chart.data.datasets[0].data = [1]; chart.data.datasets[0].backgroundColor = ['#475569']; }
-        else { chart.data.labels = ['Vigentes', 'Vencidas']; chart.data.datasets[0].data = [v, nv]; chart.data.datasets[0].backgroundColor = ['#10b981', '#ef4444']; }
+        else {
+            let total = v + nv;
+            let pV = Math.round((v / total) * 100);
+            let pNV = Math.round((nv / total) * 100);
+            chart.data.labels = [pV + '% Vigentes', pNV + '% Vencidas'];
+            chart.data.datasets[0].data = [v, nv];
+            chart.data.datasets[0].backgroundColor = ['#10b981', '#ef4444'];
+        }
         chart.update();
     }
     refrescarDatos(chartTotalInst, vigTot, noVigTot); refrescarDatos(chartMotorasInst, vigMot, noVigMot); refrescarDatos(chartNoMotorasInst, vigNoMot, noVigNoMot);
