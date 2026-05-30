@@ -83,7 +83,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
     // — Paginación — guardar total y cortar dataFinal
     window.dataFinalInspGlobal = dataFinal;
-    if (window.inspPorPagina > 0) {
+    if (isHistorialStatus && window.inspPorPagina > 0) {
         let _ini = (window.inspPaginaActual - 1) * window.inspPorPagina;
         if (_ini >= dataFinal.length && dataFinal.length > 0) { window.inspPaginaActual = 1; _ini = 0; }
         dataFinal = dataFinal.slice(_ini, _ini + window.inspPorPagina);
