@@ -166,33 +166,22 @@
 
 /* Mobile list view overrides */
 @media (max-width: 768px) {
-    /* Forzar que el grid generado por JS se comporte como lista */
     .placas-grid-view {
         display: flex !important;
         flex-direction: column !important;
-        gap: 0 !important;
-        padding: 0 0 6rem 0 !important; /* Padding inferior para FAB */
-        background: #ffffff !important;
+        gap: 0.75rem !important; /* Espacio entre tarjetas */
+        padding: 0.75rem 0.75rem 6rem 0.75rem !important; /* Padding inferior para FAB y lateral para tarjetas */
+        background: transparent !important;
     }
-    .placas-modern-card {
-        border-radius: 0 !important;
-        padding: 18px 20px !important;
-        margin-bottom: 0 !important;
-        box-shadow: none !important;
-        border: none !important;
-        border-bottom: 1px solid #f3f4f6 !important;
-        background: #ffffff !important;
-    }
-    .placas-modern-card:active { background-color: #f8fafc !important; transform: none !important; }
     
-    /* Estilos para el encabezado de grupo (Apartado) en móvil */
+    /* Estilos para el encabezado de grupo (Apartado) en móvil como antes */
     .group-header-left {
-        padding: 14px 20px !important;
-        background: #f8fafc !important;
-        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 0 0.25rem 0.5rem 0.25rem !important;
+        background: transparent !important;
+        border-bottom: 2px solid #e2e8f0 !important;
         font-weight: 700 !important;
         color: #0f172a !important;
-        margin: 0 !important;
+        margin: 1rem 0 0.25rem 0 !important;
     }
 }
 
