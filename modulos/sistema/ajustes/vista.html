@@ -1,7 +1,7 @@
 <style>
 /* ─── AJUSTES MOBILE EDGE-TO-EDGE (DISEÑO IMAGEN 2) ─── */
 #moduloAjustes { 
-    background: var(--bg) !important; 
+    background: transparent !important; 
     min-height: 100%; 
     display: flex; 
     flex-direction: column; 
@@ -43,15 +43,14 @@
 
 /* Tarjeta de Perfil */
 .ajustes-profile-card {
-    background: var(--surface);
-    padding: 1.25rem;
+    background: transparent;
+    padding: 1.25rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin: 0.5rem 1rem 1.5rem 1rem;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    border: 1px solid var(--border);
+    margin: 0.5rem 0 1.5rem 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
 }
 .ajustes-avatar {
     width: 60px;
@@ -107,16 +106,15 @@
 }
 
 .ajustes-item {
-    background: var(--surface);
-    margin: 0 1rem 1rem 1rem;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    border: 1px solid var(--border);
+    background: transparent;
+    margin: 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    padding: 1.15rem 1.25rem;
+    padding: 1.15rem 1.5rem;
     text-decoration: none;
-    transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+    transition: transform 0.1s, background 0.2s;
 }
 .ajustes-item:active { 
     background: var(--bg);
@@ -148,8 +146,8 @@
 
 /* Logout */
 .ajustes-logout-card {
-    background: var(--surface);
-    padding: 1.15rem;
+    background: transparent;
+    padding: 1.15rem 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -159,19 +157,23 @@
     color: #ef4444;
     cursor: pointer;
     transition: background 0.2s;
-    margin: 0 1rem 2rem 1rem;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    border: 1px solid var(--border);
+    margin: 1rem 0 2rem 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
 }
 .ajustes-logout-card:active { background: #fef2f2; }
 
 @media (min-width: 768px) {
-    .ajustes-header-nav { padding: 0 1rem 1rem 1rem; }
+    .ajustes-header-nav { padding: 0 1.5rem 1rem 1.5rem; }
     .ajustes-profile-card, .ajustes-item, .ajustes-logout-card {
         margin-left: 2rem;
         margin-right: 2rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        margin-bottom: 0.5rem;
     }
+    .ajustes-profile-card { margin-top: 1rem; border-bottom: 1px solid var(--border); }
     .ajustes-section-header { padding: 0 2.5rem 0.5rem 2.5rem; }
 }
 </style>

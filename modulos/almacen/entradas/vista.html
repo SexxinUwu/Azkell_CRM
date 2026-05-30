@@ -116,20 +116,9 @@
         border-radius: 20px;
         margin: 0 12px 12px 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        overflow: auto;
-        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         flex: 1 1 0;
-    }
-    #moduloEntradas table {
-        min-width: 580px;
-    }
-    #moduloEntradas th.col-articulo,
-    #moduloEntradas td.col-articulo {
-        min-width: 200px;
-        white-space: normal;
-        word-break: break-word;
     }
 }
 
@@ -147,8 +136,14 @@
     padding: 0.45rem 1.25rem; background: var(--surface);
     border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
 }
-#moduloEntradas .ent-table-wrap { flex: 1 1 0; overflow-y: auto; background: var(--surface); }
-#moduloEntradas table { width: 100%; border-collapse: collapse; font-size: 0.80rem; }
+#moduloEntradas .ent-table-wrap { flex: 1 1 0; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--surface); }
+#moduloEntradas table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 0.80rem; }
+#moduloEntradas th.col-articulo,
+#moduloEntradas td.col-articulo {
+    min-width: 250px;
+    white-space: normal;
+    word-break: break-word;
+}
 #moduloEntradas thead th {
     background: var(--bg); color: var(--subtext);
     font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
