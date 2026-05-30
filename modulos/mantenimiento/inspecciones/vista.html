@@ -7,21 +7,47 @@
     display: flex !important;
     flex-direction: column;
 }
-/* Móvil: desanclar altura fija para que la tabla sea visible */
-@media (max-width: 767.98px) {
+
+@media (max-width: 768px) {
+    /* Hacer pantalla completa y ocultar topbar */
+    .topbar { display: none !important; }
+    #root-dinamico, .main-area { 
+        padding: 0 !important; 
+        overflow: hidden !important; 
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100dvh !important;
+    }
     #moduloStatus {
-        height: auto !important;
-        min-height: 0;
+        height: 100% !important; 
+        flex: 1 1 0 !important;
+        overflow: hidden !important;
+        background-color: #e2e8f0 !important;
+    }
+    #moduloStatus .controls-row {
+        padding: 0 0.5rem !important;
     }
     #moduloStatus .card.flex-grow-1 {
-        min-height: 320px;
+        min-height: 0 !important;
+        border-radius: 16px 16px 0 0 !important;
+        border: none !important;
+        margin: 0 !important;
+        padding-bottom: 6rem !important; /* Espacio para FAB */
     }
 }
 </style>
 
 <div id="moduloStatus" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
     <div class="controls-row">
-        <div class="row mb-3" id="panelGraficosStatus">
+        <!-- Header Móvil (solo visible en móvil) -->
+        <div class="d-flex d-md-none justify-content-between align-items-center p-3 w-100">
+            <h1 class="m-0 fw-black text-dark" style="font-size: 1.35rem; letter-spacing: -0.5px;">Análisis de Inspecciones</h1>
+            <span class="badge bg-white text-primary border rounded-pill px-2 py-1 shadow-sm d-flex align-items-center" style="font-size: 0.65rem;">
+                <i class="bi bi-geo-alt-fill me-1"></i> GPS Activo
+            </span>
+        </div>
+        
+        <div class="row mb-3 px-2 px-md-0" id="panelGraficosStatus">
             <div class="col-12 col-md-4 mb-3 mb-md-0"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.totalFleet">Flota Total</h6><div class="chart-container-status"><canvas id="chartTotal"></canvas></div></div></div>
             <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.motors">Unidades Motoras</h6><div class="chart-container-status"><canvas id="chartMotoras"></canvas></div></div></div>
             <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100"><h6 class="fw-bold text-center mb-2" data-i18n="insp.nonMotors">U. No Motoras</h6><div class="chart-container-status"><canvas id="chartNoMotoras"></canvas></div></div></div>
@@ -223,4 +249,15 @@
         <button type="button" class="btn btn-primary fw-bold px-4" id="btnWizSiguiente" onclick="moverWizard(1)">Siguiente</button>
         <button type="button" class="btn btn-success fw-bold px-4" id="btnWizGuardar" style="display:none;" onclick="procesarGuardadoInspeccion()">Guardar Registro</button>
     </div>
+</div>
+
+<!-- FAB — solo mobile -->
+<div class="d-block d-md-none" style="position:fixed;bottom:104px;right:1rem;z-index:1041;">
+  <button onclick="abrirModalNuevaInspeccion()"
+          style="width:60px;height:60px;border-radius:18px;background:#10b981;border:none;color:#fff;
+                 font-size:1.5rem;box-shadow:0 6px 24px rgba(16,185,129,.5);
+                 display:flex;align-items:center;justify-content:center;
+                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
+    <i class="bi bi-plus-lg"></i>
+  </button>
 </div>
