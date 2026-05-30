@@ -21,8 +21,10 @@
     #moduloStatus {
         height: 100% !important; 
         flex: 1 1 0 !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
         background-color: #f4f7f6 !important;
+        -webkit-overflow-scrolling: touch;
     }
     #moduloStatus .controls-row {
         padding: 0 !important;
@@ -34,11 +36,13 @@
         margin: 0 !important;
         background-color: transparent !important;
         padding-bottom: 6rem !important; /* Espacio para FAB */
-        overflow-y: auto !important;
+        overflow-y: visible !important;
     }
     #tablaStatus { background: transparent !important; border: none !important; margin: 0 !important; }
     #tablaStatus thead { display: none !important; }
-    #cuerpoTablaStatus, #cuerpoTablaStatus tr, #cuerpoTablaStatus td { display: block; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
+    #cuerpoTablaStatus, #cuerpoTablaStatus tr { display: block; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
+    #cuerpoTablaStatus td { display: none !important; } /* Ocultar TODAS por defecto */
+    #cuerpoTablaStatus td:last-child { display: block !important; width: 100%; border: none !important; padding: 0 !important; background: transparent !important; }
     
     /* Mobile Header Controls */
     .insp-header-mobile {
@@ -64,6 +68,8 @@
         letter-spacing: 0.05em !important;
         color: #1f2937 !important;
     }
+    #chartTotal { max-height: 150px !important; margin: 0 auto; }
+    #chartMotoras, #chartNoMotoras { max-height: 110px !important; margin: 0 auto; }
     
     .desktop-controls-wrapper { display: none !important; }
 }
