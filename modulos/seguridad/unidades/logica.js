@@ -99,6 +99,8 @@ function _sguSaveTemplate() {
 }
 
 // ── NAVEGACIÓN ───────────────────────────────────────────────────
+window._sguNav = function(view, id) { window._sguShowView(view, id); };
+
 window._sguShowView = function(view, id) {
     _sguView = view;
     if (id) _sguDetailId = id;
@@ -106,7 +108,12 @@ window._sguShowView = function(view, id) {
         var el = document.getElementById(v);
         if (el) el.style.display = 'none';
     });
-    var target = document.getElementById('sgu-view-' + view);
+    // In vista.html, the container ids are sgu-list, sgu-form, sgu-detail, sgu-settings, NOT sgu-view-list
+    ['sgu-list', 'sgu-form', 'sgu-detail', 'sgu-settings'].forEach(function(v) {
+        var el = document.getElementById(v);
+        if (el) el.style.display = 'none';
+    });
+    var target = document.getElementById('sgu-' + view);
     if (target) target.style.display = 'block';
 
     if (view === 'list') { _sguRenderList(); }
@@ -115,20 +122,35 @@ window._sguShowView = function(view, id) {
     else if (view === 'settings') { _sguRenderSettings(); }
 };
 
+var _sguActiveTab = 'activos';
+window._sguSetTab = function(tab) {
+    _sguActiveTab = tab;
+    document.getElementById('sgu-tab-activos').classList.remove('active');
+    document.getElementById('sgu-tab-historial').classList.remove('active');
+    document.getElementById('sgu-tab-' + tab).classList.add('active');
+    _sguRenderList();
+};
+
+window._sguFilterList = function() {
+    _sguRenderList();
+};
+
 // ── RENDER LISTA ─────────────────────────────────────────────────
 function _sguRenderList() {
-    var container = document.getElementById('sgu-records-container');
+    var container = document.getElementById('sgu-records-list');
     if (!container) return;
 
-    if (!_sguRecords.length) {
-        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No hay registros de unidades.</div>';
-        return;
-    }
+    var actCount = _sguRecords.filter(function(r) { return r.estado === 'en_ruta'; }).length;
+    var elCount = document.getElementById('sgu-count-ruta');
+    if (elCount) elCount.textContent = actCount;
 
     var search = (document.getElementById('sgu-search') || {}).value || '';
     search = search.toLowerCase().trim();
 
     var filtered = _sguRecords.filter(function(r) {
+        if (_sguActiveTab === 'activos' && r.estado !== 'en_ruta') return false;
+        if (_sguActiveTab === 'historial' && r.estado !== 'completado') return false;
+
         if (!search) return true;
         return (r.placa_tracto || '').toLowerCase().indexOf(search) >= 0 ||
                (r.conductor || '').toLowerCase().indexOf(search) >= 0 ||
@@ -136,7 +158,7 @@ function _sguRenderList() {
     });
 
     if (!filtered.length) {
-        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-search" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No se encontraron resultados.</div>';
+        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No se encontraron resultados.</div>';
         return;
     }
 
