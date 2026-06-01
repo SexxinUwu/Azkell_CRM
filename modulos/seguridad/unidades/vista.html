@@ -73,6 +73,28 @@
 .sgu-form-group { flex: 1; border-bottom: 2px solid #e2e8f0; padding-bottom: .25rem; position: relative; }
 .sgu-form-group:last-child { margin-bottom: 0; }
 .sgu-form-label { font-size: .7rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: .4rem; display: block; letter-spacing: .05em; }
+/* Custom Autocomplete */
+.sgu-autocomplete-wrap { position: relative; width: 100%; }
+.sgu-autocomplete-list {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 0 0 12px 12px; max-height: 200px; overflow-y: auto;
+    z-index: 50; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-top: 4px;
+}
+.sgu-autocomplete-list.show { display: block; }
+.sgu-autocomplete-item { padding: .75rem 1rem; font-size: .95rem; font-weight: 700; color: #1e293b; cursor: pointer; transition: background .1s; }
+.sgu-autocomplete-item:hover { background: #eff6ff; color: #2563eb; }
+.sgu-autocomplete-empty { padding: .75rem 1rem; font-size: .9rem; color: #94a3b8; font-style: italic; }
+
+/* Orange focus style for autocomplete inputs as requested */
+.sgu-input-auto {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: .75rem 1rem; background: #f8fafc;
+    color: #0f172a; font-size: 1rem; font-weight: 800; outline: none; transition: all .2s; text-transform: uppercase;
+}
+.sgu-input-auto::placeholder { color: #94a3b8; font-weight: 600; text-transform: none; }
+.sgu-input-auto:focus { border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+.sgu-input-auto:focus + .sgu-autocomplete-list { border-top-color: transparent; border-radius: 0 0 8px 8px; }
+
+/* Keep classic bottom-line inputs for standard fields like Destino and Km */
 .sgu-form-input {
     width: 100%; border: none; background: transparent; color: #64748b; font-size: 1.1rem; font-weight: 800;
     outline: none; padding: 0; text-transform: uppercase;
@@ -81,6 +103,7 @@
 .sgu-form-input:focus { color: #0f172a; }
 .sgu-form-input:focus + .sgu-form-line { width: 100%; }
 .sgu-form-line { position: absolute; bottom: -2px; left: 0; width: 0; height: 2px; background: #2563eb; transition: width .3s ease; }
+
 
 /* Tasks Section */
 .sgu-section-title { font-size: .85rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: 1rem; letter-spacing: .05em; }
@@ -194,67 +217,30 @@
 .sgu-empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; font-size: .95rem; font-weight: 600; }
 </style>
 
-<!-- DataLists para Autocompletado -->
-<datalist id="dl-placas"></datalist>
-<datalist id="dl-conductores"></datalist>
-
-<div id="moduloSegUnidades">
-
-    <!-- ═══ VIEW: LISTA (Módulo de Unidades) ═════════════════════════════════════ -->
-    <div id="sgu-list" class="sgu-view active">
-        <div class="sgu-header-main">
-            <h2><i class="bi bi-truck"></i> Módulo de Unidades</h2>
-            <!-- Engranaje solo visible para Admin -->
-            <button class="sgu-btn-back" onclick="window._sguOpenSettings()" style="width:40px;height:40px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;" data-perm-crear="seguridad_unidades">
-                <i class="bi bi-gear"></i>
-            </button>
-        </div>
-
-        <button class="sgu-btn-registrar" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
-            <i class="bi bi-check-circle"></i> Registrar Salida (Checklist)
-        </button>
-
-        <div class="sgu-search-wrap">
-            <i class="bi bi-search"></i>
-            <input type="text" class="sgu-search" id="sgu-search" placeholder="Buscar por placa o chofer..." oninput="window._sguFilterList()">
-        </div>
-
-        <div class="sgu-tabs">
-            <button class="sgu-tab active" id="sgu-tab-activos" onclick="window._sguSetTab('activos')">En Ruta (<span id="sgu-count-ruta">0</span>)</button>
-            <button class="sgu-tab" id="sgu-tab-historial" onclick="window._sguSetTab('historial')">Historial</button>
-        </div>
-
-        <div id="sgu-records-list">
-            <div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>Cargando registros...</div>
-        </div>
-    </div>
-
-    <!-- ═══ VIEW: FORMULARIO (Salida Unidad) ═════════════════════════════════ -->
-    <div id="sgu-form" class="sgu-view">
-        <div class="sgu-header-sub">
-            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
-            <h2 id="sgu-form-title">Salida Unidad</h2>
-            <button class="sgu-btn-back" onclick="window._sguOpenScanner()" style="color:#64748b;"><i class="bi bi-qr-code-scan"></i></button>
-        </div>
-
         <!-- Form Inputs Card -->
         <div class="sgu-form-container">
             <div class="sgu-form-row">
-                <div class="sgu-form-group">
+                <div class="sgu-form-group" style="border:none;">
                     <label class="sgu-form-label">Tracto</label>
-                    <input type="text" class="sgu-form-input" id="sgu-f-placa" list="dl-placas" placeholder="ABC-123" oninput="window._sguCheckFormReady()">
-                    <div class="sgu-form-line"></div>
+                    <div class="sgu-autocomplete-wrap">
+                        <input type="text" class="sgu-input-auto" id="sgu-f-placa" placeholder="ABC-123" oninput="window._sguHandleAutoInput(this, 'placas')" onfocus="window._sguHandleAutoInput(this, 'placas')" autocomplete="off">
+                        <div class="sgu-autocomplete-list" id="sgu-auto-placa"></div>
+                    </div>
                 </div>
-                <div class="sgu-form-group">
+                <div class="sgu-form-group" style="border:none;">
                     <label class="sgu-form-label">Carreta</label>
-                    <input type="text" class="sgu-form-input" id="sgu-f-carreta" list="dl-placas" placeholder="XYZ-987" oninput="window._sguCheckFormReady()">
-                    <div class="sgu-form-line"></div>
+                    <div class="sgu-autocomplete-wrap">
+                        <input type="text" class="sgu-input-auto" id="sgu-f-carreta" placeholder="XYZ-987" oninput="window._sguHandleAutoInput(this, 'placas')" onfocus="window._sguHandleAutoInput(this, 'placas')" autocomplete="off">
+                        <div class="sgu-autocomplete-list" id="sgu-auto-carreta"></div>
+                    </div>
                 </div>
             </div>
-            <div class="sgu-form-group" style="margin-bottom:1.5rem;">
+            <div class="sgu-form-group" style="border:none;margin-bottom:1.5rem;">
                 <label class="sgu-form-label">Conductor</label>
-                <input type="text" class="sgu-form-input" id="sgu-f-conductor" list="dl-conductores" placeholder="NOMBRE" oninput="window._sguCheckFormReady()">
-                <div class="sgu-form-line"></div>
+                <div class="sgu-autocomplete-wrap">
+                    <input type="text" class="sgu-input-auto" id="sgu-f-conductor" placeholder="NOMBRE DEL CONDUCTOR" oninput="window._sguHandleAutoInput(this, 'conductores')" onfocus="window._sguHandleAutoInput(this, 'conductores')" autocomplete="off">
+                    <div class="sgu-autocomplete-list" id="sgu-auto-conductor"></div>
+                </div>
             </div>
             <div class="sgu-form-row">
                 <div class="sgu-form-group">
