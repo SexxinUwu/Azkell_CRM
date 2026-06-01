@@ -1,39 +1,17 @@
 // ================================================================
-// 🛡️ MÓDULO SEGURIDAD: UNIDADES (Checklist Camiones) — Lógica Aislada
-// Cargado dinámicamente por cargarModuloAislado('seguridad/unidades')
+// 🛡️ MÓDULO SEGURIDAD: UNIDADES (Checklist) — Lógica Aislada
+// Ahora conectado a MySQL vía API + fotos en AWS S3
 // ================================================================
 
 // ── ESTADO ───────────────────────────────────────────────────────
-var _sguCurrentTab = 'activos';
-var _sguFormMode = null;        // 'salida' | 'retorno'
-var _sguFormRecordId = null;    // ID del registro al registrar retorno
-var _sguChecklistData = null;   // checks temporales del modal
-var _sguFormPhotos = [];        // fotos temporales del form
-var _sguInputCallback = null;   // callback del modal de input
-
-// Plantilla global — snapshot pattern
-var _sguDefaultTemplate = [
-    { id: 'cat_1', title: 'Documentación', items: [{ id: 'i_11', label: 'Tarjeta de Propiedad' }, { id: 'i_12', label: 'Rev. Técnica y SOAT' }, { id: 'i_13', label: 'DNI, Licencia y SCTR' }] },
-    { id: 'cat_2', title: 'EPPs Personal', items: [{ id: 'i_21', label: 'Casco y Barbiquejo' }, { id: 'i_22', label: 'Chaleco Reflectivo' }, { id: 'i_23', label: 'Zapatos Seguridad' }] },
-    { id: 'cat_3', title: 'Físico y Seguridad', items: [{ id: 'i_31', label: 'Botiquín y Extintor' }, { id: 'i_32', label: 'Luces y Llantas' }, { id: 'i_33', label: 'Furgón Hermético' }] }
-];
-
-// Cargar datos de localStorage
-function _sguLoadRecords() {
-    try { return JSON.parse(localStorage.getItem('sgu_truck_records') || '[]'); } catch(e) { return []; }
-}
-function _sguSaveRecords(records) {
-    localStorage.setItem('sgu_truck_records', JSON.stringify(records));
-}
-function _sguLoadTemplate() {
-    try {
-        var t = JSON.parse(localStorage.getItem('sgu_global_template'));
-        return (t && t.length) ? t : _sguDefaultTemplate;
-    } catch(e) { return _sguDefaultTemplate; }
-}
-function _sguSaveTemplate(template) {
-    localStorage.setItem('sgu_global_template', JSON.stringify(template));
-}
+var _sguView = 'list';        // list | form | detail | settings
+var _sguRecords = [];         // Cargados desde API
+var _sguDetailId = null;
+var _sguGlobalTemplate = [];  // Cargado desde API
+var _sguChecklist = {};
+var _sguPhotos = { salida: [], retorno: [] };
+var _sguEditMode = 'salida';
+var _sguLoading = false;
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sguTimestamp() {
@@ -43,631 +21,610 @@ function _sguTimestamp() {
     var yy = String(d.getFullYear()).slice(-2);
     var HH = String(d.getHours()).padStart(2, '0');
     var MM = String(d.getMinutes()).padStart(2, '0');
-    var SS = String(d.getSeconds()).padStart(2, '0');
-    return { date: dd + '-' + mm + '-' + yy, time: HH + ':' + MM, timeFull: HH + ':' + MM + ':' + SS };
+    return { date: dd + '-' + mm + '-' + yy, time: HH + ':' + MM };
 }
 
-function _sguHasAlert(checks) {
-    if (!checks) return false;
-    return Object.values(checks).indexOf('mal') >= 0;
-}
-
-function _sguToast(msg) {
+function _sguToast(msg, icon) {
     var c = document.getElementById('sgu-toast-container');
     if (!c) return;
     var t = document.createElement('div');
     t.className = 'sgu-toast';
-    t.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#10b981;"></i> ' + msg;
+    t.innerHTML = '<i class="bi ' + (icon || 'bi-check-circle-fill') + '" style="color:#10b981;"></i> ' + msg;
     c.appendChild(t);
-    setTimeout(function() { if (t.parentNode) t.remove(); }, 3000);
+    setTimeout(function() { if (t.parentNode) t.remove(); }, 3500);
 }
 
-// ── NAVEGACIÓN INTERNA ──────────────────────────────────────────
-window._sguNav = function(view, data) {
-    var views = ['list', 'form', 'detail', 'settings'];
-    views.forEach(function(v) {
-        var el = document.getElementById('sgu-' + v);
-        if (el) { el.classList.remove('active'); }
+// ── API HELPERS ──────────────────────────────────────────────────
+function _sguFetch(url, opts) {
+    // El interceptor global de fetch ya agrega Authorization: Bearer ...
+    return fetch(url, opts).then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Error del servidor'); });
+        return r.json();
     });
-    var target = document.getElementById('sgu-' + view);
-    if (target) target.classList.add('active');
+}
 
-    if (view === 'list') {
-        _sguRenderList();
-    } else if (view === 'form') {
-        _sguInitForm(data);
-    } else if (view === 'detail') {
-        _sguRenderDetail(data);
-    } else if (view === 'settings') {
-        _sguRenderSettings();
-    }
+// ── CARGAR REGISTROS DESDE API ───────────────────────────────────
+function _sguLoadRecords(cb) {
+    _sguFetch('/api/seguridad/unidades').then(function(data) {
+        _sguRecords = data || [];
+        if (cb) cb();
+    }).catch(function(e) {
+        console.error('Error cargando unidades:', e);
+        _sguRecords = [];
+        if (cb) cb();
+    });
+}
+
+// ── CARGAR TEMPLATE DESDE API ────────────────────────────────────
+function _sguLoadTemplate(cb) {
+    _sguFetch('/api/seguridad/template').then(function(data) {
+        _sguGlobalTemplate = data || [];
+        // Si no hay template en BD, usar el default
+        if (!_sguGlobalTemplate.length) {
+            _sguGlobalTemplate = [
+                { id: 'cat_1', titulo: 'Documentación', items: [
+                    { id: 'i_11', label: 'Tarjeta de Propiedad' },
+                    { id: 'i_12', label: 'Rev. Técnica y SOAT' },
+                    { id: 'i_13', label: 'DNI, Licencia y SCTR' }
+                ]},
+                { id: 'cat_2', titulo: 'EPPs Personal', items: [
+                    { id: 'i_21', label: 'Casco y Barbiquejo' },
+                    { id: 'i_22', label: 'Chaleco Reflectivo' },
+                    { id: 'i_23', label: 'Zapatos Seguridad' }
+                ]},
+                { id: 'cat_3', titulo: 'Físico y Seguridad', items: [
+                    { id: 'i_31', label: 'Botiquín y Extintor' },
+                    { id: 'i_32', label: 'Luces y Llantas' },
+                    { id: 'i_33', label: 'Furgón Hermético' }
+                ]}
+            ];
+        }
+        if (cb) cb();
+    }).catch(function(e) {
+        console.error('Error cargando template:', e);
+        if (cb) cb();
+    });
+}
+
+function _sguSaveTemplate() {
+    _sguFetch('/api/seguridad/template', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: _sguGlobalTemplate })
+    }).then(function() {
+        _sguToast('Plantilla guardada');
+    }).catch(function(e) {
+        _sguToast('Error al guardar plantilla: ' + e.message, 'bi-exclamation-circle');
+    });
+}
+
+// ── NAVEGACIÓN ───────────────────────────────────────────────────
+window._sguShowView = function(view, id) {
+    _sguView = view;
+    if (id) _sguDetailId = id;
+    ['sgu-view-list', 'sgu-view-form', 'sgu-view-detail', 'sgu-view-settings'].forEach(function(v) {
+        var el = document.getElementById(v);
+        if (el) el.style.display = 'none';
+    });
+    var target = document.getElementById('sgu-view-' + view);
+    if (target) target.style.display = 'block';
+
+    if (view === 'list') { _sguRenderList(); }
+    else if (view === 'form') { _sguInitForm(); }
+    else if (view === 'detail') { _sguRenderDetail(id); }
+    else if (view === 'settings') { _sguRenderSettings(); }
 };
 
-// ── TAB SWITCH ──────────────────────────────────────────────────
-window._sguSetTab = function(tab) {
-    _sguCurrentTab = tab;
-    document.getElementById('sgu-tab-activos').classList.toggle('active', tab === 'activos');
-    document.getElementById('sgu-tab-historial').classList.toggle('active', tab === 'historial');
-    _sguRenderList();
-};
-
-// ── FILTRO ───────────────────────────────────────────────────────
-window._sguFilterList = function() {
-    _sguRenderList();
-};
-
-// ── RENDER: LISTA ────────────────────────────────────────────────
+// ── RENDER LISTA ─────────────────────────────────────────────────
 function _sguRenderList() {
-    var records = _sguLoadRecords();
+    var container = document.getElementById('sgu-records-container');
+    if (!container) return;
+
+    if (!_sguRecords.length) {
+        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No hay registros de unidades.</div>';
+        return;
+    }
+
     var search = (document.getElementById('sgu-search') || {}).value || '';
     search = search.toLowerCase().trim();
 
-    var filtered = records.filter(function(r) {
-        var matchTab = _sguCurrentTab === 'activos' ? r.estado === 'en_ruta' : r.estado === 'completado';
-        var matchSearch = !search ||
-            (r.placaTracto || '').toLowerCase().indexOf(search) >= 0 ||
-            (r.conductor || '').toLowerCase().indexOf(search) >= 0 ||
-            (r.placaCarreta || '').toLowerCase().indexOf(search) >= 0 ||
-            (r.destino || '').toLowerCase().indexOf(search) >= 0;
-        return matchTab && matchSearch;
+    var filtered = _sguRecords.filter(function(r) {
+        if (!search) return true;
+        return (r.placa_tracto || '').toLowerCase().indexOf(search) >= 0 ||
+               (r.conductor || '').toLowerCase().indexOf(search) >= 0 ||
+               (r.destino || '').toLowerCase().indexOf(search) >= 0;
     });
 
-    // Update count
-    var enRutaCount = records.filter(function(r) { return r.estado === 'en_ruta'; }).length;
-    var el = document.getElementById('sgu-count-ruta');
-    if (el) el.textContent = enRutaCount;
-
-    var container = document.getElementById('sgu-records-list');
-    if (!container) return;
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>' +
-            (search ? 'No se encontraron resultados.' : 'No hay registros para mostrar.') + '</div>';
+    if (!filtered.length) {
+        container.innerHTML = '<div class="sgu-empty"><i class="bi bi-search" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No se encontraron resultados.</div>';
         return;
     }
 
     var html = '';
-    filtered.forEach(function(r) {
-        var hasIssue = (r.salida && r.salida.hasAlert) || (r.retorno && r.retorno.hasAlert);
-        var barColor = r.estado === 'en_ruta' ? 'var(--crm-accent,#2563eb)' : '#cbd5e1';
-        var iconClass = r.estado === 'en_ruta' ? 'bi-truck-front-fill' : 'bi-check-circle-fill';
-        var iconBg = r.estado === 'en_ruta' ? 'rgba(37,99,235,.1)' : 'rgba(100,116,139,.1)';
-        var iconColor = r.estado === 'en_ruta' ? '#2563eb' : '#64748b';
-        var subText = r.estado === 'en_ruta'
-            ? ('Salió: ' + (r.salida ? r.salida.fecha + ' ' + r.salida.hora : '—') + (r.destino ? ' → ' + r.destino : ''))
-            : ('Completado: ' + (r.retorno ? r.retorno.fecha : '—'));
+    filtered.forEach(function(rec) {
+        var isEnRuta = rec.estado === 'en_ruta';
+        var badgeClass = isEnRuta ? 'sgu-badge-route' : 'sgu-badge-done';
+        var badgeText = isEnRuta ? 'En Ruta' : 'Completado';
+        var alertIcon = (rec.salida_has_alert || rec.retorno_has_alert)
+            ? '<i class="bi bi-exclamation-triangle-fill" style="color:#f59e0b;margin-left:.35rem;font-size:.7rem;" title="Tiene alertas"></i>'
+            : '';
 
-        html += '<div class="sgu-card" onclick="window._sguNav(\'detail\',\'' + r.id + '\')">' +
-            '<div class="sgu-card-bar" style="background:' + barColor + ';"></div>' +
-            '<div style="display:flex;align-items:center;gap:.75rem;padding-left:.5rem;">' +
-                '<div style="background:' + iconBg + ';color:' + iconColor + ';width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;">' +
-                    '<i class="bi ' + iconClass + '" style="font-size:1.1rem;"></i>' +
-                    (hasIssue ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;width:18px;height:18px;border-radius:50%;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;"><i class="bi bi-exclamation-triangle-fill" style="font-size:.55rem;"></i></div>' : '') +
+        html += '<div class="sgu-card" onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')" style="cursor:pointer;">' +
+            '<div class="sgu-card-header">' +
+                '<div>' +
+                    '<div style="font-weight:800;color:var(--text);font-size:.95rem;">' + rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '') + alertIcon + '</div>' +
+                    '<div style="font-size:.78rem;color:var(--subtext);">' + rec.conductor + (rec.destino ? ' → ' + rec.destino : '') + '</div>' +
                 '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                    '<div style="font-weight:800;color:var(--text);">' + (r.placaTracto || '—') + '</div>' +
-                    '<div style="font-size:.75rem;color:var(--subtext);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + subText + '</div>' +
-                '</div>' +
-                (r.estado === 'en_ruta'
-                    ? '<span class="sgu-badge sgu-badge-blue" style="flex-shrink:0;">En Ruta</span>'
-                    : '<i class="bi bi-chevron-right" style="color:var(--border);"></i>') +
+                '<span class="sgu-badge ' + badgeClass + '">' + badgeText + '</span>' +
+            '</div>' +
+            '<div class="sgu-card-footer">' +
+                '<span><i class="bi bi-calendar3" style="margin-right:.3rem;"></i>' + (rec.salida_fecha || '') + ' ' + (rec.salida_hora || '') + '</span>' +
+                '<span><i class="bi bi-speedometer2" style="margin-right:.3rem;"></i>' + (rec.salida_km || '---') + ' km</span>' +
             '</div>' +
         '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+// ── FORM: NUEVO REGISTRO ─────────────────────────────────────────
+function _sguInitForm() {
+    _sguEditMode = 'salida';
+    _sguChecklist = {};
+    _sguPhotos = { salida: [], retorno: [] };
+    var ts = _sguTimestamp();
+    var el;
+    el = document.getElementById('sgu-f-placa');     if (el) el.value = '';
+    el = document.getElementById('sgu-f-carreta');   if (el) el.value = '';
+    el = document.getElementById('sgu-f-conductor'); if (el) el.value = '';
+    el = document.getElementById('sgu-f-destino');   if (el) el.value = '';
+    el = document.getElementById('sgu-f-fecha');     if (el) el.value = ts.date;
+    el = document.getElementById('sgu-f-hora');      if (el) el.value = ts.time;
+    el = document.getElementById('sgu-f-km');        if (el) el.value = '';
+    _sguRenderChecklist('sgu-checklist-container');
+    _sguRenderPhotosUI('sgu-photos-container', 'salida');
+}
+
+// ── RENDER CHECKLIST ─────────────────────────────────────────────
+function _sguRenderChecklist(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!_sguGlobalTemplate.length) {
+        container.innerHTML = '<p style="color:var(--subtext);font-size:.85rem;text-align:center;padding:1rem;">No hay plantilla configurada. Ve a ⚙ Ajustes.</p>';
+        return;
+    }
+
+    var html = '';
+    _sguGlobalTemplate.forEach(function(cat) {
+        html += '<div class="sgu-check-cat">' +
+            '<div class="sgu-check-cat-header">' +
+                '<span style="font-weight:800;font-size:.82rem;color:var(--text);">' + cat.titulo + '</span>' +
+                '<button class="sgu-btn-allok" onclick="window._sguAllOK(\'' + cat.id + '\',\'' + containerId + '\')">Todo OK</button>' +
+            '</div>';
+
+        (cat.items || []).forEach(function(item) {
+            var val = _sguChecklist[item.id] || '';
+            html += '<div class="sgu-check-item">' +
+                '<span class="sgu-check-label">' + item.label + '</span>' +
+                '<div class="sgu-check-btns">' +
+                    '<button class="sgu-ck ' + (val === 'ok' ? 'sgu-ck-ok-active' : '') + '" onclick="window._sguSetCheck(\'' + item.id + '\',\'ok\',\'' + containerId + '\')" title="OK">✓</button>' +
+                    '<button class="sgu-ck ' + (val === 'mal' ? 'sgu-ck-mal-active' : '') + '" onclick="window._sguSetCheck(\'' + item.id + '\',\'mal\',\'' + containerId + '\')" title="Mal">✕</button>' +
+                    '<button class="sgu-ck ' + (val === 'na' ? 'sgu-ck-na-active' : '') + '" onclick="window._sguSetCheck(\'' + item.id + '\',\'na\',\'' + containerId + '\')" title="N/A">—</button>' +
+                '</div>' +
+            '</div>';
+        });
+
+        html += '</div>';
     });
     container.innerHTML = html;
 }
 
-// ── INIT FORM ────────────────────────────────────────────────────
-function _sguInitForm(data) {
-    _sguChecklistData = null;
-    _sguFormPhotos = [];
+window._sguSetCheck = function(itemId, valor, containerId) {
+    _sguChecklist[itemId] = (_sguChecklist[itemId] === valor) ? '' : valor;
+    _sguRenderChecklist(containerId);
+};
 
-    if (data && typeof data === 'string' && data.startsWith('retorno:')) {
-        _sguFormMode = 'retorno';
-        _sguFormRecordId = data.replace('retorno:', '');
-        var records = _sguLoadRecords();
-        var rec = records.find(function(r) { return r.id === _sguFormRecordId; });
-        document.getElementById('sgu-form-title').textContent = 'Registrar Llegada';
-        document.getElementById('sgu-btn-save-text').textContent = 'Registrar Llegada';
-        _sguRenderFormFields(rec, true);
-    } else {
-        _sguFormMode = 'salida';
-        _sguFormRecordId = null;
-        document.getElementById('sgu-form-title').textContent = 'Registrar Salida';
-        document.getElementById('sgu-btn-save-text').textContent = 'Registrar Salida';
-        _sguRenderFormFields(null, false);
-    }
+window._sguAllOK = function(catId, containerId) {
+    var cat = _sguGlobalTemplate.find(function(c) { return c.id === catId; });
+    if (cat) cat.items.forEach(function(item) { _sguChecklist[item.id] = 'ok'; });
+    _sguRenderChecklist(containerId);
+};
 
-    _sguUpdatePhotoGrid();
-    _sguUpdateChecklistStatus();
-    _sguUpdateSaveButton();
-}
-
-function _sguRenderFormFields(record, isRetorno) {
-    var container = document.getElementById('sgu-form-fields');
+// ── RENDER FOTOS UI ──────────────────────────────────────────────
+function _sguRenderPhotosUI(containerId, tipo) {
+    var container = document.getElementById(containerId);
     if (!container) return;
 
-    if (isRetorno && record) {
-        container.innerHTML =
-            '<div class="sgu-info-row">' +
-                '<div class="sgu-info-box"><div class="sgu-label">Placa Tracto</div><div style="font-weight:800;color:var(--text);">' + (record.placaTracto || '—') + '</div></div>' +
-                '<div class="sgu-info-box"><div class="sgu-label">Conductor</div><div style="font-weight:800;color:var(--text);">' + (record.conductor || '—') + '</div></div>' +
-            '</div>' +
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label">Kilometraje Actual</label>' +
-                '<input type="number" class="sgu-form-input" id="sgu-km" placeholder="Ej: 125000" min="0" oninput="window._sguUpdateSaveButton()">' +
-            '</div>';
-    } else {
-        container.innerHTML =
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label"><i class="bi bi-truck-front me-1"></i> Placa Tracto *</label>' +
-                '<input type="text" class="sgu-form-input" id="sgu-tracto" placeholder="Ej: C2Q-747" style="text-transform:uppercase;" oninput="window._sguUpdateSaveButton()">' +
-            '</div>' +
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label">Placa Carreta</label>' +
-                '<input type="text" class="sgu-form-input" id="sgu-carreta" placeholder="Opcional" style="text-transform:uppercase;">' +
-            '</div>' +
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label"><i class="bi bi-person-fill me-1"></i> Conductor *</label>' +
-                '<input type="text" class="sgu-form-input" id="sgu-conductor" placeholder="Nombre del conductor" style="text-transform:uppercase;" oninput="window._sguUpdateSaveButton()">' +
-            '</div>' +
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label"><i class="bi bi-geo-alt-fill me-1"></i> Destino</label>' +
-                '<input type="text" class="sgu-form-input" id="sgu-destino" placeholder="Ej: Arequipa" style="text-transform:uppercase;">' +
-            '</div>' +
-            '<div class="sgu-form-group">' +
-                '<label class="sgu-form-label">Kilometraje</label>' +
-                '<input type="number" class="sgu-form-input" id="sgu-km" placeholder="Ej: 125000" min="0">' +
-            '</div>';
-    }
-}
+    var photos = _sguPhotos[tipo] || [];
+    var html = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">';
 
-// ── PHOTOS ───────────────────────────────────────────────────────
-window._sguAddPhoto = function() {
-    // Use file input to pick image from gallery
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.onchange = function(e) {
-        var file = e.target.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-            _sguFormPhotos.push(ev.target.result);
-            _sguUpdatePhotoGrid();
-            _sguUpdateSaveButton();
-        };
-        reader.readAsDataURL(file);
-    };
-    input.click();
-};
-
-function _sguRemovePhoto(idx) {
-    _sguFormPhotos.splice(idx, 1);
-    _sguUpdatePhotoGrid();
-    _sguUpdateSaveButton();
-}
-
-function _sguUpdatePhotoGrid() {
-    var grid = document.getElementById('sgu-photo-grid');
-    if (!grid) return;
-    if (_sguFormPhotos.length === 0) { grid.innerHTML = ''; return; }
-
-    var html = '';
-    _sguFormPhotos.forEach(function(src, i) {
-        html += '<div class="sgu-photo-thumb">' +
-            '<img src="' + src + '" alt="foto">' +
-            '<div class="sgu-photo-del" onclick="event.stopPropagation();window._sguRemovePhoto(' + i + ')"><i class="bi bi-x"></i></div>' +
+    photos.forEach(function(p, i) {
+        html += '<div style="position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:2px solid var(--border);">' +
+            '<img src="' + p.url + '" style="width:100%;height:100%;object-fit:cover;">' +
+            '<button onclick="window._sguRemovePhoto(' + i + ',\'' + tipo + '\',\'' + containerId + '\')" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>' +
         '</div>';
     });
-    if (_sguFormPhotos.length < 20) {
-        html += '<div class="sgu-photo-add" onclick="window._sguAddPhoto()"><i class="bi bi-camera-fill"></i></div>';
-    }
-    grid.innerHTML = html;
+
+    html += '<label style="width:70px;height:70px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--subtext);font-size:1.3rem;">' +
+        '<i class="bi bi-camera-fill"></i>' +
+        '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="window._sguAddPhoto(this,\'' + tipo + '\',\'' + containerId + '\')">' +
+    '</label>';
+
+    html += '</div>';
+    container.innerHTML = html;
 }
-window._sguRemovePhoto = _sguRemovePhoto;
 
-// ── CHECKLIST ────────────────────────────────────────────────────
-window._sguOpenChecklist = function() {
-    var template = _sguLoadTemplate();
-    var checks = _sguChecklistData || {};
-    var body = document.getElementById('sgu-checklist-body');
-    if (!body) return;
+window._sguAddPhoto = function(input, tipo, containerId) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    // Preview inmediato con URL local
+    var localUrl = URL.createObjectURL(file);
+    _sguPhotos[tipo] = _sguPhotos[tipo] || [];
+    _sguPhotos[tipo].push({ url: localUrl, file: file, uploaded: false });
+    _sguRenderPhotosUI(containerId, tipo);
+    input.value = '';
+};
 
-    var html = '';
-    template.forEach(function(section) {
-        html += '<div class="sgu-check-section">' +
-            '<div class="sgu-check-header">' +
-                '<h4>' + section.title + '</h4>' +
-                '<button class="sgu-badge sgu-badge-blue" style="border:none;cursor:pointer;" onclick="window._sguCheckAllOk(\'' + section.id + '\')">✓ Todo OK</button>' +
-            '</div>';
-        section.items.forEach(function(item) {
-            var s = checks[item.id] || '';
-            html += '<div class="sgu-check-item">' +
-                '<span>' + item.label + '</span>' +
-                '<div class="sgu-check-btns">' +
-                    '<button class="sgu-check-btn mal' + (s === 'mal' ? ' active' : '') + '" onclick="window._sguCheckMark(\'' + item.id + '\',\'mal\')"><i class="bi bi-x-circle-fill"></i></button>' +
-                    '<button class="sgu-check-btn na' + (s === 'na' ? ' active' : '') + '" onclick="window._sguCheckMark(\'' + item.id + '\',\'na\')">N/A</button>' +
-                    '<button class="sgu-check-btn ok' + (s === 'ok' ? ' active' : '') + '" onclick="window._sguCheckMark(\'' + item.id + '\',\'ok\')"><i class="bi bi-check-circle-fill"></i></button>' +
-                '</div>' +
-            '</div>';
+window._sguRemovePhoto = function(index, tipo, containerId) {
+    var photo = _sguPhotos[tipo][index];
+    if (photo && photo.s3Id) {
+        // Si ya está en S3, eliminar del servidor
+        var regId = _sguDetailId || '';
+        _sguFetch('/api/seguridad/unidades/' + regId + '/fotos/' + photo.s3Id, { method: 'DELETE' })
+            .catch(function(e) { console.warn('Error eliminando foto:', e); });
+    }
+    _sguPhotos[tipo].splice(index, 1);
+    _sguRenderPhotosUI(containerId, tipo);
+};
+
+// ── SUBIR FOTOS A S3 ─────────────────────────────────────────────
+function _sguUploadPhotos(registroId, tipo, cb) {
+    var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
+    if (!pendientes.length) return cb();
+
+    var uploaded = 0;
+    pendientes.forEach(function(p) {
+        var formData = new FormData();
+        formData.append('foto', p.file);
+        formData.append('tipo', tipo);
+
+        fetch('/api/seguridad/unidades/' + registroId + '/fotos', {
+            method: 'POST',
+            body: formData
+        }).then(function(r) { return r.json(); })
+        .then(function(data) {
+            p.uploaded = true;
+            p.url = data.url;
+            p.s3Id = data.id;
+            uploaded++;
+            if (uploaded >= pendientes.length) cb();
+        }).catch(function(e) {
+            console.error('Error subiendo foto:', e);
+            uploaded++;
+            if (uploaded >= pendientes.length) cb();
         });
-        html += '</div>';
     });
-    body.innerHTML = html;
-
-    _sguUpdateChecklistSaveBtn();
-    document.getElementById('sgu-checklist-overlay').classList.add('show');
-};
-
-window._sguCloseChecklist = function() {
-    document.getElementById('sgu-checklist-overlay').classList.remove('show');
-};
-
-window._sguCheckMark = function(itemId, value) {
-    if (!_sguChecklistData) _sguChecklistData = {};
-    _sguChecklistData[itemId] = value;
-
-    // Update button visuals
-    var template = _sguLoadTemplate();
-    template.forEach(function(section) {
-        section.items.forEach(function(item) {
-            if (item.id === itemId) {
-                var parent = document.querySelector('.sgu-check-item span[class]');
-                // Re-render is simpler
-            }
-        });
-    });
-    // Re-render checklist to update visuals
-    window._sguOpenChecklist();
-};
-
-window._sguCheckAllOk = function(sectionId) {
-    if (!_sguChecklistData) _sguChecklistData = {};
-    var template = _sguLoadTemplate();
-    var section = template.find(function(s) { return s.id === sectionId; });
-    if (section) {
-        section.items.forEach(function(item) {
-            _sguChecklistData[item.id] = 'ok';
-        });
-    }
-    window._sguOpenChecklist();
-};
-
-window._sguSaveChecklist = function() {
-    document.getElementById('sgu-checklist-overlay').classList.remove('show');
-    _sguUpdateChecklistStatus();
-    _sguUpdateSaveButton();
-    _sguToast('Checklist guardado');
-};
-
-function _sguUpdateChecklistSaveBtn() {
-    var template = _sguLoadTemplate();
-    var totalItems = template.reduce(function(acc, s) { return acc + s.items.length; }, 0);
-    var markedItems = _sguChecklistData ? Object.keys(_sguChecklistData).length : 0;
-    var btn = document.getElementById('sgu-checklist-save-btn');
-    if (btn) {
-        var complete = markedItems >= totalItems;
-        btn.disabled = !complete;
-        btn.className = 'sgu-badge ' + (complete ? 'sgu-badge-blue' : 'sgu-badge-gray');
-        btn.style.cursor = complete ? 'pointer' : 'not-allowed';
-    }
 }
 
-function _sguUpdateChecklistStatus() {
-    var el = document.getElementById('sgu-checklist-status');
-    if (!el) return;
-    if (_sguChecklistData && Object.keys(_sguChecklistData).length > 0) {
-        var template = _sguLoadTemplate();
-        var total = template.reduce(function(acc, s) { return acc + s.items.length; }, 0);
-        var marked = Object.keys(_sguChecklistData).length;
-        el.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Checklist Completo (' + marked + '/' + total + ')';
-    } else {
-        el.textContent = 'Abrir Checklist';
-    }
-}
-
-// ── SAVE BUTTON STATE ────────────────────────────────────────────
-window._sguUpdateSaveButton = function() {
-    var btn = document.getElementById('sgu-btn-save');
-    if (!btn) return;
-
-    var isReady = false;
-    if (_sguFormMode === 'retorno') {
-        isReady = _sguFormPhotos.length > 0 && _sguChecklistData !== null && Object.keys(_sguChecklistData).length > 0;
-    } else {
-        var tracto = (document.getElementById('sgu-tracto') || {}).value || '';
-        var conductor = (document.getElementById('sgu-conductor') || {}).value || '';
-        isReady = tracto.trim() !== '' && conductor.trim() !== '' && _sguFormPhotos.length > 0 && _sguChecklistData !== null && Object.keys(_sguChecklistData).length > 0;
-    }
-    btn.disabled = !isReady;
-};
-
-// ── SAVE RECORD ──────────────────────────────────────────────────
+// ── GUARDAR REGISTRO ─────────────────────────────────────────────
 window._sguSaveRecord = function() {
-    var ts = _sguTimestamp();
-    var template = _sguLoadTemplate();
-    var km = (document.getElementById('sgu-km') || {}).value || '';
+    var placa     = (document.getElementById('sgu-f-placa')     || {}).value || '';
+    var carreta   = (document.getElementById('sgu-f-carreta')   || {}).value || '';
+    var conductor = (document.getElementById('sgu-f-conductor') || {}).value || '';
+    var destino   = (document.getElementById('sgu-f-destino')   || {}).value || '';
+    var fecha     = (document.getElementById('sgu-f-fecha')     || {}).value || '';
+    var hora      = (document.getElementById('sgu-f-hora')      || {}).value || '';
+    var km        = (document.getElementById('sgu-f-km')        || {}).value || '';
 
-    var eventData = {
-        fecha: ts.date,
-        hora: ts.time,
-        km: km,
-        fotos: _sguFormPhotos.slice(),
-        template: JSON.parse(JSON.stringify(template)), // SNAPSHOT
-        checklist: JSON.parse(JSON.stringify(_sguChecklistData || {})),
-        hasAlert: _sguHasAlert(_sguChecklistData)
+    if (!placa) { _sguToast('Ingrese la placa del tracto', 'bi-exclamation-circle'); return; }
+    if (!conductor) { _sguToast('Ingrese el conductor', 'bi-exclamation-circle'); return; }
+
+    var hasAlert = false;
+    for (var key in _sguChecklist) {
+        if (_sguChecklist[key] === 'mal') { hasAlert = true; break; }
+    }
+
+    var regId = 'REQ-' + Date.now();
+    var body = {
+        id: regId,
+        placa_tracto: placa.toUpperCase(),
+        placa_carreta: carreta.toUpperCase() || null,
+        conductor: conductor,
+        destino: destino,
+        salida_fecha: fecha,
+        salida_hora: hora,
+        salida_km: km,
+        salida_template_json: _sguGlobalTemplate,
+        salida_checklist_json: _sguChecklist,
+        salida_has_alert: hasAlert
     };
 
-    var records = _sguLoadRecords();
-
-    if (_sguFormMode === 'retorno' && _sguFormRecordId) {
-        var idx = records.findIndex(function(r) { return r.id === _sguFormRecordId; });
-        if (idx >= 0) {
-            records[idx].retorno = eventData;
-            records[idx].estado = 'completado';
-            _sguSaveRecords(records);
-            _sguToast('Llegada registrada correctamente');
-            window._sguNav('list');
-        }
-    } else {
-        var tracto = (document.getElementById('sgu-tracto') || {}).value || '';
-        var carreta = (document.getElementById('sgu-carreta') || {}).value || '';
-        var conductor = (document.getElementById('sgu-conductor') || {}).value || '';
-        var destino = (document.getElementById('sgu-destino') || {}).value || '';
-
-        var newRecord = {
-            id: 'REQ-' + Date.now(),
-            placaTracto: tracto.toUpperCase().trim(),
-            placaCarreta: carreta.toUpperCase().trim(),
-            conductor: conductor.toUpperCase().trim(),
-            destino: destino.toUpperCase().trim(),
-            estado: 'en_ruta',
-            salida: eventData,
-            retorno: null
-        };
-
-        records.unshift(newRecord);
-        _sguSaveRecords(records);
-        _sguToast('Salida registrada correctamente');
-        window._sguNav('list');
-    }
+    _sguToast('Guardando...');
+    _sguFetch('/api/seguridad/unidades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    }).then(function(data) {
+        // Subir fotos a S3
+        _sguUploadPhotos(data.id, 'salida', function() {
+            _sguToast('Registro guardado exitosamente');
+            _sguLoadRecords(function() {
+                window._sguShowView('list');
+            });
+        });
+    }).catch(function(e) {
+        _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
+    });
 };
 
-// ── RENDER: DETAIL ───────────────────────────────────────────────
-function _sguRenderDetail(recordId) {
-    var records = _sguLoadRecords();
-    var r = records.find(function(rec) { return rec.id === recordId; });
-    if (!r) { window._sguNav('list'); return; }
+// ── REGISTRAR RETORNO ────────────────────────────────────────────
+window._sguRegisterReturn = function(recordId) {
+    _sguDetailId = recordId;
+    _sguEditMode = 'retorno';
+    _sguChecklist = {};
+    _sguPhotos.retorno = [];
 
-    document.getElementById('sgu-detail-title').textContent = r.placaTracto || 'Detalle';
+    // Reusar el form pero en modo retorno
+    window._sguShowView('form');
+
+    var ts = _sguTimestamp();
+    var rec = _sguRecords.find(function(r) { return r.id === recordId; });
+
+    document.getElementById('sgu-f-placa').value     = rec ? rec.placa_tracto : '';
+    document.getElementById('sgu-f-carreta').value   = rec ? (rec.placa_carreta || '') : '';
+    document.getElementById('sgu-f-conductor').value = rec ? rec.conductor : '';
+    document.getElementById('sgu-f-destino').value   = rec ? (rec.destino || '') : '';
+    document.getElementById('sgu-f-fecha').value     = ts.date;
+    document.getElementById('sgu-f-hora').value      = ts.time;
+    document.getElementById('sgu-f-km').value        = '';
+
+    // Deshabilitar campos que no se editan en retorno
+    document.getElementById('sgu-f-placa').disabled     = true;
+    document.getElementById('sgu-f-carreta').disabled   = true;
+    document.getElementById('sgu-f-conductor').disabled = true;
+    document.getElementById('sgu-f-destino').disabled   = true;
+
+    // Cambiar botón de guardar
+    var btnGuardar = document.getElementById('sgu-btn-guardar');
+    if (btnGuardar) {
+        btnGuardar.textContent = 'Registrar Retorno';
+        btnGuardar.onclick = function() { window._sguSaveReturn(recordId); };
+    }
+
+    _sguRenderChecklist('sgu-checklist-container');
+    _sguRenderPhotosUI('sgu-photos-container', 'retorno');
+};
+
+window._sguSaveReturn = function(recordId) {
+    var fecha = (document.getElementById('sgu-f-fecha') || {}).value || '';
+    var hora  = (document.getElementById('sgu-f-hora')  || {}).value || '';
+    var km    = (document.getElementById('sgu-f-km')    || {}).value || '';
+
+    var hasAlert = false;
+    for (var key in _sguChecklist) {
+        if (_sguChecklist[key] === 'mal') { hasAlert = true; break; }
+    }
+
+    var body = {
+        retorno_fecha: fecha,
+        retorno_hora: hora,
+        retorno_km: km,
+        retorno_template_json: _sguGlobalTemplate,
+        retorno_checklist_json: _sguChecklist,
+        retorno_has_alert: hasAlert,
+        estado: 'completado'
+    };
+
+    _sguToast('Guardando retorno...');
+    _sguFetch('/api/seguridad/unidades/' + recordId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    }).then(function() {
+        _sguUploadPhotos(recordId, 'retorno', function() {
+            _sguToast('Retorno registrado exitosamente');
+            // Rehabilitar campos
+            ['sgu-f-placa','sgu-f-carreta','sgu-f-conductor','sgu-f-destino'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
+            var btnGuardar = document.getElementById('sgu-btn-guardar');
+            if (btnGuardar) {
+                btnGuardar.textContent = 'Guardar Registro';
+                btnGuardar.onclick = window._sguSaveRecord;
+            }
+            _sguEditMode = 'salida';
+            _sguLoadRecords(function() {
+                window._sguShowView('list');
+            });
+        });
+    }).catch(function(e) {
+        _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
+    });
+};
+
+// ── RENDER DETALLE ───────────────────────────────────────────────
+function _sguRenderDetail(recordId) {
     var container = document.getElementById('sgu-detail-content');
     if (!container) return;
 
-    var statusBadge = r.estado === 'en_ruta'
-        ? '<span class="sgu-badge sgu-badge-blue">En Ruta</span>'
-        : '<span class="sgu-badge sgu-badge-green">Completado</span>';
+    var rec = _sguRecords.find(function(r) { return r.id === recordId; });
+    if (!rec) { container.innerHTML = '<p>Registro no encontrado.</p>'; return; }
 
-    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">' +
+    var isEnRuta = rec.estado === 'en_ruta';
+
+    var html = '';
+
+    // Header
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">' +
         '<div>' +
-            '<div style="font-weight:800;font-size:1.15rem;color:var(--text);">' + r.placaTracto + '</div>' +
-            '<div style="font-size:.8rem;color:var(--subtext);">' + (r.conductor || '—') + (r.destino ? ' → ' + r.destino : '') + '</div>' +
-        '</div>' + statusBadge +
+            '<div style="font-weight:900;font-size:1.15rem;color:var(--text);">' + rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '') + '</div>' +
+            '<div style="font-size:.82rem;color:var(--subtext);">' + rec.conductor + '</div>' +
+        '</div>' +
+        '<span class="sgu-badge ' + (isEnRuta ? 'sgu-badge-route' : 'sgu-badge-done') + '">' + (isEnRuta ? 'En Ruta' : 'Completado') + '</span>' +
     '</div>';
 
-    // Info card
-    html += '<div class="sgu-info-row">' +
-        '<div class="sgu-info-box"><div class="sgu-label">ID</div><div style="font-weight:700;color:var(--text);font-size:.85rem;">' + r.id + '</div></div>' +
-        (r.placaCarreta ? '<div class="sgu-info-box"><div class="sgu-label">Carreta</div><div style="font-weight:700;color:var(--text);">' + r.placaCarreta + '</div></div>' : '') +
+    // Info
+    html += '<div class="sgu-detail-grid">' +
+        '<div class="sgu-detail-item"><div class="sgu-detail-label">Destino</div><div class="sgu-detail-value">' + (rec.destino || '—') + '</div></div>' +
+        '<div class="sgu-detail-item"><div class="sgu-detail-label">Salida</div><div class="sgu-detail-value">' + (rec.salida_fecha || '') + ' ' + (rec.salida_hora || '') + '</div></div>' +
+        '<div class="sgu-detail-item"><div class="sgu-detail-label">KM Salida</div><div class="sgu-detail-value">' + (rec.salida_km || '—') + '</div></div>' +
     '</div>';
 
-    // Salida section
-    if (r.salida) {
-        html += _sguRenderEventSection('Salida', r.salida, 'bi-box-arrow-right', '#2563eb');
+    if (rec.retorno_fecha) {
+        html += '<div class="sgu-detail-grid" style="margin-top:.5rem;">' +
+            '<div class="sgu-detail-item"><div class="sgu-detail-label">Retorno</div><div class="sgu-detail-value">' + rec.retorno_fecha + ' ' + (rec.retorno_hora || '') + '</div></div>' +
+            '<div class="sgu-detail-item"><div class="sgu-detail-label">KM Retorno</div><div class="sgu-detail-value">' + (rec.retorno_km || '—') + '</div></div>' +
+        '</div>';
     }
 
-    // Retorno section
-    if (r.retorno) {
-        html += _sguRenderEventSection('Retorno', r.retorno, 'bi-box-arrow-in-left', '#059669');
+    // Checklist de Salida
+    if (rec.salida_checklist_json && rec.salida_template_json) {
+        html += _sguRenderChecklistPreview('Checklist de Salida', rec.salida_template_json, rec.salida_checklist_json);
     }
 
-    // Action button
-    if (r.estado === 'en_ruta') {
-        html += '<button class="sgu-btn-primary orange" onclick="window._sguNav(\'form\',\'retorno:' + r.id + '\')" style="margin-top:1rem;">' +
-            '<i class="bi bi-box-arrow-in-left"></i> Registrar Llegada' +
-        '</button>';
+    // Checklist de Retorno
+    if (rec.retorno_checklist_json && rec.retorno_template_json) {
+        html += _sguRenderChecklistPreview('Checklist de Retorno', rec.retorno_template_json, rec.retorno_checklist_json);
     }
 
-    // Delete button
-    html += '<button class="sgu-btn-outline" onclick="window._sguDeleteRecord(\'' + r.id + '\')" style="margin-top:.75rem;color:#ef4444;border-color:#fecaca;">' +
-        '<i class="bi bi-trash"></i> Eliminar Registro' +
-    '</button>';
+    // Fotos
+    if (rec.fotos && rec.fotos.length) {
+        html += '<div style="margin-top:1rem;"><div style="font-weight:800;font-size:.82rem;color:var(--text);margin-bottom:.5rem;">📷 Evidencia Fotográfica</div>';
+        html += '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">';
+        rec.fotos.forEach(function(f) {
+            html += '<img src="' + f.url + '" style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid var(--border);cursor:pointer;" onclick="window.open(\'' + f.url + '\',\'_blank\')">';
+        });
+        html += '</div></div>';
+    }
+
+    // Acciones
+    if (isEnRuta) {
+        html += '<div style="margin-top:1.25rem;">' +
+            '<button onclick="window._sguRegisterReturn(\'' + rec.id + '\')" style="width:100%;padding:.85rem;border-radius:14px;border:none;background:#2563eb;color:#fff;font-weight:800;font-size:.9rem;cursor:pointer;">' +
+            '<i class="bi bi-box-arrow-in-left" style="margin-right:.5rem;"></i>Registrar Retorno</button></div>';
+    }
+
+    html += '<div style="margin-top:.75rem;">' +
+        '<button onclick="if(confirm(\'¿Eliminar este registro?\'))window._sguDeleteRecord(\'' + rec.id + '\')" style="width:100%;padding:.65rem;border-radius:12px;border:2px solid rgba(239,68,68,.2);background:transparent;color:#ef4444;font-weight:700;font-size:.82rem;cursor:pointer;">' +
+        '<i class="bi bi-trash3" style="margin-right:.4rem;"></i>Eliminar Registro</button></div>';
 
     container.innerHTML = html;
 }
 
-function _sguRenderEventSection(title, data, icon, color) {
-    var html = '<div style="margin-bottom:1rem;">' +
-        '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">' +
-            '<i class="bi ' + icon + '" style="color:' + color + ';"></i>' +
-            '<span style="font-weight:800;color:var(--text);">' + title + '</span>' +
-            (data.hasAlert ? '<span class="sgu-badge sgu-badge-red"><i class="bi bi-exclamation-triangle-fill me-1"></i>Observaciones</span>' : '') +
-        '</div>' +
-        '<div class="sgu-info-row">' +
-            '<div class="sgu-info-box"><div class="sgu-label">Fecha y Hora</div><div style="font-weight:700;color:var(--text);font-size:.85rem;">' + data.fecha + ' - ' + data.hora + '</div></div>' +
-            '<div class="sgu-info-box"><div class="sgu-label">Kilometraje</div><div style="font-weight:700;color:var(--text);font-size:.85rem;">' + (data.km || '—') + '</div></div>' +
-        '</div>';
+function _sguRenderChecklistPreview(titulo, template, checklist) {
+    var html = '<div style="margin-top:1rem;">' +
+        '<div style="font-weight:800;font-size:.82rem;color:var(--text);margin-bottom:.5rem;">' + titulo + '</div>';
 
-    // Checklist preview button
-    html += '<button class="sgu-btn-outline" style="margin-bottom:.5rem;" onclick="window._sguShowChecklistPreview(\'' + title + '\',\'' + btoa(JSON.stringify({ template: data.template, checklist: data.checklist })) + '\')">' +
-        '<i class="bi bi-clipboard2-check"></i> Ver Checklist de ' + title +
-    '</button>';
-
-    // Photos
-    if (data.fotos && data.fotos.length > 0) {
-        html += '<div class="sgu-photo-grid">';
-        data.fotos.forEach(function(src) {
-            html += '<div class="sgu-photo-thumb" style="cursor:default;"><img src="' + src + '" alt="evidencia"></div>';
+    (template || []).forEach(function(cat) {
+        html += '<div style="margin-bottom:.5rem;">' +
+            '<div style="font-size:.7rem;font-weight:700;color:var(--subtext);text-transform:uppercase;margin-bottom:.25rem;">' + cat.titulo + '</div>';
+        (cat.items || []).forEach(function(item) {
+            var val = (checklist || {})[item.id] || '';
+            var icon = val === 'ok' ? '<span style="color:#10b981;">✓</span>' :
+                       val === 'mal' ? '<span style="color:#ef4444;">✕</span>' :
+                       val === 'na' ? '<span style="color:#94a3b8;">—</span>' : '<span style="color:#cbd5e1;">○</span>';
+            html += '<div style="display:flex;justify-content:space-between;padding:.2rem 0;font-size:.78rem;">' +
+                '<span style="color:var(--text);">' + item.label + '</span>' + icon + '</div>';
         });
         html += '</div>';
-    }
+    });
 
     html += '</div>';
     return html;
 }
 
-// ── CHECKLIST PREVIEW ────────────────────────────────────────────
-window._sguShowChecklistPreview = function(title, encodedData) {
-    try {
-        var data = JSON.parse(atob(encodedData));
-        var body = document.getElementById('sgu-preview-body');
-        document.getElementById('sgu-preview-title').textContent = 'Checklist de ' + title;
-
-        var html = '';
-        (data.template || []).forEach(function(section) {
-            html += '<div class="sgu-check-section">' +
-                '<div class="sgu-check-header"><h4>' + section.title + '</h4></div>';
-            section.items.forEach(function(item) {
-                var status = data.checklist[item.id];
-                var statusHtml = '';
-                if (status === 'ok') statusHtml = '<i class="bi bi-check-circle-fill" style="color:#10b981;font-size:1.1rem;"></i>';
-                else if (status === 'mal') statusHtml = '<i class="bi bi-x-circle-fill" style="color:#ef4444;font-size:1.1rem;"></i>';
-                else if (status === 'na') statusHtml = '<span class="sgu-badge sgu-badge-gray">N/A</span>';
-                else statusHtml = '<span style="font-size:.75rem;color:var(--subtext);font-style:italic;">Sin marcar</span>';
-
-                html += '<div class="sgu-check-item"><span>' + item.label + '</span>' + statusHtml + '</div>';
-            });
-            html += '</div>';
-        });
-        body.innerHTML = html;
-        document.getElementById('sgu-preview-overlay').classList.add('show');
-    } catch(e) { console.error('Error preview:', e); }
-};
-
-// ── DELETE RECORD ────────────────────────────────────────────────
+// ── ELIMINAR REGISTRO ────────────────────────────────────────────
 window._sguDeleteRecord = function(id) {
-    if (typeof window.confirmar === 'function') {
-        window.confirmar({
-            titulo: '¿Eliminar registro?',
-            mensaje: 'Esta acción no se puede deshacer.',
-            icono: '🗑️',
-            tipo: 'danger',
-            btnConfirmar: 'Eliminar'
-        }).then(function(ok) {
-            if (ok) {
-                var records = _sguLoadRecords();
-                records = records.filter(function(r) { return r.id !== id; });
-                _sguSaveRecords(records);
-                _sguToast('Registro eliminado');
-                window._sguNav('list');
-            }
+    _sguFetch('/api/seguridad/unidades/' + id, { method: 'DELETE' })
+        .then(function() {
+            _sguToast('Registro eliminado');
+            _sguLoadRecords(function() {
+                window._sguShowView('list');
+            });
+        }).catch(function(e) {
+            _sguToast('Error: ' + e.message, 'bi-exclamation-circle');
         });
-    } else if (confirm('¿Eliminar este registro?')) {
-        var records = _sguLoadRecords();
-        records = records.filter(function(r) { return r.id !== id; });
-        _sguSaveRecords(records);
-        _sguToast('Registro eliminado');
-        window._sguNav('list');
-    }
 };
 
-// ── RENDER: SETTINGS ─────────────────────────────────────────────
+// ── SETTINGS: EDITOR DE PLANTILLA ────────────────────────────────
 function _sguRenderSettings() {
-    var template = _sguLoadTemplate();
-    var container = document.getElementById('sgu-settings-list');
+    var container = document.getElementById('sgu-settings-content');
     if (!container) return;
 
     var html = '';
-    template.forEach(function(cat, index) {
-        html += '<div class="sgu-check-section" style="margin-bottom:.75rem;">' +
-            '<div class="sgu-check-header">' +
-                '<h4><span style="background:var(--border);color:var(--subtext);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;margin-right:.5rem;">' + (index + 1) + '</span>' + cat.title + '</h4>' +
-                '<button class="sgu-settings-del" onclick="window._sguDeleteCategory(\'' + cat.id + '\')" title="Eliminar categoría"><i class="bi bi-trash" style="font-size:.9rem;"></i></button>' +
+    _sguGlobalTemplate.forEach(function(cat, ci) {
+        html += '<div class="sgu-card" style="margin-bottom:.75rem;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">' +
+                '<input type="text" value="' + cat.titulo + '" onchange="window._sguEditCatTitle(' + ci + ',this.value)" style="border:none;background:transparent;font-weight:800;font-size:.9rem;color:var(--text);outline:none;flex:1;">' +
+                '<button onclick="window._sguRemoveCat(' + ci + ')" style="border:none;background:rgba(239,68,68,.1);color:#ef4444;border-radius:8px;padding:.25rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;">Eliminar</button>' +
             '</div>';
-        cat.items.forEach(function(item) {
-            html += '<div class="sgu-settings-item">' +
-                '<span>' + item.label + '</span>' +
-                '<button class="sgu-settings-del" onclick="window._sguDeleteItem(\'' + cat.id + '\',\'' + item.id + '\')"><i class="bi bi-x-lg" style="font-size:.75rem;"></i></button>' +
+
+        (cat.items || []).forEach(function(item, ii) {
+            html += '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">' +
+                '<span style="color:var(--subtext);font-size:.7rem;">•</span>' +
+                '<input type="text" value="' + item.label + '" onchange="window._sguEditItemLabel(' + ci + ',' + ii + ',this.value)" style="flex:1;border:none;background:transparent;font-size:.82rem;color:var(--text);outline:none;">' +
+                '<button onclick="window._sguRemoveItem(' + ci + ',' + ii + ')" style="border:none;background:transparent;color:#ef4444;font-size:.75rem;cursor:pointer;"><i class="bi bi-x-circle"></i></button>' +
             '</div>';
         });
-        html += '<div style="padding:.65rem;background:var(--bg);border-top:1px solid var(--border);">' +
-            '<button class="sgu-btn-outline" onclick="window._sguAddItem(\'' + cat.id + '\',\'' + cat.title + '\')">' +
-                '<i class="bi bi-plus-lg"></i> Añadir Subcategoría' +
-            '</button>' +
-        '</div></div>';
+
+        html += '<button onclick="window._sguAddItem(' + ci + ')" style="border:none;background:rgba(37,99,235,.06);color:#2563eb;border-radius:8px;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;margin-top:.25rem;"><i class="bi bi-plus-circle" style="margin-right:.3rem;"></i>Agregar ítem</button>';
+        html += '</div>';
     });
+
+    html += '<button onclick="window._sguAddCat()" style="width:100%;padding:.75rem;border-radius:14px;border:2px dashed var(--border);background:transparent;color:var(--subtext);font-weight:700;font-size:.85rem;cursor:pointer;margin-top:.5rem;"><i class="bi bi-plus-lg" style="margin-right:.4rem;"></i>Nueva Categoría</button>';
+
     container.innerHTML = html;
 }
 
-// ── SETTINGS: ADD/DELETE ─────────────────────────────────────────
-window._sguAddCategory = function() {
-    _sguShowInput('Nueva Categoría Principal', 'Ej: Revisión de Cabina', function(val) {
-        var template = _sguLoadTemplate();
-        template.push({ id: 'cat_' + Date.now(), title: val.toUpperCase(), items: [] });
-        _sguSaveTemplate(template);
-        _sguRenderSettings();
-        _sguToast('Categoría añadida');
-    });
-};
+window._sguEditCatTitle = function(ci, val) { _sguGlobalTemplate[ci].titulo = val; _sguSaveTemplate(); };
+window._sguEditItemLabel = function(ci, ii, val) { _sguGlobalTemplate[ci].items[ii].label = val; _sguSaveTemplate(); };
 
-window._sguAddItem = function(catId, catTitle) {
-    _sguShowInput('Nuevo ítem en ' + catTitle, 'Ej: Extintor vigente', function(val) {
-        var template = _sguLoadTemplate();
-        var cat = template.find(function(c) { return c.id === catId; });
-        if (cat) {
-            cat.items.push({ id: 'i_' + Date.now(), label: val });
-            _sguSaveTemplate(template);
-            _sguRenderSettings();
-            _sguToast('Ítem añadido');
-        }
-    });
-};
-
-window._sguDeleteCategory = function(catId) {
-    var template = _sguLoadTemplate();
-    template = template.filter(function(c) { return c.id !== catId; });
-    _sguSaveTemplate(template);
+window._sguRemoveCat = function(ci) {
+    _sguGlobalTemplate.splice(ci, 1);
+    _sguSaveTemplate();
     _sguRenderSettings();
-    _sguToast('Categoría eliminada');
 };
 
-window._sguDeleteItem = function(catId, itemId) {
-    var template = _sguLoadTemplate();
-    var cat = template.find(function(c) { return c.id === catId; });
-    if (cat) {
-        cat.items = cat.items.filter(function(i) { return i.id !== itemId; });
-        _sguSaveTemplate(template);
-        _sguRenderSettings();
+window._sguRemoveItem = function(ci, ii) {
+    _sguGlobalTemplate[ci].items.splice(ii, 1);
+    _sguSaveTemplate();
+    _sguRenderSettings();
+};
+
+window._sguAddItem = function(ci) {
+    var newId = 'i_' + Date.now();
+    _sguGlobalTemplate[ci].items.push({ id: newId, label: 'Nuevo ítem' });
+    _sguSaveTemplate();
+    _sguRenderSettings();
+};
+
+window._sguAddCat = function() {
+    var newId = 'cat_' + Date.now();
+    _sguGlobalTemplate.push({ id: newId, titulo: 'Nueva Categoría', items: [] });
+    _sguSaveTemplate();
+    _sguRenderSettings();
+};
+
+// ── ESCÁNER QR ───────────────────────────────────────────────────
+window._sguOpenScanner = function() {
+    if (typeof window._abrirEscaner === 'function') {
+        window._abrirEscaner(function(scannedText) {
+            var el = document.getElementById('sgu-f-placa');
+            if (el) el.value = scannedText.trim().toUpperCase();
+        }, 'Escanear Placa');
+    } else {
+        _sguToast('Escáner no disponible', 'bi-exclamation-circle');
     }
-};
-
-// ── INPUT MODAL ──────────────────────────────────────────────────
-function _sguShowInput(title, placeholder, callback) {
-    _sguInputCallback = callback;
-    document.getElementById('sgu-input-title').textContent = title;
-    var inp = document.getElementById('sgu-input-value');
-    inp.value = '';
-    inp.placeholder = placeholder;
-    document.getElementById('sgu-input-modal').style.display = 'flex';
-    setTimeout(function() { inp.focus(); }, 100);
-}
-
-window._sguCloseInput = function() {
-    document.getElementById('sgu-input-modal').style.display = 'none';
-    _sguInputCallback = null;
-};
-
-window._sguConfirmInput = function() {
-    var val = (document.getElementById('sgu-input-value') || {}).value || '';
-    if (val.trim() && _sguInputCallback) {
-        _sguInputCallback(val.trim());
-    }
-    window._sguCloseInput();
 };
 
 // ── INIT ─────────────────────────────────────────────────────────
 window.init_unidades = function() {
-    _sguCurrentTab = 'activos';
-    window._sguNav('list');
+    _sguView = 'list';
+    _sguLoadTemplate(function() {
+        _sguLoadRecords(function() {
+            window._sguShowView('list');
+        });
+    });
 };

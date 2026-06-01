@@ -922,6 +922,12 @@ app.post('/api/login', (req, res) => {
 const tallerRoutes = require('./routes/taller')(db, logAudit, _generarCodigoAlmacen);
 app.use('/api', tallerRoutes);
 
+// ============================================================
+// 🛡️ RUTAS SEGURIDAD (Unidades checklist + Asistencia QR)
+// ============================================================
+const seguridadRoutes = require('./routes/seguridad')(db, logAudit);
+app.use('/api', seguridadRoutes);
+
 // (legacyRoutes se movió más abajo para no interceptar los endpoints que siguen)
 
 app.get('/api/cat-rampas', (req, res) => {
