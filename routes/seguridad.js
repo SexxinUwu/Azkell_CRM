@@ -234,6 +234,23 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── GET /seguridad/recursos — Autocomplete Placas y Directorio ──
+    router.get('/seguridad/recursos', (req, res) => {
+        const recursos = { placas: [], conductores: [] };
+        
+        // Consultar Placas
+        db.query('SELECT placa FROM placas ORDER BY placa ASC', (errP, rowsP) => {
+            if (!errP && rowsP) recursos.placas = rowsP.map(r => r.placa);
+            
+            // Consultar Directorio (Conductores)
+            db.query('SELECT nombre FROM directorio ORDER BY nombre ASC', (errD, rowsD) => {
+                if (!errD && rowsD) recursos.conductores = rowsD.map(r => r.nombre);
+                
+                res.json(recursos);
+            });
+        });
+    });
+
     // ════════════════════════════════════════════════════════════════
     // ASISTENCIA — Control de Personal QR
     // ════════════════════════════════════════════════════════════════
