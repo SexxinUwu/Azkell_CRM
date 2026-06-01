@@ -1,6 +1,5 @@
 <!-- ═══════════════════════════════════════════════════════════════════
      MÓDULO SEGURIDAD: UNIDADES (Checklist Camiones) — Vista Aislada
-     Cargado por cargarModuloAislado('seguridad/unidades')
 ═══════════════════════════════════════════════════════════════════ -->
 <style>
 /* ── Scoped Styles: Seguridad Unidades ─────────────────────────── */
@@ -9,14 +8,20 @@
 @keyframes sguFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Headers */
-.sgu-header-main { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+.sgu-header-main { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
 .sgu-header-main h2 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: .5rem; }
-.sgu-header-main i { color: #2563eb; }
+.sgu-header-main h2 i { color: #2563eb; }
 
 .sgu-header-sub { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
-.sgu-header-sub h2 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; }
+.sgu-header-sub-left { display: flex; align-items: center; gap: .75rem; }
+.sgu-header-sub h2 { margin: 0; font-size: 1.1rem; font-weight: 900; color: #0f172a; }
+.sgu-header-sub .subtitle { font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin: 0; }
 
 .sgu-btn-back { background: none; border: none; color: #0f172a; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
+
+.sgu-badge-header { font-size: .65rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: .05em; }
+.sgu-badge-header.en-ruta { background: #eff6ff; color: #2563eb; }
+.sgu-badge-header.completado { background: #f1f5f9; color: #64748b; }
 
 /* Action Buttons */
 .sgu-btn-registrar {
@@ -26,7 +31,7 @@
 }
 .sgu-btn-registrar:active { transform: scale(0.97); }
 
-/* Search */
+/* Search & Tabs */
 .sgu-search-wrap { position: relative; margin-bottom: 1.25rem; }
 .sgu-search-wrap i { position: absolute; left: 1.1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
 .sgu-search {
@@ -34,9 +39,7 @@
     font-size: .95rem; color: #0f172a; outline: none; transition: border-color .2s; box-shadow: 0 2px 4px rgba(0,0,0,.02);
 }
 .sgu-search:focus { border-color: #2563eb; }
-.sgu-search::placeholder { color: #94a3b8; font-weight: 500; }
 
-/* Tabs */
 .sgu-tabs { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 1.5rem; }
 .sgu-tab {
     flex: 1; text-align: center; padding: .65rem .5rem; font-size: .9rem; font-weight: 700; border-radius: 10px; cursor: pointer; border: none;
@@ -57,26 +60,21 @@
 }
 .sgu-list-card-alert {
     position: absolute; top: -2px; right: -2px; background: #ef4444; color: #fff; width: 18px; height: 18px;
-    border-radius: 50%; font-size: .6rem; display: flex; align-items: center; justify-content: center;
-    border: 2px solid #fff;
+    border-radius: 50%; font-size: .6rem; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
 }
 .sgu-list-card-info { flex: 1; margin-left: 1rem; }
 .sgu-list-card-title { font-weight: 900; color: #0f172a; font-size: 1.1rem; margin: 0 0 .2rem; }
 .sgu-list-card-subtitle { color: #64748b; font-size: .85rem; margin: 0; }
-.sgu-btn-ingresar {
-    background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700;
-    padding: .5rem 1rem; border-radius: 10px; font-size: .85rem; cursor: pointer; transition: all .15s;
-}
-.sgu-btn-ingresar:active { background: #dbeafe; }
+.sgu-btn-ingresar { background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700; padding: .5rem 1rem; border-radius: 10px; font-size: .85rem; cursor: pointer; }
 
 /* Form Container */
 .sgu-form-container { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,.02); }
 .sgu-form-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
 .sgu-form-group { flex: 1; border-bottom: 2px solid #e2e8f0; padding-bottom: .25rem; position: relative; }
 .sgu-form-group:last-child { margin-bottom: 0; }
-.sgu-form-label { font-size: .75rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: .4rem; display: block; letter-spacing: .05em; }
+.sgu-form-label { font-size: .7rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: .4rem; display: block; letter-spacing: .05em; }
 .sgu-form-input {
-    width: 100%; border: none; background: transparent; color: #64748b; font-size: 1.15rem; font-weight: 800;
+    width: 100%; border: none; background: transparent; color: #64748b; font-size: 1.1rem; font-weight: 800;
     outline: none; padding: 0; text-transform: uppercase;
 }
 .sgu-form-input::placeholder { color: #cbd5e1; font-weight: 700; }
@@ -90,21 +88,17 @@
     background: #fff; border: 1px solid #fed7aa; border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem;
     display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(249,115,22,.05);
 }
-.sgu-task-icon-wrap { width: 50px; height: 50px; border-radius: 50%; background: #fff7ed; display: flex; align-items: center; justify-content: center; }
-.sgu-task-icon { color: #ea580c; font-size: 1.4rem; }
+.sgu-task-icon-wrap { width: 44px; height: 44px; border-radius: 50%; background: #fff7ed; display: flex; align-items: center; justify-content: center; }
+.sgu-task-icon { color: #ea580c; font-size: 1.2rem; }
 .sgu-task-info { flex: 1; margin-left: 1rem; }
-.sgu-task-title { font-weight: 900; color: #0f172a; font-size: 1.05rem; margin: 0 0 .2rem; }
-.sgu-task-desc { color: #64748b; font-size: .85rem; margin: 0; }
-.sgu-btn-task {
-    background: #fff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700;
-    padding: .6rem 1.2rem; border-radius: 10px; font-size: .9rem; cursor: pointer; transition: all .15s;
-}
-.sgu-btn-task:active { background: #eff6ff; }
-.sgu-btn-task.done { background: #10b981; color: #fff; border-color: #10b981; }
+.sgu-task-title { font-weight: 900; color: #0f172a; font-size: 1rem; margin: 0 0 .1rem; }
+.sgu-task-desc { color: #64748b; font-size: .8rem; margin: 0; }
+.sgu-btn-task { background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700; padding: .5rem 1rem; border-radius: 10px; font-size: .85rem; cursor: pointer; }
+.sgu-btn-task.done { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
 
 .sgu-btn-submit {
-    width: 100%; background: #e2e8f0; color: #64748b; font-weight: 800; padding: 1.25rem; border-radius: 16px; border: none;
-    font-size: 1.05rem; cursor: pointer; transition: all .2s; margin-top: 1rem;
+    width: 100%; background: #e2e8f0; color: #64748b; font-weight: 800; padding: 1.15rem; border-radius: 16px; border: none;
+    font-size: 1.05rem; cursor: pointer; transition: all .2s; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: .5rem;
 }
 .sgu-btn-submit.ready { background: #2563eb; color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,.25); }
 .sgu-btn-submit.ready:active { transform: scale(0.97); }
@@ -118,33 +112,91 @@
     background: #fff; border-bottom: 1px solid #e2e8f0; padding: 1rem 1.25rem; display: flex; justify-content: space-between;
     align-items: center; position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 10px rgba(0,0,0,.02);
 }
-.sgu-overlay-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+.sgu-overlay-header h3 { margin: 0; font-size: 1.1rem; font-weight: 900; color: #0f172a; }
 
-/* Photo grid */
-.sgu-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
-.sgu-photo-thumb { aspect-ratio: 1; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid #e2e8f0; }
-.sgu-photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.sgu-photo-del {
-    position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: #fff; border: none; width: 24px; height: 24px;
-    border-radius: 50%; font-size: .7rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-.sgu-photo-add {
-    aspect-ratio: 1; border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center;
-    color: #94a3b8; cursor: pointer; background: transparent; font-size: 1.5rem;
-}
+/* Checklist Overlay UI */
+.sgu-alert-box { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 12px; padding: 1rem; font-size: .85rem; display: flex; gap: .75rem; margin-bottom: 1.5rem; }
+.sgu-alert-box i { font-size: 1.1rem; }
 
-/* Checklist items */
-.sgu-check-cat-title { font-size: .85rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin: 1.5rem 0 .75rem; letter-spacing: .05em; }
-.sgu-check-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: center; }
-.sgu-check-label { font-size: .95rem; font-weight: 700; color: #0f172a; flex: 1; }
-.sgu-check-btns { display: flex; gap: 8px; }
-.sgu-check-btn { padding: .5rem; border-radius: 8px; border: none; background: #f1f5f9; color: #64748b; font-weight: 800; font-size: .9rem; cursor: pointer; transition: all .15s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-.sgu-check-btn.ok.active { background: #ecfdf5; color: #10b981; box-shadow: inset 0 0 0 2px #10b981; }
-.sgu-check-btn.mal.active { background: #fef2f2; color: #ef4444; box-shadow: inset 0 0 0 2px #ef4444; }
-.sgu-check-btn.na.active { background: #1e293b; color: #fff; }
+.sgu-chk-cat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 1rem; overflow: hidden; }
+.sgu-chk-cat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.sgu-chk-cat-title { font-weight: 900; font-size: 1rem; color: #0f172a; margin: 0; }
+.sgu-btn-all-ok { background: #eff6ff; color: #2563eb; border: none; font-size: .75rem; font-weight: 800; padding: .35rem .75rem; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: .3rem; }
+
+.sgu-chk-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; }
+.sgu-chk-item:last-child { border-bottom: none; }
+.sgu-chk-label { font-size: .9rem; font-weight: 600; color: #334155; }
+.sgu-chk-actions { display: flex; gap: .5rem; }
+.sgu-chk-circle {
+    width: 32px; height: 32px; border-radius: 50%; border: 1px solid #cbd5e1; background: #f8fafc; color: #94a3b8;
+    display: flex; align-items: center; justify-content: center; font-size: .85rem; font-weight: 800; cursor: pointer; transition: all .2s;
+}
+.sgu-chk-circle.x.active { background: #ef4444; border-color: #ef4444; color: #fff; }
+.sgu-chk-circle.na.active { background: #64748b; border-color: #64748b; color: #fff; font-size: .65rem; }
+.sgu-chk-circle.ok.active { background: #10b981; border-color: #10b981; color: #fff; }
+
+/* Photos Bottom Sheet */
+.sgu-bsheet-overlay { display: none; position: fixed; inset: 0; z-index: 1070; background: rgba(15,23,42,.6); backdrop-filter: blur(4px); align-items: flex-end; }
+.sgu-bsheet-overlay.show { display: flex; }
+.sgu-bsheet-content { background: #fff; border-radius: 24px 24px 0 0; width: 100%; padding: 1.5rem; animation: sguSlideUp .25s ease; }
+.sgu-bsheet-handle { width: 40px; height: 4px; background: #cbd5e1; border-radius: 4px; margin: 0 auto 1.5rem; }
+.sgu-bsheet-title { font-weight: 900; color: #0f172a; font-size: 1.1rem; margin: 0 0 1.5rem; }
+
+.sgu-bsheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.sgu-bsheet-btn {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem;
+    display: flex; flex-direction: column; align-items: center; gap: .75rem; cursor: pointer; color: #0f172a; font-weight: 800; font-size: .9rem;
+}
+.sgu-bsheet-btn i { font-size: 2rem; }
+
+/* Detalle Cards */
+.sgu-det-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; display: flex; gap: .75rem; }
+.sgu-det-alert i { font-size: 1.2rem; }
+.sgu-det-alert h4 { margin: 0 0 .25rem; font-weight: 800; font-size: .95rem; }
+.sgu-det-alert p { margin: 0; font-size: .8rem; }
+
+.sgu-det-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,.02); }
+.sgu-det-card-primary { border: 1px solid #bfdbfe; box-shadow: 0 4px 16px rgba(37,99,235,.06); }
+.sgu-det-card-dark { background: #1e293b; border: none; color: #fff; }
+.sgu-det-card-title { display: flex; align-items: center; gap: .5rem; font-weight: 900; font-size: 1rem; color: #0f172a; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: .05em; }
+.sgu-det-card-dark .sgu-det-card-title { color: #fff; }
+
+.sgu-det-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.sgu-det-col { flex: 1; }
+.sgu-det-label { font-size: .7rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: .25rem; }
+.sgu-det-value { font-weight: 900; font-size: 1.1rem; color: #0f172a; }
+
+.sgu-det-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-top: 1.25rem; }
+.sgu-det-action-btn {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .75rem .25rem;
+    display: flex; flex-direction: column; align-items: center; gap: .4rem; font-size: .75rem; font-weight: 800; cursor: pointer;
+}
+.sgu-det-action-btn i { font-size: 1.2rem; }
+
+/* Settings View (Constructor Dinámico) */
+.sgu-set-alert { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 1rem; color: #1e40af; font-size: .85rem; display: flex; gap: .75rem; margin-bottom: 1.5rem; }
+.sgu-set-alert i { font-size: 1.2rem; }
+.sgu-set-cat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.02); }
+.sgu-set-cat-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.sgu-set-cat-title-wrap { display: flex; align-items: center; gap: .75rem; flex: 1; }
+.sgu-set-cat-num { width: 28px; height: 28px; border-radius: 50%; background: #cbd5e1; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: .85rem; }
+.sgu-set-cat-title { font-weight: 900; color: #0f172a; font-size: 1rem; border: none; background: transparent; outline: none; width: 100%; }
+.sgu-btn-del-cat { color: #ef4444; background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: .25rem; }
+
+.sgu-set-item { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1.25rem; border-bottom: 1px solid #f1f5f9; }
+.sgu-set-item-input { flex: 1; border: none; background: transparent; font-size: .9rem; color: #334155; font-weight: 600; outline: none; }
+.sgu-btn-del-item { color: #cbd5e1; background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: .25rem; }
+.sgu-btn-del-item:hover { color: #ef4444; }
+
+.sgu-btn-add-item { width: calc(100% - 2.5rem); margin: 1rem 1.25rem; padding: .75rem; border: 1px dashed #cbd5e1; border-radius: 12px; background: transparent; color: #64748b; font-weight: 700; font-size: .85rem; cursor: pointer; }
+.sgu-btn-add-cat { width: 100%; padding: 1.15rem; background: #1e293b; color: #fff; border-radius: 16px; border: none; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .5rem; margin-bottom: 2rem; box-shadow: 0 6px 16px rgba(15,23,42,.25); }
 
 .sgu-empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; font-size: .95rem; font-weight: 600; }
 </style>
+
+<!-- DataLists para Autocompletado -->
+<datalist id="dl-placas"></datalist>
+<datalist id="dl-conductores"></datalist>
 
 <div id="moduloSegUnidades">
 
@@ -152,6 +204,10 @@
     <div id="sgu-list" class="sgu-view active">
         <div class="sgu-header-main">
             <h2><i class="bi bi-truck"></i> Módulo de Unidades</h2>
+            <!-- Engranaje solo visible para Admin -->
+            <button class="sgu-btn-back" onclick="window._sguOpenSettings()" style="width:40px;height:40px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;" data-perm-crear="seguridad_unidades">
+                <i class="bi bi-gear"></i>
+            </button>
         </div>
 
         <button class="sgu-btn-registrar" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
@@ -169,7 +225,7 @@
         </div>
 
         <div id="sgu-records-list">
-            <div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No hay registros para mostrar.</div>
+            <div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>Cargando registros...</div>
         </div>
     </div>
 
@@ -186,18 +242,18 @@
             <div class="sgu-form-row">
                 <div class="sgu-form-group">
                     <label class="sgu-form-label">Tracto</label>
-                    <input type="text" class="sgu-form-input" id="sgu-f-placa" placeholder="ABC-123" oninput="window._sguCheckFormReady()">
+                    <input type="text" class="sgu-form-input" id="sgu-f-placa" list="dl-placas" placeholder="ABC-123" oninput="window._sguCheckFormReady()">
                     <div class="sgu-form-line"></div>
                 </div>
                 <div class="sgu-form-group">
                     <label class="sgu-form-label">Carreta</label>
-                    <input type="text" class="sgu-form-input" id="sgu-f-carreta" placeholder="XYZ-987" oninput="window._sguCheckFormReady()">
+                    <input type="text" class="sgu-form-input" id="sgu-f-carreta" list="dl-placas" placeholder="XYZ-987" oninput="window._sguCheckFormReady()">
                     <div class="sgu-form-line"></div>
                 </div>
             </div>
             <div class="sgu-form-group" style="margin-bottom:1.5rem;">
                 <label class="sgu-form-label">Conductor</label>
-                <input type="text" class="sgu-form-input" id="sgu-f-conductor" placeholder="NOMBRE" oninput="window._sguCheckFormReady()">
+                <input type="text" class="sgu-form-input" id="sgu-f-conductor" list="dl-conductores" placeholder="NOMBRE" oninput="window._sguCheckFormReady()">
                 <div class="sgu-form-line"></div>
             </div>
             <div class="sgu-form-row">
@@ -216,17 +272,15 @@
 
         <div class="sgu-section-title">Tareas Obligatorias</div>
 
-        <!-- Fotos Card -->
         <div class="sgu-task-card">
             <div class="sgu-task-icon-wrap"><i class="bi bi-camera sgu-task-icon"></i></div>
             <div class="sgu-task-info">
                 <h4 class="sgu-task-title">Fotos Salida</h4>
                 <p class="sgu-task-desc" id="sgu-photo-desc">Tome fotos de la unidad.</p>
             </div>
-            <button class="sgu-btn-task" id="sgu-btn-open-photos" onclick="window._sguOpenPhotos()">Añadir</button>
+            <button class="sgu-btn-task" id="sgu-btn-open-photos" onclick="window._sguOpenPhotosChooser('salida')">Añadir</button>
         </div>
 
-        <!-- Checklist Card -->
         <div class="sgu-task-card">
             <div class="sgu-task-icon-wrap"><i class="bi bi-clipboard-check sgu-task-icon"></i></div>
             <div class="sgu-task-info">
@@ -243,30 +297,43 @@
 
     <!-- ═══ VIEW: DETALLE DE CAMIÓN ═════════════════════════════════ -->
     <div id="sgu-detail" class="sgu-view">
-        <div class="sgu-header-sub">
-            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
-            <h2 id="sgu-detail-title">Detalle Unidad</h2>
-            <div style="width:24px;"></div> <!-- spacer -->
+        <div class="sgu-header-sub" style="align-items:flex-start;">
+            <div class="sgu-header-sub-left">
+                <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
+                <div>
+                    <h2 id="sgu-det-head-placa">A1B-234</h2>
+                    <p class="subtitle" id="sgu-det-head-cond">NOMBRE CONDUCTOR</p>
+                </div>
+            </div>
+            <div id="sgu-det-head-badge" class="sgu-badge-header completado">COMPLETADO</div>
         </div>
         <div id="sgu-detail-content" style="padding-bottom:2rem;">
             <!-- Dynamic detail content rendered by logica.js -->
         </div>
     </div>
 
-</div>
-
-<!-- ═══ OVERLAY: FOTOS MODAL ════════════════════════════════════ -->
-<div id="sgu-photos-overlay" class="sgu-overlay">
-    <div class="sgu-overlay-header">
-        <div style="display:flex;align-items:center;gap:.5rem;">
-            <button class="sgu-btn-back" onclick="document.getElementById('sgu-photos-overlay').classList.remove('show')"><i class="bi bi-chevron-left"></i></button>
-            <h3>Evidencia Fotográfica</h3>
+    <!-- ═══ VIEW: AJUSTES (Constructor de Checklist) ════════════════ -->
+    <div id="sgu-settings" class="sgu-view">
+        <div class="sgu-header-sub">
+            <button class="sgu-btn-back" onclick="window._sguNav('list'); window._sguLoadTemplate();"><i class="bi bi-chevron-left"></i></button>
+            <h2>Ajustes de Checklist</h2>
+            <button class="sgu-btn-back" onclick="window._sguSaveSettings()" style="color:#2563eb;"><i class="bi bi-cloud-check"></i></button>
         </div>
-        <button class="sgu-btn-task done" onclick="document.getElementById('sgu-photos-overlay').classList.remove('show'); window._sguCheckFormReady();" style="padding:.4rem 1rem;">Listo</button>
+
+        <div class="sgu-set-alert">
+            <i class="bi bi-info-circle"></i>
+            <div>
+                <strong>Constructor Dinámico:</strong> Agregue o quite apartados. Los cambios se aplicarán <strong>solo a los nuevos registros</strong>. El historial conservará su plantilla original de forma inmutable.
+            </div>
+        </div>
+
+        <div id="sgu-settings-container"></div>
+        
+        <button class="sgu-btn-add-cat" onclick="window._sguAddSettingsCat()">
+            <i class="bi bi-plus-lg"></i> Crear Nueva Categoría
+        </button>
     </div>
-    <div style="padding:1.5rem;" id="sgu-photos-container">
-        <!-- Rendered by logica.js -->
-    </div>
+
 </div>
 
 <!-- ═══ OVERLAY: CHECKLIST MODAL ════════════════════════════════════ -->
@@ -274,12 +341,36 @@
     <div class="sgu-overlay-header">
         <div style="display:flex;align-items:center;gap:.5rem;">
             <button class="sgu-btn-back" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show')"><i class="bi bi-chevron-left"></i></button>
-            <h3>Checklist de Inspección</h3>
+            <h3 id="sgu-chk-overlay-title">Checklist Salida</h3>
         </div>
-        <button class="sgu-btn-task done" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show'); window._sguCheckFormReady();" style="padding:.4rem 1rem;">Guardar</button>
+        <button class="sgu-btn-task" style="padding:.4rem 1rem;background:#e2e8f0;border:none;color:#64748b;" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show'); window._sguCheckFormReady();">Guardar</button>
     </div>
-    <div style="padding:0 1.5rem 2rem;" id="sgu-checklist-container">
+    <div style="padding:1.5rem;" id="sgu-checklist-container">
         <!-- Rendered by logica.js -->
+    </div>
+</div>
+
+<!-- ═══ BOTTOM SHEET: AÑADIR FOTOS ══════════════════════════════════ -->
+<div id="sgu-photos-bsheet" class="sgu-bsheet-overlay" onclick="if(event.target===this) this.classList.remove('show')">
+    <div class="sgu-bsheet-content">
+        <div class="sgu-bsheet-handle"></div>
+        <h3 class="sgu-bsheet-title">Añadir Evidencia</h3>
+        <div class="sgu-bsheet-grid">
+            <label class="sgu-bsheet-btn">
+                <div style="background:#1e293b;color:#fff;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-camera"></i>
+                </div>
+                Abrir Cámara
+                <input type="file" accept="image/*" capture="environment" style="display:none;" id="sgu-input-cam">
+            </label>
+            <label class="sgu-bsheet-btn">
+                <div style="background:#2563eb;color:#fff;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-image"></i>
+                </div>
+                Galería
+                <input type="file" accept="image/*" multiple style="display:none;" id="sgu-input-gal">
+            </label>
+        </div>
     </div>
 </div>
 
