@@ -52,14 +52,62 @@ window.init_unidades = function() {
     });
 };
 
+var _sguRecursos = { placas: [], conductores: [] };
+
 function _sguLoadResources() {
     _sguFetch('/api/seguridad/recursos').then(function(data) {
-        var dp = document.getElementById('dl-placas');
-        var dc = document.getElementById('dl-conductores');
-        if (dp && data.placas) dp.innerHTML = data.placas.map(function(p){return '<option value="'+p+'">';}).join('');
-        if (dc && data.conductores) dc.innerHTML = data.conductores.map(function(c){return '<option value="'+c+'">';}).join('');
+        if (data.placas) _sguRecursos.placas = data.placas;
+        if (data.conductores) _sguRecursos.conductores = data.conductores;
     }).catch(function(){}); // Ignorar si falla
 }
+
+// ── CUSTOM AUTOCOMPLETE LOGIC ────────────────────────────────────
+window._sguHandleAutoInput = function(input, type) {
+    var val = input.value.toLowerCase().trim();
+    var listEl = input.nextElementSibling;
+    if (!listEl || !listEl.classList.contains('sgu-autocomplete-list')) return;
+
+    var items = _sguRecursos[type] || [];
+    var filtered = items.filter(function(item) {
+        return item.toLowerCase().indexOf(val) >= 0;
+    });
+
+    // Limit to top 50 to prevent huge DOM if lists are too large
+    filtered = filtered.slice(0, 50);
+
+    var html = '';
+    if (filtered.length === 0) {
+        html = '<div class="sgu-autocomplete-empty">No se encontraron resultados...</div>';
+    } else {
+        filtered.forEach(function(item) {
+            // Escape quotes for onclick
+            var safeItem = item.replace(/'/g, "\\'");
+            html += '<div class="sgu-autocomplete-item" onclick="window._sguSelectAutoItem(\'' + input.id + '\', \'' + safeItem + '\')">' + item + '</div>';
+        });
+    }
+
+    listEl.innerHTML = html;
+    listEl.classList.add('show');
+    window._sguCheckFormReady();
+};
+
+window._sguSelectAutoItem = function(inputId, value) {
+    var input = document.getElementById(inputId);
+    if (input) {
+        input.value = value;
+        var listEl = input.nextElementSibling;
+        if (listEl) listEl.classList.remove('show');
+        window._sguCheckFormReady();
+    }
+};
+
+// Close autocomplete lists when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.sgu-autocomplete-wrap')) {
+        var lists = document.querySelectorAll('.sgu-autocomplete-list');
+        lists.forEach(function(l) { l.classList.remove('show'); });
+    }
+});
 
 function _sguLoadRecords(cb) {
     _sguFetch('/api/seguridad/unidades').then(function(data) {
