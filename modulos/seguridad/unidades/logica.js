@@ -63,6 +63,12 @@ function _sguLoadResources() {
 
 // ── CUSTOM AUTOCOMPLETE LOGIC ────────────────────────────────────
 window._sguHandleAutoInput = function(input, type) {
+    // Hide all other lists first
+    var allLists = document.querySelectorAll('.sgu-autocomplete-list');
+    allLists.forEach(function(l) {
+        if (l !== input.nextElementSibling) l.classList.remove('show');
+    });
+
     var val = input.value.toLowerCase().trim();
     var listEl = input.nextElementSibling;
     if (!listEl || !listEl.classList.contains('sgu-autocomplete-list')) return;
