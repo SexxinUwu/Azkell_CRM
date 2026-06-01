@@ -242,8 +242,8 @@ module.exports = (db, logAudit) => {
         db.query('SELECT placa FROM placas ORDER BY placa ASC', (errP, rowsP) => {
             if (!errP && rowsP) recursos.placas = rowsP.map(r => r.placa);
             
-            // Consultar Directorio (Conductores)
-            db.query('SELECT nombre FROM directorio ORDER BY nombre ASC', (errD, rowsD) => {
+            // Consultar Conductores (Directorio)
+            db.query('SELECT nombre FROM conductores ORDER BY nombre ASC', (errD, rowsD) => {
                 if (!errD && rowsD) recursos.conductores = rowsD.map(r => r.nombre);
                 
                 res.json(recursos);
