@@ -1,18 +1,10 @@
 // ================================================================
 // 🛡️ MÓDULO SEGURIDAD: ASISTENCIA (Control QR) — Lógica Aislada
-// Cargado dinámicamente por cargarModuloAislado('seguridad/asistencia')
+// Ahora conectado a MySQL vía API
 // ================================================================
 
 // ── ESTADO ───────────────────────────────────────────────────────
 var _sgaLastScanResult = null;
-
-// ── PERSISTENCIA ─────────────────────────────────────────────────
-function _sgaLoadRecords() {
-    try { return JSON.parse(localStorage.getItem('sga_attendance_records') || '[]'); } catch(e) { return []; }
-}
-function _sgaSaveRecords(records) {
-    localStorage.setItem('sga_attendance_records', JSON.stringify(records));
-}
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sgaTimestamp() {
@@ -51,6 +43,14 @@ function _sgaGetTodayISO() {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+// ── API HELPERS ──────────────────────────────────────────────────
+function _sgaFetch(url, opts) {
+    return fetch(url, opts).then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Error del servidor'); });
+        return r.json();
+    });
+}
+
 // ── ESCÁNER QR ───────────────────────────────────────────────────
 window._sgaOpenScanner = function() {
     if (typeof window._abrirEscaner === 'function') {
@@ -58,7 +58,6 @@ window._sgaOpenScanner = function() {
             window._sgaProcessDNI(scannedText.trim());
         }, 'Escanear QR Personal');
     } else {
-        // Fallback: abrir ingreso manual
         window._sgaOpenManual();
         _sgaToast('Escáner no disponible, use ingreso manual', 'bi-exclamation-circle');
     }
@@ -89,74 +88,33 @@ window._sgaProcessManualDNI = function() {
 // ── PROCESAR DNI (desde escáner o manual) ────────────────────────
 window._sgaProcessDNI = function(dni, nombreManual, cargoManual) {
     if (!dni) return;
-    var records = _sgaLoadRecords();
-    var ts = _sgaTimestamp();
 
-    // Buscar si tiene registro abierto HOY (ingresó pero no salió)
-    var openRecordIndex = -1;
-    for (var i = 0; i < records.length; i++) {
-        if (records[i].dni === dni && records[i].fechaIngreso === ts.date && records[i].horaSalida === null) {
-            openRecordIndex = i;
-            break;
-        }
-    }
+    var body = { dni: dni };
+    if (nombreManual) body.nombre = nombreManual;
+    if (cargoManual) body.cargo = cargoManual;
 
-    var scanResult;
-
-    if (openRecordIndex >= 0) {
-        // SALIDA: Ya está adentro, registrar salida
-        records[openRecordIndex].fechaSalida = ts.date;
-        records[openRecordIndex].horaSalida = ts.timeFull;
-        _sgaSaveRecords(records);
-
-        scanResult = {
-            actionText: 'SALIDA REGISTRADA',
-            actionType: 'salida',
-            nombre: records[openRecordIndex].nombre,
-            dni: records[openRecordIndex].dni,
-            cargo: records[openRecordIndex].cargo || '',
-            time: ts.timeFull
+    _sgaFetch('/api/seguridad/asistencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    }).then(function(data) {
+        var scanResult = {
+            actionText: data.accion === 'ingreso' ? 'INGRESO REGISTRADO' : 'SALIDA REGISTRADA',
+            actionType: data.accion,
+            nombre: data.nombre,
+            dni: data.dni,
+            cargo: data.cargo || '',
+            time: data.time
         };
-    } else {
-        // INGRESO: Crear nuevo registro
-        // Intentar buscar nombre del empleado en registros previos
-        var prevRecord = null;
-        for (var j = records.length - 1; j >= 0; j--) {
-            if (records[j].dni === dni) { prevRecord = records[j]; break; }
-        }
 
-        var nombre = nombreManual || (prevRecord ? prevRecord.nombre : 'EMPLEADO ' + dni);
-        var cargo = cargoManual || (prevRecord ? prevRecord.cargo : '');
+        _sgaLastScanResult = scanResult;
+        _sgaShowScanResult(scanResult);
 
-        var newRec = {
-            id: Date.now(),
-            dni: dni,
-            nombre: nombre,
-            cargo: cargo,
-            fechaIngreso: ts.date,
-            horaIngreso: ts.timeFull,
-            fechaSalida: null,
-            horaSalida: null
-        };
-        records.unshift(newRec);
-        _sgaSaveRecords(records);
-
-        // Reset date filter to today
-        document.getElementById('sga-date-filter').value = ts.isoDate;
-
-        scanResult = {
-            actionText: 'INGRESO REGISTRADO',
-            actionType: 'ingreso',
-            nombre: nombre,
-            dni: dni,
-            cargo: cargo,
-            time: ts.timeFull
-        };
-    }
-
-    _sgaLastScanResult = scanResult;
-    _sgaShowScanResult(scanResult);
-    window._sgaRender();
+        // Recargar registros del día
+        window._sgaRender();
+    }).catch(function(e) {
+        _sgaToast('Error: ' + e.message, 'bi-exclamation-circle');
+    });
 };
 
 // ── MOSTRAR RESULTADO DE ESCANEO ─────────────────────────────────
@@ -182,15 +140,11 @@ function _sgaShowScanResult(result) {
         '</div>' +
     '</div>';
 
-    // Auto-hide after 10 seconds
-    setTimeout(function() {
-        if (container) container.style.display = 'none';
-    }, 10000);
+    setTimeout(function() { if (container) container.style.display = 'none'; }, 10000);
 }
 
 // ── RENDER PRINCIPAL ─────────────────────────────────────────────
 window._sgaRender = function() {
-    var records = _sgaLoadRecords();
     var dateFilter = document.getElementById('sga-date-filter').value;
     var search = (document.getElementById('sga-search') || {}).value || '';
     search = search.toLowerCase().trim();
@@ -206,22 +160,31 @@ window._sgaRender = function() {
     var btnScan = document.getElementById('sga-btn-scan');
     if (btnScan) btnScan.style.display = (dateFilter === todayISO) ? 'flex' : 'none';
 
-    // Filter records by date
-    var todaysRecords = records.filter(function(r) { return r.fechaIngreso === dateLocal; });
+    // Fetch records from API filtered by date
+    _sgaFetch('/api/seguridad/asistencia?fecha=' + encodeURIComponent(dateLocal))
+        .then(function(records) {
+            _sgaRenderRecords(records, search, dateLocal);
+        })
+        .catch(function(e) {
+            console.error('Error cargando asistencia:', e);
+            _sgaRenderRecords([], search, dateLocal);
+        });
+};
 
+function _sgaRenderRecords(records, search, dateLocal) {
     // Stats
-    var inPlant = todaysRecords.filter(function(r) { return r.horaSalida === null; }).length;
-    var finished = todaysRecords.filter(function(r) { return r.horaSalida !== null; }).length;
+    var inPlant = records.filter(function(r) { return r.hora_salida === null; }).length;
+    var finished = records.filter(function(r) { return r.hora_salida !== null; }).length;
 
     var elInside = document.getElementById('sga-stat-inside');
     var elDone = document.getElementById('sga-stat-done');
     var elTotal = document.getElementById('sga-stat-total');
     if (elInside) elInside.textContent = inPlant;
     if (elDone) elDone.textContent = finished;
-    if (elTotal) elTotal.textContent = todaysRecords.length;
+    if (elTotal) elTotal.textContent = records.length;
 
     // Search filter
-    var filtered = todaysRecords.filter(function(r) {
+    var filtered = records.filter(function(r) {
         if (!search) return true;
         return (r.nombre || '').toLowerCase().indexOf(search) >= 0 ||
                (r.dni || '').indexOf(search) >= 0 ||
@@ -240,17 +203,17 @@ window._sgaRender = function() {
 
     var html = '';
     filtered.forEach(function(log) {
-        var isInside = log.horaSalida === null;
+        var isInside = log.hora_salida === null;
         var statusBadge = isInside
-            ? '<span class="sga-badge sga-badge-active" style="' + (isInside ? 'animation:sgaPulse 2s infinite;' : '') + '">En Planta</span>'
+            ? '<span class="sga-badge sga-badge-active">En Planta</span>'
             : '<span class="sga-badge sga-badge-done">Turno Finalizado</span>';
 
         var inBg = 'rgba(16,185,129,.05)';
         var inBorder = 'rgba(16,185,129,.15)';
-        var outBg = log.horaSalida ? 'rgba(234,88,12,.05)' : 'rgba(100,116,139,.05)';
-        var outBorder = log.horaSalida ? 'rgba(234,88,12,.15)' : 'var(--border)';
-        var outColor = log.horaSalida ? '#ea580c' : 'var(--subtext)';
-        var outLabelColor = log.horaSalida ? '#ea580c' : 'var(--subtext)';
+        var outBg = log.hora_salida ? 'rgba(234,88,12,.05)' : 'rgba(100,116,139,.05)';
+        var outBorder = log.hora_salida ? 'rgba(234,88,12,.15)' : 'var(--border)';
+        var outColor = log.hora_salida ? '#ea580c' : 'var(--subtext)';
+        var outLabelColor = log.hora_salida ? '#ea580c' : 'var(--subtext)';
 
         html += '<div class="sga-card sga-record">' +
             '<div class="sga-record-header">' +
@@ -265,14 +228,14 @@ window._sgaRender = function() {
                     '<i class="bi bi-box-arrow-in-right" style="color:#10b981;font-size:.85rem;"></i>' +
                     '<div>' +
                         '<div class="sga-time-label" style="color:#059669;">Ingreso</div>' +
-                        '<div class="sga-time-value">' + log.horaIngreso + '</div>' +
+                        '<div class="sga-time-value">' + log.hora_ingreso + '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="sga-time-box" style="background:' + outBg + ';border-color:' + outBorder + ';">' +
                     '<i class="bi bi-box-arrow-right" style="color:' + outColor + ';font-size:.85rem;"></i>' +
                     '<div>' +
                         '<div class="sga-time-label" style="color:' + outLabelColor + ';">Salida</div>' +
-                        '<div class="sga-time-value">' + (log.horaSalida || '--:--:--') + '</div>' +
+                        '<div class="sga-time-value">' + (log.hora_salida || '--:--:--') + '</div>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -280,7 +243,7 @@ window._sgaRender = function() {
     });
 
     container.innerHTML = html;
-};
+}
 
 // ── SET TODAY ────────────────────────────────────────────────────
 window._sgaSetToday = function() {
@@ -290,53 +253,33 @@ window._sgaSetToday = function() {
 
 // ── EXPORT CSV ───────────────────────────────────────────────────
 window._sgaExportCSV = function() {
-    var records = _sgaLoadRecords();
     var dateFilter = document.getElementById('sga-date-filter').value;
     var dateLocal = _sgaFormatToLocal(dateFilter);
 
-    var recordsToExport = records.filter(function(r) { return r.fechaIngreso === dateLocal; });
+    // Descargar CSV directamente del servidor
+    var url = '/api/seguridad/asistencia/export?fecha=' + encodeURIComponent(dateLocal);
 
-    if (recordsToExport.length === 0) {
-        _sgaToast('No hay registros para exportar', 'bi-exclamation-circle');
-        return;
-    }
-
-    var headers = "DNI,Nombre,Cargo,Fecha Ingreso,Hora Ingreso,Fecha Salida,Hora Salida\n";
-    var csvContent = recordsToExport.map(function(log) {
-        return '="' + log.dni + '","' + log.nombre + '","' + (log.cargo || '') + '",' +
-               log.fechaIngreso + ',' + log.horaIngreso + ',' +
-               (log.fechaSalida || '') + ',' + (log.horaSalida || '');
-    }).join("\n");
-
-    // Try using XLSX if available
-    if (typeof XLSX !== 'undefined') {
-        var data = [['DNI', 'Nombre', 'Cargo', 'Fecha Ingreso', 'Hora Ingreso', 'Fecha Salida', 'Hora Salida']];
-        recordsToExport.forEach(function(log) {
-            data.push([log.dni, log.nombre, log.cargo || '', log.fechaIngreso, log.horaIngreso, log.fechaSalida || '', log.horaSalida || '']);
+    // Usar fetch con auth para obtener el CSV
+    fetch(url).then(function(r) {
+        if (!r.ok) {
+            return r.json().then(function(e) { _sgaToast(e.error || 'No hay datos', 'bi-exclamation-circle'); });
+        }
+        return r.blob().then(function(blob) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'asistencia_' + dateLocal + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            _sgaToast('Archivo generado exitosamente');
         });
-        var ws = XLSX.utils.aoa_to_sheet(data);
-        var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-        XLSX.writeFile(wb, 'Asistencia_' + dateLocal + '.xlsx');
-        _sgaToast('Archivo Excel generado exitosamente');
-        return;
-    }
-
-    // Fallback: CSV
-    var blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'asistencia_' + dateLocal + '.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    _sgaToast('Archivo generado exitosamente');
+    }).catch(function(e) {
+        _sgaToast('Error: ' + e.message, 'bi-exclamation-circle');
+    });
 };
 
 // ── INIT ─────────────────────────────────────────────────────────
 window.init_asistencia = function() {
-    // Set date filter to today
     var todayISO = _sgaGetTodayISO();
     document.getElementById('sga-date-filter').value = todayISO;
     _sgaLastScanResult = null;
