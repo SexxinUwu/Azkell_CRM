@@ -4,232 +4,158 @@
 ═══════════════════════════════════════════════════════════════════ -->
 <style>
 /* ── Scoped Styles: Seguridad Unidades ─────────────────────────── */
-.sgu-view { display: none; animation: sguFadeIn .25s ease; }
+.sgu-view { display: none; animation: sguFadeIn .25s ease; background: #f8fafc; min-height: 100vh; padding: 1rem; margin: -15px -25px; }
 .sgu-view.active { display: block; }
 @keyframes sguFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Cards */
-.sgu-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 1rem; margin-bottom: .75rem;
-    cursor: pointer; transition: transform .15s, box-shadow .15s;
-    position: relative; overflow: hidden;
-}
-.sgu-card:active { transform: scale(0.98); }
-.sgu-card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+/* Headers */
+.sgu-header-main { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+.sgu-header-main h2 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: .5rem; }
+.sgu-header-main i { color: #2563eb; }
 
-/* Buttons */
-.sgu-btn-primary {
-    width: 100%; background: var(--crm-accent, #10b981); color: #fff;
-    font-weight: 800; padding: .9rem; border-radius: 14px; border: none;
-    font-size: .95rem; cursor: pointer; transition: background .15s, transform .1s;
-    display: flex; align-items: center; justify-content: center; gap: .5rem;
-    box-shadow: 0 4px 14px rgba(16,185,129,.25);
-}
-.sgu-btn-primary:active { transform: scale(0.97); }
-.sgu-btn-primary:disabled { opacity: .45; pointer-events: none; box-shadow: none; }
-.sgu-btn-primary.green { background: #059669; box-shadow: 0 4px 14px rgba(5,150,105,.25); }
-.sgu-btn-primary.dark { background: #1e293b; box-shadow: 0 4px 14px rgba(30,41,59,.25); }
-.sgu-btn-primary.orange { background: #ea580c; box-shadow: 0 4px 14px rgba(234,88,12,.25); }
+.sgu-header-sub { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.sgu-header-sub h2 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; }
 
-.sgu-btn-outline {
-    background: var(--bg); border: 2px dashed var(--border); color: var(--subtext);
-    font-weight: 700; padding: .65rem; border-radius: 12px; width: 100%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .5rem;
-    font-size: .85rem; transition: background .15s;
-}
-.sgu-btn-outline:active { background: var(--border); }
+.sgu-btn-back { background: none; border: none; color: #0f172a; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
 
-.sgu-btn-back {
-    background: none; border: none; color: var(--subtext); cursor: pointer;
-    padding: .5rem; margin: -.5rem; border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; transition: background .15s;
+/* Action Buttons */
+.sgu-btn-registrar {
+    width: 100%; background: #2563eb; color: #fff; font-weight: 800; padding: 1.15rem; border-radius: 16px; border: none;
+    font-size: 1.05rem; cursor: pointer; transition: transform .1s; display: flex; align-items: center; justify-content: center; gap: .5rem;
+    box-shadow: 0 6px 16px rgba(37,99,235,.25); margin-bottom: 1.5rem;
 }
-.sgu-btn-back:active { background: var(--border); }
-
-/* Tabs */
-.sgu-tabs {
-    display: flex; background: var(--border); padding: 3px; border-radius: 12px; margin-bottom: 1rem;
-}
-.sgu-tab {
-    flex: 1; text-align: center; padding: .55rem .5rem; font-size: .82rem;
-    font-weight: 700; border-radius: 10px; cursor: pointer; border: none;
-    background: transparent; color: var(--subtext); transition: all .2s;
-}
-.sgu-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.sgu-btn-registrar:active { transform: scale(0.97); }
 
 /* Search */
+.sgu-search-wrap { position: relative; margin-bottom: 1.25rem; }
+.sgu-search-wrap i { position: absolute; left: 1.1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; }
 .sgu-search {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: .7rem .7rem .7rem 2.5rem; font-size: .88rem;
-    color: var(--text); outline: none; transition: border-color .2s;
+    width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1rem 1rem 3rem;
+    font-size: .95rem; color: #0f172a; outline: none; transition: border-color .2s; box-shadow: 0 2px 4px rgba(0,0,0,.02);
 }
-.sgu-search:focus { border-color: var(--crm-accent, #10b981); }
-.sgu-search-wrap { position: relative; margin-bottom: 1rem; }
-.sgu-search-wrap i { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%); color: var(--subtext); }
+.sgu-search:focus { border-color: #2563eb; }
+.sgu-search::placeholder { color: #94a3b8; font-weight: 500; }
 
-/* Badge */
-.sgu-badge {
-    font-size: .65rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;
-    text-transform: uppercase; letter-spacing: .04em;
+/* Tabs */
+.sgu-tabs { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 1.5rem; }
+.sgu-tab {
+    flex: 1; text-align: center; padding: .65rem .5rem; font-size: .9rem; font-weight: 700; border-radius: 10px; cursor: pointer; border: none;
+    background: transparent; color: #64748b; transition: all .2s;
 }
-.sgu-badge-blue { background: rgba(37,99,235,.1); color: #2563eb; }
-.sgu-badge-green { background: rgba(16,185,129,.1); color: #059669; }
-.sgu-badge-red { background: rgba(239,68,68,.1); color: #ef4444; }
-.sgu-badge-orange { background: rgba(234,88,12,.1); color: #ea580c; }
-.sgu-badge-gray { background: rgba(100,116,139,.1); color: #64748b; }
+.sgu-tab.active { background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,.05); }
 
-/* Label */
-.sgu-label {
-    font-size: .65rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .08em; color: var(--subtext); margin-bottom: 2px;
+/* List Card */
+.sgu-list-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.15rem; margin-bottom: 1rem;
+    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,.03);
 }
+.sgu-list-card-border { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #2563eb; }
+.sgu-list-card-icon {
+    width: 48px; height: 48px; border-radius: 50%; background: #eff6ff; color: #2563eb;
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem; position: relative;
+}
+.sgu-list-card-alert {
+    position: absolute; top: -2px; right: -2px; background: #ef4444; color: #fff; width: 18px; height: 18px;
+    border-radius: 50%; font-size: .6rem; display: flex; align-items: center; justify-content: center;
+    border: 2px solid #fff;
+}
+.sgu-list-card-info { flex: 1; margin-left: 1rem; }
+.sgu-list-card-title { font-weight: 900; color: #0f172a; font-size: 1.1rem; margin: 0 0 .2rem; }
+.sgu-list-card-subtitle { color: #64748b; font-size: .85rem; margin: 0; }
+.sgu-btn-ingresar {
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700;
+    padding: .5rem 1rem; border-radius: 10px; font-size: .85rem; cursor: pointer; transition: all .15s;
+}
+.sgu-btn-ingresar:active { background: #dbeafe; }
 
-/* Alert box */
-.sgu-alert {
-    background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.15);
-    color: #064e3b; padding: .85rem 1rem; border-radius: 14px; font-size: .82rem;
-    display: flex; align-items: flex-start; gap: .6rem; margin-bottom: 1rem;
-}
-.sgu-alert i { flex-shrink: 0; margin-top: 2px; }
-
-/* Photo grid */
-.sgu-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin-top: .75rem; }
-.sgu-photo-thumb {
-    aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
-    position: relative; background: var(--bg);
-}
-.sgu-photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.sgu-photo-thumb .sgu-photo-del {
-    position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff;
-    border: 2px solid var(--surface); width: 22px; height: 22px; border-radius: 50%;
-    font-size: .6rem; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; z-index: 2;
-}
-.sgu-photo-add {
-    aspect-ratio: 1; border-radius: 10px; border: 2px dashed var(--border);
-    display: flex; align-items: center; justify-content: center; color: var(--subtext);
-    cursor: pointer; transition: background .15s; background: var(--surface);
-}
-.sgu-photo-add:active { background: var(--border); }
-
-/* Form */
-.sgu-form-group { margin-bottom: 1rem; }
-.sgu-form-label { font-weight: 700; font-size: .85rem; color: var(--text); margin-bottom: .35rem; display: block; }
+/* Form Container */
+.sgu-form-container { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,.02); }
+.sgu-form-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+.sgu-form-group { flex: 1; border-bottom: 2px solid #e2e8f0; padding-bottom: .25rem; position: relative; }
+.sgu-form-group:last-child { margin-bottom: 0; }
+.sgu-form-label { font-size: .75rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: .4rem; display: block; letter-spacing: .05em; }
 .sgu-form-input {
-    width: 100%; padding: .7rem .85rem; border: 1px solid var(--border); border-radius: 12px;
-    background: var(--surface); color: var(--text); font-size: .9rem; font-weight: 600;
-    outline: none; transition: border-color .2s;
+    width: 100%; border: none; background: transparent; color: #64748b; font-size: 1.15rem; font-weight: 800;
+    outline: none; padding: 0; text-transform: uppercase;
 }
-.sgu-form-input:focus { border-color: var(--crm-accent, #10b981); }
-.sgu-form-input::placeholder { color: var(--subtext); font-weight: 500; }
+.sgu-form-input::placeholder { color: #cbd5e1; font-weight: 700; }
+.sgu-form-input:focus { color: #0f172a; }
+.sgu-form-input:focus + .sgu-form-line { width: 100%; }
+.sgu-form-line { position: absolute; bottom: -2px; left: 0; width: 0; height: 2px; background: #2563eb; transition: width .3s ease; }
 
-/* Checklist */
-.sgu-check-section {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-    overflow: hidden; margin-bottom: .75rem;
+/* Tasks Section */
+.sgu-section-title { font-size: .85rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: 1rem; letter-spacing: .05em; }
+.sgu-task-card {
+    background: #fff; border: 1px solid #fed7aa; border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem;
+    display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(249,115,22,.05);
 }
-.sgu-check-header {
-    background: var(--bg); padding: .7rem 1rem; border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
+.sgu-task-icon-wrap { width: 50px; height: 50px; border-radius: 50%; background: #fff7ed; display: flex; align-items: center; justify-content: center; }
+.sgu-task-icon { color: #ea580c; font-size: 1.4rem; }
+.sgu-task-info { flex: 1; margin-left: 1rem; }
+.sgu-task-title { font-weight: 900; color: #0f172a; font-size: 1.05rem; margin: 0 0 .2rem; }
+.sgu-task-desc { color: #64748b; font-size: .85rem; margin: 0; }
+.sgu-btn-task {
+    background: #fff; border: 1px solid #bfdbfe; color: #2563eb; font-weight: 700;
+    padding: .6rem 1.2rem; border-radius: 10px; font-size: .9rem; cursor: pointer; transition: all .15s;
 }
-.sgu-check-header h4 { margin: 0; font-size: .88rem; font-weight: 700; color: var(--text); }
-.sgu-check-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: .6rem .85rem; border-bottom: 1px solid rgba(0,0,0,.03);
-}
-.sgu-check-item:last-child { border-bottom: none; }
-.sgu-check-item span { font-size: .85rem; color: var(--text); flex: 1; }
-.sgu-check-btns { display: flex; gap: 4px; }
-.sgu-check-btn {
-    padding: .4rem .55rem; border-radius: 8px; border: none; cursor: pointer;
-    font-size: .75rem; font-weight: 700; transition: all .15s;
-}
-.sgu-check-btn.mal { background: rgba(239,68,68,.08); color: #94a3b8; }
-.sgu-check-btn.mal.active { background: rgba(239,68,68,.15); color: #ef4444; outline: 2px solid #ef4444; }
-.sgu-check-btn.na { background: rgba(100,116,139,.08); color: #94a3b8; }
-.sgu-check-btn.na.active { background: #1e293b; color: #fff; }
-.sgu-check-btn.ok { background: rgba(16,185,129,.08); color: #94a3b8; }
-.sgu-check-btn.ok.active { background: rgba(16,185,129,.15); color: #10b981; outline: 2px solid #10b981; }
+.sgu-btn-task:active { background: #eff6ff; }
+.sgu-btn-task.done { background: #10b981; color: #fff; border-color: #10b981; }
 
-/* Overlay */
-.sgu-overlay {
-    display: none; position: fixed; inset: 0; z-index: 1060;
-    background: var(--bg); overflow-y: auto;
-    animation: sguSlideUp .3s cubic-bezier(.4,0,.2,1);
+.sgu-btn-submit {
+    width: 100%; background: #e2e8f0; color: #64748b; font-weight: 800; padding: 1.25rem; border-radius: 16px; border: none;
+    font-size: 1.05rem; cursor: pointer; transition: all .2s; margin-top: 1rem;
 }
+.sgu-btn-submit.ready { background: #2563eb; color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,.25); }
+.sgu-btn-submit.ready:active { transform: scale(0.97); }
+
+/* Overlays */
+.sgu-overlay { display: none; position: fixed; inset: 0; z-index: 1060; background: #f8fafc; overflow-y: auto; animation: sguSlideUp .3s cubic-bezier(.4,0,.2,1); }
 .sgu-overlay.show { display: flex; flex-direction: column; }
 @keyframes sguSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 .sgu-overlay-header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: .75rem 1rem; display: flex; justify-content: space-between;
-    align-items: center; position: sticky; top: 0; z-index: 5;
+    background: #fff; border-bottom: 1px solid #e2e8f0; padding: 1rem 1.25rem; display: flex; justify-content: space-between;
+    align-items: center; position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 10px rgba(0,0,0,.02);
+}
+.sgu-overlay-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+
+/* Photo grid */
+.sgu-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.sgu-photo-thumb { aspect-ratio: 1; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid #e2e8f0; }
+.sgu-photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sgu-photo-del {
+    position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: #fff; border: none; width: 24px; height: 24px;
+    border-radius: 50%; font-size: .7rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.sgu-photo-add {
+    aspect-ratio: 1; border-radius: 12px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; cursor: pointer; background: transparent; font-size: 1.5rem;
 }
 
-/* Settings item delete */
-.sgu-settings-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: .55rem .85rem;
-}
-.sgu-settings-item span { font-size: .85rem; color: var(--text); }
-.sgu-settings-del {
-    background: none; border: none; color: var(--border); cursor: pointer;
-    padding: .25rem; border-radius: 6px; transition: color .15s;
-}
-.sgu-settings-del:hover { color: #ef4444; }
+/* Checklist items */
+.sgu-check-cat-title { font-size: .85rem; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin: 1.5rem 0 .75rem; letter-spacing: .05em; }
+.sgu-check-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: center; }
+.sgu-check-label { font-size: .95rem; font-weight: 700; color: #0f172a; flex: 1; }
+.sgu-check-btns { display: flex; gap: 8px; }
+.sgu-check-btn { padding: .5rem; border-radius: 8px; border: none; background: #f1f5f9; color: #64748b; font-weight: 800; font-size: .9rem; cursor: pointer; transition: all .15s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.sgu-check-btn.ok.active { background: #ecfdf5; color: #10b981; box-shadow: inset 0 0 0 2px #10b981; }
+.sgu-check-btn.mal.active { background: #fef2f2; color: #ef4444; box-shadow: inset 0 0 0 2px #ef4444; }
+.sgu-check-btn.na.active { background: #1e293b; color: #fff; }
 
-/* Empty state */
-.sgu-empty {
-    text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border);
-    border-radius: 16px; color: var(--subtext); font-size: .85rem;
-}
-
-/* Header row */
-.sgu-header {
-    display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem;
-}
-.sgu-header h2 { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text); flex: 1; }
-
-/* Info row */
-.sgu-info-row {
-    display: flex; gap: .75rem; margin-bottom: 1rem;
-}
-.sgu-info-box {
-    flex: 1; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: .75rem;
-}
-
-/* Toast */
-.sgu-toast {
-    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
-    background: #1e293b; color: #fff; padding: .65rem 1.25rem; border-radius: 50px;
-    font-size: .82rem; font-weight: 700; z-index: 9999; display: flex;
-    align-items: center; gap: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,.25);
-    animation: sguFadeIn .3s ease;
-}
-
-/* Responsive mobile tweaks inside CRM shell */
-@media (max-width: 767.98px) {
-    #moduloSegUnidades { margin: -15px -25px; padding: 1rem; }
-}
+.sgu-empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; font-size: .95rem; font-weight: 600; }
 </style>
 
 <div id="moduloSegUnidades">
 
-    <!-- ═══ VIEW: LISTA ═════════════════════════════════════════════ -->
+    <!-- ═══ VIEW: LISTA (Módulo de Unidades) ═════════════════════════════════════ -->
     <div id="sgu-list" class="sgu-view active">
-        <div class="sgu-header">
-            <div style="flex:1;">
-                <h2><i class="bi bi-truck-front-fill" style="color:var(--crm-accent,#10b981);"></i> Unidades</h2>
-            </div>
-            <button class="sgu-btn-back" onclick="window._sguNav('settings')" title="Ajustes de Checklist">
-                <i class="bi bi-gear-fill" style="font-size:1.3rem;"></i>
-            </button>
+        <div class="sgu-header-main">
+            <h2><i class="bi bi-truck"></i> Módulo de Unidades</h2>
         </div>
 
-        <button class="sgu-btn-primary" onclick="window._sguNav('form')" style="margin-bottom:1rem;" data-perm-crear="seguridad_unidades">
-            <i class="bi bi-clipboard2-check-fill"></i> Registrar Salida (Checklist)
+        <button class="sgu-btn-registrar" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
+            <i class="bi bi-check-circle"></i> Registrar Salida (Checklist)
         </button>
 
         <div class="sgu-search-wrap">
@@ -247,69 +173,99 @@
         </div>
     </div>
 
-    <!-- ═══ VIEW: FORMULARIO NUEVA SALIDA / LLEGADA ═════════════════ -->
+    <!-- ═══ VIEW: FORMULARIO (Salida Unidad) ═════════════════════════════════ -->
     <div id="sgu-form" class="sgu-view">
-        <div class="sgu-header">
-            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left" style="font-size:1.4rem;"></i></button>
-            <h2 id="sgu-form-title">Registrar Salida</h2>
+        <div class="sgu-header-sub">
+            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
+            <h2 id="sgu-form-title">Salida Unidad</h2>
+            <button class="sgu-btn-back" onclick="window._sguOpenScanner()" style="color:#64748b;"><i class="bi bi-qr-code-scan"></i></button>
         </div>
 
-        <div id="sgu-form-fields">
-            <!-- Dynamic form fields rendered by logica.js -->
+        <!-- Form Inputs Card -->
+        <div class="sgu-form-container">
+            <div class="sgu-form-row">
+                <div class="sgu-form-group">
+                    <label class="sgu-form-label">Tracto</label>
+                    <input type="text" class="sgu-form-input" id="sgu-f-placa" placeholder="ABC-123" oninput="window._sguCheckFormReady()">
+                    <div class="sgu-form-line"></div>
+                </div>
+                <div class="sgu-form-group">
+                    <label class="sgu-form-label">Carreta</label>
+                    <input type="text" class="sgu-form-input" id="sgu-f-carreta" placeholder="XYZ-987" oninput="window._sguCheckFormReady()">
+                    <div class="sgu-form-line"></div>
+                </div>
+            </div>
+            <div class="sgu-form-group" style="margin-bottom:1.5rem;">
+                <label class="sgu-form-label">Conductor</label>
+                <input type="text" class="sgu-form-input" id="sgu-f-conductor" placeholder="NOMBRE" oninput="window._sguCheckFormReady()">
+                <div class="sgu-form-line"></div>
+            </div>
+            <div class="sgu-form-row">
+                <div class="sgu-form-group">
+                    <label class="sgu-form-label">Destino</label>
+                    <input type="text" class="sgu-form-input" id="sgu-f-destino" placeholder="CIUDAD" oninput="window._sguCheckFormReady()">
+                    <div class="sgu-form-line"></div>
+                </div>
+                <div class="sgu-form-group">
+                    <label class="sgu-form-label">Km Inicio</label>
+                    <input type="number" class="sgu-form-input" id="sgu-f-km" placeholder="00000" oninput="window._sguCheckFormReady()">
+                    <div class="sgu-form-line"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Photos Section -->
-        <div style="margin-bottom:1rem;">
-            <div class="sgu-form-label"><i class="bi bi-camera-fill me-1"></i> Evidencia Fotográfica</div>
-            <button class="sgu-btn-outline" id="sgu-btn-add-photo" onclick="window._sguAddPhoto()">
-                <i class="bi bi-plus-lg"></i> Añadir Foto
-            </button>
-            <div class="sgu-photo-grid" id="sgu-photo-grid"></div>
+        <div class="sgu-section-title">Tareas Obligatorias</div>
+
+        <!-- Fotos Card -->
+        <div class="sgu-task-card">
+            <div class="sgu-task-icon-wrap"><i class="bi bi-camera sgu-task-icon"></i></div>
+            <div class="sgu-task-info">
+                <h4 class="sgu-task-title">Fotos Salida</h4>
+                <p class="sgu-task-desc" id="sgu-photo-desc">Tome fotos de la unidad.</p>
+            </div>
+            <button class="sgu-btn-task" id="sgu-btn-open-photos" onclick="window._sguOpenPhotos()">Añadir</button>
         </div>
 
-        <!-- Checklist Section -->
-        <div style="margin-bottom:1rem;">
-            <div class="sgu-form-label"><i class="bi bi-clipboard2-check me-1"></i> Checklist de Inspección</div>
-            <button class="sgu-btn-outline" id="sgu-btn-checklist" onclick="window._sguOpenChecklist()">
-                <i class="bi bi-clipboard2-pulse-fill"></i> <span id="sgu-checklist-status">Abrir Checklist</span>
-            </button>
+        <!-- Checklist Card -->
+        <div class="sgu-task-card">
+            <div class="sgu-task-icon-wrap"><i class="bi bi-clipboard-check sgu-task-icon"></i></div>
+            <div class="sgu-task-info">
+                <h4 class="sgu-task-title">Checklist</h4>
+                <p class="sgu-task-desc" id="sgu-checklist-desc">Revisión requerida.</p>
+            </div>
+            <button class="sgu-btn-task" id="sgu-btn-open-checklist" onclick="window._sguOpenChecklist()">Llenar</button>
         </div>
 
-        <button class="sgu-btn-primary green" id="sgu-btn-save" onclick="window._sguSaveRecord()" disabled>
-            <i class="bi bi-check-circle-fill"></i> <span id="sgu-btn-save-text">Guardar Registro</span>
+        <button class="sgu-btn-submit" id="sgu-btn-save" onclick="window._sguSaveRecord()" disabled>
+            Registrar Salida Definitiva
         </button>
     </div>
 
     <!-- ═══ VIEW: DETALLE DE CAMIÓN ═════════════════════════════════ -->
     <div id="sgu-detail" class="sgu-view">
-        <div class="sgu-header">
-            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left" style="font-size:1.4rem;"></i></button>
-            <h2 id="sgu-detail-title">Detalle</h2>
+        <div class="sgu-header-sub">
+            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
+            <h2 id="sgu-detail-title">Detalle Unidad</h2>
+            <div style="width:24px;"></div> <!-- spacer -->
         </div>
-        <div id="sgu-detail-content">
+        <div id="sgu-detail-content" style="padding-bottom:2rem;">
             <!-- Dynamic detail content rendered by logica.js -->
         </div>
     </div>
 
-    <!-- ═══ VIEW: AJUSTES (Template Constructor) ════════════════════ -->
-    <div id="sgu-settings" class="sgu-view">
-        <div class="sgu-header">
-            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left" style="font-size:1.4rem;"></i></button>
-            <h2>Ajustes de Checklist</h2>
-        </div>
+</div>
 
-        <div class="sgu-alert">
-            <i class="bi bi-info-circle-fill"></i>
-            <div><strong>Constructor Dinámico:</strong> Agregue o quite apartados. Los cambios se aplicarán <strong>solo a los nuevos registros</strong>. El historial conservará su plantilla original.</div>
+<!-- ═══ OVERLAY: FOTOS MODAL ════════════════════════════════════ -->
+<div id="sgu-photos-overlay" class="sgu-overlay">
+    <div class="sgu-overlay-header">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+            <button class="sgu-btn-back" onclick="document.getElementById('sgu-photos-overlay').classList.remove('show')"><i class="bi bi-chevron-left"></i></button>
+            <h3>Evidencia Fotográfica</h3>
         </div>
-
-        <div id="sgu-settings-list">
-            <!-- Dynamic template editor rendered by logica.js -->
-        </div>
-
-        <button class="sgu-btn-primary dark" onclick="window._sguAddCategory()" style="margin-top:1rem;">
-            <i class="bi bi-plus-lg"></i> Crear Nueva Categoría
-        </button>
+        <button class="sgu-btn-task done" onclick="document.getElementById('sgu-photos-overlay').classList.remove('show'); window._sguCheckFormReady();" style="padding:.4rem 1rem;">Listo</button>
+    </div>
+    <div style="padding:1.5rem;" id="sgu-photos-container">
+        <!-- Rendered by logica.js -->
     </div>
 </div>
 
@@ -317,45 +273,13 @@
 <div id="sgu-checklist-overlay" class="sgu-overlay">
     <div class="sgu-overlay-header">
         <div style="display:flex;align-items:center;gap:.5rem;">
-            <button class="sgu-btn-back" onclick="window._sguCloseChecklist()"><i class="bi bi-chevron-left" style="font-size:1.3rem;"></i></button>
-            <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--text);">Checklist de Inspección</h3>
+            <button class="sgu-btn-back" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show')"><i class="bi bi-chevron-left"></i></button>
+            <h3>Checklist de Inspección</h3>
         </div>
-        <button id="sgu-checklist-save-btn" class="sgu-badge sgu-badge-gray" onclick="window._sguSaveChecklist()" disabled style="cursor:pointer;padding:6px 14px;border:none;font-size:.78rem;">
-            Guardar
-        </button>
+        <button class="sgu-btn-task done" onclick="document.getElementById('sgu-checklist-overlay').classList.remove('show'); window._sguCheckFormReady();" style="padding:.4rem 1rem;">Guardar</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:1rem;padding-bottom:5rem;">
-        <div class="sgu-alert" style="margin:0 0 1rem;">
-            <i class="bi bi-exclamation-circle"></i>
-            <span>Marque todos los campos. Utilice <strong>✕</strong> si reporta observaciones o daños.</span>
-        </div>
-        <div id="sgu-checklist-body">
-            <!-- Dynamic checklist rendered by logica.js -->
-        </div>
-    </div>
-</div>
-
-<!-- ═══ OVERLAY: DETALLE PREVIEW (Checklist guardado) ═══════════════ -->
-<div id="sgu-preview-overlay" class="sgu-overlay">
-    <div class="sgu-overlay-header">
-        <div style="display:flex;align-items:center;gap:.5rem;">
-            <button class="sgu-btn-back" onclick="document.getElementById('sgu-preview-overlay').classList.remove('show')"><i class="bi bi-chevron-left" style="font-size:1.3rem;"></i></button>
-            <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--text);" id="sgu-preview-title">Checklist</h3>
-        </div>
-    </div>
-    <div style="flex:1;overflow-y:auto;padding:1rem;padding-bottom:5rem;" id="sgu-preview-body">
-    </div>
-</div>
-
-<!-- ═══ INPUT MODAL (para nombres de categoría/ítem) ═════════════════ -->
-<div id="sgu-input-modal" style="display:none;position:fixed;inset:0;z-index:1070;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:1rem;">
-    <div style="background:var(--surface);border-radius:20px;padding:1.5rem;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
-        <h4 style="font-weight:800;color:var(--text);margin:0 0 1rem;" id="sgu-input-title">Nuevo</h4>
-        <input type="text" class="sgu-form-input" id="sgu-input-value" placeholder="" autofocus>
-        <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
-            <button class="sgu-btn-outline" style="flex:1;border-style:solid;" onclick="window._sguCloseInput()">Cancelar</button>
-            <button class="sgu-btn-primary" style="flex:1;" onclick="window._sguConfirmInput()">Guardar</button>
-        </div>
+    <div style="padding:0 1.5rem 2rem;" id="sgu-checklist-container">
+        <!-- Rendered by logica.js -->
     </div>
 </div>
 
