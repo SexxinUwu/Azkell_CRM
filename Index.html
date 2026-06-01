@@ -164,6 +164,25 @@
                     </div>
                 </div>
 
+                <!-- SEGURIDAD -->
+                <div id="wrap-seguridad">
+                    <button class="nav-section-toggle" data-section="seguridad" aria-expanded="false" onclick="window.toggleNavSection('seguridad')">
+                        <span class="link-text">Seguridad</span>
+                        <span class="section-badge">2</span>
+                        <i class="bi bi-chevron-down section-chevron"></i>
+                    </button>
+                    <div class="nav-section-items nav-section-collapsed" id="section-items-seguridad">
+                        <a id="nav-seg-unidades" class="nav-item" onclick="cargarModuloAislado('seguridad/unidades')">
+                            <i class="bi bi-truck-front-fill nav-icon"></i>
+                            <span class="link-text">Unidades</span>
+                        </a>
+                        <a id="nav-seg-asistencia" class="nav-item" onclick="cargarModuloAislado('seguridad/asistencia')">
+                            <i class="bi bi-people-fill nav-icon"></i>
+                            <span class="link-text">Asistencia</span>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- CONFIGURACIÓN -->
                 <div id="wrap-configuracion">
                     <button class="nav-section-toggle" data-section="configuracion" aria-expanded="false" onclick="window.toggleNavSection('configuracion')">
@@ -533,6 +552,9 @@
         <a class="bottom-nav-item" id="bnav-directorio" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetDirectorio">
             <i class="bi bi-person-lines-fill"></i><span>Directorio</span>
         </a>
+        <a class="bottom-nav-item" id="bnav-seguridad" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetSeguridad">
+            <i class="bi bi-shield-lock-fill"></i><span>Seguridad</span>
+        </a>
         <a class="bottom-nav-item" id="bnav-config" onclick="cargarModuloAislado('sistema/ajustes'); setBottomNavActive('bnav-config')">
             <i class="bi bi-gear-fill"></i><span>Ajustes</span>
         </a>
@@ -687,6 +709,24 @@
             <div id="mbnav-conductores" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetDirectorio')).hide(); cargarModuloAislado('directorio/conductores'); setBottomNavActive('bnav-directorio');">
                 <div class="bnav-card-icon" style="background: rgba(6,182,212,.1); color: #06b6d4;"><i class="bi bi-person-vcard-fill"></i></div>
                 <div><p class="bnav-card-title">Personal</p><p class="bnav-card-desc">Conductores y operarios</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seguridad -->
+    <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetSeguridad">
+        <div class="bnav-sheet-header">
+            <div class="bnav-sheet-title"><i class="bi bi-shield-lock-fill text-danger"></i> Seguridad</div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body px-4 pb-4">
+            <div id="mbnav-seg-unidades" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/unidades'); setBottomNavActive('bnav-seguridad');">
+                <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-truck-front-fill"></i></div>
+                <div><p class="bnav-card-title">Unidades</p><p class="bnav-card-desc">Checklist de salida y llegada</p></div>
+            </div>
+            <div id="mbnav-seg-asistencia" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/asistencia'); setBottomNavActive('bnav-seguridad');">
+                <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-people-fill"></i></div>
+                <div><p class="bnav-card-title">Asistencia</p><p class="bnav-card-desc">Control de personal con QR</p></div>
             </div>
         </div>
     </div>

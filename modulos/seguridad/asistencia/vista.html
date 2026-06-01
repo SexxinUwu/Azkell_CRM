@@ -1,0 +1,239 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     MÓDULO SEGURIDAD: ASISTENCIA (Control de Personal QR) — Vista Aislada
+     Cargado por cargarModuloAislado('seguridad/asistencia')
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+/* ── Scoped Styles: Seguridad Asistencia ───────────────────────── */
+.sga-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1rem; margin-bottom: .75rem;
+    animation: sgaFadeIn .25s ease;
+}
+@keyframes sgaFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.sga-btn-scan {
+    width: 100%; background: #059669; color: #fff;
+    font-weight: 800; padding: 1.15rem; border-radius: 16px; border: 4px solid #10b981;
+    font-size: 1rem; cursor: pointer; transition: background .15s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: .65rem;
+    box-shadow: 0 6px 20px rgba(5,150,105,.3); margin-bottom: 1.25rem;
+}
+.sga-btn-scan:active { transform: scale(0.97); background: #047857; }
+
+.sga-btn-manual {
+    width: 100%; background: var(--surface); color: var(--crm-accent, #2563eb);
+    font-weight: 700; padding: .75rem; border-radius: 12px;
+    border: 2px solid var(--border); font-size: .85rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    transition: background .15s; margin-bottom: 1rem;
+}
+.sga-btn-manual:active { background: var(--bg); }
+
+.sga-btn-export {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-weight: 700; padding: .45rem .85rem;
+    border-radius: 10px; font-size: .75rem; cursor: pointer;
+    display: flex; align-items: center; gap: .4rem; transition: background .15s;
+}
+.sga-btn-export:active { background: var(--border); }
+
+/* Stats row */
+.sga-stats { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.sga-stat {
+    flex: 1; padding: .65rem; border-radius: 14px;
+    border: 1px solid var(--border);
+}
+.sga-stat-label { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.sga-stat-value { font-size: 1.5rem; font-weight: 900; }
+
+/* Filter bar */
+.sga-filter {
+    background: var(--surface); padding: .75rem; border-radius: 16px;
+    border: 1px solid var(--border); margin-bottom: 1rem;
+}
+.sga-filter-row {
+    display: flex; align-items: center; gap: .5rem;
+    padding-bottom: .65rem; border-bottom: 1px solid var(--border); margin-bottom: .65rem;
+}
+.sga-filter-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.sga-filter input[type="date"],
+.sga-filter input[type="text"] {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: .85rem; font-weight: 700; color: var(--text);
+}
+.sga-filter input::placeholder { color: var(--subtext); font-weight: 500; }
+.sga-btn-hoy {
+    background: rgba(37,99,235,.08); color: #2563eb; border: none;
+    font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Scan result card */
+.sga-scan-result {
+    padding: 1rem; border-radius: 16px; background: var(--surface);
+    border: 1px solid var(--border); margin-bottom: 1rem;
+    display: flex; align-items: flex-start; gap: 1rem;
+    animation: sgaSlideIn .3s ease;
+}
+@keyframes sgaSlideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+.sga-scan-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* Record card */
+.sga-record { margin-bottom: .75rem; }
+.sga-record-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding-bottom: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .5rem;
+}
+.sga-record-times { display: flex; gap: .5rem; }
+.sga-time-box {
+    flex: 1; display: flex; align-items: center; gap: .5rem;
+    padding: .45rem .65rem; border-radius: 10px; border: 1px solid var(--border);
+}
+.sga-time-label { font-size: .6rem; font-weight: 800; text-transform: uppercase; }
+.sga-time-value { font-size: .78rem; font-family: monospace; }
+
+/* Badge */
+.sga-badge {
+    font-size: .6rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;
+    text-transform: uppercase; letter-spacing: .04em;
+}
+.sga-badge-active { background: rgba(16,185,129,.1); color: #059669; }
+.sga-badge-done { background: rgba(100,116,139,.1); color: #64748b; }
+
+/* Empty */
+.sga-empty {
+    text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border);
+    border-radius: 16px; color: var(--subtext); font-size: .85rem;
+}
+
+/* Toast */
+.sga-toast {
+    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: .65rem 1.25rem; border-radius: 50px;
+    font-size: .82rem; font-weight: 700; z-index: 9999; display: flex;
+    align-items: center; gap: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    animation: sgaFadeIn .3s ease;
+}
+
+/* Header */
+.sga-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem;
+}
+.sga-header h2 {
+    margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: .5rem;
+}
+
+/* Manual input overlay */
+.sga-manual-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1070;
+    background: rgba(15,23,42,.6); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 1rem;
+}
+.sga-manual-overlay.show { display: flex; }
+.sga-manual-box {
+    background: var(--surface); border-radius: 20px; padding: 1.5rem;
+    width: 100%; max-width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.sga-manual-input {
+    width: 100%; padding: .75rem 1rem; border: 2px solid var(--border);
+    border-radius: 12px; background: var(--bg); color: var(--text);
+    font-size: 1.1rem; font-weight: 700; text-align: center;
+    outline: none; letter-spacing: .1em;
+}
+.sga-manual-input:focus { border-color: var(--crm-accent, #2563eb); }
+
+@media (max-width: 767.98px) {
+    #moduloSegAsistencia { margin: -15px -25px; padding: 1rem; }
+}
+</style>
+
+<div id="moduloSegAsistencia">
+
+    <!-- Header -->
+    <div class="sga-header">
+        <h2><i class="bi bi-people-fill" style="color:#059669;"></i> Asistencia</h2>
+        <button class="sga-btn-export" onclick="window._sgaExportCSV()">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar
+        </button>
+    </div>
+
+    <!-- Scanner Button -->
+    <button class="sga-btn-scan" id="sga-btn-scan" onclick="window._sgaOpenScanner()">
+        <i class="bi bi-qr-code-scan" style="font-size:1.5rem;"></i> Abrir Escáner de Personal
+    </button>
+
+    <!-- Manual entry button -->
+    <button class="sga-btn-manual" onclick="window._sgaOpenManual()">
+        <i class="bi bi-keyboard"></i> Ingreso Manual (DNI)
+    </button>
+
+    <!-- Scan Result -->
+    <div id="sga-scan-result" style="display:none;"></div>
+
+    <!-- Filter -->
+    <div class="sga-filter">
+        <div class="sga-filter-row">
+            <i class="bi bi-calendar3" style="color:var(--subtext);"></i>
+            <input type="date" id="sga-date-filter" onchange="window._sgaRender()">
+            <button class="sga-btn-hoy" id="sga-btn-hoy" style="display:none;" onclick="window._sgaSetToday()">Volver a Hoy</button>
+        </div>
+        <div class="sga-filter-row">
+            <i class="bi bi-search" style="color:var(--subtext);"></i>
+            <input type="text" id="sga-search" placeholder="Buscar empleado o DNI..." oninput="window._sgaRender()">
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sga-stats">
+        <div class="sga-stat" style="background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.15);">
+            <div class="sga-stat-label" style="color:#059669;">En Planta</div>
+            <div class="sga-stat-value" id="sga-stat-inside" style="color:#047857;">0</div>
+        </div>
+        <div class="sga-stat" style="background:rgba(100,116,139,.05);">
+            <div class="sga-stat-label" style="color:var(--subtext);">Turno Final</div>
+            <div class="sga-stat-value" id="sga-stat-done" style="color:var(--text);">0</div>
+        </div>
+        <div class="sga-stat" style="background:rgba(37,99,235,.05);border-color:rgba(37,99,235,.15);">
+            <div class="sga-stat-label" style="color:#2563eb;">Registros</div>
+            <div class="sga-stat-value" id="sga-stat-total" style="color:#1e40af;">0</div>
+        </div>
+    </div>
+
+    <!-- Records list -->
+    <div id="sga-records-list">
+        <div class="sga-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>No hay registros de asistencia para esta fecha.</div>
+    </div>
+</div>
+
+<!-- Manual DNI Input Overlay -->
+<div id="sga-manual-overlay" class="sga-manual-overlay">
+    <div class="sga-manual-box">
+        <h4 style="font-weight:800;color:var(--text);margin:0 0 .5rem;text-align:center;">
+            <i class="bi bi-person-badge-fill" style="color:var(--crm-accent,#2563eb);"></i> Ingreso Manual
+        </h4>
+        <p style="text-align:center;color:var(--subtext);font-size:.82rem;margin-bottom:1rem;">Ingrese el DNI del trabajador</p>
+        <input type="text" class="sga-manual-input" id="sga-manual-dni" placeholder="DNI" maxlength="12"
+               onkeypress="if(event.key==='Enter')window._sgaProcessManualDNI()">
+        <div style="margin-top:.75rem;">
+            <p style="font-size:.75rem;color:var(--subtext);margin:0 0 .4rem;">Nombre (si es nuevo):</p>
+            <input type="text" class="sga-manual-input" id="sga-manual-nombre" placeholder="NOMBRE COMPLETO" style="text-transform:uppercase;font-size:.9rem;letter-spacing:0;">
+        </div>
+        <div style="margin-top:.75rem;">
+            <p style="font-size:.75rem;color:var(--subtext);margin:0 0 .4rem;">Cargo:</p>
+            <input type="text" class="sga-manual-input" id="sga-manual-cargo" placeholder="Cargo" style="font-size:.9rem;letter-spacing:0;">
+        </div>
+        <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
+            <button onclick="window._sgaCloseManual()" style="flex:1;padding:.7rem;border-radius:12px;border:2px solid var(--border);background:var(--bg);font-weight:700;color:var(--subtext);cursor:pointer;">Cancelar</button>
+            <button onclick="window._sgaProcessManualDNI()" style="flex:1;padding:.7rem;border-radius:12px;border:none;background:var(--crm-accent,#2563eb);color:#fff;font-weight:700;cursor:pointer;">Registrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="sga-toast-container"></div>
