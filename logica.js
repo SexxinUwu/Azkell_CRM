@@ -2303,6 +2303,7 @@ function actualizarBottomNavActivo(ruta) {
     else if (ruta.startsWith('mantenimiento/')) id = 'bnav-mantenimiento';
     else if (ruta.startsWith('almacen/')) id = 'bnav-almacen';
     else if (ruta.startsWith('directorio/')) id = 'bnav-directorio';
+    else if (ruta.startsWith('seguridad/')) id = 'bnav-seguridad';
     else if (ruta.startsWith('sistema/') || ruta.startsWith('administracion')) id = 'bnav-config';
     
     if (id) { var el = document.getElementById(id); if (el) el.classList.add('active'); }
@@ -2337,6 +2338,8 @@ var NOMBRES_MODULOS_RECIENTES = {
     'sistema/usuarios':           'Usuarios',
     'sistema/auditoria':          'Auditoría',
     'sistema/configuracion':      'Configuración',
+    'seguridad/unidades':          'Unidades',
+    'seguridad/asistencia':        'Asistencia',
 };
 var ICONOS_MODULOS_RECIENTES = {
     'dashboard':                  'bi-grid-1x2-fill',
@@ -2365,6 +2368,8 @@ var ICONOS_MODULOS_RECIENTES = {
     'sistema/usuarios':           'bi-people-fill',
     'sistema/auditoria':          'bi-journal-code',
     'sistema/configuracion':      'bi-gear-fill',
+    'seguridad/unidades':          'bi-truck-front-fill',
+    'seguridad/asistencia':        'bi-people-fill',
 };
 
 function pushReciente(ruta) {
@@ -2460,6 +2465,8 @@ const TITULOS_MODULOS = {
     'sistema/usuarios':            'Gestión de Usuarios',
     'sistema/auditoria':           'Bitácora de Auditoría',
     'administracion':              'Administración',
+    'seguridad/unidades':          'Control de Unidades',
+    'seguridad/asistencia':        'Asistencia de Personal',
 };
 
 const MENU_IDS = {
@@ -2499,6 +2506,8 @@ const MENU_IDS = {
     'directorio/conductores':      'nav-conductores',
     'sistema/usuarios':            'nav-usuarios',
     'sistema/auditoria':           'nav-auditoria',
+    'seguridad/unidades':          'nav-seg-unidades',
+    'seguridad/asistencia':        'nav-seg-asistencia',
 };
 
 const MENU_SECTION = {
@@ -2535,6 +2544,8 @@ const MENU_SECTION = {
     'directorio/conductores':     'directorio',
     'sistema/usuarios':           'configuracion',
     'sistema/auditoria':          'configuracion',
+    'seguridad/unidades':         'seguridad',
+    'seguridad/asistencia':       'seguridad',
 };
 
 const BREADCRUMB_MAP = {
@@ -2568,6 +2579,8 @@ const BREADCRUMB_MAP = {
     'sistema/usuarios':           ['Configuración','Usuarios'],
     'sistema/auditoria':          ['Configuración','Auditoría'],
     'sistema/configuracion':      ['Sistema','Configuración'],
+    'seguridad/unidades':         ['Seguridad','Unidades'],
+    'seguridad/asistencia':       ['Seguridad','Asistencia'],
 };
 
 function actualizarTituloHeader(ruta) {
