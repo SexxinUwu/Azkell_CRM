@@ -21,7 +21,7 @@
 .sga-btn-scan:active { transform: scale(0.97); background: #047857; }
 
 .sga-btn-manual {
-    width: 100%; background: var(--surface); color: var(--crm-accent, #2563eb);
+    width: 100%; background: var(--surface); color: var(--crm-accent, #10b981);
     font-weight: 700; padding: .75rem; border-radius: 12px;
     border: 2px solid var(--border); font-size: .85rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: .5rem;
@@ -63,7 +63,7 @@
 }
 .sga-filter input::placeholder { color: var(--subtext); font-weight: 500; }
 .sga-btn-hoy {
-    background: rgba(37,99,235,.08); color: #2563eb; border: none;
+    background: rgba(16,185,129,.08); color: #10b981; border: none;
     font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;
     cursor: pointer;
 }
@@ -146,7 +146,7 @@
     font-size: 1.1rem; font-weight: 700; text-align: center;
     outline: none; letter-spacing: .1em;
 }
-.sga-manual-input:focus { border-color: var(--crm-accent, #2563eb); }
+.sga-manual-input:focus { border-color: var(--crm-accent, #10b981); }
 
 @media (max-width: 767.98px) {
     #moduloSegAsistencia { margin: -15px -25px; padding: 1rem; }
@@ -199,9 +199,9 @@
             <div class="sga-stat-label" style="color:var(--subtext);">Turno Final</div>
             <div class="sga-stat-value" id="sga-stat-done" style="color:var(--text);">0</div>
         </div>
-        <div class="sga-stat" style="background:rgba(37,99,235,.05);border-color:rgba(37,99,235,.15);">
-            <div class="sga-stat-label" style="color:#2563eb;">Registros</div>
-            <div class="sga-stat-value" id="sga-stat-total" style="color:#1e40af;">0</div>
+        <div class="sga-stat" style="background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.15);">
+            <div class="sga-stat-label" style="color:#10b981;">Registros</div>
+            <div class="sga-stat-value" id="sga-stat-total" style="color:#064e3b;">0</div>
         </div>
     </div>
 
@@ -215,7 +215,7 @@
 <div id="sga-manual-overlay" class="sga-manual-overlay">
     <div class="sga-manual-box">
         <h4 style="font-weight:800;color:var(--text);margin:0 0 .5rem;text-align:center;">
-            <i class="bi bi-person-badge-fill" style="color:var(--crm-accent,#2563eb);"></i> Ingreso Manual
+            <i class="bi bi-person-badge-fill" style="color:var(--crm-accent,#10b981);"></i> Ingreso Manual
         </h4>
         <p style="text-align:center;color:var(--subtext);font-size:.82rem;margin-bottom:1rem;">Ingrese el DNI del trabajador</p>
         <input type="text" class="sga-manual-input" id="sga-manual-dni" placeholder="DNI" maxlength="12"
@@ -230,7 +230,7 @@
         </div>
         <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
             <button onclick="window._sgaCloseManual()" style="flex:1;padding:.7rem;border-radius:12px;border:2px solid var(--border);background:var(--bg);font-weight:700;color:var(--subtext);cursor:pointer;">Cancelar</button>
-            <button onclick="window._sgaProcessManualDNI()" style="flex:1;padding:.7rem;border-radius:12px;border:none;background:var(--crm-accent,#2563eb);color:#fff;font-weight:700;cursor:pointer;">Registrar</button>
+            <button onclick="window._sgaProcessManualDNI()" style="flex:1;padding:.7rem;border-radius:12px;border:none;background:var(--crm-accent,#10b981);color:#fff;font-weight:700;cursor:pointer;">Registrar</button>
         </div>
     </div>
 </div>
