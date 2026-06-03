@@ -78,7 +78,7 @@ const db = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
-    ssl: { rejectUnauthorized: false }, // Crucial para que Render acepte a Aiven
+    ssl: process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined,
     charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10,
