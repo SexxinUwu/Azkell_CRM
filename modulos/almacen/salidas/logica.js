@@ -668,7 +668,7 @@ window.salEditarSalida = function(id) {
                 '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._salQuitarItem(' + idx + ')"><i class="bi bi-x"></i></button></td>';
             if (tbody) tbody.appendChild(tr);
         });
-        window._salCalcTotales();
+        _salActualizarTotal();
     }
     
     // Cerrar el detalle para mostrar el form claramente
