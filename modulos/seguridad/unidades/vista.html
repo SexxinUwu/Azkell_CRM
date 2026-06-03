@@ -216,6 +216,48 @@
 
 .sgu-empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; font-size: .95rem; font-weight: 600; }
 </style>
+<!-- DataLists para Autocompletado -->
+<datalist id="dl-placas"></datalist>
+<datalist id="dl-conductores"></datalist>
+
+<div id="moduloSegUnidades">
+
+    <!-- ═══ VIEW: LISTA (Módulo de Unidades) ═════════════════════════════════════ -->
+    <div id="sgu-list" class="sgu-view active">
+        <div class="sgu-header-main">
+            <h2><i class="bi bi-truck"></i> Módulo de Unidades</h2>
+            <!-- Engranaje solo visible para Admin -->
+            <button class="sgu-btn-back" onclick="window._sguOpenSettings()" style="width:40px;height:40px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;" data-perm-crear="seguridad_unidades">
+                <i class="bi bi-gear"></i>
+            </button>
+        </div>
+
+        <button class="sgu-btn-registrar" onclick="window._sguNav('form')" data-perm-crear="seguridad_unidades">
+            <i class="bi bi-check-circle"></i> Registrar Salida (Checklist)
+        </button>
+
+        <div class="sgu-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" class="sgu-search" id="sgu-search" placeholder="Buscar por placa o chofer..." oninput="window._sguFilterList()">
+        </div>
+
+        <div class="sgu-tabs">
+            <button class="sgu-tab active" id="sgu-tab-activos" onclick="window._sguSetTab('activos')">En Ruta (<span id="sgu-count-ruta">0</span>)</button>
+            <button class="sgu-tab" id="sgu-tab-historial" onclick="window._sguSetTab('historial')">Historial</button>
+        </div>
+
+        <div id="sgu-records-list">
+            <div class="sgu-empty"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>Cargando registros...</div>
+        </div>
+    </div>
+
+    <!-- ═══ VIEW: FORMULARIO (Salida Unidad) ═════════════════════════════════ -->
+    <div id="sgu-form" class="sgu-view">
+        <div class="sgu-header-sub">
+            <button class="sgu-btn-back" onclick="window._sguNav('list')"><i class="bi bi-chevron-left"></i></button>
+            <h2 id="sgu-form-title">Salida Unidad</h2>
+            <button class="sgu-btn-back" onclick="window._sguOpenScanner()" style="color:#64748b;"><i class="bi bi-qr-code-scan"></i></button>
+        </div>
 
         <!-- Form Inputs Card -->
         <div class="sgu-form-container">
