@@ -135,6 +135,20 @@ function _sguLoadTemplate(cb) {
 // ── NAVEGACIÓN ───────────────────────────────────────────────────
 window._sguNav = function(view, id) { window._sguShowView(view, id); };
 
+window._sguOpenScanner = function() {
+    if (typeof window._abrirEscaner === 'function') {
+        window._abrirEscaner(function(valor) {
+            var el = document.getElementById('sgu-f-placa');
+            if (el) {
+                el.value = valor;
+                window._sguHandleAutoInput(el, 'placas');
+            }
+        }, 'Escanear QR de Unidad');
+    } else {
+        _sguToast('Función de escáner no disponible', 'bi-qr-code-scan');
+    }
+};
+
 window._sguShowView = function(view, id) {
     _sguView = view;
     if (id) _sguDetailId = id;
