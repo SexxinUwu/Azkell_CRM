@@ -48,7 +48,19 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 app.use(cors({
     origin: function(origin, cb) {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+        // Permitimos llamadas sin origin (como apps móviles o curl)
+        if (!origin) return cb(null, true);
+        
+        // Permitimos dominios de Railway, Render, Localhost y el VPS actual
+        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('sslip.io')) {
+            return cb(null, true);
+        }
+        
+        // Si hay una APP_URL definida y el origin coincide, lo permitimos
+        if (process.env.APP_URL && origin.startsWith(process.env.APP_URL)) {
+            return cb(null, true);
+        }
+
         cb(new Error('CORS bloqueado: ' + origin));
     },
     credentials: true
