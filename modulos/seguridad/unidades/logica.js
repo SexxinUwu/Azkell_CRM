@@ -429,7 +429,10 @@ function _sguRenderDetail(recordId) {
         // Tarjetas Viaje Completado + Retorno
         html += '<div class="sgu-det-card sgu-det-card-dark" style="display:flex;flex-direction:column;align-items:center;padding:1.5rem;">';
         html += '<h3 class="sgu-det-card-title"><i class="bi bi-file-earmark-check"></i> Viaje Completado</h3>';
-        html += '<button style="width:100%;padding:.8rem;border-radius:12px;border:none;background:#2563eb;color:#fff;font-weight:700;"><i class="bi bi-download"></i> Descargar Viaje (Ida y Vuelta PDF)</button>';
+        html += '<button style="width:100%;padding:.8rem;border-radius:12px;border:none;background:#2563eb;color:#fff;font-weight:700;" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-download"></i> Descargar Viaje (Ida y Vuelta PDF)</button>';
+        if (typeof rolLogueado !== 'undefined' && (rolLogueado === 'Administrador' || rolLogueado === 'administrador')) {
+            html += '<button style="width:100%;padding:.8rem;border-radius:12px;border:none;background:#ef4444;color:#fff;font-weight:700;margin-top:10px;" onclick="window._sguDeleteRecord(\'' + rec.id + '\')"><i class="bi bi-trash"></i> Eliminar Expediente</button>';
+        }
         html += '</div>';
 
         html += '<div class="sgu-det-card">';
@@ -815,6 +818,106 @@ window._sguGenerarPDF = function(tipo) {
     };
     
     _sguToast('Generando PDF, por favor espere...', 'bi-hourglass-split');
+    html2pdf().set(opt).from(div).save().then(function() {
+        _sguToast('PDF descargado correctamente.', 'bi-check-circle');
+    });
+};
+
+// =========================================================
+// 🗑️ ELIMINAR REGISTRO
+// =========================================================
+window._sguDeleteRecord = function(id) {
+    if (!confirm('¿Está seguro de eliminar este expediente? Esta acción no se puede deshacer y borrará también las fotos.')) return;
+    
+    _sguToast('Eliminando expediente...', 'bi-hourglass-split');
+    fetch('/api/seguridad/unidades/' + id, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('fleet_token') }
+    }).then(function(r) {
+        if(!r.ok) throw new Error('Error al eliminar');
+        return r.json();
+    }).then(function() {
+        _sguToast('Expediente eliminado', 'bi-check-circle');
+        _sguLoadRecords(); // Recargar datos
+        window._sguNav('list');
+    }).catch(function(e) {
+        _sguToast(e.message, 'bi-exclamation-circle');
+    });
+};
+
+// =========================================================
+// 📄 GENERAR PDF COMPLETO (IDA Y VUELTA)
+// =========================================================
+window._sguGenerarPDFCompleto = function() {
+    if (typeof html2pdf === 'undefined') {
+        _sguToast('Error: Librería PDF no cargada', 'bi-exclamation-triangle');
+        return;
+    }
+    
+    if (!window._sguCurrentRecord) return;
+    var rec = window._sguCurrentRecord;
+    
+    // Crear un contenedor temporal que agrupe ambos HTML (Ida y Vuelta)
+    var div = document.createElement('div');
+    div.style.padding = '20px';
+    div.style.fontFamily = 'Arial, sans-serif';
+    div.style.color = '#333';
+    div.style.width = '800px'; 
+    
+    function buildTable(tipo) {
+        var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
+        var hora = tipo === 'salida' ? rec.salida_hora : rec.retorno_hora;
+        var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
+        var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
+        var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
+        
+        var html = '<div style="text-align:center;border-bottom:2px solid #1e293b;padding-bottom:10px;margin-bottom:20px;">';
+        html += '<h1 style="margin:0;font-size:24px;color:#1e293b;">REPORTE DE CHECKLIST (' + (tipo==='salida'?'IDA':'VUELTA') + ')</h1>';
+        html += '<p style="margin:5px 0 0 0;font-size:14px;color:#64748b;">ID: ' + rec.id + '</p>';
+        html += '</div>';
+        
+        html += '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;">';
+        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA TRACTO</td><td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + rec.placa_tracto + '</td><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA CARRETA</td><td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + (rec.placa_carreta || '---') + '</td></tr>';
+        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">CONDUCTOR</td><td colspan="3" style="padding:5px;border:1px solid #cbd5e1;">' + rec.conductor + '</td></tr>';
+        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">FECHA Y HORA</td><td style="padding:5px;border:1px solid #cbd5e1;">' + (fecha||'--') + ' ' + (hora||'--') + '</td><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">KILOMETRAJE</td><td style="padding:5px;border:1px solid #cbd5e1;">' + (km||'---') + '</td></tr>';
+        html += '</table>';
+        
+        html += '<h3 style="margin:0 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Detalle de Revisión</h3>';
+        if (template && template.length && checklist) {
+            html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">';
+            template.forEach(function(cat) {
+                html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + cat.name + '</td></tr>';
+                if (cat.items) {
+                    cat.items.forEach(function(item) {
+                        var valor = checklist[item.id] || '---';
+                        var color = valor === 'ok' ? '#166534' : (valor === 'mal' ? '#991b1b' : '#475569');
+                        html += '<tr><td style="padding:4px;border:1px solid #cbd5e1;width:80%;">' + item.label + '</td><td style="padding:4px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;color:'+color+';">' + valor.toUpperCase() + '</td></tr>';
+                    });
+                }
+            });
+            html += '</table>';
+        } else {
+            html += '<p style="font-size:12px;color:#64748b;margin-bottom:20px;">No se registró checklist.</p>';
+        }
+        return html;
+    }
+    
+    var htmlFinal = buildTable('salida');
+    // Salto de página para el PDF
+    htmlFinal += '<div class="html2pdf__page-break"></div>';
+    htmlFinal += buildTable('retorno');
+    
+    div.innerHTML = htmlFinal;
+    
+    var opt = {
+        margin:       10,
+        filename:     'Checklist_Completo_' + rec.placa_tracto + '.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    _sguToast('Generando PDF completo...', 'bi-hourglass-split');
     html2pdf().set(opt).from(div).save().then(function() {
         _sguToast('PDF descargado correctamente.', 'bi-check-circle');
     });
