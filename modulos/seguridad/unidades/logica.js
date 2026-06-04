@@ -372,6 +372,9 @@ function _sguRenderDetail(recordId) {
 
     var rec = _sguRecords.find(function(r) { return r.id === recordId; });
     if (!rec) return;
+    
+    // Asignar a variable global para los modales de Fotos, Detalles y PDF
+    window._sguCurrentRecord = rec;
 
     var isEnRuta = rec.estado === 'en_ruta';
     _sguEditMode = isEnRuta ? 'retorno' : 'ver';
