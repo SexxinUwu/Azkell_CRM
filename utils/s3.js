@@ -5,14 +5,14 @@
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({
-    region:      process.env.AWS_REGION || 'us-east-2',
+    region:      (process.env.AWS_REGION || 'us-east-2').trim(),
     credentials: {
-        accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        accessKeyId:     (process.env.AWS_ACCESS_KEY_ID || '').trim(),
+        secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY || '').trim()
     }
 });
 
-const BUCKET = process.env.AWS_BUCKET_NAME;
+const BUCKET = (process.env.AWS_BUCKET_NAME || '').trim();
 
 /**
  * Sube un buffer a S3 y retorna la URL pública.
