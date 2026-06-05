@@ -10,7 +10,7 @@ const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15
 module.exports = (db, logAudit) => {
 
     // ── Cargar helper S3 ──────────────────────────────────────────
-    const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
+    const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('../utils/s3');
 
     // ════════════════════════════════════════════════════════════════
     // UNIDADES — Checklist de Camiones
@@ -161,45 +161,67 @@ module.exports = (db, logAudit) => {
         });
     });
 
-    // ── POST /seguridad/unidades/:id/fotos — Subir foto a S3 ──────
-    router.post('/seguridad/unidades/:id/fotos', (req, res) => {
-        upload.single('foto')(req, res, async (err) => {
-            if (err) {
-                console.error('Error de multer:', err.message);
-                return res.status(400).json({ error: 'Error al subir imagen (posiblemente muy grande): ' + err.message });
-            }
-            try {
-                if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
+    // ── POST /seguridad/unidades/:id/fotos/presigned — Generar pases VIP ──
+    router.post('/seguridad/unidades/:id/fotos/presigned', async (req, res) => {
+        try {
+            const registroId = req.params.id;
+            const archivos = req.body.archivos || []; // [{nombre: '...', tipo: 'image/jpeg', fase: 'salida'}]
+            if (!archivos.length) return res.status(400).json({ error: 'No se enviaron archivos' });
 
-                const registroId = req.params.id;
-                const tipo       = req.body.tipo || 'salida'; // 'salida' o 'retorno'
-                const ext        = (req.file.originalname || '').split('.').pop() || 'jpg';
-                const timestamp  = Date.now();
-                const s3Key      = `seguridad/unidades/${registroId}/${tipo}_${timestamp}.${ext}`;
+            const urls = await Promise.all(archivos.map(async (arch) => {
+                const tipo = arch.fase || 'salida';
+                const ext = (arch.nombre || '').split('.').pop() || 'jpg';
+                // Generar sufijo pseudo-random para evitar colisiones si se suben múltiples al mismo tiempo
+                const rand = Math.random().toString(36).substring(2, 7);
+                const s3Key = `seguridad/unidades/${registroId}/${tipo}_${Date.now()}_${rand}.${ext}`;
+                const uploadUrl = await getPresignedUploadUrl(s3Key, arch.tipo || 'image/jpeg', 300); // 5 mins
+                return { uploadUrl, key: s3Key, fase: tipo };
+            }));
 
-                const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+            res.json({ urls });
+        } catch (e) {
+            console.error('Error generando URLs prefirmadas:', e);
+            res.status(500).json({ error: 'Error generando URLs de S3' });
+        }
+    });
 
-                // Obtener siguiente orden
+    // ── POST /seguridad/unidades/:id/fotos/confirmar — Confirmar subida a DB ──
+    router.post('/seguridad/unidades/:id/fotos/confirmar', (req, res) => {
+        const registroId = req.params.id;
+        const exitosos = req.body.exitosos || []; // [{key: '...', fase: 'salida'}]
+        if (!exitosos.length) return res.json({ ok: true, message: 'Ninguna foto para confirmar' });
+
+        const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+        const region = (process.env.AWS_REGION || 'us-east-2').trim();
+
+        // Para evitar bloqueos con consultas separadas, iteramos o insertamos en bloque
+        db.query(
+            'SELECT COALESCE(MAX(orden), 0) AS maxOrden FROM seg_unidades_fotos WHERE registro_id = ?',
+            [registroId],
+            (errDb, rows) => {
+                if (errDb) return res.status(500).json({ error: errDb.message });
+                let orden = (rows && rows[0]) ? rows[0].maxOrden : 0;
+                
+                // Construir bulk insert
+                const values = [];
+                exitosos.forEach(ex => {
+                    orden++;
+                    const fullUrl = `https://${bucket}.s3.${region}.amazonaws.com/${ex.key}`;
+                    values.push([registroId, ex.fase || 'salida', fullUrl, orden]);
+                });
+
+                if (!values.length) return res.json({ ok: true });
+
                 db.query(
-                    'SELECT COALESCE(MAX(orden), 0) + 1 AS nextOrden FROM seg_unidades_fotos WHERE registro_id = ? AND tipo = ?',
-                    [registroId, tipo],
-                    (errDb, rows) => {
-                        const orden = (rows && rows[0]) ? rows[0].nextOrden : 1;
-                        db.query(
-                            'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES (?, ?, ?, ?)',
-                            [registroId, tipo, url, orden],
-                            (err2, result) => {
-                                if (err2) return res.status(500).json({ error: err2.message });
-                                res.json({ ok: true, id: result.insertId, url, orden });
-                            }
-                        );
+                    'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES ?',
+                    [values],
+                    (err2) => {
+                        if (err2) return res.status(500).json({ error: err2.message });
+                        res.json({ ok: true, guardados: values.length });
                     }
                 );
-            } catch (e) {
-                console.error('Error subiendo foto a S3:', e);
-                res.status(500).json({ error: 'Error al subir imagen: ' + e.message });
             }
-        });
+        );
     });
 
     // ── DELETE /seguridad/unidades/:id/fotos/:fotoId — Eliminar foto ──

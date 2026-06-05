@@ -526,46 +526,82 @@ function _sguUploadPhotos(registroId, tipo, cb) {
     var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
     if (!pendientes.length) return cb();
 
-    var current = 0;
-    var errores = [];
+    var archivosMetadata = pendientes.map(function(p) {
+        return { nombre: p.file.name || 'foto.jpg', tipo: p.file.type || 'image/jpeg', fase: tipo };
+    });
 
-    function uploadNext() {
-        if (current >= pendientes.length) {
-            if (errores.length > 0) {
-                _sguToast('Algunas fotos fallaron: ' + errores.join(', '), 'bi-exclamation-triangle');
-                // Give user time to see the error before callback
-                setTimeout(cb, 3000);
-            } else {
-                cb();
-            }
-            return;
+    _sguToast('Preparando subida directa...', 'bi-cloud-arrow-up');
+
+    // 1. Pedir URLs prefirmadas al backend
+    fetch('/api/seguridad/unidades/' + registroId + '/fotos/presigned', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('fleet_token')
+        },
+        body: JSON.stringify({ archivos: archivosMetadata })
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('Error solicitando permisos de subida');
+        return r.json();
+    })
+    .then(function(data) {
+        var urls = data.urls || [];
+        var exitosos = [];
+        var promesas = [];
+
+        _sguToast('Subiendo ' + pendientes.length + ' fotos a la nube...', 'bi-hourglass-split');
+
+        // 2. Subir directo a S3 en paralelo
+        pendientes.forEach(function(p, i) {
+            if (!urls[i]) return; // Fallback
+            var uploadUrl = urls[i].uploadUrl;
+            var s3Key = urls[i].key;
+
+            var req = fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': p.file.type || 'image/jpeg' },
+                body: p.file // <- El archivo va directo a Amazon S3
+            })
+            .then(function(resS3) {
+                if (!resS3.ok) throw new Error('Fallo subida a S3 de foto ' + (i+1));
+                p.uploaded = true;
+                exitosos.push({ key: s3Key, fase: tipo });
+            })
+            .catch(function(e) {
+                console.error(e);
+            });
+
+            promesas.push(req);
+        });
+
+        return Promise.all(promesas).then(function() { return exitosos; });
+    })
+    .then(function(exitosos) {
+        if (!exitosos.length) {
+            _sguToast('Ninguna foto pudo subirse.', 'bi-x-circle');
+            return cb();
         }
 
-        var p = pendientes[current];
-        var formData = new FormData();
-        formData.append('foto', p.file);
-        formData.append('tipo', tipo);
-
-        fetch('/api/seguridad/unidades/' + registroId + '/fotos', { method: 'POST', body: formData })
-        .then(function(r) {
-            if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
-            return r.json();
+        // 3. Confirmar al backend las fotos exitosas
+        return fetch('/api/seguridad/unidades/' + registroId + '/fotos/confirmar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('fleet_token')
+            },
+            body: JSON.stringify({ exitosos: exitosos })
         })
-        .then(function(data) {
-            p.uploaded = true; 
-            p.url = data.url;
-            current++;
-            uploadNext();
-        })
-        .catch(function(e) {
-            console.error('Fallo subida foto', current, e);
-            errores.push(e.message || 'Error S3');
-            current++;
-            uploadNext();
+        .then(function(r) { return r.json(); })
+        .then(function() {
+            cb();
         });
-    }
-
-    uploadNext();
+    })
+    .catch(function(e) {
+        console.error('Error subida fotos:', e);
+        _sguToast(e.message || 'Fallo de subida de fotos', 'bi-exclamation-triangle');
+        setTimeout(cb, 3000);
+    });
 }
 
 // ── GUARDAR SALIDA / RETORNO ─────────────────────────────────────
