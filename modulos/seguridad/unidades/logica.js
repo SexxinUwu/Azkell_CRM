@@ -13,15 +13,22 @@ var _sguEditMode = 'salida';
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sguIsAdmin() {
+    var ADMIN_ROLES = ['administrador', 'admin', 'sistema', 'master', 'fundador'];
     try {
         if (typeof rolLogueado !== 'undefined' && rolLogueado) {
             var r = rolLogueado.toLowerCase();
-            return r === 'administrador' || r === 'admin' || r === 'sistema' || r === 'master';
+            if (ADMIN_ROLES.indexOf(r) >= 0) return true;
         }
     } catch(e) {}
     var rol = localStorage.getItem('fleet_rol') || '';
     rol = rol.toLowerCase();
-    return rol === 'administrador' || rol === 'admin' || rol === 'sistema' || rol === 'master';
+    if (ADMIN_ROLES.indexOf(rol) >= 0) return true;
+    // Fallback: check permisos.admin flag
+    try {
+        var perms = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+        if (perms && perms.admin === true) return true;
+    } catch(e2) {}
+    return false;
 }
 
 function _sguTimestamp() {
