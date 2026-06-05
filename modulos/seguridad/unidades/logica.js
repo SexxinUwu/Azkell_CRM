@@ -208,7 +208,10 @@ function _sguRenderList() {
         var alertBadge = hasAlert ? '<div class="sgu-list-card-alert"><i class="bi bi-exclamation-triangle"></i></div>' : '';
         var color = isEnRuta ? '#2563eb' : '#64748b';
         var bg = isEnRuta ? '#eff6ff' : '#f1f5f9';
-        
+        var isAdmin = (typeof rolLogueado !== 'undefined' && (rolLogueado === 'Administrador' || rolLogueado === 'administrador'));
+        var deleteBtn = isAdmin ? '<button class="sgu-btn-eliminar-card" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '';
+        var btnText = isEnRuta ? 'Ingresar' : 'Ver Resumen';
+
         html += '<div class="sgu-list-card">' +
             '<div class="sgu-list-card-border" style="background:' + color + ';"></div>' +
             '<div class="sgu-list-card-icon" style="color:' + color + ';background:' + bg + ';">' +
@@ -218,7 +221,10 @@ function _sguRenderList() {
                 '<h4 class="sgu-list-card-title">' + rec.placa_tracto + (rec.placa_carreta ? ' / ' + rec.placa_carreta : '') + '</h4>' +
                 '<p class="sgu-list-card-subtitle">' + (isEnRuta ? 'Salió a: ' : 'Completado: ') + (rec.destino || '---') + '</p>' +
             '</div>' +
-            '<button class="sgu-btn-ingresar" onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">Ingresar</button>' +
+            '<div class="sgu-list-card-actions" style="display:flex; gap:8px; align-items:center;">' +
+                '<button class="sgu-btn-ingresar" onclick="window._sguShowView(\'detail\',\'' + rec.id + '\')">' + btnText + '</button>' +
+                deleteBtn +
+            '</div>' +
         '</div>';
     });
     container.innerHTML = html;
