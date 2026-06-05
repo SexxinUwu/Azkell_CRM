@@ -204,6 +204,7 @@ module.exports = (db, logAudit) => {
                 // Usar inserts individuales para asegurar máxima compatibilidad
                 let procesados = 0;
                 let errores = 0;
+                let ultimoError = '';
 
                 exitosos.forEach(ex => {
                     orden++;
@@ -215,10 +216,11 @@ module.exports = (db, logAudit) => {
                             if (err2) {
                                 console.error('Error insertando foto:', err2.message);
                                 errores++;
+                                ultimoError = err2.message;
                             }
                             procesados++;
                             if (procesados === exitosos.length) {
-                                if (errores === procesados) return res.status(500).json({ error: 'Fallo al guardar rutas de fotos en BD' });
+                                if (errores === procesados) return res.status(500).json({ error: 'MySQL Error: ' + ultimoError });
                                 res.json({ ok: true, guardados: procesados - errores });
                             }
                         }
