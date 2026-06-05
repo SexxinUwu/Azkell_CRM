@@ -201,25 +201,29 @@ module.exports = (db, logAudit) => {
             (errDb, rows) => {
                 if (errDb) return res.status(500).json({ error: errDb.message });
                 let orden = (rows && rows[0]) ? rows[0].maxOrden : 0;
-                
-                // Construir bulk insert
-                const values = [];
+                // Usar inserts individuales para asegurar máxima compatibilidad
+                let procesados = 0;
+                let errores = 0;
+
                 exitosos.forEach(ex => {
                     orden++;
                     const fullUrl = `https://${bucket}.s3.${region}.amazonaws.com/${ex.key}`;
-                    values.push([registroId, ex.fase || 'salida', fullUrl, orden]);
+                    db.query(
+                        'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES (?, ?, ?, ?)',
+                        [registroId, ex.fase || 'salida', fullUrl, orden],
+                        (err2) => {
+                            if (err2) {
+                                console.error('Error insertando foto:', err2.message);
+                                errores++;
+                            }
+                            procesados++;
+                            if (procesados === exitosos.length) {
+                                if (errores === procesados) return res.status(500).json({ error: 'Fallo al guardar rutas de fotos en BD' });
+                                res.json({ ok: true, guardados: procesados - errores });
+                            }
+                        }
+                    );
                 });
-
-                if (!values.length) return res.json({ ok: true });
-
-                db.query(
-                    'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES ?',
-                    [values],
-                    (err2) => {
-                        if (err2) return res.status(500).json({ error: err2.message });
-                        res.json({ ok: true, guardados: values.length });
-                    }
-                );
             }
         );
     });

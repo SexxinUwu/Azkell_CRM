@@ -592,8 +592,12 @@ function _sguUploadPhotos(registroId, tipo, cb) {
             },
             body: JSON.stringify({ exitosos: exitosos })
         })
-        .then(function(r) { return r.json(); })
-        .then(function() {
+        .then(function(r) { 
+            if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Error BD'); });
+            return r.json(); 
+        })
+        .then(function(resData) {
+            console.log("Confirmación exitosa:", resData);
             cb();
         });
     })
