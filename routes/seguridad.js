@@ -10,14 +10,14 @@ const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15
 module.exports = (db, logAudit) => {
 
     // ── Cargar helper S3 ──────────────────────────────────────────
-    const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+    const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
 
     // ════════════════════════════════════════════════════════════════
     // UNIDADES — Checklist de Camiones
     // ════════════════════════════════════════════════════════════════
 
     // ── GET /seguridad/unidades — Listar registros ────────────────
-    router.get('/seguridad/unidades', (req, res) => {
+    router.get('/seguridad/unidades', async (req, res) => {
         let sql = `SELECT r.*,
             (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', f.id, 'tipo', f.tipo, 'url', f.url, 'orden', f.orden))
              FROM seg_unidades_fotos f WHERE f.registro_id = r.id) AS fotos
@@ -28,17 +28,25 @@ module.exports = (db, logAudit) => {
             params.push(req.query.fecha);
         }
         sql += ' ORDER BY r.created_at DESC';
-        db.query(sql, params, (err, rows) => {
+        db.query(sql, params, async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             // Parse fotos JSON
-            rows.forEach(r => {
+            for (const r of rows) {
                 try { r.fotos = r.fotos ? JSON.parse(r.fotos) : []; } catch(e) { r.fotos = []; }
-                // Parse checklist JSONs
+                // Generar URLs pre-firmadas para cada foto
+                if (r.fotos && r.fotos.length) {
+                    for (const f of r.fotos) {
+                        const key = s3KeyFromUrl(f.url);
+                        if (key) {
+                            try { f.url = await getPresignedUrl(key); } catch(e) { /* keep original */ }
+                        }
+                    }
+                }
                 try { r.salida_template_json  = r.salida_template_json  ? JSON.parse(r.salida_template_json)  : null; } catch(e) {}
                 try { r.salida_checklist_json  = r.salida_checklist_json  ? JSON.parse(r.salida_checklist_json)  : null; } catch(e) {}
                 try { r.retorno_template_json = r.retorno_template_json ? JSON.parse(r.retorno_template_json) : null; } catch(e) {}
                 try { r.retorno_checklist_json = r.retorno_checklist_json ? JSON.parse(r.retorno_checklist_json) : null; } catch(e) {}
-            });
+            }
             res.json(rows);
         });
     });
@@ -130,19 +138,24 @@ module.exports = (db, logAudit) => {
 
     // ── DELETE /seguridad/unidades/:id — Eliminar registro + fotos S3 ──
     router.delete('/seguridad/unidades/:id', (req, res) => {
-        // Primero obtener fotos para borrarlas de S3
-        db.query('SELECT url FROM seg_unidades_fotos WHERE registro_id = ?', [req.params.id], async (err, fotos) => {
-            if (!err && fotos && fotos.length) {
-                for (const f of fotos) {
-                    const key = s3KeyFromUrl(f.url);
-                    if (key) await deleteFromS3(key);
-                }
-            }
-            db.query('DELETE FROM seg_unidades_fotos WHERE registro_id = ?', [req.params.id], () => {
-                db.query('DELETE FROM seg_unidades_registros WHERE id = ?', [req.params.id], (err2) => {
+        const regId = req.params.id;
+        // 1. Obtener URLs de fotos para limpiar S3 después
+        db.query('SELECT url FROM seg_unidades_fotos WHERE registro_id = ?', [regId], (err, fotos) => {
+            // 2. Borrar fotos de la BD
+            db.query('DELETE FROM seg_unidades_fotos WHERE registro_id = ?', [regId], () => {
+                // 3. Borrar registro de la BD
+                db.query('DELETE FROM seg_unidades_registros WHERE id = ?', [regId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'ELIMINÓ', 'Unidad ' + req.params.id);
+                    if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'ELIMINÓ', 'Unidad ' + regId);
+                    // 4. Responder inmediatamente
                     res.json({ ok: true });
+                    // 5. Limpiar S3 en segundo plano (no bloquea la respuesta)
+                    if (!err && fotos && fotos.length) {
+                        Promise.all(fotos.map(f => {
+                            const key = s3KeyFromUrl(f.url);
+                            return key ? deleteFromS3(key) : Promise.resolve();
+                        })).catch(e => console.warn('S3 cleanup error:', e.message));
+                    }
                 });
             });
         });
