@@ -39,6 +39,20 @@ async function getPresignedUrl(key, expiresIn = 3600) {
 }
 
 /**
+ * Genera una URL pre-firmada para ESCRIBIR (subir) un objeto a S3 directamente.
+ * @param {string} key — Ruta destino en S3
+ * @param {string} contentType — Tipo MIME (ej: image/jpeg)
+ * @param {number} expiresIn — Vigencia en segundos (default 300 = 5 mins)
+ */
+async function getPresignedUploadUrl(key, contentType, expiresIn = 300) {
+    return getSignedUrl(s3, new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        ContentType: contentType
+    }), { expiresIn });
+}
+
+/**
  * Elimina un objeto de S3.
  */
 async function deleteFromS3(key) {
@@ -65,4 +79,4 @@ function s3KeyFromUrl(url) {
     return null;
 }
 
-module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl };
+module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl };
