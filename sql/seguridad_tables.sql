@@ -25,12 +25,9 @@ CREATE TABLE IF NOT EXISTS `seg_checklist_templates` (
 
 
 -- ─────────────────────────────────────────────────────────────
--- DATOS INICIALES: Categorías por defecto del checklist
+-- DATOS INICIALES: Categorías por defecto del checklist (Eliminados a petición del usuario)
 -- ─────────────────────────────────────────────────────────────
-INSERT INTO `seg_checklist_templates` (`template_id`, `titulo`, `items_json`, `orden`) VALUES
-('cat_1', 'Documentación',     '[{"id":"i_11","label":"Tarjeta de Propiedad"},{"id":"i_12","label":"Rev. Técnica y SOAT"},{"id":"i_13","label":"DNI, Licencia y SCTR"}]', 1),
-('cat_2', 'EPPs Personal',     '[{"id":"i_21","label":"Casco y Barbiquejo"},{"id":"i_22","label":"Chaleco Reflectivo"},{"id":"i_23","label":"Zapatos Seguridad"}]', 2),
-('cat_3', 'Físico y Seguridad','[{"id":"i_31","label":"Botiquín y Extintor"},{"id":"i_32","label":"Luces y Llantas"},{"id":"i_33","label":"Furgón Hermético"}]', 3);
+
 
 
 -- ─────────────────────────────────────────────────────────────

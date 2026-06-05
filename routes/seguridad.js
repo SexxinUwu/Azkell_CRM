@@ -258,6 +258,26 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── GET /seguridad/limpiar-plantillas — Borrar plantillas por defecto ──
+    router.get('/seguridad/limpiar-plantillas', (req, res) => {
+        db.query('DELETE FROM seg_checklist_templates', (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, message: 'Plantillas borradas. Ahora el checklist estará vacío por defecto.' });
+        });
+    });
+
+    // ── GET /test-s3 — Diagnóstico de conexión S3 ──
+    router.get('/test-s3', async (req, res) => {
+        try {
+            const buffer = Buffer.from('Testing S3 connection from Railway', 'utf-8');
+            const key = `test/test_${Date.now()}.txt`;
+            const url = await uploadToS3(buffer, key, 'text/plain');
+            res.json({ ok: true, url, message: 'Upload exitoso a S3' });
+        } catch (e) {
+            res.status(500).json({ ok: false, error: e.message, stack: e.stack, hint: 'Revisa las variables de entorno de AWS en Railway' });
+        }
+    });
+
     // ── GET /seguridad/recursos — Autocomplete Placas y Directorio ──
     router.get('/seguridad/recursos', (req, res) => {
         const recursos = { placas: [], conductores: [] };
