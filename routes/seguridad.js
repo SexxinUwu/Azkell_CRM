@@ -268,13 +268,38 @@ module.exports = (db, logAudit) => {
 
     // ── GET /test-s3 — Diagnóstico de conexión S3 ──
     router.get('/test-s3', async (req, res) => {
+        const bucketName = process.env.AWS_BUCKET_NAME || '';
+        const diagnostic = {
+            AWS_REGION: process.env.AWS_REGION || '(not set)',
+            AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? process.env.AWS_ACCESS_KEY_ID.substring(0, 8) + '...' : '(not set)',
+            AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'SET (' + process.env.AWS_SECRET_ACCESS_KEY.length + ' chars)' : '(not set)',
+            AWS_BUCKET_NAME_raw: bucketName,
+            AWS_BUCKET_NAME_length: bucketName.length,
+            AWS_BUCKET_NAME_trimmed: bucketName.trim(),
+            AWS_BUCKET_NAME_charCodes: Array.from(bucketName).map(c => c.charCodeAt(0)).join(',')
+        };
         try {
+            const cleanBucket = bucketName.trim();
+            const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+            const testS3 = new S3Client({
+                region: (process.env.AWS_REGION || 'us-east-2').trim(),
+                credentials: {
+                    accessKeyId: (process.env.AWS_ACCESS_KEY_ID || '').trim(),
+                    secretAccessKey: (process.env.AWS_SECRET_ACCESS_KEY || '').trim()
+                }
+            });
             const buffer = Buffer.from('Testing S3 connection from Railway', 'utf-8');
             const key = `test/test_${Date.now()}.txt`;
-            const url = await uploadToS3(buffer, key, 'text/plain');
-            res.json({ ok: true, url, message: 'Upload exitoso a S3' });
+            await testS3.send(new PutObjectCommand({
+                Bucket: cleanBucket,
+                Key: key,
+                Body: buffer,
+                ContentType: 'text/plain'
+            }));
+            const url = `https://${cleanBucket}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${key}`;
+            res.json({ ok: true, url, message: 'Upload exitoso a S3', diagnostic });
         } catch (e) {
-            res.status(500).json({ ok: false, error: e.message, stack: e.stack, hint: 'Revisa las variables de entorno de AWS en Railway' });
+            res.status(500).json({ ok: false, error: e.message, diagnostic, hint: 'Revisa las variables de entorno de AWS en Railway' });
         }
     });
 
