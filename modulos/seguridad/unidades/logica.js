@@ -13,15 +13,15 @@ var _sguEditMode = 'salida';
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function _sguIsAdmin() {
-    // Intenta leer rolLogueado (declarado con let en logica.js principal)
-    // Si no está accesible, lee directamente de localStorage
     try {
         if (typeof rolLogueado !== 'undefined' && rolLogueado) {
-            return rolLogueado.toLowerCase() === 'administrador';
+            var r = rolLogueado.toLowerCase();
+            return r === 'administrador' || r === 'admin' || r === 'sistema' || r === 'master';
         }
     } catch(e) {}
     var rol = localStorage.getItem('fleet_rol') || '';
-    return rol.toLowerCase() === 'administrador';
+    rol = rol.toLowerCase();
+    return rol === 'administrador' || rol === 'admin' || rol === 'sistema' || rol === 'master';
 }
 
 function _sguTimestamp() {
@@ -526,11 +526,15 @@ function _sguUploadPhotos(registroId, tipo, cb) {
         formData.append('tipo', tipo);
 
         fetch('/api/seguridad/unidades/' + registroId + '/fotos', { method: 'POST', body: formData })
-        .then(function(r) { return r.json(); })
+        .then(function(r) { 
+            if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
+            return r.json(); 
+        })
         .then(function(data) {
             p.uploaded = true; p.url = data.url; uploaded++;
             if (uploaded >= pendientes.length) cb();
-        }).catch(function() {
+        }).catch(function(e) {
+            alert('Fallo subida de foto: ' + e.message);
             uploaded++; if (uploaded >= pendientes.length) cb();
         });
     });
