@@ -12,6 +12,18 @@ var _sguPhotos = { salida: [], retorno: [] };
 var _sguEditMode = 'salida';
 
 // ── HELPERS ──────────────────────────────────────────────────────
+function _sguIsAdmin() {
+    // Intenta leer rolLogueado (declarado con let en logica.js principal)
+    // Si no está accesible, lee directamente de localStorage
+    try {
+        if (typeof rolLogueado !== 'undefined' && rolLogueado) {
+            return rolLogueado.toLowerCase() === 'administrador';
+        }
+    } catch(e) {}
+    var rol = localStorage.getItem('fleet_rol') || '';
+    return rol.toLowerCase() === 'administrador';
+}
+
 function _sguTimestamp() {
     var d = new Date();
     var dd = String(d.getDate()).padStart(2, '0');
@@ -208,7 +220,7 @@ function _sguRenderList() {
         var alertBadge = hasAlert ? '<div class="sgu-list-card-alert"><i class="bi bi-exclamation-triangle"></i></div>' : '';
         var color = isEnRuta ? '#2563eb' : '#64748b';
         var bg = isEnRuta ? '#eff6ff' : '#f1f5f9';
-        var isAdmin = (typeof rolLogueado !== 'undefined' && (rolLogueado === 'Administrador' || rolLogueado === 'administrador'));
+        var isAdmin = _sguIsAdmin();
         var deleteBtn = isAdmin ? '<button class="sgu-btn-eliminar-card" onclick="event.stopPropagation(); window._sguDeleteRecord(\'' + rec.id + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '';
         var btnText = isEnRuta ? 'Ingresar' : 'Ver Resumen';
 
@@ -436,7 +448,7 @@ function _sguRenderDetail(recordId) {
         html += '<div class="sgu-det-card sgu-det-card-dark" style="display:flex;flex-direction:column;align-items:center;padding:1.5rem;">';
         html += '<h3 class="sgu-det-card-title"><i class="bi bi-file-earmark-check"></i> Viaje Completado</h3>';
         html += '<button style="width:100%;padding:.8rem;border-radius:12px;border:none;background:#2563eb;color:#fff;font-weight:700;" onclick="window._sguGenerarPDFCompleto()"><i class="bi bi-download"></i> Descargar Viaje (Ida y Vuelta PDF)</button>';
-        if (typeof rolLogueado !== 'undefined' && (rolLogueado === 'Administrador' || rolLogueado === 'administrador')) {
+        if (_sguIsAdmin()) {
             html += '<button style="width:100%;padding:.8rem;border-radius:12px;border:none;background:#ef4444;color:#fff;font-weight:700;margin-top:10px;" onclick="window._sguDeleteRecord(\'' + rec.id + '\')"><i class="bi bi-trash"></i> Eliminar Expediente</button>';
         }
         html += '</div>';
@@ -540,8 +552,7 @@ window._sguSaveRecord = function() {
     document.getElementById('sgu-btn-save').disabled = true;
     document.getElementById('sgu-btn-save').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Procesando...';
 
-    var regId = 'REQ-' + Date.now();
-    var bodyOut = { id: regId, placa_tracto: p, placa_carreta: c, conductor: cond, destino: dest, salida_fecha: ts.date, salida_hora: ts.time, salida_km: km, salida_template_json: _sguGlobalTemplate, salida_checklist_json: _sguChecklist, salida_has_alert: hasAlert };
+    var bodyOut = { placa_tracto: p, placa_carreta: c, conductor: cond, destino: dest, salida_fecha: ts.date, salida_hora: ts.time, salida_km: km, salida_template_json: _sguGlobalTemplate, salida_checklist_json: _sguChecklist, salida_has_alert: hasAlert };
     
     _sguFetch('/api/seguridad/unidades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyOut) })
     .then(function(data) {
@@ -714,7 +725,7 @@ window._sguVerDetalles = function(tipo) {
         if (template && template.length) {
             template.forEach(function(cat) {
                 html += '<div style="margin-bottom:1rem;">';
-                html += '<h4 style="margin:0 0 .5rem 0;font-size:0.95rem;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">' + cat.name + '</h4>';
+                html += '<h4 style="margin:0 0 .5rem 0;font-size:0.95rem;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">' + (cat.titulo || cat.name || 'Sin categoría') + '</h4>';
                 if (cat.items && cat.items.length) {
                     cat.items.forEach(function(item) {
                         var valor = checklist[item.id];
@@ -795,7 +806,7 @@ window._sguGenerarPDF = function(tipo) {
     if (template && template.length && checklist) {
         html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">';
         template.forEach(function(cat) {
-            html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + cat.name + '</td></tr>';
+            html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + (cat.titulo || cat.name || 'Sin categoría') + '</td></tr>';
             if (cat.items) {
                 cat.items.forEach(function(item) {
                     var valor = checklist[item.id] || '---';
@@ -892,7 +903,7 @@ window._sguGenerarPDFCompleto = function() {
         if (template && template.length && checklist) {
             html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">';
             template.forEach(function(cat) {
-                html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + cat.name + '</td></tr>';
+                html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + (cat.titulo || cat.name || 'Sin categoría') + '</td></tr>';
                 if (cat.items) {
                     cat.items.forEach(function(item) {
                         var valor = checklist[item.id] || '---';

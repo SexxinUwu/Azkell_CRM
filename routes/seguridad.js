@@ -45,7 +45,7 @@ module.exports = (db, logAudit) => {
 
     // ── POST /seguridad/unidades — Crear registro de salida ───────
     router.post('/seguridad/unidades', (req, res) => {
-        const { id, placa_tracto, placa_carreta, conductor, destino,
+        const { placa_tracto, placa_carreta, conductor, destino,
                 salida_fecha, salida_hora, salida_km,
                 salida_template_json, salida_checklist_json, salida_has_alert } = req.body;
 
@@ -53,25 +53,43 @@ module.exports = (db, logAudit) => {
             return res.status(400).json({ error: 'placa_tracto y conductor son requeridos' });
         }
 
-        const regId = id || ('REQ-' + Date.now());
-        const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
-        const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
-
+        // Generar ID secuencial: CHECK-YYYY-NNNN
+        const year = new Date().getFullYear();
+        const prefix = `CHECK-${year}-`;
         db.query(
-            `INSERT INTO seg_unidades_registros
-             (id, placa_tracto, placa_carreta, conductor, destino, estado,
-              salida_fecha, salida_hora, salida_km,
-              salida_template_json, salida_checklist_json, salida_has_alert, creado_por)
-             VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?)`,
-            [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
-             conductor, destino || null,
-             salida_fecha || null, salida_hora || null, salida_km || null,
-             templateStr, checklistStr, salida_has_alert ? 1 : 0,
-             (req.user && req.user.nombre) || ''],
-            (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
-                res.json({ ok: true, id: regId });
+            `SELECT id FROM seg_unidades_registros WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+            [prefix + '%'],
+            (errSeq, seqRows) => {
+                let nextNum = 1;
+                if (!errSeq && seqRows && seqRows.length) {
+                    // Extraer el número del último ID (ej: CHECK-2026-0003 → 3)
+                    const lastId = seqRows[0].id;
+                    const parts = lastId.split('-');
+                    const lastNum = parseInt(parts[parts.length - 1], 10);
+                    if (!isNaN(lastNum)) nextNum = lastNum + 1;
+                }
+                const regId = prefix + String(nextNum).padStart(4, '0');
+
+                const templateStr  = typeof salida_template_json  === 'string' ? salida_template_json  : JSON.stringify(salida_template_json  || null);
+                const checklistStr = typeof salida_checklist_json  === 'string' ? salida_checklist_json  : JSON.stringify(salida_checklist_json  || null);
+
+                db.query(
+                    `INSERT INTO seg_unidades_registros
+                     (id, placa_tracto, placa_carreta, conductor, destino, estado,
+                      salida_fecha, salida_hora, salida_km,
+                      salida_template_json, salida_checklist_json, salida_has_alert, creado_por)
+                     VALUES (?, ?, ?, ?, ?, 'en_ruta', ?, ?, ?, ?, ?, ?, ?)`,
+                    [regId, placa_tracto.toUpperCase(), (placa_carreta || '').toUpperCase() || null,
+                     conductor, destino || null,
+                     salida_fecha || null, salida_hora || null, salida_km || null,
+                     templateStr, checklistStr, salida_has_alert ? 1 : 0,
+                     (req.user && req.user.nombre) || ''],
+                    (err) => {
+                        if (err) return res.status(500).json({ error: err.message });
+                        if (typeof logAudit === 'function') logAudit((req.user && req.user.nombre) || '', 'seguridad', 'CREÓ', 'Registro unidad ' + regId);
+                        res.json({ ok: true, id: regId });
+                    }
+                );
             }
         );
     });
