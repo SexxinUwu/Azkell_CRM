@@ -5,7 +5,7 @@
 const express = require('express');
 const router  = express.Router();
 const multer  = require('multer');
-const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB max
+const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }); // 15MB max
 
 module.exports = (db, logAudit) => {
 
@@ -149,38 +149,44 @@ module.exports = (db, logAudit) => {
     });
 
     // ── POST /seguridad/unidades/:id/fotos — Subir foto a S3 ──────
-    router.post('/seguridad/unidades/:id/fotos', upload.single('foto'), async (req, res) => {
-        try {
-            if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
+    router.post('/seguridad/unidades/:id/fotos', (req, res) => {
+        upload.single('foto')(req, res, async (err) => {
+            if (err) {
+                console.error('Error de multer:', err.message);
+                return res.status(400).json({ error: 'Error al subir imagen (posiblemente muy grande): ' + err.message });
+            }
+            try {
+                if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
 
-            const registroId = req.params.id;
-            const tipo       = req.body.tipo || 'salida'; // 'salida' o 'retorno'
-            const ext        = (req.file.originalname || '').split('.').pop() || 'jpg';
-            const timestamp  = Date.now();
-            const s3Key      = `seguridad/unidades/${registroId}/${tipo}_${timestamp}.${ext}`;
+                const registroId = req.params.id;
+                const tipo       = req.body.tipo || 'salida'; // 'salida' o 'retorno'
+                const ext        = (req.file.originalname || '').split('.').pop() || 'jpg';
+                const timestamp  = Date.now();
+                const s3Key      = `seguridad/unidades/${registroId}/${tipo}_${timestamp}.${ext}`;
 
-            const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+                const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
 
-            // Obtener siguiente orden
-            db.query(
-                'SELECT COALESCE(MAX(orden), 0) + 1 AS nextOrden FROM seg_unidades_fotos WHERE registro_id = ? AND tipo = ?',
-                [registroId, tipo],
-                (err, rows) => {
-                    const orden = (rows && rows[0]) ? rows[0].nextOrden : 1;
-                    db.query(
-                        'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES (?, ?, ?, ?)',
-                        [registroId, tipo, url, orden],
-                        (err2, result) => {
-                            if (err2) return res.status(500).json({ error: err2.message });
-                            res.json({ ok: true, id: result.insertId, url, orden });
-                        }
-                    );
-                }
-            );
-        } catch (e) {
-            console.error('Error subiendo foto a S3:', e);
-            res.status(500).json({ error: 'Error al subir imagen: ' + e.message });
-        }
+                // Obtener siguiente orden
+                db.query(
+                    'SELECT COALESCE(MAX(orden), 0) + 1 AS nextOrden FROM seg_unidades_fotos WHERE registro_id = ? AND tipo = ?',
+                    [registroId, tipo],
+                    (errDb, rows) => {
+                        const orden = (rows && rows[0]) ? rows[0].nextOrden : 1;
+                        db.query(
+                            'INSERT INTO seg_unidades_fotos (registro_id, tipo, url, orden) VALUES (?, ?, ?, ?)',
+                            [registroId, tipo, url, orden],
+                            (err2, result) => {
+                                if (err2) return res.status(500).json({ error: err2.message });
+                                res.json({ ok: true, id: result.insertId, url, orden });
+                            }
+                        );
+                    }
+                );
+            } catch (e) {
+                console.error('Error subiendo foto a S3:', e);
+                res.status(500).json({ error: 'Error al subir imagen: ' + e.message });
+            }
+        });
     });
 
     // ── DELETE /seguridad/unidades/:id/fotos/:fotoId — Eliminar foto ──
