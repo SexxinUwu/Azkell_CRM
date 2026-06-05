@@ -526,25 +526,46 @@ function _sguUploadPhotos(registroId, tipo, cb) {
     var pendientes = (_sguPhotos[tipo] || []).filter(function(p) { return !p.uploaded && p.file; });
     if (!pendientes.length) return cb();
 
-    var uploaded = 0;
-    pendientes.forEach(function(p) {
+    var current = 0;
+    var errores = [];
+
+    function uploadNext() {
+        if (current >= pendientes.length) {
+            if (errores.length > 0) {
+                _sguToast('Algunas fotos fallaron: ' + errores.join(', '), 'bi-exclamation-triangle');
+                // Give user time to see the error before callback
+                setTimeout(cb, 3000);
+            } else {
+                cb();
+            }
+            return;
+        }
+
+        var p = pendientes[current];
         var formData = new FormData();
         formData.append('foto', p.file);
         formData.append('tipo', tipo);
 
         fetch('/api/seguridad/unidades/' + registroId + '/fotos', { method: 'POST', body: formData })
-        .then(function(r) { 
+        .then(function(r) {
             if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
-            return r.json(); 
+            return r.json();
         })
         .then(function(data) {
-            p.uploaded = true; p.url = data.url; uploaded++;
-            if (uploaded >= pendientes.length) cb();
-        }).catch(function(e) {
-            alert('Fallo subida de foto: ' + e.message);
-            uploaded++; if (uploaded >= pendientes.length) cb();
+            p.uploaded = true; 
+            p.url = data.url;
+            current++;
+            uploadNext();
+        })
+        .catch(function(e) {
+            console.error('Fallo subida foto', current, e);
+            errores.push(e.message || 'Error S3');
+            current++;
+            uploadNext();
         });
-    });
+    }
+
+    uploadNext();
 }
 
 // ── GUARDAR SALIDA / RETORNO ─────────────────────────────────────
@@ -866,8 +887,9 @@ window._sguDeleteRecord = function(id) {
         return r.json();
     }).then(function() {
         _sguToast('Expediente eliminado', 'bi-check-circle');
-        _sguLoadRecords(); // Recargar datos
-        window._sguNav('list');
+        _sguLoadRecords(function() {
+            window._sguNav('list');
+        });
     }).catch(function(e) {
         _sguToast(e.message, 'bi-exclamation-circle');
     });
