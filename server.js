@@ -762,7 +762,7 @@ const sseClients = new Set();
 // 🔑 MIDDLEWARE DE AUTENTICACIÓN JWT
 // ============================================================
 function verifyToken(req, res, next) {
-    const PUBLIC_PATHS = ['/login', '/ping', '/eventos'];
+    const PUBLIC_PATHS = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas'];
     if (PUBLIC_PATHS.includes(req.path)) return next();
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'No autorizado' });
