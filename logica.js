@@ -3892,39 +3892,53 @@ document.addEventListener('click', function(event) {
 // ==========================================
 // 📲 BOTÓN DE INSTALACIÓN PWA (EN EL MENÚ LATERAL)
 // ==========================================
-let deferredPrompt;
+// 📲 BOTÓN DE INSTALACIÓN PWA
+// ==========================================
+window.deferredPrompt = null;
 
 // 1. Atrapamos el evento del navegador
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e;
+    window.deferredPrompt = e;
 
     const contenedorInstall = document.getElementById('contenedor-instalar');
-    if (contenedorInstall) {
-        contenedorInstall.style.display = 'block';
-    }
+    if (contenedorInstall) contenedorInstall.style.display = 'block';
+    
+    const btnAjustes = document.getElementById('btn-instalar-ajustes');
+    if (btnAjustes) btnAjustes.style.display = 'flex';
 });
 
-// 2. Acción al hacer clic en Instalar App en el menú
-document.getElementById('btn-install-sidebar')?.addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+// Función global para instalar
+window.instalarPWAApp = async function() {
+    if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
 
         if (outcome === 'accepted') {
-            console.log('El usuario instaló Azkell CRM');
+            console.log('El usuario instaló Azkell Fleet');
         }
 
-        deferredPrompt = null;
+        window.deferredPrompt = null;
         let contenedorInstallEl1 = document.getElementById('contenedor-instalar');
         if (contenedorInstallEl1) contenedorInstallEl1.style.display = 'none';
+        
+        let btnAjustes = document.getElementById('btn-instalar-ajustes');
+        if (btnAjustes) btnAjustes.style.display = 'none';
+    } else {
+        alert('La instalación no está disponible. Es posible que la app ya esté instalada o que tu navegador no lo soporte.');
     }
+};
+
+// 2. Acción al hacer clic en Instalar App en el menú
+document.getElementById('btn-install-sidebar')?.addEventListener('click', window.instalarPWAApp);
 });
 
 // 3. Ocultar si ya se instaló
 window.addEventListener('appinstalled', () => {
     let contenedorInstallEl2 = document.getElementById('contenedor-instalar');
     if (contenedorInstallEl2) contenedorInstallEl2.style.display = 'none';
+    let btnAjustes = document.getElementById('btn-instalar-ajustes');
+    if (btnAjustes) btnAjustes.style.display = 'none';
     console.log('Azkell CRM fue instalado como App nativa');
 });
 

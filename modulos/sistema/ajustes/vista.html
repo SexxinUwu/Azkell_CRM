@@ -203,6 +203,21 @@
     <div class="ajustes-section-header">
         <h2 class="ajustes-section-title">PREFERENCIAS</h2>
     </div>
+    <a href="#" class="ajustes-item" id="btn-instalar-ajustes" style="display: none;" onclick="window.instalarPWAApp()">
+        <div class="ajustes-item-icon-wrap icon-blue" style="background: rgba(16,185,129,0.1); color: #10b981;">
+            <i class="bi bi-cloud-arrow-down-fill"></i>
+        </div>
+        <div class="ajustes-item-content">
+            <p class="ajustes-item-title" style="color: #10b981;">Instalar App</p>
+            <i class="bi bi-chevron-right ajustes-item-chevron" style="color: #10b981;"></i>
+        </div>
+    </a>
+    <script>
+        if (window.deferredPrompt) {
+            const btn = document.getElementById('btn-instalar-ajustes');
+            if(btn) btn.style.display = 'flex';
+        }
+    </script>
     
     <a href="#" class="ajustes-item" onclick="window.cargarConfigSection('apariencia')">
         <div class="ajustes-item-icon-wrap icon-pink">
