@@ -3931,7 +3931,6 @@ window.instalarPWAApp = async function() {
 
 // 2. Acción al hacer clic en Instalar App en el menú
 document.getElementById('btn-install-sidebar')?.addEventListener('click', window.instalarPWAApp);
-});
 
 // 3. Ocultar si ya se instaló
 window.addEventListener('appinstalled', () => {
