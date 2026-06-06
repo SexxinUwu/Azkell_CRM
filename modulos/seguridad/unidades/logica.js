@@ -767,7 +767,7 @@ window._sguVerFotos = function(tipo) {
         var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
         fotos.forEach(function(f) {
             html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">';
-            html += '<img src="' + f.url + '" style="width:100%;height:120px;object-fit:cover;display:block;" alt="Foto">';
+            html += '<img src="' + f.url + '" style="width:100%;height:120px;object-fit:cover;display:block;" alt="Foto" crossorigin="anonymous">';
             html += '</a>';
         });
         html += '</div>';
@@ -825,7 +825,7 @@ window._sguVerDetalles = function(tipo) {
             html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;">';
             fotos.forEach(function(f) {
                 html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">';
-                html += '<img src="' + f.url + '" style="width:100%;height:100px;object-fit:cover;display:block;" alt="Evidencia">';
+                html += '<img src="' + f.url + '" style="width:100%;height:100px;object-fit:cover;display:block;" alt="Evidencia" crossorigin="anonymous">';
                 html += '</a>';
             });
             html += '</div>';
@@ -856,77 +856,78 @@ window._sguGenerarPDF = function(tipo) {
     var km = tipo === 'salida' ? rec.salida_km : rec.retorno_km;
     
     var div = document.createElement('div');
-    div.style.padding = '20px';
-    div.style.fontFamily = 'Arial, sans-serif';
-    div.style.color = '#333';
-    div.style.width = '800px'; 
+    // 794px es exactamente el ancho de un A4 a 96DPI. Usamos 750px para margen de seguridad
+    div.style.width = '750px'; 
+    div.style.padding = '30px';
+    div.style.fontFamily = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+    div.style.color = '#1e293b';
+    div.style.backgroundColor = '#ffffff';
+    div.style.boxSizing = 'border-box';
     
-    // Cabecera
-    var html = '<div style="text-align:center;border-bottom:2px solid #1e293b;padding-bottom:10px;margin-bottom:20px;">';
-    html += '<h1 style="margin:0;font-size:24px;color:#1e293b;">REPORTE DE CHECKLIST (' + (tipo==='salida'?'IDA':'VUELTA') + ')</h1>';
-    html += '<p style="margin:5px 0 0 0;font-size:14px;color:#64748b;">ID: ' + rec.id + '</p>';
+    // Cabecera moderna
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #2563eb;padding-bottom:15px;margin-bottom:25px;">';
+    html += '<div>';
+    html += '<h1 style="margin:0;font-size:26px;color:#0f172a;letter-spacing:-0.5px;">INSPECCIÓN DE UNIDAD</h1>';
+    html += '<p style="margin:5px 0 0 0;font-size:14px;color:#64748b;font-weight:bold;text-transform:uppercase;">FASE: ' + tipo + '</p>';
+    html += '</div>';
+    html += '<div style="text-align:right;">';
+    html += '<p style="margin:0;font-size:16px;font-weight:bold;color:#0f172a;">ID: ' + rec.id + '</p>';
+    html += '<p style="margin:5px 0 0 0;font-size:13px;color:#64748b;">' + (fecha||'--') + ' ' + (hora||'--') + '</p>';
+    html += '</div>';
     html += '</div>';
     
     // Datos Generales
-    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;">';
-    html += '<tr>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA TRACTO</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + rec.placa_tracto + '</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA CARRETA</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + (rec.placa_carreta || '---') + '</td>';
-    html += '</tr>';
-    html += '<tr>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">CONDUCTOR</td>';
-    html += '<td colspan="3" style="padding:5px;border:1px solid #cbd5e1;">' + rec.conductor + '</td>';
-    html += '</tr>';
-    html += '<tr>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">FECHA Y HORA</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;">' + (fecha||'--') + ' ' + (hora||'--') + '</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">KILOMETRAJE</td>';
-    html += '<td style="padding:5px;border:1px solid #cbd5e1;">' + (km||'---') + '</td>';
-    html += '</tr>';
-    html += '</table>';
+    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;margin-bottom:25px;">';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">';
+    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Tracto</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.placa_tracto + '</p></div>';
+    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Carreta</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (rec.placa_carreta || '---') + '</p></div>';
+    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Conductor</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.conductor + '</p></div>';
+    html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Kilometraje</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (km||'---') + '</p></div>';
+    html += '</div></div>';
     
     // Checklist
-    html += '<h3 style="margin:0 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Detalle de Revisión</h3>';
+    html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Detalle de Revisión</h3>';
     if (template && template.length && checklist) {
-        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">';
         template.forEach(function(cat) {
-            html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + (cat.titulo || cat.name || 'Sin categoría') + '</td></tr>';
+            html += '<div style="margin-bottom:15px;break-inside:avoid;">';
+            html += '<h4 style="margin:0 0 8px 0;font-size:14px;background:#f1f5f9;padding:6px 10px;border-radius:4px;color:#334155;">' + (cat.titulo || cat.name || 'Sin categoría') + '</h4>';
+            html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
             if (cat.items) {
                 cat.items.forEach(function(item) {
                     var valor = checklist[item.id] || '---';
                     var valStr = valor.toUpperCase();
-                    var color = valor === 'ok' ? '#166534' : (valor === 'mal' ? '#991b1b' : '#475569');
-                    html += '<tr>';
-                    html += '<td style="padding:4px;border:1px solid #cbd5e1;width:80%;">' + item.label + '</td>';
-                    html += '<td style="padding:4px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;color:'+color+';">' + valStr + '</td>';
+                    var color = valor === 'ok' ? '#16a34a' : (valor === 'mal' ? '#dc2626' : '#64748b');
+                    var bg = valor === 'ok' ? '#dcfce7' : (valor === 'mal' ? '#fee2e2' : '#f1f5f9');
+                    html += '<tr style="border-bottom:1px solid #f1f5f9;">';
+                    html += '<td style="padding:6px 4px;width:80%;color:#475569;">' + item.label + '</td>';
+                    html += '<td style="padding:6px 4px;text-align:right;"><span style="background:'+bg+';color:'+color+';padding:3px 8px;border-radius:12px;font-weight:bold;font-size:11px;">' + valStr + '</span></td>';
                     html += '</tr>';
                 });
             }
+            html += '</table></div>';
         });
-        html += '</table>';
     } else {
-        html += '<p style="font-size:12px;color:#64748b;">No se registró checklist.</p>';
+        html += '<p style="font-size:13px;color:#64748b;font-style:italic;">No se registró checklist.</p>';
     }
     
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
     if (fotos.length > 0) {
-        html += '<h3 style="margin:20px 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
-        html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+        html += '<div style="break-inside:avoid;margin-top:20px;">';
+        html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:12px;">';
         fotos.forEach(function(f) {
-            html += '<img src="' + f.url + '" style="width:180px;height:180px;object-fit:cover;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
+            html += '<img src="' + f.url + '" style="width:160px;height:160px;object-fit:cover;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);" crossorigin="anonymous">';
         });
-        html += '</div>';
+        html += '</div></div>';
     }
     
     div.innerHTML = html;
     
     var opt = {
-        margin:       10,
+        margin:       [10, 10, 10, 10], // top, left, bottom, right
         filename:     'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
@@ -973,10 +974,13 @@ window._sguGenerarPDFCompleto = function() {
     
     // Crear un contenedor temporal que agrupe ambos HTML (Ida y Vuelta)
     var div = document.createElement('div');
-    div.style.padding = '20px';
-    div.style.fontFamily = 'Arial, sans-serif';
-    div.style.color = '#333';
-    div.style.width = '800px'; 
+    // 794px es ancho A4
+    div.style.width = '750px'; 
+    div.style.padding = '30px';
+    div.style.fontFamily = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+    div.style.color = '#1e293b';
+    div.style.backgroundColor = '#ffffff';
+    div.style.boxSizing = 'border-box';
     
     function buildTable(tipo) {
         var fecha = tipo === 'salida' ? rec.salida_fecha : rec.retorno_fecha;
@@ -985,43 +989,58 @@ window._sguGenerarPDFCompleto = function() {
         var checklist = tipo === 'salida' ? rec.salida_checklist_json : rec.retorno_checklist_json;
         var template = tipo === 'salida' ? rec.salida_template_json : rec.retorno_template_json;
         
-        var html = '<div style="text-align:center;border-bottom:2px solid #1e293b;padding-bottom:10px;margin-bottom:20px;">';
-        html += '<h1 style="margin:0;font-size:24px;color:#1e293b;">REPORTE DE CHECKLIST (' + (tipo==='salida'?'IDA':'VUELTA') + ')</h1>';
-        html += '<p style="margin:5px 0 0 0;font-size:14px;color:#64748b;">ID: ' + rec.id + '</p>';
+        var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #2563eb;padding-bottom:15px;margin-bottom:25px;">';
+        html += '<div>';
+        html += '<h1 style="margin:0;font-size:26px;color:#0f172a;letter-spacing:-0.5px;">INSPECCIÓN DE UNIDAD</h1>';
+        html += '<p style="margin:5px 0 0 0;font-size:14px;color:#64748b;font-weight:bold;text-transform:uppercase;">FASE: ' + tipo + '</p>';
+        html += '</div>';
+        html += '<div style="text-align:right;">';
+        html += '<p style="margin:0;font-size:16px;font-weight:bold;color:#0f172a;">ID: ' + rec.id + '</p>';
+        html += '<p style="margin:5px 0 0 0;font-size:13px;color:#64748b;">' + (fecha||'--') + ' ' + (hora||'--') + '</p>';
+        html += '</div>';
         html += '</div>';
         
-        html += '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;">';
-        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA TRACTO</td><td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + rec.placa_tracto + '</td><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;width:25%;">PLACA CARRETA</td><td style="padding:5px;border:1px solid #cbd5e1;width:25%;">' + (rec.placa_carreta || '---') + '</td></tr>';
-        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">CONDUCTOR</td><td colspan="3" style="padding:5px;border:1px solid #cbd5e1;">' + rec.conductor + '</td></tr>';
-        html += '<tr><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">FECHA Y HORA</td><td style="padding:5px;border:1px solid #cbd5e1;">' + (fecha||'--') + ' ' + (hora||'--') + '</td><td style="padding:5px;border:1px solid #cbd5e1;background:#f8fafc;font-weight:bold;">KILOMETRAJE</td><td style="padding:5px;border:1px solid #cbd5e1;">' + (km||'---') + '</td></tr>';
-        html += '</table>';
+        html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;margin-bottom:25px;">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">';
+        html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Tracto</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.placa_tracto + '</p></div>';
+        html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Placa Carreta</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (rec.placa_carreta || '---') + '</p></div>';
+        html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Conductor</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + rec.conductor + '</p></div>';
+        html += '<div><p style="margin:0;font-size:11px;color:#64748b;font-weight:bold;text-transform:uppercase;">Kilometraje</p><p style="margin:2px 0 0 0;font-size:15px;font-weight:bold;">' + (km||'---') + '</p></div>';
+        html += '</div></div>';
         
-        html += '<h3 style="margin:0 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Detalle de Revisión</h3>';
+        html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Detalle de Revisión</h3>';
         if (template && template.length && checklist) {
-            html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">';
             template.forEach(function(cat) {
-                html += '<tr style="background:#e2e8f0;"><td colspan="2" style="padding:5px;font-weight:bold;border:1px solid #cbd5e1;">' + (cat.titulo || cat.name || 'Sin categoría') + '</td></tr>';
+                html += '<div style="margin-bottom:15px;break-inside:avoid;">';
+                html += '<h4 style="margin:0 0 8px 0;font-size:14px;background:#f1f5f9;padding:6px 10px;border-radius:4px;color:#334155;">' + (cat.titulo || cat.name || 'Sin categoría') + '</h4>';
+                html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
                 if (cat.items) {
                     cat.items.forEach(function(item) {
                         var valor = checklist[item.id] || '---';
-                        var color = valor === 'ok' ? '#166534' : (valor === 'mal' ? '#991b1b' : '#475569');
-                        html += '<tr><td style="padding:4px;border:1px solid #cbd5e1;width:80%;">' + item.label + '</td><td style="padding:4px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;color:'+color+';">' + valor.toUpperCase() + '</td></tr>';
+                        var valStr = valor.toUpperCase();
+                        var color = valor === 'ok' ? '#16a34a' : (valor === 'mal' ? '#dc2626' : '#64748b');
+                        var bg = valor === 'ok' ? '#dcfce7' : (valor === 'mal' ? '#fee2e2' : '#f1f5f9');
+                        html += '<tr style="border-bottom:1px solid #f1f5f9;">';
+                        html += '<td style="padding:6px 4px;width:80%;color:#475569;">' + item.label + '</td>';
+                        html += '<td style="padding:6px 4px;text-align:right;"><span style="background:'+bg+';color:'+color+';padding:3px 8px;border-radius:12px;font-weight:bold;font-size:11px;">' + valStr + '</span></td>';
+                        html += '</tr>';
                     });
                 }
+                html += '</table></div>';
             });
-            html += '</table>';
         } else {
-            html += '<p style="font-size:12px;color:#64748b;margin-bottom:20px;">No se registró checklist.</p>';
+            html += '<p style="font-size:13px;color:#64748b;font-style:italic;">No se registró checklist.</p>';
         }
         
         var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
         if (fotos.length > 0) {
-            html += '<h3 style="margin:20px 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
-            html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">';
+            html += '<div style="break-inside:avoid;margin-top:20px;">';
+            html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
+            html += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:25px;">';
             fotos.forEach(function(f) {
-                html += '<img src="' + f.url + '" style="width:180px;height:180px;object-fit:cover;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
+                html += '<img src="' + f.url + '" style="width:160px;height:160px;object-fit:cover;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);" crossorigin="anonymous">';
             });
-            html += '</div>';
+            html += '</div></div>';
         }
         return html;
     }
