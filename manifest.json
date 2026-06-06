@@ -1,6 +1,6 @@
 {
-  "name": "Azkell CRM",
-  "short_name": "Azkell",
+  "name": "Azkell Fleet",
+  "short_name": "Azkell Fleet",
   "description": "Sistema de Gestión de Flota y Mantenimiento",
   "start_url": "/",
   "display": "standalone",
