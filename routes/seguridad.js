@@ -18,36 +18,42 @@ module.exports = (db, logAudit) => {
 
     // ── GET /seguridad/unidades — Listar registros ────────────────
     router.get('/seguridad/unidades', async (req, res) => {
-        let sql = `SELECT r.*,
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', f.id, 'tipo', f.tipo, 'url', f.url, 'orden', f.orden))
-             FROM seg_unidades_fotos f WHERE f.registro_id = r.id) AS fotos
-            FROM seg_unidades_registros r`;
+        let sql = `SELECT r.* FROM seg_unidades_registros r`;
         const params = [];
         if (req.query.fecha) {
             sql += ' WHERE r.salida_fecha = ?';
             params.push(req.query.fecha);
         }
         sql += ' ORDER BY r.created_at DESC';
-        db.query(sql, params, async (err, rows) => {
+        
+        db.query(sql, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Parse fotos JSON
-            for (const r of rows) {
-                try { r.fotos = r.fotos ? JSON.parse(r.fotos) : []; } catch(e) { r.fotos = []; }
-                // Generar URLs pre-firmadas para cada foto
-                if (r.fotos && r.fotos.length) {
-                    for (const f of r.fotos) {
-                        const key = s3KeyFromUrl(f.url);
-                        if (key) {
-                            try { f.url = await getPresignedUrl(key); } catch(e) { /* keep original */ }
-                        }
+            
+            if (!rows.length) return res.json([]);
+            
+            const ids = rows.map(r => r.id);
+            db.query('SELECT * FROM seg_unidades_fotos WHERE registro_id IN (?) ORDER BY orden ASC', [ids], async (err2, fotosRows) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                
+                const fotosByRecord = {};
+                for (const f of (fotosRows || [])) {
+                    if (!fotosByRecord[f.registro_id]) fotosByRecord[f.registro_id] = [];
+                    const key = s3KeyFromUrl(f.url);
+                    if (key) {
+                        try { f.url = await getPresignedUrl(key); } catch(e) {}
                     }
+                    fotosByRecord[f.registro_id].push({ id: f.id, tipo: f.tipo, url: f.url, orden: f.orden });
                 }
-                try { r.salida_template_json  = r.salida_template_json  ? JSON.parse(r.salida_template_json)  : null; } catch(e) {}
-                try { r.salida_checklist_json  = r.salida_checklist_json  ? JSON.parse(r.salida_checklist_json)  : null; } catch(e) {}
-                try { r.retorno_template_json = r.retorno_template_json ? JSON.parse(r.retorno_template_json) : null; } catch(e) {}
-                try { r.retorno_checklist_json = r.retorno_checklist_json ? JSON.parse(r.retorno_checklist_json) : null; } catch(e) {}
-            }
-            res.json(rows);
+
+                for (const r of rows) {
+                    r.fotos = fotosByRecord[r.id] || [];
+                    try { r.salida_template_json  = r.salida_template_json  ? JSON.parse(r.salida_template_json)  : null; } catch(e) {}
+                    try { r.salida_checklist_json  = r.salida_checklist_json  ? JSON.parse(r.salida_checklist_json)  : null; } catch(e) {}
+                    try { r.retorno_template_json = r.retorno_template_json ? JSON.parse(r.retorno_template_json) : null; } catch(e) {}
+                    try { r.retorno_checklist_json = r.retorno_checklist_json ? JSON.parse(r.retorno_checklist_json) : null; } catch(e) {}
+                }
+                res.json(rows);
+            });
         });
     });
 
