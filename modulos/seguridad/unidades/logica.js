@@ -817,6 +817,20 @@ window._sguVerDetalles = function(tipo) {
             });
         }
         html += '</div>';
+        
+        // Agregar fotos como evidencia si existen
+        var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+        if (fotos.length > 0) {
+            html += '<h4 style="margin:1rem 0 .5rem 0;font-size:0.95rem;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">Evidencias (' + fotos.length + ')</h4>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;">';
+            fotos.forEach(function(f) {
+                html += '<a href="' + f.url + '" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">';
+                html += '<img src="' + f.url + '" style="width:100%;height:100px;object-fit:cover;display:block;" alt="Evidencia">';
+                html += '</a>';
+            });
+            html += '</div>';
+        }
+
         container.innerHTML = html;
     }
     
@@ -894,6 +908,16 @@ window._sguGenerarPDF = function(tipo) {
         html += '</table>';
     } else {
         html += '<p style="font-size:12px;color:#64748b;">No se registró checklist.</p>';
+    }
+    
+    var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+    if (fotos.length > 0) {
+        html += '<h3 style="margin:20px 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+        fotos.forEach(function(f) {
+            html += '<img src="' + f.url + '" style="width:180px;height:180px;object-fit:cover;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
+        });
+        html += '</div>';
     }
     
     div.innerHTML = html;
@@ -988,6 +1012,16 @@ window._sguGenerarPDFCompleto = function() {
             html += '</table>';
         } else {
             html += '<p style="font-size:12px;color:#64748b;margin-bottom:20px;">No se registró checklist.</p>';
+        }
+        
+        var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+        if (fotos.length > 0) {
+            html += '<h3 style="margin:20px 0 10px 0;font-size:16px;color:#1e293b;border-bottom:1px solid #cbd5e1;padding-bottom:5px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
+            html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">';
+            fotos.forEach(function(f) {
+                html += '<img src="' + f.url + '" style="width:180px;height:180px;object-fit:cover;border:1px solid #cbd5e1;border-radius:4px;" crossorigin="anonymous">';
+            });
+            html += '</div>';
         }
         return html;
     }
