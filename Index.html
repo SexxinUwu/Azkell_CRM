@@ -823,13 +823,21 @@
 window._notifData = [];
 
 window.cargarNotificaciones = function() {
-    fetch('/api/almacen/notificaciones/resumen')
-        .then(function(r) { return r.json(); })
+    var token = localStorage.getItem('fleet_token');
+    if (!token) return; // Si no hay token, no intentar cargar notificaciones
+    
+    fetch('/api/almacen/notificaciones/resumen', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+        .then(function(r) { 
+            if (r.status === 401) throw new Error('No autorizado');
+            return r.json(); 
+        })
         .then(function(data) {
             window._notifData = data || [];
             window._notifRender();
         })
-        .catch(function() {
+        .catch(function(e) {
             var lista = document.getElementById('notif-lista');
             if (lista) lista.innerHTML = '<div class="text-center py-3" style="color:#94a3b8;font-size:.82rem;">No se pudo cargar</div>';
         });

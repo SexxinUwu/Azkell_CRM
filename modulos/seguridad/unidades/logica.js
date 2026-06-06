@@ -841,7 +841,7 @@ window._sguVerDetalles = function(tipo) {
 // =========================================================
 // 📄 GENERAR PDF
 // =========================================================
-window._sguGenerarPDF = function(tipo) {
+window._sguGenerarPDF = async function(tipo) {
     if (!window._sguCurrentRecord) return;
     if (typeof html2pdf === 'undefined') {
         _sguToast('Error: Librería PDF no cargada', 'bi-exclamation-triangle');
@@ -911,12 +911,33 @@ window._sguGenerarPDF = function(tipo) {
     }
     
     var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
+    var fotosBase64 = [];
     if (fotos.length > 0) {
+        _sguToast('Preparando ' + fotos.length + ' imágenes...', 'bi-hourglass-split');
+        for (var i = 0; i < fotos.length; i++) {
+            try {
+                var res = await fetch(fotos[i].url, { mode: 'cors', cache: 'no-store' });
+                var blob = await res.blob();
+                var b64 = await new Promise(function(resolve) {
+                    var r = new FileReader();
+                    r.onloadend = function() { resolve(r.result); };
+                    r.readAsDataURL(blob);
+                });
+                fotosBase64.push({ b64: b64, num: i + 1 });
+            } catch(e) {
+                console.error("Error al cargar imagen " + i, e);
+                fotosBase64.push({ b64: fotos[i].url, num: i + 1 });
+            }
+        }
+        
         html += '<div style="break-inside:avoid;margin-top:20px;">';
         html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
-        html += '<div style="display:flex;flex-wrap:wrap;gap:12px;">';
-        fotos.forEach(function(f) {
-            html += '<img src="' + f.url + '" style="width:160px;height:160px;object-fit:cover;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);" crossorigin="anonymous">';
+        html += '<div style="display:flex;flex-direction:column;gap:25px;">';
+        fotosBase64.forEach(function(f) {
+            html += '<div style="text-align:center;border:1px solid #e2e8f0;padding:15px;border-radius:8px;background:#f8fafc;break-inside:avoid;">';
+            html += '<h4 style="margin:0 0 10px 0;font-size:15px;color:#334155;font-weight:bold;">Evidencia ' + f.num + '</h4>';
+            html += '<img src="' + f.b64 + '" style="width:100%;max-height:500px;object-fit:contain;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
+            html += '</div>';
         });
         html += '</div></div>';
     }
@@ -963,7 +984,7 @@ window._sguDeleteRecord = function(id) {
 // =========================================================
 // 📄 GENERAR PDF COMPLETO (IDA Y VUELTA)
 // =========================================================
-window._sguGenerarPDFCompleto = function() {
+window._sguGenerarPDFCompleto = async function() {
     if (typeof html2pdf === 'undefined') {
         _sguToast('Error: Librería PDF no cargada', 'bi-exclamation-triangle');
         return;
@@ -1033,35 +1054,68 @@ window._sguGenerarPDFCompleto = function() {
         }
         
         var fotos = (rec.fotos || []).filter(function(f) { return f.tipo === tipo; });
-        if (fotos.length > 0) {
-            html += '<div style="break-inside:avoid;margin-top:20px;">';
-            html += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotos.length + ')</h3>';
-            html += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:25px;">';
-            fotos.forEach(function(f) {
-                html += '<img src="' + f.url + '" style="width:160px;height:160px;object-fit:cover;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);" crossorigin="anonymous">';
-            });
-            html += '</div></div>';
-        }
-        return html;
+        return { html: html, fotos: fotos };
     }
     
-    var htmlFinal = buildTable('salida');
+    var salidaData = buildTable('salida');
+    var retornoData = buildTable('retorno');
+    
+    var todasFotos = salidaData.fotos.concat(retornoData.fotos);
+    var fotosMap = {}; // url -> base64
+    
+    if (todasFotos.length > 0) {
+        _sguToast('Preparando ' + todasFotos.length + ' imágenes...', 'bi-hourglass-split');
+        for (var i = 0; i < todasFotos.length; i++) {
+            var url = todasFotos[i].url;
+            if (fotosMap[url]) continue;
+            try {
+                var res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+                var blob = await res.blob();
+                var b64 = await new Promise(function(resolve) {
+                    var r = new FileReader();
+                    r.onloadend = function() { resolve(r.result); };
+                    r.readAsDataURL(blob);
+                });
+                fotosMap[url] = b64;
+            } catch(e) {
+                console.error("Error al cargar imagen", e);
+                fotosMap[url] = url;
+            }
+        }
+    }
+    
+    function buildFotosHtml(fotosArray) {
+        if (!fotosArray || fotosArray.length === 0) return '';
+        var h = '<div style="break-inside:avoid;margin-top:20px;">';
+        h += '<h3 style="margin:0 0 15px 0;font-size:18px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Evidencias Fotográficas (' + fotosArray.length + ')</h3>';
+        h += '<div style="display:flex;flex-direction:column;gap:25px;margin-bottom:25px;">';
+        fotosArray.forEach(function(f, index) {
+            h += '<div style="text-align:center;border:1px solid #e2e8f0;padding:15px;border-radius:8px;background:#f8fafc;break-inside:avoid;">';
+            h += '<h4 style="margin:0 0 10px 0;font-size:15px;color:#334155;font-weight:bold;">Evidencia ' + (index + 1) + '</h4>';
+            h += '<img src="' + fotosMap[f.url] + '" style="width:100%;max-height:500px;object-fit:contain;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
+            h += '</div>';
+        });
+        h += '</div></div>';
+        return h;
+    }
+    
+    var htmlFinal = salidaData.html + buildFotosHtml(salidaData.fotos);
     // Salto de página para el PDF
     htmlFinal += '<div class="html2pdf__page-break"></div>';
-    htmlFinal += buildTable('retorno');
+    htmlFinal += retornoData.html + buildFotosHtml(retornoData.fotos);
     
     div.innerHTML = htmlFinal;
     
     var opt = {
-        margin:       10,
-        filename:     'Checklist_Completo_' + rec.placa_tracto + '.pdf',
+        margin:       [10, 10, 10, 10],
+        filename:     'Expediente_Completo_' + rec.placa_tracto + '.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
-    _sguToast('Generando PDF completo...', 'bi-hourglass-split');
+    _sguToast('Generando Expediente PDF...', 'bi-hourglass-split');
     html2pdf().set(opt).from(div).save().then(function() {
-        _sguToast('PDF descargado correctamente.', 'bi-check-circle');
+        _sguToast('Expediente descargado.', 'bi-check-circle');
     });
 };
