@@ -936,7 +936,7 @@ window._sguGenerarPDF = async function(tipo) {
         fotosBase64.forEach(function(f) {
             html += '<div style="text-align:center;border:1px solid #e2e8f0;padding:15px;border-radius:8px;background:#f8fafc;break-inside:avoid;">';
             html += '<h4 style="margin:0 0 10px 0;font-size:15px;color:#334155;font-weight:bold;">Evidencia ' + f.num + '</h4>';
-            html += '<img src="' + f.b64 + '" style="width:100%;max-height:500px;object-fit:contain;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
+            html += '<img src="' + f.b64 + '" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
             html += '</div>';
         });
         html += '</div></div>';
@@ -947,8 +947,8 @@ window._sguGenerarPDF = async function(tipo) {
     var opt = {
         margin:       [10, 10, 10, 10], // top, left, bottom, right
         filename:     'Checklist_' + rec.placa_tracto + '_' + tipo + '.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 3, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
@@ -1092,7 +1092,7 @@ window._sguGenerarPDFCompleto = async function() {
         fotosArray.forEach(function(f, index) {
             h += '<div style="text-align:center;border:1px solid #e2e8f0;padding:15px;border-radius:8px;background:#f8fafc;break-inside:avoid;">';
             h += '<h4 style="margin:0 0 10px 0;font-size:15px;color:#334155;font-weight:bold;">Evidencia ' + (index + 1) + '</h4>';
-            h += '<img src="' + fotosMap[f.url] + '" style="width:100%;max-height:500px;object-fit:contain;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
+            h += '<img src="' + fotosMap[f.url] + '" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.06);" crossorigin="anonymous">';
             h += '</div>';
         });
         h += '</div></div>';
@@ -1109,8 +1109,8 @@ window._sguGenerarPDFCompleto = async function() {
     var opt = {
         margin:       [10, 10, 10, 10],
         filename:     'Expediente_Completo_' + rec.placa_tracto + '.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 3, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
