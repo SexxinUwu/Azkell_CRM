@@ -194,16 +194,16 @@ router.post('/:metodo', async (req, res) => {
         const datos = req.body.form || {};
         const query = `
             INSERT INTO inspecciones
-            (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma, id_ot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?
+            placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?, id_ot=?
         `;
         const values = [
             datos.id, datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64,
+            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null,
             datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64
+            parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null
         ];
         db.query(query, values, (err) => {
             if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }

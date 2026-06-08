@@ -23,6 +23,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     });
 });
 
+// ── Migración: agregar id_ot a inspecciones ──────────────
+db.query('ALTER TABLE inspecciones ADD COLUMN id_ot VARCHAR(50) NULL', function(e) {
+    if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ inspecciones.id_ot verificada');
+    else console.warn('ALTER inspecciones.id_ot:', e.message);
+});
 // ── Helper: genera ID secuencial por año  (ej. OT-2026-0001) ─────
 // Solo busca IDs con sufijo de exactamente 4 dígitos (nuevo formato),
 // ignorando los IDs legacy con sufijos largos.
@@ -193,7 +198,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     }
 
     if (accion === 'editar') {
-        const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo } = req.body;
+        const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo, km } = req.body;
         db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
@@ -205,6 +210,7 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             if (supervisor !== undefined)        det.supervisor        = supervisor;
             if (situacion_inicial !== undefined) det.situacion_inicial = situacion_inicial;
             if (motivo !== undefined)            det.motivo            = motivo;
+            if (km !== undefined)                det.km                = parseInt(km) || 0;
             db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
                 [JSON.stringify(det), ticketId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
@@ -245,6 +251,16 @@ router.delete('/ordenes-trabajo/:id', (req, res) => {
 });
 
 // ── OT TRABAJOS ───────────────────────────────────────────────────
+
+router.get('/inspecciones-por-ot', (req, res) => {
+    const { id_ot } = req.query;
+    if (!id_ot) return res.status(400).json({ error: 'id_ot requerido' });
+    db.query('SELECT * FROM inspecciones WHERE id_ot = ? ORDER BY fecha_ingreso DESC', [id_ot], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 router.get('/ot-trabajos', (req, res) => {
     const { id_ot } = req.query;
     // ticket_visita = FK a ordenes_trabajo.ticket_entrada | id_ot = ID único del trabajo (TR-YYYY-NNN)
