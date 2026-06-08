@@ -848,9 +848,28 @@ window.renderModernInspForm = function() {
     
     let opcionesTecnicos = new Set();
     if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
-    if (window.dataGlobalConductores) window.dataGlobalConductores.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
     if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
-    window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Buscar técnico...');
+
+    let cacheCond = (window.CACHE && window.CACHE.conductores) ? window.CACHE.conductores : window.dataGlobalConductores;
+    
+    if (cacheCond && cacheCond.length > 0) {
+        cacheCond.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+        window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Buscar técnico...');
+    } else {
+        window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Cargando directorio...');
+        fetch('/api/conductores')
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                window.CACHE = window.CACHE || {};
+                window.CACHE.conductores = data;
+                window.dataGlobalConductores = data;
+                data.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+                window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Buscar técnico...');
+            })
+            .catch(e => {
+                window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Buscar técnico...');
+            });
+    }
     window._cbOnSelect('i_tecnico', function(val) {
         document.getElementById('i_tecnico-txt').value = val;
         document.getElementById('i_tecnico').value = val;
