@@ -142,6 +142,24 @@
 #moduloSalidas tbody tr.sal-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
 #moduloSalidas tbody tr.sal-item-last { border-bottom: 2px solid var(--border); }
 #moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
+#moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
+
+/* Wrapper Desktop para bordes redondeados */
+@media (min-width: 768px) {
+    .sal-desktop-card {
+        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+}
+@media (max-width: 767.98px) {
+    .sal-desktop-card {
+        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+    }
+}
 
 /* Badges */
 #moduloSalidas .sal-badge {
@@ -305,8 +323,11 @@
     </button>
   </div>
 
-  <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
-  <div id="sal-desktop-header">
+  <!-- ═══ WRAPPER DESKTOP (BORDES REDONDOS) ════════════════════════ -->
+  <div class="sal-desktop-card">
+
+    <!-- ═══ HEADER ESCRITORIO ════════════════════════════════════════ -->
+    <div id="sal-desktop-header">
 
     <!-- Barra título + acciones -->
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -449,6 +470,7 @@
     </div>
 
   </div>
+  </div> <!-- Cierre del sal-desktop-card -->
 
   <!-- DRAWER: Nueva Solicitud -->
   <div class="sal-drawer" id="sal-drawer-nuevo">
