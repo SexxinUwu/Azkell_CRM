@@ -1479,11 +1479,13 @@ window.SS = (function() {
         } else {
             if (box) {
                 var rect = box.getBoundingClientRect();
+                document.body.appendChild(dd); // Mover al body para evitar conflictos con Offcanvas (transform)
                 dd.style.position = 'fixed';
                 dd.style.top  = (rect.bottom + 2) + 'px';
                 dd.style.left = rect.left + 'px';
                 dd.style.width = rect.width + 'px';
                 dd.style.right = 'auto';
+                dd.style.zIndex = '99999';
             }
             dd.style.display = 'block';
             if (box) box.style.borderColor = 'var(--primary,#5865F2)';
