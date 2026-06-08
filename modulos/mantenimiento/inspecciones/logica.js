@@ -887,13 +887,15 @@ window.abrirModalNuevaInspeccion = function (placaPreselect) {
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
 
     if (placaPreselect) {
-        let iPlaca = document.getElementById('i_placa');
-        if (iPlaca) {
-            iPlaca.value = placaPreselect;
-            let txt = document.getElementById('i_placa-txt');
-            if(txt) txt.value = placaPreselect;
-            autocompletarInfoInsp();
-        }
+        setTimeout(() => {
+            let iPlaca = document.getElementById('i_placa');
+            if (iPlaca) {
+                iPlaca.value = placaPreselect;
+                let txt = document.getElementById('i_placa-txt');
+                if(txt) txt.value = placaPreselect;
+                autocompletarInfoInsp();
+            }
+        }, 50);
     }
 
     new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
@@ -927,9 +929,12 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     } else { fIngreso = ""; }
 
     document.getElementById('i_fecha').value = fIngreso;
-    document.getElementById('i_placa').value = insp.placa || "";
-    let txtPla = document.getElementById('i_placa-txt');
-    if(txtPla) txtPla.value = insp.placa || "";
+    
+    setTimeout(() => {
+        document.getElementById('i_placa').value = insp.placa || "";
+        let txtPla = document.getElementById('i_placa-txt');
+        if(txtPla) txtPla.value = insp.placa || "";
+    }, 50);
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
     document.getElementById('i_cliente').value = insp.cliente || "";
     document.getElementById('i_tecnico').value = insp.tecnico || "";
