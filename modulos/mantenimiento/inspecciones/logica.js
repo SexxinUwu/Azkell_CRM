@@ -717,8 +717,8 @@ window.renderModernInspForm = function() {
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-muted" style="font-size:0.8rem;">Fecha de Ingreso</label>
-                    <input type="date" class="form-control fw-bold shadow-sm" id="i_fecha" required style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Fecha de Ingreso</label>
+                    <input type="date" class="form-control fw-bold shadow-sm" id="i_fecha" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
                 <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">
@@ -736,20 +736,20 @@ window.renderModernInspForm = function() {
                     </div>
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-muted" style="font-size:0.8rem;">KM Tablero (Opcional)</label>
-                    <input type="number" class="form-control text-danger fw-bold shadow-sm" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Kilometraje de Tablero</label>
+                    <input type="number" class="form-control text-danger fw-bold shadow-sm" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-muted" style="font-size:0.8rem;">Dueño (Cliente)</label>
-                    <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Cliente</label>
+                    <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-muted" style="font-size:0.8rem;">Tipo</label>
-                    <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Tipo</label>
+                    <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-muted" style="font-size:0.8rem;"><i class="bi bi-geo-alt-fill"></i> KM GPS (Wialon)</label>
-                    <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
+                    <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
             </div>
         </div>
@@ -820,8 +820,8 @@ window.renderModernInspForm = function() {
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.8rem;">Días Propuestos</label>
-                    <input type="number" class="form-control fw-bold shadow-sm" id="i_dias" value="30" style="border-radius:8px;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días Propuestos</label>
+                    <input type="number" class="form-control fw-bold shadow-sm" id="i_dias" value="30" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
             </div>
             <div class="mb-2">
@@ -890,7 +890,8 @@ window.abrirModalNuevaInspeccion = function (placaPreselect) {
         let iPlaca = document.getElementById('i_placa');
         if (iPlaca) {
             iPlaca.value = placaPreselect;
-            if (window.SS) window.SS.setValue('insp-placa', placaPreselect);
+            let txt = document.getElementById('i_placa-txt');
+            if(txt) txt.value = placaPreselect;
             autocompletarInfoInsp();
         }
     }
@@ -927,7 +928,8 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
 
     document.getElementById('i_fecha').value = fIngreso;
     document.getElementById('i_placa').value = insp.placa || "";
-    if (window.SS) window.SS.setValue('insp-placa', insp.placa || '');
+    let txtPla = document.getElementById('i_placa-txt');
+    if(txtPla) txtPla.value = insp.placa || "";
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
     document.getElementById('i_cliente').value = insp.cliente || "";
     document.getElementById('i_tecnico').value = insp.tecnico || "";
