@@ -1195,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.addEventListener('click', registrarActividad);
   setInterval(verificarInactividad, 60000);
 
-  generarWizardFase3();
+  // generarWizardFase3(); // (Movido)
 });
 
 function normalizarClase(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, ''); }
@@ -2862,115 +2862,6 @@ function actualizarColoresGraficos() {
     });
 }
 
-// ==========================================
-// 🔥 FASE 3: GENERADOR DINÁMICO DEL SÚPER WIZARD 🔥
-// ==========================================
-// ==========================================
-// FASE 3: GENERADOR DINÁMICO DEL SÚPER WIZARD
-// ==========================================
-const WIZARD_SCHEMA = [
-    { tab: "1. REGISTRO", type: "registro" },
-    { tab: "2. II. MOTOR", items: ["1. Niveles de Motor", "2. Sistema lubricacion de fugas", "3. Sistema Combustible", "4. Sistema de Refrigeracion", "5. Correas, ventilador y accesorios", "6. Codigo Falla", "II.7 Otros"] },
-    { tab: "3. III. S. ELÉCTRICO", items: ["1. Inspeccion de Luces General", {label: "2. Amperaje de bateria", type:"text"}] },
-    { tab: "4. S. DE AIRE", items: ["Inspeccion General de Aire", "Mantenimiento de Valvulas", "Inspeccion de Manitos de aire"] },
-    { tab: "5. IV. TRANSMISIÓN", items: ["1. Embrague", "2. Caja de Cambios", "3. Diferencial", "4. Cardanes", "IV. 5 Otros"] },
-    { tab: "6. V. DIRECCIÓN", items: ["1. Servo direccion", "2. Alinemiento", "3. Pines, bocinas y terminales", "4. CAJA DE DIRECCION", "V.5 Otros"] },
-    { tab: "7. VI. FRENOS", items: ["1. Limpieza y regulacion", {label: "Zapatas Delanteras /Pastillas Delanteras", type:"percent"}, {label: "Zapata De Traccion/Primer Eje De Traccion", type:"percent"}, {label: "Zapatas Eje Loco/ Segundo Eje De Traccion", type:"percent"}, {label: "Disco De Embrague", type:"percent"}, "VI.4 Otros"] },
-    { tab: "8. VII. SUSPENSIÓN", items: ["1. Mueles, Bolsas De Aire", "VII 2. Amortiguadores", "VII 3. Eje Barras Estabilizadoraa", "VII.4 Otros"] },
-    { tab: "9. VIII. HERMETIZADO", items: ["VIII.1 Cabina Exterior e Interior", "VIII.2 Puerta, chapa y asientos", "VIII.3 Chasis, tornamesa y bastidor", "VIII.4 Furgon extructuras laterales", "VIII.5 Otros"] },
-    { tab: "10. IX. DAÑOS", items: [{label: "IX. Daños Encontrados", type:"text"}] },
-    { tab: "11. X. FIRMA", type: "firma" }
-];
-
-function generarWizardFase3() {
-    let htmlHeaders = ''; let htmlTabs = '';
-    htmlTabs += `<input type="hidden" id="i_id_inspeccion" value="">`;
-
-    WIZARD_SCHEMA.forEach((sec, i) => {
-        htmlHeaders += `<div class="wizard-step ${i===0?'active':''}" id="step-btn-${i}" onclick="cambiarPestana(${i})">${sec.tab}</div>`;
-        htmlTabs += `<div class="wizard-tab ${i===0?'active':''}" id="tab-${i}">`;
-        htmlTabs += `<h5 class="fw-bold mb-3 border-bottom pb-2 text-primary">${sec.tab.substring(sec.tab.indexOf(' ')+1)}</h5>`;
-
-        if(sec.type === "registro") {
-            htmlTabs += `<div class="row">
-                <div class="col-12 mb-3">
-                    <label class="fw-bold">Fecha de Ingreso</label>
-                    <input type="date" class="form-control fw-bold text-primary border-primary shadow-sm" id="i_fecha" required>
-                </div>
-                <div class="col-12 mb-3">
-                    <label class="fw-bold text-primary">
-                        <i class="bi bi-truck"></i> Placa *
-                    </label>
-                    ${window.SS.html('insp-placa','i_placa','i_placa','ESCRIBE PARA BUSCAR...','Buscar placa...')}
-                </div>
-                <div class="col-12 mb-3">
-                    <label class="fw-bold">KM Tablero (Opcional)</label>
-                    <input type="number" class="form-control text-danger fw-bold border-danger shadow-sm" id="i_kmtablero" placeholder="Ej: 150000">
-                </div>
-                <div class="col-12 mb-3">
-                    <label class="fw-bold text-secondary">Dueño (Cliente)</label>
-                    <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly>
-                </div>
-                <div class="col-12 mb-3">
-                    <label class="form-label fw-bold text-secondary">Tipo</label>
-                    <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly>
-                </div>
-                <div class="col-12 mb-3">
-                    <label class="form-label fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> KM GPS (Wialon)</label>
-                    <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando...">
-                </div>
-            </div>`;
-        }
-        else if (sec.type === "firma") {
-            htmlTabs += `<div class="row"><div class="col-md-8 mb-3"><label class="fw-bold text-primary">Técnico Inspector</label><input type="text" class="form-control fw-bold text-uppercase" id="i_tecnico" list="dl-tecnicos" placeholder="Selecciona o escribe uno nuevo" required></div><div class="col-md-4 mb-3"><label class="fw-bold text-primary">Días Propuestos</label><input type="number" class="form-control fw-bold" id="i_dias" value="30"></div></div><div class="mb-3"><label class="fw-bold text-primary mb-2"><i class="bi bi-pen"></i> Firma del Técnico</label><canvas id="canvasFirma" class="firma-pad shadow-sm"></canvas><button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirma()"><i class="bi bi-eraser"></i> Borrar Firma</button></div>`;
-        }
-        else {
-            sec.items.forEach((item, j) => {
-                let lbl = typeof item === 'string' ? item : item.label; let t = typeof item === 'string' ? 'okfalla' : item.type; let uid = `p_${i}_${j}`;
-                htmlTabs += `<div class="pregunta-box"><label class="fw-bold text-secondary">${lbl}</label>`;
-
-                if (t === 'okfalla') {
-                    htmlTabs += `<div class="btn-group w-100 mt-2 shadow-sm" role="group">
-                        <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
-                        <label class="btn btn-outline-success fw-bold" for="${uid}_ok">OK</label>
-                        <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
-                        <label class="btn btn-outline-danger fw-bold" for="${uid}_fa">FALLA</label>
-                    </div>
-                    <div id="f_${uid}" style="display:none;" class="mt-3 p-3 bg-light rounded border-start border-danger border-4 shadow-inner">
-                        <label class="form-label text-danger fw-bold"><i class="bi bi-pencil-square"></i> Observación</label>
-                        <textarea class="form-control mb-2 border-danger" rows="2" id="obs_${uid}" placeholder="Describe la falla..."></textarea>
-                        <label class="form-label text-danger fw-bold mt-2"><i class="bi bi-camera"></i> Evidencia (Opcional)</label>
-                        <input type="file" class="form-control border-danger form-control-sm" id="foto_${uid}" accept="image/*">
-                    </div>`;
-                } else if (t === 'percent') {
-                    htmlTabs += `<input type="hidden" id="val_${uid}" value=""><div class="percent-grid mt-2">`;
-                    [10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100].forEach(pct => { htmlTabs += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold pct-btn pct-${uid} shadow-sm" onclick="seleccionarPorcentaje('${uid}', ${pct}, this)">${pct}%</button>`; });
-                    htmlTabs += `</div>`;
-                } else if (t === 'text') {
-                    htmlTabs += `<textarea class="form-control mt-2 border-primary" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..."></textarea>`;
-                }
-                htmlTabs += `</div>`;
-            });
-        }
-        htmlTabs += `</div>`;
-    });
-
-    let wH = document.getElementById('wizardHeaders'); if(wH) wH.innerHTML = htmlHeaders;
-    let wD = document.getElementById('wizard-dynamic-tabs'); if(wD) wD.innerHTML = htmlTabs;
-    // Inicializar SS para placa
-    window.SS.init('insp-placa', 'i_placa',
-        function() {
-            return (window.dataGlobalPlacas || [])
-                .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
-                .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
-                .sort();
-        },
-        '', window.autocompletarInfoInsp, 'ESCRIBE PARA BUSCAR...'
-    );
-}
-
-
-function moverWizard(step) { let n = currentTab + step; if(n >= 0 && n < WIZARD_SCHEMA.length) cambiarPestana(n); }
 function initFirma() { canvasFirma = document.getElementById('canvasFirma'); if(!canvasFirma) return; ctxFirma = canvasFirma.getContext('2d'); canvasFirma.width = canvasFirma.offsetWidth; canvasFirma.height = canvasFirma.offsetHeight; ctxFirma.lineWidth = 3; ctxFirma.lineCap = 'round'; ctxFirma.strokeStyle = '#000000'; canvasFirma.onmousedown = startDrawing; canvasFirma.onmouseup = stopDrawing; canvasFirma.onmousemove = draw; canvasFirma.onmouseout = stopDrawing; canvasFirma.addEventListener('touchstart', startDrawingTouch, {passive: false}); canvasFirma.addEventListener('touchend', stopDrawing); canvasFirma.addEventListener('touchmove', drawTouch, {passive: false}); }
 function startDrawing(e) { dibujando = true; draw(e); } function stopDrawing() { dibujando = false; ctxFirma.beginPath(); }
 function draw(e) { if (!dibujando) return; let rect = canvasFirma.getBoundingClientRect(); ctxFirma.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctxFirma.stroke(); ctxFirma.beginPath(); ctxFirma.moveTo(e.clientX - rect.left, e.clientY - rect.top); }
