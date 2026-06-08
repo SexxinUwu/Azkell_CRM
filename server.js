@@ -940,6 +940,9 @@ app.use('/api', tallerRoutes);
 const seguridadRoutes = require('./routes/seguridad')(db, logAudit);
 app.use('/api', seguridadRoutes);
 
+const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
+app.use('/api/mantenimiento', mantenimientoRoutes);
+
 // (legacyRoutes se movió más abajo para no interceptar los endpoints que siguen)
 
 app.get('/api/cat-rampas', (req, res) => {
