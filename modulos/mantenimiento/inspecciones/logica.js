@@ -757,6 +757,15 @@ window.renderModernInspForm = function() {
     });
 
     // Tarjeta Final: Firma
+    let opcionesTecnicos = new Set();
+    if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
+    if (window.dataGlobalConductores) window.dataGlobalConductores.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+    if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
+    
+    let htmlTecnicos = "<datalist id='dl-tecnicos'>";
+    opcionesTecnicos.forEach(t => { htmlTecnicos += `<option value="${t}">`; });
+    htmlTecnicos += "</datalist>";
+
     html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
         <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
             <h6 class="fw-bold text-primary m-0"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMA</h6>
@@ -766,6 +775,7 @@ window.renderModernInspForm = function() {
                 <div class="col-md-8 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.8rem;">Técnico Inspector</label>
                     <input type="text" class="form-control fw-bold text-uppercase shadow-sm" id="i_tecnico" list="dl-tecnicos" placeholder="Selecciona o escribe uno nuevo" required style="border-radius:8px;">
+                    ${htmlTecnicos}
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.8rem;">Días Propuestos</label>
@@ -784,11 +794,19 @@ window.renderModernInspForm = function() {
     
     // 🔥 INICIALIZAR LIBRERÍA DE BÚSQUEDA DESPUÉS DE RENDERIZAR 🔥
     if (window.SS) {
-        window.SS.init('insp-placa');
+        window.SS.init('insp-placa', 'i_placa',
+            function() {
+                return (window.dataGlobalPlacas || [])
+                    .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
+                    .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
+                    .sort();
+            },
+            '', window.autocompletarInfoInsp, 'BUSCAR PLACA...'
+        );
         // También reasignamos autocompletado en caso de cambios
         let placaInput = document.getElementById('i_placa');
         if(placaInput) {
-            placaInput.addEventListener('change', autocompletarInfoInsp);
+            placaInput.addEventListener('change', window.autocompletarInfoInsp);
         }
     }
     
