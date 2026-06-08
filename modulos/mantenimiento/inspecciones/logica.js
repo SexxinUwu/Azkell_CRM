@@ -549,7 +549,21 @@ async function procesarGuardadoInspeccion() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
 
-    let idInsp = document.getElementById('i_id_inspeccion').value || "INSP-" + Date.now();
+    let idInsp = document.getElementById('i_id_inspeccion').value;
+    if (!idInsp) {
+        let anioActual = new Date().getFullYear();
+        let prefix = `Insp-${anioActual}-`;
+        let max = 0;
+        if (window.dataGlobalInspecciones) {
+            window.dataGlobalInspecciones.forEach(i => {
+                if (i.id && i.id.startsWith(prefix)) {
+                    let num = parseInt(i.id.split('-')[2]);
+                    if (!isNaN(num) && num > max) max = num;
+                }
+            });
+        }
+        idInsp = prefix + (max + 1).toString().padStart(4, '0');
+    }
     let fecha = document.getElementById('i_fecha').value;
     let placa = document.getElementById('i_placa').value.toUpperCase();
     let km = document.getElementById('i_kmtablero').value;
@@ -782,7 +796,6 @@ window.renderModernInspForm = function() {
 };
 
 window.abrirModalNuevaInspeccion = function (placaPreselect) {
-    // Renderizamos primero para que los campos dinámicos existan (incluyendo i_id_inspeccion)
     renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
@@ -818,8 +831,13 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if (!insp) return;
 
-    document.getElementById('formNuevaInspeccion').reset();
-    document.getElementById('i_id_inspeccion').value = insp.id;
+    renderModernInspForm();
+
+    let formEl = document.getElementById('formNuevaInspeccion');
+    if(formEl) formEl.reset();
+    
+    let idInput = document.getElementById('i_id_inspeccion');
+    if(idInput) idInput.value = insp.id;
 
     document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.pct-btn').forEach(btn => {
