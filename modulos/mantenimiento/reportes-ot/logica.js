@@ -319,7 +319,15 @@ window.rotAbrirDetalle = function(idOT) {
     var t = rotCalcularTiempos(ot);
     html += '<div class="rot-sec"><div class="rot-sec-hd">Tiempos de la Orden</div>';
     html += fld('Ingreso a Taller', rotFmtFecha(ot.fecha_ingreso || ot.creado_en));
-    if (det.km) html += fld('Kilometraje', esc(Number(det.km).toLocaleString('es-PE') + ' km'));
+    if (det.km !== undefined) {
+        var kmHtml = '<div style="display:flex;align-items:center;gap:10px;">'
+                   + '<span id="rot-ot-km-txt">' + Number(det.km).toLocaleString('es-PE') + ' km</span>'
+                   + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', ' + det.km + ')" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-pencil"></i></button>' : '')
+                   + '</div>';
+        html += fld('Kilometraje', kmHtml);
+    } else if (puedeEditar) {
+        html += fld('Kilometraje', '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', 0)" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-plus"></i> Agregar KM</button>');
+    }
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
         html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.iniciado_por) + '</span>' : ''));
@@ -374,11 +382,21 @@ window.rotAbrirDetalle = function(idOT) {
           + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
+    // Inspección General (placeholder)
+    html += '<div class="rot-sec" id="rot-sec-inspecciones">'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspección General '
+          + '<div style="margin-left:auto;display:flex;gap:4px;">'
+          + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-file-earmark-pdf"></i> Plantilla Vacía</button>'
+          + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;" onclick="event.stopPropagation();window.abrirModalNuevaInspeccion(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '')
+          + '</div></div>'
+          + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
+          + '</div>';
+
     // Backlog pendiente de la unidad (placeholder)
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
               + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + (esAprobada ? '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -434,20 +452,24 @@ window.rotAbrirDetalle = function(idOT) {
     if (back) back.classList.add('open');
     drawer.classList.add('open');
 
-    // Fetch trabajos + materiales + backlog en paralelo
+    // Fetch trabajos + materiales + backlog + inspecciones en paralelo
     window.rotOtTrabajosActivos   = [];
     window.rotOtMaterialesActivos = [];
+    window.rotOtInspeccionesActivas = [];
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='       + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([])
+        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([]),
+        fetch('/api/inspecciones-por-ot?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
     ]).then(function(res) {
         window.rotOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
         window.rotOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
+        window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
         rotRenderSecTrabajos(idOT, esAprobada);
         rotRenderSecMateriales(idOT, puedeAgregarMaterial);
         rotRenderSecBacklog(backlogItems);
+        rotRenderSecInspecciones(idOT);
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
             .filter(function(t){ return t.estado === 'Aprobado'; })
@@ -483,28 +505,42 @@ function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
 
     var overlay = document.createElement('div');
     overlay.id = 'rot-modal-comentario';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
 
     overlay.innerHTML =
-        '<div style="background:var(--surface,#fff);border-radius:12px;padding:24px;width:420px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,0.22);">'
-      + '<div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:14px;">' + titulo + '</div>'
-      + '<textarea id="rot-mc-input" rows="4" style="width:100%;border:1px solid var(--border,#e0e0e0);border-radius:8px;padding:8px 10px;font-size:0.85rem;resize:vertical;color:var(--text);background:var(--bg,#f8f8f8);outline:none;" placeholder="' + placeholder + '"></textarea>'
-      + (requerido ? '<div id="rot-mc-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Este campo es obligatorio.</div>' : '')
-      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
-      + '<button id="rot-mc-cancel" class="btn btn-sm btn-outline-secondary">Cancelar</button>'
-      + '<button id="rot-mc-ok" class="btn btn-sm btn-primary">Confirmar</button>'
+        '<div style="background:var(--surface,#fff);border-radius:16px;width:420px;max-width:94vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+      + '<div style="padding:24px 24px 16px;">'
+      + '<h5 style="margin:0 0 16px;font-weight:700;color:var(--text);text-align:center;">' + titulo + '</h5>'
+      + '<textarea id="rot-mc-input" rows="4" class="form-control" style="border-radius:10px;font-size:0.9rem;resize:vertical;background:var(--bg,#f8f8f8);" placeholder="' + placeholder + '"></textarea>'
+      + (requerido ? '<div id="rot-mc-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:6px;text-align:center;">Este campo es obligatorio.</div>' : '')
+      + '</div>'
+      + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+      + '<button id="rot-mc-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+      + '<button id="rot-mc-ok" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:600;">Confirmar</button>'
       + '</div></div>';
 
     document.body.appendChild(overlay);
+    
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
     var ta   = document.getElementById('rot-mc-input');
     var err  = document.getElementById('rot-mc-err');
     var ok   = document.getElementById('rot-mc-ok');
     var can  = document.getElementById('rot-mc-cancel');
     if (ta) ta.focus();
 
-    function cerrar() { overlay.remove(); }
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+    
     can.addEventListener('click', cerrar);
-    overlay.addEventListener('click', function(e) { if (e.target === overlay) cerrar(); });
+    
     ok.addEventListener('click', function() {
         var val = ta ? ta.value.trim() : '';
         if (requerido && !val) {
@@ -516,6 +552,89 @@ function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
         onConfirm(val);
     });
 }
+function rotConfirmModerno(titulo, mensaje, onConfirm, type) {
+    type = type || 'danger';
+    var iconClass = type === 'danger' ? 'bi-exclamation-triangle-fill text-danger' : 'bi-info-circle-fill text-primary';
+    var btnClass = type === 'danger' ? 'btn-danger' : 'btn-primary';
+    var btnText = type === 'danger' ? 'Sí, eliminar' : 'Confirmar';
+
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+    
+    var modalHtml = '<div style="background:var(--surface,#fff);border-radius:16px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+                  + '<div style="padding:24px 24px 16px;text-align:center;">'
+                  + '<i class="bi ' + iconClass + '" style="font-size:3rem;line-height:1;margin-bottom:16px;display:block;"></i>'
+                  + '<h5 style="margin:0 0 8px;font-weight:700;color:var(--text);">' + rotEscHtml(titulo) + '</h5>'
+                  + '<p style="margin:0;font-size:0.9rem;color:var(--subtext);">' + rotEscHtml(mensaje) + '</p>'
+                  + '</div>'
+                  + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+                  + '<button id="rot-cfm-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+                  + '<button id="rot-cfm-ok" class="btn ' + btnClass + '" style="flex:1;border-radius:10px;font-weight:600;">' + btnText + '</button>'
+                  + '</div></div>';
+    overlay.innerHTML = modalHtml;
+    document.body.appendChild(overlay);
+    
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+
+    document.getElementById('rot-cfm-cancel').addEventListener('click', cerrar);
+    document.getElementById('rot-cfm-ok').addEventListener('click', function() {
+        cerrar();
+        onConfirm();
+    });
+}
+
+function rotPromptKm(currentKm, onConfirm) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+    
+    var modalHtml = '<div style="background:var(--surface,#fff);border-radius:16px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+                  + '<div style="padding:24px 24px 16px;">'
+                  + '<h5 style="margin:0 0 16px;font-weight:700;color:var(--text);text-align:center;">Actualizar Kilometraje</h5>'
+                  + '<div class="mb-3">'
+                  + '<label class="form-label fw-bold" style="font-size:0.8rem;color:var(--subtext);">Kilometraje (KM)</label>'
+              + '<input type="number" id="rot-prompt-km" class="form-control" style="border-radius:10px;text-align:center;font-weight:700;font-size:1.2rem;" value="' + (currentKm || 0) + '">'
+                  + '</div>'
+                  + '</div>'
+                  + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+                  + '<button id="rot-pkm-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+                  + '<button id="rot-pkm-ok" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:600;">Guardar KM</button>'
+                  + '</div></div>';
+    overlay.innerHTML = modalHtml;
+    document.body.appendChild(overlay);
+    
+    var inp = document.getElementById('rot-prompt-km');
+    inp.focus();
+    inp.select();
+
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+
+    document.getElementById('rot-pkm-cancel').addEventListener('click', cerrar);
+    document.getElementById('rot-pkm-ok').addEventListener('click', function() {
+        var v = parseFloat(inp.value);
+        cerrar();
+        onConfirm(v);
+    });
+}
 
 // ── Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ──
 window.rotAccion = function(accion, idOT) {
@@ -524,39 +643,41 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'eliminar') {
         if (!window.guardAction('ot', 'd')) return;
-        if (!confirm('¿Eliminar la OT ' + idOT + '? Esta acción no se puede deshacer.')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
-            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-            .then(function() {
-                window.rotCerrarDetalle();
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT eliminada', 'success');
-                window.rotCargar();
-            })
-            .catch(function(err) {
-                console.error('Error eliminando OT:', err);
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la OT', 'danger');
-            });
+        rotConfirmModerno('Eliminar OT', '¿Eliminar la OT ' + idOT + '? Esta acción no se puede deshacer.', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
+                .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+                .then(function() {
+                    window.rotCerrarDetalle();
+                    if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT eliminada', 'success');
+                    window.rotCargar();
+                })
+                .catch(function(err) {
+                    console.error('Error eliminando OT:', err);
+                    if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la OT', 'danger');
+                });
+        }, 'danger');
         return;
     }
 
     if (accion === 'iniciar') {
         if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Iniciar la OT ' + idOT + '?')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error iniciando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al iniciar la OT', 'danger');
-        });
+        rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error iniciando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al iniciar la OT', 'danger');
+            });
+        }, 'primary');
         return;
     }
 
@@ -637,22 +758,23 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'anular') {
         if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Anular la OT ' + idOT + '?')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'anular' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error anulando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la OT', 'danger');
-        });
+        rotConfirmModerno('Anular OT', '¿Anular la OT ' + idOT + '?', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'anular' })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error anulando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la OT', 'danger');
+            });
+        }, 'danger');
         return;
     }
 
@@ -1137,8 +1259,8 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     var html = '';
     if (esAprobada) {
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm btn-outline-primary" onclick="window.rotAgregarTrabajo(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Trabajo</button></div>';
+              + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;" onclick="window.rotAgregarTrabajo(\'' + rotEscHtml(idOt) + '\')">'
+              + '<i class="bi bi-plus"></i> Agregar</button></div>';
     }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay trabajos registrados</div>';
@@ -1170,7 +1292,45 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// ── Render dinámico: sección Materiales ──────────────────────────
+// ── Render dinámico: sección Inspecciones ──────────────────────────
+function rotRenderSecInspecciones(idOt) {
+    var body = document.getElementById('rot-insp-body');
+    if (!body) return;
+    var lista = window.rotOtInspeccionesActivas || [];
+    var html = '';
+    if (!lista.length) {
+        html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay inspecciones registradas</div>';
+    } else {
+        lista.forEach(function(i) {
+            var fIngreso = String(i.fecha_ingreso || '').split('T')[0];
+            html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;display:flex;justify-content:space-between;align-items:center;">'
+                  + '<div>'
+                  + '<div style="font-weight:700;color:var(--primary,#5865F2);font-size:0.75rem;">' + rotEscHtml(i.id) + '</div>'
+                  + '<div style="color:var(--subtext);font-size:0.7rem;">' + fIngreso + ' • KM: ' + (i.km_tablero || 0) + '</div>'
+                  + '</div>'
+                  + '<button class="btn btn-sm btn-outline-secondary" style="padding:1px 8px;font-size:0.7rem;border-radius:12px;" onclick="window.rotAbrirTabInspeccion(\'' + rotEscHtml(i.id) + '\')"><i class="bi bi-eye"></i> Ver</button>'
+                  + '</div>';
+        });
+    }
+    body.innerHTML = html;
+}
+
+window.rotEditarKm = function(idOT, kmActual) {
+    window.rotPromptKm(kmActual, function(newKm) {
+        if (newKm === null || isNaN(newKm) || newKm < 0) return;
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'editar', km: newKm })
+        }).then(function(r) { return r.json(); })
+          .then(function(res) {
+              if (res.error) alert('Error: ' + res.error);
+              else window.rotCargar();
+          }).catch(function(e) { alert('Error: ' + e); });
+    });
+};
+
+
 function rotRenderSecMateriales(idOt, esAprobada) {
     var body  = document.getElementById('rot-mat-body');
     var count = document.getElementById('rot-mat-count');
@@ -1186,8 +1346,8 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     var html = '';
     if (esAprobada) {
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAgregarSalida(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Solicitud</button></div>';
+              + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(16,185,129,0.1);color:#10b981;font-weight:700;border-radius:12px;" onclick="window.rotAgregarSalida(\'' + rotEscHtml(idOt) + '\')">'
+              + '<i class="bi bi-plus"></i> Agregar</button></div>';
     }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
@@ -1313,22 +1473,22 @@ window.rotEliminarTrabajo = function() {
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     if (!ticket) return;
-    if (!confirm('¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.')) return;
-
-    fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
-    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function() {
-        window.rotCerrarSubDrawer('rot-drawer-trabajo');
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Trabajo eliminado', 'success');
-        fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOt))
-            .then(function(r){ return r.ok ? r.json() : []; })
-            .then(function(rows) {
-                window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
-                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
-            }).catch(function(){});
-    })
-    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
+    rotConfirmModerno('Eliminar Trabajo', '¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.', function() {
+        fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+            window.rotCerrarSubDrawer('rot-drawer-trabajo');
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Trabajo eliminado', 'success');
+            fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOt))
+                .then(function(r){ return r.ok ? r.json() : []; })
+                .then(function(rows) {
+                    window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
+                    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                    rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
+                }).catch(function(){});
+        })
+        .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
+    }, 'danger');
 };
 
 // ── Agregar Salida (material) — form rico multi-artículo ──────────
@@ -1560,20 +1720,21 @@ window.rotGuardarMaterial = function() {
 
 // ── Eliminar Material ─────────────────────────────────────────────
 window.rotEliminarMaterial = function(idSolicitud, idOt) {
-    if (!confirm('¿Eliminar esta solicitud de material?')) return;
-    fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
-    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function() {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
-        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
-            .then(function(r){ return r.ok ? r.json() : []; })
-            .then(function(rows) {
-                window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
-                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
-            }).catch(function(){});
-    })
-    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger'); });
+    rotConfirmModerno('Eliminar Solicitud', '¿Eliminar esta solicitud de material?', function() {
+        fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
+            fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
+                .then(function(r){ return r.ok ? r.json() : []; })
+                .then(function(rows) {
+                    window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
+                    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                    rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
+                }).catch(function(){});
+        })
+        .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger'); });
+    }, 'danger');
 };
 
 // ── Sub-drawer helpers ────────────────────────────────────────────
@@ -1914,4 +2075,92 @@ window.rotGuardarEdicionOT = function() {
         console.error('Error editando OT:', err);
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar los cambios', 'danger');
     });
+};
+
+// ── Descargar Plantilla Vacía para Inspección ──
+window.descargarPlantillaVaciaOT = function(idOt, placa) {
+    if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
+    fetch('/api/mantenimiento/inspecciones/config')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var schema = res.data ? res.data.map(function(d) {
+                var parsed = [];
+                try { parsed = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
+                return { tab: d.categoria, items: parsed };
+            }) : [];
+            
+            var tbody = '';
+            var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+            schema.forEach(function(sec, idxCat) {
+                tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat] || (idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+                if (sec.items) {
+                    sec.items.forEach(function(item) {
+                        var lbl = typeof item === 'string' ? item : item.label;
+                        tbody += '<tr>'
+                               + '<td class="w-crit">' + rotEscHtml(lbl) + '</td>'
+                               + '<td class="w-chk"><div class="sq"></div></td>'
+                               + '<td class="w-chk"><div class="sq"></div></td>'
+                               + '<td class="w-obs"></td>'
+                               + '</tr>';
+                    });
+                }
+            });
+
+            var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plantilla Inspección</title>'
+                + '<style>'
+                + '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap");'
+                + 'body { margin: 0; padding: 20px; font-family: "Oswald", sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }'
+                + 'table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }'
+                + 'th, td { border: 1px solid #000; padding: 2px 4px; font-size: 11px; }'
+                + '.iso-header td { text-align: center; vertical-align: middle; }'
+                + '.title-cell { font-size: 24px; font-weight: bold; text-transform: uppercase; line-height: 1; }'
+                + '.sub-title { font-size: 12px; font-weight: normal; letter-spacing: 1px; }'
+                + '.qms-item { font-size: 10px; text-align: left; height: 16px; }'
+                + '.data-grid td { font-weight: bold; height: 20px; vertical-align: middle; }'
+                + '.val-normal { font-weight: normal; margin-left: 3px; }'
+                + '.val-blue { color: #4a86e8; font-size: 13px; margin-left: 3px; }'
+                + '.checklist-table th { background-color: #0053b3; color: white; text-transform: uppercase; text-align: left; }'
+                + '.checklist-table th.th-center { text-align: center; }'
+                + '.sec-row td { background-color: #f2f2f2; font-weight: bold; border-top: 2px solid #000; }'
+                + '.w-crit { width: 45%; } .w-chk { width: 30px; text-align: center; } .w-obs { width: auto; }'
+                + '.sq { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; margin-top: 2px; }'
+                + '@media print { body { padding: 0; } }'
+                + '</style></head><body>'
+                + '<table class="iso-header">'
+                + '<tr><td rowspan="3" style="width:20%;"><img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" style="max-height:45px;"></td>'
+                + '<td rowspan="3" class="title-cell">INSPECCIÓN MENSUAL<br><span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span></td>'
+                + '<td class="qms-item" style="width:25%;"><b>CÓDIGO:</b> F-MAN-003</td></tr>'
+                + '<tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>'
+                + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>'
+                + '</table>'
+                + '<table class="data-grid">'
+                + '<tr><td style="width:35%;">Nº de Reporte: <span class="val-blue">' + rotEscHtml(idOt) + '</span></td>'
+                + '<td style="width:35%;">Placa: <span class="val-normal">' + rotEscHtml(placa) + '</span></td>'
+                + '<td rowspan="2" style="width:30%;vertical-align:top;">Rampa:<br></td></tr>'
+                + '<tr><td>Fecha de Ingreso: <span class="val-normal">____/____/______</span></td>'
+                + '<td>Kilometraje: <span class="val-normal">________________</span></td></tr>'
+                + '</table>'
+                + '<table class="checklist-table">'
+                + '<thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">OK</th><th class="w-chk th-center">MAL</th><th class="w-obs th-center">OBSERVACION</th></tr></thead>'
+                + '<tbody>' + tbody + '</tbody>'
+                + '</table>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">'
+                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div>Firma del Técnico</div></div>'
+                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div>Firma del Supervisor</div></div>'
+                + '</div>'
+                + '</body></html>';
+
+            var win = window.open('', '_blank');
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            win.onload = function() {
+                setTimeout(function() {
+                    win.print();
+                }, 500);
+            };
+        }).catch(function(e) {
+            console.error('Error fetching schema for pdf', e);
+            if (typeof window.rotToast === 'function') window.rotToast('Error al generar plantilla', 'bg-danger');
+        });
 };

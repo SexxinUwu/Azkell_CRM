@@ -704,10 +704,13 @@ async function procesarGuardadoInspeccion() {
     }
 
     let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
+    let idOt = "";
+    let iIdOt = document.getElementById('i_id_ot');
+    if (iIdOt) idOt = iIdOt.value;
 
     let datos = {
         form: {
-            id: idInsp, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
+            id: idInsp, id_ot: idOt, fecha_ingreso: fecha, placa: placa, km_tablero: km, cliente: cliente, tecnico: tecnico, dias_propuestos: dias,
             detalles_json: JSON.stringify(detalles), firma_base64: firmaData, usuarioAutor: usuarioLogueado
         }
     };
@@ -754,7 +757,8 @@ window.autocompletarInfoInsp = function () {
 // ============================================================
 
 window.renderModernInspForm = function() {
-    let html = '<input type="hidden" id="i_id_inspeccion" value="">';
+    let html = '<input type="hidden" id="i_id_inspeccion" value="">'
+             + '<input type="hidden" id="i_id_ot" value="">';
     
     // Tarjeta 1: Registro Fijo
     html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
@@ -763,16 +767,16 @@ window.renderModernInspForm = function() {
         </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Fecha de Ingreso</label>
-                    <input type="date" class="form-control fw-bold shadow-sm" id="i_fecha" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <input type="date" class="form-control fw-bold shadow-sm text-primary" id="i_fecha" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">
                         <i class="bi bi-truck"></i> Placa *
                     </label>
                     <div class="position-relative">
-                        <input type="text" id="i_placa-txt" class="form-control form-control-sm"
+                        <input type="text" id="i_placa-txt" class="form-control fw-bold shadow-sm text-primary"
                                placeholder="Buscar placa..." autocomplete="off" required
                                style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;"
                                oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_placa')"
@@ -782,19 +786,19 @@ window.renderModernInspForm = function() {
                         <div id="i_placa-dd" class="cb-dropdown"></div>
                     </div>
                 </div>
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Kilometraje de Tablero</label>
-                    <input type="number" class="form-control text-danger fw-bold shadow-sm" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Cliente</label>
-                    <input type="text" class="form-control bg-light shadow-sm" id="i_cliente" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light" id="i_cliente" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Tipo</label>
-                    <input type="text" class="form-control bg-light text-uppercase shadow-sm" id="i_modelo" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light text-uppercase" id="i_modelo" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-md-6 col-12">
+                <div class="col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
                     <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
@@ -932,7 +936,7 @@ window.renderModernInspForm = function() {
     setTimeout(initFirma, 500);
 };
 
-window.abrirModalNuevaInspeccion = function (placaPreselect) {
+window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPreselect) {
     renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
@@ -940,6 +944,9 @@ window.abrirModalNuevaInspeccion = function (placaPreselect) {
     
     let idInput = document.getElementById('i_id_inspeccion');
     if (idInput) idInput.value = "";
+
+    let idOtInput = document.getElementById('i_id_ot');
+    if (idOtInput) idOtInput.value = idOtPreselect || "";
 
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
     document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
@@ -951,6 +958,11 @@ window.abrirModalNuevaInspeccion = function (placaPreselect) {
     });
     document.querySelectorAll('[id^="val_p_"]').forEach(el => el.value = '');
     document.querySelectorAll('input[type="radio"]').forEach(r => r.dataset.chk = '0');
+
+    if (kmPreselect) {
+        let iKm = document.getElementById('i_kmtablero');
+        if (iKm) iKm.value = kmPreselect;
+    }
 
     if (placaPreselect) {
         setTimeout(() => {

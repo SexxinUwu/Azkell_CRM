@@ -148,7 +148,10 @@
 
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="input-group input-group-sm d-none d-md-flex" style="max-width: 200px;"><span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0" id="buscadorStatus-desktop" onkeyup="document.getElementById('buscadorStatus').value=this.value; filtrarStatusAvanzado()" placeholder="Buscar placa, técnico..."></div>
+                <div class="d-none d-md-flex align-items-center" style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;transition:all .2s;overflow:hidden;height:36px;padding:0 .8rem;gap:.4rem;min-width:240px;flex:1;max-width:300px;" onfocusin="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,0.1)'" onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
+                    <i class="bi bi-search" style="color:#94a3b8;font-size:.82rem;flex-shrink:0;"></i>
+                    <input type="text" id="buscadorStatus-desktop" style="border:none;background:transparent;outline:none;font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;" placeholder="Buscar placa, técnico..." onkeyup="document.getElementById('buscadorStatus').value=this.value; filtrarStatusAvanzado()">
+                </div>
                 <input type="hidden" id="buscadorStatus" value="">
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary fw-bold px-2 d-none d-md-block" id="btnFiltrosInsp" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
