@@ -620,8 +620,28 @@ async function procesarGuardadoInspeccion() {
                         let inputFoto = document.getElementById(`foto_${uid}`);
                         if (inputFoto && inputFoto.files && inputFoto.files.length > 0) {
                             try {
+                                let file = inputFoto.files[0];
+                                let tempId = 'Insp_' + Date.now();
+                                let resUpload = await fetch('/api/mantenimiento/inspecciones/upload-url', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ idInsp: tempId, fileName: file.name, fileType: file.type })
+                                }).then(r => r.json());
+                                
+                                if (resUpload.ok && resUpload.uploadUrl) {
+                                    await fetch(resUpload.uploadUrl, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': file.type },
+                                        body: file
+                                    });
+                                    fotoEvidencia = resUpload.finalUrl;
+                                } else {
+                                    fotoEvidencia = await fileToBase64(file); // fallback
+                                }
+                            } catch (e) { 
+                                console.log("Error subiendo foto a S3, usando fallback", e);
                                 fotoEvidencia = await fileToBase64(inputFoto.files[0]);
-                            } catch (e) { console.log("Error foto", e); }
+                            }
                         }
                     }
                 } else if (t === 'percent') {

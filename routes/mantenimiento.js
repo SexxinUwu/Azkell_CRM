@@ -76,5 +76,26 @@ module.exports = function (db, logAudit) {
         });
     });
 
+    const { getPresignedUploadUrl } = require('../utils/s3');
+
+    // POST /api/mantenimiento/inspecciones/upload-url
+    router.post('/inspecciones/upload-url', async (req, res) => {
+        const { idInsp, fileName, fileType } = req.body;
+        if (!idInsp) return res.status(400).json({ ok: false, error: 'ID Inspección requerido' });
+        
+        try {
+            const rand = Math.random().toString(36).substring(2, 7);
+            const ext = fileName ? fileName.split('.').pop() : 'jpg';
+            const s3Key = `mantenimiento/inspecciones/${idInsp}/${Date.now()}_${rand}.${ext}`;
+            const uploadUrl = await getPresignedUploadUrl(s3Key, fileType || 'image/jpeg', 300);
+            const finalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-2'}.amazonaws.com/${s3Key}`;
+            
+            res.json({ ok: true, uploadUrl, s3Key, finalUrl });
+        } catch(e) {
+            console.error('Error getPresignedUploadUrl', e);
+            res.status(500).json({ ok: false, error: e.message });
+        }
+    });
+
     return router;
 };
