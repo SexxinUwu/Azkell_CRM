@@ -782,11 +782,14 @@ window.renderModernInspForm = function() {
 };
 
 window.abrirModalNuevaInspeccion = function (placaPreselect) {
-    document.getElementById('formNuevaInspeccion').reset();
-    document.getElementById('i_id_inspeccion').value = "";
-    
-    // Renderizamos de nuevo por si cambió la config
+    // Renderizamos primero para que los campos dinámicos existan (incluyendo i_id_inspeccion)
     renderModernInspForm();
+
+    let formEl = document.getElementById('formNuevaInspeccion');
+    if (formEl) formEl.reset();
+    
+    let idInput = document.getElementById('i_id_inspeccion');
+    if (idInput) idInput.value = "";
 
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
     document.getElementById('i_fecha').value = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
