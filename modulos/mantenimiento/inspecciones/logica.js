@@ -564,6 +564,14 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         }
     }
 
+    let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
+    if (btnIrOtContainer) {
+        if (insp.id_ot) {
+            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); window.rotAbrirDetalle('${insp.id_ot}')"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
+        } else {
+            btnIrOtContainer.innerHTML = '';
+        }
+    }
     document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
     new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
 
