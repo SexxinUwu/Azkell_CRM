@@ -659,7 +659,7 @@ window.autocompletarInfoInsp = function () {
 // ============================================================
 
 window.renderModernInspForm = function() {
-    let html = '';
+    let html = '<input type="hidden" id="i_id_inspeccion" value="">';
     
     // Tarjeta 1: Registro Fijo
     html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
