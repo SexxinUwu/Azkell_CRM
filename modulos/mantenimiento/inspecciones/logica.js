@@ -721,10 +721,19 @@ window.renderModernInspForm = function() {
                     <input type="date" class="form-control fw-bold shadow-sm" id="i_fecha" required style="border-radius:8px;">
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.8rem;">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">
                         <i class="bi bi-truck"></i> Placa *
                     </label>
-                    ${window.SS.html('insp-placa','i_placa','i_placa','ESCRIBE PARA BUSCAR...','Buscar placa...')}
+                    <div class="position-relative">
+                        <input type="text" id="i_placa-txt" class="form-control form-control-sm"
+                               placeholder="Buscar placa..." autocomplete="off" required
+                               style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_placa')"
+                               onfocus="window._cbFiltrar('i_placa')"
+                               onblur="window._cbHide('i_placa')">
+                        <input type="hidden" id="i_placa" name="i_placa">
+                        <div id="i_placa-dd" class="cb-dropdown"></div>
+                    </div>
                 </div>
                 <div class="col-md-6 col-12">
                     <label class="fw-bold text-muted" style="font-size:0.8rem;">KM Tablero (Opcional)</label>
@@ -791,15 +800,6 @@ window.renderModernInspForm = function() {
     });
 
     // Tarjeta Final: Firma
-    let opcionesTecnicos = new Set();
-    if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
-    if (window.dataGlobalConductores) window.dataGlobalConductores.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
-    if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
-    
-    let htmlTecnicos = "<datalist id='dl-tecnicos'>";
-    opcionesTecnicos.forEach(t => { htmlTecnicos += `<option value="${t}">`; });
-    htmlTecnicos += "</datalist>";
-
     html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
         <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
             <h6 class="fw-bold text-primary m-0"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMA</h6>
@@ -807,9 +807,17 @@ window.renderModernInspForm = function() {
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-8 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.8rem;">Técnico Inspector</label>
-                    <input type="text" class="form-control fw-bold text-uppercase shadow-sm" id="i_tecnico" list="dl-tecnicos" placeholder="Selecciona o escribe uno nuevo" required style="border-radius:8px;">
-                    ${htmlTecnicos}
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
+                    <div class="position-relative">
+                        <input type="text" id="i_tecnico-txt" class="form-control form-control-sm text-uppercase shadow-sm"
+                               placeholder="Selecciona o escribe uno nuevo" autocomplete="off" required
+                               style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')"
+                               onfocus="window._cbFiltrar('i_tecnico')"
+                               onblur="window._cbHide('i_tecnico')">
+                        <input type="hidden" id="i_tecnico" name="i_tecnico">
+                        <div id="i_tecnico-dd" class="cb-dropdown"></div>
+                    </div>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.8rem;">Días Propuestos</label>
@@ -827,22 +835,33 @@ window.renderModernInspForm = function() {
     document.getElementById('wizard-dynamic-tabs').innerHTML = html;
     
     // 🔥 INICIALIZAR LIBRERÍA DE BÚSQUEDA DESPUÉS DE RENDERIZAR 🔥
-    if (window.SS) {
-        window.SS.init('insp-placa', 'i_placa',
-            function() {
-                return (window.dataGlobalPlacas || [])
-                    .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
-                    .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
-                    .sort();
-            },
-            '', window.autocompletarInfoInsp, 'BUSCAR PLACA...'
-        );
-        // También reasignamos autocompletado en caso de cambios
-        let placaInput = document.getElementById('i_placa');
-        if(placaInput) {
-            placaInput.addEventListener('change', window.autocompletarInfoInsp);
-        }
-    }
+    let listPlacas = (window.dataGlobalPlacas || [])
+        .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
+        .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
+        .sort();
+    window._cbInit('i_placa', listPlacas, 'BUSCAR PLACA...');
+    window._cbOnSelect('i_placa', function(val) {
+        document.getElementById('i_placa-txt').value = val;
+        document.getElementById('i_placa').value = val;
+        window.autocompletarInfoInsp();
+    });
+    
+    let opcionesTecnicos = new Set();
+    if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
+    if (window.dataGlobalConductores) window.dataGlobalConductores.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+    if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
+    window._cbInit('i_tecnico', Array.from(opcionesTecnicos).sort(), 'Buscar técnico...');
+    window._cbOnSelect('i_tecnico', function(val) {
+        document.getElementById('i_tecnico-txt').value = val;
+        document.getElementById('i_tecnico').value = val;
+    });
+
+    // Permitir ingreso libre para técnico y placa
+    let inputTec = document.getElementById('i_tecnico-txt');
+    if (inputTec) inputTec.addEventListener('input', function() { document.getElementById('i_tecnico').value = this.value; });
+    
+    let inputPla = document.getElementById('i_placa-txt');
+    if (inputPla) inputPla.addEventListener('input', function() { document.getElementById('i_placa').value = this.value; window.autocompletarInfoInsp(); });
     
     setTimeout(initFirma, 500);
 };
