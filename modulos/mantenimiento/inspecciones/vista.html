@@ -266,64 +266,151 @@
 </div>
 
 <div id="contenedor-pdf-inspeccion" style="display: none;">
-    <div id="pdf-inspeccion" style="width: 100%; padding: 10px 15px; background: white; font-family: Arial, sans-serif;">
+    <div id="pdf-inspeccion" class="page-container" style="background: white; font-family: 'Oswald', sans-serif !important;">
         <style>
-            #pdf-inspeccion, #pdf-inspeccion * { color: #000000 !important; background-color: transparent !important; box-sizing: border-box; line-height: 1.2; }
-            #pdf-inspeccion .insp-section-title { color: #ffffff !important; background-color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 8px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 12px;}
-            #pdf-inspeccion .text-danger-pdf { color: #dc2626 !important; font-weight: bold; }
-            #pdf-inspeccion .text-success-pdf { color: #16a34a !important; font-weight: bold; }
-            #pdf-inspeccion .text-info-pdf { color: #0ea5e9 !important; font-weight: bold; }
-            .pdf-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
-            .pdf-header-table td { border: 1px solid #94a3b8; padding: 4px 8px; vertical-align: middle; }
-            .pdf-header-table .lbl { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; width: 15%; color: #000000 !important; }
-            .pdf-falla-item { border-bottom: 1px solid #e2e8f0; padding: 4px 0; font-size: 11px; }
-            .pdf-falla-obs { color: #334155 !important; font-size: 12px; font-weight: bold; font-style: italic; display: block; margin-top: 2px; }
-            .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
-            .pdf-evidencia-card { border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px; text-align: center; page-break-inside: avoid; }
-            .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; }
-            .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; color: #000 !important; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; font-weight: bold; }
-            .pdf-evidencia-card p { margin: 4px 0 0 0; font-size: 11px; color: #dc2626 !important; font-style: italic; font-weight: bold; }
+            @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap');
+            
+            #pdf-inspeccion {
+                width: 210mm;
+                min-height: 296mm;
+                padding: 5mm 10mm;
+                box-sizing: border-box;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                color: #000 !important;
+            }
+            #pdf-inspeccion * {
+                font-family: 'Oswald', sans-serif !important;
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color: #000 !important;
+            }
+            
+            /* --- ENCABEZADO NORMATIVA ISO --- */
+            #pdf-inspeccion .iso-header {
+                width: 100%;
+                border-collapse: collapse;
+                border: 2px solid #000;
+                margin-bottom: -2px;
+                table-layout: fixed;
+                flex-shrink: 0;
+            }
+            #pdf-inspeccion .iso-header td {
+                border: 1px solid #000;
+                text-align: center;
+                vertical-align: middle;
+            }
+            #pdf-inspeccion .logo-cell { width: 20%; padding: 2px; }
+            #pdf-inspeccion .title-cell { 
+                width: 55%; font-size: 24px; font-weight: bold; line-height: 1; text-transform: uppercase; 
+            }
+            #pdf-inspeccion .sub-title { font-size: 12px; font-weight: normal; color: #333 !important; letter-spacing: 1px; }
+            #pdf-inspeccion .qms-item { width: 25%; font-size: 10px; text-align: left !important; padding: 1px 4px; height: 16px; }
+
+            /* --- DATOS EN CUADRÍCULA --- */
+            #pdf-inspeccion .data-grid {
+                width: 100%;
+                border-collapse: collapse;
+                border: 2px solid #000;
+                margin-bottom: 4px;
+                table-layout: fixed;
+                flex-shrink: 0;
+            }
+            #pdf-inspeccion .data-grid td {
+                border: 1px solid #000; padding: 1px 4px; font-size: 11px; font-weight: bold; height: 20px; vertical-align: middle;
+            }
+            #pdf-inspeccion .col-left { width: 35%; }
+            #pdf-inspeccion .col-mid { width: 35%; }
+            #pdf-inspeccion .col-right { width: 30%; vertical-align: top !important; padding-top: 2px !important; }
+            #pdf-inspeccion .val-normal { font-weight: normal; margin-left: 3px; }
+            #pdf-inspeccion .val-blue { color: #4a86e8 !important; font-size: 13px; margin-left: 3px; }
+
+            /* --- CONTENEDOR FLEXIBLE DE LA TABLA --- */
+            #pdf-inspeccion .table-wrapper { flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 5px; }
+            
+            #pdf-inspeccion .checklist-table { width: 100%; flex-grow: 1; border-collapse: collapse; border: 2px solid #000; font-size: 9.5px; }
+            #pdf-inspeccion .checklist-table th { background-color: #0053b3 !important; color: white !important; text-transform: uppercase; padding: 2px; border: 1px solid #000; text-align: left; }
+            #pdf-inspeccion .checklist-table th.th-center { text-align: center; }
+            #pdf-inspeccion .checklist-table td { border: 1px solid #000; padding: 1px 3px; vertical-align: middle; }
+            #pdf-inspeccion .sec-row td { background-color: #f2f2f2 !important; font-weight: bold; border-top: 2px solid #000; padding: 1px 3px; }
+            
+            #pdf-inspeccion .w-crit { width: 45%; }
+            #pdf-inspeccion .w-chk { width: 22px; text-align: center; padding: 0; }
+            #pdf-inspeccion .w-obs { width: auto; }
+
+            #pdf-inspeccion .sq { display: inline-block; width: 9px; height: 9px; background: #fff !important; margin-top: 2px; border: 1px solid #000; }
+            #pdf-inspeccion .sq-green { border: 2px solid #00ff00 !important; background-color: #00ff00 !important; }
+            #pdf-inspeccion .sq-red { border: 2px solid #ff0000 !important; background-color: #ff0000 !important; }
+
+            /* --- PIE DE PÁGINA ANCLADO --- */
+            #pdf-inspeccion .footer { flex-shrink: 0; height: 45px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; margin-top: 15px; }
+            #pdf-inspeccion .sign-box { width: 30%; text-align: center; position: relative; }
+            #pdf-inspeccion .sign-line { border-top: 2px solid #000; margin-bottom: 2px; }
+            #pdf-inspeccion .sign-label { font-weight: bold; font-size: 11px; }
+
+            /* Evidencias si existen */
+            #pdf-inspeccion .pdf-evidencias-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; width: 100%; }
+            #pdf-inspeccion .pdf-evidencia-card { border: 1px solid #000; padding: 5px; text-align: center; page-break-inside: avoid; }
+            #pdf-inspeccion .pdf-evidencia-card img { max-width: 100%; max-height: 180px; object-fit: contain; display: block; margin: 0 auto; }
+            #pdf-inspeccion .pdf-evidencia-card h5 { margin: 0 0 4px 0; font-size: 11px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; }
         </style>
 
-        <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 5px; margin-bottom: 8px;">
-            <h2 style="margin: 0; font-size: 16px; font-weight: bold; color: #000000 !important;">REPORTE TÉCNICO DE INSPECCIÓN MECÁNICA</h2>
-        </div>
-
-        <table class="pdf-header-table">
+        <!-- ENCABEZADO NORMATIVA ISO -->
+        <table class="iso-header">
             <tr>
-                <td class="lbl">Placa:</td>
-                <td id="pdf-insp-placa" style="font-weight: bold; font-size: 13px;"></td>
-                <td class="lbl">Fecha:</td>
-                <td id="pdf-insp-fecha"></td>
+                <td class="logo-cell" rowspan="3">
+                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                </td>
+                <td class="title-cell" rowspan="3">
+                    INSPECCIÓN MENSUAL<br>
+                    <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>
+                </td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>
+            </tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>
+        </table>
+
+        <!-- DATOS DEL REPORTE -->
+        <table class="data-grid">
+            <tr>
+                <td class="col-left">Nº de Reporte: <span class="val-blue" id="pdf-insp-reporte"></span></td>
+                <td class="col-mid">Placa: <span class="val-normal" id="pdf-insp-placa"></span></td>
+                <td class="col-right" rowspan="2">
+                    Rampa:<br>
+                    <span class="val-normal" id="pdf-insp-rampa" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>
+                </td>
             </tr>
             <tr>
-                <td class="lbl">Cliente:</td>
-                <td id="pdf-insp-cliente"></td>
-                <td class="lbl">Kilometraje:</td>
-                <td id="pdf-insp-km"></td>
+                <td>Fecha de Ingreso: <span class="val-normal" id="pdf-insp-fecha"></span></td>
+                <td>Kilometraje: <span class="val-normal" id="pdf-insp-km"></span></td>
             </tr>
         </table>
 
-        <div class="insp-section-title">DIAGNÓSTICO</div>
-        <div id="pdf-insp-detalle-fallas" style="min-height: 20px;"></div>
-
-        <div id="pdf-insp-evidencias-container" style="display: none;">
-            <div class="insp-section-title" style="background-color: #dc2626 !important; margin-top: 15px;">EVIDENCIA FOTOGRÁFICA</div>
+        <!-- CUERPO DE LA TABLA -->
+        <div class="table-wrapper">
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th class="w-crit">CRITERIOS</th>
+                        <th class="w-chk th-center">OK</th>
+                        <th class="w-chk th-center">MAL</th>
+                        <th class="w-obs th-center">OBSERVACION</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-insp-checklist-body">
+                    <!-- Se llena dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="pdf-insp-evidencias-container" style="display: none; page-break-before: auto;">
+            <div style="background-color: #0053b3 !important; color: white !important; font-size: 11px; font-weight: bold; text-align: center; border: 2px solid #000; padding: 2px; text-transform: uppercase;">EVIDENCIA FOTOGRÁFICA</div>
             <div id="pdf-insp-evidencias" class="pdf-evidencias-grid"></div>
         </div>
 
-        <div style="margin-top: 25px; text-align: center; page-break-inside: avoid;">
-            <img id="pdf-insp-firma" src="" alt="Firma" style="max-height: 50px; max-width: 150px; margin-bottom: 2px; display:none;">
-            <div style="border-top: 1px solid #000; width: 220px; margin: 0 auto; padding-top: 3px; font-weight: bold; font-size: 11px;">
-                Inspector Técnico<br>
-                <span id="pdf-insp-tecnico-firma" style="font-weight: normal; text-transform: uppercase;"></span>
-            </div>
-        </div>
-
-        <div style="margin-top: 10px; text-align: center; font-size: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px;">
-            Documento generado por AZKELL FLEET
-        </div>
-    </div>
 </div>
 
 <div class="offcanvas offcanvas-end shadow-lg border-0" tabindex="-1" id="drawerInspeccion" style="width:600px;max-width:100vw;">
