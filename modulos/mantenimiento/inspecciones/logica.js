@@ -8,6 +8,20 @@ window.dataFinalInspGlobal = window.dataFinalInspGlobal || [];
 window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fleet_insp_ppp') || '50');
 window.inspPaginaActual = window.inspPaginaActual || 1;
 
+window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || [];
+fetch('/api/mantenimiento/inspecciones/config')
+    .then(r => r.json())
+    .then(res => {
+        if (res.ok && res.data) {
+            window.DYNAMIC_INSP_SCHEMA = res.data.map(d => {
+                let parsedItems = [];
+                try { parsedItems = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
+                return { tab: d.titulo, template_id: d.template_id, items: parsedItems };
+            });
+        }
+    })
+    .catch(err => console.error("Error preloading config insp:", err));
+
 // ── Lightbox para evidencias fotográficas ─────────────────────────
 window.verFotoEvidencia = function (urlFoto, titulo) {
     var modalId = 'modal-foto-evidencia';
