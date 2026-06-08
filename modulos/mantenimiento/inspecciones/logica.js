@@ -498,14 +498,61 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div></div></div>
     <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">DIAGNÓSTICO</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem; color:var(--text);">${htmlFallas}</div></div></div>`;
 
-    document.getElementById('pdf-insp-placa').innerText = insp.placa;
-    document.getElementById('pdf-insp-fecha').innerText = fIng;
+    // GENERAR CHECKLIST PARA PDF
+    let htmlChecklist = "";
+    const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
+    let detallesArrayParaPDF = [];
+    try { detallesArrayParaPDF = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch(e){}
+
+    if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
+        window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
+            htmlChecklist += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
+            if (sec.items) {
+                sec.items.forEach((item, idxItem) => {
+                    let lbl = typeof item === 'string' ? item : item.label;
+                    let match = detallesArrayParaPDF.find(d => d.item && normalizeStr(d.item) === normalizeStr(lbl));
+                    
+                    let sqOk = "";
+                    let sqMal = "";
+                    let obs = "";
+
+                    if (match && match.estado) {
+                        if (match.estado === "OK") sqOk = "sq-green";
+                        if (match.estado === "FALLA") sqMal = "sq-red";
+                        obs = match.observacion || "";
+                    }
+
+                    htmlChecklist += `<tr>
+                        <td>${idxItem + 1}. ${lbl}</td>
+                        <td class="w-chk"><div class="sq ${sqOk}"></div></td>
+                        <td class="w-chk"><div class="sq ${sqMal}"></div></td>
+                        <td class="w-obs" style="font-size: 8px;">${obs}</td>
+                    </tr>`;
+                });
+            }
+        });
+    }
+
+    let rId = document.getElementById('pdf-insp-reporte');
+    if (rId) rId.innerText = insp.id || '';
+    
+    let rPlaca = document.getElementById('pdf-insp-placa');
+    if (rPlaca) rPlaca.innerText = insp.placa || '';
+    
+    let rRampa = document.getElementById('pdf-insp-rampa');
+    if (rRampa) rRampa.innerText = ''; // Dejar en blanco
+
+    let rFecha = document.getElementById('pdf-insp-fecha');
+    if (rFecha) rFecha.innerText = fIng || '';
+
+    let rKm = document.getElementById('pdf-insp-km');
+    if (rKm) rKm.innerText = insp.km_tablero || '-';
 
     let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
     if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
-    document.getElementById('pdf-insp-km').innerText = insp.km_tablero || '-';
-    document.getElementById('pdf-insp-cliente').innerText = insp.cliente || (dataGlobalPlacas.find(p => normalizeStr(p[0]) === normalizeStr(insp.placa)) || [])[1] || "";
-    document.getElementById('pdf-insp-detalle-fallas').innerHTML = htmlFallas;
+
+    let checklistBody = document.getElementById('pdf-insp-checklist-body');
+    if (checklistBody) checklistBody.innerHTML = htmlChecklist;
 
     let ctnEvidencias = document.getElementById('pdf-insp-evidencias-container');
     if (ctnEvidencias) {
