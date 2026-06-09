@@ -527,7 +527,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     let firmaPlannerPDF = ""; let nombrePlannerPDF = "";
     window.EVIDENCIAS_TMP = window.EVIDENCIAS_TMP || {};
 
-    let htmlEvidenciasPDF = ""; let contEvidencias = 1;
+    let htmlEvidenciasPDF = ""; let htmlEvidenciasUI = ""; let contEvidencias = 1;
 
     detallesArray.forEach(d => {
         if (d.estado === "SIN DATOS" || d.estado === "") return;
@@ -556,11 +556,40 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                     <div style="text-align:center;">${btnVer}</div>
                 </div>
             `;
+
+            htmlEvidenciasUI += `<img src="${fotoReal}" onclick="window.verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}: ${d.item}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" title="${d.item}">`;
+
             contEvidencias++;
         }
     });
 
     let htmlChecklistPDF = "";
+    let htmlUI = `
+    <div class="p-3 p-md-4" style="background-color: #f8fafc;">
+        <div class="d-flex flex-wrap gap-3 gap-md-4 mb-4 p-3 bg-white rounded shadow-sm" style="border: 1px solid #e2e8f0;">
+            <div class="flex-grow-1">
+                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Nº Reporte</span>
+                <div style="font-size: 15px; font-weight: 800; color: #0284c7;">${insp.id || '-'}</div>
+            </div>
+            <div>
+                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Vehículo</span>
+                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">${insp.placa || '-'}</div>
+            </div>
+            <div>
+                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Fecha</span>
+                <div style="font-size: 14px; font-weight: 600; color: #334155;">${fIng || '-'}</div>
+            </div>
+            <div>
+                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Técnico</span>
+                <div style="font-size: 14px; font-weight: 600; color: #334155;">${insp.tecnico || '-'}</div>
+            </div>
+            <div>
+                <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Kilometraje</span>
+                <div style="font-size: 14px; font-weight: 600; color: #334155;">${insp.km_tablero || '-'}</div>
+            </div>
+        </div>
+        <div class="bg-white rounded shadow-sm p-3 p-md-4" style="border: 1px solid #e2e8f0;">
+    `;
     const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
     if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
@@ -583,51 +612,57 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                         <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'FALLA' ? 'chk-red' : ''}">${match && match.estado === 'FALLA' ? '✗' : ''}</span></td>
                         <td class="w-obs">${obs}</td>
                     </tr>`;
+
+                    if (match && match.estado) {
+                        let badgeHtml = match.estado === 'OK' 
+                            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
+                            : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
+                        
+                        let obsHtml = obs ? `<span style="font-size: 11px; color: #dc2626; display: block; margin-top: 2px;"><i class="bi bi-exclamation-circle"></i> OBS: ${obs}</span>` : '';
+
+                        htmlUI += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div class="d-flex flex-column" style="max-width: 80%;">
+                                <span style="font-size: 13px; color: #475569;">${lbl}</span>
+                                ${obsHtml}
+                            </div>
+                            ${badgeHtml}
+                        </div>`;
+                    }
                 });
             }
         });
     }
 
-    let rId = document.getElementById('pdf-insp-reporte'); if (rId) rId.innerText = insp.id || '';
-    let rPlaca = document.getElementById('pdf-insp-placa'); if (rPlaca) rPlaca.innerText = insp.placa || '';
-    let rRampa = document.getElementById('pdf-insp-rampa'); if (rRampa) rRampa.innerText = '';
-    let rFecha = document.getElementById('pdf-insp-fecha'); if (rFecha) rFecha.innerText = fIng || '';
-    let rKm = document.getElementById('pdf-insp-km'); if (rKm) rKm.innerText = insp.km_tablero || '-';
-
-    let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
-    if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
-
-    let checklistBody = document.getElementById('pdf-insp-checklist-body');
-    if (checklistBody) checklistBody.innerHTML = htmlChecklistPDF;
-
-    let ctnEvidencias = document.getElementById('pdf-insp-evidencias-container');
-    if (ctnEvidencias) {
-        if (htmlEvidenciasPDF !== "") {
-            document.getElementById('pdf-insp-evidencias').innerHTML = htmlEvidenciasPDF;
-            ctnEvidencias.style.display = 'block';
-        } else {
-            ctnEvidencias.style.display = 'none';
-        }
+    if (contEvidencias > 1) {
+        htmlUI += `<div class="mt-4 pt-2">
+            <h6 style="font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 12px;">Evidencias Fotográficas (${contEvidencias - 1})</h6>
+            <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin;">${htmlEvidenciasUI}</div>
+        </div>`;
     }
 
     let firmaPrincipalReal = signedMap[insp.url_firma] || insp.url_firma;
-    let firmaImgPDF = document.getElementById('pdf-insp-firma');
-    if (firmaImgPDF) {
-        if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
-            firmaImgPDF.src = firmaPrincipalReal;
-            firmaImgPDF.style.display = 'inline-block';
-        } else {
-            firmaImgPDF.style.display = 'none';
-        }
-        let tecPDF = document.getElementById('pdf-insp-tecnico'); if(tecPDF) tecPDF.textContent = insp.tecnico || '-';
-        
-        let boxJefe = document.getElementById('pdf-box-jefe');
-        if (boxJefe && firmaJefePDF) { boxJefe.style.display = 'block'; document.getElementById('pdf-insp-firma-jefe').src = firmaJefePDF; document.getElementById('pdf-insp-jefe').textContent = nombreJefePDF; }
-        else if(boxJefe) { boxJefe.style.display = 'none'; }
+    let firmasHtmlUI = "";
+    if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
+        firmasHtmlUI += `<div class="text-center"><img src="${firmaPrincipalReal}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Técnico Inspector</span><br><span style="font-size: 10px;">${insp.tecnico || '-'}</span></div>`;
+    }
+    if (firmaJefePDF) {
+        firmasHtmlUI += `<div class="text-center"><img src="${firmaJefePDF}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Jefe de Taller</span><br><span style="font-size: 10px;">${nombreJefePDF || '-'}</span></div>`;
+    }
+    if (firmaPlannerPDF) {
+        firmasHtmlUI += `<div class="text-center"><img src="${firmaPlannerPDF}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Planner de Mant.</span><br><span style="font-size: 10px;">${nombrePlannerPDF || '-'}</span></div>`;
+    }
 
-        let boxPlanner = document.getElementById('pdf-box-planner');
-        if (boxPlanner && firmaPlannerPDF) { boxPlanner.style.display = 'block'; document.getElementById('pdf-insp-firma-planner').src = firmaPlannerPDF; document.getElementById('pdf-insp-planner').textContent = nombrePlannerPDF; }
-        else if(boxPlanner) { boxPlanner.style.display = 'none'; }
+    if (firmasHtmlUI !== "") {
+        htmlUI += `<div class="mt-4 pt-3 border-top d-flex justify-content-around flex-wrap gap-3">${firmasHtmlUI}</div>`;
+    }
+
+    htmlUI += `</div></div>`; // Close cards
+
+    if (!autoDescargarPDF) {
+        let modalBody = document.querySelector('#modalResumenInspeccion .modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = htmlUI;
+        }
     }
 
     let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
@@ -639,17 +674,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         }
     }
 
-    let pdfNode = document.getElementById('pdf-inspeccion');
-    let pdfHtml = pdfNode ? pdfNode.outerHTML : '<p>Error cargando plantilla PDF</p>';
-
-    let htmlModal = `
-    <div class="d-flex justify-content-center" style="background-color: #cbd5e1; padding: 15px 0; border-radius: 8px;">
-        <div style="transform: scale(0.9); transform-origin: top center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-            ${pdfHtml}
-        </div>
-    </div>`;
-
-    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
+    // Se ha eliminado la inyección del HTML del PDF en el modal, ahora usamos la vista UI limpia.
 
     let modalDialog = document.querySelector('#modalResumenInspeccion .modal-dialog');
     if(modalDialog) {
@@ -657,9 +682,11 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         modalDialog.classList.add('modal-xl');
     }
 
-    new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
-
-    if (autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
+    if (!autoDescargarPDF) {
+        let modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResumenInspeccion'));
+        modal.show();
+    }
+    setTimeout(generarPDFInspeccion, 500);
 }
 
 function generarPDFInspeccion() {
