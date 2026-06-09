@@ -1,356 +1,23 @@
-<!-- Módulo Reportes OT — Azkell Fleet -->
-<style>
-#moduloReportesOT {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--bg);
+const fs = require('fs');
+const path = require('path');
+
+const vistaPath = path.join(__dirname, 'modulos/mantenimiento/reportes-ot/vista.html');
+const logicaPath = path.join(__dirname, 'modulos/mantenimiento/reportes-ot/logica.js');
+
+let vistaContent = fs.readFileSync(vistaPath, 'utf8');
+let logicaContent = fs.readFileSync(logicaPath, 'utf8');
+
+// 1. Remove the old rot-mobile-view block and the custom bottom bar/FAB
+vistaContent = vistaContent.replace(/<div id="rot-mobile-view"[\s\S]*?<\/div>\s*<!-- Cajón Inferior/g, '<!-- Cajón Inferior');
+
+// We also need to strip out the old Drawers and Overlays since we will replace them cleanly.
+// Let's just find where rot-mobile-view starts, and where the end of the file is, and replace that whole chunk.
+const startIdx = vistaContent.indexOf('<!-- Contenedor principal de la Vista Móvil -->');
+if(startIdx > -1) {
+    vistaContent = vistaContent.substring(0, startIdx);
 }
 
-/* ── Header barra ─────────────────────────────────────────────── */
-#moduloReportesOT .rot-header {
-    padding: .75rem 1.25rem .6rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: .55rem;
-}
-
-/* Búsqueda libre */
-#moduloReportesOT .rot-search-pill {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    border-radius: 99px;
-    padding: .35rem .85rem;
-    transition: border-color .2s;
-}
-#moduloReportesOT .rot-search-pill:focus-within {
-    border-color: var(--primary, #5865F2);
-    box-shadow: 0 0 0 3px rgba(88,101,242,.1);
-}
-#moduloReportesOT .rot-search-pill i { color: var(--subtext); font-size: .85rem; }
-#moduloReportesOT .rot-search-pill input {
-    border: none; background: transparent; outline: none;
-    font-size: .84rem; color: var(--text); flex: 1;
-}
-#moduloReportesOT .rot-search-pill input::placeholder { color: var(--subtext); }
-
-/* Fila de filtros */
-#moduloReportesOT .rot-filters {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    flex-wrap: wrap;
-}
-#moduloReportesOT .rot-filters .rot-input {
-    height: 32px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    background: var(--bg);
-    color: var(--text);
-    font-size: .78rem;
-    padding: 0 .65rem;
-    outline: none;
-    transition: border-color .2s;
-}
-#moduloReportesOT .rot-filters .rot-input:focus {
-    border-color: var(--primary, #5865F2);
-    box-shadow: 0 0 0 3px rgba(88,101,242,.08);
-}
-#moduloReportesOT .rot-filters .rot-input-date {
-    height: 32px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    background: var(--bg);
-    color: var(--text);
-    font-size: .78rem;
-    padding: 0 .5rem;
-    outline: none;
-    transition: border-color .2s;
-    cursor: pointer;
-    appearance: none; -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right .5rem center;
-    padding-right: 1.8rem;
-}
-#moduloReportesOT .rot-filters .rot-input-date:focus {
-    border-color: var(--primary, #5865F2);
-}
-#moduloReportesOT .rot-filters .rot-sep {
-    font-size: .72rem; color: var(--subtext); font-weight: 700;
-}
-
-/* Estado chips */
-#moduloReportesOT .rot-estado-wrap {
-    display: flex; gap: 4px; flex-wrap: wrap;
-}
-#moduloReportesOT .rot-chip {
-    height: 30px;
-    padding: 0 .75rem;
-    border-radius: 99px;
-    border: 1.5px solid var(--border);
-    background: var(--bg);
-    color: var(--subtext);
-    font-size: .72rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s;
-    white-space: nowrap;
-}
-#moduloReportesOT .rot-chip:hover { border-color: var(--primary,#5865F2); color: var(--primary,#5865F2); }
-#moduloReportesOT .rot-chip.active { background: var(--primary,#5865F2); color: #fff; border-color: var(--primary,#5865F2); }
-#moduloReportesOT .rot-chip.c-pend.active  { background:#d97706; border-color:#d97706; }
-#moduloReportesOT .rot-chip.c-proc.active  { background:#0ea5e9; border-color:#0ea5e9; }
-#moduloReportesOT .rot-chip.c-paus.active  { background:#f59e0b; border-color:#f59e0b; }
-#moduloReportesOT .rot-chip.c-fin.active   { background:#5865F2; border-color:#5865F2; }
-#moduloReportesOT .rot-chip.c-anul.active  { background:#ef4444; border-color:#ef4444; }
-
-/* ── KPI bar ──────────────────────────────────────────────────── */
-#moduloReportesOT .rot-kpi-bar {
-    display: flex; gap: .6rem;
-    padding: .6rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0; flex-wrap: wrap;
-}
-#moduloReportesOT .rot-kpi {
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    padding: .65rem 1rem .55rem;
-    min-width: 110px;
-    display: flex; flex-direction: column; gap: 2px;
-    transition: box-shadow .15s;
-    position: relative; overflow: hidden;
-}
-#moduloReportesOT .rot-kpi::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--kpi-color, #94a3b8);
-    border-radius: 14px 14px 0 0;
-}
-#moduloReportesOT .rot-kpi-lbl {
-    font-size: .62rem; font-weight: 700; color: var(--subtext);
-    text-transform: uppercase; letter-spacing: .06em;
-}
-#moduloReportesOT .rot-kpi-val {
-    font-size: 1.45rem; font-weight: 900; color: var(--kpi-color, var(--text)); line-height: 1.1;
-}
-#moduloReportesOT .rot-kpi-sub {
-    font-size: .65rem; font-weight: 600; color: var(--subtext);
-}
-
-/* ── Tabla ────────────────────────────────────────────────────── */
-#moduloReportesOT .rot-table-wrap {
-    flex: 1 1 0; overflow-y: auto; background: var(--surface);
-}
-#moduloReportesOT table {
-    width: 100%; border-collapse: collapse; font-size: .82rem;
-}
-#moduloReportesOT thead th {
-    background: var(--bg); color: var(--subtext);
-    font-size: .67rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .06em;
-    padding: 9px 12px; border-bottom: 1.5px solid var(--border);
-    position: sticky; top: 0; z-index: 2; white-space: nowrap;
-}
-#moduloReportesOT tbody tr {
-    border-bottom: 1px solid var(--border);
-    cursor: pointer; transition: background .1s;
-}
-#moduloReportesOT tbody tr:hover { background: rgba(88,101,242,.04); }
-#moduloReportesOT tbody tr.rot-row-activa {
-    background: rgba(88,101,242,.06);
-    border-left: 3px solid var(--primary, #5865F2);
-}
-#moduloReportesOT tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; }
-#moduloReportesOT .td-empty { text-align:center; color:var(--subtext); font-size:.82rem; padding:2.5rem; }
-
-/* OT number link */
-#moduloReportesOT .rot-ot-num {
-    font-weight: 800; font-size: .82rem;
-    color: var(--primary, #5865F2); text-decoration: none;
-}
-/* Placa pill */
-#moduloReportesOT .rot-placa-pill {
-    display: inline-block;
-    background: var(--bg); border: 1.5px solid var(--border);
-    border-radius: 8px; padding: 2px 8px;
-    font-weight: 800; font-size: .78rem; letter-spacing: .04em;
-    color: var(--text);
-}
-
-/* ── Badges de estado ─────────────────────────────────────────── */
-#moduloReportesOT .rot-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 9px; border-radius: 20px;
-    font-size: .68rem; font-weight: 700; white-space: nowrap;
-}
-#moduloReportesOT .rot-badge::before {
-    content: ''; width: 5px; height: 5px;
-    border-radius: 50%; background: currentColor; opacity: .8;
-}
-#moduloReportesOT .rot-b-pendiente   { background: rgba(217,119,6,.12);  color: #d97706; }
-#moduloReportesOT .rot-b-aprobada    { background: rgba(22,163,74,.12);   color: #16a34a; }
-#moduloReportesOT .rot-b-cerrada     { background: rgba(88,101,242,.12);  color: var(--primary,#5865F2); }
-#moduloReportesOT .rot-b-anulado     { background: rgba(220,38,38,.12);   color: #dc2626; }
-#moduloReportesOT .rot-b-en-proceso  { background: rgba(14,165,233,.12);  color: #0ea5e9; }
-#moduloReportesOT .rot-b-pausada     { background: rgba(245,158,11,.12);  color: #f59e0b; }
-#moduloReportesOT .rot-b-finalizado  { background: rgba(88,101,242,.10);  color: var(--primary,#5865F2); }
-#moduloReportesOT .rot-b-en-atencion { background: rgba(22,163,74,.10);   color: #16a34a; }
-#moduloReportesOT .rot-b-espera      { background: rgba(217,119,6,.10);   color: #d97706; }
-#moduloReportesOT .rot-b-tipo-prev   { background: rgba(8,145,178,.10);   color: #0891b2; border:1px solid rgba(8,145,178,.25); }
-#moduloReportesOT .rot-b-tipo-corr   { background: rgba(220,38,38,.08);   color: #dc2626; border:1px solid rgba(220,38,38,.20); }
-
-/* ── Botones de acción en tabla ───────────────────────────────── */
-#moduloReportesOT .rot-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 4px 11px; border-radius: 8px;
-    font-size: .70rem; font-weight: 700;
-    border: none; cursor: pointer;
-    transition: filter .15s, transform .1s;
-    white-space: nowrap; line-height: 1.4;
-}
-#moduloReportesOT .rot-btn:hover  { filter: brightness(.9); }
-#moduloReportesOT .rot-btn:active { transform: scale(.96); }
-#moduloReportesOT .rot-btn-iniciar  { background: #0ea5e9; color: #fff; }
-#moduloReportesOT .rot-btn-pausar   { background: #f59e0b; color: #fff; }
-#moduloReportesOT .rot-btn-reanudar { background: #22c55e; color: #fff; }
-#moduloReportesOT .rot-btn-cerrar   { background: #ef4444; color: #fff; }
-
-/* Botones de acción en toolbar */
-#moduloReportesOT .rot-toolbar-btn {
-    height: 32px; padding: 0 .85rem; border-radius: 10px;
-    font-size: .76rem; font-weight: 700;
-    display: inline-flex; align-items: center; gap: .35rem;
-    border: 1.5px solid var(--border); background: var(--bg);
-    color: var(--text); cursor: pointer; transition: all .15s;
-    white-space: nowrap;
-}
-#moduloReportesOT .rot-toolbar-btn:hover { border-color: var(--primary,#5865F2); color: var(--primary,#5865F2); }
-#moduloReportesOT .rot-toolbar-btn.green { background:#16a34a; color:#fff; border-color:#16a34a; }
-#moduloReportesOT .rot-toolbar-btn.green:hover { filter: brightness(.9); }
-#moduloReportesOT .rot-toolbar-btn.red-outline { color:#ef4444; border-color:rgba(239,68,68,.4); }
-#moduloReportesOT .rot-toolbar-btn.red-outline:hover { background:rgba(239,68,68,.07); border-color:#ef4444; }
-
-/* ── Drawer lateral de detalle ────────────────────────────────── */
-#rotDrawerBackdrop {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.35); z-index: 1059;
-}
-#rotDrawerBackdrop.open { display: block; }
-.rot-drawer {
-    position: fixed; top: 0; right: 0;
-    width: 500px; max-width: 96vw; height: 100vh;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 30px rgba(0,0,0,.14);
-    transform: translateX(100%); transition: transform .28s ease;
-    z-index: 1060; display: flex; flex-direction: column;
-}
-.rot-drawer.open { transform: translateX(0); }
-.rot-drawer-hd {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    padding: 0 1.25rem; height: 52px;
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.rot-drawer-title { font-size: .95rem; font-weight: 800; color: var(--text); }
-.rot-drawer-body  { flex: 1; overflow-y: auto; padding: 1.25rem; }
-.rot-drawer-footer {
-    padding: .75rem 1rem; border-top: 1px solid var(--border);
-    display: flex; gap: .5rem; flex-wrap: wrap;
-}
-/* Secciones en el drawer */
-#moduloReportesOT .rot-sec, .rot-sec {
-    border: 1px solid var(--border); border-radius: 10px;
-    margin-top: 1rem; overflow: hidden;
-}
-.rot-sec-hd {
-    background: var(--bg); padding: 7px 12px;
-    font-size: .72rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .05em;
-    color: var(--subtext); border-bottom: 1px solid var(--border);
-}
-.rot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: .82rem; }
-.rot-field:last-child { border-bottom: none; }
-.rot-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: .77rem; padding-right: 6px; }
-.rot-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
-.rot-id-bar {
-    background: rgba(88,101,242,.06); border: 1px solid rgba(88,101,242,.2);
-    border-radius: 10px; padding: 10px 14px; margin-bottom: 1.25rem;
-    display: flex; align-items: center; justify-content: space-between;
-}
-.rot-id-num { font-size: 1.1rem; font-weight: 800; color: var(--primary,#5865F2); }
-.rot-id-lbl { font-size: .7rem; font-weight: 700; color: var(--primary,#5865F2); text-transform: uppercase; }
-/* Sub-drawers */
-.rot-sub-drawer {
-    position: fixed; top: 0; right: 0;
-    width: 440px; max-width: 96vw; height: 100vh;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 40px rgba(0,0,0,.22);
-    transform: translateX(100%); transition: transform .25s ease;
-    z-index: 1062; display: flex; flex-direction: column;
-}
-.rot-sub-drawer.open { transform: translateX(0); }
-#rot-drawer-material { width: 560px; }
-</style>
-
-<!-- Backdrop drawer detalle -->
-<div id="rotDrawerBackdrop" onclick="window.rotCerrarDetalle()"></div>
-
-
-<div id="moduloReportesOT" class="d-flex flex-column h-100" style="flex: 1; min-height: 0;">
-    
-    <!-- Tailwind CSS (Scoped to mobile view if possible, disabled preflight) -->
-    <script>
-        window.tailwind = window.tailwind || {};
-        tailwind.config = {
-            corePlugins: {
-                preflight: false,
-            },
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0f4ff',
-                            100: '#d9e2ff',
-                            500: '#1d4ed8',
-                            600: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        status: {
-                            pending: '#f59e0b',
-                            process: '#3b82f6',
-                            paused: '#ea580c',
-                            closed: '#ef4444',
-                            done: '#10b981'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
-
-    
+const newMobileHTML = `
 <!-- Contenedor principal de la Vista Móvil -->
 <style>
 /* Reset and base */
@@ -650,3 +317,102 @@
         closeAllDrawers();
     }
 </script>
+`;
+
+vistaContent += newMobileHTML;
+fs.writeFileSync(vistaPath, vistaContent, 'utf8');
+
+// 2. Refactor rotRenderTablaMobile in logica.js
+// First, let's remove the injected tailwind CDN script
+logicaContent = logicaContent.replace(/\/\/ Inject Tailwind for mobile view dynamically[\s\S]*?\n\)\(\);\n/g, '');
+
+const newRenderHTML = `
+// Reemplazar la funcion rotRenderTablaMobile original
+function rotRenderTablaMobile(datos) {
+    var container = document.getElementById('otListMobile');
+    if (!container) return;
+    
+    if (datos.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 40px 20px; color: #64748b; font-size: 13px;"><i class="bi bi-inbox" style="font-size: 32px; display: block; margin-bottom: 12px; color: #334155;"></i> No se encontraron OTs</div>';
+        return;
+    }
+
+    var html = '';
+    for (var i = 0; i < datos.length; i++) {
+        var ot = datos[i];
+        
+        // Colores por estado
+        var stripeColor = '';
+        var badgeColor = '';
+        if (ot.estado === 'Pendiente') { stripeColor = 'bg-yellow'; badgeColor = 'bg-yellow'; }
+        else if (ot.estado === 'En Proceso') { stripeColor = 'bg-blue'; badgeColor = 'bg-blue'; }
+        else if (ot.estado === 'Pausada') { stripeColor = 'bg-orange'; badgeColor = 'bg-orange'; }
+        else if (ot.estado === 'Finalizado') { stripeColor = 'bg-green'; badgeColor = 'bg-green'; }
+        else if (ot.estado === 'Anulado') { stripeColor = 'bg-red'; badgeColor = 'bg-red'; }
+
+        // Tipos
+        var isPrev = ot.tipo_ot === 'Preventivo';
+        var typePill = isPrev ? '<span class="rot-m-info-pill">Prev.</span>' : '<span class="rot-m-info-pill red">Corr.</span>';
+        
+        // Acciones para el Drawer (stringifyed)
+        var btnAcciones = '';
+        if (ot.estado === 'Pendiente') btnAcciones += '<button class="rot-m-btn-block rot-m-btn-primary" onclick="closeAllDrawers();"><i class="bi bi-play-fill"></i> Iniciar OT</button>';
+        if (ot.estado === 'En Proceso') {
+            btnAcciones += '<button class="rot-m-btn-block rot-m-btn-actions" onclick="closeAllDrawers();"><i class="bi bi-pause-fill"></i> Pausar OT</button>';
+            btnAcciones += '<button class="rot-m-btn-block" style="background:#10b981; color:#fff;" onclick="closeAllDrawers();"><i class="bi bi-check-lg"></i> Cerrar OT</button>';
+        }
+        btnAcciones += '<button class="rot-m-btn-block rot-m-btn-secondary" onclick="closeAllDrawers(); if(typeof window.rotAbrirDetalle === \\'function\\') window.rotAbrirDetalle(\\'' + ot.id_ot + '\\');"><i class="bi bi-list-ul"></i> Ver Detalles Completos</button>';
+        var encodedActions = encodeURIComponent(btnAcciones);
+
+        html += '<div class="rot-m-card">';
+        html += '<div class="rot-m-card-stripe ' + stripeColor + '"></div>';
+        
+        html += '<div class="rot-m-card-header">';
+        html += '<h3 class="rot-m-ot-title">' + ot.id_ot + ' <i class="bi bi-check-circle-fill" style="color:#10b981; font-size:12px;"></i></h3>';
+        html += '<span class="rot-m-badge ' + badgeColor + '"><span class="rot-m-header-dot" style="animation:none;"></span> ' + ot.estado + '</span>';
+        html += '</div>';
+
+        html += '<div class="rot-m-card-grid">';
+        html += '<div class="rot-m-info-item">';
+        html += '<div class="rot-m-icon-box"><i class="bi bi-truck"></i></div>';
+        html += '<div class="rot-m-info-content"><span class="rot-m-info-label">Placa</span><span class="rot-m-info-val">' + ot.placa + '</span></div>';
+        html += '</div>';
+
+        html += '<div class="rot-m-info-item">';
+        html += '<div class="rot-m-icon-box"><i class="bi bi-speedometer2"></i></div>';
+        html += '<div class="rot-m-info-content"><span class="rot-m-info-label">Odómetro</span><span class="rot-m-info-val">' + ot.kilometraje + ' km</span></div>';
+        html += '</div>';
+
+        html += '<div class="rot-m-info-item" style="grid-column: span 2;">';
+        html += '<div class="rot-m-icon-box"><i class="bi bi-tools"></i></div>';
+        html += '<div class="rot-m-info-content"><span class="rot-m-info-label">Tipo & Tarea</span><span class="rot-m-info-val">' + typePill + ' ' + ot.tipo_servicio + '</span></div>';
+        html += '</div>';
+
+        html += '<div class="rot-m-info-item" style="grid-column: span 2;">';
+        html += '<div class="rot-m-icon-box"><i class="bi bi-person"></i></div>';
+        html += '<div class="rot-m-info-content"><span class="rot-m-info-label">Asignado a</span><span class="rot-m-info-val">' + ot.encargado + '</span></div>';
+        html += '</div>';
+        html += '</div>'; // End grid
+
+        if (ot.observacion) {
+            html += '<div class="rot-m-obs">"' + ot.observacion + '"</div>';
+        }
+
+        html += '<div class="rot-m-card-footer">';
+        html += '<span class="rot-m-date"><i class="bi bi-calendar3" style="margin-right:4px;"></i> ' + ot.fecha_creacion + '</span>';
+        html += '<button class="rot-m-btn-icon" onclick="document.getElementById(\\'rotMobileActionContent\\').innerHTML=decodeURIComponent(\\'' + encodedActions + '\\'); openActionDrawer(); event.stopPropagation();"><i class="bi bi-three-dots-vertical"></i></button>';
+        html += '</div>';
+
+        html += '</div>'; // End card
+    }
+    container.innerHTML = html;
+}
+`;
+
+// Replace the old rotRenderTablaMobile function in logica.js
+const regex = /function rotRenderTablaMobile\(datos\) \{[\s\S]*?\}\s*(?=\n\/\/ \-\-\-|\nfunction|\nwindow)/;
+logicaContent = logicaContent.replace(regex, newRenderHTML);
+
+fs.writeFileSync(logicaPath, logicaContent, 'utf8');
+
+console.log("Refactored to semantic HTML/CSS successfully.");
