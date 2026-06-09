@@ -2511,3 +2511,27 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             if (typeof window.rotToast === 'function') window.rotToast('Error al generar plantilla', 'bg-danger');
         });
 };
+
+
+// Inject Tailwind for mobile view dynamically
+(function() {
+    if (!document.getElementById('tailwind-cdn-injected')) {
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            corePlugins: { preflight: false },
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f4ff', 100: '#d9e2ff', 500: '#1d4ed8', 600: '#1e40af', 900: '#1e3a8a' },
+                        status: { pending: '#f59e0b', process: '#3b82f6', paused: '#ea580c', closed: '#ef4444', done: '#10b981' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] }
+                }
+            }
+        };
+        const s = document.createElement('script');
+        s.id = 'tailwind-cdn-injected';
+        s.src = "https://cdn.tailwindcss.com";
+        document.head.appendChild(s);
+    }
+})();
