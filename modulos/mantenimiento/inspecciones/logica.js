@@ -819,11 +819,11 @@ async function procesarGuardadoInspeccion() {
     let idInsp = document.getElementById('i_id_inspeccion').value;
     if (!idInsp) {
         let anioActual = new Date().getFullYear();
-        let prefix = `Insp-${anioActual}-`;
+        let prefix = `INSP-${anioActual}-`;
         let max = 0;
         if (window.dataGlobalInspecciones) {
             window.dataGlobalInspecciones.forEach(i => {
-                if (i.id && i.id.startsWith(prefix)) {
+                if (i.id && i.id.toUpperCase().startsWith(prefix)) {
                     let num = parseInt(i.id.split('-')[2]);
                     if (!isNaN(num) && num > max) max = num;
                 }
