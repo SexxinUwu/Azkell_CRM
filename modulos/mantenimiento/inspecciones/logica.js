@@ -1248,6 +1248,7 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         document.getElementById('i_placa').value = placaPreselect || "";
         let txtPla = document.getElementById('i_placa-txt');
         if(txtPla) txtPla.value = placaPreselect || "";
+        window.autocompletarInfoInsp();
 
         let diasPrevios = "30";
         if (placaPreselect && dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
@@ -1273,6 +1274,28 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
             if(chk30) chk30.checked = false;
             if(containerDias) containerDias.style.display = 'block';
             if(inputDias) inputDias.value = diasPrevios;
+        }
+
+        let titleEl = document.querySelector('#drawerInspeccion .offcanvas-title');
+        let indicator = document.getElementById('ot-linked-indicator');
+        if (!indicator && titleEl) {
+            indicator = document.createElement('span');
+            indicator.id = 'ot-linked-indicator';
+            indicator.className = 'badge ms-2 shadow-sm';
+            indicator.style.backgroundColor = '#e0f2fe';
+            indicator.style.color = '#0284c7';
+            indicator.style.fontSize = '0.75rem';
+            indicator.style.fontWeight = 'bold';
+            indicator.style.border = '1px solid #7dd3fc';
+            titleEl.appendChild(indicator);
+        }
+        if (indicator) {
+            if (idOtPreselect) {
+                indicator.innerHTML = `<i class="bi bi-link-45deg"></i> Vinculada a OT: ${idOtPreselect}`;
+                indicator.style.display = 'inline-block';
+            } else {
+                indicator.style.display = 'none';
+            }
         }
     }, 50);
 
