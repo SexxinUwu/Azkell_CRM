@@ -42,26 +42,142 @@ fetch('/api/mantenimiento/inspecciones/config')
     .catch(err => console.error("Error preloading config insp:", err));
 
 // ── Lightbox para evidencias fotográficas ─────────────────────────
-window.verFotoEvidencia = function (urlFoto, titulo) {
+window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
+    let isIndex = typeof fotoOrIndex === 'number' || (typeof fotoOrIndex === 'string' && !isNaN(fotoOrIndex) && !fotoOrIndex.includes('http'));
+    let currentIndex = isIndex ? parseInt(fotoOrIndex) : 0;
+    let singleMode = !isIndex;
+    let photosList = singleMode ? [{url: fotoOrIndex, titulo: titulo}] : (window._currentInspPhotos || []);
+    
+    if (photosList.length === 0) return;
+    if (currentIndex >= photosList.length) currentIndex = 0;
+
     var overlayId = 'overlay-foto-evidencia';
     var existing = document.getElementById(overlayId);
     if (existing) existing.remove();
     var div = document.createElement('div');
     div.id = overlayId;
-    div.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1060; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: zoom-out;";
+    div.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1060; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none;";
     
-    div.onclick = function() { div.remove(); };
-    
-    let safeTitle = (titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let isZoomed = false;
+    let zoomLevel = 2;
+
     div.innerHTML = `
-        <div style="position: absolute; top: 20px; right: 25px; color: white; font-size: 32px; cursor: pointer; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+        <div style="position: absolute; top: 20px; right: 25px; color: white; font-size: 32px; cursor: pointer; text-shadow: 0px 2px 4px rgba(0,0,0,0.5); z-index: 1062;" onclick="document.getElementById('${overlayId}').remove();">
             <i class="bi bi-x"></i>
         </div>
-        <img src="${urlFoto}" style="max-width: 95vw; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" onclick="event.stopPropagation();">
-        <div style="color: white; margin-top: 20px; font-weight: 600; font-size: 16px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">${safeTitle}</div>
+        
+        <div id="gallery-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1062; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+            <i class="bi bi-chevron-left"></i>
+        </div>
+        <div id="gallery-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1062; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+            <i class="bi bi-chevron-right"></i>
+        </div>
+
+        <div id="gallery-img-container" style="width: 100vw; height: 80vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+            <img id="gallery-img" src="" style="max-width: 95vw; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease-out; transform-origin: center center;">
+        </div>
+        
+        <div id="gallery-title" style="color: white; margin-top: 20px; font-weight: 600; font-size: 16px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8); z-index: 1061; text-align: center; padding: 0 20px;"></div>
     `;
     
     document.body.appendChild(div);
+
+    let imgEl = document.getElementById('gallery-img');
+    let titleEl = document.getElementById('gallery-title');
+    let prevBtn = document.getElementById('gallery-prev');
+    let nextBtn = document.getElementById('gallery-next');
+    let imgContainer = document.getElementById('gallery-img-container');
+
+    function renderImg() {
+        let photo = photosList[currentIndex];
+        imgEl.src = photo.url;
+        let safeTitle = (photo.titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (photosList.length > 1) {
+            titleEl.innerHTML = safeTitle + ` <span style="font-size:13px; color:#ccc; font-weight:normal;"><br>(${currentIndex + 1} de ${photosList.length})</span>`;
+        } else {
+            titleEl.innerHTML = safeTitle;
+        }
+        
+        prevBtn.style.display = currentIndex > 0 ? 'block' : 'none';
+        nextBtn.style.display = currentIndex < photosList.length - 1 ? 'block' : 'none';
+        
+        isZoomed = false;
+        imgEl.style.transform = "scale(1)";
+        imgContainer.style.cursor = "zoom-in";
+    }
+
+    renderImg();
+
+    prevBtn.onclick = (e) => { e.stopPropagation(); if (currentIndex > 0) { currentIndex--; renderImg(); } };
+    nextBtn.onclick = (e) => { e.stopPropagation(); if (currentIndex < photosList.length - 1) { currentIndex++; renderImg(); } };
+
+    imgContainer.onclick = (e) => {
+        e.stopPropagation();
+        if (!isZoomed) {
+            isZoomed = true;
+            let rect = imgEl.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            let xPercent = (x / rect.width) * 100;
+            let yPercent = (y / rect.height) * 100;
+            
+            if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+                imgEl.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+            } else {
+                imgEl.style.transformOrigin = `center center`;
+            }
+            imgEl.style.transform = `scale(${zoomLevel})`;
+            imgContainer.style.cursor = "zoom-out";
+            
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        } else {
+            isZoomed = false;
+            imgEl.style.transform = "scale(1)";
+            imgContainer.style.cursor = "zoom-in";
+            
+            prevBtn.style.display = currentIndex > 0 ? 'block' : 'none';
+            nextBtn.style.display = currentIndex < photosList.length - 1 ? 'block' : 'none';
+        }
+    };
+
+    div.onclick = function(e) {
+        if (e.target === div || e.target === titleEl) {
+            div.remove();
+        }
+    };
+
+    let touchstartX = 0;
+    let touchendX = 0;
+    
+    div.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+    }, {passive: true});
+    
+    div.addEventListener('touchend', e => {
+        if (isZoomed) return;
+        touchendX = e.changedTouches[0].screenX;
+        if (touchendX < touchstartX - 50 && currentIndex < photosList.length - 1) {
+            currentIndex++; renderImg();
+        }
+        if (touchendX > touchstartX + 50 && currentIndex > 0) {
+            currentIndex--; renderImg();
+        }
+    }, {passive: true}); 
+
+    document.addEventListener('keydown', function keyHandler(e) {
+        if (!document.getElementById(overlayId)) {
+            document.removeEventListener('keydown', keyHandler);
+            return;
+        }
+        if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            currentIndex--; renderImg();
+        } else if (e.key === 'ArrowRight' && currentIndex < photosList.length - 1) {
+            currentIndex++; renderImg();
+        } else if (e.key === 'Escape') {
+            div.remove();
+        }
+    });
 };
 
 // ==========================================
@@ -536,6 +652,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     window.EVIDENCIAS_TMP = window.EVIDENCIAS_TMP || {};
 
     let htmlEvidenciasPDF = ""; let htmlEvidenciasUI = ""; let contEvidencias = 1;
+    window._currentInspPhotos = [];
 
     detallesArray.forEach(d => {
         if (d.estado === "SIN DATOS" || d.estado === "") return;
@@ -554,7 +671,13 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
             let tmpKey = 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000);
             window.EVIDENCIAS_TMP[tmpKey] = fotoReal;
             
-            let btnVer = `<button type="button" data-html2canvas-ignore="true" class="btn btn-sm btn-primary mt-2 py-1 px-3 shadow-sm pdf-hide-btn" onclick="window.verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}')"><i class="bi bi-camera"></i> Abrir Evidencia</button>`;
+            let photoIndex = window._currentInspPhotos.length;
+            window._currentInspPhotos.push({
+                url: fotoReal,
+                titulo: `Evidencia ${contEvidencias}: ${d.item}`
+            });
+            
+            let btnVer = `<button type="button" data-html2canvas-ignore="true" class="btn btn-sm btn-primary mt-2 py-1 px-3 shadow-sm pdf-hide-btn" onclick="window.verFotoEvidencia(${photoIndex})"><i class="bi bi-camera"></i> Abrir Evidencia</button>`;
             
             htmlEvidenciasPDF += `
                 <div class="pdf-evidencia-card">
@@ -565,7 +688,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                 </div>
             `;
 
-            htmlEvidenciasUI += `<img src="${fotoReal}" onclick="window.verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}: ${d.item}')" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" title="${d.item}">`;
+            htmlEvidenciasUI += `<img src="${fotoReal}" onclick="window.verFotoEvidencia(${photoIndex})" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" title="${d.item}">`;
 
             contEvidencias++;
         }
