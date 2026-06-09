@@ -1054,10 +1054,18 @@ window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPr
     }
 
     let offEl = document.getElementById('drawerInspeccion');
-    if (offEl && offEl.parentElement !== document.body) {
-        document.body.appendChild(offEl);
+    if (offEl) {
+        if (offEl.parentElement !== document.body) {
+            document.body.appendChild(offEl);
+        }
+        offEl.style.zIndex = '1065';
+        offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
+            let backdrops = document.querySelectorAll('.offcanvas-backdrop');
+            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1064';
+            offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
+        });
+        new bootstrap.Offcanvas(offEl).show();
     }
-    new bootstrap.Offcanvas(offEl).show();
 };
 
 window.abrirModalEditarInspeccion = function (idBusqueda) {
@@ -1173,10 +1181,18 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
 
     window.cambiarPestana(0);
     let offEl = document.getElementById('drawerInspeccion');
-    if (offEl && offEl.parentElement !== document.body) {
-        document.body.appendChild(offEl);
+    if (offEl) {
+        if (offEl.parentElement !== document.body) {
+            document.body.appendChild(offEl);
+        }
+        offEl.style.zIndex = '1065';
+        offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
+            let backdrops = document.querySelectorAll('.offcanvas-backdrop');
+            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1064';
+            offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
+        });
+        new bootstrap.Offcanvas(offEl).show();
     }
-    new bootstrap.Offcanvas(offEl).show();
 };
 
 // ============================================================

@@ -253,6 +253,7 @@ window.rotRenderTabla = function(lista) {
         html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
         html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
         html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>';
+        html += '<td style="font-size:0.85rem;color:var(--text);">' + rotEscHtml(det.km ? Number(det.km).toLocaleString('es-PE') + ' km' : '—') + '</td>';
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
         html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
@@ -312,7 +313,7 @@ window.rotAbrirDetalle = function(idOT) {
     html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '—'));
     html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
-    html += fld('Situación',  esc(det.situacion_inicial || ot.situacion || '—'));
+    html += fld('Status Rampa',  esc(det.situacion_inicial || ot.situacion || '—'));
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
@@ -331,10 +332,10 @@ window.rotAbrirDetalle = function(idOT) {
     }
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
-        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.iniciado_por) + '</span>' : ''));
+        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
     }
     if (t.fin) {
-        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.cerrado_por) + '</span>' : ''));
+        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
     }
     if (t.inicio) {
         html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
