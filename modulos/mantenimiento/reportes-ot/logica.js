@@ -370,25 +370,34 @@ window.rotAbrirDetalle = function(idOT) {
         html += '</div>';
     }
 
+    // Acciones Rápidas (Plantillas)
+    html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
+    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
+          + '<div style="background:#0ea5e9;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-file-earmark-text" style="font-size:1.2rem;"></i></div>'
+          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span></button>';
+    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\')">'
+          + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
+          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>';
+    html += '</div>';
+
     // Trabajos (placeholder)
     html += '<div class="rot-sec" id="rot-sec-trabajos">'
-          + '<div class="rot-sec-hd">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarTrabajo(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
     // Salidas de Almacén (placeholder)
     html += '<div class="rot-sec" id="rot-sec-materiales">'
-          + '<div class="rot-sec-hd">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
     // Inspección General (placeholder)
     html += '<div class="rot-sec" id="rot-sec-inspecciones">'
           + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspección General '
-          + '<div style="margin-left:auto;display:flex;gap:4px;">'
-          + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-file-earmark-pdf"></i> Plantilla Vacía</button>'
-          + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;" onclick="event.stopPropagation();window.abrirModalNuevaInspeccion(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '')
-          + '</div></div>'
+          + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.abrirModalNuevaInspeccion(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
@@ -1257,11 +1266,6 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
         }, 0);
 
     var html = '';
-    if (esAprobada) {
-        html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;" onclick="window.rotAgregarTrabajo(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus"></i> Agregar</button></div>';
-    }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay trabajos registrados</div>';
     } else {
@@ -1344,11 +1348,6 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; });
 
     var html = '';
-    if (esAprobada) {
-        html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(16,185,129,0.1);color:#10b981;font-weight:700;border-radius:12px;" onclick="window.rotAgregarSalida(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus"></i> Agregar</button></div>';
-    }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
     } else {
@@ -2086,7 +2085,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa) {
             var schema = res.data ? res.data.map(function(d) {
                 var parsed = [];
                 try { parsed = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
-                return { tab: d.categoria, items: parsed };
+                return { tab: d.titulo, items: parsed };
             }) : [];
             
             var tbody = '';
