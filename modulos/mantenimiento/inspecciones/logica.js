@@ -1733,7 +1733,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         });
     }
 
-    window.cambiarPestana(0);
+
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
         if (offEl.parentElement !== document.body) {
