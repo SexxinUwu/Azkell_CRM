@@ -463,6 +463,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
 
     let fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
     let htmlFallas = ""; let countFallas = 0; let htmlFirmasExtra = "";
+    let firmaJefePDF = ""; let nombreJefePDF = "";
+    let firmaPlannerPDF = ""; let nombrePlannerPDF = "";
     window.EVIDENCIAS_TMP = window.EVIDENCIAS_TMP || {};
 
     let htmlEvidenciasPDF = ""; let contEvidencias = 1;
@@ -482,6 +484,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
                 if (d.categoria === "FIRMAS_EXTRA") {
                     let nombreHtml = d.estado ? d.estado.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "-";
                     htmlFirmasExtra += `<div class="mt-3 border-top pt-2"><span style="color:var(--text);font-size:0.8rem;" class="fw-bold text-uppercase">${d.item}</span><br><span style="color:var(--text);font-size:0.9rem;">${nombreHtml}</span><br><img src="${d.foto}" style="max-height:80px; margin-top:5px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; padding:4px;"></div>`;
+                    if (d.item === "Jefe de Taller") { firmaJefePDF = d.foto; nombreJefePDF = d.estado; }
+                    if (d.item === "Planner de Mant.") { firmaPlannerPDF = d.foto; nombrePlannerPDF = d.estado; }
                     return;
                 }
 
@@ -529,6 +533,7 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
 
     // GENERAR CHECKLIST PARA PDF
     let htmlChecklist = "";
+    let htmlChecklistPDF = "";
     const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
     let detallesArrayParaPDF = [];
     try { detallesArrayParaPDF = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch(e){}
@@ -536,6 +541,7 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
         window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
             htmlChecklist += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
+            htmlChecklistPDF += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
             if (sec.items) {
                 sec.items.forEach((item, idxItem) => {
                     let lbl = typeof item === 'string' ? item : item.label;
@@ -556,6 +562,13 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
                         <td class="w-chk"><div class="sq ${sqOk}"></div></td>
                         <td class="w-chk"><div class="sq ${sqMal}"></div></td>
                         <td class="w-obs" style="font-size: 8px;">${obs}</td>
+                    </tr>`;
+                    
+                    htmlChecklistPDF += `<tr>
+                        <td class="w-crit">${idxItem + 1}. ${lbl}</td>
+                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'OK' ? 'chk-green' : ''}">${match && match.estado === 'OK' ? '✓' : ''}</span></td>
+                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'FALLA' ? 'chk-red' : ''}">${match && match.estado === 'FALLA' ? '✗' : ''}</span></td>
+                        <td class="w-obs">${obs}</td>
                     </tr>`;
                 });
             }
@@ -581,7 +594,7 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
 
     let checklistBody = document.getElementById('pdf-insp-checklist-body');
-    if (checklistBody) checklistBody.innerHTML = htmlChecklist;
+    if (checklistBody) checklistBody.innerHTML = htmlChecklistPDF;
 
     let ctnEvidencias = document.getElementById('pdf-insp-evidencias-container');
     if (ctnEvidencias) {
@@ -596,7 +609,7 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
     if (btnIrOtContainer) {
         if (insp.id_ot) {
-            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); window.rotAbrirDetalle('${insp.id_ot}')"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
+            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { window.location.hash = '#ot'; setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
         } else {
             btnIrOtContainer.innerHTML = '';
         }
@@ -608,15 +621,26 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
 
     let firmaImgPDF = document.getElementById('pdf-insp-firma');
-    if (insp.url_firma && insp.url_firma.length > 100) {
-        firmaImgPDF.src = insp.url_firma;
-        firmaImgPDF.style.display = 'inline-block';
-        document.getElementById('firma-visual-modal').innerHTML = `<img src="${insp.url_firma}" style="max-height: 100px; max-width:100%;">`;
-        if (autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
-    } else {
-        firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Sin firma registrada</span>';
-        if (autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
+    if (firmaImgPDF) {
+        if (insp.url_firma && insp.url_firma.length > 100) {
+            firmaImgPDF.src = insp.url_firma;
+            firmaImgPDF.style.display = 'inline-block';
+            document.getElementById('firma-visual-modal').innerHTML = `<img src="${insp.url_firma}" style="max-height: 100px; max-width:100%;">`;
+        } else {
+            firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Sin firma registrada</span>';
+        }
+        let tecPDF = document.getElementById('pdf-insp-tecnico'); if(tecPDF) tecPDF.textContent = insp.tecnico || '-';
+        
+        let boxJefe = document.getElementById('pdf-box-jefe');
+        if (boxJefe && firmaJefePDF) { boxJefe.style.display = 'block'; document.getElementById('pdf-insp-firma-jefe').src = firmaJefePDF; document.getElementById('pdf-insp-jefe').textContent = nombreJefePDF; }
+        else if(boxJefe) { boxJefe.style.display = 'none'; }
+
+        let boxPlanner = document.getElementById('pdf-box-planner');
+        if (boxPlanner && firmaPlannerPDF) { boxPlanner.style.display = 'block'; document.getElementById('pdf-insp-firma-planner').src = firmaPlannerPDF; document.getElementById('pdf-insp-planner').textContent = nombrePlannerPDF; }
+        else if(boxPlanner) { boxPlanner.style.display = 'none'; }
     }
+
+    if (autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
 }
 
 function generarPDFInspeccion() {
@@ -631,7 +655,7 @@ function generarPDFInspeccion() {
         margin: [10, 10, 10, 10],
         filename: `Inspeccion_${document.getElementById('pdf-insp-placa').innerText}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 1.5, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(elemento).save().then(() => {
         document.getElementById('contenedor-pdf-inspeccion').style.display = 'none';
