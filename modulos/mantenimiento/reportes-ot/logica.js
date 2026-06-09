@@ -1248,6 +1248,39 @@ function rotGetNombreUsuario(email) {
     return email.split('@')[0];
 }
 
+window.rotAbrirInspeccionWrapper = function(placa, idOT, km) {
+    if (typeof window.abrirModalNuevaInspeccion === 'function') {
+        window.abrirModalNuevaInspeccion(placa, idOT, km);
+    } else {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando módulo de inspecciones...", "bg-info");
+        var script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/inspecciones/logica.js?v=' + Date.now();
+        script.onload = function() {
+            if (typeof window.abrirModalNuevaInspeccion === 'function') {
+                window.abrirModalNuevaInspeccion(placa, idOT, km);
+            } else {
+                alert("No se pudo cargar el módulo de inspecciones.");
+            }
+        };
+        script.onerror = function() {
+            alert("Error al cargar logica de inspecciones.");
+        };
+        document.body.appendChild(script);
+    }
+};
+
+function rotGetNombreUsuario(email) {
+    if (!email) return '';
+    if (window.dataGlobalUsuarios && Array.isArray(window.dataGlobalUsuarios)) {
+        var u = window.dataGlobalUsuarios.find(function(user) { 
+            return String(user[0]).toLowerCase() === String(email).toLowerCase() || 
+                   String(user[1]).toLowerCase() === String(email).toLowerCase(); 
+        });
+        if (u && u[1]) return u[1];
+    }
+    return email.split('@')[0];
+}
+
 function rotEscHtml(str) {
     return String(str)
         .replace(/&/g,'&amp;')
