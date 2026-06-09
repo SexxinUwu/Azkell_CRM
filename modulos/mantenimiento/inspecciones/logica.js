@@ -611,6 +611,17 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     `;
     const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
+    htmlUI += `<div class="table-responsive">
+        <table class="table table-borderless align-middle mb-0" style="min-width: 500px;">
+            <thead style="border-bottom: 2px solid #cbd5e1;">
+                <tr>
+                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Criterio</th>
+                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%;">Estado</th>
+                    <th class="text-uppercase" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
     if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
         window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
             htmlChecklistPDF += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
@@ -640,24 +651,24 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                             ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
                             : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
                         
-                        let obsHtml = obs ? `<span style="font-size: 11px; color: #dc2626; display: block; margin-top: 2px;"><i class="bi bi-exclamation-circle"></i> OBS: ${obs}</span>` : '';
+                        let obsHtml = obs ? `<span style="font-size: 12px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i> ${obs}</span>` : '';
 
-                        catUI += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <div class="d-flex flex-column" style="max-width: 80%;">
-                                <span style="font-size: 13px; color: #475569;">${lbl}</span>
-                                ${obsHtml}
-                            </div>
-                            ${badgeHtml}
-                        </div>`;
+                        catUI += `<tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td class="px-3" style="font-size: 13px; color: #475569;">${lbl}</td>
+                            <td class="text-center">${badgeHtml}</td>
+                            <td style="font-size: 12px; color: #dc2626;">${obsHtml}</td>
+                        </tr>`;
                     }
                 });
             }
             if (hasItems) {
-                htmlUI += `<div class="mt-4 mb-2 pb-1 border-bottom" style="border-bottom-width: 2px !important; border-bottom-color: #cbd5e1 !important;"><span class="text-uppercase fw-bold" style="font-size: 13px; color: #475569;">${romanos[idxCat] || (idxCat+1)}. ${sec.tab}</span></div>`;
+                htmlUI += `<tr><td colspan="3" class="fw-bold px-3" style="background-color: #f8fafc; font-size: 13px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-top: 16px; padding-bottom: 8px;">${romanos[idxCat] || (idxCat+1)}. ${sec.tab}</td></tr>`;
                 htmlUI += catUI;
             }
         });
     }
+
+    htmlUI += `</tbody></table></div>`;
 
     if (contEvidencias > 1) {
         htmlUI += `<div class="mt-4 pt-2">
