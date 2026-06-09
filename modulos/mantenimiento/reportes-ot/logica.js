@@ -278,6 +278,7 @@ window.rotAbrirDetalle = function(idOT) {
     var estado = ot.estado || 'Pendiente';
     var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada');
     var puedeAgregarMaterial = esAprobada;
+    var puedeEditar = window.checkPerm('ot', 'e');
 
     function esc(s) { return rotEscHtml(String(s||'')); }
     function fld(lbl, val) {
@@ -372,10 +373,7 @@ window.rotAbrirDetalle = function(idOT) {
 
     // Acciones Rápidas (Plantillas)
     html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
-    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
-          + '<div style="background:#0ea5e9;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-file-earmark-text" style="font-size:1.2rem;"></i></div>'
-          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span></button>';
-    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\')">'
+    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\')">'
           + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>';
     html += '</div>';
@@ -419,7 +417,6 @@ window.rotAbrirDetalle = function(idOT) {
     body.innerHTML = html;
 
     // Footer
-    var puedeEditar   = window.checkPerm('ot', 'e');
     var puedeEliminar = window.checkPerm('ot', 'd');
     var ftHtml = (puedeEditar
         ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
@@ -2076,8 +2073,8 @@ window.rotGuardarEdicionOT = function() {
     });
 };
 
-// ── Descargar Plantilla Vacía para Inspección ──
-window.descargarPlantillaVaciaOT = function(idOt, placa) {
+// — Descargar Plantilla Vacía para Inspección —
+window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
     fetch('/api/mantenimiento/inspecciones/config')
         .then(function(r) { return r.json(); })
@@ -2132,20 +2129,24 @@ window.descargarPlantillaVaciaOT = function(idOt, placa) {
                 + '<tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>'
                 + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>'
                 + '</table>'
-                + '<table class="data-grid">'
+                var dtStr = fechaIng ? rotFmtFecha(fechaIng).split(' ')[0] : '____/____/______';
+                var kmStr = km ? Number(km).toLocaleString('es-PE') : '________________';
+
+                html += '<table class="data-grid">'
                 + '<tr><td style="width:35%;">Nº de Reporte: <span class="val-blue">' + rotEscHtml(idOt) + '</span></td>'
                 + '<td style="width:35%;">Placa: <span class="val-normal">' + rotEscHtml(placa) + '</span></td>'
                 + '<td rowspan="2" style="width:30%;vertical-align:top;">Rampa:<br></td></tr>'
-                + '<tr><td>Fecha de Ingreso: <span class="val-normal">____/____/______</span></td>'
-                + '<td>Kilometraje: <span class="val-normal">________________</span></td></tr>'
+                + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + rotEscHtml(dtStr) + '</span></td>'
+                + '<td>Kilometraje: <span class="val-normal">' + rotEscHtml(kmStr) + '</span></td></tr>'
                 + '</table>'
                 + '<table class="checklist-table">'
                 + '<thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">OK</th><th class="w-chk th-center">MAL</th><th class="w-obs th-center">OBSERVACION</th></tr></thead>'
                 + '<tbody>' + tbody + '</tbody>'
                 + '</table>'
-                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">'
-                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div>Firma del Técnico</div></div>'
-                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div>Firma del Supervisor</div></div>'
+                + '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;margin-top:20px;">'
+                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Tecnico</div></div>'
+                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Jefe de taller</div></div>'
+                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Planner de Mantenimiento</div></div>'
                 + '</div>'
                 + '</body></html>';
 
