@@ -1366,6 +1366,25 @@ function rotRenderSecInspecciones(idOt) {
     body.innerHTML = html;
 }
 
+window.rotAbrirTabInspeccion = function(idInsp) {
+    if (typeof window.verDetalleInspeccion === 'function') {
+        window.verDetalleInspeccion(idInsp);
+    } else {
+        if (typeof recargarModulo === 'function') {
+            recargarModulo('statusMant');
+            setTimeout(function() {
+                if (typeof window.verDetalleInspeccion === 'function') {
+                    window.verDetalleInspeccion(idInsp);
+                } else {
+                    alert('No se pudo cargar el módulo de inspecciones.');
+                }
+            }, 1500);
+        } else {
+            alert('Módulo de inspecciones no disponible.');
+        }
+    }
+};
+
 window.rotEditarKm = function(idOT, kmActual) {
     window.rotPromptKm(kmActual, function(newKm) {
         if (newKm === null || isNaN(newKm) || newKm < 0) return;
