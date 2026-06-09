@@ -56,20 +56,20 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
     if (existing) existing.remove();
     var div = document.createElement('div');
     div.id = overlayId;
-    div.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1060; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none;";
+    div.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1090; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none;";
     
     let isZoomed = false;
     let zoomLevel = 2;
 
     div.innerHTML = `
-        <div style="position: absolute; top: 20px; right: 25px; color: white; font-size: 32px; cursor: pointer; text-shadow: 0px 2px 4px rgba(0,0,0,0.5); z-index: 1062;" onclick="document.getElementById('${overlayId}').remove();">
+        <div style="position: absolute; top: 20px; right: 25px; color: white; font-size: 32px; cursor: pointer; text-shadow: 0px 2px 4px rgba(0,0,0,0.5); z-index: 1092;" onclick="document.getElementById('${overlayId}').remove();">
             <i class="bi bi-x"></i>
         </div>
         
-        <div id="gallery-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1062; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+        <div id="gallery-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1092; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
             <i class="bi bi-chevron-left"></i>
         </div>
-        <div id="gallery-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1062; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+        <div id="gallery-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 40px; cursor: pointer; padding: 20px; z-index: 1092; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
             <i class="bi bi-chevron-right"></i>
         </div>
 
@@ -77,7 +77,7 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
             <img id="gallery-img" src="" style="max-width: 95vw; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease-out; transform-origin: center center;">
         </div>
         
-        <div id="gallery-title" style="color: white; margin-top: 20px; font-weight: 600; font-size: 16px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8); z-index: 1061; text-align: center; padding: 0 20px;"></div>
+        <div id="gallery-title" style="color: white; margin-top: 20px; font-weight: 600; font-size: 16px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8); z-index: 1091; text-align: center; padding: 0 20px;"></div>
     `;
     
     document.body.appendChild(div);
