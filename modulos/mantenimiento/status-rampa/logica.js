@@ -465,6 +465,7 @@ window.srAbrirDetalle = function(id) {
     html += '<div class="sr-sec"><div class="sr-sec-hd">I. Recepción</div>';
     html += srField('Rampa',         _srEsc(rampaNomDet));
     html += srField('Ingreso a Taller', (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—') + (e.horaIngreso ? ' ' + e.horaIngreso : ''));
+    html += srField('Kilometraje',   e.km ? e.km + ' km' : '—');
     html += srField('Situación',     e.situacion ? srSemaforo(e.situacion, true) : '—');
     html += srField('Observaciones', e.obs || '—');
     if (e.fechaSalida) html += srField('Salida Estimada', srFmtFecha(e.fechaSalida) + (e.horaSalida ? ' ' + e.horaSalida : ''));
