@@ -840,8 +840,16 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     if (autoDescargarPDF) {
         setTimeout(generarPDFInspeccion, 500);
     } else {
-        let modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResumenInspeccion'));
+        let modalEl = document.getElementById('modalResumenInspeccion');
+        modalEl.style.setProperty('z-index', '1080', 'important');
+        let modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+        setTimeout(() => {
+            let backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                backdrops[backdrops.length - 1].style.setProperty('z-index', '1070', 'important');
+            }
+        }, 100);
     }
 }
 
