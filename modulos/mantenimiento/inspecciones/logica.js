@@ -462,7 +462,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     if (!insp) return;
 
     let fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
-    let htmlFallas = ""; let countFallas = 0;
+    let htmlFallas = ""; let countFallas = 0; let htmlFirmasExtra = "";
+    window.EVIDENCIAS_TMP = window.EVIDENCIAS_TMP || {};
 
     let htmlEvidenciasPDF = ""; let contEvidencias = 1;
 
@@ -477,6 +478,12 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         if (detallesArray && detallesArray.length > 0) {
             detallesArray.forEach(d => {
                 if (d.estado === "SIN DATOS" || d.estado === "") return;
+
+                if (d.categoria === "FIRMAS_EXTRA") {
+                    let nombreHtml = d.estado ? d.estado.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "-";
+                    htmlFirmasExtra += `<div class="mt-3 border-top pt-2"><span style="color:var(--text);font-size:0.8rem;" class="fw-bold text-uppercase">${d.item}</span><br><span style="color:var(--text);font-size:0.9rem;">${nombreHtml}</span><br><img src="${d.foto}" style="max-height:80px; margin-top:5px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; padding:4px;"></div>`;
+                    return;
+                }
 
                 let colorTxt = ""; let icon = ""; let pdfClass = "";
                 if (d.estado === "FALLA") {
@@ -493,7 +500,9 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
                 let extraFotoBtn = "";
                 if (d.foto && d.foto.length > 100) {
                     let nombreFallaSeguro = d.item.replace(/'/g, "\\'");
-                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia('${d.foto}', 'Evidencia ${contEvidencias}: ${nombreFallaSeguro}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
+                    let tmpKey = 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+                    window.EVIDENCIAS_TMP[tmpKey] = d.foto;
+                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}: ${nombreFallaSeguro}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
                     htmlEvidenciasPDF += `
                         <div class="pdf-evidencia-card">
                             <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
@@ -514,7 +523,8 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     let htmlModal = `
     <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-card-checklist text-primary"></i> REGISTRO GENERAL</div><div class="insp-row"><span style="color:var(--text)">Fecha de Inspección</span><span style="color:var(--text)">${fIng}</span></div><div class="insp-row"><span style="color:var(--text)">Placa</span><span class="text-primary fw-bold">${insp.placa}</span></div><div class="insp-row"><span style="color:var(--text)">Kilometraje</span><span style="color:var(--text)">${insp.km_tablero || '-'}</span></div><div class="insp-row"><span style="color:var(--text)">Fallas Detectadas</span><span class="text-danger fw-bold">${countFallas}</span></div></div></div>
     <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-person-badge text-primary"></i> FIRMA Y RESPONSABLE</div><div class="insp-row"><span style="color:var(--text)">Técnico Inspector</span><span style="color:var(--text)">${insp.tecnico || '-'}</span></div>
-    <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div></div></div>
+    <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div>
+    <div id="firmas-extra-container"></div></div></div>
     <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">DIAGNÓSTICO</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem; color:var(--text);">${htmlFallas}</div></div></div>`;
 
     // GENERAR CHECKLIST PARA PDF
@@ -592,6 +602,9 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         }
     }
     document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
+    let containerFirmas = document.getElementById('firmas-extra-container');
+    if (containerFirmas) containerFirmas.innerHTML = htmlFirmasExtra;
+
     new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
 
     let firmaImgPDF = document.getElementById('pdf-insp-firma');
@@ -731,6 +744,21 @@ async function procesarGuardadoInspeccion() {
     }
 
     let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
+    let cvsJefe = document.getElementById('canvasFirmaJefe');
+    let firmaJefeData = cvsJefe ? cvsJefe.toDataURL("image/png") : "";
+    let cvsPlanner = document.getElementById('canvasFirmaPlanner');
+    let firmaPlannerData = cvsPlanner ? cvsPlanner.toDataURL("image/png") : "";
+    
+    let jefeTaller = document.getElementById('i_jefe_taller') ? document.getElementById('i_jefe_taller').value : "";
+    let plannerMant = document.getElementById('i_planner') ? document.getElementById('i_planner').value : "";
+
+    if (firmaJefeData && firmaJefeData.length > 2000) {
+        detalles.push({ categoria: "FIRMAS_EXTRA", item: "Jefe de Taller", estado: jefeTaller, foto: firmaJefeData });
+    }
+    if (firmaPlannerData && firmaPlannerData.length > 2000) {
+        detalles.push({ categoria: "FIRMAS_EXTRA", item: "Planner de Mant.", estado: plannerMant, foto: firmaPlannerData });
+    }
+
     let idOt = "";
     let iIdOt = document.getElementById('i_id_ot');
     if (iIdOt) idOt = iIdOt.value;
@@ -751,6 +779,9 @@ async function procesarGuardadoInspeccion() {
             if (r.data === 'Éxito') {
                 bootstrap.Offcanvas.getInstance(document.getElementById('drawerInspeccion')).hide();
                 recargarModulo('statusMant');
+                if (typeof window.rotAbrirDetalle === 'function' && idOt) {
+                    window.rotAbrirDetalle(idOt);
+                }
             } else { alert("Error: " + r.data); }
             btn.disabled = false; btn.innerHTML = 'Guardar Registro';
         }).catch(e => { alert("Error de red: " + e.message); btn.disabled = false; btn.innerHTML = 'Guardar Registro'; });
