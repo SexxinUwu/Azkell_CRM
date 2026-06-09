@@ -1370,23 +1370,26 @@ window.rotAbrirTabInspeccion = function(idInsp) {
     if (typeof window.verDetalleInspeccion === 'function') {
         window.verDetalleInspeccion(idInsp);
     } else {
-        if (typeof window.cargarModuloAislado === 'function') {
-            if (typeof window.rotToast === 'function') window.rotToast("Cargando módulo de inspecciones...", "bg-info");
-            window.cargarModuloAislado('mantenimiento/inspecciones');
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando visor...", "bg-info");
+        let script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/inspecciones/logica.js?v=' + Date.now();
+        script.onload = function() {
             let intentos = 0;
             let checkInterval = setInterval(function() {
                 intentos++;
                 if (typeof window.verDetalleInspeccion === 'function') {
                     clearInterval(checkInterval);
                     window.verDetalleInspeccion(idInsp);
-                } else if (intentos > 20) { // 2 seconds
+                } else if (intentos > 40) {
                     clearInterval(checkInterval);
-                    alert('No se pudo cargar el módulo de inspecciones.');
+                    alert('No se pudo cargar el visor de inspecciones.');
                 }
-            }, 100);
-        } else {
-            alert('Módulo de carga aislada no disponible.');
-        }
+            }, 50);
+        };
+        script.onerror = function() {
+            alert('Error al cargar la lógica de inspecciones.');
+        };
+        document.body.appendChild(script);
     }
 };
 

@@ -481,7 +481,27 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         } catch(e) { console.error("Error loading vista", e); return; }
     }
 
-    let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+    if (!window.DYNAMIC_INSP_SCHEMA || window.DYNAMIC_INSP_SCHEMA.length === 0) {
+        try {
+            let reqCfg = await fetch('/api/mantenimiento/inspecciones/configuracion', { method: 'GET' });
+            let resCfg = await reqCfg.json();
+            if (resCfg.data && resCfg.data.length > 0) {
+                window.DYNAMIC_INSP_SCHEMA = resCfg.data.map(d => {
+                    let items = d.items;
+                    try { if (typeof items === 'string') items = JSON.parse(items); } catch(e){}
+                    return { tab: d.tab, items: items };
+                });
+            } else {
+                window.DYNAMIC_INSP_SCHEMA = [];
+            }
+        } catch (e) {
+            console.error("Error loading schema", e);
+            window.DYNAMIC_INSP_SCHEMA = [];
+        }
+    }
+
+    let dataLocal = window.dataGlobalInspecciones || [];
+    let insp = dataLocal.find(i => i.id === idBusqueda);
     if (!insp) {
         try {
             if (typeof window.rotToast === 'function') window.rotToast("Cargando detalles...", "bg-info");
@@ -489,9 +509,8 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] })
             });
             let res = await req.json();
-            dataGlobalInspecciones = res.data || [];
-            window.dataGlobalInspecciones = dataGlobalInspecciones;
-            insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+            window.dataGlobalInspecciones = res.data || [];
+            insp = window.dataGlobalInspecciones.find(i => i.id === idBusqueda);
         } catch (e) { console.error(e); }
     }
     if (!insp) { alert("No se encontró la inspección."); return; }
@@ -517,7 +536,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                 body: JSON.stringify({ urls: s3Urls })
             });
             let resUrl = await reqUrl.json();
-            if (resUrl.signedUrls) signedMap = resUrl.signedUrls;
+            if (resUrl.signed) signedMap = resUrl.signed;
         } catch (e) { console.error("Error presigning", e); }
     }
 
@@ -613,7 +632,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                         <td class="w-obs">${obs}</td>
                     </tr>`;
 
-                    if (match && match.estado) {
+                    if (match && match.estado && match.estado !== "SIN DATOS") {
                         let badgeHtml = match.estado === 'OK' 
                             ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
                             : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
