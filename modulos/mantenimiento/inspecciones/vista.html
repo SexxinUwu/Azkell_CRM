@@ -489,12 +489,18 @@
 </div>
 
 <!-- FAB — solo mobile -->
-<div class="d-block d-md-none" style="position:fixed;bottom:104px;right:1rem;z-index:1041;">
+<style>
+  #fab-insp-mobile { display: none !important; }
+  @media (max-width: 767px) {
+    #fab-insp-mobile { display: flex !important; }
+  }
+</style>
+<div id="fab-insp-mobile" style="position:fixed;bottom:104px;right:16px;z-index:999999;flex-direction:column;gap:10px;">
   <button onclick="abrirModalNuevaInspeccion()"
           style="width:60px;height:60px;border-radius:18px;background:#10b981;border:none;color:#fff;
                  font-size:1.5rem;box-shadow:0 6px 24px rgba(16,185,129,.5);
                  display:flex;align-items:center;justify-content:center;
-                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
+                 transition:transform .25s cubic-bezier(.4,0,.2,1); cursor:pointer;">
     <i class="bi bi-plus-lg"></i>
   </button>
 </div>
