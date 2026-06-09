@@ -9,6 +9,25 @@ window.inspPorPagina = window.inspPorPagina || parseInt(localStorage.getItem('fl
 window.inspPaginaActual = window.inspPaginaActual || 1;
 
 window.DYNAMIC_INSP_SCHEMA = window.DYNAMIC_INSP_SCHEMA || [];
+
+window.ensureInspConfig = function() {
+    if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) return Promise.resolve();
+    if (typeof window.rotToast === 'function') window.rotToast("Cargando módulos...", "bg-info");
+    return fetch('/api/mantenimiento/inspecciones/config')
+        .then(r => r.json())
+        .then(res => {
+            if (res.ok && res.data) {
+                window.DYNAMIC_INSP_SCHEMA = res.data.map(d => {
+                    let parsedItems = [];
+                    try { parsedItems = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
+                    return { tab: d.titulo, template_id: d.template_id, items: parsedItems };
+                });
+            } else {
+                window.DYNAMIC_INSP_SCHEMA = [];
+            }
+        }).catch(e => { console.error("Error al cargar cfg inspecciones", e); window.DYNAMIC_INSP_SCHEMA = []; });
+};
+
 fetch('/api/mantenimiento/inspecciones/config')
     .then(r => r.json())
     .then(res => {
@@ -638,7 +657,7 @@ async function procesarGuardadoInspeccion() {
     let km = document.getElementById('i_kmtablero').value;
     let cliente = document.getElementById('i_cliente').value;
     let tecnico = document.getElementById('i_tecnico').value;
-    let dias = document.getElementById('i_dias').value || "30";
+    let iDias = document.getElementById('i_dias'); let dias = iDias ? (iDias.value || '30') : '30';
 
     if (!placa || !tecnico) {
         alert("⚠️ La Placa y el Técnico son obligatorios.");
