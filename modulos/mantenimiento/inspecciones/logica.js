@@ -569,7 +569,12 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
             if (sec.items) {
                 sec.items.forEach((item, idxItem) => {
                     let lbl = typeof item === 'string' ? item : item.label;
-                    let match = detallesArray.find(d => d.item && normalizeStr(d.item) === normalizeStr(lbl));
+                    let secTabNorm = normalizeStr(sec.tab);
+                    let match = detallesArray.find(d => {
+                        if (!d.item || !d.categoria) return false;
+                        let catNorm = normalizeStr(d.categoria.replace(/^\d+\.\s*/, ''));
+                        return normalizeStr(d.item) === normalizeStr(lbl) && catNorm === secTabNorm;
+                    });
                     let obs = (match && match.observacion) ? match.observacion : "";
                     
                     htmlChecklistPDF += `<tr>
@@ -696,7 +701,11 @@ function generarPDFInspeccion() {
             if (sec.items) {
                 sec.items.forEach(function(item, idxItem) {
                     var lbl = typeof item === 'string' ? item : item.label;
-                    var match = detallesArr.find(function(d){ return d.item && d.item.trim().toLowerCase() === lbl.trim().toLowerCase(); });
+                    var match = detallesArr.find(function(d){ 
+                        if (!d.item || !d.categoria) return false;
+                        var catNorm = (d.categoria.replace(/^\d+\.\s*/, '')).trim().toLowerCase();
+                        return d.item.trim().toLowerCase() === lbl.trim().toLowerCase() && catNorm === sec.tab.trim().toLowerCase();
+                    });
                     var okIcon = '', malIcon = '', obs = '';
                     if (match && match.estado) {
                         if (match.estado === 'OK') okIcon = '<span style="color:#16a34a;font-weight:bold;font-size:14px;">✓</span>';
