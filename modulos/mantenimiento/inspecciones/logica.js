@@ -945,7 +945,7 @@ window.renderModernInspForm = function() {
 };
 
 window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPreselect) {
-    renderModernInspForm();
+    window.renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
     if (formEl) formEl.reset();
@@ -991,7 +991,7 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if (!insp) return;
 
-    renderModernInspForm();
+    window.renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
     if(formEl) formEl.reset();
@@ -1443,7 +1443,7 @@ window.abrirConfigInspecciones = function() {
             } else {
                 window.DYNAMIC_INSP_SCHEMA = [];
             }
-            renderConfigInspItems();
+            window.renderConfigInspItems();
             new bootstrap.Modal(document.getElementById('modalConfigInsp')).show();
         })
         .catch(e => alert("Error al abrir configuración"));
@@ -1499,12 +1499,12 @@ window.renderConfigInspItems = function() {
 
 window.agregarCategoriaConfigInsp = function() {
     window.DYNAMIC_INSP_SCHEMA.push({ tab: "NUEVA CATEGORÍA", template_id: 'cat_' + Date.now(), items: [] });
-    renderConfigInspItems();
+    window.renderConfigInspItems();
 };
 window.eliminarCategoriaConfigInsp = function(idx) {
     if(confirm("¿Seguro que deseas eliminar esta categoría entera?")) {
         window.DYNAMIC_INSP_SCHEMA.splice(idx, 1);
-        renderConfigInspItems();
+        window.renderConfigInspItems();
     }
 };
 window.actualizarCategoriaConfigInsp = function(idx, val) {
@@ -1512,11 +1512,11 @@ window.actualizarCategoriaConfigInsp = function(idx, val) {
 };
 window.agregarItemConfigInsp = function(catIdx) {
     window.DYNAMIC_INSP_SCHEMA[catIdx].items.push({ label: "Nuevo Ítem", type: "okfalla" });
-    renderConfigInspItems();
+    window.renderConfigInspItems();
 };
 window.eliminarItemConfigInsp = function(catIdx, itemIdx) {
     window.DYNAMIC_INSP_SCHEMA[catIdx].items.splice(itemIdx, 1);
-    renderConfigInspItems();
+    window.renderConfigInspItems();
 };
 window.actualizarItemConfigInsp = function(catIdx, itemIdx, field, val) {
     let item = window.DYNAMIC_INSP_SCHEMA[catIdx].items[itemIdx];
