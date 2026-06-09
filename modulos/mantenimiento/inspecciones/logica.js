@@ -609,7 +609,7 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
     let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
     if (btnIrOtContainer) {
         if (insp.id_ot) {
-            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { window.location.hash = '#ot'; setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
+            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
         } else {
             btnIrOtContainer.innerHTML = '';
         }
@@ -644,22 +644,141 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
 }
 
 function generarPDFInspeccion() {
-    const btnElement = event.currentTarget || document.querySelector('#modalResumenInspeccion .btn-outline-danger');
-    let textoOriginal = "Exportar PDF";
-    if (btnElement) { textoOriginal = btnElement.innerHTML; btnElement.innerHTML = '<i class="bi bi-hourglass-split"></i> Creando...'; btnElement.classList.add('disabled'); }
+    var insp = window._lastInspDetalle;
+    if (!insp) { alert('No hay datos de inspección cargados.'); return; }
 
-    const elemento = document.getElementById('pdf-inspeccion');
-    document.getElementById('contenedor-pdf-inspeccion').style.display = 'block';
+    var fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
+    var detallesArr = [];
+    try { detallesArr = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch(e){}
 
-    html2pdf().set({
-        margin: [10, 10, 10, 10],
-        filename: `Inspeccion_${document.getElementById('pdf-insp-placa').innerText}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 1.5, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(elemento).save().then(() => {
-        document.getElementById('contenedor-pdf-inspeccion').style.display = 'none';
-        if (btnElement) { btnElement.innerHTML = textoOriginal; btnElement.classList.remove('disabled'); }
+    // Collect S3 URLs that need presigning
+    var s3Urls = [];
+    detallesArr.forEach(function(d) {
+        if (d.foto && d.foto.startsWith('https://') && d.foto.includes('.s3.')) {
+            s3Urls.push(d.foto);
+        }
+    });
+    if (insp.url_firma && insp.url_firma.startsWith('https://') && insp.url_firma.includes('.s3.')) {
+        s3Urls.push(insp.url_firma);
+    }
+
+    var presignPromise;
+    if (s3Urls.length > 0) {
+        presignPromise = fetch('/api/mantenimiento/inspecciones/presign-read', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ urls: s3Urls })
+        }).then(function(r){ return r.json(); }).then(function(res){ return res.signed || {}; }).catch(function(){ return {}; });
+    } else {
+        presignPromise = Promise.resolve({});
+    }
+
+    presignPromise.then(function(signedMap) {
+        // Build checklist body
+        var tbody = '';
+        var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+        var schema = window.DYNAMIC_INSP_SCHEMA || [];
+        schema.forEach(function(sec, idxCat) {
+            tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat]||(idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+            if (sec.items) {
+                sec.items.forEach(function(item, idxItem) {
+                    var lbl = typeof item === 'string' ? item : item.label;
+                    var match = detallesArr.find(function(d){ return d.item && d.item.trim().toLowerCase() === lbl.trim().toLowerCase(); });
+                    var okIcon = '', malIcon = '', obs = '';
+                    if (match && match.estado) {
+                        if (match.estado === 'OK') okIcon = '<span style="color:#16a34a;font-weight:bold;font-size:14px;">✓</span>';
+                        if (match.estado === 'FALLA') malIcon = '<span style="color:#dc2626;font-weight:bold;font-size:14px;">✗</span>';
+                        obs = match.observacion || '';
+                    }
+                    tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + okIcon + '</td><td class="w-chk" style="text-align:center;">' + malIcon + '</td><td>' + obs + '</td></tr>';
+                });
+            }
+        });
+
+        // Build evidences HTML
+        var htmlEvidencias = '';
+        var contEv = 1;
+        detallesArr.forEach(function(d) {
+            if (d.categoria === 'FIRMAS_EXTRA') return;
+            if (d.foto && d.foto.length > 100) {
+                var fotoUrl = d.foto;
+                if (signedMap[fotoUrl]) fotoUrl = signedMap[fotoUrl];
+                htmlEvidencias += '<div style="border:1px solid #000;padding:5px;text-align:center;page-break-inside:avoid;"><h5 style="margin:0 0 4px 0;font-size:11px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:2px;">Evidencia ' + contEv + ': ' + d.item + '</h5><img src="' + fotoUrl + '" style="max-width:100%;max-height:180px;object-fit:contain;display:block;margin:0 auto;">' + (d.observacion ? '<p style="margin:4px 0 0;font-size:10px;">' + d.observacion + '</p>' : '') + '</div>';
+                contEv++;
+            }
+        });
+
+        // Build firmas extra
+        var firmaJefeImg = '', firmaJefeNombre = '', firmaPlannerImg = '', firmaPlannerNombre = '';
+        detallesArr.forEach(function(d) {
+            if (d.categoria !== 'FIRMAS_EXTRA') return;
+            if (d.item === 'Jefe de Taller') { firmaJefeImg = signedMap[d.foto] || d.foto || ''; firmaJefeNombre = d.estado || ''; }
+            if (d.item === 'Planner de Mant.') { firmaPlannerImg = signedMap[d.foto] || d.foto || ''; firmaPlannerNombre = d.estado || ''; }
+        });
+
+        var inspUrlFirma = (insp.url_firma && signedMap[insp.url_firma]) ? signedMap[insp.url_firma] : (insp.url_firma || '');
+        var logoUrl = window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+
+        var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Inspección - ' + (insp.placa||'') + '</title>'
+            + '<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">'
+            + '<style>'
+            + ':root{--blue-header:#0053b3;--blue-num:#4a86e8;}'
+            + '*{font-family:"Oswald",sans-serif!important;box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}'
+            + 'body{background-color:#e0e0e0;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}'
+            + '#btnPrint{position:fixed;top:20px;right:20px;background-color:#000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-size:14px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.3);z-index:1000;}'
+            + '#btnPrint:hover{opacity:0.9;}'
+            + '.page-container{width:210mm;min-height:296mm;background:white;padding:5mm 10mm;box-sizing:border-box;box-shadow:0 0 15px rgba(0,0,0,0.2);position:relative;display:flex;flex-direction:column;margin-bottom:20px;}'
+            + '.iso-header{width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:-2px;table-layout:fixed;flex-shrink:0;}'
+            + '.iso-header td{border:1px solid #000;text-align:center;vertical-align:middle;}'
+            + '.logo-cell{width:20%;padding:2px;} .title-cell{width:55%;font-size:24px;font-weight:bold;line-height:1;text-transform:uppercase;color:#000;}'
+            + '.sub-title{font-size:12px;font-weight:normal;color:#333;letter-spacing:1px;}'
+            + '.qms-item{width:25%;font-size:10px;text-align:left!important;padding:1px 4px;height:16px;}'
+            + '.data-grid{width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:4px;table-layout:fixed;flex-shrink:0;}'
+            + '.data-grid td{border:1px solid #000;padding:1px 4px;font-size:11px;font-weight:bold;height:20px;vertical-align:middle;}'
+            + '.col-left{width:35%;} .col-mid{width:35%;} .col-right{width:30%;vertical-align:top!important;padding-top:2px!important;}'
+            + '.val-normal{font-weight:normal;margin-left:3px;} .val-blue{color:var(--blue-num);font-size:13px;margin-left:3px;}'
+            + '.table-wrapper{flex-grow:1;display:flex;flex-direction:column;margin-bottom:5px;}'
+            + '.checklist-table{width:100%;flex-grow:1;border-collapse:collapse;border:2px solid #000;font-size:9.5px;}'
+            + '.checklist-table th{background-color:var(--blue-header);color:white;text-transform:uppercase;padding:2px;border:1px solid #000;text-align:left;}'
+            + '.checklist-table th.th-center{text-align:center;}'
+            + '.checklist-table td{border:1px solid #000;padding:1px 3px;vertical-align:middle;}'
+            + '.sec-row td{background-color:#f2f2f2;font-weight:bold;border-top:2px solid #000;padding:1px 3px;}'
+            + '.w-crit{width:46%;} .w-chk{width:4%;text-align:center;padding:0;} .w-obs{width:46%;}'
+            + '.footer{flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
+            + '.sign-box{width:30%;text-align:center;} .sign-line{border-top:2px solid #000;margin-bottom:2px;} .sign-label{font-weight:bold;font-size:11px;}'
+            + '.sign-img{max-height:60px;max-width:100%;display:block;margin:0 auto 5px;}'
+            + '.evidencias-section{page-break-before:always;margin-top:20px;}'
+            + '.pdf-evidencias-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;width:100%;}'
+            + '@media print{@page{size:A4;margin:0;}body{background:none;padding:0;margin:0;}#btnPrint{display:none;}.page-container{width:210mm;min-height:296mm;padding:5mm 10mm;box-shadow:none;border:none;margin:0;}}'
+            + '</style></head><body>'
+            + '<button id="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
+            + '<div class="page-container">'
+            + '<table class="iso-header"><tr><td class="logo-cell" rowspan="3"><img src="' + logoUrl + '" alt="Logo" style="max-width:100%;max-height:45px;object-fit:contain;"></td>'
+            + '<td class="title-cell" rowspan="3">INSPECCIÓN MENSUAL<br><span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span></td>'
+            + '<td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td></tr>'
+            + '<tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>'
+            + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr></table>'
+            + '<table class="data-grid"><tr><td class="col-left">Nº de Reporte: <span class="val-blue">' + (insp.id||'') + '</span></td><td class="col-mid">Placa: <span class="val-normal">' + (insp.placa||'') + '</span></td><td class="col-right" rowspan="2">Rampa:<br><span class="val-normal"></span></td></tr>'
+            + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + (fIng||'') + '</span></td><td>Kilometraje: <span class="val-normal">' + (insp.km_tablero||'-') + '</span></td></tr></table>'
+            + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">OK</th><th class="w-chk th-center">MAL</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
+            + '<div class="footer">'
+            + '<div class="sign-box">' + (inspUrlFirma && inspUrlFirma.length > 100 ? '<img class="sign-img" src="' + inspUrlFirma + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Técnico Inspector<br><span style="font-weight:normal;">' + (insp.tecnico||'') + '</span></div></div>'
+            + '<div class="sign-box">' + (firmaJefeImg ? '<img class="sign-img" src="' + firmaJefeImg + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Jefe de Taller<br><span style="font-weight:normal;">' + firmaJefeNombre + '</span></div></div>'
+            + '<div class="sign-box">' + (firmaPlannerImg ? '<img class="sign-img" src="' + firmaPlannerImg + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Planner de Mantenimiento<br><span style="font-weight:normal;">' + firmaPlannerNombre + '</span></div></div>'
+            + '</div></div>';
+
+        // Evidencias page
+        if (htmlEvidencias) {
+            html += '<div class="page-container evidencias-section">'
+                + '<div style="background-color:#0053b3;color:white;font-size:12px;font-weight:bold;text-align:center;border:2px solid #000;padding:4px;text-transform:uppercase;margin-bottom:10px;">EVIDENCIA FOTOGRÁFICA</div>'
+                + '<div class="pdf-evidencias-grid">' + htmlEvidencias + '</div></div>';
+        }
+
+        html += '</body></html>';
+
+        var win = window.open('', '_blank');
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
     });
 }
 
@@ -885,8 +1004,14 @@ window.renderModernInspForm = function() {
                     <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
                 <div class="col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días de Vigencia</label>
-                    <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_dias" value="30" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="chk_30dias" checked onchange="document.getElementById('i_dias_container').style.display = this.checked ? 'none' : 'block'; document.getElementById('i_dias').value = this.checked ? '30' : '';">
+                        <label class="form-check-label fw-bold text-primary" for="chk_30dias">Inspección Válida por 30 Días</label>
+                    </div>
+                    <div id="i_dias_container" style="display: none;">
+                        <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días Personalizados</label>
+                        <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_dias" value="30" placeholder="Ej: 15" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    </div>
                 </div>
             </div>
         </div>
@@ -1072,7 +1197,7 @@ window.limpiarFirmaCanvas = function(id) {
     ctx.clearRect(0, 0, cvs.width, cvs.height);
 };
 
-window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPreselect) {
+window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect, kmPreselect) {
     if (!document.getElementById('drawerInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
         fetch('/modulos/mantenimiento/inspecciones/vista.html')
@@ -1092,6 +1217,7 @@ window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPr
         return;
     }
 
+    await window.ensureInspConfig();
     window.renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
@@ -1146,7 +1272,7 @@ window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPr
     }
 };
 
-window.abrirModalEditarInspeccion = function (idBusqueda) {
+window.abrirModalEditarInspeccion = async function (idBusqueda) {
     if (!document.getElementById('drawerInspeccion')) {
         if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
         fetch('/modulos/mantenimiento/inspecciones/vista.html')
@@ -1169,6 +1295,7 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if (!insp) return;
 
+    await window.ensureInspConfig();
     window.renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
@@ -1202,7 +1329,24 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
     document.getElementById('i_cliente').value = insp.cliente || "";
     document.getElementById('i_tecnico').value = insp.tecnico || "";
-    document.getElementById('i_dias').value = insp.dias_propuestos || "30";
+    
+    let diasPropuestos = insp.dias_propuestos || "30";
+    let chk30 = document.getElementById('chk_30dias');
+    let inputDias = document.getElementById('i_dias');
+    let contDias = document.getElementById('i_dias_container');
+    if (chk30 && inputDias && contDias) {
+        if (diasPropuestos == "30") {
+            chk30.checked = true;
+            contDias.style.display = 'none';
+            inputDias.value = "30";
+        } else {
+            chk30.checked = false;
+            contDias.style.display = 'block';
+            inputDias.value = diasPropuestos;
+        }
+    } else if (inputDias) {
+        inputDias.value = diasPropuestos;
+    }
 
     window.autocompletarInfoInsp();
 

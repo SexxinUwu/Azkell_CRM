@@ -1123,11 +1123,12 @@ app.post('/api/taller/ingreso', (req, res) => {
         const year = new Date().getFullYear();
         const correlativoID = `ST-${nextNum}-${year}`;
 
+        const detallesObj = { km: parseFloat(data.kilometraje) || 0 };
         const sql = `INSERT INTO ordenes_trabajo
-            (ticket_entrada, placa, id_rampa, tipo_trabajo, descripcion_falla, conductor, kilometraje, estado)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'EN ESPERA')`;
+            (ticket_entrada, placa, id_rampa, tipo_trabajo, descripcion_falla, conductor, kilometraje, detalles_json, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EN ESPERA')`;
 
-        db.query(sql, [correlativoID, data.placa, data.id_rampa, data.tipo_trabajo, data.descripcion_falla, data.conductor, data.kilometraje], (err) => {
+        db.query(sql, [correlativoID, data.placa, data.id_rampa, data.tipo_trabajo, data.descripcion_falla, data.conductor, data.kilometraje, JSON.stringify(detallesObj)], (err) => {
             if (err) return res.status(500).json({ error: err.message });
 
             if (data.generar_ot) {

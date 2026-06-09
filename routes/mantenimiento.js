@@ -97,5 +97,24 @@ module.exports = function (db, logAudit) {
         }
     });
 
+    // POST /api/mantenimiento/inspecciones/presign-read
+    // Generates presigned read URLs for S3 evidence photos
+    router.post('/inspecciones/presign-read', async (req, res) => {
+        const { urls } = req.body; // array of S3 URLs
+        if (!Array.isArray(urls) || !urls.length) return res.json({ ok: true, signed: {} });
+        
+        const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+        const signed = {};
+        for (const url of urls) {
+            const key = s3KeyFromUrl(url);
+            if (key) {
+                try { signed[url] = await getPresignedUrl(key, 3600); } catch(e) { signed[url] = url; }
+            } else {
+                signed[url] = url; // not an S3 url, return as-is
+            }
+        }
+        res.json({ ok: true, signed });
+    });
+
     return router;
 };
