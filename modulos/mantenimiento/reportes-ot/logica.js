@@ -1236,6 +1236,18 @@ function rotVal(id) {
     return el ? (el.value || '') : '';
 }
 
+function rotGetNombreUsuario(email) {
+    if (!email) return '';
+    if (window.dataGlobalUsuarios && Array.isArray(window.dataGlobalUsuarios)) {
+        var u = window.dataGlobalUsuarios.find(function(user) { 
+            return String(user[0]).toLowerCase() === String(email).toLowerCase() || 
+                   String(user[1]).toLowerCase() === String(email).toLowerCase(); 
+        });
+        if (u && u[1]) return u[1];
+    }
+    return email.split('@')[0];
+}
+
 function rotEscHtml(str) {
     return String(str)
         .replace(/&/g,'&amp;')
