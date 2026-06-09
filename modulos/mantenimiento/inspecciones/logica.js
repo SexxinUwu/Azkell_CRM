@@ -466,6 +466,21 @@ function filtrarStatusAvanzado() {
 }
 
 window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
+    if (!document.getElementById('modalResumenInspeccion')) {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando visor de reportes...", "bg-info");
+        try {
+            let res = await fetch('/modulos/mantenimiento/inspecciones/vista.html');
+            let html = await res.text();
+            let tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            let modal = tmp.querySelector('#modalResumenInspeccion');
+            let pdfContainer = tmp.querySelector('#contenedor-pdf-inspeccion');
+            if (modal) document.body.appendChild(modal);
+            if (pdfContainer) document.body.appendChild(pdfContainer);
+            await new Promise(r => setTimeout(r, 50));
+        } catch(e) { console.error("Error loading vista", e); return; }
+    }
+
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if (!insp) {
         try {
