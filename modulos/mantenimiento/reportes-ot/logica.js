@@ -2085,70 +2085,275 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
                 return { tab: d.titulo, items: parsed };
             }) : [];
             
+            var dtStr = '____/____/______';
+            if (fechaIng) {
+                var parts = fechaIng.split('T')[0].split('-');
+                if(parts.length === 3) dtStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+            }
+            var kmStr = km ? Number(km).toLocaleString('es-PE') : '________________';
+
             var tbody = '';
             var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
             schema.forEach(function(sec, idxCat) {
                 tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat] || (idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
                 if (sec.items) {
-                    sec.items.forEach(function(item) {
+                    var itemsArr = Array.isArray(sec.items) ? sec.items : [];
+                    itemsArr.forEach(function(item, idxItem) {
                         var lbl = typeof item === 'string' ? item : item.label;
                         tbody += '<tr>'
-                               + '<td class="w-crit">' + rotEscHtml(lbl) + '</td>'
-                               + '<td class="w-chk"><div class="sq"></div></td>'
-                               + '<td class="w-chk"><div class="sq"></div></td>'
-                               + '<td class="w-obs"></td>'
+                               + '<td>' + (idxItem+1) + '. ' + rotEscHtml(lbl) + '</td>'
+                               + '<td class="w-chk"><div class="sq sq-green"></div></td>'
+                               + '<td class="w-chk"><div class="sq sq-red"></div></td>'
+                               + '<td></td>'
                                + '</tr>';
                     });
                 }
             });
 
-            var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plantilla Inspección</title>'
-                + '<style>'
-                + '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap");'
-                + 'body { margin: 0; padding: 20px; font-family: "Oswald", sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }'
-                + 'table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }'
-                + 'th, td { border: 1px solid #000; padding: 2px 4px; font-size: 11px; }'
-                + '.iso-header td { text-align: center; vertical-align: middle; }'
-                + '.title-cell { font-size: 24px; font-weight: bold; text-transform: uppercase; line-height: 1; }'
-                + '.sub-title { font-size: 12px; font-weight: normal; letter-spacing: 1px; }'
-                + '.qms-item { font-size: 10px; text-align: left; height: 16px; }'
-                + '.data-grid td { font-weight: bold; height: 20px; vertical-align: middle; }'
-                + '.val-normal { font-weight: normal; margin-left: 3px; }'
-                + '.val-blue { color: #4a86e8; font-size: 13px; margin-left: 3px; }'
-                + '.checklist-table th { background-color: #0053b3; color: white; text-transform: uppercase; text-align: left; }'
-                + '.checklist-table th.th-center { text-align: center; }'
-                + '.sec-row td { background-color: #f2f2f2; font-weight: bold; border-top: 2px solid #000; }'
-                + '.w-crit { width: 45%; } .w-chk { width: 30px; text-align: center; } .w-obs { width: auto; }'
-                + '.sq { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; margin-top: 2px; }'
-                + '@media print { body { padding: 0; } }'
-                + '</style></head><body>'
-                + '<table class="iso-header">'
-                + '<tr><td rowspan="3" style="width:20%;"><img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" style="max-height:45px;"></td>'
-                + '<td rowspan="3" class="title-cell">INSPECCIÓN MENSUAL<br><span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span></td>'
-                + '<td class="qms-item" style="width:25%;"><b>CÓDIGO:</b> F-MAN-003</td></tr>'
-                + '<tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>'
-                + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>'
-                + '</table>'
-                var dtStr = fechaIng ? rotFmtFecha(fechaIng).split(' ')[0] : '____/____/______';
-                var kmStr = km ? Number(km).toLocaleString('es-PE') : '________________';
-
-                html += '<table class="data-grid">'
-                + '<tr><td style="width:35%;">Nº de Reporte: <span class="val-blue">' + rotEscHtml(idOt) + '</span></td>'
-                + '<td style="width:35%;">Placa: <span class="val-normal">' + rotEscHtml(placa) + '</span></td>'
-                + '<td rowspan="2" style="width:30%;vertical-align:top;">Rampa:<br></td></tr>'
-                + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + rotEscHtml(dtStr) + '</span></td>'
-                + '<td>Kilometraje: <span class="val-normal">' + rotEscHtml(kmStr) + '</span></td></tr>'
-                + '</table>'
-                + '<table class="checklist-table">'
-                + '<thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">OK</th><th class="w-chk th-center">MAL</th><th class="w-obs th-center">OBSERVACION</th></tr></thead>'
-                + '<tbody>' + tbody + '</tbody>'
-                + '</table>'
-                + '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;margin-top:20px;">'
-                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Tecnico</div></div>'
-                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Jefe de taller</div></div>'
-                + '<div style="text-align:center;"><div style="border-top:1px solid #000;margin-top:40px;width:80%;margin-left:auto;margin-right:auto;"></div><div style="font-size:12px;font-weight:bold;">Planner de Mantenimiento</div></div>'
-                + '</div>'
-                + '</body></html>';
+            var html = '<!DOCTYPE html>\\n' +
+                '<html lang="es">\\n' +
+                '<head>\\n' +
+                '    <meta charset="UTF-8">\\n' +
+                '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\\n' +
+                '    <title>Reporte Fallas Mecánicas</title>\\n' +
+                '    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">\\n' +
+                '    <style>\\n' +
+                '        :root {\\n' +
+                '            --blue-header: #0053b3;\\n' +
+                '            --blue-num: #4a86e8;\\n' +
+                '            --chk-green: #00ff00;\\n' +
+                '            --chk-red: #ff0000;\\n' +
+                '        }\\n' +
+                '        * {\\n' +
+                '            font-family: "Oswald", sans-serif !important;\\n' +
+                '            box-sizing: border-box;\\n' +
+                '            -webkit-print-color-adjust: exact !important;\\n' +
+                '            print-color-adjust: exact !important;\\n' +
+                '        }\\n' +
+                '        body {\\n' +
+                '            background-color: #e0e0e0;\\n' +
+                '            margin: 0;\\n' +
+                '            padding: 20px;\\n' +
+                '            display: flex;\\n' +
+                '            justify-content: center;\\n' +
+                '        }\\n' +
+                '        #btnPrint {\\n' +
+                '            position: fixed; top: 20px; right: 20px;\\n' +
+                '            background-color: #000; color: #fff; border: none;\\n' +
+                '            padding: 8px 16px; border-radius: 4px;\\n' +
+                '            font-size: 14px;\\n' +
+                '            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 1000;\\n' +
+                '        }\\n' +
+                '        #btnPrint:hover { opacity: 0.9; }\\n' +
+                '        .page-container {\\n' +
+                '            width: 210mm;\\n' +
+                '            height: 296mm;\\n' +
+                '            background: white;\\n' +
+                '            padding: 5mm 10mm;\\n' +
+                '            box-sizing: border-box;\\n' +
+                '            box-shadow: 0 0 15px rgba(0,0,0,0.2);\\n' +
+                '            position: relative;\\n' +
+                '            display: flex;\\n' +
+                '            flex-direction: column;\\n' +
+                '        }\\n' +
+                '        .iso-header {\\n' +
+                '            width: 100%;\\n' +
+                '            border-collapse: collapse;\\n' +
+                '            border: 2px solid #000;\\n' +
+                '            margin-bottom: -2px;\\n' +
+                '            table-layout: fixed;\\n' +
+                '            flex-shrink: 0;\\n' +
+                '        }\\n' +
+                '        .iso-header td {\\n' +
+                '            border: 1px solid #000;\\n' +
+                '            text-align: center;\\n' +
+                '            vertical-align: middle;\\n' +
+                '        }\\n' +
+                '        .logo-cell { \\n' +
+                '            width: 20%; \\n' +
+                '            padding: 2px;\\n' +
+                '        }\\n' +
+                '        .title-cell { \\n' +
+                '            width: 55%; \\n' +
+                '            font-size: 24px;\\n' +
+                '            font-weight: bold; \\n' +
+                '            line-height: 1; \\n' +
+                '            text-transform: uppercase; \\n' +
+                '            color: #000;\\n' +
+                '        }\\n' +
+                '        .sub-title { \\n' +
+                '            font-size: 12px; \\n' +
+                '            font-weight: normal; \\n' +
+                '            color: #333; \\n' +
+                '            letter-spacing: 1px;\\n' +
+                '        }\\n' +
+                '        .qms-item { \\n' +
+                '            width: 25%; \\n' +
+                '            font-size: 10px; \\n' +
+                '            text-align: left !important; \\n' +
+                '            padding: 1px 4px; \\n' +
+                '            height: 16px; \\n' +
+                '        }\\n' +
+                '        .data-grid {\\n' +
+                '            width: 100%;\\n' +
+                '            border-collapse: collapse;\\n' +
+                '            border: 2px solid #000;\\n' +
+                '            margin-bottom: 4px;\\n' +
+                '            table-layout: fixed;\\n' +
+                '            flex-shrink: 0;\\n' +
+                '        }\\n' +
+                '        .data-grid td {\\n' +
+                '            border: 1px solid #000;\\n' +
+                '            padding: 1px 4px;\\n' +
+                '            font-size: 11px;\\n' +
+                '            font-weight: bold;\\n' +
+                '            height: 20px;\\n' +
+                '            vertical-align: middle;\\n' +
+                '        }\\n' +
+                '        .col-left { width: 35%; }\\n' +
+                '        .col-mid { width: 35%; }\\n' +
+                '        .col-right { width: 30%; vertical-align: top !important; padding-top: 2px !important; }\\n' +
+                '        .val-normal { font-weight: normal; margin-left: 3px; }\\n' +
+                '        .val-blue { color: var(--blue-num); font-size: 13px; margin-left: 3px; }\\n' +
+                '        .table-wrapper {\\n' +
+                '            flex-grow: 1;\\n' +
+                '            display: flex;\\n' +
+                '            flex-direction: column;\\n' +
+                '            margin-bottom: 5px;\\n' +
+                '        }\\n' +
+                '        .checklist-table {\\n' +
+                '            width: 100%;\\n' +
+                '            flex-grow: 1;\\n' +
+                '            border-collapse: collapse;\\n' +
+                '            border: 2px solid #000;\\n' +
+                '            font-size: 9.5px;\\n' +
+                '        }\\n' +
+                '        .checklist-table th {\\n' +
+                '            background-color: var(--blue-header);\\n' +
+                '            color: white;\\n' +
+                '            text-transform: uppercase;\\n' +
+                '            padding: 2px;\\n' +
+                '            border: 1px solid #000;\\n' +
+                '            text-align: left;\\n' +
+                '        }\\n' +
+                '        .checklist-table th.th-center { text-align: center; }\\n' +
+                '        .checklist-table td {\\n' +
+                '            border: 1px solid #000;\\n' +
+                '            padding: 1px 3px;\\n' +
+                '            vertical-align: middle;\\n' +
+                '        }\\n' +
+                '        .sec-row td {\\n' +
+                '            background-color: #f2f2f2;\\n' +
+                '            font-weight: bold;\\n' +
+                '            border-top: 2px solid #000;\\n' +
+                '            padding: 1px 3px;\\n' +
+                '        }\\n' +
+                '        .w-crit { width: 45%; }\\n' +
+                '        .w-chk { width: 22px; text-align: center; padding: 0; }\\n' +
+                '        .w-obs { width: auto; }\\n' +
+                '        .sq {\\n' +
+                '            display: inline-block;\\n' +
+                '            width: 9px; height: 9px;\\n' +
+                '            background: #fff; margin-top: 2px;\\n' +
+                '        }\\n' +
+                '        .sq-green { border: 2px solid var(--chk-green); }\\n' +
+                '        .sq-red { border: 2px solid var(--chk-red); }\\n' +
+                '        .footer {\\n' +
+                '            flex-shrink: 0;\\n' +
+                '            height: 45px;\\n' +
+                '            display: flex;\\n' +
+                '            justify-content: space-between;\\n' +
+                '            align-items: flex-end;\\n' +
+                '            padding: 0 10px;\\n' +
+                '        }\\n' +
+                '        .sign-box {\\n' +
+                '            width: 30%;\\n' +
+                '            text-align: center;\\n' +
+                '        }\\n' +
+                '        .sign-line {\\n' +
+                '            border-top: 2px solid #000;\\n' +
+                '            margin-bottom: 2px;\\n' +
+                '        }\\n' +
+                '        .sign-label {\\n' +
+                '            font-weight: bold;\\n' +
+                '            font-size: 11px;\\n' +
+                '        }\\n' +
+                '        @media print {\\n' +
+                '            @page { size: A4; margin: 0; }\\n' +
+                '            body { background: none; padding: 0; margin: 0; }\\n' +
+                '            #btnPrint { display: none; }\\n' +
+                '            .page-container { \\n' +
+                '                width: 210mm; \\n' +
+                '                height: 296mm; \\n' +
+                '                padding: 5mm 10mm;\\n' +
+                '                box-shadow: none; \\n' +
+                '                border: none; \\n' +
+                '                margin: 0;\\n' +
+                '            }\\n' +
+                '        }\\n' +
+                '    </style>\\n' +
+                '</head>\\n' +
+                '<body>\\n' +
+                '    <button id="btnPrint" onclick="window.print()">Print PDF</button>\\n' +
+                '    <div class="page-container">\\n' +
+                '        <table class="iso-header">\\n' +
+                '            <tr>\\n' +
+                '                <td class="logo-cell" rowspan="3">\\n' +
+                '                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">\\n' +
+                '                </td>\\n' +
+                '                <td class="title-cell" rowspan="3">\\n' +
+                '                    INSPECCIÓN MENSUAL<br>\\n' +
+                '                    <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>\\n' +
+                '                </td>\\n' +
+                '                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>\\n' +
+                '            </tr>\\n' +
+                '            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>\\n' +
+                '            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>\\n' +
+                '        </table>\\n' +
+                '        <table class="data-grid">\\n' +
+                '            <tr>\\n' +
+                '                <td class="col-left">Nº de Reporte: <span class="val-blue">' + rotEscHtml(idOt) + '</span></td>\\n' +
+                '                <td class="col-mid">Placa: <span class="val-normal">' + rotEscHtml(placa) + '</span></td>\\n' +
+                '                <td class="col-right" rowspan="2">\\n' +
+                '                    Rampa:<br>\\n' +
+                '                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>\\n' +
+                '                </td>\\n' +
+                '            </tr>\\n' +
+                '            <tr>\\n' +
+                '                <td>Fecha de Ingreso: <span class="val-normal">' + rotEscHtml(dtStr) + '</span></td>\\n' +
+                '                <td>Kilometraje: <span class="val-normal">' + rotEscHtml(kmStr) + '</span></td>\\n' +
+                '            </tr>\\n' +
+                '        </table>\\n' +
+                '        <div class="table-wrapper">\\n' +
+                '            <table class="checklist-table">\\n' +
+                '                <thead>\\n' +
+                '                    <tr>\\n' +
+                '                        <th class="w-crit">CRITERIOS</th>\\n' +
+                '                        <th class="w-chk th-center">OK</th>\\n' +
+                '                        <th class="w-chk th-center">MAL</th>\\n' +
+                '                        <th class="w-obs th-center">OBSERVACION</th>\\n' +
+                '                    </tr>\\n' +
+                '                </thead>\\n' +
+                '                <tbody>' + tbody + '</tbody>\\n' +
+                '            </table>\\n' +
+                '        </div>\\n' +
+                '        <div class="footer">\\n' +
+                '            <div class="sign-box">\\n' +
+                '                <div class="sign-line"></div>\\n' +
+                '                <div class="sign-label">Tecnico</div>\\n' +
+                '            </div>\\n' +
+                '            <div class="sign-box">\\n' +
+                '                <div class="sign-line"></div>\\n' +
+                '                <div class="sign-label">Jefe de taller</div>\\n' +
+                '            </div>\\n' +
+                '            <div class="sign-box">\\n' +
+                '                <div class="sign-line"></div>\\n' +
+                '                <div class="sign-label">Planner de Mantenimiento</div>\\n' +
+                '            </div>\\n' +
+                '        </div>\\n' +
+                '    </div>\\n' +
+                '</body>\\n' +
+                '</html>';
 
             var win = window.open('', '_blank');
             win.document.open();

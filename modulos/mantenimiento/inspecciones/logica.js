@@ -861,32 +861,37 @@ window.renderModernInspForm = function() {
     // Tarjeta Final: Firma
     html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
         <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
-            <h6 class="fw-bold text-primary m-0"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMA</h6>
+            <h6 class="fw-bold text-primary m-0"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMAS</h6>
         </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-8 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
-                    <div class="position-relative">
-                        <input type="text" id="i_tecnico-txt" class="form-control form-control-sm text-uppercase shadow-sm"
-                               placeholder="Selecciona o escribe uno nuevo" autocomplete="off" required
-                               style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')"
-                               onfocus="window._cbFiltrar('i_tecnico')"
-                               onblur="window._cbHide('i_tecnico')">
-                        <input type="hidden" id="i_tecnico" name="i_tecnico">
-                        <div id="i_tecnico-dd" class="cb-dropdown"></div>
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico" placeholder="Ej. Juan Pérez" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <div class="mt-3">
+                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
+                        <canvas id="canvasFirma" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirma')"><i class="bi bi-eraser"></i> Borrar</button>
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días Propuestos</label>
-                    <input type="number" class="form-control fw-bold shadow-sm" id="i_dias" value="30" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Jefe de Taller *</label>
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_jefe_taller" placeholder="Ej. Carlos Ramos" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <div class="mt-3">
+                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Jefe</label>
+                        <canvas id="canvasFirmaJefe" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirmaJefe')"><i class="bi bi-eraser"></i> Borrar</button>
+                    </div>
                 </div>
-            </div>
-            <div class="mb-2">
-                <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
-                <canvas id="canvasFirma" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
-                <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirma()"><i class="bi bi-eraser"></i> Borrar Firma</button>
+                <div class="col-md-4 mb-3">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Planner de Mant. *</label>
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_planner" placeholder="Ej. Luis Díaz" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <div class="mt-3">
+                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Planner</label>
+                        <canvas id="canvasFirmaPlanner" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirmaPlanner')"><i class="bi bi-eraser"></i> Borrar</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>`;
@@ -941,10 +946,74 @@ window.renderModernInspForm = function() {
     let inputPla = document.getElementById('i_placa-txt');
     if (inputPla) inputPla.addEventListener('input', function() { document.getElementById('i_placa').value = this.value; window.autocompletarInfoInsp(); });
     
-    setTimeout(initFirma, 500);
+    setTimeout(function() {
+        if(typeof window.initFirmaCanvas === 'function') {
+            window.initFirmaCanvas('canvasFirma');
+            window.initFirmaCanvas('canvasFirmaJefe');
+            window.initFirmaCanvas('canvasFirmaPlanner');
+        } else if(typeof initFirma === 'function') { initFirma(); }
+    }, 500);
+};
+
+window.initFirmaCanvas = function(id) {
+    let cvs = document.getElementById(id);
+    if (!cvs) return;
+    let ctx = cvs.getContext('2d');
+    cvs.width = cvs.offsetWidth || 300;
+    cvs.height = cvs.offsetHeight || 150;
+    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000000';
+    let drawing = false;
+
+    function getPos(e) {
+        let rect = cvs.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+    function start(e) { drawing = true; draw(e); }
+    function stop() { drawing = false; ctx.beginPath(); }
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        let pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    }
+
+    cvs.onmousedown = start; cvs.onmouseup = stop; cvs.onmousemove = draw; cvs.onmouseout = stop;
+    cvs.addEventListener('touchstart', start, {passive: false});
+    cvs.addEventListener('touchend', stop);
+    cvs.addEventListener('touchmove', draw, {passive: false});
+};
+
+window.limpiarFirmaCanvas = function(id) {
+    let cvs = document.getElementById(id);
+    if (!cvs) return;
+    let ctx = cvs.getContext('2d');
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
 };
 
 window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPreselect) {
+    if (!document.getElementById('drawerInspeccion')) {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
+        fetch('/modulos/mantenimiento/inspecciones/vista.html')
+            .then(r => r.text())
+            .then(html => {
+                let tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                let drawer = tmp.querySelector('#drawerInspeccion');
+                if (drawer) {
+                    document.body.appendChild(drawer);
+                    window.abrirModalNuevaInspeccion(placaPreselect, idOtPreselect, kmPreselect);
+                } else {
+                    alert("No se encontró la vista de Inspecciones.");
+                }
+            })
+            .catch(e => console.error(e));
+        return;
+    }
+
     window.renderModernInspForm();
 
     let formEl = document.getElementById('formNuevaInspeccion');
@@ -992,6 +1061,25 @@ window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPr
 };
 
 window.abrirModalEditarInspeccion = function (idBusqueda) {
+    if (!document.getElementById('drawerInspeccion')) {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando formulario...", "bg-info");
+        fetch('/modulos/mantenimiento/inspecciones/vista.html')
+            .then(r => r.text())
+            .then(html => {
+                let tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                let drawer = tmp.querySelector('#drawerInspeccion');
+                if (drawer) {
+                    document.body.appendChild(drawer);
+                    window.abrirModalEditarInspeccion(idBusqueda);
+                } else {
+                    alert("No se encontró la vista de Inspecciones.");
+                }
+            })
+            .catch(e => console.error(e));
+        return;
+    }
+
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
     if (!insp) return;
 
