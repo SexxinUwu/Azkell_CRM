@@ -102,9 +102,20 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
         nextBtn.style.display = currentIndex < photosList.length - 1 ? 'block' : 'none';
         
         isZoomed = false;
-        imgEl.style.transform = "scale(1)";
+        zoomLevel = 1;
+        panX = 0; panY = 0;
+        imgEl.style.transform = "translate(0px, 0px) scale(1)";
+        imgEl.style.transformOrigin = "center center";
         imgContainer.style.cursor = "zoom-in";
     }
+
+    zoomLevel = 1;
+    let panX = 0, panY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialPinchDist = null;
+    let initialZoom = 1;
+    let touchstartX = 0;
 
     renderImg();
 
@@ -112,9 +123,10 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
     nextBtn.onclick = (e) => { e.stopPropagation(); if (currentIndex < photosList.length - 1) { currentIndex++; renderImg(); } };
 
     imgContainer.onclick = (e) => {
+        if (e.pointerType === "touch") return; 
         e.stopPropagation();
-        if (!isZoomed) {
-            isZoomed = true;
+        if (zoomLevel === 1) {
+            zoomLevel = 2;
             let rect = imgEl.getBoundingClientRect();
             let x = e.clientX - rect.left;
             let y = e.clientY - rect.top;
@@ -126,44 +138,96 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
             } else {
                 imgEl.style.transformOrigin = `center center`;
             }
-            imgEl.style.transform = `scale(${zoomLevel})`;
+            imgEl.style.transform = `translate(0px, 0px) scale(${zoomLevel})`;
             imgContainer.style.cursor = "zoom-out";
             
             prevBtn.style.display = 'none';
             nextBtn.style.display = 'none';
+            isZoomed = true;
         } else {
-            isZoomed = false;
-            imgEl.style.transform = "scale(1)";
+            zoomLevel = 1;
+            panX = 0; panY = 0;
+            imgEl.style.transform = "translate(0px, 0px) scale(1)";
             imgContainer.style.cursor = "zoom-in";
             
             prevBtn.style.display = currentIndex > 0 ? 'block' : 'none';
             nextBtn.style.display = currentIndex < photosList.length - 1 ? 'block' : 'none';
+            isZoomed = false;
         }
     };
+
+    function getDistance(touches) {
+        return Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
+    }
+
+    div.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            initialPinchDist = getDistance(e.touches);
+            initialZoom = zoomLevel;
+            isDragging = false;
+        } else if (e.touches.length === 1) {
+            if (zoomLevel > 1) {
+                isDragging = true;
+                startX = e.touches[0].pageX - panX;
+                startY = e.touches[0].pageY - panY;
+            } else {
+                touchstartX = e.changedTouches[0].screenX;
+            }
+        }
+    }, {passive: false});
+
+    div.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && initialPinchDist) {
+            e.preventDefault(); 
+            let currentDist = getDistance(e.touches);
+            let scale = currentDist / initialPinchDist;
+            zoomLevel = Math.min(Math.max(1, initialZoom * scale), 5);
+            imgEl.style.transformOrigin = 'center center';
+            imgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+            
+            if (zoomLevel > 1) {
+                isZoomed = true;
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+            } else {
+                isZoomed = false;
+                panX = 0; panY = 0;
+                imgEl.style.transform = `translate(0px, 0px) scale(1)`;
+                prevBtn.style.display = currentIndex > 0 ? 'block' : 'none';
+                nextBtn.style.display = currentIndex < photosList.length - 1 ? 'block' : 'none';
+            }
+        } else if (e.touches.length === 1 && isDragging && zoomLevel > 1) {
+            e.preventDefault();
+            panX = e.touches[0].pageX - startX;
+            panY = e.touches[0].pageY - startY;
+            imgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+        }
+    }, {passive: false});
+
+    div.addEventListener('touchend', e => {
+        if (e.touches.length < 2) {
+            initialPinchDist = null;
+        }
+        if (e.touches.length === 0) {
+            isDragging = false;
+            if (!isZoomed && e.changedTouches.length > 0) {
+                let touchendX = e.changedTouches[0].screenX;
+                if (touchendX < touchstartX - 50 && currentIndex < photosList.length - 1) {
+                    currentIndex++; renderImg();
+                }
+                if (touchendX > touchstartX + 50 && currentIndex > 0) {
+                    currentIndex--; renderImg();
+                }
+            }
+        }
+    });
 
     div.onclick = function(e) {
         if (e.target === div || e.target === titleEl) {
             div.remove();
         }
     };
-
-    let touchstartX = 0;
-    let touchendX = 0;
-    
-    div.addEventListener('touchstart', e => {
-        touchstartX = e.changedTouches[0].screenX;
-    }, {passive: true});
-    
-    div.addEventListener('touchend', e => {
-        if (isZoomed) return;
-        touchendX = e.changedTouches[0].screenX;
-        if (touchendX < touchstartX - 50 && currentIndex < photosList.length - 1) {
-            currentIndex++; renderImg();
-        }
-        if (touchendX > touchstartX + 50 && currentIndex > 0) {
-            currentIndex--; renderImg();
-        }
-    }, {passive: true}); 
 
     document.addEventListener('keydown', function keyHandler(e) {
         if (!document.getElementById(overlayId)) {
