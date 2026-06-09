@@ -2172,15 +2172,14 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             var tbody = '';
             var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
             schema.forEach(function(sec, idxCat) {
-                tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat] || (idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+                tbody += '<tr class="sec-row"><td colspan="3">' + (romanos[idxCat] || (idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
                 if (sec.items) {
                     var itemsArr = Array.isArray(sec.items) ? sec.items : [];
                     itemsArr.forEach(function(item, idxItem) {
                         var lbl = typeof item === 'string' ? item : item.label;
                         tbody += '<tr>'
                                + '<td>' + (idxItem+1) + '. ' + rotEscHtml(lbl) + '</td>'
-                               + '<td class="w-chk"><div class="sq sq-green"></div></td>'
-                               + '<td class="w-chk"><div class="sq sq-red"></div></td>'
+                               + '<td class="w-chk"></td>'
                                + '<td></td>'
                                + '</tr>';
                     });
@@ -2326,8 +2325,8 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             padding: 1px 3px;
         }
         .w-crit { width: 45%; }
-        .w-chk { width: 22px; text-align: center; padding: 0; }
-        .w-obs { width: auto; }
+        .w-chk { width: 10%; text-align: center; padding: 0; }
+        .w-obs { width: 45%; }
         .sq {
             display: inline-block;
             width: 9px; height: 9px;
@@ -2406,8 +2405,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
                 <thead>
                     <tr>
                         <th class="w-crit">CRITERIOS</th>
-                        <th class="w-chk th-center">OK</th>
-                        <th class="w-chk th-center">MAL</th>
+                        <th class="w-chk th-center">ESTADO</th>
                         <th class="w-obs th-center">OBSERVACION</th>
                     </tr>
                 </thead>

@@ -952,7 +952,7 @@ function generarPDFInspeccion() {
         var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
         var schema = window.DYNAMIC_INSP_SCHEMA || [];
         schema.forEach(function(sec, idxCat) {
-            tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat]||(idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+            tbody += '<tr class="sec-row"><td colspan="3">' + (romanos[idxCat]||(idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
             if (sec.items) {
                 sec.items.forEach(function(item, idxItem) {
                     var lbl = typeof item === 'string' ? item : item.label;
@@ -961,13 +961,13 @@ function generarPDFInspeccion() {
                         var catNorm = (d.categoria.replace(/^\d+\.\s*/, '')).trim().toLowerCase();
                         return d.item.trim().toLowerCase() === lbl.trim().toLowerCase() && catNorm === sec.tab.trim().toLowerCase();
                     });
-                    var okIcon = '', malIcon = '', obs = '';
+                    var estadoHtml = '', obs = '';
                     if (match && match.estado) {
-                        if (match.estado === 'OK') okIcon = '<span style="color:#16a34a;font-weight:bold;font-size:14px;">✓</span>';
-                        if (match.estado === 'FALLA') malIcon = '<span style="color:#dc2626;font-weight:bold;font-size:14px;">✗</span>';
+                        if (match.estado === 'OK') estadoHtml = '<span style="color:#16a34a;font-weight:bold;font-size:11px;">BIEN</span>';
+                        if (match.estado === 'FALLA') estadoHtml = '<span style="color:#dc2626;font-weight:bold;font-size:11px;">MAL</span>';
                         obs = match.observacion || '';
                     }
-                    tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + okIcon + '</td><td class="w-chk" style="text-align:center;">' + malIcon + '</td><td>' + obs + '</td></tr>';
+                    tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + estadoHtml + '</td><td>' + obs + '</td></tr>';
                 });
             }
         });
@@ -1020,7 +1020,7 @@ function generarPDFInspeccion() {
             + '.checklist-table th.th-center{text-align:center;}'
             + '.checklist-table td{border:1px solid #000;padding:1px 3px;vertical-align:middle;}'
             + '.sec-row td{background-color:#f2f2f2;font-weight:bold;border-top:2px solid #000;padding:1px 3px;}'
-            + '.w-crit{width:46%;} .w-chk{width:4%;text-align:center;padding:0;} .w-obs{width:46%;}'
+            + '.w-crit{width:45%;} .w-chk{width:10%;text-align:center;padding:0;} .w-obs{width:45%;}'
             + '.footer{flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
             + '.sign-box{width:30%;text-align:center;} .sign-line{border-top:2px solid #000;margin-bottom:2px;} .sign-label{font-weight:bold;font-size:11px;}'
             + '.sign-img{max-height:60px;max-width:100%;display:block;margin:0 auto 5px;}'
@@ -1044,7 +1044,7 @@ function generarPDFInspeccion() {
             + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr></table>'
             + '<table class="data-grid"><tr><td class="col-left">Nº de Reporte: <span class="val-blue">' + (insp.id||'') + '</span></td><td class="col-mid">Placa: <span class="val-normal">' + (insp.placa||'') + '</span></td><td class="col-right" rowspan="2">Rampa:<br><span class="val-normal"></span></td></tr>'
             + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + (fIng||'') + '</span></td><td>Kilometraje: <span class="val-normal">' + (insp.km_tablero||'-') + '</span></td></tr></table>'
-            + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">OK</th><th class="w-chk th-center">MAL</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
+            + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">ESTADO</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
             + '<div class="footer">'
             + '<div class="sign-box">' + (inspUrlFirma && inspUrlFirma.length > 100 ? '<img class="sign-img" src="' + inspUrlFirma + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Técnico Inspector<br><span style="font-weight:normal;">' + (insp.tecnico||'') + '</span></div></div>'
             + '<div class="sign-box">' + (firmaJefeImg ? '<img class="sign-img" src="' + firmaJefeImg + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Jefe de Taller<br><span style="font-weight:normal;">' + firmaJefeNombre + '</span></div></div>'
@@ -1594,10 +1594,10 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1065';
+        offEl.style.zIndex = '1080';
         offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
             let backdrops = document.querySelectorAll('.offcanvas-backdrop');
-            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1064';
+            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1079';
             offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
         });
         new bootstrap.Offcanvas(offEl).show();
@@ -1739,10 +1739,10 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1065';
+        offEl.style.zIndex = '1080';
         offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
             let backdrops = document.querySelectorAll('.offcanvas-backdrop');
-            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1064';
+            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1079';
             offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
         });
         new bootstrap.Offcanvas(offEl).show();
