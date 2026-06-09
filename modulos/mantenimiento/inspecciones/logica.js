@@ -43,36 +43,25 @@ fetch('/api/mantenimiento/inspecciones/config')
 
 // ── Lightbox para evidencias fotográficas ─────────────────────────
 window.verFotoEvidencia = function (urlFoto, titulo) {
-    var modalId = 'modal-foto-evidencia';
-    var existing = document.getElementById(modalId);
+    var overlayId = 'overlay-foto-evidencia';
+    var existing = document.getElementById(overlayId);
     if (existing) existing.remove();
     var div = document.createElement('div');
-    div.id = modalId;
-    div.className = 'modal fade';
-    div.tabIndex = -1;
-    div.innerHTML =
-        '<div class="modal-dialog modal-lg modal-dialog-centered">' +
-        '<div class="modal-content" style="background:var(--surface);color:var(--text);">' +
-        '<div class="modal-header border-0 pb-1">' +
-        '<h6 class="modal-title fw-semibold"><i class="bi bi-camera-fill me-2 text-secondary"></i>' +
-        (titulo || 'Evidencia fotográfica').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h6>' +
-        '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
-        '</div>' +
-        '<div class="modal-body text-center p-2">' +
-        '<img src="' + urlFoto + '" class="img-fluid rounded" style="max-height:70vh;object-fit:contain;" ' +
-        'onerror="this.src=\'\';this.alt=\'No se pudo cargar la imagen\';">' +
-        '</div>' +
-        '<div class="modal-footer border-0 pt-1">' +
-        '<a href="' + urlFoto + '" target="_blank" class="btn btn-sm btn-outline-secondary">' +
-        '<i class="bi bi-box-arrow-up-right me-1"></i>Abrir original</a>' +
-        '<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>' +
-        '</div>' +
-        '</div>' +
-        '</div>';
+    div.id = overlayId;
+    div.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1060; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: zoom-out;";
+    
+    div.onclick = function() { div.remove(); };
+    
+    let safeTitle = (titulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    div.innerHTML = `
+        <div style="position: absolute; top: 20px; right: 25px; color: white; font-size: 32px; cursor: pointer; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+            <i class="bi bi-x"></i>
+        </div>
+        <img src="${urlFoto}" style="max-width: 95vw; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" onclick="event.stopPropagation();">
+        <div style="color: white; margin-top: 20px; font-weight: 600; font-size: 16px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">${safeTitle}</div>
+    `;
+    
     document.body.appendChild(div);
-    var modal = bootstrap.Modal.getOrCreateInstance(div);
-    modal.show();
-    div.addEventListener('hidden.bs.modal', function () { div.remove(); });
 };
 
 // ==========================================
@@ -584,8 +573,8 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
 
     let htmlChecklistPDF = "";
     let htmlUI = `
-    <div class="p-3 p-md-4" style="background-color: #f8fafc;">
-        <div class="d-flex flex-wrap gap-3 gap-md-4 mb-4 p-3 bg-white rounded shadow-sm" style="border: 1px solid #e2e8f0;">
+    <div class="p-0 p-md-4" style="background-color: #f8fafc; min-height: 100%;">
+        <div class="d-flex flex-wrap gap-3 gap-md-4 mb-3 p-3 bg-white rounded-0 rounded-md shadow-sm" style="border: 1px solid #e2e8f0; border-left: 0; border-right: 0;">
             <div class="flex-grow-1">
                 <span class="text-uppercase" style="font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 0.5px;">Nº Reporte</span>
                 <div style="font-size: 15px; font-weight: 800; color: #0284c7;">${insp.id || '-'}</div>
@@ -607,7 +596,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                 <div style="font-size: 14px; font-weight: 600; color: #334155;">${insp.km_tablero || '-'}</div>
             </div>
         </div>
-        <div class="bg-white rounded shadow-sm p-3 p-md-4" style="border: 1px solid #e2e8f0;">
+        <div class="bg-white rounded-0 rounded-md shadow-sm p-0 p-md-4 pb-4" style="border: 1px solid #e2e8f0; border-left: 0; border-right: 0;">
     `;
     const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
@@ -716,7 +705,13 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     let modalDialog = document.querySelector('#modalResumenInspeccion .modal-dialog');
     if(modalDialog) {
         modalDialog.classList.remove('modal-lg');
-        modalDialog.classList.add('modal-xl');
+        modalDialog.classList.add('modal-xl', 'modal-fullscreen-lg-down');
+    }
+    
+    let modalBody = document.querySelector('#modalResumenInspeccion .modal-body');
+    if(modalBody) {
+        modalBody.classList.remove('p-4');
+        modalBody.classList.add('p-0', 'p-md-4');
     }
 
     if (autoDescargarPDF) {
