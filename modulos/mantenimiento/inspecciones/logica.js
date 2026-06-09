@@ -979,12 +979,16 @@ window.abrirModalNuevaInspeccion = function (placaPreselect, idOtPreselect, kmPr
                 iPlaca.value = placaPreselect;
                 let txt = document.getElementById('i_placa-txt');
                 if(txt) txt.value = placaPreselect;
-                autocompletarInfoInsp();
+                window.autocompletarInfoInsp();
             }
         }, 50);
     }
 
-    new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
+    let offEl = document.getElementById('drawerInspeccion');
+    if (offEl && offEl.parentElement !== document.body) {
+        document.body.appendChild(offEl);
+    }
+    new bootstrap.Offcanvas(offEl).show();
 };
 
 window.abrirModalEditarInspeccion = function (idBusqueda) {
@@ -1026,7 +1030,7 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     document.getElementById('i_tecnico').value = insp.tecnico || "";
     document.getElementById('i_dias').value = insp.dias_propuestos || "30";
 
-    autocompletarInfoInsp();
+    window.autocompletarInfoInsp();
 
     let arr = [];
     try {
@@ -1080,7 +1084,11 @@ window.abrirModalEditarInspeccion = function (idBusqueda) {
     }
 
     window.cambiarPestana(0);
-    new bootstrap.Offcanvas(document.getElementById('drawerInspeccion')).show();
+    let offEl = document.getElementById('drawerInspeccion');
+    if (offEl && offEl.parentElement !== document.body) {
+        document.body.appendChild(offEl);
+    }
+    new bootstrap.Offcanvas(offEl).show();
 };
 
 // ============================================================
@@ -1444,7 +1452,11 @@ window.abrirConfigInspecciones = function() {
                 window.DYNAMIC_INSP_SCHEMA = [];
             }
             window.renderConfigInspItems();
-            new bootstrap.Modal(document.getElementById('modalConfigInsp')).show();
+            let mod = document.getElementById('modalConfigInsp');
+            if (mod && mod.parentElement !== document.body) {
+                document.body.appendChild(mod);
+            }
+            new bootstrap.Modal(mod).show();
         })
         .catch(e => alert("Error al abrir configuración"));
 };
