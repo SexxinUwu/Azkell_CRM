@@ -614,6 +614,8 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
         window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
             htmlChecklistPDF += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
+            let catUI = '';
+            let hasItems = false;
             if (sec.items) {
                 sec.items.forEach((item, idxItem) => {
                     let lbl = typeof item === 'string' ? item : item.label;
@@ -633,13 +635,14 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                     </tr>`;
 
                     if (match && match.estado && match.estado !== "SIN DATOS") {
+                        hasItems = true;
                         let badgeHtml = match.estado === 'OK' 
                             ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
                             : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
                         
                         let obsHtml = obs ? `<span style="font-size: 11px; color: #dc2626; display: block; margin-top: 2px;"><i class="bi bi-exclamation-circle"></i> OBS: ${obs}</span>` : '';
 
-                        htmlUI += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        catUI += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                             <div class="d-flex flex-column" style="max-width: 80%;">
                                 <span style="font-size: 13px; color: #475569;">${lbl}</span>
                                 ${obsHtml}
@@ -648,6 +651,10 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                         </div>`;
                     }
                 });
+            }
+            if (hasItems) {
+                htmlUI += `<div class="mt-4 mb-2 pb-1 border-bottom" style="border-bottom-width: 2px !important; border-bottom-color: #cbd5e1 !important;"><span class="text-uppercase fw-bold" style="font-size: 13px; color: #475569;">${romanos[idxCat] || (idxCat+1)}. ${sec.tab}</span></div>`;
+                htmlUI += catUI;
             }
         });
     }
@@ -701,11 +708,12 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         modalDialog.classList.add('modal-xl');
     }
 
-    if (!autoDescargarPDF) {
+    if (autoDescargarPDF) {
+        setTimeout(generarPDFInspeccion, 500);
+    } else {
         let modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResumenInspeccion'));
         modal.show();
     }
-    setTimeout(generarPDFInspeccion, 500);
 }
 
 function generarPDFInspeccion() {
