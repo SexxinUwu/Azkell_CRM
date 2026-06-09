@@ -87,7 +87,15 @@ function mostrarStatusInspecciones(inspecciones) {
     if (procesadorErroresCuota(inspecciones, 'cuerpoTablaStatus')) return;
     dataGlobalInspecciones = inspecciones;
     let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    let numId = (id) => parseInt((id || '').split('-')[1]) || 0;
+    let numId = (id) => {
+        if (!id) return 0;
+        let parts = id.split('-');
+        if (parts.length > 2 && parts[1].length === 4) {
+            // format INSP-2026-06-0001
+            return parseInt(parts[1] + parts[2] + parts[3]) || 0;
+        }
+        return parseInt(parts[1]) || 0;
+    };
     let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
     inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
     let dataFinal = [];
@@ -457,112 +465,97 @@ function filtrarStatusAvanzado() {
     }
 }
 
-function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
+window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     let insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
-    if (!insp) return;
+    if (!insp) {
+        try {
+            if (typeof window.rotToast === 'function') window.rotToast("Cargando detalles...", "bg-info");
+            let req = await fetch('/api/script/obtenerDatosInspecciones', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] })
+            });
+            let res = await req.json();
+            dataGlobalInspecciones = res.data || [];
+            window.dataGlobalInspecciones = dataGlobalInspecciones;
+            insp = dataGlobalInspecciones.find(i => i.id === idBusqueda);
+        } catch (e) { console.error(e); }
+    }
+    if (!insp) { alert("No se encontró la inspección."); return; }
+
+    window._lastInspDetalle = insp;
+
+    let detallesArray = [];
+    try { detallesArray = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch (e) { }
+
+    let s3Urls = [];
+    detallesArray.forEach(d => {
+        if (d.foto && d.foto.startsWith('https://') && d.foto.includes('.s3.')) s3Urls.push(d.foto);
+        if (d.categoria === "FIRMAS_EXTRA" && d.foto && d.foto.startsWith('https://') && d.foto.includes('.s3.')) s3Urls.push(d.foto);
+    });
+    if (insp.url_firma && insp.url_firma.startsWith('https://') && insp.url_firma.includes('.s3.')) s3Urls.push(insp.url_firma);
+
+    let signedMap = {};
+    if (s3Urls.length > 0) {
+        try {
+            if (typeof window.rotToast === 'function') window.rotToast("Cargando evidencias temporales...", "bg-info");
+            let reqUrl = await fetch('/api/mantenimiento/inspecciones/presign-read', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls: s3Urls })
+            });
+            let resUrl = await reqUrl.json();
+            if (resUrl.signedUrls) signedMap = resUrl.signedUrls;
+        } catch (e) { console.error("Error presigning", e); }
+    }
 
     let fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
-    let htmlFallas = ""; let countFallas = 0; let htmlFirmasExtra = "";
+    let countFallas = 0;
     let firmaJefePDF = ""; let nombreJefePDF = "";
     let firmaPlannerPDF = ""; let nombrePlannerPDF = "";
     window.EVIDENCIAS_TMP = window.EVIDENCIAS_TMP || {};
 
     let htmlEvidenciasPDF = ""; let contEvidencias = 1;
 
-    try {
-        let detallesArray = [];
-        if (typeof insp.detalles_json === 'string') {
-            try { detallesArray = JSON.parse(insp.detalles_json); } catch (e) { }
-        } else if (Array.isArray(insp.detalles_json)) {
-            detallesArray = insp.detalles_json;
+    detallesArray.forEach(d => {
+        if (d.estado === "SIN DATOS" || d.estado === "") return;
+
+        let fotoReal = signedMap[d.foto] || d.foto;
+
+        if (d.categoria === "FIRMAS_EXTRA") {
+            if (d.item === "Jefe de Taller") { firmaJefePDF = fotoReal; nombreJefePDF = d.estado; }
+            if (d.item === "Planner de Mant.") { firmaPlannerPDF = fotoReal; nombrePlannerPDF = d.estado; }
+            return;
         }
 
-        if (detallesArray && detallesArray.length > 0) {
-            detallesArray.forEach(d => {
-                if (d.estado === "SIN DATOS" || d.estado === "") return;
+        if (d.estado === "FALLA") countFallas++;
 
-                if (d.categoria === "FIRMAS_EXTRA") {
-                    let nombreHtml = d.estado ? d.estado.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "-";
-                    htmlFirmasExtra += `<div class="mt-3 border-top pt-2"><span style="color:var(--text);font-size:0.8rem;" class="fw-bold text-uppercase">${d.item}</span><br><span style="color:var(--text);font-size:0.9rem;">${nombreHtml}</span><br><img src="${d.foto}" style="max-height:80px; margin-top:5px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; padding:4px;"></div>`;
-                    if (d.item === "Jefe de Taller") { firmaJefePDF = d.foto; nombreJefePDF = d.estado; }
-                    if (d.item === "Planner de Mant.") { firmaPlannerPDF = d.foto; nombrePlannerPDF = d.estado; }
-                    return;
-                }
-
-                let colorTxt = ""; let icon = ""; let pdfClass = "";
-                if (d.estado === "FALLA") {
-                    colorTxt = "color: #dc2626; font-weight: bold;"; icon = "❌"; countFallas++;
-                    pdfClass = "text-danger-pdf";
-                } else if (d.estado === "OK") {
-                    colorTxt = "color: #16a34a; font-weight: bold;"; icon = "✅";
-                    pdfClass = "text-success-pdf";
-                } else {
-                    colorTxt = "color: #0ea5e9; font-weight: bold;"; icon = "ℹ️";
-                    pdfClass = "text-info-pdf";
-                }
-
-                let extraFotoBtn = "";
-                if (d.foto && d.foto.length > 100) {
-                    let nombreFallaSeguro = d.item.replace(/'/g, "\\'");
-                    let tmpKey = 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-                    window.EVIDENCIAS_TMP[tmpKey] = d.foto;
-                    extraFotoBtn = `<br><button class="btn btn-sm btn-secondary mt-1 py-0 px-2 shadow-sm" onclick="verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}: ${nombreFallaSeguro}')"><i class="bi bi-camera"></i> Ver Evidencia ${contEvidencias}</button>`;
-                    htmlEvidenciasPDF += `
-                        <div class="pdf-evidencia-card">
-                            <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
-                            <img src="${d.foto}">
-                            ${d.observacion ? `<p>${d.observacion}</p>` : ''}
-                        </div>
-                    `;
-                    contEvidencias++;
-                }
-
-                htmlFallas += `<div class="pdf-falla-item"><strong>${d.categoria.replace(/^\d+\.\s*/, '')} - ${d.item}:</strong> <span class="${pdfClass}" style="${colorTxt}">${icon} ${d.estado}</span>${d.observacion ? `<span class="pdf-falla-obs">Obs: ${d.observacion}</span>` : ''}${extraFotoBtn}</div>`;
-            });
+        if (fotoReal && fotoReal.length > 100) {
+            let tmpKey = 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+            window.EVIDENCIAS_TMP[tmpKey] = fotoReal;
+            
+            let btnVer = `<button type="button" data-html2canvas-ignore="true" class="btn btn-sm btn-primary mt-2 py-1 px-3 shadow-sm pdf-hide-btn" onclick="window.verFotoEvidencia(window.EVIDENCIAS_TMP['${tmpKey}'], 'Evidencia ${contEvidencias}')"><i class="bi bi-camera"></i> Abrir Evidencia</button>`;
+            
+            htmlEvidenciasPDF += `
+                <div class="pdf-evidencia-card">
+                    <h5>Evidencia ${contEvidencias}: ${d.item}</h5>
+                    <img src="${fotoReal}">
+                    ${d.observacion ? `<p>${d.observacion}</p>` : ''}
+                    <div style="text-align:center;">${btnVer}</div>
+                </div>
+            `;
+            contEvidencias++;
         }
-    } catch (e) { htmlFallas = "<p class='text-danger'>Error al leer los detalles históricos.</p>"; }
+    });
 
-    if (htmlFallas === "") htmlFallas = "<p class='text-center text-muted mt-3'>No hay fallas ni diagnósticos registrados en este reporte.</p>";
-
-    let htmlModal = `
-    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-card-checklist text-primary"></i> REGISTRO GENERAL</div><div class="insp-row"><span style="color:var(--text)">Fecha de Inspección</span><span style="color:var(--text)">${fIng}</span></div><div class="insp-row"><span style="color:var(--text)">Placa</span><span class="text-primary fw-bold">${insp.placa}</span></div><div class="insp-row"><span style="color:var(--text)">Kilometraje</span><span style="color:var(--text)">${insp.km_tablero || '-'}</span></div><div class="insp-row"><span style="color:var(--text)">Fallas Detectadas</span><span class="text-danger fw-bold">${countFallas}</span></div></div></div>
-    <div class="col-md-6"><div class="insp-detail-card shadow-sm"><div class="insp-detail-title"><i class="bi bi-person-badge text-primary"></i> FIRMA Y RESPONSABLE</div><div class="insp-row"><span style="color:var(--text)">Técnico Inspector</span><span style="color:var(--text)">${insp.tecnico || '-'}</span></div>
-    <div class="text-center mt-3 p-2 border rounded bg-white" id="firma-visual-modal"><span class="text-muted"><span class="spinner-border spinner-border-sm"></span> Verificando firma...</span></div>
-    <div id="firmas-extra-container"></div></div></div>
-    <div class="col-12"><div class="card p-3 shadow-sm"><h6 class="fw-bold text-primary border-bottom pb-2">DIAGNÓSTICO</h6><div style="max-height: 300px; overflow-y:auto; font-size: 0.9rem; color:var(--text);">${htmlFallas}</div></div></div>`;
-
-    // GENERAR CHECKLIST PARA PDF
-    let htmlChecklist = "";
     let htmlChecklistPDF = "";
     const romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
-    let detallesArrayParaPDF = [];
-    try { detallesArrayParaPDF = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch(e){}
 
     if (window.DYNAMIC_INSP_SCHEMA && window.DYNAMIC_INSP_SCHEMA.length > 0) {
         window.DYNAMIC_INSP_SCHEMA.forEach((sec, idxCat) => {
-            htmlChecklist += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
             htmlChecklistPDF += `<tr class="sec-row"><td colspan="4">${romanos[idxCat] || (idxCat+1)}. ${sec.tab.toUpperCase()}</td></tr>`;
             if (sec.items) {
                 sec.items.forEach((item, idxItem) => {
                     let lbl = typeof item === 'string' ? item : item.label;
-                    let match = detallesArrayParaPDF.find(d => d.item && normalizeStr(d.item) === normalizeStr(lbl));
-                    
-                    let sqOk = "";
-                    let sqMal = "";
-                    let obs = "";
-
-                    if (match && match.estado) {
-                        if (match.estado === "OK") sqOk = "sq-green";
-                        if (match.estado === "FALLA") sqMal = "sq-red";
-                        obs = match.observacion || "";
-                    }
-
-                    htmlChecklist += `<tr>
-                        <td>${idxItem + 1}. ${lbl}</td>
-                        <td class="w-chk"><div class="sq ${sqOk}"></div></td>
-                        <td class="w-chk"><div class="sq ${sqMal}"></div></td>
-                        <td class="w-obs" style="font-size: 8px;">${obs}</td>
-                    </tr>`;
+                    let match = detallesArray.find(d => d.item && normalizeStr(d.item) === normalizeStr(lbl));
+                    let obs = (match && match.observacion) ? match.observacion : "";
                     
                     htmlChecklistPDF += `<tr>
                         <td class="w-crit">${idxItem + 1}. ${lbl}</td>
@@ -575,20 +568,11 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         });
     }
 
-    let rId = document.getElementById('pdf-insp-reporte');
-    if (rId) rId.innerText = insp.id || '';
-    
-    let rPlaca = document.getElementById('pdf-insp-placa');
-    if (rPlaca) rPlaca.innerText = insp.placa || '';
-    
-    let rRampa = document.getElementById('pdf-insp-rampa');
-    if (rRampa) rRampa.innerText = ''; // Dejar en blanco
-
-    let rFecha = document.getElementById('pdf-insp-fecha');
-    if (rFecha) rFecha.innerText = fIng || '';
-
-    let rKm = document.getElementById('pdf-insp-km');
-    if (rKm) rKm.innerText = insp.km_tablero || '-';
+    let rId = document.getElementById('pdf-insp-reporte'); if (rId) rId.innerText = insp.id || '';
+    let rPlaca = document.getElementById('pdf-insp-placa'); if (rPlaca) rPlaca.innerText = insp.placa || '';
+    let rRampa = document.getElementById('pdf-insp-rampa'); if (rRampa) rRampa.innerText = '';
+    let rFecha = document.getElementById('pdf-insp-fecha'); if (rFecha) rFecha.innerText = fIng || '';
+    let rKm = document.getElementById('pdf-insp-km'); if (rKm) rKm.innerText = insp.km_tablero || '-';
 
     let lblTecnicoFirma = document.getElementById('pdf-insp-tecnico-firma');
     if (lblTecnicoFirma) lblTecnicoFirma.innerText = insp.tecnico || '';
@@ -606,28 +590,14 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         }
     }
 
-    let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
-    if (btnIrOtContainer) {
-        if (insp.id_ot) {
-            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
-        } else {
-            btnIrOtContainer.innerHTML = '';
-        }
-    }
-    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
-    let containerFirmas = document.getElementById('firmas-extra-container');
-    if (containerFirmas) containerFirmas.innerHTML = htmlFirmasExtra;
-
-    new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
-
+    let firmaPrincipalReal = signedMap[insp.url_firma] || insp.url_firma;
     let firmaImgPDF = document.getElementById('pdf-insp-firma');
     if (firmaImgPDF) {
-        if (insp.url_firma && insp.url_firma.length > 100) {
-            firmaImgPDF.src = insp.url_firma;
+        if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
+            firmaImgPDF.src = firmaPrincipalReal;
             firmaImgPDF.style.display = 'inline-block';
-            document.getElementById('firma-visual-modal').innerHTML = `<img src="${insp.url_firma}" style="max-height: 100px; max-width:100%;">`;
         } else {
-            firmaImgPDF.style.display = 'none'; document.getElementById('firma-visual-modal').innerHTML = '<span class="text-muted">Sin firma registrada</span>';
+            firmaImgPDF.style.display = 'none';
         }
         let tecPDF = document.getElementById('pdf-insp-tecnico'); if(tecPDF) tecPDF.textContent = insp.tecnico || '-';
         
@@ -639,6 +609,35 @@ function verDetalleInspeccion(idBusqueda, autoDescargarPDF) {
         if (boxPlanner && firmaPlannerPDF) { boxPlanner.style.display = 'block'; document.getElementById('pdf-insp-firma-planner').src = firmaPlannerPDF; document.getElementById('pdf-insp-planner').textContent = nombrePlannerPDF; }
         else if(boxPlanner) { boxPlanner.style.display = 'none'; }
     }
+
+    let btnIrOtContainer = document.getElementById('btn-ir-ot-container');
+    if (btnIrOtContainer) {
+        if (insp.id_ot) {
+            btnIrOtContainer.innerHTML = `<button type="button" class="btn btn-outline-info btn-sm fw-bold" onclick="bootstrap.Modal.getInstance(document.getElementById('modalResumenInspeccion')).hide(); if(typeof window.rotAbrirDetalle === 'function'){ window.rotAbrirDetalle('${insp.id_ot}'); } else { if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/reportes-ot'); setTimeout(()=> { if(typeof window.rotAbrirDetalle === 'function') window.rotAbrirDetalle('${insp.id_ot}'); }, 800); }"><i class="bi bi-box-arrow-up-right"></i> Ir a OT</button>`;
+        } else {
+            btnIrOtContainer.innerHTML = '';
+        }
+    }
+
+    let pdfNode = document.getElementById('pdf-inspeccion');
+    let pdfHtml = pdfNode ? pdfNode.outerHTML : '<p>Error cargando plantilla PDF</p>';
+
+    let htmlModal = `
+    <div class="d-flex justify-content-center" style="background-color: #cbd5e1; padding: 15px 0; border-radius: 8px;">
+        <div style="transform: scale(0.9); transform-origin: top center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            ${pdfHtml}
+        </div>
+    </div>`;
+
+    document.getElementById('contenedor-resumen-insp').innerHTML = htmlModal;
+
+    let modalDialog = document.querySelector('#modalResumenInspeccion .modal-dialog');
+    if(modalDialog) {
+        modalDialog.classList.remove('modal-lg');
+        modalDialog.classList.add('modal-xl');
+    }
+
+    new bootstrap.Modal(document.getElementById('modalResumenInspeccion')).show();
 
     if (autoDescargarPDF) setTimeout(generarPDFInspeccion, 500);
 }
@@ -1245,17 +1244,37 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         if (iKm) iKm.value = kmPreselect;
     }
 
-    if (placaPreselect) {
-        setTimeout(() => {
-            let iPlaca = document.getElementById('i_placa');
-            if (iPlaca) {
-                iPlaca.value = placaPreselect;
-                let txt = document.getElementById('i_placa-txt');
-                if(txt) txt.value = placaPreselect;
-                window.autocompletarInfoInsp();
-            }
-        }, 50);
-    }
+    setTimeout(() => {
+        document.getElementById('i_placa').value = placaPreselect || "";
+        let txtPla = document.getElementById('i_placa-txt');
+        if(txtPla) txtPla.value = placaPreselect || "";
+
+        let diasPrevios = "30";
+        if (placaPreselect && dataGlobalInspecciones && dataGlobalInspecciones.length > 0) {
+            let normalizeStr = (str) => (str || '').toString().trim().toUpperCase();
+            let numId = (id) => {
+                if (!id) return 0;
+                let parts = id.toString().split('-');
+                if (parts.length > 2 && parts[1].length === 4) { return parseInt(parts[1] + parts[2] + parts[3]) || 0; }
+                return parseInt(parts[1]) || 0;
+            };
+            let inspOrd = [...dataGlobalInspecciones].sort((a, b) => numId(b.id) - numId(a.id));
+            let prevInsp = inspOrd.find(i => normalizeStr(i.placa) === normalizeStr(placaPreselect));
+            if (prevInsp && prevInsp.dias_propuestos) diasPrevios = prevInsp.dias_propuestos.toString();
+        }
+
+        let chk30 = document.getElementById('chk_30dias');
+        let inputDias = document.getElementById('i_dias');
+        let containerDias = document.getElementById('i_dias_container');
+        if(diasPrevios == "30") {
+            if(chk30) chk30.checked = true;
+            if(containerDias) containerDias.style.display = 'none';
+        } else {
+            if(chk30) chk30.checked = false;
+            if(containerDias) containerDias.style.display = 'block';
+            if(inputDias) inputDias.value = diasPrevios;
+        }
+    }, 50);
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
@@ -1509,7 +1528,7 @@ window.eliminarMasivo = function (coleccion, contexto) {
     if (!ids.length) return;
     if (!confirm('¿Eliminar ' + ids.length + ' registro(s) seleccionado(s)? Esta acción no se puede deshacer.')) return;
 
-    fetch('/api/eliminarMasivo', {
+    fetch('/api/script/eliminarDocumento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: ids, coleccion: coleccion })
