@@ -2110,250 +2110,250 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
                 }
             });
 
-            var html = '<!DOCTYPE html>\\n' +
-                '<html lang="es">\\n' +
-                '<head>\\n' +
-                '    <meta charset="UTF-8">\\n' +
-                '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\\n' +
-                '    <title>Reporte Fallas Mecánicas</title>\\n' +
-                '    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">\\n' +
-                '    <style>\\n' +
-                '        :root {\\n' +
-                '            --blue-header: #0053b3;\\n' +
-                '            --blue-num: #4a86e8;\\n' +
-                '            --chk-green: #00ff00;\\n' +
-                '            --chk-red: #ff0000;\\n' +
-                '        }\\n' +
-                '        * {\\n' +
-                '            font-family: "Oswald", sans-serif !important;\\n' +
-                '            box-sizing: border-box;\\n' +
-                '            -webkit-print-color-adjust: exact !important;\\n' +
-                '            print-color-adjust: exact !important;\\n' +
-                '        }\\n' +
-                '        body {\\n' +
-                '            background-color: #e0e0e0;\\n' +
-                '            margin: 0;\\n' +
-                '            padding: 20px;\\n' +
-                '            display: flex;\\n' +
-                '            justify-content: center;\\n' +
-                '        }\\n' +
-                '        #btnPrint {\\n' +
-                '            position: fixed; top: 20px; right: 20px;\\n' +
-                '            background-color: #000; color: #fff; border: none;\\n' +
-                '            padding: 8px 16px; border-radius: 4px;\\n' +
-                '            font-size: 14px;\\n' +
-                '            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 1000;\\n' +
-                '        }\\n' +
-                '        #btnPrint:hover { opacity: 0.9; }\\n' +
-                '        .page-container {\\n' +
-                '            width: 210mm;\\n' +
-                '            height: 296mm;\\n' +
-                '            background: white;\\n' +
-                '            padding: 5mm 10mm;\\n' +
-                '            box-sizing: border-box;\\n' +
-                '            box-shadow: 0 0 15px rgba(0,0,0,0.2);\\n' +
-                '            position: relative;\\n' +
-                '            display: flex;\\n' +
-                '            flex-direction: column;\\n' +
-                '        }\\n' +
-                '        .iso-header {\\n' +
-                '            width: 100%;\\n' +
-                '            border-collapse: collapse;\\n' +
-                '            border: 2px solid #000;\\n' +
-                '            margin-bottom: -2px;\\n' +
-                '            table-layout: fixed;\\n' +
-                '            flex-shrink: 0;\\n' +
-                '        }\\n' +
-                '        .iso-header td {\\n' +
-                '            border: 1px solid #000;\\n' +
-                '            text-align: center;\\n' +
-                '            vertical-align: middle;\\n' +
-                '        }\\n' +
-                '        .logo-cell { \\n' +
-                '            width: 20%; \\n' +
-                '            padding: 2px;\\n' +
-                '        }\\n' +
-                '        .title-cell { \\n' +
-                '            width: 55%; \\n' +
-                '            font-size: 24px;\\n' +
-                '            font-weight: bold; \\n' +
-                '            line-height: 1; \\n' +
-                '            text-transform: uppercase; \\n' +
-                '            color: #000;\\n' +
-                '        }\\n' +
-                '        .sub-title { \\n' +
-                '            font-size: 12px; \\n' +
-                '            font-weight: normal; \\n' +
-                '            color: #333; \\n' +
-                '            letter-spacing: 1px;\\n' +
-                '        }\\n' +
-                '        .qms-item { \\n' +
-                '            width: 25%; \\n' +
-                '            font-size: 10px; \\n' +
-                '            text-align: left !important; \\n' +
-                '            padding: 1px 4px; \\n' +
-                '            height: 16px; \\n' +
-                '        }\\n' +
-                '        .data-grid {\\n' +
-                '            width: 100%;\\n' +
-                '            border-collapse: collapse;\\n' +
-                '            border: 2px solid #000;\\n' +
-                '            margin-bottom: 4px;\\n' +
-                '            table-layout: fixed;\\n' +
-                '            flex-shrink: 0;\\n' +
-                '        }\\n' +
-                '        .data-grid td {\\n' +
-                '            border: 1px solid #000;\\n' +
-                '            padding: 1px 4px;\\n' +
-                '            font-size: 11px;\\n' +
-                '            font-weight: bold;\\n' +
-                '            height: 20px;\\n' +
-                '            vertical-align: middle;\\n' +
-                '        }\\n' +
-                '        .col-left { width: 35%; }\\n' +
-                '        .col-mid { width: 35%; }\\n' +
-                '        .col-right { width: 30%; vertical-align: top !important; padding-top: 2px !important; }\\n' +
-                '        .val-normal { font-weight: normal; margin-left: 3px; }\\n' +
-                '        .val-blue { color: var(--blue-num); font-size: 13px; margin-left: 3px; }\\n' +
-                '        .table-wrapper {\\n' +
-                '            flex-grow: 1;\\n' +
-                '            display: flex;\\n' +
-                '            flex-direction: column;\\n' +
-                '            margin-bottom: 5px;\\n' +
-                '        }\\n' +
-                '        .checklist-table {\\n' +
-                '            width: 100%;\\n' +
-                '            flex-grow: 1;\\n' +
-                '            border-collapse: collapse;\\n' +
-                '            border: 2px solid #000;\\n' +
-                '            font-size: 9.5px;\\n' +
-                '        }\\n' +
-                '        .checklist-table th {\\n' +
-                '            background-color: var(--blue-header);\\n' +
-                '            color: white;\\n' +
-                '            text-transform: uppercase;\\n' +
-                '            padding: 2px;\\n' +
-                '            border: 1px solid #000;\\n' +
-                '            text-align: left;\\n' +
-                '        }\\n' +
-                '        .checklist-table th.th-center { text-align: center; }\\n' +
-                '        .checklist-table td {\\n' +
-                '            border: 1px solid #000;\\n' +
-                '            padding: 1px 3px;\\n' +
-                '            vertical-align: middle;\\n' +
-                '        }\\n' +
-                '        .sec-row td {\\n' +
-                '            background-color: #f2f2f2;\\n' +
-                '            font-weight: bold;\\n' +
-                '            border-top: 2px solid #000;\\n' +
-                '            padding: 1px 3px;\\n' +
-                '        }\\n' +
-                '        .w-crit { width: 45%; }\\n' +
-                '        .w-chk { width: 22px; text-align: center; padding: 0; }\\n' +
-                '        .w-obs { width: auto; }\\n' +
-                '        .sq {\\n' +
-                '            display: inline-block;\\n' +
-                '            width: 9px; height: 9px;\\n' +
-                '            background: #fff; margin-top: 2px;\\n' +
-                '        }\\n' +
-                '        .sq-green { border: 2px solid var(--chk-green); }\\n' +
-                '        .sq-red { border: 2px solid var(--chk-red); }\\n' +
-                '        .footer {\\n' +
-                '            flex-shrink: 0;\\n' +
-                '            height: 45px;\\n' +
-                '            display: flex;\\n' +
-                '            justify-content: space-between;\\n' +
-                '            align-items: flex-end;\\n' +
-                '            padding: 0 10px;\\n' +
-                '        }\\n' +
-                '        .sign-box {\\n' +
-                '            width: 30%;\\n' +
-                '            text-align: center;\\n' +
-                '        }\\n' +
-                '        .sign-line {\\n' +
-                '            border-top: 2px solid #000;\\n' +
-                '            margin-bottom: 2px;\\n' +
-                '        }\\n' +
-                '        .sign-label {\\n' +
-                '            font-weight: bold;\\n' +
-                '            font-size: 11px;\\n' +
-                '        }\\n' +
-                '        @media print {\\n' +
-                '            @page { size: A4; margin: 0; }\\n' +
-                '            body { background: none; padding: 0; margin: 0; }\\n' +
-                '            #btnPrint { display: none; }\\n' +
-                '            .page-container { \\n' +
-                '                width: 210mm; \\n' +
-                '                height: 296mm; \\n' +
-                '                padding: 5mm 10mm;\\n' +
-                '                box-shadow: none; \\n' +
-                '                border: none; \\n' +
-                '                margin: 0;\\n' +
-                '            }\\n' +
-                '        }\\n' +
-                '    </style>\\n' +
-                '</head>\\n' +
-                '<body>\\n' +
-                '    <button id="btnPrint" onclick="window.print()">Print PDF</button>\\n' +
-                '    <div class="page-container">\\n' +
-                '        <table class="iso-header">\\n' +
-                '            <tr>\\n' +
-                '                <td class="logo-cell" rowspan="3">\\n' +
-                '                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">\\n' +
-                '                </td>\\n' +
-                '                <td class="title-cell" rowspan="3">\\n' +
-                '                    INSPECCIÓN MENSUAL<br>\\n' +
-                '                    <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>\\n' +
-                '                </td>\\n' +
-                '                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>\\n' +
-                '            </tr>\\n' +
-                '            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>\\n' +
-                '            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>\\n' +
-                '        </table>\\n' +
-                '        <table class="data-grid">\\n' +
-                '            <tr>\\n' +
-                '                <td class="col-left">Nº de Reporte: <span class="val-blue">' + rotEscHtml(idOt) + '</span></td>\\n' +
-                '                <td class="col-mid">Placa: <span class="val-normal">' + rotEscHtml(placa) + '</span></td>\\n' +
-                '                <td class="col-right" rowspan="2">\\n' +
-                '                    Rampa:<br>\\n' +
-                '                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>\\n' +
-                '                </td>\\n' +
-                '            </tr>\\n' +
-                '            <tr>\\n' +
-                '                <td>Fecha de Ingreso: <span class="val-normal">' + rotEscHtml(dtStr) + '</span></td>\\n' +
-                '                <td>Kilometraje: <span class="val-normal">' + rotEscHtml(kmStr) + '</span></td>\\n' +
-                '            </tr>\\n' +
-                '        </table>\\n' +
-                '        <div class="table-wrapper">\\n' +
-                '            <table class="checklist-table">\\n' +
-                '                <thead>\\n' +
-                '                    <tr>\\n' +
-                '                        <th class="w-crit">CRITERIOS</th>\\n' +
-                '                        <th class="w-chk th-center">OK</th>\\n' +
-                '                        <th class="w-chk th-center">MAL</th>\\n' +
-                '                        <th class="w-obs th-center">OBSERVACION</th>\\n' +
-                '                    </tr>\\n' +
-                '                </thead>\\n' +
-                '                <tbody>' + tbody + '</tbody>\\n' +
-                '            </table>\\n' +
-                '        </div>\\n' +
-                '        <div class="footer">\\n' +
-                '            <div class="sign-box">\\n' +
-                '                <div class="sign-line"></div>\\n' +
-                '                <div class="sign-label">Tecnico</div>\\n' +
-                '            </div>\\n' +
-                '            <div class="sign-box">\\n' +
-                '                <div class="sign-line"></div>\\n' +
-                '                <div class="sign-label">Jefe de taller</div>\\n' +
-                '            </div>\\n' +
-                '            <div class="sign-box">\\n' +
-                '                <div class="sign-line"></div>\\n' +
-                '                <div class="sign-label">Planner de Mantenimiento</div>\\n' +
-                '            </div>\\n' +
-                '        </div>\\n' +
-                '    </div>\\n' +
-                '</body>\\n' +
-                '</html>';
+            var html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Fallas Mecánicas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-header: #0053b3;
+            --blue-num: #4a86e8;
+            --chk-green: #00ff00;
+            --chk-red: #ff0000;
+        }
+        * {
+            font-family: 'Oswald', sans-serif !important;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        #btnPrint {
+            position: fixed; top: 20px; right: 20px;
+            background-color: #000; color: #fff; border: none;
+            padding: 8px 16px; border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 1000;
+        }
+        #btnPrint:hover { opacity: 0.9; }
+        .page-container {
+            width: 210mm;
+            height: 296mm;
+            background: white;
+            padding: 5mm 10mm;
+            box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .iso-header {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: -2px;
+            table-layout: fixed;
+            flex-shrink: 0;
+        }
+        .iso-header td {
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .logo-cell { 
+            width: 20%; 
+            padding: 2px;
+        }
+        .title-cell { 
+            width: 55%; 
+            font-size: 24px;
+            font-weight: bold; 
+            line-height: 1; 
+            text-transform: uppercase; 
+            color: #000;
+        }
+        .sub-title { 
+            font-size: 12px; 
+            font-weight: normal; 
+            color: #333; 
+            letter-spacing: 1px;
+        }
+        .qms-item { 
+            width: 25%; 
+            font-size: 10px; 
+            text-align: left !important; 
+            padding: 1px 4px; 
+            height: 16px; 
+        }
+        .data-grid {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 4px;
+            table-layout: fixed;
+            flex-shrink: 0;
+        }
+        .data-grid td {
+            border: 1px solid #000;
+            padding: 1px 4px;
+            font-size: 11px;
+            font-weight: bold;
+            height: 20px;
+            vertical-align: middle;
+        }
+        .col-left { width: 35%; }
+        .col-mid { width: 35%; }
+        .col-right { width: 30%; vertical-align: top !important; padding-top: 2px !important; }
+        .val-normal { font-weight: normal; margin-left: 3px; }
+        .val-blue { color: var(--blue-num); font-size: 13px; margin-left: 3px; }
+        .table-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 5px;
+        }
+        .checklist-table {
+            width: 100%;
+            flex-grow: 1;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            font-size: 9.5px;
+        }
+        .checklist-table th {
+            background-color: var(--blue-header);
+            color: white;
+            text-transform: uppercase;
+            padding: 2px;
+            border: 1px solid #000;
+            text-align: left;
+        }
+        .checklist-table th.th-center { text-align: center; }
+        .checklist-table td {
+            border: 1px solid #000;
+            padding: 1px 3px;
+            vertical-align: middle;
+        }
+        .sec-row td {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            padding: 1px 3px;
+        }
+        .w-crit { width: 45%; }
+        .w-chk { width: 22px; text-align: center; padding: 0; }
+        .w-obs { width: auto; }
+        .sq {
+            display: inline-block;
+            width: 9px; height: 9px;
+            background: #fff; margin-top: 2px;
+        }
+        .sq-green { border: 2px solid var(--chk-green); }
+        .sq-red { border: 2px solid var(--chk-red); }
+        .footer {
+            flex-shrink: 0;
+            height: 45px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 10px;
+        }
+        .sign-box {
+            width: 30%;
+            text-align: center;
+        }
+        .sign-line {
+            border-top: 2px solid #000;
+            margin-bottom: 2px;
+        }
+        .sign-label {
+            font-weight: bold;
+            font-size: 11px;
+        }
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { background: none; padding: 0; margin: 0; }
+            #btnPrint { display: none; }
+            .page-container { 
+                width: 210mm; 
+                height: 296mm; 
+                padding: 5mm 10mm;
+                box-shadow: none; 
+                border: none; 
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="btnPrint" onclick="window.print()">Print PDF</button>
+    <div class="page-container">
+        <table class="iso-header">
+            <tr>
+                <td class="logo-cell" rowspan="3">
+                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                </td>
+                <td class="title-cell" rowspan="3">
+                    INSPECCIÓN MENSUAL<br>
+                    <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>
+                </td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>
+            </tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>
+        </table>
+        <table class="data-grid">
+            <tr>
+                <td class="col-left">Nº de Reporte: <span class="val-blue">${rotEscHtml(idOt)}</span></td>
+                <td class="col-mid">Placa: <span class="val-normal">${rotEscHtml(placa)}</span></td>
+                <td class="col-right" rowspan="2">
+                    Rampa:<br>
+                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Fecha de Ingreso: <span class="val-normal">${rotEscHtml(dtStr)}</span></td>
+                <td>Kilometraje: <span class="val-normal">${rotEscHtml(kmStr)}</span></td>
+            </tr>
+        </table>
+        <div class="table-wrapper">
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th class="w-crit">CRITERIOS</th>
+                        <th class="w-chk th-center">OK</th>
+                        <th class="w-chk th-center">MAL</th>
+                        <th class="w-obs th-center">OBSERVACION</th>
+                    </tr>
+                </thead>
+                <tbody>${tbody}</tbody>
+            </table>
+        </div>
+        <div class="footer">
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Tecnico</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Jefe de taller</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Planner de Mantenimiento</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
 
             var win = window.open('', '_blank');
             win.document.open();
