@@ -829,6 +829,10 @@ window.renderModernInspForm = function() {
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
                     <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
+                <div class="col-12">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días de Vigencia</label>
+                    <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_dias" value="30" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                </div>
             </div>
         </div>
     </div>`;
