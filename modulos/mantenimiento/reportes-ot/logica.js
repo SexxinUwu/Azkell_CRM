@@ -2210,8 +2210,6 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             background-color: #e0e0e0;
             margin: 0;
             padding: 20px;
-            display: flex;
-            justify-content: center;
         }
         #btnPrint {
             position: fixed; top: 20px; right: 20px;
@@ -2231,6 +2229,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             position: relative;
             display: flex;
             flex-direction: column;
+            margin: 0 auto;
         }
         .iso-header {
             width: 100%;
