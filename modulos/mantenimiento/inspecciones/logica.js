@@ -943,7 +943,11 @@ async function procesarGuardadoInspeccion() {
         .then(res => res.json())
         .then(r => {
             if (r.data === 'Éxito') {
-                bootstrap.Offcanvas.getInstance(document.getElementById('drawerInspeccion')).hide();
+                let offEl = document.getElementById('drawerInspeccion');
+                if (offEl) {
+                    let inst = bootstrap.Offcanvas.getInstance(offEl) || bootstrap.Offcanvas.getOrCreateInstance(offEl);
+                    if (inst) inst.hide();
+                }
                 recargarModulo('statusMant');
                 if (typeof window.rotAbrirDetalle === 'function' && idOt) {
                     window.rotAbrirDetalle(idOt);
