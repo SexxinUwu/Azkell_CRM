@@ -792,8 +792,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
             <thead style="border-bottom: 2px solid #cbd5e1;">
                 <tr>
                     <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Criterio</th>
-                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 10%;">B</th>
-                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 10%;">M</th>
+                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%;">Estado</th>
                     <th class="text-uppercase" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
                 </tr>
             </thead>
@@ -815,26 +814,36 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                     });
                     let obs = (match && match.observacion) ? match.observacion : "";
                     
+                    let rowspan = sec.items.length;
+                    let allObs = sec.items.map(i => {
+                        let lbl2 = typeof i === 'string' ? i : i.label;
+                        let secTabNorm2 = normalizeStr(sec.tab);
+                        let m = detallesArray.find(d => {
+                            if (!d.item || !d.categoria) return false;
+                            let catNorm2 = normalizeStr(d.categoria.replace(/^\d+\.\s*/, ''));
+                            return normalizeStr(d.item) === normalizeStr(lbl2) && catNorm2 === secTabNorm2;
+                        });
+                        return (m && m.observacion) ? m.observacion : "";
+                    }).filter(x => x).join('<br>');
+                    let obsTd = (idxItem === 0) ? `<td class="w-obs" rowspan="${rowspan}" style="vertical-align:top; border-left: 1px solid #000; padding: 4px;">${allObs}</td>` : '';
                     htmlChecklistPDF += `<tr>
                         <td class="w-crit">${idxItem + 1}. ${lbl}</td>
                         <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'OK' ? 'chk-green' : ''}">${match && match.estado === 'OK' ? '✓' : ''}</span></td>
                         <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'FALLA' ? 'chk-red' : ''}">${match && match.estado === 'FALLA' ? '✗' : ''}</span></td>
-                        <td class="w-obs">${obs}</td>
+                        ${obsTd}
                     </tr>`;
 
                     if (match && match.estado && match.estado !== "SIN DATOS") {
                         hasItems = true;
-                        
-                        let isOk = match.estado === 'OK';
-                        let htmlB = isOk ? `<div style="display:inline-block; width:18px; height:18px; border:1px solid #16a34a; background-color:#dcfce7; color:#16a34a; text-align:center; line-height:18px; font-weight:bold; font-size:12px;">✓</div>` : `<div style="display:inline-block; width:18px; height:18px; border:1px solid #cbd5e1; background-color:#fff;"></div>`;
-                        let htmlM = !isOk ? `<div style="display:inline-block; width:18px; height:18px; border:1px solid #dc2626; background-color:#fee2e2; color:#dc2626; text-align:center; line-height:18px; font-weight:bold; font-size:12px;">✗</div>` : `<div style="display:inline-block; width:18px; height:18px; border:1px solid #cbd5e1; background-color:#fff;"></div>`;
+                        let badgeHtml = match.estado === 'OK' 
+                            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
+                            : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
                         
                         let obsHtml = obs ? `<span style="font-size: 12px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i> ${obs}</span>` : '';
 
                         catUI += `<tr style="border-bottom: 1px solid #f1f5f9;">
                             <td class="px-3" style="font-size: 13px; color: #475569;">${lbl}</td>
-                            <td class="text-center">${htmlB}</td>
-                            <td class="text-center">${htmlM}</td>
+                            <td class="text-center">${badgeHtml}</td>
                             <td style="font-size: 12px; color: #dc2626;">${obsHtml}</td>
                         </tr>`;
                     }
@@ -971,8 +980,18 @@ function generarPDFInspeccion() {
                         }
                         obs = match.observacion || '';
                     }
-                    estadoHtml = sqGreen + sqRed;
-                    tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + estadoHtml + '</td><td>' + obs + '</td></tr>';
+                    let rowspan = sec.items.length;
+                    let allObs = sec.items.map(i => {
+                        let lbl2 = typeof i === 'string' ? i : i.label;
+                        let m = detallesArr.find(d => {
+                            if (!d.item || !d.categoria) return false;
+                            let catNorm2 = (d.categoria.replace(/^\d+\.\s*/, '')).trim().toLowerCase();
+                            return d.item.trim().toLowerCase() === lbl2.trim().toLowerCase() && catNorm2 === sec.tab.trim().toLowerCase();
+                        });
+                        return (m && m.observacion) ? m.observacion : "";
+                    }).filter(x => x).join('<br>');
+                    let obsTd = (idxItem === 0) ? `<td class="w-obs" rowspan="${rowspan}" style="vertical-align:top; border-left:1px solid #000; padding:4px;">${allObs}</td>` : '';
+                    tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + sqGreen + '</td><td class="w-chk" style="text-align:center;">' + sqRed + '</td>' + obsTd + '</tr>';
                 });
             }
         });
@@ -1507,6 +1526,26 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     
     let idInput = document.getElementById('i_id_inspeccion');
     if (idInput) idInput.value = "";
+
+    let maxId = 0;
+    let year = new Date().getFullYear();
+    if (window.dataGlobalInspecciones && window.dataGlobalInspecciones.length > 0) {
+        window.dataGlobalInspecciones.forEach(row => {
+            let parts = (row.id || '').split('-');
+            if (parts.length === 3 && parts[1] == year) {
+                let num = parseInt(parts[2], 10);
+                if (num > maxId) maxId = num;
+            }
+        });
+    }
+    let showInput = document.getElementById('i_id_inspeccion_show');
+    if (showInput) {
+        if (maxId > 0) {
+            showInput.value = "INSP-" + year + "-" + String(maxId + 1).padStart(4, '0');
+        } else {
+            showInput.value = "AUTOMÁTICO";
+        }
+    }
 
     let idOtInput = document.getElementById('i_id_ot');
     if (idOtInput) idOtInput.value = idOtPreselect || "";
@@ -2211,4 +2250,20 @@ window.guardarConfigInsp = function() {
             recargarModulo('statusMant');
         } else alert("Error guardando: " + res.error);
     });
+};
+
+window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
+    let caja = document.getElementById(cajaId);
+    if (!caja) return;
+    
+    if (el.dataset.chk === '1') {
+        el.checked = false;
+        el.dataset.chk = '0';
+        caja.style.display = 'none';
+    } else {
+        let group = document.querySelectorAll(`input[name="${el.name}"]`);
+        group.forEach(r => r.dataset.chk = '0');
+        el.dataset.chk = '1';
+        caja.style.display = isFalla ? 'block' : 'none';
+    }
 };

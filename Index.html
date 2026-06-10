@@ -19,12 +19,20 @@
     <script src="/libs/leaflet.js"></script>
     <link rel="stylesheet" href="./estilos.css?v=5">
     <link rel="manifest" href="./manifest.json">
+    <script>
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
+                return;
+            }
+            originalWarn.apply(console, args);
+        };
+    </script>
     <meta name="theme-color" content="#1e293b">
     <link rel="icon" href="/favicon-2003.png" type="image/png">
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker Registrado', reg))
             .catch(err => console.error('Error en Service Worker', err));
         }
     </script>
