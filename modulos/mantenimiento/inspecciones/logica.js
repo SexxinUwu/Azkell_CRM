@@ -792,7 +792,8 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
             <thead style="border-bottom: 2px solid #cbd5e1;">
                 <tr>
                     <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Criterio</th>
-                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%;">Estado</th>
+                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 10%;">B</th>
+                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 10%;">M</th>
                     <th class="text-uppercase" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
                 </tr>
             </thead>
@@ -823,15 +824,17 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
 
                     if (match && match.estado && match.estado !== "SIN DATOS") {
                         hasItems = true;
-                        let badgeHtml = match.estado === 'OK' 
-                            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
-                            : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
+                        
+                        let isOk = match.estado === 'OK';
+                        let htmlB = isOk ? `<div style="display:inline-block; width:18px; height:18px; border:1px solid #16a34a; background-color:#dcfce7; color:#16a34a; text-align:center; line-height:18px; font-weight:bold; font-size:12px;">✓</div>` : `<div style="display:inline-block; width:18px; height:18px; border:1px solid #cbd5e1; background-color:#fff;"></div>`;
+                        let htmlM = !isOk ? `<div style="display:inline-block; width:18px; height:18px; border:1px solid #dc2626; background-color:#fee2e2; color:#dc2626; text-align:center; line-height:18px; font-weight:bold; font-size:12px;">✗</div>` : `<div style="display:inline-block; width:18px; height:18px; border:1px solid #cbd5e1; background-color:#fff;"></div>`;
                         
                         let obsHtml = obs ? `<span style="font-size: 12px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i> ${obs}</span>` : '';
 
                         catUI += `<tr style="border-bottom: 1px solid #f1f5f9;">
                             <td class="px-3" style="font-size: 13px; color: #475569;">${lbl}</td>
-                            <td class="text-center">${badgeHtml}</td>
+                            <td class="text-center">${htmlB}</td>
+                            <td class="text-center">${htmlM}</td>
                             <td style="font-size: 12px; color: #dc2626;">${obsHtml}</td>
                         </tr>`;
                     }
@@ -1082,20 +1085,8 @@ async function procesarGuardadoInspeccion() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando Evidencias...';
 
     let idInsp = document.getElementById('i_id_inspeccion').value;
-    if (!idInsp) {
-        let anioActual = new Date().getFullYear();
-        let prefix = `INSP-${anioActual}-`;
-        let max = 0;
-        if (window.dataGlobalInspecciones) {
-            window.dataGlobalInspecciones.forEach(i => {
-                if (i.id && i.id.toUpperCase().startsWith(prefix)) {
-                    let num = parseInt(i.id.split('-')[2]);
-                    if (!isNaN(num) && num > max) max = num;
-                }
-            });
-        }
-        idInsp = prefix + (max + 1).toString().padStart(4, '0');
-    }
+    isNew = !idInsp;
+
     let fecha = document.getElementById('i_fecha').value;
     let placa = document.getElementById('i_placa').value.toUpperCase();
     let km = document.getElementById('i_kmtablero').value;
@@ -1208,16 +1199,17 @@ async function procesarGuardadoInspeccion() {
         .then(res => res.json())
         .then(r => {
             if (r.data === 'Éxito') {
+                let finalId = isNew ? r.id : idInsp;
                 let offEl = document.getElementById('drawerInspeccion');
                 if (offEl) {
                     let inst = bootstrap.Offcanvas.getInstance(offEl) || bootstrap.Offcanvas.getOrCreateInstance(offEl);
                     if (inst) inst.hide();
                 }
                 if (window.dataGlobalInspecciones) {
-                    let existing = window.dataGlobalInspecciones.find(x => x.id === idInsp);
+                    let existing = window.dataGlobalInspecciones.find(x => x.id === finalId);
                     if (!existing) {
                         window.dataGlobalInspecciones.push({
-                            id: idInsp, placa: placa, tecnico: tecnico, fecha_ingreso: fecha, detalles_json: JSON.stringify(detalles), url_firma: firmaData
+                            id: finalId, placa: placa, tecnico: tecnico, fecha_ingreso: fecha, detalles_json: JSON.stringify(detalles), url_firma: firmaData
                         });
                     } else {
                         existing.placa = placa;
@@ -1444,8 +1436,6 @@ window.renderModernInspForm = function() {
     setTimeout(function() {
         if(typeof window.initFirmaCanvas === 'function') {
             window.initFirmaCanvas('canvasFirma');
-            window.initFirmaCanvas('canvasFirmaJefe');
-            window.initFirmaCanvas('canvasFirmaPlanner');
         } else if(typeof initFirma === 'function') { initFirma(); }
     }, 500);
 };
