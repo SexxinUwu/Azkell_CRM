@@ -2342,7 +2342,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
             flex-shrink: 0;
             height: 45px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: flex-end;
             padding: 0 10px;
         }

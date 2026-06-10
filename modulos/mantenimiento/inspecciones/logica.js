@@ -858,12 +858,6 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
         firmasHtmlUI += `<div class="text-center"><img src="${firmaPrincipalReal}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Técnico Inspector</span><br><span style="font-size: 10px;">${insp.tecnico || '-'}</span></div>`;
     }
-    if (firmaJefePDF) {
-        firmasHtmlUI += `<div class="text-center"><img src="${firmaJefePDF}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Jefe de Taller</span><br><span style="font-size: 10px;">${nombreJefePDF || '-'}</span></div>`;
-    }
-    if (firmaPlannerPDF) {
-        firmasHtmlUI += `<div class="text-center"><img src="${firmaPlannerPDF}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Planner de Mant.</span><br><span style="font-size: 10px;">${nombrePlannerPDF || '-'}</span></div>`;
-    }
 
     if (firmasHtmlUI !== "") {
         htmlUI += `<div class="mt-4 pt-3 border-top d-flex justify-content-around flex-wrap gap-3">${firmasHtmlUI}</div>`;
@@ -962,11 +956,19 @@ function generarPDFInspeccion() {
                         return d.item.trim().toLowerCase() === lbl.trim().toLowerCase() && catNorm === sec.tab.trim().toLowerCase();
                     });
                     var estadoHtml = '', obs = '';
+                    var sqGreen = '<div style="display:inline-block;width:12px;height:12px;border:2px solid #16a34a;margin-right:8px;vertical-align:middle;text-align:center;line-height:10px;font-size:10px;font-weight:bold;color:#16a34a;">&nbsp;</div>';
+                    var sqRed = '<div style="display:inline-block;width:12px;height:12px;border:2px solid #dc2626;vertical-align:middle;text-align:center;line-height:10px;font-size:10px;font-weight:bold;color:#dc2626;">&nbsp;</div>';
+
                     if (match && match.estado) {
-                        if (match.estado === 'OK') estadoHtml = '<span style="color:#16a34a;font-weight:bold;font-size:11px;">BIEN</span>';
-                        if (match.estado === 'FALLA') estadoHtml = '<span style="color:#dc2626;font-weight:bold;font-size:11px;">MAL</span>';
+                        if (match.estado === 'OK') {
+                            sqGreen = '<div style="display:inline-block;width:12px;height:12px;border:2px solid #16a34a;margin-right:8px;vertical-align:middle;text-align:center;line-height:10px;font-size:10px;font-weight:bold;color:#16a34a;">✓</div>';
+                        }
+                        if (match.estado === 'FALLA') {
+                            sqRed = '<div style="display:inline-block;width:12px;height:12px;border:2px solid #dc2626;vertical-align:middle;text-align:center;line-height:10px;font-size:10px;font-weight:bold;color:#dc2626;">✗</div>';
+                        }
                         obs = match.observacion || '';
                     }
+                    estadoHtml = sqGreen + sqRed;
                     tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + estadoHtml + '</td><td>' + obs + '</td></tr>';
                 });
             }
@@ -1021,7 +1023,7 @@ function generarPDFInspeccion() {
             + '.checklist-table td{border:1px solid #000;padding:1px 3px;vertical-align:middle;}'
             + '.sec-row td{background-color:#f2f2f2;font-weight:bold;border-top:2px solid #000;padding:1px 3px;}'
             + '.w-crit{width:45%;} .w-chk{width:10%;text-align:center;padding:0;} .w-obs{width:45%;}'
-            + '.footer{flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
+            + '.footer{flex-shrink:0;display:flex;justify-content:center;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
             + '.sign-box{width:30%;text-align:center;} .sign-line{border-top:2px solid #000;margin-bottom:2px;} .sign-label{font-weight:bold;font-size:11px;}'
             + '.sign-img{max-height:60px;max-width:100%;display:block;margin:0 auto 5px;}'
             + '.evidencias-section{page-break-before:always;margin-top:20px;}'
@@ -1047,8 +1049,6 @@ function generarPDFInspeccion() {
             + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">ESTADO</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
             + '<div class="footer">'
             + '<div class="sign-box">' + (inspUrlFirma && inspUrlFirma.length > 100 ? '<img class="sign-img" src="' + inspUrlFirma + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Técnico Inspector<br><span style="font-weight:normal;">' + (insp.tecnico||'') + '</span></div></div>'
-            + '<div class="sign-box">' + (firmaJefeImg ? '<img class="sign-img" src="' + firmaJefeImg + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Jefe de Taller<br><span style="font-weight:normal;">' + firmaJefeNombre + '</span></div></div>'
-            + '<div class="sign-box">' + (firmaPlannerImg ? '<img class="sign-img" src="' + firmaPlannerImg + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Planner de Mantenimiento<br><span style="font-weight:normal;">' + firmaPlannerNombre + '</span></div></div>'
             + '</div></div>';
 
         // Evidencias page
@@ -1172,20 +1172,6 @@ async function procesarGuardadoInspeccion() {
     }
 
     let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
-    let cvsJefe = document.getElementById('canvasFirmaJefe');
-    let firmaJefeData = cvsJefe ? cvsJefe.toDataURL("image/png") : "";
-    let cvsPlanner = document.getElementById('canvasFirmaPlanner');
-    let firmaPlannerData = cvsPlanner ? cvsPlanner.toDataURL("image/png") : "";
-    
-    let jefeTaller = document.getElementById('i_jefe_taller') ? document.getElementById('i_jefe_taller').value : "";
-    let plannerMant = document.getElementById('i_planner') ? document.getElementById('i_planner').value : "";
-
-    if (firmaJefeData && firmaJefeData.length > 2000) {
-        detalles.push({ categoria: "FIRMAS_EXTRA", item: "Jefe de Taller", estado: jefeTaller, foto: firmaJefeData });
-    }
-    if (firmaPlannerData && firmaPlannerData.length > 2000) {
-        detalles.push({ categoria: "FIRMAS_EXTRA", item: "Planner de Mant.", estado: plannerMant, foto: firmaPlannerData });
-    }
 
     let idOt = "";
     let iIdOt = document.getElementById('i_id_ot');
@@ -1357,31 +1343,13 @@ window.renderModernInspForm = function() {
         </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-12 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
                     <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico" placeholder="Ej. Juan Pérez" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                     <div class="mt-3">
                         <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
                         <canvas id="canvasFirma" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
                         <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirma')"><i class="bi bi-eraser"></i> Borrar</button>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Jefe de Taller *</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_jefe_taller" placeholder="Ej. Carlos Ramos" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
-                    <div class="mt-3">
-                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Jefe</label>
-                        <canvas id="canvasFirmaJefe" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
-                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirmaJefe')"><i class="bi bi-eraser"></i> Borrar</button>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Planner de Mant. *</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_planner" placeholder="Ej. Luis Díaz" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
-                    <div class="mt-3">
-                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Planner</label>
-                        <canvas id="canvasFirmaPlanner" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
-                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirmaPlanner')"><i class="bi bi-eraser"></i> Borrar</button>
                     </div>
                 </div>
             </div>
