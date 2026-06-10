@@ -980,17 +980,7 @@ function generarPDFInspeccion() {
                         }
                         obs = match.observacion || '';
                     }
-                    let rowspan = sec.items.length;
-                    let allObs = sec.items.map(i => {
-                        let lbl2 = typeof i === 'string' ? i : i.label;
-                        let m = detallesArr.find(d => {
-                            if (!d.item || !d.categoria) return false;
-                            let catNorm2 = (d.categoria.replace(/^\d+\.\s*/, '')).trim().toLowerCase();
-                            return d.item.trim().toLowerCase() === lbl2.trim().toLowerCase() && catNorm2 === sec.tab.trim().toLowerCase();
-                        });
-                        return (m && m.observacion) ? m.observacion : "";
-                    }).filter(x => x).join('<br>');
-                    let obsTd = (idxItem === 0) ? `<td class="w-obs" rowspan="${rowspan}" style="vertical-align:top; border-left:1px solid #000; padding:4px;">${allObs}</td>` : '';
+                    let obsTd = `<td class="w-obs" style="vertical-align:middle; border-left:1px solid #000; padding:1px 4px;">${obs}</td>`;
                     tbody += '<tr><td>' + (idxItem+1) + '. ' + lbl + '</td><td class="w-chk" style="text-align:center;">' + sqGreen + '</td><td class="w-chk" style="text-align:center;">' + sqRed + '</td>' + obsTd + '</tr>';
                 });
             }
