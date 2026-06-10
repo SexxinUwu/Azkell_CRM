@@ -1540,11 +1540,7 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     }
     let showInput = document.getElementById('i_id_inspeccion_show');
     if (showInput) {
-        if (maxId > 0) {
-            showInput.value = "INSP-" + year + "-" + String(maxId + 1).padStart(4, '0');
-        } else {
-            showInput.value = "AUTOMÁTICO";
-        }
+        showInput.value = "INSP-" + year + "-" + String(maxId + 1).padStart(4, '0');
     }
 
     let idOtInput = document.getElementById('i_id_ot');
@@ -1744,7 +1740,8 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
                                 let rFa = document.getElementById(`${uid}_fa`);
                                 if (rFa) {
                                     rFa.checked = true; rFa.dataset.chk = '1';
-                                    toggleFalla(`f_${uid}`, true);
+                                    let caja = document.getElementById(`f_${uid}`);
+                                    if (caja) caja.style.display = 'block';
                                     if (res.observacion) document.getElementById(`obs_${uid}`).value = res.observacion;
                                 }
                             }
