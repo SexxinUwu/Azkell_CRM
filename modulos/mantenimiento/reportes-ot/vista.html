@@ -309,39 +309,6 @@
 
 <div id="moduloReportesOT" class="d-flex flex-column h-100" style="flex: 1; min-height: 0;">
     
-    <!-- Tailwind CSS (Scoped to mobile view if possible, disabled preflight) -->
-    <script>
-        window.tailwind = window.tailwind || {};
-        tailwind.config = {
-            corePlugins: {
-                preflight: false,
-            },
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0f4ff',
-                            100: '#d9e2ff',
-                            500: '#1d4ed8',
-                            600: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        status: {
-                            pending: '#f59e0b',
-                            process: '#3b82f6',
-                            paused: '#ea580c',
-                            closed: '#ef4444',
-                            done: '#10b981'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -354,20 +321,9 @@
 <!-- Contenedor principal de la Vista Móvil -->
 <style>
 /* Reset and base */
-#rot-mobile-view {
-    margin: -15px -25px; /* Cover padding of root-dinamico */
-    height: calc(100% + 30px);
-    width: calc(100% + 50px);
-    background: #020617;
-    color: #f1f5f9;
-    font-family: 'Inter', sans-serif;
-    display: none;
-    flex-direction: column;
-    position: relative;
-    z-index: 10;
-}
+
 @media (max-width: 991.98px) {
-    #rot-mobile-view { display: flex !important; }
+    
 }
 
 /* Header */
@@ -482,20 +438,9 @@
 <!-- Contenedor principal de la Vista Móvil -->
 <style>
 /* Reset and base */
-#rot-mobile-view {
-    margin: -15px -25px; /* Cover padding of root-dinamico */
-    height: calc(100% + 30px);
-    width: calc(100% + 50px);
-    background: #f8fafc;
-    color: #0f172a;
-    font-family: 'Inter', system-ui, sans-serif;
-    display: none;
-    flex-direction: column;
-    position: relative;
-    z-index: 10;
-}
+
 @media (max-width: 991.98px) {
-    #rot-mobile-view { display: flex !important; }
+    
 }
 
 /* Base Classes */
