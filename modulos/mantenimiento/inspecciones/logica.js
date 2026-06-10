@@ -1531,7 +1531,11 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     let year = new Date().getFullYear();
     
     try {
-        let res = await fetch('/api/inspecciones');
+        let res = await fetch('/api/script/obtenerDatosInspecciones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [] })
+        });
         let data = await res.json();
         if (data.data) {
             window.dataGlobalInspecciones = data.data;

@@ -418,10 +418,8 @@ window.consultarDocProveedor = async function() {
     
     try {
         let url = '';
-        if (tipo === 'RUC') {
-            url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
-        } else if (tipo === 'DNI') {
-            url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
+        if (tipo === 'RUC' || tipo === 'DNI') {
+            url = '/api/proxy/documento?tipo=' + tipo + '&numero=' + numero;
         } else {
             throw new Error("La consulta automÃ¡tica solo estÃ¡ disponible para RUC y DNI.");
         }

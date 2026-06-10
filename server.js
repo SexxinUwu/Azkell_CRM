@@ -77,6 +77,26 @@ app.use(express.static(__dirname, {
     }
 }));
 
+app.get('/api/proxy/documento', async (req, res) => {
+    let tipo = req.query.tipo;
+    let numero = req.query.numero;
+    if (!tipo || !numero) return res.status(400).json({error: "Faltan parametros"});
+    let url = '';
+    if (tipo === 'RUC') url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
+    else if (tipo === 'DNI') url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
+    else return res.status(400).json({error: "Tipo no valido"});
+    
+    try {
+        let fetchCall = global.fetch || require('node-fetch');
+        let response = await fetchCall(url);
+        if (!response.ok) return res.status(response.status).json({error: "Error en API externa"});
+        let data = await response.json();
+        res.json(data);
+    } catch(err) {
+        res.status(500).json({error: err.message});
+    }
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
