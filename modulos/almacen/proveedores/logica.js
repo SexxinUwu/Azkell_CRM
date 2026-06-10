@@ -398,3 +398,65 @@ window.importarExcelProveedores = function(event) {
     reader.readAsArrayBuffer(file);
     event.target.value = '';
 };
+
+window.consultarDocProveedor = async function() {
+    let numInput = document.getElementById('prov-f-num-doc');
+    let tipoSel = document.getElementById('prov-f-tipo-doc');
+    if (!numInput || !tipoSel) return;
+    
+    let numero = numInput.value.trim();
+    let tipo = tipoSel.value;
+    
+    if (!numero) {
+        if(typeof window.rotToast === 'function') window.rotToast("Ingrese un nÃºmero de documento.", "bg-warning");
+        else alert("Ingrese un nÃºmero de documento.");
+        return;
+    }
+    
+    let btnIcon = document.querySelector('button[onclick="window.consultarDocProveedor()"] i');
+    if(btnIcon) btnIcon.className = "spinner-border spinner-border-sm";
+    
+    try {
+        let url = '';
+        if (tipo === 'RUC') {
+            url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
+        } else if (tipo === 'DNI') {
+            url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
+        } else {
+            throw new Error("La consulta automÃ¡tica solo estÃ¡ disponible para RUC y DNI.");
+        }
+        
+        let res = await fetch(url);
+        if (!res.ok) {
+            throw new Error("No se encontrÃ³ informaciÃ³n o hubo un error en la consulta.");
+        }
+        let data = await res.json();
+        
+        if (tipo === 'RUC') {
+            let razon = document.getElementById('prov-f-razon');
+            let nombre = document.getElementById('prov-f-nombre');
+            let dir = document.getElementById('prov-f-dir');
+            
+            if (razon) razon.value = data.nombre || '';
+            if (nombre && !nombre.value) nombre.value = data.nombre || '';
+            if (dir) dir.value = data.direccion || '';
+            
+            if(typeof window.rotToast === 'function') window.rotToast("Datos RUC consultados con Ã©xito.", "bg-success");
+        } else if (tipo === 'DNI') {
+            let razon = document.getElementById('prov-f-razon');
+            let nombre = document.getElementById('prov-f-nombre');
+            let nombreCompleto = (data.nombres + " " + data.apellidoPaterno + " " + data.apellidoMaterno).trim();
+            
+            if (razon) razon.value = nombreCompleto;
+            if (nombre && !nombre.value) nombre.value = nombreCompleto;
+            
+            if(typeof window.rotToast === 'function') window.rotToast("Datos DNI consultados con Ã©xito.", "bg-success");
+        }
+    } catch(err) {
+        if(typeof window.rotToast === 'function') window.rotToast(err.message, "bg-danger");
+        else alert(err.message);
+    } finally {
+        if(btnIcon) btnIcon.className = "bi bi-search";
+    }
+};
+
