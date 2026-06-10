@@ -1,4 +1,4 @@
-const CACHE_NAME = 'azkell-fleet-v45';
+const CACHE_NAME = 'azkell-fleet-v46';
 const ASSETS_TO_CACHE = [
   '/',
   '/Index.html',

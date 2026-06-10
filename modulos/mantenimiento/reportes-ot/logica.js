@@ -1,10 +1,10 @@
-// ================================================================
-// Módulo Reportes OT — Azkell Fleet
-// Patrón SPA: window.* globals, init_reportes_ot() entry point
-// Muestra histórico filtrable de Órdenes de Trabajo
+﻿// ================================================================
+// M├│dulo Reportes OT ÔÇö Azkell Fleet
+// Patr├│n SPA: window.* globals, init_reportes_ot() entry point
+// Muestra hist├│rico filtrable de ├ôrdenes de Trabajo
 // ================================================================
 
-// ── Estado global ────────────────────────────────────────────────
+// ÔöÇÔöÇ Estado global ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotData               = window.rotData               || [];
 window.rotDatosFiltrados     = window.rotDatosFiltrados     || [];
 window.rotDetalleId          = window.rotDetalleId          || null;
@@ -16,18 +16,18 @@ window._rotMatIdx            = window._rotMatIdx            || 0;
 window._rotInvData           = window._rotInvData           || [];
 window._rotCatSituaciones    = window._rotCatSituaciones    || [];
 
-// ── Entry point ──────────────────────────────────────────────────
+// ÔöÇÔöÇ Entry point ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.init_reportes_ot = function() {
     window._rotFiltroEstado = '';
     window.rotCargar();
     rotCargarSituaciones();
     if (typeof window.initColPicker === 'function') {
         window.initColPicker('col-picker-rot', 'rot-tabla', [
-            {label: 'N° OT',        idx: 1, visible: true},
+            {label: 'N┬░ OT',        idx: 1, visible: true},
             {label: 'Placa',        idx: 2, visible: true},
             {label: 'Tipo / Sub',   idx: 3, visible: true},
             {label: 'Supervisor',   idx: 4, visible: true},
-            {label: 'Situación',    idx: 5, visible: true},
+            {label: 'Situaci├│n',    idx: 5, visible: true},
             {label: 'Observaciones',idx: 6, visible: true},
             {label: 'Costo Total',  idx: 7, visible: true},
             {label: 'Fecha',        idx: 8, visible: true}
@@ -35,7 +35,7 @@ window.init_reportes_ot = function() {
     }
 };
 
-// ── Carga catálogo de situaciones ────────────────────────────────
+// ÔöÇÔöÇ Carga cat├ílogo de situaciones ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotCargarSituaciones() {
     fetch('/api/catalogos_taller')
         .then(function(r) { return r.ok ? r.json() : {}; })
@@ -50,7 +50,7 @@ function rotPoblarSelectSituacion() {
     var sel = document.getElementById('rot-eot-situacion');
     if (!sel) return;
     var current = sel.value;
-    sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    sel.innerHTML = '<option value="">ÔÇö Seleccionar ÔÇö</option>' +
         window._rotCatSituaciones.map(function(s) {
             var l = s.descripcion || s.nombre || '';
             return '<option value="' + l.replace(/"/g,'&quot;') + '">' + l + '</option>';
@@ -58,7 +58,7 @@ function rotPoblarSelectSituacion() {
     if (current) sel.value = current;
 }
 
-// ── Carga desde API ──────────────────────────────────────────────
+// ÔöÇÔöÇ Carga desde API ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotCargar = function() {
     var tbody = document.getElementById('rot-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="td-empty"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</td></tr>';
@@ -80,7 +80,7 @@ window.rotCargar = function() {
         });
 };
 
-// ── Chips de estado ───────────────────────────────────────────────
+// ÔöÇÔöÇ Chips de estado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotChipEstado = function(btn, estado) {
     document.querySelectorAll('#moduloReportesOT .rot-chip').forEach(function(c) { c.classList.remove('active'); });
     if (btn) btn.classList.add('active');
@@ -88,9 +88,9 @@ window.rotChipEstado = function(btn, estado) {
     window.rotFiltrar();
 };
 
-// ── Filtrar ──────────────────────────────────────────────────────
+// ÔöÇÔöÇ Filtrar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotFiltrar = function() {
-    var libre   = rotVal('rot-busqueda-libre').toLowerCase();
+    var libre   = (rotVal('rot-busqueda-libre') || rotVal('rotMobileSearch')).toLowerCase();
     var filOT   = rotVal('rot-fil-ot').toLowerCase();
     var filPlaca= rotVal('rot-fil-placa').toUpperCase();
     var filMes  = rotVal('rot-fil-mes');        // 'YYYY-MM'
@@ -102,7 +102,7 @@ window.rotFiltrar = function() {
         var det = rotDetalles(ot);
         var fechaOT = rotFechaISO(ot.creado_en);
 
-        // Búsqueda libre (N° OT, técnico, supervisor, placa)
+        // B├║squeda libre (N┬░ OT, t├®cnico, supervisor, placa)
         if (libre) {
             var hayText =
                 (String(ot.ticket_entrada || ot.id_ot || '')).toLowerCase().indexOf(libre) !== -1 ||
@@ -114,7 +114,7 @@ window.rotFiltrar = function() {
                 (det.sub_tipo  || '').toLowerCase().indexOf(libre) !== -1;
             if (!hayText) return false;
         }
-        // Filtro N° OT
+        // Filtro N┬░ OT
         if (filOT && String(ot.ticket_entrada || ot.id_ot || '').toLowerCase().indexOf(filOT) === -1) return false;
         // Filtro placa
         if (filPlaca && (ot.placa || '').toUpperCase().indexOf(filPlaca) === -1) return false;
@@ -124,7 +124,7 @@ window.rotFiltrar = function() {
         if (filDesde && fechaOT < filDesde) return false;
         // Filtro hasta
         if (filHasta && fechaOT > filHasta) return false;
-        // Filtro estado (aprobación)
+        // Filtro estado (aprobaci├│n)
         if (filEst && ot.aprobacion !== filEst) return false;
 
         return true;
@@ -135,7 +135,7 @@ window.rotFiltrar = function() {
     window.rotRenderTabla(resultado);
 };
 
-// ── Permiso edición OT (lectura directa, sin depender de checkPerm global) ───
+// ÔöÇÔöÇ Permiso edici├│n OT (lectura directa, sin depender de checkPerm global) ÔöÇÔöÇÔöÇ
 function rotPuedeEditar() {
     try {
         var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
@@ -144,7 +144,7 @@ function rotPuedeEditar() {
     } catch(e) { return false; }
 }
 
-// ── Botones de acción modernos por estado ─────────────────────────
+// ÔöÇÔöÇ Botones de acci├│n modernos por estado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotBotonesAccion(ot) {
     var idOT   = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
     var estado = ot.estado || 'Pendiente';
@@ -192,7 +192,7 @@ function rotBadgeEstado(estado) {
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
-// ── Cálculo de tiempos de OT ──────────────────────────────────────
+// ÔöÇÔöÇ C├ílculo de tiempos de OT ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotFmtDuracion(ms) {
     if (!ms || ms <= 0) return '0 min';
     var mins = Math.floor(ms / 60000);
@@ -231,17 +231,22 @@ function rotCalcularTiempos(ot) {
     };
 }
 
-// ── Render tabla ─────────────────────────────────────────────────
+// ÔöÇÔöÇ Render tabla ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
+    var mobileList = document.getElementById('otListMobile');
+    
     if (!tbody) return;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="td-empty">No hay resultados con los filtros aplicados.</td></tr>';
+        if(mobileList) mobileList.innerHTML = '<div style="text-align:center; padding: 40px 20px; color: #94a3b8; font-size: 13px;"><i class="bi bi-inbox" style="font-size: 32px; display: block; margin-bottom: 12px; color: #cbd5e1;"></i> No se encontraron OTs</div>';
         return;
     }
 
     var html = '';
+    var mobileHtml = '';
+    
     for (var i = 0; i < lista.length; i++) {
         var ot  = lista[i];
         var det = rotDetalles(ot);
@@ -249,10 +254,12 @@ window.rotRenderTabla = function(lista) {
         var idOT = ot.ticket_entrada || ot.id_ot || '—';
         var obs  = rotEscHtml((det.motivo || ot.observaciones || '').substring(0, 80)) + ((det.motivo || ot.observaciones || '').length > 80 ? '…' : '');
 
-        html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(ot.ticket_entrada || ot.id_ot || '')) + '\')">';
+        // --- DESKTOP ROW ---
+        html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(idOT)) + '\')">';
         html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
         html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
         html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '—') + '</td>';
+        html += '<td style="font-size:0.85rem;color:var(--text);">' + rotEscHtml(det.km ? Number(det.km).toLocaleString('es-PE') + ' km' : '—') + '</td>';
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '—') + '</td>';
         html += '<td>' + rotBadgeSituacion(det.situacion_inicial || ot.situacion) + '</td>';
@@ -260,12 +267,58 @@ window.rotRenderTabla = function(lista) {
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
         html += '</tr>';
+        
+        // --- MOBILE CARD ---
+        var estado = ot.estado || 'Pendiente';
+        var stripeClass = '';
+        if (estado === 'Pendiente') stripeClass = 'c-orange';
+        else if (estado === 'En Proceso') stripeClass = 'c-blue';
+        else if (estado === 'Pausada') stripeClass = 'c-orange';
+        else if (estado === 'Finalizado') stripeClass = 'c-green';
+        else if (estado === 'Anulado') stripeClass = 'c-red';
+
+        var isPrev = (det.tipo_ot || ot.tipo || '').toLowerCase().indexOf('prev') !== -1;
+        var badgeType = isPrev ? '<span class="rot2-badge">PREVENTIVO</span>' : '<span class="rot2-badge red">CORRECTIVO</span>';
+        
+        var btnAcciones = '';
+        if (estado === 'Pendiente') btnAcciones += '<button class="rot2-btn-clear rot2-btn-solid" style="width:100%; margin-bottom:12px;" onclick="closeAllDrawers();"><i class="bi bi-play-fill"></i> Iniciar OT</button>';
+        if (estado === 'En Proceso') {
+            btnAcciones += '<button class="rot2-btn-clear rot2-btn-solid" style="width:100%; margin-bottom:12px; background:#f59e0b;" onclick="closeAllDrawers();"><i class="bi bi-pause-fill"></i> Pausar OT</button>';
+            btnAcciones += '<button class="rot2-btn-clear rot2-btn-solid" style="width:100%; margin-bottom:12px; background:#10b981;" onclick="closeAllDrawers();"><i class="bi bi-check-lg"></i> Cerrar OT</button>';
+        }
+        btnAcciones += '<button class="rot2-btn-clear rot2-btn-outline" style="width:100%;" onclick="closeAllDrawers(); if(typeof window.rotAbrirDetalle === \'function\') window.rotAbrirDetalle(\'' + idOT + '\');"><i class="bi bi-list-ul"></i> Ver Detalles Completos</button>';
+        var encodedActions = encodeURIComponent(btnAcciones);
+
+        var primaryAction = '';
+        if (estado === 'Pendiente') primaryAction = '<button class="rot2-btn-clear rot2-btn-action blue" onclick="event.stopPropagation();">Iniciar</button>';
+        else if (estado === 'En Proceso') primaryAction = '<button class="rot2-btn-clear rot2-btn-action" onclick="event.stopPropagation();">Pausar</button>';
+
+        mobileHtml += '<div class="rot2-card" onclick="if(typeof window.rotAbrirDetalle === \'function\') window.rotAbrirDetalle(\'' + idOT + '\');">';
+        mobileHtml += '<div class="rot2-card-stripe ' + stripeClass + '"></div>';
+        mobileHtml += '<div class="rot2-card-header">';
+        mobileHtml += '<div class="rot2-badge-box">' + badgeType + '</div>';
+        mobileHtml += '<span class="rot2-badge-outline"><span class="dot"></span> ' + estado + '</span>';
+        mobileHtml += '</div>';
+        mobileHtml += '<h3 class="rot2-card-title">' + idOT + '</h3>';
+        mobileHtml += '<div class="rot2-card-grid">';
+        mobileHtml += '<div class="rot2-c-row"><span class="rot2-c-lbl">PLACA / UNIDAD</span><span class="rot2-c-val">' + (ot.placa||'—') + '</span></div>';
+        mobileHtml += '<div class="rot2-c-row"><span class="rot2-c-lbl">KILOMETRAJE</span><span class="rot2-c-val">' + (det.km?Number(det.km).toLocaleString('es-PE')+' km':'—') + '</span></div>';
+        mobileHtml += '<div class="rot2-c-row"><span class="rot2-c-lbl">TIPO DE TRABAJO</span><span class="rot2-c-val">' + (det.tipo_ot||ot.tipo||'—') + '</span></div>';
+        mobileHtml += '</div>';
+        mobileHtml += '<div class="rot2-card-footer">';
+        mobileHtml += '<div class="rot2-c-cost"><span class="rot2-c-lbl">COSTO</span><span class="rot2-c-val-lrg">' + rotFmtMoney(ot.costo_total) + '</span></div>';
+        mobileHtml += '<div class="rot2-c-actions">';
+        mobileHtml += '<button class="rot2-btn-clear rot2-btn-dots" onclick="event.stopPropagation(); document.getElementById(\'rotMobileActionContent\').innerHTML=decodeURIComponent(\'' + encodedActions + '\'); openActionDrawer();"><i class="bi bi-three-dots"></i></button>';
+        mobileHtml += primaryAction;
+        mobileHtml += '</div>';
+        mobileHtml += '</div>';
+        mobileHtml += '</div>';
     }
-
+    
     tbody.innerHTML = html;
-};
+    if(mobileList) mobileList.innerHTML = mobileHtml;
+}
 
-// ── Abrir drawer de detalle ───────────────────────────────────────
 window.rotAbrirDetalle = function(idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot) return;
@@ -278,6 +331,7 @@ window.rotAbrirDetalle = function(idOT) {
     var estado = ot.estado || 'Pendiente';
     var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada');
     var puedeAgregarMaterial = esAprobada;
+    var puedeEditar = window.checkPerm('ot', 'e');
 
     function esc(s) { return rotEscHtml(String(s||'')); }
     function fld(lbl, val) {
@@ -293,25 +347,25 @@ window.rotAbrirDetalle = function(idOT) {
             'Finalizado': ['rot-b-finalizado', 'Finalizado'],
             'Anulado':    ['rot-b-anulado',    'Anulado']
         };
-        var v = map[e] || ['rot-b-pendiente', e || '—'];
+        var v = map[e] || ['rot-b-pendiente', e || 'ÔÇö'];
         return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
     }
 
     var html = '';
     // ID bar
     html += '<div class="rot-id-bar">';
-    html += '<div><div class="rot-id-lbl">N° Orden de Trabajo</div><div class="rot-id-num">' + esc(idOT) + '</div></div>';
+    html += '<div><div class="rot-id-lbl">N┬░ Orden de Trabajo</div><div class="rot-id-num">' + esc(idOT) + '</div></div>';
     html += '<div style="text-align:right;">' + badge(estado)
           + '<div style="font-size:0.72rem;color:var(--subtext);margin-top:4px;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</div></div>';
     html += '</div>';
 
     // Datos Generales
     html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
-    html += fld('Placa',      esc(ot.placa || '—'));
-    html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '—'));
-    html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
-    html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
-    html += fld('Situación',  esc(det.situacion_inicial || ot.situacion || '—'));
+    html += fld('Placa',      esc(ot.placa || 'ÔÇö'));
+    html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || 'ÔÇö'));
+    html += fld('Sub Tipo',   esc(det.sub_tipo   || 'ÔÇö'));
+    html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| 'ÔÇö'));
+    html += fld('Status Rampa',  esc(det.situacion_inicial || ot.situacion || 'ÔÇö'));
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
@@ -319,13 +373,21 @@ window.rotAbrirDetalle = function(idOT) {
     var t = rotCalcularTiempos(ot);
     html += '<div class="rot-sec"><div class="rot-sec-hd">Tiempos de la Orden</div>';
     html += fld('Ingreso a Taller', rotFmtFecha(ot.fecha_ingreso || ot.creado_en));
-    if (det.km) html += fld('Kilometraje', esc(Number(det.km).toLocaleString('es-PE') + ' km'));
+    if (det.km !== undefined) {
+        var kmHtml = '<div style="display:flex;align-items:center;gap:10px;">'
+                   + '<span id="rot-ot-km-txt">' + Number(det.km).toLocaleString('es-PE') + ' km</span>'
+                   + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', ' + det.km + ')" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-pencil"></i></button>' : '')
+                   + '</div>';
+        html += fld('Kilometraje', kmHtml);
+    } else if (puedeEditar) {
+        html += fld('Kilometraje', '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', 0)" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-plus"></i> Agregar KM</button>');
+    }
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
-        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.iniciado_por) + '</span>' : ''));
+        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
     }
     if (t.fin) {
-        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(ot.cerrado_por) + '</span>' : ''));
+        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
     }
     if (t.inicio) {
         html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
@@ -341,7 +403,7 @@ window.rotAbrirDetalle = function(idOT) {
             html += '<div style="border-left:3px solid #f59e0b;padding:5px 10px;margin-bottom:6px;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">'
                   + '<div style="font-size:0.74rem;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
                   + '<span>' + rotFmtFecha(p.inicio.toISOString()) + '</span>'
-                  + '<span style="opacity:0.6;">→</span>'
+                  + '<span style="opacity:0.6;">ÔåÆ</span>'
                   + '<span>' + (p.fin ? rotFmtFecha(p.fin.toISOString()) : '<em>Sin reanudar</em>') + '</span>'
                   + '<span style="background:rgba(245,158,11,0.2);border-radius:6px;padding:1px 7px;">' + dur + '</span>'
                   + '</div>'
@@ -362,23 +424,43 @@ window.rotAbrirDetalle = function(idOT) {
         html += '</div>';
     }
 
+    // Acciones R├ípidas (Plantillas)
+    html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
+    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\')">'
+          + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
+          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>'
+          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.rotToast ? window.rotToast('Plantilla OT (En desarrollo)', 'bg-info') : alert('Plantilla OT (En desarrollo)')\">"
+          + '<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.1rem;"><i class="bi bi-file-earmark-text"></i></div>'
+          + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span>'
+          + '</button>';
+    html += '</div>';
+
     // Trabajos (placeholder)
     html += '<div class="rot-sec" id="rot-sec-trabajos">'
-          + '<div class="rot-sec-hd">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">ÔÇª</span>'
+          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarTrabajo(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
-    // Salidas de Almacén (placeholder)
+    // Salidas de Almac├®n (placeholder)
     html += '<div class="rot-sec" id="rot-sec-materiales">'
-          + '<div class="rot-sec-hd">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almac├®n <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">ÔÇª</span>'
+          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
+          + '</div>';
+
+    // Inspecci├│n General (placeholder)
+    html += '<div class="rot-sec" id="rot-sec-inspecciones">'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspecci├│n General '
+          + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+          + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
     // Backlog pendiente de la unidad (placeholder)
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
-              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + (esAprobada ? '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">ÔÇª</span>'
+              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -392,7 +474,6 @@ window.rotAbrirDetalle = function(idOT) {
     body.innerHTML = html;
 
     // Footer
-    var puedeEditar   = window.checkPerm('ot', 'e');
     var puedeEliminar = window.checkPerm('ot', 'd');
     var ftHtml = (puedeEditar
         ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
@@ -434,21 +515,25 @@ window.rotAbrirDetalle = function(idOT) {
     if (back) back.classList.add('open');
     drawer.classList.add('open');
 
-    // Fetch trabajos + materiales + backlog en paralelo
+    // Fetch trabajos + materiales + backlog + inspecciones en paralelo
     window.rotOtTrabajosActivos   = [];
     window.rotOtMaterialesActivos = [];
+    window.rotOtInspeccionesActivas = [];
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='       + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([])
+        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([]),
+        fetch('/api/inspecciones-por-ot?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
     ]).then(function(res) {
         window.rotOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
         window.rotOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
+        window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
         rotRenderSecTrabajos(idOT, esAprobada);
         rotRenderSecMateriales(idOT, puedeAgregarMaterial);
         rotRenderSecBacklog(backlogItems);
-        // Actualizar costo total dinámico
+        rotRenderSecInspecciones(idOT);
+        // Actualizar costo total din├ímico
         var costoTr = window.rotOtTrabajosActivos
             .filter(function(t){ return t.estado === 'Aprobado'; })
             .reduce(function(s, t) {
@@ -463,7 +548,7 @@ window.rotAbrirDetalle = function(idOT) {
     });
 };
 
-// ── Cerrar drawer ─────────────────────────────────────────────────
+// ÔöÇÔöÇ Cerrar drawer ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotCerrarDetalle = function() {
     ['rot-drawer-trabajo', 'rot-drawer-material'].forEach(function(id) {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
@@ -476,35 +561,49 @@ window.rotCerrarDetalle = function() {
     window.rotRenderTabla(window.rotDatosFiltrados);
 };
 
-// ── Modal de comentario (pausar / cerrar) ─────────────────────────
+// ÔöÇÔöÇ Modal de comentario (pausar / cerrar) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
     var existente = document.getElementById('rot-modal-comentario');
     if (existente) existente.remove();
 
     var overlay = document.createElement('div');
     overlay.id = 'rot-modal-comentario';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
 
     overlay.innerHTML =
-        '<div style="background:var(--surface,#fff);border-radius:12px;padding:24px;width:420px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,0.22);">'
-      + '<div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:14px;">' + titulo + '</div>'
-      + '<textarea id="rot-mc-input" rows="4" style="width:100%;border:1px solid var(--border,#e0e0e0);border-radius:8px;padding:8px 10px;font-size:0.85rem;resize:vertical;color:var(--text);background:var(--bg,#f8f8f8);outline:none;" placeholder="' + placeholder + '"></textarea>'
-      + (requerido ? '<div id="rot-mc-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:4px;">Este campo es obligatorio.</div>' : '')
-      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
-      + '<button id="rot-mc-cancel" class="btn btn-sm btn-outline-secondary">Cancelar</button>'
-      + '<button id="rot-mc-ok" class="btn btn-sm btn-primary">Confirmar</button>'
+        '<div style="background:var(--surface,#fff);border-radius:16px;width:420px;max-width:94vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+      + '<div style="padding:24px 24px 16px;">'
+      + '<h5 style="margin:0 0 16px;font-weight:700;color:var(--text);text-align:center;">' + titulo + '</h5>'
+      + '<textarea id="rot-mc-input" rows="4" class="form-control" style="border-radius:10px;font-size:0.9rem;resize:vertical;background:var(--bg,#f8f8f8);" placeholder="' + placeholder + '"></textarea>'
+      + (requerido ? '<div id="rot-mc-err" style="display:none;color:#dc3545;font-size:0.75rem;margin-top:6px;text-align:center;">Este campo es obligatorio.</div>' : '')
+      + '</div>'
+      + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+      + '<button id="rot-mc-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+      + '<button id="rot-mc-ok" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:600;">Confirmar</button>'
       + '</div></div>';
 
     document.body.appendChild(overlay);
+    
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
     var ta   = document.getElementById('rot-mc-input');
     var err  = document.getElementById('rot-mc-err');
     var ok   = document.getElementById('rot-mc-ok');
     var can  = document.getElementById('rot-mc-cancel');
     if (ta) ta.focus();
 
-    function cerrar() { overlay.remove(); }
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+    
     can.addEventListener('click', cerrar);
-    overlay.addEventListener('click', function(e) { if (e.target === overlay) cerrar(); });
+    
     ok.addEventListener('click', function() {
         var val = ta ? ta.value.trim() : '';
         if (requerido && !val) {
@@ -516,53 +615,138 @@ function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
         onConfirm(val);
     });
 }
+function rotConfirmModerno(titulo, mensaje, onConfirm, type) {
+    type = type || 'danger';
+    var iconClass = type === 'danger' ? 'bi-exclamation-triangle-fill text-danger' : 'bi-info-circle-fill text-primary';
+    var btnClass = type === 'danger' ? 'btn-danger' : 'btn-primary';
+    var btnText = type === 'danger' ? 'S├¡, eliminar' : 'Confirmar';
 
-// ── Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ──
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+    
+    var modalHtml = '<div style="background:var(--surface,#fff);border-radius:16px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+                  + '<div style="padding:24px 24px 16px;text-align:center;">'
+                  + '<i class="bi ' + iconClass + '" style="font-size:3rem;line-height:1;margin-bottom:16px;display:block;"></i>'
+                  + '<h5 style="margin:0 0 8px;font-weight:700;color:var(--text);">' + rotEscHtml(titulo) + '</h5>'
+                  + '<p style="margin:0;font-size:0.9rem;color:var(--subtext);">' + rotEscHtml(mensaje) + '</p>'
+                  + '</div>'
+                  + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+                  + '<button id="rot-cfm-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+                  + '<button id="rot-cfm-ok" class="btn ' + btnClass + '" style="flex:1;border-radius:10px;font-weight:600;">' + btnText + '</button>'
+                  + '</div></div>';
+    overlay.innerHTML = modalHtml;
+    document.body.appendChild(overlay);
+    
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+
+    document.getElementById('rot-cfm-cancel').addEventListener('click', cerrar);
+    document.getElementById('rot-cfm-ok').addEventListener('click', function() {
+        cerrar();
+        onConfirm();
+    });
+}
+
+function rotPromptKm(currentKm, onConfirm) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+    
+    var modalHtml = '<div style="background:var(--surface,#fff);border-radius:16px;width:380px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;overflow:hidden;">'
+                  + '<div style="padding:24px 24px 16px;">'
+                  + '<h5 style="margin:0 0 16px;font-weight:700;color:var(--text);text-align:center;">Actualizar Kilometraje</h5>'
+                  + '<div class="mb-3">'
+                  + '<label class="form-label fw-bold" style="font-size:0.8rem;color:var(--subtext);">Kilometraje (KM)</label>'
+              + '<input type="number" id="rot-prompt-km" class="form-control" style="border-radius:10px;text-align:center;font-weight:700;font-size:1.2rem;" value="' + (currentKm || 0) + '">'
+                  + '</div>'
+                  + '</div>'
+                  + '<div style="background:rgba(0,0,0,0.03);padding:16px 24px;display:flex;gap:12px;justify-content:center;">'
+                  + '<button id="rot-pkm-cancel" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;font-weight:600;">Cancelar</button>'
+                  + '<button id="rot-pkm-ok" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:600;">Guardar KM</button>'
+                  + '</div></div>';
+    overlay.innerHTML = modalHtml;
+    document.body.appendChild(overlay);
+    
+    var inp = document.getElementById('rot-prompt-km');
+    inp.focus();
+    inp.select();
+
+    // Animate in
+    setTimeout(function() {
+        overlay.style.opacity = '1';
+        overlay.firstChild.style.transform = 'scale(1)';
+    }, 10);
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        overlay.firstChild.style.transform = 'scale(0.95)';
+        setTimeout(function(){ overlay.remove(); }, 200);
+    }
+
+    document.getElementById('rot-pkm-cancel').addEventListener('click', cerrar);
+    document.getElementById('rot-pkm-ok').addEventListener('click', function() {
+        var v = parseFloat(inp.value);
+        cerrar();
+        onConfirm(v);
+    });
+}
+
+// ÔöÇÔöÇ Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ÔöÇÔöÇ
 window.rotAccion = function(accion, idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot && accion !== 'pdf') return;
 
     if (accion === 'eliminar') {
         if (!window.guardAction('ot', 'd')) return;
-        if (!confirm('¿Eliminar la OT ' + idOT + '? Esta acción no se puede deshacer.')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
-            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-            .then(function() {
-                window.rotCerrarDetalle();
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT eliminada', 'success');
-                window.rotCargar();
-            })
-            .catch(function(err) {
-                console.error('Error eliminando OT:', err);
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la OT', 'danger');
-            });
+        rotConfirmModerno('Eliminar OT', '┬┐Eliminar la OT ' + idOT + '? Esta acci├│n no se puede deshacer.', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
+                .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+                .then(function() {
+                    window.rotCerrarDetalle();
+                    if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT eliminada', 'success');
+                    window.rotCargar();
+                })
+                .catch(function(err) {
+                    console.error('Error eliminando OT:', err);
+                    if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar la OT', 'danger');
+                });
+        }, 'danger');
         return;
     }
 
     if (accion === 'iniciar') {
         if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Iniciar la OT ' + idOT + '?')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error iniciando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al iniciar la OT', 'danger');
-        });
+        rotConfirmModerno('Iniciar OT', '┬┐Iniciar la OT ' + idOT + '?', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error iniciando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al iniciar la OT', 'danger');
+            });
+        }, 'primary');
         return;
     }
 
     if (accion === 'pausar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotModalComentario('Motivo de la pausa', 'Escribe el motivo (obligatorio)…', true, function(motivo) {
+        rotModalComentario('Motivo de la pausa', 'Escribe el motivo (obligatorio)ÔÇª', true, function(motivo) {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -604,7 +788,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'cerrar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)…', true, function(comentario) {
+        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)ÔÇª', true, function(comentario) {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -637,22 +821,23 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'anular') {
         if (!window.guardAction('ot', 'e')) return;
-        if (!confirm('¿Anular la OT ' + idOT + '?')) return;
-        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'anular' })
-        })
-        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
-        .then(function() {
-            window.rotCerrarDetalle();
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
-            window.rotCargar();
-        })
-        .catch(function(err) {
-            console.error('Error anulando OT:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la OT', 'danger');
-        });
+        rotConfirmModerno('Anular OT', '┬┐Anular la OT ' + idOT + '?', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'anular' })
+            })
+            .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
+            .then(function() {
+                window.rotCerrarDetalle();
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                console.error('Error anulando OT:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al anular la OT', 'danger');
+            });
+        }, 'danger');
         return;
     }
 
@@ -662,7 +847,7 @@ window.rotAccion = function(accion, idOT) {
     }
 };
 
-// ── Exportar a Excel ──────────────────────────────────────────────
+// ÔöÇÔöÇ Exportar a Excel ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotExportar = function() {
     var lista = window.rotDatosFiltrados.length > 0 ? window.rotDatosFiltrados : window.rotData;
     if (!lista || lista.length === 0) {
@@ -674,8 +859,8 @@ window.rotExportar = function() {
     var str  = function(v) { return String(v == null ? '' : v); };
 
     var encabezado = [
-        'N° OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
-        'Supervisor', 'Situación Inicial', 'Observaciones', 'Costo Total (S/)',
+        'N┬░ OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
+        'Supervisor', 'Situaci├│n Inicial', 'Observaciones', 'Costo Total (S/)',
         'Ingreso Taller', 'Inicio OT', 'Iniciado Por',
         'Pausa 1', 'Motivo Pausa 1', 'Fin Pausa 1',
         'Pausa 2', 'Motivo Pausa 2', 'Fin Pausa 2',
@@ -722,7 +907,7 @@ window.rotExportar = function() {
     var datos = [encabezado].concat(filas);
     var ws = XLSX.utils.aoa_to_sheet(datos);
 
-    // Ancho automático por columna
+    // Ancho autom├ítico por columna
     var wscols = encabezado.map(function(h, i) {
         var maxLen = h.length;
         filas.forEach(function(f) { var v = str(f[i]); if (v.length > maxLen) maxLen = v.length; });
@@ -735,14 +920,14 @@ window.rotExportar = function() {
     XLSX.writeFile(wb, 'Reportes_OT_' + new Date().toISOString().slice(0,10) + '.xlsx');
 };
 
-// ── PDF de una OT (jsPDF + autoTable) ────────────────────────────
+// ÔöÇÔöÇ PDF de una OT (jsPDF + autoTable) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotGenerarPDF(idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT no encontrada', 'danger'); return; }
     window.generarPDF_OT(ot, window.rotOtTrabajosActivos, window.rotOtMaterialesActivos);
 }
 
-// ── PDF del reporte (tabla filtrada) ─────────────────────────────
+// ÔöÇÔöÇ PDF del reporte (tabla filtrada) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotExportarPDF = function() {
     var lista = window.rotDatosFiltrados.length > 0 ? window.rotDatosFiltrados : window.rotData;
     if (!lista || lista.length === 0) {
@@ -764,7 +949,7 @@ window.rotExportarPDF = function() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('REPORTE DE ÓRDENES DE TRABAJO — AZKELL FLEET', 14, 12);
+    doc.text('REPORTE DE ├ôRDENES DE TRABAJO ÔÇö AZKELL FLEET', 14, 12);
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text('Generado: ' + new Date().toLocaleString('es-PE'), pageW - 14, 12, { align: 'right' });
@@ -778,8 +963,8 @@ window.rotExportarPDF = function() {
     var filHasta = rotVal('rot-fil-hasta');
     var filEst   = window._rotFiltroEstado || '';
     var filLibre = rotVal('rot-busqueda-libre');
-    if (filLibre) filtros.push('Búsqueda: ' + filLibre);
-    if (filOT)    filtros.push('N° OT: ' + filOT);
+    if (filLibre) filtros.push('B├║squeda: ' + filLibre);
+    if (filOT)    filtros.push('N┬░ OT: ' + filOT);
     if (filPlaca) filtros.push('Placa: ' + filPlaca);
     if (filMes)   filtros.push('Mes: ' + filMes);
     if (filDesde) filtros.push('Desde: ' + filDesde);
@@ -810,19 +995,19 @@ window.rotExportarPDF = function() {
     // Tabla
     var body = lista.map(function(ot) {
         var det   = rotDetalles(ot);
-        var idOT  = ot.ticket_entrada || ot.id_ot || '—';
-        var tipo  = det.tipo_ot || ot.tipo || '—';
-        var sub   = det.sub_tipo || '—';
-        var sup   = det.supervisor || ot.supervisor || '—';
-        var estado = ot.aprobacion || ot.estado || '—';
+        var idOT  = ot.ticket_entrada || ot.id_ot || 'ÔÇö';
+        var tipo  = det.tipo_ot || ot.tipo || 'ÔÇö';
+        var sub   = det.sub_tipo || 'ÔÇö';
+        var sup   = det.supervisor || ot.supervisor || 'ÔÇö';
+        var estado = ot.aprobacion || ot.estado || 'ÔÇö';
         var costo = 'S/' + parseFloat(ot.costo_total || 0).toFixed(2);
         var fecha = rotFechaISO(ot.creado_en || ot.fecha_ingreso);
-        return [idOT, ot.placa || '—', tipo + ' / ' + sub, sup, estado, costo, fecha];
+        return [idOT, ot.placa || 'ÔÇö', tipo + ' / ' + sub, sup, estado, costo, fecha];
     });
 
     doc.autoTable({
         startY: y,
-        head:   [['N° OT', 'Placa', 'Tipo / Sub Tipo', 'Supervisor', 'Estado', 'Costo Total', 'Fecha']],
+        head:   [['N┬░ OT', 'Placa', 'Tipo / Sub Tipo', 'Supervisor', 'Estado', 'Costo Total', 'Fecha']],
         body:   body,
         theme:  'striped',
         headStyles: { fillColor: azul, textColor: 255, fontStyle: 'bold', fontSize: 8 },
@@ -847,10 +1032,10 @@ window.rotExportarPDF = function() {
     doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
 };
 
-// ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
+// ÔöÇÔöÇ Generador global de PDF de OT (reutilizable desde otros m├│dulos) ÔöÇÔöÇ
 window.generarPDF_OT = function(ot, trabajos, materiales) {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería jsPDF no cargada. Recarga la página.', 'danger');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librer├¡a jsPDF no cargada. Recarga la p├ígina.', 'danger');
         return;
     }
     var jsPDF = window.jspdf.jsPDF;
@@ -859,14 +1044,14 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     var det = {};
     try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e) {}
 
-    var idOt    = String(ot.id_ot || ot.ticket_entrada || '—');
-    var placa   = ot.placa || '—';
+    var idOt    = String(ot.id_ot || ot.ticket_entrada || 'ÔÇö');
+    var placa   = ot.placa || 'ÔÇö';
     var estado  = ot.estado || 'Pendiente';
     var trList  = trabajos  || [];
     var matList = materiales || [];
 
     function fmtF(iso) {
-        if (!iso) return '—';
+        if (!iso) return 'ÔÇö';
         var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
         var p = s.split('-'); if (p.length !== 3) return iso;
         var m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -874,7 +1059,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     }
     function money(v) { return 'S/' + parseFloat(v || 0).toFixed(2); }
 
-    // ── Encabezado ──
+    // ÔöÇÔöÇ Encabezado ÔöÇÔöÇ
     doc.setFontSize(22);
     doc.setTextColor(37, 99, 235);
     doc.text('Orden de Trabajo: ' + idOt, 14, 22);
@@ -883,23 +1068,23 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     doc.setTextColor(100, 100, 100);
     doc.text('Generado: ' + new Date().toLocaleString('es-PE') + '  |  Estado: ' + estado, 14, 28);
 
-    // ── I. Información General ──
+    // ÔöÇÔöÇ I. Informaci├│n General ÔöÇÔöÇ
     var y = 40;
     doc.setFontSize(13);
     doc.setTextColor(30, 30, 30);
-    doc.text('I. Información General', 14, y);
+    doc.text('I. Informaci├│n General', 14, y);
     y += 7;
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
     doc.text('Placa: ' + placa,                                      14,  y);
-    doc.text('Rampa: ' + (det.rampa_origen || '—'),                  80,  y);
-    doc.text('Kilometraje: ' + (det.km ? det.km + ' km' : '—'),      145, y);
+    doc.text('Rampa: ' + (det.rampa_origen || 'ÔÇö'),                  80,  y);
+    doc.text('Kilometraje: ' + (det.km ? det.km + ' km' : 'ÔÇö'),      145, y);
     y += 6;
-    doc.text('Tipo OT: ' + (det.tipo_ot || '—') + (det.sub_tipo ? ' / ' + det.sub_tipo : ''), 14, y);
-    doc.text('Supervisor: ' + (det.supervisor || ot.supervisor || '—'), 110, y);
+    doc.text('Tipo OT: ' + (det.tipo_ot || 'ÔÇö') + (det.sub_tipo ? ' / ' + det.sub_tipo : ''), 14, y);
+    doc.text('Supervisor: ' + (det.supervisor || ot.supervisor || 'ÔÇö'), 110, y);
     y += 6;
-    doc.text('Situación Inicial: ' + (det.situacion_inicial || ot.situacion || '—'), 14, y);
-    doc.text('Técnico: ' + (det.tecnico || ot.tecnico || '—'),       110, y);
+    doc.text('Situaci├│n Inicial: ' + (det.situacion_inicial || ot.situacion || 'ÔÇö'), 14, y);
+    doc.text('T├®cnico: ' + (det.tecnico || ot.tecnico || 'ÔÇö'),       110, y);
     y += 6;
     doc.text('Fecha Ingreso: ' + fmtF(ot.fecha_ingreso),             14,  y);
     y += 6;
@@ -909,15 +1094,15 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         y += motivoLines.length * 5;
     }
 
-    // ── II. Cierre ──
+    // ÔöÇÔöÇ II. Cierre ÔöÇÔöÇ
     y += 4;
     doc.setFontSize(13);
     doc.setTextColor(30, 30, 30);
-    doc.text('II. Cierre y Finalización', 14, y);
+    doc.text('II. Cierre y Finalizaci├│n', 14, y);
     y += 7;
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
-    doc.text('Técnico Cierre: ' + (det.tecnico || ot.tecnico || '—'), 14, y);
+    doc.text('T├®cnico Cierre: ' + (det.tecnico || ot.tecnico || 'ÔÇö'), 14, y);
     y += 6;
     if (det.obs_cierre) {
         var obsLines = doc.splitTextToSize('Observaciones Finales: ' + det.obs_cierre, 180);
@@ -925,7 +1110,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         y += obsLines.length * 5;
     }
 
-    // ── III. Trabajos ──
+    // ÔöÇÔöÇ III. Trabajos ÔöÇÔöÇ
     y += 5;
     doc.setFontSize(13);
     doc.setTextColor(30, 30, 30);
@@ -936,48 +1121,48 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
             var det2 = {};
             try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
             return [
-                t.ticket_visita || '—',
-                t.trabajo_realizado || '—',
-                det2.personal || t.tecnico || '—',
-                t.estado || '—'
+                t.ticket_visita || 'ÔÇö',
+                t.trabajo_realizado || 'ÔÇö',
+                det2.personal || t.tecnico || 'ÔÇö',
+                t.estado || 'ÔÇö'
             ];
           })
-        : [['—', 'Sin trabajos registrados', '—', '—']];
+        : [['ÔÇö', 'Sin trabajos registrados', 'ÔÇö', 'ÔÇö']];
 
     doc.autoTable({
         startY: y + 4,
-        head:   [['N° Trabajo', 'Descripción', 'Personal', 'Estado']],
+        head:   [['N┬░ Trabajo', 'Descripci├│n', 'Personal', 'Estado']],
         body:   trbBody,
         theme:  'grid',
         headStyles: { fillColor: [37, 99, 235] },
         styles: { fontSize: 9 }
     });
 
-    // ── IV. Materiales ──
+    // ÔöÇÔöÇ IV. Materiales ÔöÇÔöÇ
     y = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(13);
     doc.setTextColor(30, 30, 30);
-    doc.text('IV. Consumos de Almacén', 14, y);
+    doc.text('IV. Consumos de Almac├®n', 14, y);
 
     var matBody = matList.length
         ? matList.reduce(function(acc, a) {
             var items = a.items || [];
             if (!items.length) {
-                acc.push([a.id || '—', '—', '—', money(a.total_pen), a.estado || '—']);
+                acc.push([a.id || 'ÔÇö', 'ÔÇö', 'ÔÇö', money(a.total_pen), a.estado || 'ÔÇö']);
             } else {
                 items.forEach(function(it, idx) {
                     acc.push([
-                        (idx === 0 ? (a.id || '') + ' | ' : '') + (it.descripcion || it.inventario_id || '—'),
+                        (idx === 0 ? (a.id || '') + ' | ' : '') + (it.descripcion || it.inventario_id || 'ÔÇö'),
                         parseFloat(it.cantidad || 0).toLocaleString('es-PE', {maximumFractionDigits: 3}),
                         money(it.costo_unitario),
                         money(it.importe),
-                        idx === 0 ? (a.estado || '—') : ''
+                        idx === 0 ? (a.estado || 'ÔÇö') : ''
                     ]);
                 });
             }
             return acc;
           }, [])
-        : [['—', 'Sin consumos registrados', '—', '—', '—']];
+        : [['ÔÇö', 'Sin consumos registrados', 'ÔÇö', 'ÔÇö', 'ÔÇö']];
 
     doc.autoTable({
         startY: y + 4,
@@ -988,25 +1173,25 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         styles: { fontSize: 9 }
     });
 
-    // ── Costo Total ──
+    // ÔöÇÔöÇ Costo Total ÔöÇÔöÇ
     y = doc.lastAutoTable.finalY + 12;
     doc.setFontSize(15);
     doc.setTextColor(22, 163, 74);
     doc.text('COSTO TOTAL DE LA OT: ' + money(ot.costo_total), 14, y);
 
-    // ── Firma ──
+    // ÔöÇÔöÇ Firma ÔöÇÔöÇ
     if (det.firma) {
         y += 14;
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
-        doc.text('Firma del Técnico/Supervisor:', 14, y);
+        doc.text('Firma del T├®cnico/Supervisor:', 14, y);
         try { doc.addImage(det.firma, 'PNG', 14, y + 4, 50, 20); } catch(e) {}
     }
 
     doc.save('OT_' + idOt + '.pdf');
 };
 
-// ── KPIs ─────────────────────────────────────────────────────────
+// ÔöÇÔöÇ KPIs ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotActualizarKPIs(lista) {
     var total       = lista.length;
     var correctivos = lista.filter(function(o) {
@@ -1043,7 +1228,7 @@ function rotSetKPI(id, val) {
     if (el) el.textContent = val;
 }
 
-// ── Helpers de formato ────────────────────────────────────────────
+// ÔöÇÔöÇ Helpers de formato ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotDetalles(ot) {
     if (!ot) return {};
     try { return typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); }
@@ -1055,7 +1240,7 @@ function rotFmtMoney(val) {
 }
 
 function rotFmtFecha(iso) {
-    if (!iso) return '—';
+    if (!iso) return 'ÔÇö';
     var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
     var p = s.split('-');
     if (p.length !== 3) return iso;
@@ -1075,16 +1260,16 @@ function rotBadgeAprobacion(estado) {
         'Cerrada':   ['rot-b-cerrada',   'Cerrada'],
         'Anulado':   ['rot-b-anulado',   'Anulado']
     };
-    var v = map[estado] || ['rot-b-pendiente', estado || '—'];
+    var v = map[estado] || ['rot-b-pendiente', estado || 'ÔÇö'];
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
 function rotBadgeSituacion(sit) {
-    if (!sit) return '—';
+    if (!sit) return 'ÔÇö';
     var map = {
-        'En atención':            ['rot-b-en-atencion', 'En Atención'],
+        'En atenci├│n':            ['rot-b-en-atencion', 'En Atenci├│n'],
         'Espera de repuesto':     ['rot-b-espera',      'Espera Repuesto'],
-        'Espera de autorización': ['rot-b-espera',      'Espera Autor.'],
+        'Espera de autorizaci├│n': ['rot-b-espera',      'Espera Autor.'],
         'Finalizado':             ['rot-b-cerrada',     'Finalizado']
     };
     var v = map[sit] || [null, sit];
@@ -1092,7 +1277,7 @@ function rotBadgeSituacion(sit) {
 }
 
 function rotBadgeTipo(tipo) {
-    if (!tipo) return '—';
+    if (!tipo) return 'ÔÇö';
     return tipo === 'Preventivo'
         ? '<span class="rot-badge rot-b-tipo-prev">Prev.</span>'
         : '<span class="rot-badge rot-b-tipo-corr">Corr.</span>';
@@ -1107,6 +1292,51 @@ function rotVal(id) {
     return el ? (el.value || '') : '';
 }
 
+function rotGetNombreUsuario(email) {
+    if (!email) return '';
+    if (window.dataGlobalUsuarios && Array.isArray(window.dataGlobalUsuarios)) {
+        var u = window.dataGlobalUsuarios.find(function(user) { 
+            return String(user[0]).toLowerCase() === String(email).toLowerCase() || 
+                   String(user[1]).toLowerCase() === String(email).toLowerCase(); 
+        });
+        if (u && u[1]) return u[1];
+    }
+    return email.split('@')[0];
+}
+
+window.rotAbrirInspeccionWrapper = function(placa, idOT, km) {
+    if (typeof window.abrirModalNuevaInspeccion === 'function') {
+        window.abrirModalNuevaInspeccion(placa, idOT, km);
+    } else {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando m├│dulo de inspecciones...", "bg-info");
+        var script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/inspecciones/logica.js?v=' + Date.now();
+        script.onload = function() {
+            if (typeof window.abrirModalNuevaInspeccion === 'function') {
+                window.abrirModalNuevaInspeccion(placa, idOT, km);
+            } else {
+                alert("No se pudo cargar el m├│dulo de inspecciones.");
+            }
+        };
+        script.onerror = function() {
+            alert("Error al cargar logica de inspecciones.");
+        };
+        document.body.appendChild(script);
+    }
+};
+
+function rotGetNombreUsuario(email) {
+    if (!email) return '';
+    if (window.dataGlobalUsuarios && Array.isArray(window.dataGlobalUsuarios)) {
+        var u = window.dataGlobalUsuarios.find(function(user) { 
+            return String(user[0]).toLowerCase() === String(email).toLowerCase() || 
+                   String(user[1]).toLowerCase() === String(email).toLowerCase(); 
+        });
+        if (u && u[1]) return u[1];
+    }
+    return email.split('@')[0];
+}
+
 function rotEscHtml(str) {
     return String(str)
         .replace(/&/g,'&amp;')
@@ -1119,7 +1349,7 @@ function rotCapitalize(str) {
     return str.replace(/_/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
 }
 
-// ── Render dinámico: sección Trabajos ────────────────────────────
+// ÔöÇÔöÇ Render din├ímico: secci├│n Trabajos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotRenderSecTrabajos(idOt, esAprobada) {
     var body  = document.getElementById('rot-tr-body');
     var count = document.getElementById('rot-tr-count');
@@ -1135,11 +1365,6 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
         }, 0);
 
     var html = '';
-    if (esAprobada) {
-        html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm btn-outline-primary" onclick="window.rotAgregarTrabajo(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Trabajo</button></div>';
-    }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay trabajos registrados</div>';
     } else {
@@ -1157,9 +1382,9 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
                   + '<div><span style="font-weight:700;color:var(--primary,#5865F2);font-size:0.72rem;">' + ticket + '</span> ' + bdg + '</div>'
                   + (det2.costo ? '<span style="font-weight:700;color:#16a34a;font-size:0.78rem;">S/' + parseFloat(det2.costo).toFixed(2) + '</span>' : '')
                   + '</div>'
-                  + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(t.trabajo_realizado || '—') + '</div>'
+                  + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(t.trabajo_realizado || 'ÔÇö') + '</div>'
                   + (det2.personal ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + rotEscHtml(det2.personal) + '</div>' : '')
-                  + ((fecIni || fecFin) ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;"><i class="bi bi-calendar me-1"></i>' + fecIni + (fecFin ? ' → ' + fecFin : '') + '</div>' : '')
+                  + ((fecIni || fecFin) ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;"><i class="bi bi-calendar me-1"></i>' + fecIni + (fecFin ? ' ÔåÆ ' + fecFin : '') + '</div>' : '')
                   + '<div style="font-size:0.7rem;color:var(--primary,#5865F2);margin-top:3px;opacity:0.7;">Clic para editar</div>'
                   + '</div>';
         });
@@ -1170,7 +1395,72 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// ── Render dinámico: sección Materiales ──────────────────────────
+// ÔöÇÔöÇ Render din├ímico: secci├│n Inspecciones ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+function rotRenderSecInspecciones(idOt) {
+    var body = document.getElementById('rot-insp-body');
+    if (!body) return;
+    var lista = window.rotOtInspeccionesActivas || [];
+    var html = '';
+    if (!lista.length) {
+        html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay inspecciones registradas</div>';
+    } else {
+        lista.forEach(function(i) {
+            var fIngreso = String(i.fecha_ingreso || '').split('T')[0];
+            html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;display:flex;justify-content:space-between;align-items:center;">'
+                  + '<div>'
+                  + '<div style="font-weight:700;color:var(--primary,#5865F2);font-size:0.75rem;">' + rotEscHtml(i.id) + '</div>'
+                  + '<div style="color:var(--subtext);font-size:0.7rem;">' + fIngreso + ' ÔÇó KM: ' + (i.km_tablero || 0) + '</div>'
+                  + '</div>'
+                  + '<button class="btn btn-sm btn-outline-secondary" style="padding:1px 8px;font-size:0.7rem;border-radius:12px;" onclick="window.rotAbrirTabInspeccion(\'' + rotEscHtml(i.id) + '\')"><i class="bi bi-eye"></i> Ver</button>'
+                  + '</div>';
+        });
+    }
+    body.innerHTML = html;
+}
+
+window.rotAbrirTabInspeccion = function(idInsp) {
+    if (typeof window.verDetalleInspeccion === 'function') {
+        window.verDetalleInspeccion(idInsp);
+    } else {
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando visor...", "bg-info");
+        let script = document.createElement('script');
+        script.src = '/modulos/mantenimiento/inspecciones/logica.js?v=' + Date.now();
+        script.onload = function() {
+            let intentos = 0;
+            let checkInterval = setInterval(function() {
+                intentos++;
+                if (typeof window.verDetalleInspeccion === 'function') {
+                    clearInterval(checkInterval);
+                    window.verDetalleInspeccion(idInsp);
+                } else if (intentos > 40) {
+                    clearInterval(checkInterval);
+                    alert('No se pudo cargar el visor de inspecciones.');
+                }
+            }, 50);
+        };
+        script.onerror = function() {
+            alert('Error al cargar la l├│gica de inspecciones.');
+        };
+        document.body.appendChild(script);
+    }
+};
+
+window.rotEditarKm = function(idOT, kmActual) {
+    window.rotPromptKm(kmActual, function(newKm) {
+        if (newKm === null || isNaN(newKm) || newKm < 0) return;
+        fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'editar', km: newKm })
+        }).then(function(r) { return r.json(); })
+          .then(function(res) {
+              if (res.error) alert('Error: ' + res.error);
+              else window.rotCargar();
+          }).catch(function(e) { alert('Error: ' + e); });
+    });
+};
+
+
 function rotRenderSecMateriales(idOt, esAprobada) {
     var body  = document.getElementById('rot-mat-body');
     var count = document.getElementById('rot-mat-count');
@@ -1184,11 +1474,6 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     var hayPendientes = lista.some(function(m) { return m.estado !== 'Despachado' && m.estado !== 'Anulado'; });
 
     var html = '';
-    if (esAprobada) {
-        html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);">'
-              + '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAgregarSalida(\'' + rotEscHtml(idOt) + '\')">'
-              + '<i class="bi bi-plus-lg me-1"></i>Agregar Solicitud</button></div>';
-    }
     if (!lista.length) {
         html += '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay salidas registradas</div>';
     } else {
@@ -1199,10 +1484,10 @@ function rotRenderSecMateriales(idOt, esAprobada) {
                 ? '<span style="background:rgba(220,38,38,0.1);color:#dc2626;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Anulado</span>'
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
             var items = m.items || [];
-            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || '—'); }).join(', ') || '—';
+            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || 'ÔÇö'); }).join(', ') || 'ÔÇö';
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || '—') + '</span> ' + badge + '</div>'
+                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || 'ÔÇö') + '</span> ' + badge + '</div>'
                   + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(\'' + m.id + '\',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
                   + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
@@ -1217,7 +1502,7 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// ── Agregar Trabajo ───────────────────────────────────────────────
+// ÔöÇÔöÇ Agregar Trabajo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotAgregarTrabajo = function(idOt) {
     var lbl  = document.getElementById('rot-tr-ot-lbl');      if (lbl)  lbl.textContent = idOt;
     var hid  = document.getElementById('rot-tr-ot-id');        if (hid)  hid.value = idOt;
@@ -1238,7 +1523,7 @@ window.rotAgregarTrabajo = function(idOt) {
     rotMsInit('');
 };
 
-// ── Editar Trabajo ────────────────────────────────────────────────
+// ÔöÇÔöÇ Editar Trabajo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotEditarTrabajo = function(ticket, idOt) {
     var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.ticket_visita || '') === String(ticket); });
     if (!t) return;
@@ -1264,7 +1549,7 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     rotMsInit(det2.personal || t.tecnico || '');
 };
 
-// ── Guardar Trabajo (nuevo o edición) ────────────────────────────
+// ÔöÇÔöÇ Guardar Trabajo (nuevo o edici├│n) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotGuardarTrabajo = function() {
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
@@ -1274,7 +1559,7 @@ window.rotGuardarTrabajo = function() {
     var fFin   = ((document.getElementById('rot-tr-fecha-fin')  || {}).value || '');
     var costo  = parseFloat((document.getElementById('rot-tr-costo')   || {}).value || 0);
 
-    if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
+    if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripci├│n es requerida', 'danger'); return; }
 
     var esEdicion = !!ticket;
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
@@ -1308,35 +1593,35 @@ window.rotGuardarTrabajo = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
-// ── Eliminar Trabajo ──────────────────────────────────────────────
+// ÔöÇÔöÇ Eliminar Trabajo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotEliminarTrabajo = function() {
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     if (!ticket) return;
-    if (!confirm('¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.')) return;
-
-    fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
-    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function() {
-        window.rotCerrarSubDrawer('rot-drawer-trabajo');
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Trabajo eliminado', 'success');
-        fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOt))
-            .then(function(r){ return r.ok ? r.json() : []; })
-            .then(function(rows) {
-                window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
-                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
-            }).catch(function(){});
-    })
-    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
+    rotConfirmModerno('Eliminar Trabajo', '┬┐Eliminar el trabajo ' + ticket + '? Esta acci├│n no se puede deshacer.', function() {
+        fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+            window.rotCerrarSubDrawer('rot-drawer-trabajo');
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Trabajo eliminado', 'success');
+            fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOt))
+                .then(function(r){ return r.ok ? r.json() : []; })
+                .then(function(rows) {
+                    window.rotOtTrabajosActivos = Array.isArray(rows) ? rows : [];
+                    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                    rotRenderSecTrabajos(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
+                }).catch(function(){});
+        })
+        .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar trabajo', 'danger'); });
+    }, 'danger');
 };
 
-// ── Agregar Salida (material) — form rico multi-artículo ──────────
+// ÔöÇÔöÇ Agregar Salida (material) ÔÇö form rico multi-art├¡culo ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotAgregarSalida = function(idOt) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
     var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
     if (estadoOT === 'Finalizado' || estadoOT === 'Cerrada' || estadoOT === 'Anulado') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT está cerrada. No se pueden agregar salidas de material.', 'warning');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT est├í cerrada. No se pueden agregar salidas de material.', 'warning');
         return;
     }
     if (estadoOT === 'Pendiente') {
@@ -1369,7 +1654,7 @@ window.rotAgregarSalida = function(idOt) {
     var tot = document.getElementById('rot-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
     _rotAgregarItemMat();
 
-    // Cargar inventario y placas si no están cargados
+    // Cargar inventario y placas si no est├ín cargados
     if (!window._rotInvData.length) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
@@ -1377,7 +1662,7 @@ window.rotAgregarSalida = function(idOt) {
                 window._rotInvData = d || [];
                 var dl = document.getElementById('rot-mat-inv-list');
                 if (dl) dl.innerHTML = (d || []).map(function(a) {
-                    return '<option value="' + rotEscHtml(a.id + ' — ' + a.descripcion) + '">';
+                    return '<option value="' + rotEscHtml(a.id + ' ÔÇö ' + a.descripcion) + '">';
                 }).join('');
             })
             .catch(function() {});
@@ -1386,7 +1671,7 @@ window.rotAgregarSalida = function(idOt) {
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
             var lista = (Array.isArray(d) ? d : []).map(function(p){ return (p.placa || String(p) || '').toUpperCase(); }).filter(Boolean).sort();
-            if (window.SS) window.SS.init('rot-placa', 'rot-mat-placa', lista, '', null, 'Buscar placa…');
+            if (window.SS) window.SS.init('rot-placa', 'rot-mat-placa', lista, '', null, 'Buscar placaÔÇª');
         })
         .catch(function() {});
     fetch('/api/conductores-lista')
@@ -1402,7 +1687,7 @@ window.rotAgregarSalida = function(idOt) {
     rotAbrirSubDrawer('rot-drawer-material');
 };
 
-// ── Item helpers para el form de materiales ───────────────────────
+// ÔöÇÔöÇ Item helpers para el form de materiales ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window._rotAgregarItemMat = function() {
     var tbody = document.getElementById('rot-mat-items-tbody');
     if (!tbody) return;
@@ -1411,7 +1696,7 @@ window._rotAgregarItemMat = function() {
     tr.id = 'rot-mat-item-' + idx;
     tr.innerHTML =
         '<td>' +
-            '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+            '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Art├¡culoÔÇª" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
             '<input type="hidden" class="rot-mat-item-inv-id" data-idx="' + idx + '">' +
             '<input type="hidden" class="rot-mat-item-stock" data-idx="' + idx + '" value="">' +
             '<div class="rot-mat-item-stock-lbl" data-idx="' + idx + '" style="font-size:0.71rem;margin-top:2px;display:none;"></div>' +
@@ -1425,7 +1710,7 @@ window._rotAgregarItemMat = function() {
 
 window._rotBuscarArtMat = function(input, idx) {
     var val = input.value || '';
-    var invId = val.split(' — ')[0].trim();
+    var invId = val.split(' ÔÇö ')[0].trim();
     var item = (window._rotInvData || []).find(function(d) { return d.id === invId; });
     var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
     var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
@@ -1439,7 +1724,7 @@ window._rotBuscarArtMat = function(input, idx) {
         if (lblEl) {
             lblEl.style.display = '';
             if (stock <= 0) {
-                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠ Sin stock disponible</span>';
+                lblEl.innerHTML = '<span style="color:#dc2626;font-weight:700;">ÔÜá Sin stock disponible</span>';
             } else {
                 lblEl.innerHTML = '<span style="color:#16a34a;">Stock disponible: <strong>' + stock + '</strong> ' + (item.unidad || 'und') + '</span>';
             }
@@ -1472,7 +1757,7 @@ function _rotActualizarTotalMat() {
     if (el) el.textContent = 'S/. ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ── Guardar Material ──────────────────────────────────────────────
+// ÔöÇÔöÇ Guardar Material ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotGuardarMaterial = function() {
     var idOt  = ((document.getElementById('rot-mat-ot-id')      || {}).value || '');
     var fecha = ((document.getElementById('rot-mat-fecha')       || {}).value || '');
@@ -1493,10 +1778,10 @@ window.rotGuardarMaterial = function() {
         var cant = parseFloat(cants[i].value) || 0;
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
-        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
+        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inv├ílida en fila ' + (i+1), 'danger'); return; }
         items.push({ descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
     }
-    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
+    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un art├¡culo', 'danger'); return; }
 
     // Validar stock antes de guardar
     var sinStock = [];
@@ -1516,14 +1801,14 @@ window.rotGuardarMaterial = function() {
             if (inv) {
                 var stockDisp = parseFloat(inv.stock_actual != null ? inv.stock_actual : 0);
                 if (it.cantidad > stockDisp) {
-                    sinStock.push('"' + it.descripcion + '" — solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
+                    sinStock.push('"' + it.descripcion + '" ÔÇö solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
                 }
             }
         }
     });
     if (sinStock.length) {
         if (typeof window.mostrarAlerta === 'function') {
-            window.mostrarAlerta('Stock insuficiente:\n• ' + sinStock.join('\n• '), 'danger');
+            window.mostrarAlerta('Stock insuficiente:\nÔÇó ' + sinStock.join('\nÔÇó '), 'danger');
         }
         return;
     }
@@ -1558,25 +1843,26 @@ window.rotGuardarMaterial = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar solicitud', 'danger'); });
 };
 
-// ── Eliminar Material ─────────────────────────────────────────────
+// ÔöÇÔöÇ Eliminar Material ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotEliminarMaterial = function(idSolicitud, idOt) {
-    if (!confirm('¿Eliminar esta solicitud de material?')) return;
-    fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
-    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function() {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
-        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
-            .then(function(r){ return r.ok ? r.json() : []; })
-            .then(function(rows) {
-                window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
-                var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-                rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
-            }).catch(function(){});
-    })
-    .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger'); });
+    rotConfirmModerno('Eliminar Solicitud', '┬┐Eliminar esta solicitud de material?', function() {
+        fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Solicitud eliminada', 'success');
+            fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt))
+                .then(function(r){ return r.ok ? r.json() : []; })
+                .then(function(rows) {
+                    window.rotOtMaterialesActivos = Array.isArray(rows) ? rows : [];
+                    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+                    rotRenderSecMateriales(idOt, ot ? (ot.estado === 'Aprobada' || ot.estado === 'En Proceso' || ot.estado === 'Pausada') : false);
+                }).catch(function(){});
+        })
+        .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger'); });
+    }, 'danger');
 };
 
-// ── Sub-drawer helpers ────────────────────────────────────────────
+// ÔöÇÔöÇ Sub-drawer helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotAbrirSubDrawer(id) {
     var d = document.getElementById(id);
     if (d) d.classList.add('open');
@@ -1587,7 +1873,7 @@ window.rotCerrarSubDrawer = function(drawerId) {
     if (d) d.classList.remove('open');
 };
 
-// ── Multiselect Personal (Agregar/Editar Trabajo) ────────────────
+// ÔöÇÔöÇ Multiselect Personal (Agregar/Editar Trabajo) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window._rotPersonalLista = window._rotPersonalLista || [];
 window._rotSeleccionados = window._rotSeleccionados || [];
 
@@ -1691,14 +1977,14 @@ function rotMsRenderBox() {
     if (!box) return;
     var sel = window._rotSeleccionados;
     if (sel.length === 0) {
-        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona t├®cnico(s)...</span>';
     } else {
         box.innerHTML = sel.map(function(n) {
             var nEsc = n.replace(/'/g, "\\'");
             return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
                 + n
                 + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
-                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">×</span>'
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">├ù</span>'
                 + '</span>';
         }).join('');
     }
@@ -1717,7 +2003,7 @@ document.removeEventListener('click', window._rotMsOutsideClick);
 document.addEventListener('click', window._rotMsOutsideClick);
 
 
-// ── Render sección Backlog ────────────────────────────────────────
+// ÔöÇÔöÇ Render secci├│n Backlog ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function rotRenderSecBacklog(items) {
     var body  = document.getElementById('rot-bkg-body');
     var count = document.getElementById('rot-bkg-count');
@@ -1737,21 +2023,21 @@ function rotRenderSecBacklog(items) {
               + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
               + '<div style="display:flex;gap:4px;">'
               + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
-              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">✓ Realizado</button>'
+              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">Ô£ô Realizado</button>'
               + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
               + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
               + '</div>'
               + '</div>'
-              + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(b.tarea || '—') + '</div>'
+              + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(b.tarea || 'ÔÇö') + '</div>'
               + (b.reportado_por ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + rotEscHtml(b.reportado_por) + '</div>' : '')
               + '</div>';
     });
     body.innerHTML = html;
 }
 
-// ── Eliminar backlog item ─────────────────────────────────────────
+// ÔöÇÔöÇ Eliminar backlog item ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotEliminarBacklogItem = function(id, btn) {
-    if (!confirm('¿Eliminar este mantenimiento pendiente?')) return;
+    if (!confirm('┬┐Eliminar este mantenimiento pendiente?')) return;
     if (btn) btn.disabled = true;
     fetch('/api/ot-backlog/' + id, { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -1770,7 +2056,7 @@ window.rotEliminarBacklogItem = function(id, btn) {
     });
 };
 
-// ── Abrir sub-drawer agregar backlog ──────────────────────────────
+// ÔöÇÔöÇ Abrir sub-drawer agregar backlog ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotAbrirAgregarBacklog = function(placa) {
     var lbl = document.getElementById('rot-bkg-placa-lbl'); if (lbl) lbl.textContent = 'Placa: ' + placa;
     var hid = document.getElementById('rot-bkg-placa-hid'); if (hid) hid.value = placa;
@@ -1780,14 +2066,14 @@ window.rotAbrirAgregarBacklog = function(placa) {
     rotAbrirSubDrawer('rot-drawer-backlog');
 };
 
-// ── Guardar nuevo backlog ─────────────────────────────────────────
+// ÔöÇÔöÇ Guardar nuevo backlog ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 window.rotGuardarBacklog = function() {
     var placa = ((document.getElementById('rot-bkg-placa-hid')     || {}).value || '').trim();
     var tema  = ((document.getElementById('rot-bkg-tema')          || {}).value || '').trim();
     var tarea = ((document.getElementById('rot-bkg-tarea')         || {}).value || '').trim();
     var rep   = ((document.getElementById('rot-bkg-reportado-por') || {}).value || '').trim();
 
-    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
+    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripci├│n es requerida', 'danger'); return; }
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
     fetch('/api/ot-backlog', {
         method: 'POST',
@@ -1807,7 +2093,7 @@ window.rotGuardarBacklog = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al agregar pendiente', 'danger'); });
 };
 window.rotMarcarBacklogRealizado = function(id, btn) {
-    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'ÔÇª'; }
     fetch('/api/ot-backlog/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1824,16 +2110,16 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
         }
     })
     .catch(function() {
-        if (btn) { btn.disabled = false; btn.innerHTML = '✓ Realizado'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Ô£ô Realizado'; }
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al actualizar el backlog', 'danger');
     });
 };
 
-// ── Editar OT — abrir sub-drawer ─────────────────────────────────
+// ÔöÇÔöÇ Editar OT ÔÇö abrir sub-drawer ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 var ROT_SUBTIPOS = {
-    'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
-    'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
-    'Predictivo': ['Por condición','Prueba'],
+    'Preventivo': ['Inspecci├│n Pre-PM','Campa├▒a','Limpieza Integral','Rutina','Programado','Oportuno'],
+    'Correctivo': ['Falla','Varado','Programado','Garant├¡a','Accidentabilidad','Mala Operaci├│n'],
+    'Predictivo': ['Por condici├│n','Prueba'],
     'Proactivo':  ['Mejora'],
     'Servicio':   ['Stock','Taller']
 };
@@ -1851,7 +2137,7 @@ function rotAbrirEditarOT(idOT) {
     set('rot-eot-supervisor', det.supervisor || ot.supervisor || '');
     set('rot-eot-motivo',     det.motivo || ot.observaciones || '');
 
-    // Situación
+    // Situaci├│n
     var sitEl = document.getElementById('rot-eot-situacion');
     if (sitEl) sitEl.value = det.situacion_inicial || ot.situacion || '';
 
@@ -1876,7 +2162,7 @@ window.rotCambiarTipoEOT = function() {
     var sel  = document.getElementById('rot-eot-subtipo');
     if (!sel) return;
     var opts = ROT_SUBTIPOS[tipo] || [];
-    sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(function(s) {
+    sel.innerHTML = '<option value="">ÔÇö Seleccionar ÔÇö</option>' + opts.map(function(s) {
         return '<option value="' + s + '">' + s + '</option>';
     }).join('');
     sel.disabled = !opts.length;
@@ -1915,3 +2201,321 @@ window.rotGuardarEdicionOT = function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar los cambios', 'danger');
     });
 };
+
+// ÔÇö Descargar Plantilla Vac├¡a para Inspecci├│n ÔÇö
+window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
+    if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
+    fetch('/api/mantenimiento/inspecciones/config')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var schema = res.data ? res.data.map(function(d) {
+                var parsed = [];
+                try { parsed = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : d.items_json; } catch(e){}
+                return { tab: d.titulo, items: parsed };
+            }) : [];
+            
+            var dtStr = '____/____/______';
+            if (fechaIng) {
+                var parts = fechaIng.split('T')[0].split('-');
+                if(parts.length === 3) dtStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+            }
+            var kmStr = km ? Number(km).toLocaleString('es-PE') : '________________';
+
+            var tbody = '';
+            var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+            schema.forEach(function(sec, idxCat) {
+                tbody += '<tr class="sec-row"><td colspan="3">' + (romanos[idxCat] || (idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+                if (sec.items) {
+                    var itemsArr = Array.isArray(sec.items) ? sec.items : [];
+                    itemsArr.forEach(function(item, idxItem) {
+                        var lbl = typeof item === 'string' ? item : item.label;
+                        tbody += '<tr>'
+                               + '<td>' + (idxItem+1) + '. ' + rotEscHtml(lbl) + '</td>'
+                               + '<td class="w-chk"></td>'
+                               + '<td></td>'
+                               + '</tr>';
+                    });
+                }
+            });
+
+            var html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Fallas Mec├ínicas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-header: #0053b3;
+            --blue-num: #4a86e8;
+            --chk-green: #00ff00;
+            --chk-red: #ff0000;
+        }
+        * {
+            font-family: 'Oswald', sans-serif !important;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        #btnPrint {
+            position: fixed; top: 20px; right: 20px;
+            background-color: #000; color: #fff; border: none;
+            padding: 8px 16px; border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 1000;
+        }
+        #btnPrint:hover { opacity: 0.9; }
+        .page-container {
+            width: 210mm;
+            height: 296mm;
+            background: white;
+            padding: 5mm 10mm;
+            box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+        }
+        .iso-header {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: -2px;
+            table-layout: fixed;
+            flex-shrink: 0;
+        }
+        .iso-header td {
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .logo-cell { 
+            width: 20%; 
+            padding: 2px;
+        }
+        .title-cell { 
+            width: 55%; 
+            font-size: 24px;
+            font-weight: bold; 
+            line-height: 1; 
+            text-transform: uppercase; 
+            color: #000;
+        }
+        .sub-title { 
+            font-size: 12px; 
+            font-weight: normal; 
+            color: #333; 
+            letter-spacing: 1px;
+        }
+        .qms-item { 
+            width: 25%; 
+            font-size: 10px; 
+            text-align: left !important; 
+            padding: 1px 4px; 
+            height: 16px; 
+        }
+        .data-grid {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 4px;
+            table-layout: fixed;
+            flex-shrink: 0;
+        }
+        .data-grid td {
+            border: 1px solid #000;
+            padding: 1px 4px;
+            font-size: 11px;
+            font-weight: bold;
+            height: 20px;
+            vertical-align: middle;
+        }
+        .col-left { width: 35%; }
+        .col-mid { width: 35%; }
+        .col-right { width: 30%; vertical-align: top !important; padding-top: 2px !important; }
+        .val-normal { font-weight: normal; margin-left: 3px; }
+        .val-blue { color: var(--blue-num); font-size: 13px; margin-left: 3px; }
+        .table-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 5px;
+        }
+        .checklist-table {
+            width: 100%;
+            flex-grow: 1;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            font-size: 9.5px;
+        }
+        .checklist-table th {
+            background-color: var(--blue-header);
+            color: white;
+            text-transform: uppercase;
+            padding: 2px;
+            border: 1px solid #000;
+            text-align: left;
+        }
+        .checklist-table th.th-center { text-align: center; }
+        .checklist-table td {
+            border: 1px solid #000;
+            padding: 1px 3px;
+            vertical-align: middle;
+        }
+        .sec-row td {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            padding: 1px 3px;
+        }
+        .w-crit { width: 45%; }
+        .w-chk { width: 10%; text-align: center; padding: 0; }
+        .w-obs { width: 45%; }
+        .sq {
+            display: inline-block;
+            width: 9px; height: 9px;
+            background: #fff; margin-top: 2px;
+        }
+        .sq-green { border: 2px solid var(--chk-green); }
+        .sq-red { border: 2px solid var(--chk-red); }
+        .footer {
+            flex-shrink: 0;
+            height: 45px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 10px;
+        }
+        .sign-box {
+            width: 30%;
+            text-align: center;
+        }
+        .sign-line {
+            border-top: 2px solid #000;
+            margin-bottom: 2px;
+        }
+        .sign-label {
+            font-weight: bold;
+            font-size: 11px;
+        }
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { background: none; padding: 0; margin: 0; }
+            #btnPrint { display: none; }
+            .page-container { 
+                width: 210mm; 
+                height: 296mm; 
+                padding: 5mm 10mm;
+                box-shadow: none; 
+                border: none; 
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="btnPrint" onclick="window.print()">Print PDF</button>
+    <div class="page-container">
+        <table class="iso-header">
+            <tr>
+                <td class="logo-cell" rowspan="3">
+                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                </td>
+                <td class="title-cell" rowspan="3">
+                    INSPECCI├ôN MENSUAL<br>
+                    <span class="sub-title">REPORTE DE FALLAS MEC├üNICAS</span>
+                </td>
+                <td class="qms-item"><b>C├ôDIGO:</b> F-MAN-003</td>
+            </tr>
+            <tr><td class="qms-item"><b>VERSI├ôN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>F. EMISI├ôN:</b> 10/11/2025</td></tr>
+        </table>
+        <table class="data-grid">
+            <tr>
+                <td class="col-left">N┬║ de Reporte: <span class="val-blue">${rotEscHtml(idOt)}</span></td>
+                <td class="col-mid">Placa: <span class="val-normal">${rotEscHtml(placa)}</span></td>
+                <td class="col-right" rowspan="2">
+                    Rampa:<br>
+                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Fecha de Ingreso: <span class="val-normal">${rotEscHtml(dtStr)}</span></td>
+                <td>Kilometraje: <span class="val-normal">${rotEscHtml(kmStr)}</span></td>
+            </tr>
+        </table>
+        <div class="table-wrapper">
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th class="w-crit">CRITERIOS</th>
+                        <th class="w-chk th-center">ESTADO</th>
+                        <th class="w-obs th-center">OBSERVACION</th>
+                    </tr>
+                </thead>
+                <tbody>${tbody}</tbody>
+            </table>
+        </div>
+        <div class="footer">
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Tecnico</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Jefe de taller</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line"></div>
+                <div class="sign-label">Planner de Mantenimiento</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            var win = window.open('', '_blank');
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            win.onload = function() {
+                setTimeout(function() {
+                    win.print();
+                }, 500);
+            };
+        }).catch(function(e) {
+            console.error('Error fetching schema for pdf', e);
+            if (typeof window.rotToast === 'function') window.rotToast('Error al generar plantilla', 'bg-danger');
+        });
+};
+
+
+// Inject Tailwind for mobile view dynamically
+(function() {
+    if (!document.getElementById('tailwind-cdn-injected')) {
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            corePlugins: { preflight: false },
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f4ff', 100: '#d9e2ff', 500: '#1d4ed8', 600: '#1e40af', 900: '#1e3a8a' },
+                        status: { pending: '#f59e0b', process: '#3b82f6', paused: '#ea580c', closed: '#ef4444', done: '#10b981' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] }
+                }
+            }
+        };
+        const s = document.createElement('script');
+        s.id = 'tailwind-cdn-injected';
+        s.src = "https://cdn.tailwindcss.com";
+        document.head.appendChild(s);
+    }
+})();
