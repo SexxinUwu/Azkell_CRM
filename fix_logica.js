@@ -12,9 +12,7 @@ logicaContent = logicaContent.replace(/\/\/ Inject Tailwind for mobile view dyna
 const startIdx = logicaContent.indexOf('window.rotRenderTabla = function(lista) {');
 if(startIdx > -1) {
     // Find the end of rotRenderTabla function
-    let endIdx = logicaContent.indexOf('window.rotCambiarPagina = function', startIdx);
-    if(endIdx === -1) endIdx = logicaContent.indexOf('// ── Paginación', startIdx);
-    if(endIdx === -1) endIdx = logicaContent.indexOf('function ', startIdx + 100);
+    let endIdx = logicaContent.indexOf('window.rotAbrirDetalle = function', startIdx);
 
     const newRenderTabla = `window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
