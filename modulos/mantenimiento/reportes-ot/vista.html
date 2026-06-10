@@ -345,26 +345,26 @@
 
             <div style="flex:1"></div>
 
-            <!-- Estado chips -->
-            <div class="rot-estado-wrap">
-                <button class="rot-chip active" data-estado="" onclick="window.rotChipEstado(this,'')">Todos</button>
-                <button class="rot-chip c-pend" data-estado="Pendiente" onclick="window.rotChipEstado(this,'Pendiente')">Pendiente</button>
-                <button class="rot-chip c-proc" data-estado="En Proceso" onclick="window.rotChipEstado(this,'En Proceso')">En Proceso</button>
-                <button class="rot-chip c-paus" data-estado="Pausada" onclick="window.rotChipEstado(this,'Pausada')">Pausada</button>
-                <button class="rot-chip c-fin" data-estado="Finalizado" onclick="window.rotChipEstado(this,'Finalizado')">Finalizado</button>
-                <button class="rot-chip c-anul" data-estado="Anulado" onclick="window.rotChipEstado(this,'Anulado')">Anulado</button>
-            </div>
+            <!-- Estado Select -->
+            <select class="rot-input rot-input-date" id="rot-fil-estado" style="width:140px;" title="Filtrar por Estado" onchange="window.rotChipEstado(null, this.value)">
+                <option value="">Estado: Todos</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Pausada">Pausada</option>
+                <option value="Finalizado">Finalizado</option>
+                <option value="Anulado">Anulado</option>
+            </select>
 
             <!-- Acciones -->
-            <button class="rot-toolbar-btn green" onclick="window.rotExportar()">
-                <i class="bi bi-file-earmark-excel"></i>Excel
+            <button class="rot-toolbar-btn green px-2" onclick="window.rotExportar()" title="Exportar a Excel">
+                <i class="bi bi-file-earmark-excel" style="font-size: 1.1rem; margin: 0;"></i>
             </button>
-            <button class="rot-toolbar-btn red-outline" onclick="window.rotExportarPDF()">
-                <i class="bi bi-filetype-pdf"></i>PDF
+            <button class="rot-toolbar-btn red-outline px-2" onclick="window.rotExportarPDF()" title="Exportar a PDF">
+                <i class="bi bi-filetype-pdf" style="font-size: 1.1rem; margin: 0;"></i>
             </button>
             <div id="col-picker-rot"></div>
-            <button class="rot-toolbar-btn" onclick="window.rotCargar()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise"></i>
+            <button class="rot-toolbar-btn px-2" onclick="window.rotCargar()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise" style="font-size: 1.1rem; margin: 0;"></i>
             </button>
         </div>
     </div>

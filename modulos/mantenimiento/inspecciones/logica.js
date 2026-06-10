@@ -419,9 +419,7 @@ function mostrarStatusInspecciones(inspecciones) {
 
                 let btnRegistrar = '';
                 if (!insp || !insp.id) {
-                    if (window.checkPerm && window.checkPerm('insp', 'c')) {
-                        btnRegistrar = `<button class="btn btn-sm d-flex align-items-center gap-1 shadow-sm" style="color: #2563eb; background-color: #eff6ff; border: 1px solid #dbeafe; font-size: 13px; font-weight: bold; padding: 0.375rem 0.75rem; border-radius: 8px;" onclick="event.stopPropagation(); abrirModalNuevaInspeccion('${placa}')"><i class="bi bi-plus-lg" style="stroke-width: 2;"></i> Registrar</button>`;
-                    }
+                    btnRegistrar = `<span class="text-muted" style="font-size:12px;">Sin registro</span>`;
                 } else {
                     btnRegistrar = `<button class="btn btn-sm d-flex align-items-center gap-1 shadow-sm" style="color: #059669; background-color: #d1fae5; border: 1px solid #a7f3d0; font-size: 13px; font-weight: bold; padding: 0.375rem 0.75rem; border-radius: 8px;" onclick="event.stopPropagation(); verDetalleInspeccion('${insp.id}', false)"><i class="bi bi-eye"></i> Ver</button>`;
                 }
@@ -791,9 +789,9 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         <table class="table table-borderless align-middle mb-0" style="min-width: 500px;">
             <thead style="border-bottom: 2px solid #cbd5e1;">
                 <tr>
-                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Criterio</th>
-                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%;">Estado</th>
-                    <th class="text-uppercase" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
+                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%; border-right: 1px solid #e2e8f0;">Criterio</th>
+                    <th class="text-uppercase text-center" style="font-size: 11px; color: #64748b; width: 20%; border-right: 1px solid #e2e8f0;">Estado</th>
+                    <th class="text-uppercase px-3" style="font-size: 11px; color: #64748b; width: 40%;">Observación</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -839,12 +837,12 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                             ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
                             : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
                         
-                        let obsHtml = obs ? `<span style="font-size: 12px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i> ${obs}</span>` : '';
+                        let obsHtml = obs ? `<span style="font-size: 13px; color: #000; font-weight: bold;">${obs}</span>` : '';
 
                         catUI += `<tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td class="px-3" style="font-size: 13px; color: #475569;">${lbl}</td>
-                            <td class="text-center">${badgeHtml}</td>
-                            <td style="font-size: 12px; color: #dc2626;">${obsHtml}</td>
+                            <td class="px-3 py-2" style="font-size: 13px; color: #475569; border-right: 1px solid #e2e8f0;">${lbl}</td>
+                            <td class="text-center py-2" style="border-right: 1px solid #e2e8f0; width: 120px;">${badgeHtml}</td>
+                            <td class="px-3 py-2" style="font-size: 13px; color: #000;">${obsHtml}</td>
                         </tr>`;
                     }
                 });
