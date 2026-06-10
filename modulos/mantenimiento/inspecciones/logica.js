@@ -1022,7 +1022,10 @@ function generarPDFInspeccion() {
             + '.checklist-table th.th-center{text-align:center;}'
             + '.checklist-table td{border:1px solid #000;padding:1px 3px;vertical-align:middle;}'
             + '.sec-row td{background-color:#f2f2f2;font-weight:bold;border-top:2px solid #000;padding:1px 3px;}'
-            + '.w-crit{width:45%;} .w-chk{width:10%;text-align:center;padding:0;} .w-obs{width:45%;}'
+            + '.w-crit{width:45%;} .w-chk{width:10%;text-align:center;padding:0;} .w-obs{width:35%;}'
+            + '.chk-icon { display:inline-block; width:14px; height:14px; border:1px solid #000; line-height:14px; text-align:center; font-size:11px; font-weight:bold; margin-top:2px; }'
+            + '.chk-green { background-color:#dcfce7; color:#16a34a; border-color:#16a34a; }'
+            + '.chk-red { background-color:#fee2e2; color:#dc2626; border-color:#dc2626; }'
             + '.footer{flex-shrink:0;display:flex;justify-content:center;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
             + '.sign-box{width:30%;text-align:center;} .sign-line{border-top:2px solid #000;margin-bottom:2px;} .sign-label{font-weight:bold;font-size:11px;}'
             + '.sign-img{max-height:60px;max-width:100%;display:block;margin:0 auto 5px;}'
@@ -1046,7 +1049,7 @@ function generarPDFInspeccion() {
             + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr></table>'
             + '<table class="data-grid"><tr><td class="col-left">Nº de Reporte: <span class="val-blue">' + (insp.id||'') + '</span></td><td class="col-mid">Placa: <span class="val-normal">' + (insp.placa||'') + '</span></td><td class="col-right" rowspan="2">Rampa:<br><span class="val-normal"></span></td></tr>'
             + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + (fIng||'') + '</span></td><td>Kilometraje: <span class="val-normal">' + (insp.km_tablero||'-') + '</span></td></tr></table>'
-            + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">ESTADO</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
+            + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">B</th><th class="w-chk th-center">M</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
             + '<div class="footer">'
             + '<div class="sign-box">' + (inspUrlFirma && inspUrlFirma.length > 100 ? '<img class="sign-img" src="' + inspUrlFirma + '">' : '') + '<div class="sign-line"></div><div class="sign-label">Técnico Inspector<br><span style="font-weight:normal;">' + (insp.tecnico||'') + '</span></div></div>'
             + '</div></div>';
@@ -1171,7 +1174,21 @@ async function procesarGuardadoInspeccion() {
         }
     }
 
-    let firmaData = (canvasFirma && ctxFirma) ? canvasFirma.toDataURL("image/png") : "";
+    let canvasFirmaLoc = document.getElementById('canvasFirma');
+    let isBlank = false;
+    if (canvasFirmaLoc) {
+        let canvasVacio = document.createElement('canvas');
+        canvasVacio.width = canvasFirmaLoc.width;
+        canvasVacio.height = canvasFirmaLoc.height;
+        isBlank = (canvasFirmaLoc.toDataURL("image/png") === canvasVacio.toDataURL("image/png"));
+    }
+
+    let firmaData = "";
+    if (canvasFirmaLoc && !isBlank) {
+        firmaData = canvasFirmaLoc.toDataURL("image/png");
+    } else if (window._currentEditSignature) {
+        firmaData = window._currentEditSignature;
+    }
 
     let idOt = "";
     let iIdOt = document.getElementById('i_id_ot');
@@ -1195,6 +1212,20 @@ async function procesarGuardadoInspeccion() {
                 if (offEl) {
                     let inst = bootstrap.Offcanvas.getInstance(offEl) || bootstrap.Offcanvas.getOrCreateInstance(offEl);
                     if (inst) inst.hide();
+                }
+                if (window.dataGlobalInspecciones) {
+                    let existing = window.dataGlobalInspecciones.find(x => x.id === idInsp);
+                    if (!existing) {
+                        window.dataGlobalInspecciones.push({
+                            id: idInsp, placa: placa, tecnico: tecnico, fecha_ingreso: fecha, detalles_json: JSON.stringify(detalles), url_firma: firmaData
+                        });
+                    } else {
+                        existing.placa = placa;
+                        existing.tecnico = tecnico;
+                        existing.fecha_ingreso = fecha;
+                        existing.detalles_json = JSON.stringify(detalles);
+                        if (firmaData && firmaData.length > 100) existing.url_firma = firmaData;
+                    }
                 }
                 recargarModulo('statusMant');
                 if (typeof window.rotAbrirDetalle === 'function' && idOt) {
@@ -1243,11 +1274,15 @@ window.renderModernInspForm = function() {
         </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-12">
+                <div class="col-md-6 col-12">
+                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">N° Registro</label>
+                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light text-uppercase" id="i_id_inspeccion_show" readonly placeholder="Automático" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                </div>
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Fecha de Ingreso</label>
                     <input type="date" class="form-control fw-bold shadow-sm text-primary" id="i_fecha" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-12">
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">
                         <i class="bi bi-truck"></i> Placa *
                     </label>
@@ -1262,24 +1297,24 @@ window.renderModernInspForm = function() {
                         <div id="i_placa-dd" class="cb-dropdown"></div>
                     </div>
                 </div>
-                <div class="col-12">
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Kilometraje de Tablero</label>
                     <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-12">
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Cliente</label>
                     <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light" id="i_cliente" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-12">
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Tipo</label>
                     <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light text-uppercase" id="i_modelo" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-12">
+                <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
                     <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
                 </div>
-                <div class="col-12">
-                    <div class="form-check form-switch mb-2">
+                <div class="col-md-6 col-12">
+                    <div class="form-check form-switch mb-2 mt-md-4">
                         <input class="form-check-input" type="checkbox" id="chk_30dias" checked onchange="document.getElementById('i_dias_container').style.display = this.checked ? 'none' : 'block'; document.getElementById('i_dias').value = this.checked ? '30' : '';">
                         <label class="form-check-label fw-bold text-primary" for="chk_30dias">Inspección Válida por 30 Días</label>
                     </div>
@@ -1603,6 +1638,11 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
     
     let idInput = document.getElementById('i_id_inspeccion');
     if(idInput) idInput.value = insp.id;
+    
+    let idShow = document.getElementById('i_id_inspeccion_show');
+    if(idShow) idShow.value = insp.id;
+
+    window._currentEditSignature = insp.url_firma || "";
 
     document.querySelectorAll('[id^="f_p_"]').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.pct-btn').forEach(btn => {
