@@ -86,7 +86,7 @@
                 <option value="Inactivo">Inactivo</option>
               </select>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-7">
               <label class="fw-semibold small">Razón Social</label>
               <input type="text" class="form-control" id="prov-f-razon" placeholder="Razón Social completa">
             </div>
@@ -99,9 +99,14 @@
                 <option value="Otro">Otro</option>
               </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="fw-semibold small">N° Documento</label>
-              <input type="text" class="form-control" id="prov-f-num-doc" placeholder="20123456789">
+              <div class="input-group">
+                <input type="text" class="form-control" id="prov-f-num-doc" placeholder="20123456789" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocProveedor();}">
+                <button class="btn btn-primary" type="button" onclick="window.consultarDocProveedor()" title="Consultar SUNAT/RENIEC">
+                  <i class="bi bi-search"></i>
+                </button>
+              </div>
             </div>
             <div class="col-md-4">
               <label class="fw-semibold small">Teléfono</label>

@@ -1529,6 +1529,17 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
 
     let maxId = 0;
     let year = new Date().getFullYear();
+    
+    try {
+        let res = await fetch('/api/inspecciones');
+        let data = await res.json();
+        if (data.data) {
+            window.dataGlobalInspecciones = data.data;
+        }
+    } catch (e) {
+        console.warn("No se pudo actualizar inspecciones", e);
+    }
+
     if (window.dataGlobalInspecciones && window.dataGlobalInspecciones.length > 0) {
         window.dataGlobalInspecciones.forEach(row => {
             let parts = (row.id || '').split('-');
