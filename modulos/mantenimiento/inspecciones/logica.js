@@ -958,7 +958,7 @@ function generarPDFInspeccion() {
         var romanos = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
         var schema = window.DYNAMIC_INSP_SCHEMA || [];
         schema.forEach(function(sec, idxCat) {
-            tbody += '<tr class="sec-row"><td colspan="3">' + (romanos[idxCat]||(idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
+            tbody += '<tr class="sec-row"><td colspan="4">' + (romanos[idxCat]||(idxCat+1)) + '. ' + sec.tab.toUpperCase() + '</td></tr>';
             if (sec.items) {
                 sec.items.forEach(function(item, idxItem) {
                     var lbl = typeof item === 'string' ? item : item.label;
