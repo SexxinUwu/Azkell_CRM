@@ -306,374 +306,482 @@
 <!-- Backdrop drawer detalle -->
 <div id="rotDrawerBackdrop" onclick="window.rotCerrarDetalle()"></div>
 
-<div id="moduloReportesOT">
 
-    <!-- HEADER: búsqueda + filtros + botones -->
-    <div class="rot-header">
+<div id="moduloReportesOT" class="d-flex flex-column h-100" style="flex: 1; min-height: 0;">
+    
+    <!-- Tailwind CSS (Scoped to mobile view if possible, disabled preflight) -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            corePlugins: {
+                preflight: false,
+            },
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f4ff',
+                            100: '#d9e2ff',
+                            500: '#1d4ed8',
+                            600: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        status: {
+                            pending: '#f59e0b',
+                            process: '#3b82f6',
+                            paused: '#ea580c',
+                            closed: '#ef4444',
+                            done: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 
-        <!-- Fila 1: búsqueda libre -->
-        <div class="rot-search-pill">
-            <i class="bi bi-search"></i>
-            <input type="text" id="rot-busqueda-libre"
-                placeholder="Búsqueda libre — N° OT, Placa, Supervisor, Técnico…"
-                oninput="window.rotFiltrar()">
-        </div>
+    
+<!-- Contenedor principal de la Vista Móvil -->
+<style>
+/* Reset and base */
+#rot-mobile-view {
+    margin: -15px -25px; /* Cover padding of root-dinamico */
+    height: calc(100% + 30px);
+    width: calc(100% + 50px);
+    background: #020617;
+    color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+}
+@media (max-width: 991.98px) {
+    #rot-mobile-view { display: flex !important; }
+}
 
-        <!-- Fila 2: filtros + acciones -->
-        <div class="rot-filters">
-            <input type="text" class="rot-input" id="rot-fil-ot"
-                placeholder="N° OT" style="width:105px;"
-                oninput="window.rotFiltrar()">
+/* Header */
+.rot-m-header { background: #0f172a; padding: 12px 16px; border-bottom: 1px solid #1e293b; flex-shrink: 0; }
+.rot-m-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.rot-m-header-left { display: flex; align-items: center; gap: 8px; }
+.rot-m-header-icon { width: 32px; height: 32px; background: #1d4ed8; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(29,78,216,0.3); }
+.rot-m-header-title { font-size: 14px; font-weight: 700; color: #fff; margin: 0; line-height: 1.2; }
+.rot-m-header-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; background: rgba(16,185,129,0.1); color: #34d399; padding: 2px 6px; border-radius: 99px; font-weight: 500; }
+.rot-m-header-dot { width: 4px; height: 4px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+.rot-m-header-right { display: flex; align-items: center; gap: 6px; }
+.rot-m-header-btn { width: 32px; height: 32px; border-radius: 50%; background: #1e293b; display: flex; align-items: center; justify-content: center; color: #cbd5e1; border: none; cursor: pointer; }
 
-            <input type="text" class="rot-input" id="rot-fil-placa"
-                placeholder="PLACA" style="width:95px; text-transform:uppercase;"
-                oninput="this.value=this.value.toUpperCase(); window.rotFiltrar()">
+.rot-m-search-row { display: flex; gap: 8px; }
+.rot-m-search-wrap { position: relative; flex: 1; }
+.rot-m-search-wrap i { position: absolute; left: 12px; top: 10px; color: #94a3b8; font-size: 12px; }
+.rot-m-search { width: 100%; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 12px; padding: 6px 12px 6px 32px; font-size: 12px; outline: none; }
+.rot-m-search:focus { border-color: #1d4ed8; }
+.rot-m-btn-filter { background: #1d4ed8; color: #fff; border: none; border-radius: 12px; padding: 6px 12px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
-            <input type="month" class="rot-input rot-input-date" id="rot-fil-mes"
-                style="width:140px;" title="Filtrar por mes"
-                onchange="window.rotFiltrar()">
+/* Main Scroll */
+.rot-m-main { flex: 1; overflow-y: auto; background: #020617; padding-bottom: 80px; }
+.rot-m-no-scrollbar::-webkit-scrollbar { display: none; }
 
-            <div style="display:flex;align-items:center;gap:4px;">
-                <input type="date" class="rot-input rot-input-date" id="rot-fil-desde"
-                    style="width:135px;" title="Desde"
-                    onchange="window.rotFiltrar()">
-                <span class="rot-sep">→</span>
-                <input type="date" class="rot-input rot-input-date" id="rot-fil-hasta"
-                    style="width:135px;" title="Hasta"
-                    onchange="window.rotFiltrar()">
-            </div>
+/* KPIs */
+.rot-m-kpi-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
+.rot-m-kpi-title-main { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin: 0; }
+.rot-m-kpi-swipe { font-size: 10px; color: #60a5fa; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.rot-m-kpi-scroll { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 16px 8px; }
+.rot-m-kpi { background: #0f172a; border-radius: 12px; padding: 12px; min-width: 128px; flex-shrink: 0; scroll-snap-align: start; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-left: 4px solid #1d4ed8; display: flex; flex-direction: column; justify-content: space-between; }
+.rot-m-kpi.red { border-left-color: #ef4444; }
+.rot-m-kpi.blue { border-left-color: #3b82f6; }
+.rot-m-kpi.green { border-left-color: #10b981; }
+.rot-m-kpi.orange { border-left-color: #f97316; }
+.rot-m-kpi-title { font-size: 10px; font-weight: 500; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
+.rot-m-kpi-val { font-size: 24px; font-weight: 700; color: #fff; line-height: 1; margin-bottom: 4px; }
+.rot-m-kpi-sub { font-size: 9px; color: #64748b; font-weight: 400; }
 
-            <div style="flex:1"></div>
+/* Quick actions */
+.rot-m-quick-scroll { padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto; }
+.rot-m-quick-btn { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #34d399; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
+.rot-m-quick-btn.red { background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.2); color: #fb7185; }
 
-            <!-- Estado chips -->
-            <div class="rot-estado-wrap">
-                <button class="rot-chip active" data-estado="" onclick="window.rotChipEstado(this,'')">Todos</button>
-                <button class="rot-chip c-pend" data-estado="Pendiente" onclick="window.rotChipEstado(this,'Pendiente')">Pendiente</button>
-                <button class="rot-chip c-proc" data-estado="En Proceso" onclick="window.rotChipEstado(this,'En Proceso')">En Proceso</button>
-                <button class="rot-chip c-paus" data-estado="Pausada" onclick="window.rotChipEstado(this,'Pausada')">Pausada</button>
-                <button class="rot-chip c-fin" data-estado="Finalizado" onclick="window.rotChipEstado(this,'Finalizado')">Finalizado</button>
-                <button class="rot-chip c-anul" data-estado="Anulado" onclick="window.rotChipEstado(this,'Anulado')">Anulado</button>
-            </div>
+/* Tabs */
+.rot-m-tabs-wrap { padding: 8px 16px; }
+.rot-m-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.rot-m-tab { background: #1e293b; color: #cbd5e1; border: none; border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: 0.2s; }
+.rot-m-tab.active { background: #1d4ed8; color: #fff; }
 
-            <!-- Acciones -->
-            <button class="rot-toolbar-btn green" onclick="window.rotExportar()">
-                <i class="bi bi-file-earmark-excel"></i>Excel
-            </button>
-            <button class="rot-toolbar-btn red-outline" onclick="window.rotExportarPDF()">
-                <i class="bi bi-filetype-pdf"></i>PDF
-            </button>
-            <div id="col-picker-rot"></div>
-            <button class="rot-toolbar-btn" onclick="window.rotCargar()" title="Actualizar">
-                <i class="bi bi-arrow-clockwise"></i>
-            </button>
-        </div>
-    </div>
+/* Cards List */
+.rot-m-list { padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.rot-m-card { background: #0f172a; border-radius: 16px; padding: 16px; border: 1px solid #1e293b; position: relative; overflow: hidden; }
+.rot-m-card-stripe { position: absolute; top: 0; left: 0; bottom: 0; width: 6px; background: #1d4ed8; }
+.rot-m-card-stripe.bg-yellow { background: #f59e0b; }
+.rot-m-card-stripe.bg-blue { background: #3b82f6; }
+.rot-m-card-stripe.bg-orange { background: #ea580c; }
+.rot-m-card-stripe.bg-green { background: #10b981; }
+.rot-m-card-stripe.bg-red { background: #ef4444; }
 
-    <!-- KPI BAR -->
-    <div class="rot-kpi-bar" id="rot-kpi-bar">
-        <div class="rot-kpi" style="--kpi-color:#5865F2">
-            <div class="rot-kpi-lbl">Total OTs</div>
-            <div class="rot-kpi-val" id="rot-kpi-total">0</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#dc2626">
-            <div class="rot-kpi-lbl">Correctivos</div>
-            <div class="rot-kpi-val" id="rot-kpi-correctivos">0</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#2563eb">
-            <div class="rot-kpi-lbl">Preventivos</div>
-            <div class="rot-kpi-val" id="rot-kpi-preventivos">0</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#5865F2">
-            <div class="rot-kpi-lbl">Finalizadas</div>
-            <div class="rot-kpi-val" id="rot-kpi-cerrada">0</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#0ea5e9">
-            <div class="rot-kpi-lbl">En Proceso</div>
-            <div class="rot-kpi-val" id="rot-kpi-enproceso">0</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#16a34a">
-            <div class="rot-kpi-lbl">Costo Total</div>
-            <div class="rot-kpi-val" style="font-size:1.1rem" id="rot-kpi-costo">S/0.00</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#dc2626">
-            <div class="rot-kpi-lbl">Costo Correctivo</div>
-            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-costo-correctivo">S/0.00</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#2563eb">
-            <div class="rot-kpi-lbl">Costo Preventivo</div>
-            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-costo-preventivo">S/0.00</div>
-        </div>
-        <div class="rot-kpi" style="--kpi-color:#94a3b8">
-            <div class="rot-kpi-lbl">Mostrando</div>
-            <div class="rot-kpi-val" style="font-size:1.05rem" id="rot-kpi-filtradas">0</div>
-        </div>
-    </div>
+.rot-m-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-left: 8px; }
+.rot-m-ot-title { font-size: 16px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; margin: 0; }
+.rot-m-badge { padding: 4px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.rot-m-badge.bg-yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.rot-m-badge.bg-blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.rot-m-badge.bg-orange { background: rgba(234,88,12,0.1); color: #ea580c; }
+.rot-m-badge.bg-green { background: rgba(16,185,129,0.1); color: #10b981; }
+.rot-m-badge.bg-red { background: rgba(239,68,68,0.1); color: #ef4444; }
 
-    <!-- TABLA DE OTs -->
-    <div class="rot-table-wrap" id="rot-tabla-wrap">
-        <table id="rot-tabla">
-            <thead>
-                <tr>
-                    <th style="width:145px;">Acciones</th>
-                    <th>N° OT</th>
-                    <th>Placa</th>
-                    <th>Tipo / Sub Tipo</th>
-                    <th>Supervisor</th>
-                    <th>Situación</th>
-                    <th style="max-width:200px;">Observaciones</th>
-                    <th>Costo Total</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody id="rot-tbody"></tbody>
-        </table>
-    </div>
+.rot-m-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 8px; border-top: 1px solid #1e293b; border-bottom: 1px solid #1e293b; margin-bottom: 12px; }
+.rot-m-info-item { display: flex; gap: 8px; align-items: flex-start; }
+.rot-m-icon-box { width: 24px; height: 24px; border-radius: 6px; background: rgba(51,65,85,0.5); display: flex; justify-content: center; align-items: center; color: #94a3b8; font-size: 10px; flex-shrink: 0; }
+.rot-m-info-content { display: flex; flex-direction: column; }
+.rot-m-info-label { font-size: 9px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+.rot-m-info-val { font-size: 11px; color: #e2e8f0; font-weight: 500; }
+.rot-m-info-pill { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; display: inline-block; margin-right: 4px; margin-top: 2px; }
+.rot-m-info-pill.red { background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.3); }
 
-</div><!-- fin moduloReportesOT -->
+.rot-m-obs { background: rgba(2,6,23,0.6); padding: 10px; border-radius: 12px; font-size: 11px; color: #cbd5e1; border-left: 2px solid #334155; margin: 0 8px 16px; font-style: italic; }
+.rot-m-card-footer { display: flex; justify-content: space-between; align-items: center; padding-left: 8px; }
+.rot-m-date { font-size: 10px; color: #64748b; font-weight: 500; }
+.rot-m-btn-icon { width: 32px; height: 32px; background: #1e293b; color: #cbd5e1; border: none; border-radius: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 
+/* Drawers & Overlays */
+.rot-m-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 40; display: none; }
+.rot-m-overlay.open { display: block; }
+.rot-m-drawer { position: absolute; bottom: 0; left: 0; right: 0; background: #0f172a; border-top-left-radius: 24px; border-top-right-radius: 24px; transform: translateY(100%); transition: transform 0.3s ease-out; z-index: 50; padding: 24px; border-top: 1px solid #1e293b; max-height: 85vh; display: flex; flex-direction: column; }
+.rot-m-drawer.open { transform: translateY(0); }
+.rot-m-drawer-handle { width: 48px; height: 4px; background: #334155; border-radius: 99px; margin: 0 auto 20px; }
+.rot-m-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.rot-m-drawer-title { font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px; }
+.rot-m-drawer-clear { background: none; border: none; color: #60a5fa; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+.rot-m-drawer-content { overflow-y: auto; flex: 1; padding-bottom: 24px; }
 
-<!-- ═══════════════ DRAWER: Detalle de OT ═══════════════ -->
-<div class="rot-drawer" id="rot-drawer-detalle">
-    <div class="rot-drawer-hd">
-        <span class="rot-drawer-title">Detalle de Orden de Trabajo</span>
-        <button class="btn btn-sm" onclick="window.rotCerrarDetalle()" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="rot-drawer-body" id="rot-drawer-body"></div>
-    <div class="rot-drawer-footer" id="rot-drawer-footer"></div>
-</div>
+/* Form inputs */
+.rot-m-form-group { margin-bottom: 16px; }
+.rot-m-label { display: block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; }
+.rot-m-input { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 8px 12px; color: #fff; font-size: 12px; outline: none; }
+.rot-m-input:focus { border-color: #1d4ed8; }
+
+.rot-m-btn-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; margin-bottom: 12px; }
+.rot-m-btn-primary { background: #1d4ed8; color: #fff; }
+.rot-m-btn-secondary { background: #1e293b; color: #e2e8f0; }
+.rot-m-btn-actions { background: #f59e0b; color: #fff; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+}
+</style>
 
 
-<!-- ═══════════════ SUB-DRAWER: Agregar / Editar Trabajo ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-trabajo">
-    <div class="rot-drawer-hd">
-        <div>
-            <div class="rot-drawer-title" id="rot-tr-drawer-titulo">Agregar Trabajo</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-tr-ot-lbl"></div>
-        </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-trabajo')" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="rot-drawer-body">
-        <input type="hidden" id="rot-tr-ot-id">
-        <input type="hidden" id="rot-tr-ticket-hid">
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Trabajo *</label>
-            <textarea class="form-control form-control-sm" id="rot-tr-desc" rows="3" placeholder="Detalla el trabajo realizado..."></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Personal / Técnico</label>
-            <input type="hidden" id="rot-tr-personal">
-            <div style="position:relative;" id="rot-ms-wrapper">
-                <div id="rot-ms-box" onclick="rotMsToggle()"
-                    style="background:var(--bg); border:1.5px solid var(--border); border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
-                    <span style="color:var(--subtext); font-size:.85rem;">Selecciona técnico(s)...</span>
+<!-- Contenedor principal de la Vista Móvil -->
+<style>
+/* Reset and base */
+#rot-mobile-view {
+    margin: -15px -25px; /* Cover padding of root-dinamico */
+    height: calc(100% + 30px);
+    width: calc(100% + 50px);
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+}
+@media (max-width: 991.98px) {
+    #rot-mobile-view { display: flex !important; }
+}
+
+/* Base Classes */
+.rot2-flex-c { display: flex; align-items: center; }
+.rot2-flex-b { display: flex; align-items: center; justify-content: space-between; }
+.rot2-no-scroll::-webkit-scrollbar { display: none; }
+.rot2-btn-clear { background: none; border: none; padding: 0; outline: none; cursor: pointer; }
+
+/* Header */
+.rot2-header { background: #ffffff; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
+.rot2-header-top { margin-bottom: 16px; }
+.rot2-logo-af { width: 36px; height: 36px; background: #2563eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 800; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(37,99,235,0.2); }
+.rot2-title-box { margin-left: 10px; }
+.rot2-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px; }
+.rot2-dot-green { width: 6px; height: 6px; border-radius: 50%; background: #10b981; }
+.rot2-subtitle { font-size: 11px; color: #64748b; font-weight: 500; }
+.rot2-header-actions { display: flex; gap: 8px; }
+.rot2-btn-icon-top { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff; color: #475569; display: flex; align-items: center; justify-content: center; position: relative; }
+.rot2-bell-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; border: 1px solid #ffffff; }
+
+/* Tabs Header */
+.rot2-tabs-header { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+.rot2-tab-btn { flex: 1; padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 700; color: #64748b; text-align: center; border: none; background: transparent; display: flex; justify-content: center; align-items: center; gap: 6px; }
+.rot2-tab-btn.active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+/* Search Row */
+.rot2-search-row { display: flex; gap: 8px; }
+.rot2-search-box { flex: 1; position: relative; }
+.rot2-search-box i { position: absolute; left: 12px; top: 10px; color: #94a3b8; font-size: 14px; }
+.rot2-search-box input { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 10px; padding: 8px 12px 8px 34px; font-size: 12px; color: #0f172a; outline: none; }
+.rot2-search-box input:focus { border-color: #2563eb; background: #ffffff; }
+.rot2-btn-filter { background: #f1f5f9; color: #475569; font-weight: 700; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 14px; display: flex; align-items: center; gap: 6px; }
+
+/* Main Scroll */
+.rot2-main { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 40px; }
+
+/* KPI Grid */
+.rot2-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.rot2-kpi { background: #ffffff; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; }
+.rot2-kpi-icon { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.rot2-kpi-blue .rot2-kpi-icon { background: #eff6ff; color: #2563eb; }
+.rot2-kpi-red .rot2-kpi-icon { background: #fef2f2; color: #ef4444; }
+.rot2-kpi-green .rot2-kpi-icon { background: #f0fdf4; color: #10b981; }
+.rot2-kpi-yellow .rot2-kpi-icon { background: #fffbeb; color: #d97706; }
+.rot2-kpi-info { display: flex; flex-direction: column; }
+.rot2-kpi-lbl { font-size: 9px; font-weight: 800; color: #94a3b8; margin-bottom: 2px; }
+.rot2-kpi-val { font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1; }
+
+/* Exports */
+.rot2-exports { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.rot2-btn-export { border-radius: 12px; padding: 10px; font-size: 12px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid; }
+.rot2-btn-excel { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+.rot2-btn-pdf { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+
+/* Pills */
+.rot2-pills { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; }
+.rot2-pill { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; background: #ffffff; color: #475569; white-space: nowrap; }
+.rot2-pill.active { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+
+/* Cards */
+.rot2-list { display: flex; flex-direction: column; gap: 16px; }
+.rot2-card { background: #ffffff; border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.03); position: relative; overflow: hidden; padding: 16px; }
+.rot2-card-stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: #2563eb; }
+.rot2-card-stripe.c-red { background: #ef4444; }
+.rot2-card-stripe.c-orange { background: #f59e0b; }
+.rot2-card-stripe.c-green { background: #10b981; }
+
+.rot2-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-left: 6px; }
+.rot2-badge-box { display: flex; gap: 6px; }
+.rot2-badge { background: #eff6ff; color: #2563eb; font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; }
+.rot2-badge.red { background: #fef2f2; color: #ef4444; }
+.rot2-badge-outline { background: #ffffff; border: 1px solid #bfdbfe; color: #2563eb; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 99px; display: flex; align-items: center; gap: 4px; }
+.rot2-badge-outline .dot { width: 5px; height: 5px; border-radius: 50%; background: #2563eb; }
+
+.rot2-card-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 12px 6px; }
+
+.rot2-card-grid { background: #f8fafc; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; margin-left: 6px; }
+.rot2-c-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; }
+.rot2-c-row:last-child { border-bottom: none; padding-bottom: 0; }
+.rot2-c-lbl { font-size: 10px; font-weight: 700; color: #94a3b8; }
+.rot2-c-val { font-size: 11px; font-weight: 700; color: #0f172a; }
+
+.rot2-card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-left: 6px; }
+.rot2-c-cost { display: flex; flex-direction: column; gap: 2px; }
+.rot2-c-val-lrg { font-size: 16px; font-weight: 800; color: #0f172a; }
+
+.rot2-c-actions { display: flex; gap: 8px; align-items: center; }
+.rot2-btn-dots { width: 32px; height: 32px; background: #f1f5f9; border-radius: 16px; display: flex; justify-content: center; align-items: center; color: #475569; font-size: 16px; font-weight: bold; cursor: pointer; border: none; }
+.rot2-btn-action { background: #f59e0b; color: #ffffff; font-size: 12px; font-weight: 700; border-radius: 16px; padding: 0 16px; height: 32px; border: none; cursor: pointer; }
+.rot2-btn-action.blue { background: #2563eb; }
+.rot2-btn-action.green { background: #10b981; }
+
+/* Filter Sheet */
+.rot2-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.6); z-index: 40; display: none; backdrop-filter: blur(2px); }
+.rot2-overlay.open { display: block; }
+.rot2-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: #ffffff; border-top-left-radius: 32px; border-top-right-radius: 32px; transform: translateY(100%); transition: transform 0.3s ease-out; z-index: 50; display: flex; flex-direction: column; max-height: 90vh; }
+.rot2-sheet.open { transform: translateY(0); }
+.rot2-sheet-handle { width: 40px; height: 4px; background: #cbd5e1; border-radius: 4px; margin: 12px auto; }
+.rot2-sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px 20px; }
+.rot2-sheet-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px; }
+.rot2-sheet-clear { background: #fef2f2; color: #ef4444; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 6px; }
+
+.rot2-sheet-body { flex: 1; overflow-y: auto; padding: 0 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.rot2-s-lbl { font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; }
+.rot2-s-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; }
+.rot2-input { width: 100%; border: none; outline: none; font-size: 13px; color: #0f172a; font-weight: 500; background: transparent; }
+.rot2-input::placeholder { color: #94a3b8; }
+.rot2-s-date-row { display: flex; gap: 12px; }
+.rot2-s-date-row input { flex: 1; }
+
+.rot2-sheet-footer { display: flex; gap: 12px; padding: 16px 24px 24px; border-top: 1px solid #f1f5f9; background: #ffffff; }
+.rot2-btn-outline { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; color: #475569; font-size: 14px; font-weight: 700; text-align: center; }
+.rot2-btn-solid { flex: 1; padding: 12px; border-radius: 12px; border: none; background: #2563eb; color: #ffffff; font-size: 14px; font-weight: 700; text-align: center; }
+
+</style>
+
+<div id="rot-mobile-view">
+    <!-- Header -->
+    <header class="rot2-header">
+        <div class="rot2-header-top rot2-flex-b">
+            <div class="rot2-flex-c">
+                <div class="rot2-logo-af">AF</div>
+                <div class="rot2-title-box">
+                    <h1 class="rot2-title">Azkell Fleet <span class="rot2-dot-green"></span></h1>
+                    <span class="rot2-subtitle">Logística & Mantenimiento</span>
                 </div>
-                <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--subtext); pointer-events:none; font-size:.8rem;">▾</span>
-                <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--surface); border:1.5px solid var(--border); border-radius:8px; z-index:1200; box-shadow:0 8px 24px rgba(0,0,0,.18); overflow:hidden;">
-                    <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
-                        oninput="rotMsFiltrar(this.value)"
-                        style="width:100%; border:none; border-bottom:1px solid var(--border); background:var(--bg); color:var(--text); padding:9px 12px; font-size:.84rem; outline:none;">
-                    <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
-                    <div style="padding:7px 12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                        <span id="rot-ms-count" style="font-size:.76rem; color:var(--subtext);">0 seleccionados</span>
-                        <span onclick="rotMsLimpiar()" style="font-size:.76rem; color:#f87171; cursor:pointer;">Limpiar todo</span>
-                    </div>
+            </div>
+            <div class="rot2-header-actions">
+                <button class="rot2-btn-clear rot2-btn-icon-top" onclick="window.rotCargar()"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="rot2-btn-clear rot2-btn-icon-top" onclick="showToast('Notificaciones')"><i class="bi bi-bell"></i><span class="rot2-bell-dot"></span></button>
+            </div>
+        </div>
+        
+        <div class="rot2-tabs-header">
+            <button class="rot2-btn-clear rot2-tab-btn active"><i class="bi bi-file-text"></i> Reportes OT</button>
+            <button class="rot2-btn-clear rot2-tab-btn" onclick="if(typeof window.cargarModuloAislado === 'function') window.cargarModuloAislado('mantenimiento/inspecciones');"><i class="bi bi-ui-checks"></i> Inspecciones</button>
+        </div>
+
+        <div class="rot2-search-row">
+            <div class="rot2-search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="rotMobileSearch" placeholder="Buscar placa, técnico, cliente..." oninput="window.rotFiltrar()">
+            </div>
+            <button class="rot2-btn-clear rot2-btn-filter" onclick="toggleFilterDrawer()"><i class="bi bi-sliders"></i> Filtros</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="rot2-main rot2-no-scroll">
+        <!-- KPIs -->
+        <div class="rot2-kpi-grid">
+            <div class="rot2-kpi rot2-kpi-blue">
+                <div class="rot2-kpi-icon"><i class="bi bi-folder-fill"></i></div>
+                <div class="rot2-kpi-info">
+                    <span class="rot2-kpi-lbl">TOTAL OTS</span>
+                    <span class="rot2-kpi-val" id="rotMobileKpiTotal">0</span>
+                </div>
+            </div>
+            <div class="rot2-kpi rot2-kpi-red">
+                <div class="rot2-kpi-icon"><i class="bi bi-tools"></i></div>
+                <div class="rot2-kpi-info">
+                    <span class="rot2-kpi-lbl">CORRECTIVOS</span>
+                    <span class="rot2-kpi-val" id="rotMobileKpiCorrectivos">0</span>
+                </div>
+            </div>
+            <div class="rot2-kpi rot2-kpi-green">
+                <div class="rot2-kpi-icon"><i class="bi bi-shield-fill-check"></i></div>
+                <div class="rot2-kpi-info">
+                    <span class="rot2-kpi-lbl">PREVENTIVOS</span>
+                    <span class="rot2-kpi-val" id="rotMobileKpiPreventivos">0</span>
+                </div>
+            </div>
+            <div class="rot2-kpi rot2-kpi-yellow">
+                <div class="rot2-kpi-icon"><i class="bi bi-coin"></i></div>
+                <div class="rot2-kpi-info">
+                    <span class="rot2-kpi-lbl">COSTO ACUM.</span>
+                    <span class="rot2-kpi-val" id="rotMobileKpiCosto">S/ 0.00</span>
                 </div>
             </div>
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Inicio</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-ini">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Fecha y Hora Fin</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="rot-tr-fecha-fin">
-            </div>
+
+        <!-- Exports -->
+        <div class="rot2-exports">
+            <button class="rot2-btn-clear rot2-btn-export rot2-btn-excel" onclick="window.rotExportar()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+            <button class="rot2-btn-clear rot2-btn-export rot2-btn-pdf" onclick="window.rotExportarPDF()"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Costo del Trabajo (S/)</label>
-            <input type="number" class="form-control form-control-sm" id="rot-tr-costo" value="0" min="0" step="0.01">
+
+        <!-- Filter Pills -->
+        <div class="rot2-pills rot2-no-scroll" id="rotMobileStatusTabs">
+            <button class="rot2-btn-clear rot2-pill active" data-estado="" onclick="window.rotChipEstado(this,'')">Todos</button>
+            <button class="rot2-btn-clear rot2-pill" data-estado="Pendiente" onclick="window.rotChipEstado(this,'Pendiente')">Pendientes</button>
+            <button class="rot2-btn-clear rot2-pill" data-estado="En Proceso" onclick="window.rotChipEstado(this,'En Proceso')">En Proceso</button>
+            <button class="rot2-btn-clear rot2-pill" data-estado="Pausada" onclick="window.rotChipEstado(this,'Pausada')">Pausadas</button>
+            <button class="rot2-btn-clear rot2-pill" data-estado="Finalizado" onclick="window.rotChipEstado(this,'Finalizado')">Finalizados</button>
         </div>
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarTrabajo()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Trabajo
-        </button>
-        <button class="btn btn-outline-danger w-100 fw-bold mt-2" id="rot-tr-btn-eliminar" style="display:none;" onclick="window.rotEliminarTrabajo()">
-            <i class="bi bi-trash me-1"></i>Eliminar Trabajo
-        </button>
-    </div>
+
+        <!-- Cards List -->
+        <div class="rot2-list" id="otListMobile">
+            <!-- Renderizado desde JS -->
+        </div>
+    </main>
 </div>
 
+<!-- Overlay -->
+<div id="rotMobileOverlay" class="rot2-overlay" onclick="closeAllDrawers()"></div>
 
-<!-- ═══════════════ SUB-DRAWER: Agregar Material / Salida ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-material">
-    <div class="rot-drawer-hd">
+<!-- Filter Sheet -->
+<div id="rotMobileFilterDrawer" class="rot2-sheet">
+    <div class="rot2-sheet-handle"></div>
+    <div class="rot2-sheet-header">
+        <h3 class="rot2-sheet-title"><i class="bi bi-funnel-fill text-primary"></i> Filtros Avanzados</h3>
+        <button class="rot2-btn-clear rot2-sheet-clear" onclick="resetFilters()"><i class="bi bi-trash"></i> Limpiar Filtros</button>
+    </div>
+    
+    <div class="rot2-sheet-body rot2-no-scroll">
         <div>
-            <span class="rot-drawer-title"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud de Materiales</span>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:4px;" id="rot-mat-ot-lbl"></div>
-        </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="rot-drawer-body">
-        <input type="hidden" id="rot-mat-ot-id">
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-ot-vis" readonly style="border-radius:12px;min-height:44px;background:var(--bg);color:var(--subtext);">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
-                <input type="date" class="form-control form-control-sm" id="rot-mat-fecha" style="border-radius:12px;min-height:44px;">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
-                <select class="form-select form-select-sm" id="rot-mat-tipo" style="border-radius:12px;min-height:44px;">
-                    <option value="Vehiculo">Vehículo</option>
-                    <option value="Personal">Personal</option>
-                </select>
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
-                <div id="ss-W-rot-placa" class="ss-wrapper" style="position:relative;"><div id="ss-B-rot-placa" class="form-select form-select-sm ss-box" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:12px;min-height:44px;" onclick="window.SS.toggle('rot-placa')"><span id="ss-L-rot-placa" class="ss-lbl" style="color:#6c757d;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">Buscar placa…</span><i class="bi bi-chevron-down" style="flex-shrink:0;font-size:.7rem;margin-left:4px;"></i></div><input type="hidden" id="rot-mat-placa" name="rot-mat-placa"><div id="ss-D-rot-placa" class="ss-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:3000;background:var(--card,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);"><div style="padding:6px 6px 3px;"><input type="text" id="ss-S-rot-placa" class="form-control form-control-sm ss-search" placeholder="Buscar placa..." oninput="window.SS.filter(this.value,'rot-placa')" autocomplete="off"></div><div id="ss-O-rot-placa" class="ss-options" style="max-height:200px;overflow-y:auto;"></div></div></div>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable / Solicitante</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-solicitante" placeholder="Nombre del responsable" list="rot-mat-list-personal" autocomplete="off" style="border-radius:12px;min-height:44px;">
-                <datalist id="rot-mat-list-personal"></datalist>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
-                <input type="text" class="form-control form-control-sm" id="rot-mat-obs" placeholder="Motivo, notas…" style="border-radius:12px;min-height:44px;">
+            <span class="rot2-s-lbl">NÚMERO DE OT</span>
+            <div class="rot2-s-box">
+                <input type="text" id="rotMobileFilOt" class="rot2-input" placeholder="Ej. OT-2026-0001" oninput="document.getElementById('rot-fil-ot').value=this.value;">
             </div>
         </div>
-        <hr style="border-color:var(--border);">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold" style="font-size:.83rem;color:var(--text);">
-              <i class="bi bi-list-ul me-1"></i>Artículos
-            </span>
-            <button type="button"
-                    style="padding:.4rem .9rem;border-radius:12px;border:1.5px solid #5865F2;
-                           background:transparent;color:#5865F2;font-weight:700;font-size:.78rem;cursor:pointer;"
-                    onclick="window._rotAgregarItemMat()">
-              <i class="bi bi-plus-lg me-1"></i>Agregar
-            </button>
-        </div>
-        <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-            <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
-                <thead style="background:var(--bg);">
-                    <tr>
-                        <th style="min-width:220px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
-                        <th style="width:80px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cantidad</th>
-                        <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Costo Unit.</th>
-                        <th style="width:100px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Importe</th>
-                        <th style="width:38px;"></th>
-                    </tr>
-                </thead>
-                <tbody id="rot-mat-items-tbody"></tbody>
-                <tfoot style="background:var(--bg);">
-                    <tr>
-                        <td colspan="3" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">Total:</td>
-                        <td style="font-weight:800;color:#16a34a;padding:10px 12px;" id="rot-mat-items-total">S/. 0.00</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <datalist id="rot-mat-inv-list"></datalist>
-        <button class="btn fw-bold w-100 mt-3"
-                style="border-radius:14px;border:none;background:#5865F2;color:#fff;font-size:.9rem;min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;"
-                onclick="window.rotGuardarMaterial()">
-            <i class="bi bi-save"></i>Guardar Solicitud
-        </button>
-    </div>
-</div>
 
-
-<!-- ═══════════════ SUB-DRAWER: Agregar Mantenimiento Pendiente ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-backlog">
-    <div class="rot-drawer-hd">
         <div>
-            <div class="rot-drawer-title">Nuevo Mantenimiento Pendiente</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-bkg-placa-lbl"></div>
+            <span class="rot2-s-lbl">PLACA DE VEHÍCULO</span>
+            <div class="rot2-s-box">
+                <input type="text" id="rotMobileFilPlaca" class="rot2-input" placeholder="Ej. A5B891" oninput="this.value=this.value.toUpperCase(); document.getElementById('rot-fil-placa').value=this.value;">
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-backlog')" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    <div class="rot-drawer-body">
-        <input type="hidden" id="rot-bkg-placa-hid">
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
-            <input type="text" class="form-control form-control-sm" id="rot-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Mantenimiento *</label>
-            <textarea class="form-control form-control-sm" id="rot-bkg-tarea" rows="3" placeholder="Describe el trabajo pendiente…"></textarea>
-        </div>
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Reportado por</label>
-            <input type="text" class="form-control form-control-sm" id="rot-bkg-reportado-por" placeholder="Nombre de quien reporta">
-        </div>
-        <button class="btn btn-warning w-100 fw-bold" style="color:#fff;" onclick="window.rotGuardarBacklog()">
-            <i class="bi bi-plus-lg me-1"></i>Agregar Pendiente
-        </button>
-    </div>
-</div>
 
-
-<!-- ═══════════════ SUB-DRAWER: Editar OT ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-editar-ot">
-    <div class="rot-drawer-hd">
         <div>
-            <div class="rot-drawer-title">Editar Orden de Trabajo</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="rot-eot-id-lbl"></div>
+            <span class="rot2-s-lbl">RANGO DE FECHAS</span>
+            <div class="rot2-s-box rot2-s-date-row">
+                <input type="date" id="rotMobileFilDesde" class="rot2-input" onchange="document.getElementById('rot-fil-desde').value=this.value;">
+                <input type="date" id="rotMobileFilHasta" class="rot2-input" onchange="document.getElementById('rot-fil-hasta').value=this.value;">
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="window.rotCerrarSubDrawer('rot-drawer-editar-ot')" style="color:var(--subtext)">
-            <i class="bi bi-x-lg"></i>
-        </button>
     </div>
-    <div class="rot-drawer-body">
-        <input type="hidden" id="rot-eot-id">
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Tipo OT</label>
-                <select class="form-select form-select-sm" id="rot-eot-tipo" onchange="window.rotCambiarTipoEOT()">
-                    <option value="">— Seleccionar —</option>
-                    <option value="Preventivo">Preventivo</option>
-                    <option value="Correctivo">Correctivo</option>
-                    <option value="Predictivo">Predictivo</option>
-                    <option value="Proactivo">Proactivo</option>
-                    <option value="Servicio">Servicio</option>
-                </select>
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Sub Tipo</label>
-                <select class="form-select form-select-sm" id="rot-eot-subtipo" disabled>
-                    <option value="">— Seleccionar tipo primero —</option>
-                </select>
-            </div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Supervisor</label>
-            <input type="text" class="form-control form-control-sm" id="rot-eot-supervisor" placeholder="Nombre del supervisor">
-        </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Situación Inicial</label>
-            <select class="form-select form-select-sm" id="rot-eot-situacion">
-                <option value="">— Seleccionar —</option>
-            </select>
-        </div>
-        <div class="mb-4">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Motivo / Observaciones</label>
-            <textarea class="form-control form-control-sm" id="rot-eot-motivo" rows="3" placeholder="Describe el motivo de la OT..."></textarea>
-        </div>
-        <button class="btn btn-primary w-100 fw-bold" onclick="window.rotGuardarEdicionOT()">
-            <i class="bi bi-check-lg me-1"></i>Guardar Cambios
-        </button>
+
+    <div class="rot2-sheet-footer">
+        <button class="rot2-btn-clear rot2-btn-outline" onclick="closeAllDrawers()">Cancelar</button>
+        <button class="rot2-btn-clear rot2-btn-solid" onclick="window.rotFiltrar(); closeAllDrawers()">Aplicar Filtros</button>
     </div>
 </div>
+
+<!-- Contextual Actions Sheet -->
+<div id="rotMobileActionDrawer" class="rot2-sheet" style="max-height: 50vh;">
+    <div class="rot2-sheet-handle"></div>
+    <div class="rot2-sheet-header">
+        <h3 class="rot2-sheet-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Acciones Rápidas</h3>
+    </div>
+    <div class="rot2-sheet-body rot2-no-scroll" style="padding-bottom: 0;" id="rotMobileActionContent">
+        <!-- Rendered from JS -->
+    </div>
+    <div class="rot2-sheet-footer">
+        <button class="rot2-btn-clear rot2-btn-outline" onclick="closeAllDrawers()">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    function toggleFilterDrawer() {
+        document.getElementById('rotMobileOverlay').classList.add('open');
+        document.getElementById('rotMobileFilterDrawer').classList.add('open');
+    }
+    function openActionDrawer() {
+        document.getElementById('rotMobileOverlay').classList.add('open');
+        document.getElementById('rotMobileActionDrawer').classList.add('open');
+    }
+    function closeAllDrawers() {
+        document.getElementById('rotMobileOverlay').classList.remove('open');
+        document.getElementById('rotMobileFilterDrawer').classList.remove('open');
+        document.getElementById('rotMobileActionDrawer').classList.remove('open');
+    }
+    function resetFilters() {
+        document.getElementById('rotMobileFilOt').value = '';
+        document.getElementById('rotMobileFilPlaca').value = '';
+        document.getElementById('rotMobileFilDesde').value = '';
+        document.getElementById('rotMobileFilHasta').value = '';
+        document.getElementById('rotMobileSearch').value = '';
+        
+        document.getElementById('rot-fil-ot').value = '';
+        document.getElementById('rot-fil-placa').value = '';
+        document.getElementById('rot-fil-desde').value = '';
+        document.getElementById('rot-fil-hasta').value = '';
+        
+        window.rotChipEstado(document.querySelector('#rotMobileStatusTabs button[data-estado=""]'), '');
+        window.rotFiltrar();
+        closeAllDrawers();
+    }
+</script>
