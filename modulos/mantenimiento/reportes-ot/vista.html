@@ -10,6 +10,12 @@
     background: var(--bg);
     width: 100%;
 }
+#root-dinamico, .main-area {
+    padding: 0 !important;
+    background-color: #F2F2F7 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
 
 /* ── Header barra ─────────────────────────────────────────────── */
 #moduloReportesOT .rot-header {
@@ -271,14 +277,15 @@
 }
 #rotDrawerBackdrop.open { display: block; }
 .rot-drawer {
-    position: fixed; top: 0; right: 0;
-    width: 500px; max-width: 96vw; height: 100vh;
+    position: fixed; top: 0; right: -500px;
+    width: 500px; max-width: 100vw; height: 100vh;
     background: var(--surface); border-left: 1px solid var(--border);
     box-shadow: -8px 0 30px rgba(0,0,0,.14);
-    transform: translateX(100%); transition: transform .28s ease;
+    transition: right .28s ease;
     z-index: 1060; display: flex; flex-direction: column;
+    visibility: hidden;
 }
-.rot-drawer.open { transform: translateX(0); }
+.rot-drawer.open { right: 0; visibility: visible; }
 .rot-drawer-hd {
     display: flex; align-items: center;
     justify-content: space-between;
@@ -315,14 +322,15 @@
 .rot-id-lbl { font-size: .7rem; font-weight: 700; color: var(--primary,#5865F2); text-transform: uppercase; }
 /* Sub-drawers */
 .rot-sub-drawer {
-    position: fixed; top: 0; right: 0;
-    width: 440px; max-width: 96vw; height: 100vh;
+    position: fixed; top: 0; right: -500px;
+    width: 440px; max-width: 100vw; height: 100vh;
     background: var(--surface); border-left: 1px solid var(--border);
     box-shadow: -8px 0 40px rgba(0,0,0,.22);
-    transform: translateX(100%); transition: transform .25s ease;
+    transition: right .25s ease;
     z-index: 1062; display: flex; flex-direction: column;
+    visibility: hidden;
 }
-.rot-sub-drawer.open { transform: translateX(0); }
+.rot-sub-drawer.open { right: 0; visibility: visible; }
 #rot-drawer-material { width: 560px; }
 </style>
 
