@@ -940,6 +940,18 @@ function generarPDFInspeccion() {
         s3Urls.push(insp.url_firma);
     }
 
+    var rampaPdf = '';
+    if (insp.id_ot) {
+        var otList = window.rotData || (window.dataGlobalOT || []);
+        var otMatch = otList.find(function(o){ return String(o.ticket_entrada) === String(insp.id_ot) || String(o.id_ot) === String(insp.id_ot); });
+        if (!otMatch && window.srData) otMatch = window.srData.find(function(o){ return String(o.ticket_entrada) === String(insp.id_ot) || String(o.id_ot) === String(insp.id_ot); });
+        if (otMatch) {
+             var detOt = {};
+             try { detOt = typeof otMatch.detalles_json === 'string' ? JSON.parse(otMatch.detalles_json) : (otMatch.detalles_json||{}); }catch(e){}
+             rampaPdf = detOt.rampa_origen || '';
+        }
+    }
+
     var presignPromise;
     if (s3Urls.length > 0) {
         presignPromise = fetch('/api/mantenimiento/inspecciones/presign-read', {
@@ -1027,10 +1039,10 @@ function generarPDFInspeccion() {
             + '.col-left{width:35%;} .col-mid{width:35%;} .col-right{width:30%;vertical-align:top!important;padding-top:2px!important;}'
             + '.val-normal{font-weight:normal;margin-left:3px;} .val-blue{color:var(--blue-num);font-size:13px;margin-left:3px;}'
             + '.table-wrapper{flex-grow:1;display:flex;flex-direction:column;margin-bottom:5px;}'
-            + '.checklist-table{width:100%;flex-grow:1;border-collapse:collapse;border:2px solid #000;font-size:9.5px;}'
+            + '.checklist-table{width:100%;flex-grow:1;border-collapse:collapse;border:2px solid #000;font-size:8.5px;}'
             + '.checklist-table th{background-color:var(--blue-header);color:white;text-transform:uppercase;padding:2px;border:1px solid #000;text-align:left;}'
             + '.checklist-table th.th-center{text-align:center;}'
-            + '.checklist-table td{border:1px solid #000;padding:1px 3px;vertical-align:middle;}'
+            + '.checklist-table td{border:1px solid #000;padding:0px 2px;vertical-align:middle;}'
             + '.sec-row td{background-color:#f2f2f2;font-weight:bold;border-top:2px solid #000;padding:1px 3px;}'
             + '.w-crit{width:45%;} .w-chk{width:10%;text-align:center;padding:0;} .w-obs{width:35%;}'
             + '.chk-icon { display:inline-block; width:14px; height:14px; border:1px solid #000; line-height:14px; text-align:center; font-size:11px; font-weight:bold; margin-top:2px; }'
@@ -1038,7 +1050,7 @@ function generarPDFInspeccion() {
             + '.chk-red { background-color:#fee2e2; color:#dc2626; border-color:#dc2626; }'
             + '.footer{flex-shrink:0;display:flex;justify-content:center;align-items:flex-end;padding:0 10px;margin-top:auto;padding-top:30px;}'
             + '.sign-box{width:30%;text-align:center;} .sign-line{border-top:2px solid #000;margin-bottom:2px;} .sign-label{font-weight:bold;font-size:11px;}'
-            + '.sign-img{max-height:60px;max-width:100%;display:block;margin:0 auto 5px;}'
+            + '.sign-img{max-height:40px;max-width:100%;display:block;margin:0 auto 2px;}'
             + '.evidencias-section{page-break-before:always;margin-top:20px;}'
             + '.pdf-evidencias-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;width:100%;}'
             + '@media print{'
@@ -1047,17 +1059,17 @@ function generarPDFInspeccion() {
             + '  #btnPrint{display:none;}'
             + '  .page-container{width:100%;height:auto;min-height:0;padding:0;box-shadow:none;border:none;margin:0;display:block;}'
             + '  .table-wrapper{flex-grow:0;margin-bottom:20px;}'
-            + '  .footer{padding-top:15px;margin-top:0;page-break-inside:avoid;}'
+            + '  .footer{padding-top:8px;margin-top:0;page-break-inside:avoid;}'
             + '}'
             + '</style></head><body>'
             + '<button id="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
             + '<div class="page-container">'
             + '<table class="iso-header"><tr><td class="logo-cell" rowspan="3"><img src="' + logoUrl + '" alt="Logo" style="max-width:100%;max-height:45px;object-fit:contain;"></td>'
-            + '<td class="title-cell" rowspan="3">INSPECCIÓN MENSUAL<br><span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span></td>'
+            + '<td class="title-cell" rowspan="3">INSPECCIÓN DE PRE USO DE UNIDAD<br><span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span></td>'
             + '<td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td></tr>'
             + '<tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>'
             + '<tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr></table>'
-            + '<table class="data-grid"><tr><td class="col-left">Nº de Reporte: <span class="val-blue">' + (insp.id||'') + '</span></td><td class="col-mid">Placa: <span class="val-normal">' + (insp.placa||'') + '</span></td><td class="col-right" rowspan="2">Rampa:<br><span class="val-normal"></span></td></tr>'
+            + '<table class="data-grid"><tr><td class="col-left">Nº de Reporte: <span class="val-blue">' + (insp.id||'') + '</span></td><td class="col-mid">Placa: <span class="val-normal">' + (insp.placa||'') + '</span></td><td class="col-right" rowspan="2">Rampa:<br><span class="val-normal">' + rampaPdf + '</span></td></tr>'
             + '<tr><td>Fecha de Ingreso: <span class="val-normal">' + (fIng||'') + '</span></td><td>Kilometraje: <span class="val-normal">' + (insp.km_tablero||'-') + '</span></td></tr></table>'
             + '<div class="table-wrapper"><table class="checklist-table"><thead><tr><th class="w-crit">CRITERIOS</th><th class="w-chk th-center">B</th><th class="w-chk th-center">M</th><th class="w-obs th-center">OBSERVACION</th></tr></thead><tbody>' + tbody + '</tbody></table></div>'
             + '<div class="footer">'
