@@ -355,7 +355,8 @@ router.post('/:metodo', async (req, res) => {
         const isEdit = metodo === 'actualizarPlaca';
 
         // Extracción de las 23 variables del formulario HTML
-        const placa = (isEdit ? form.editP_placa : form.p_placa).toUpperCase();
+        const rawPlaca = isEdit ? form.editP_placa : form.p_placa;
+        const placa = (rawPlaca || '').toString().trim().substring(0, 20).toUpperCase();
         const cliente = isEdit ? form.editP_cliente : form.p_cliente;
         const ruc = isEdit ? form.editP_ruc : form.p_ruc;
         const marca = isEdit ? form.editP_marca : form.p_marca;
