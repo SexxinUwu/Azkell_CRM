@@ -314,8 +314,9 @@ window.rotAbrirDetalle = function(idOT) {
 
     // Datos Generales
     html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
-    html += fld('Placa',      esc(ot.placa || '—'));
-    html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '—'));
+    html += fld('Placa',      esc(ot.placa || '-'));
+    html += fld('Rampa',      esc(det.rampa_origen || '-'));
+    html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '-'));
     html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
     html += fld('Status Rampa',  esc(det.situacion_inicial || ot.situacion || '—'));
@@ -379,7 +380,7 @@ window.rotAbrirDetalle = function(idOT) {
 
     // Acciones Rápidas (Plantillas)
     html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
-    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\')">'
+    html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\', \'' + rotEscHtml(det.rampa_origen||'') + '\')">'
           + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>'
           + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.rotToast ? window.rotToast('Plantilla OT (En desarrollo)', 'bg-info') : alert('Plantilla OT (En desarrollo)')\">"
@@ -2156,7 +2157,7 @@ window.rotGuardarEdicionOT = function() {
 };
 
 // — Descargar Plantilla Vacía para Inspección —
-window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
+window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
     fetch('/api/mantenimiento/inspecciones/config')
         .then(function(r) { return r.json(); })
@@ -2382,7 +2383,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
                     <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
                 </td>
                 <td class="title-cell" rowspan="3">
-                    INSPECCIÓN MENSUAL<br>
+                    INSPECCIÓN DE PRE USO DE UNIDAD<br>
                     <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>
                 </td>
                 <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>
@@ -2396,7 +2397,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km) {
                 <td class="col-mid">Placa: <span class="val-normal">${rotEscHtml(placa)}</span></td>
                 <td class="col-right" rowspan="2">
                     Rampa:<br>
-                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;"></span>
+                    <span class="val-normal" style="display: block; margin-top: 1px; word-wrap: break-word;">${rotEscHtml(rampa || '')}</span>
                 </td>
             </tr>
             <tr>

@@ -1065,6 +1065,7 @@ window.srAbrirDetalleOT = function(idOt) {
     // ── Datos Generales ──
     html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
     html += fld('Placa',      esc(ot.placa || '—'));
+    html += fld('Rampa',      esc(det.rampa_origen || '—'));
     html += fld('Tipo OT',    esc(det.tipo_ot || ot.tipo || '—'));
     html += fld('Sub Tipo',   esc(det.sub_tipo || '—'));
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor || '—'));
