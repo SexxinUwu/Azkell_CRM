@@ -3242,11 +3242,16 @@ body.dark .sidebar {
 
 /* Aplicando el diseño cápsula también en teléfonos móviles */
 @media (max-width: 768px) {
-    #app-crm { padding: 0 !important; background-color: var(--bg-modern); }
+    #app-crm { padding: 0 !important; background-color: var(--bg); }
     .sidebar { 
         height: calc(100% - 16px) !important; 
         border-radius: 20px !important; 
         margin: 8px !important; 
+    }
+    .topbar {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border-bottom: 1px solid var(--border) !important;
     }
     .main-area { padding: 0 !important; }
 }

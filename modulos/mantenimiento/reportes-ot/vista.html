@@ -320,27 +320,43 @@
         </div>
 
         <!-- Fila 2: filtros + acciones -->
-        <div class="rot-filters">
-            <input type="text" class="rot-input" id="rot-fil-ot"
-                placeholder="N° OT" style="width:105px;"
-                oninput="window.rotFiltrar()">
+        <div class="rot-filters mt-2">
+            
+            <!-- Botón de Filtros (Embudo) -->
+            <div class="dropdown">
+                <button class="rot-toolbar-btn px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside" style="background: var(--surface);">
+                    <i class="bi bi-funnel-fill text-primary"></i> <span class="d-none d-sm-inline ms-1">Filtros</span>
+                </button>
+                <div class="dropdown-menu shadow-lg p-3" style="width: 290px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); z-index: 1060;">
+                    <h6 class="fw-bold mb-3" style="font-size: 0.85rem; color: var(--subtext);">Filtros Avanzados</h6>
+                    
+                    <div class="mb-3">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: var(--subtext); margin-bottom: 4px; display: block;">N° ORDEN DE TRABAJO</label>
+                        <input type="text" id="rot-fil-ot" class="form-control form-control-sm" placeholder="Ej. OT-2026-0001" style="background: var(--bg); border: 1px solid var(--border);" oninput="window.rotFiltrar()">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: var(--subtext); margin-bottom: 4px; display: block;">PLACA DE UNIDAD</label>
+                        <input type="text" id="rot-fil-placa" class="form-control form-control-sm" placeholder="Ej. A1B-234" style="text-transform:uppercase; background: var(--bg); border: 1px solid var(--border);" oninput="this.value=this.value.toUpperCase(); window.rotFiltrar()">
+                    </div>
 
-            <input type="text" class="rot-input" id="rot-fil-placa"
-                placeholder="PLACA" style="width:95px; text-transform:uppercase;"
-                oninput="this.value=this.value.toUpperCase(); window.rotFiltrar()">
+                    <div class="mb-3">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: var(--subtext); margin-bottom: 4px; display: block;">MES</label>
+                        <input type="month" id="rot-fil-mes" class="form-control form-control-sm" style="background: var(--bg); border: 1px solid var(--border);" onchange="window.rotFiltrar()">
+                    </div>
 
-            <input type="month" class="rot-input rot-input-date" id="rot-fil-mes"
-                style="width:140px;" title="Filtrar por mes"
-                onchange="window.rotFiltrar()">
-
-            <div style="display:flex;align-items:center;gap:4px;">
-                <input type="date" class="rot-input rot-input-date" id="rot-fil-desde"
-                    style="width:135px;" title="Desde"
-                    onchange="window.rotFiltrar()">
-                <span class="rot-sep">→</span>
-                <input type="date" class="rot-input rot-input-date" id="rot-fil-hasta"
-                    style="width:135px;" title="Hasta"
-                    onchange="window.rotFiltrar()">
+                    <div class="mb-3">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: var(--subtext); margin-bottom: 4px; display: block;">RANGO DE FECHAS</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="date" id="rot-fil-desde" class="form-control form-control-sm" style="background: var(--bg); border: 1px solid var(--border);" onchange="window.rotFiltrar()">
+                            <span style="font-size: 0.8rem; color: var(--subtext);"><i class="bi bi-arrow-right"></i></span>
+                            <input type="date" id="rot-fil-hasta" class="form-control form-control-sm" style="background: var(--bg); border: 1px solid var(--border);" onchange="window.rotFiltrar()">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3 mx-n3" style="border-color: var(--border);">
+                    <button class="btn w-100" style="background: rgba(37,99,235,0.1); color: var(--primary, #2563eb); font-weight: 600; font-size: 0.85rem;" onclick="document.getElementById('rot-fil-ot').value=''; document.getElementById('rot-fil-placa').value=''; document.getElementById('rot-fil-mes').value=''; document.getElementById('rot-fil-desde').value=''; document.getElementById('rot-fil-hasta').value=''; window.rotFiltrar();"><i class="bi bi-trash"></i> Limpiar Filtros</button>
+                </div>
             </div>
 
             <div style="flex:1"></div>
