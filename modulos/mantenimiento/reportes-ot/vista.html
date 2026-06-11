@@ -121,6 +121,22 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0; flex-wrap: wrap;
 }
+@media (max-width: 768px) {
+    #moduloReportesOT .rot-kpi-bar {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: .8rem;
+    }
+    #moduloReportesOT .rot-kpi-bar::-webkit-scrollbar {
+        display: none;
+    }
+    #moduloReportesOT .rot-kpi {
+        flex-shrink: 0;
+        min-width: 130px !important;
+    }
+}
 #moduloReportesOT .rot-kpi {
     background: var(--bg);
     border: 1.5px solid var(--border);
