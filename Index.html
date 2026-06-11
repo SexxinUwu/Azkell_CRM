@@ -17,7 +17,7 @@
     <script src="/libs/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="/libs/leaflet.css" />
     <script src="/libs/leaflet.js"></script>
-    <link rel="stylesheet" href="./estilos.css?v=9">
+    <link rel="stylesheet" href="./estilos.css?v=10">
     <link rel="manifest" href="./manifest.json">
     <script>
         const originalWarn = console.warn;
@@ -269,36 +269,7 @@
                     <button class="btn btn-link p-0 fs-5" id="btn-modo-revisor" onclick="window.toggleModoRevisor()" title="Modo Revisor — oculta botones de edición" style="color: var(--subtext);" data-bs-toggle="tooltip" data-bs-placement="bottom">
                         <i class="bi bi-eye-fill"></i>
                     </button>
-                    <button class="btn btn-link p-0 fs-5" onclick="cargarModuloAislado('sistema/configuracion')" title="Configuración" style="color: var(--subtext);">
-                        <i class="bi bi-gear-fill"></i>
-                    </button>
 
-                    <!-- ── Centro de Notificaciones ── -->
-                    <div class="dropdown d-inline-block" id="notif-dropdown-wrap">
-                        <button class="btn btn-link p-0 fs-5 position-relative" id="btn-notif"
-                                data-bs-toggle="dropdown" aria-expanded="false"
-                                style="color:var(--subtext);" onclick="window.cargarNotificaciones()">
-                            <i class="bi bi-bell-fill"></i>
-                            <span id="notif-badge"
-                                  class="position-absolute badge rounded-pill bg-danger"
-                                  style="font-size:0.5rem;padding:3px 5px;top:-2px;left:10px;display:none;min-width:16px;line-height:1;">0</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end shadow-lg p-0"
-                             style="width:340px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--surface);">
-                            <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);">
-                                <span style="font-weight:800;font-size:.88rem;color:var(--text);">
-                                    <i class="bi bi-bell-fill me-1 text-primary" style="font-size:.8rem;"></i>Notificaciones
-                                </span>
-                                <button class="btn btn-sm btn-link p-0" style="font-size:.72rem;color:var(--crm-accent);"
-                                        onclick="window.notifMarcarTodoLeido()">Marcar todo leído</button>
-                            </div>
-                            <div id="notif-lista" style="max-height:380px;overflow-y:auto;background:var(--surface);">
-                                <div class="text-center py-4" style="color:var(--subtext);font-size:.82rem;">
-                                    <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="dropdown d-none d-md-inline-block">
     <div class="d-flex align-items-center p-1 px-2 rounded" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; transition: 0.2s;">
