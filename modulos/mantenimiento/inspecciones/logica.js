@@ -866,7 +866,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
     let firmaPrincipalReal = signedMap[insp.url_firma] || insp.url_firma;
     let firmasHtmlUI = "";
     if (firmaPrincipalReal && firmaPrincipalReal.length > 100) {
-        firmasHtmlUI += `<div class="text-center"><img src="${firmaPrincipalReal}" style="max-height: 60px; max-width: 120px; display: block; margin: 0 auto; border-bottom: 1px solid #ccc;"><span style="font-size: 11px; font-weight: bold;">Técnico Inspector</span><br><span style="font-size: 10px;">${insp.tecnico || '-'}</span></div>`;
+        firmasHtmlUI += `<div class="text-center"><img src="${firmaPrincipalReal}" style="max-height: 120px; max-width: 250px; object-fit: contain; display: block; margin: 0 auto; border-bottom: 2px solid #ccc;"><span style="font-size: 14px; font-weight: bold;">Técnico Inspector</span><br><span style="font-size: 12px;">${insp.tecnico || '-'}</span></div>`;
     }
 
     if (firmasHtmlUI !== "") {
