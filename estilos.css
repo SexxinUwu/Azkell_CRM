@@ -957,10 +957,17 @@ body.dark {
 
 /* 3. APLICACIÓN GLOBAL */
 body {
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
-    font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
-    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    overflow-x: hidden !important; /* Evitar scroll horizontal */
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* 4. TARJETAS Y CONTENEDORES */
