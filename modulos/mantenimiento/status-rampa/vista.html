@@ -7,6 +7,12 @@
     min-height: 0;
     overflow: hidden;
 }
+#root-dinamico, .main-area {
+    padding: 0 !important;
+    background-color: #F2F2F7 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
 
 /* ── Barra de controles ──────────────────────────────────────── */
 #moduloStatusRampa .sr-top-wrap {
@@ -337,20 +343,20 @@
 .sr-drawer-global {
     position: fixed;
     top: 0;
-    right: 0;
+    right: -500px;
     width: 440px;
-    max-width: 96vw;
+    max-width: 100vw;
     height: 100vh;
     background: var(--surface);
     border-left: 1px solid var(--border);
     box-shadow: -8px 0 30px rgba(0,0,0,0.14);
-    transform: translateX(100%);
-    transition: transform 0.28s ease;
+    transition: right 0.28s ease;
     z-index: 1060;
     display: flex;
     flex-direction: column;
+    visibility: hidden;
 }
-.sr-drawer-global.open { transform: translateX(0); }
+.sr-drawer-global.open { right: 0; visibility: visible; }
 /* El drawer de materiales es más ancho para ver mejor los artículos */
 #sr-drawer-material { width: 560px; }
 /* ── Drawer header ─────────────────────────────────────────────── */
@@ -622,7 +628,7 @@
 
 <!-- ═══════════════ PANEL: Configurar Rampas ═══════════════ -->
 <div id="sr-config-bd" onclick="window.srCerrarConfigRampas()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1050;"></div>
-<div id="sr-config-rampas" style="position:fixed;top:0;right:0;height:100%;width:360px;max-width:95vw;background:var(--surface);border-left:1px solid var(--border);z-index:1051;transform:translateX(100%);transition:.3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;">
+<div id="sr-config-rampas" style="position:fixed;top:0;right:-500px;height:100%;width:360px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:1051;transition:right .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;visibility:hidden;box-shadow:-8px 0 30px rgba(0,0,0,.14);">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
         <span style="font-size:1rem;font-weight:800;color:var(--text);"><i class="bi bi-gear me-2"></i>Configurar Rampas</span>
         <button onclick="window.srCerrarConfigRampas()" style="border:none;background:none;font-size:1.2rem;color:var(--subtext);cursor:pointer;"><i class="bi bi-x-lg"></i></button>
@@ -642,7 +648,7 @@
     </div>
 </div>
 <style>
-#sr-config-rampas.open { transform: translateX(0); }
+#sr-config-rampas.open { right: 0; visibility: visible; }
 </style>
 
 <!-- FAB: Registrar Unidad (sólo móvil) -->
