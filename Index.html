@@ -17,7 +17,7 @@
     <script src="/libs/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="/libs/leaflet.css" />
     <script src="/libs/leaflet.js"></script>
-    <link rel="stylesheet" href="./estilos.css?v=8">
+    <link rel="stylesheet" href="./estilos.css?v=9">
     <link rel="manifest" href="./manifest.json">
     <script>
         const originalWarn = console.warn;
@@ -414,7 +414,9 @@
         </div>
     </div>
 
-
+    <!-- Contenedor oculto para generación de PDF -->
+    <div id="hidden-pdf-template" style="display: none;">
+        <div id="pdf-sf-container" style="padding: 20px; font-family: 'Inter', sans-serif; background: #fff;">
             <div style="margin-bottom: 25px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;" border="1">
                     <thead style="background-color: #1e293b; color: white;">

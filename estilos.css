@@ -3555,3 +3555,6 @@ body.dark .fab-item-label {
         bottom: 110px !important;
     }
 }
+
+/* Desactivar sombras fantasma de offcanvas cerrados */
+.offcanvas:not(.show) { box-shadow: none !important; visibility: hidden !important; }
