@@ -386,8 +386,39 @@
 /* ── Responsive móvil ─────────────────────────────────────────── */
 @media (max-width: 767px) {
     /* Mostrar FAB, ocultar botón de registrar en barra */
-    #sr-fab { display: flex !important; }
+    #sr-fab { display: flex !important; bottom: 104px !important; right: 1rem !important; }
     #sr-btn-registrar { display: none !important; }
+
+    /* Cajas principales a Full Screen */
+    #moduloStatusRampa .sr-top-wrap,
+    #moduloStatusRampa .sr-table-wrap,
+    #moduloStatusRampa .sr-hist-wrap {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+    }
+    #moduloStatusRampa .sr-top-wrap { border-top: none !important; }
+
+    /* Drawers a Bottom Sheet estilo Inventario */
+    #moduloStatusRampa .sr-drawer,
+    .sr-drawer-global,
+    #sr-config-rampas {
+        top: auto !important; bottom: -100vh !important; right: 0 !important;
+        width: 100vw !important; height: 92vh !important;
+        max-width: none !important;
+        border-radius: 22px 22px 0 0 !important;
+        border-left: none !important;
+        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
+        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important;
+        visibility: visible !important;
+    }
+    #moduloStatusRampa .sr-drawer.open,
+    .sr-drawer-global.open,
+    #sr-config-rampas.open {
+        bottom: 0 !important; right: 0 !important;
+    }
 
     /* Barra de controles compacta */
     #moduloStatusRampa .sr-controls {
