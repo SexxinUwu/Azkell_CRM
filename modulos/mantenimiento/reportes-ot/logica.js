@@ -1021,8 +1021,13 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     if (numOT.includes('-')) {
         var parts = numOT.split('-');
         if (parts.length >= 3) {
-            anioPart = parts[1];
-            numPart = parts[2];
+            if (parts[1].startsWith('20')) {
+                anioPart = parts[1];
+                numPart = parts[2];
+            } else {
+                anioPart = parts[2];
+                numPart = parts[1];
+            }
         } else {
             numPart = numOT;
         }
@@ -1146,7 +1151,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
         <table class="data-grid">
             <tr>
-                <td style="width: 33%;">Nº OT: <span class="val-blue">${numPart}${anioPart ? '-' + anioPart : ''}</span></td>
+                <td style="width: 33%;">Nº OT: <span class="val-blue">${anioPart ? anioPart + "-" : ""}${numPart}</span></td>
                 <td style="width: 33%;">Placa: <span class="val-normal">${rotEscHtml(ot.placa || '—')}</span></td>
                 <td style="width: 34%;">Marca: <span class="val-normal">${rotEscHtml(pMarca || '—')}</span></td>
             </tr>
