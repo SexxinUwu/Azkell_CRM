@@ -501,6 +501,7 @@ window.srAbrirDetalle = function(id) {
     if (window.checkPerm('ot', 'e')) {
         footer.innerHTML =
             '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarRampa(' + id + ')"><i class="bi bi-pencil me-1"></i>Editar Ingreso</button>' +
+            '<button class="btn btn-sm btn-danger ms-2" onclick="window.srEliminarRegistroGeneral(' + id + ', \'' + (e.ticket_entrada || e.id_ot || '') + '\')"><i class="bi bi-trash me-1"></i>Eliminar</button>' +
             '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-box-arrow-right me-1"></i>Liberar</button>';
     }
     footer.style.display = 'flex';

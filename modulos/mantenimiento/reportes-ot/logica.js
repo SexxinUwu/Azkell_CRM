@@ -384,7 +384,7 @@ window.rotAbrirDetalle = function(idOT) {
     html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\', \'' + rotEscHtml(det.rampa_origen||'') + '\')">'
           + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>'
-          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.generarPDF_OT({ id_ot: '" + rotEscHtml(idOT) + "', placa: '" + rotEscHtml(ot.placa) + "' }, [], []);\">"
+          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.rotDescargarPlantillaOT('" + rotEscHtml(idOT) + "', '" + rotEscHtml(ot.placa) + "');\">"
           + '<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.1rem;"><i class="bi bi-file-earmark-text"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span>'
           + '</button>';
@@ -996,6 +996,25 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
     var det = {};
     try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e) {}
+
+    // Merge con padre si es OT hija
+    if (ot.ticket_visita) {
+        var pOT = null;
+        if (window.rotData) pOT = window.rotData.find(function(x){return x.ticket_entrada === ot.ticket_visita;});
+        if (!pOT && window.srEntradas) pOT = window.srEntradas.find(function(x){return x.ticket_entrada === ot.ticket_visita || x.ticket === ot.ticket_visita;});
+        
+        if (pOT) {
+            var detP = {};
+            try { detP = typeof pOT.detalles_json === 'string' ? JSON.parse(pOT.detalles_json) : (pOT.detalles_json||{}); } catch(e){}
+            det.motivo = det.motivo || detP.motivo || pOT.observaciones || pOT.motivo || '';
+            det.cliente = det.cliente || detP.cliente || pOT.cliente || '';
+            det.km_gps = det.km_gps || detP.km_gps || pOT.km_gps || '';
+            det.km_tablero = det.km_tablero || detP.km_tablero || pOT.km_tablero || pOT.km || '';
+            det.rampa_origen = det.rampa_origen || detP.rampa_origen || pOT.txtRampa || pOT.rampa || '';
+            ot.fecha_ingreso = ot.fecha_ingreso || pOT.fecha_ingreso || pOT.creado_en || '';
+        }
+    }
+
 
     var numOT = ot.id_ot || ot.ticket_entrada || '';
     var numPart = numOT, anioPart = '';
@@ -2255,6 +2274,36 @@ window.rotGuardarEdicionOT = function() {
 };
 
 // — Descargar Plantilla Vacía para Inspección —
+window.rotDescargarPlantillaOT = function(idOt, placa) {
+    if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla OT...', 'bg-info');
+    
+    // Buscar en memoria
+    var ot = null;
+    if (window.rotData) ot = window.rotData.find(function(o) { return String(o.ticket_entrada||o.id_ot) === String(idOt); });
+    if (!ot && window.srData) ot = window.srData.find(function(o) { return String(o.ticket_entrada||o.id_ot) === String(idOt); });
+    if (!ot && window.srOtData) ot = window.srOtData.find(function(o) { return String(o.ticket_entrada||o.id_ot) === String(idOt); });
+    if (!ot && window.srEntradas) ot = window.srEntradas.find(function(o) { return String(o.ticket_entrada||o.id_ot||o.ticket) === String(idOt); });
+
+    if (ot) {
+        window.generarPDF_OT(ot, [], []);
+        return;
+    }
+
+    // Buscar por API
+    fetch('/api/ordenes-trabajo')
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(data) {
+          if (!window.rotData) window.rotData = data;
+          var found = data.find(function(o) { return String(o.ticket_entrada||o.id_ot) === String(idOt); });
+          if (!found) found = { ticket_entrada: idOt, placa: placa };
+          window.generarPDF_OT(found, [], []);
+      })
+      .catch(function(e) {
+          console.error(e);
+          window.generarPDF_OT({ ticket_entrada: idOt, placa: placa }, [], []);
+      });
+};
+
 window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
     fetch('/api/mantenimiento/inspecciones/config')
