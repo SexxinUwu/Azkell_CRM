@@ -2065,3 +2065,21 @@ function srLimpiarFormRegistro() {
     var sR = document.getElementById('sr-f-rampa');
     if (sR) { sR.value = ''; sR.disabled = false; }
 }
+
+window.srEliminarRegistroGeneral = function(idRampa, ticketOT) {
+    if (!confirm('¿Eliminar este registro de rampa?\n\n¡ATENCIÓN! Esto también eliminará permanentemente la Orden de Trabajo (' + ticketOT + '), sus trabajos, repuestos e inspecciones vinculadas. Esta acción no se puede deshacer.')) return;
+    
+    // Primero eliminamos la OT y luego la rampa (o viceversa)
+    var p1 = ticketOT ? fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketOT), { method: 'DELETE' }).then(function(r){return r.json();}) : Promise.resolve();
+    
+    p1.then(function() {
+        return fetch('/api/taller-rampas/' + idRampa, { method: 'DELETE' }).then(function(r){return r.json();});
+    }).then(function() {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Registro y OT vinculada eliminados', 'success');
+        srCerrarDrawers();
+        srFetchData();
+    }).catch(function(err) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger');
+        console.error(err);
+    });
+};

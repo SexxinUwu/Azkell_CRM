@@ -1221,7 +1221,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
                   + 'body { background-color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center; }\n'
                   + '#btnPrint { position: fixed; top: 20px; right: 20px; background-color: #000; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; z-index: 1000; font-family: Oswald, sans-serif; font-size: 14px; }\n'
                   + '#btnPrint:hover { opacity: 0.9; }\n'
-                  + '@media print { body { background: none; padding: 0; margin: 0; display: block; } #btnPrint { display: none; } .page-container { margin: 0 !important; box-shadow: none !important; } }\n'
+                  + '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; } body { background: none; padding: 0; margin: 0; display: block; } #btnPrint { display: none; } .page-container { margin: 0 !important; box-shadow: none !important; } }\n'
                   + '</style>\n</head>\n<body>\n'
                   + '<button id="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>\n'
                   + htmlBody
