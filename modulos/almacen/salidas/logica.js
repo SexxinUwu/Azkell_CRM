@@ -829,6 +829,42 @@ function _salActualizarTotal() {
     if (el) el.textContent = 'S/. ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ── Alerta Moderna (Estilo Azkell) ──────────────────────────────
+window.salAlertModerno = function(titulo, mensaje) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
+
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:12px;padding:24px;width:90%;max-width:360px;box-shadow:0 10px 25px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;text-align:center;';
+
+    box.innerHTML = 
+        '<div style="margin-bottom:12px;">' +
+        '<i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>' +
+        '</div>' +
+        '<h6 style="margin:0 0 12px 0;font-weight:800;font-size:1.15rem;color:#1e293b;">' + titulo + '</h6>' +
+        '<p style="margin:0 0 20px 0;font-size:0.9rem;color:#475569;line-height:1.5;">' + mensaje + '</p>' +
+        '<button class="btn btn-sm" id="btn-ok" style="background:#5865F2;color:#fff;font-weight:700;padding:8px 24px;border-radius:8px;width:100%;font-size:0.95rem;">Aceptar</button>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function(){
+        overlay.style.opacity = '1';
+        box.style.transform = 'scale(1)';
+    });
+
+    var ok = box.querySelector('#btn-ok');
+
+    function cerrar() {
+        overlay.style.opacity = '0';
+        box.style.transform = 'scale(0.95)';
+        setTimeout(function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
+    }
+
+    overlay.addEventListener('click', function(e) { if(e.target === overlay) cerrar(); });
+    ok.addEventListener('click', cerrar);
+};
+
 // ── Guardar nueva solicitud ───────────────────────────────────
 window.salGuardarNuevo = function() {
     var get = function(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
@@ -847,6 +883,8 @@ window.salGuardarNuevo = function() {
     var cus    = document.querySelectorAll('.sal-item-cu');
     var imps   = document.querySelectorAll('.sal-item-imp');
     var items  = [];
+    var requestedStock = {};
+
     for (var i = 0; i < cants.length; i++) {
         var desc = descs[i] ? descs[i].value.trim() : '';
         var invId = invIds[i] ? invIds[i].value : '';
@@ -855,9 +893,31 @@ window.salGuardarNuevo = function() {
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
         if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i + 1), 'danger'); return; }
+        
+        if (invId) {
+            requestedStock[invId] = (requestedStock[invId] || 0) + cant;
+        }
+        
         items.push({ inventario_id: invId || null, descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
     }
+
     if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
+
+    // Validar el stock acumulado
+    for (var invIdKey in requestedStock) {
+        var invItem = (window._salInvData || []).find(function(d) { return d.id === invIdKey; });
+        if (invItem) {
+            var stock = parseFloat(invItem.stock_actual || 0);
+            if (requestedStock[invIdKey] > stock) {
+                var descCorta = invItem.descripcion || invIdKey;
+                window.salAlertModerno(
+                    'Stock Insuficiente',
+                    'Actualmente tienes <b>' + stock.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b> en stock de:<br><br><b>' + salEsc(descCorta) + '</b><br><br>Estás solicitando <b>' + requestedStock[invIdKey].toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b>.<br><br>Debes hacer entradas de inventario para actualizar el stock.'
+                );
+                return;
+            }
+        }
+    }
 
     var body = {
         ticket_ot:    idOt,
