@@ -2640,7 +2640,7 @@ window.rotVerFormatoOT = function(idOT) {
             // Actualizar título y botón imprimir
             var btnPrint = document.querySelector('#modalFormatoOT .btn-primary');
             if(btnPrint) {
-                btnPrint.setAttribute('onclick', "window.generarPDF_OT(window.rotData.find(o=>String(o.ticket_entrada||o.id_ot)===String('" + idOT + "')), window.currentVerTrabajos, window.currentVerMateriales)")===String('" + idOT + "')), " + JSON.stringify(trabajos).replace(/"/g, '&quot;') + ", " + JSON.stringify(materiales).replace(/"/g, '&quot;') + ")");
+                btnPrint.setAttribute('onclick', "window.generarPDF_OT(window.rotData.find(o=>String(o.ticket_entrada||o.id_ot)===String('" + idOT + "')), window.currentVerTrabajos, window.currentVerMateriales)");
             }
             var title = document.querySelector('#modalFormatoOT .modal-title');
             if(title) {
