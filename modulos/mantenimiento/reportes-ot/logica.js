@@ -383,7 +383,7 @@ window.rotAbrirDetalle = function(idOT) {
     html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\', \'' + rotEscHtml(det.rampa_origen||'') + '\')">'
           + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>Inspecciones</span></button>'
-          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.rotToast ? window.rotToast('Plantilla OT (En desarrollo)', 'bg-info') : alert('Plantilla OT (En desarrollo)')\">"
+          + "<button class=\"btn btn-sm\" style=\"display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);\" onclick=\"event.stopPropagation(); window.generarPDF_OT({ id_ot: '" + rotEscHtml(idOT) + "', placa: '" + rotEscHtml(ot.placa) + "' }, [], []);\">"
           + '<div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.1rem;"><i class="bi bi-file-earmark-text"></i></div>'
           + '<span style="font-size:0.7rem;font-weight:600;line-height:1;">Plantilla<br>OT</span>'
           + '</button>';
@@ -1218,8 +1218,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     html2pdf().set({
         margin: 0,
         filename: 'OT_' + numOT + '.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 4, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(container.children[0]).save().then(function() {
         setTimeout(function(){ container.remove(); }, 1000);
