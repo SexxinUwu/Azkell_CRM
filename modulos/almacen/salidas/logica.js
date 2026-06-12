@@ -835,14 +835,14 @@ window.salAlertModerno = function(titulo, mensaje) {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
 
     var box = document.createElement('div');
-    box.style.cssText = 'background:#fff;border-radius:12px;padding:24px;width:90%;max-width:360px;box-shadow:0 10px 25px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;text-align:center;';
+    box.style.cssText = 'background:#fff;border-radius:12px;padding:24px;width:90%;max-width:380px;box-shadow:0 10px 25px rgba(0,0,0,0.2);transform:scale(0.95);transition:transform 0.2s ease;text-align:center;';
 
     box.innerHTML = 
         '<div style="margin-bottom:12px;">' +
         '<i class="bi bi-x-circle-fill text-danger" style="font-size:3rem;"></i>' +
         '</div>' +
         '<h6 style="margin:0 0 12px 0;font-weight:800;font-size:1.15rem;color:#1e293b;">' + titulo + '</h6>' +
-        '<p style="margin:0 0 20px 0;font-size:0.9rem;color:#475569;line-height:1.5;">' + mensaje + '</p>' +
+        '<div style="margin:0 0 20px 0;font-size:0.9rem;color:#475569;line-height:1.5;text-align:left;">' + mensaje + '</div>' +
         '<button class="btn btn-sm" id="btn-ok" style="background:#5865F2;color:#fff;font-weight:700;padding:8px 24px;border-radius:8px;width:100%;font-size:0.95rem;">Aceptar</button>';
 
     overlay.appendChild(box);
@@ -904,19 +904,39 @@ window.salGuardarNuevo = function() {
     if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
     // Validar el stock acumulado
+    var stockErrors = [];
     for (var invIdKey in requestedStock) {
         var invItem = (window._salInvData || []).find(function(d) { return d.id === invIdKey; });
         if (invItem) {
             var stock = parseFloat(invItem.stock_actual || 0);
             if (requestedStock[invIdKey] > stock) {
                 var descCorta = invItem.descripcion || invIdKey;
-                window.salAlertModerno(
-                    'Stock Insuficiente',
-                    'Actualmente tienes <b>' + stock.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b> en stock de:<br><br><b>' + salEsc(descCorta) + '</b><br><br>Estás solicitando <b>' + requestedStock[invIdKey].toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b>.<br><br>Debes hacer entradas de inventario para actualizar el stock.'
-                );
-                return;
+                stockErrors.push({
+                    desc: descCorta,
+                    stock: stock,
+                    req: requestedStock[invIdKey]
+                });
             }
         }
+    }
+
+    if (stockErrors.length > 0) {
+        var msg = '<p style="text-align:center;margin-bottom:12px;">Se ha detectado stock insuficiente para los siguientes artículos:</p>';
+        msg += '<div style="max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#f8fafc;margin-bottom:12px;scrollbar-width:thin;">';
+        stockErrors.forEach(function(e, idx) {
+            var isLast = idx === stockErrors.length - 1;
+            msg += '<div style="padding-bottom:8px;' + (isLast ? '' : 'margin-bottom:8px;border-bottom:1px dashed #cbd5e1;') + '">';
+            msg += '<div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:6px;word-break:break-word;">' + salEsc(e.desc) + '</div>';
+            msg += '<div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#475569;">';
+            msg += '<span>Stock: <b style="color:#0f172a;">' + e.stock.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b></span>';
+            msg += '<span>Sol.: <b style="color:#ef4444;">' + e.req.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</b></span>';
+            msg += '</div>';
+            msg += '</div>';
+        });
+        msg += '</div>';
+        
+        window.salAlertModerno('Stock Insuficiente', msg);
+        return;
     }
 
     var body = {
