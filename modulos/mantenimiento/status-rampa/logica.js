@@ -825,7 +825,7 @@ window.srAbrirDetalleHistorial = function(id) {
 
     var html = '';
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
-    html += '<span class="sr-badge-rampa" style="background:#64748b;font-size:1rem;">Rampa ' + esc(row.rampa || '—') + '</span>';
+    html += '<div style="font-size:1.1rem;font-weight:900;color:var(--text);margin-right:8px;display:flex;align-items:center;">Rampa <span class="sr-badge-rampa" style="background:#64748b;font-size:0.9rem;margin-left:6px;">' + esc(row.rampa || '?') + '</span></div>';
     html += '<span style="background:#16a34a22;color:#16a34a;border-radius:9px;padding:2px 10px;font-size:0.75rem;font-weight:800;">Liberada</span>';
     html += '</div>';
 
