@@ -1107,7 +1107,7 @@ app.post('/api/ordenes', (req, res) => {
         if (dbYear !== currentYear) ultimo = 0;
         ultimo += 1;
 
-        const nuevoIdOT = "OT-" + String(ultimo).padStart(4, '0') + "-" + currentYear;
+        const nuevoIdOT = "OT-" + currentYear + "-" + String(ultimo).padStart(4, "0");
 
         db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
             if (errUpd) return res.status(500).json({ error: "Error update seq: " + errUpd.message });
@@ -1141,7 +1141,7 @@ app.post('/api/taller/ingreso', (req, res) => {
 
         const nextNum = (counts[0].total + 1).toString().padStart(4, '0');
         const year = new Date().getFullYear();
-        const correlativoID = `ST-${nextNum}-${year}`;
+        const correlativoID = `ST-${year}-${nextNum}`;
 
         const detallesObj = { km: parseFloat(data.kilometraje) || 0 };
         const sql = `INSERT INTO ordenes_trabajo
@@ -1290,7 +1290,7 @@ app.post('/api/taller/generar_ot', (req, res) => {
         if (dbYear !== currentYear) ultimo = 0;
         ultimo += 1;
 
-        const nuevoIdOT = "OT-" + String(ultimo).padStart(4, '0') + "-" + currentYear;
+        const nuevoIdOT = "OT-" + currentYear + "-" + String(ultimo).padStart(4, "0");
 
         db.query("UPDATE secuencias SET ultimo_valor = ?, anio = ? WHERE tipo = 'OT'", [ultimo, currentYear], (errUpd) => {
             if (errUpd) return res.status(500).json({ error: "Error actualizando secuencia: " + errUpd.message });

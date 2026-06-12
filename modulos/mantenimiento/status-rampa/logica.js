@@ -1,3 +1,16 @@
+
+window.srFormatID = function(id) {
+    if (!id || !id.includes('-')) return id;
+    var parts = id.split('-');
+    if (parts.length >= 3) {
+        if (parts[1].startsWith('20')) {
+            return parts[1] + '-' + parts[2];
+        } else {
+            return parts[2] + '-' + parts[1];
+        }
+    }
+    return id;
+};
 // ================================================================
 // Módulo Status Rampa — Azkell Fleet
 // Modelo: window.srEntradas = lista dinámica (N entradas por rampa)
@@ -429,6 +442,8 @@ window.srAbrirDetalle = function(id) {
     var footer = document.getElementById('sr-detalle-footer');
     if (!panel || !scroll || !footer) return;
     panel.classList.add('open');
+    var bd = document.getElementById('srDrawerBackdrop');
+    if (bd) bd.classList.add('open');
 
     var rampaIdx = window.srCatRampas.findIndex(function(r) { return r.id === e.rampa; });
     var color = SR_COLORES[(rampaIdx >= 0 ? rampaIdx : e.rampa - 1) % SR_COLORES.length];
@@ -483,7 +498,7 @@ window.srAbrirDetalle = function(id) {
             try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(ex) {}
             var idOt = ot.id_ot || ot.ticket_entrada || '—';
             html += '<tr style="cursor:pointer;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
-            html += '<td style="font-weight:700;color:var(--primary,#5865F2);">' + idOt + '</td>';
+            html += '<td style="font-weight:700;color:var(--primary,#5865F2);">' + window.srFormatID(idOt) + '</td>';
             html += '<td>' + srBadgeEstado(ot.estado || 'Pendiente') + '</td>';
             html += '<td>' + (det.situacion_inicial ? srSemaforo(det.situacion_inicial, true) : '—') + '</td>';
             html += '</tr>';
@@ -842,8 +857,7 @@ window.srAbrirDetalleHistorial = function(id) {
 };
 
 window.srCerrarDetalleHist = function() {
-    var panel = document.getElementById('sr-panel-detalle-hist');
-    if (panel) panel.classList.remove('open');
+    window.srCerrarDrawers();
 };
 
 window.srReactivarRampa = function(id) {
@@ -1204,7 +1218,7 @@ window.srAnularOT = function(idOt) {
 };
 
 window.srAgregarTrabajo = function(idOt) {
-    var lbl = document.getElementById('sr-tr-ot-lbl'); if (lbl) lbl.textContent = idOt;
+    var lbl = document.getElementById('sr-tr-ot-lbl'); if (lbl) lbl.textContent = window.srFormatID(idOt);
     var hid = document.getElementById('sr-tr-ot-id');  if (hid) hid.value = idOt;
     var desc  = document.getElementById('sr-tr-desc');    if (desc)  desc.value  = '';
     var costo = document.getElementById('sr-tr-costo');   if (costo) costo.value = '0';
@@ -1263,7 +1277,7 @@ window._srMatIdx  = window._srMatIdx  || 0;
 window._srInvData = window._srInvData || [];
 
 window.srAgregarSalida = function(idOt) {
-    var lbl = document.getElementById('sr-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
+    var lbl = document.getElementById('sr-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + window.srFormatID(idOt);
     var hid = document.getElementById('sr-mat-ot-id');  if (hid) hid.value = idOt;
     var vis = document.getElementById('sr-mat-ot-vis'); if (vis) vis.value = idOt;
 
@@ -1840,7 +1854,7 @@ function srAbrirDrawer(id) {
 window.srCerrarDrawers = function() {
     var back = document.getElementById('srDrawerBackdrop');
     if (back) back.classList.remove('open');
-    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot'].forEach(function(id) {
+    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot', 'sr-panel-detalle', 'sr-panel-detalle-hist'].forEach(function(id) {
         var d = document.getElementById(id);
         if (d) d.classList.remove('open');
     });
@@ -1999,7 +2013,7 @@ window.srEditarOT = function(idOt) {
     }, 50);
 
     var lbl = document.getElementById('sr-eot-id-lbl');
-    if (lbl) lbl.textContent = idOt;
+    if (lbl) lbl.textContent = window.srFormatID(idOt);
 
     srAbrirDrawer('sr-drawer-editar-ot');
 };
