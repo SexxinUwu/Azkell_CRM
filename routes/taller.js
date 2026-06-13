@@ -63,15 +63,15 @@ router.get('/ordenes-trabajo', (req, res) => {
 });
 
 router.post('/ordenes-trabajo', (req, res) => {
-    const { placa, estado, fecha_ingreso, creado_por, detalles_json } = req.body;
+    const { placa, estado, fecha_ingreso, creado_por, detalles_json, id_rampa } = req.body;
     if (!placa) return res.status(400).json({ error: 'placa es requerida' });
     const anio    = new Date().getFullYear();
     const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
     generarId('ordenes_trabajo', 'id_ot', 'OT', anio, (nuevoId) => {
         db.query(
-            `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || new Date()],
+            `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, id_rampa)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || new Date(), id_rampa || null],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId });
