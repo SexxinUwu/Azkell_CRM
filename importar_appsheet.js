@@ -96,13 +96,16 @@ async function ejecutarImportacion() {
                     tipo_ot: row['Tipo'],
                     sub_tipo: row['SubTipo'],
                     supervisor: row['Supervisor'],
+                    motivo: row['Motivo'],
+                    situacion_inicial: row['Situacion Inicial'],
+                    obs_cierre: row['Comentario Cierre'],
                     origen: 'Migracion Excel'
                 });
 
                 await db.query(
-                    `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, id_rampa, detalles_json, fecha_ingreso)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [newTicket, newTicket, row['Placa'] || 'SIN-PLACA', row['Estado'] || 'Finalizado', newRampaId, detallesJson, fecha || new Date()]
+                    `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, id_rampa, detalles_json, fecha_ingreso, comentario_cierre)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [newTicket, newTicket, row['Placa'] || 'SIN-PLACA', row['Estado'] || 'Finalizado', newRampaId, detallesJson, fecha || new Date(), row['Comentario Cierre'] || '']
                 );
                 DicOTs[oldId] = newTicket;
             }

@@ -9,7 +9,7 @@ const rampasHeader = [
 // 2. Ordenes
 const ordenesHeader = [
     'ID_OT', 'ID_Padre_Rampa', 'Placa', 'Fecha Ingreso', 'Estado',
-    'Tipo', 'SubTipo', 'Supervisor'
+    'Tipo', 'SubTipo', 'Supervisor', 'Motivo', 'Situacion Inicial', 'Comentario Cierre'
 ];
 
 // 3. Trabajos
@@ -25,9 +25,10 @@ const materialesHeader = [
 ];
 
 // 5. Inspecciones
+// NOTA: Puedes agregar todas las columnas que quieras aquí (ej. Luces, Frenos, etc.)
 const inspeccionesHeader = [
     'ID_Inspeccion', 'ID_Padre_OT', 'Placa', 'Categoria', 'Fecha',
-    'Observaciones Generales'
+    'Observaciones Generales', 'Estado Llantas', 'Estado Frenos', 'Estado Luces'
 ];
 
 const wb = xlsx.utils.book_new();
