@@ -379,6 +379,7 @@ function srRenderTabla() {
             }
             var esActiva = (window.srDetalleId === e._id);
             var otsPlaca = window.srOtData.filter(function(o) {
+                if (o.id_rampa) return String(o.id_rampa) === String(e._id);
                 return (o.placa || '').toUpperCase() === e.placa.toUpperCase();
             });
             var otsTxt = otsPlaca.length
@@ -463,6 +464,7 @@ window.srAbrirDetalle = function(id) {
     }
 
     var otsPlaca = window.srOtData.filter(function(o) {
+        if (o.id_rampa) return String(o.id_rampa) === String(e._id);
         return (o.placa || '').toUpperCase() === e.placa.toUpperCase();
     });
 
@@ -853,6 +855,7 @@ window.srAbrirDetalleHistorial = function(id) {
         fEnd.setHours(23,59,59,999);
 
         var ots = window.srOtData.filter(function(o) {
+            if (o.id_rampa) return String(o.id_rampa) === String(row.id);
             if (String(o.placa).toUpperCase() !== String(row.placa).toUpperCase()) return false;
             var otD = new Date(o.fecha_ingreso);
             return otD >= fStart && otD <= fEnd;
@@ -977,6 +980,7 @@ window.srGenerarOT = function(id) {
     var rDisp = document.getElementById('sr-ot-rampa-disp'); if (rDisp) rDisp.textContent = 'Rampa ' + e.rampa;
     var pHid  = document.getElementById('sr-ot-placa-hid');  if (pHid)  pHid.value = e.placa;
     var rHid  = document.getElementById('sr-ot-rampa-hid');  if (rHid)  rHid.value = String(e.rampa);
+    var idRHid = document.getElementById('sr-ot-id-rampa-hid'); if (idRHid) idRHid.value = e._id || e.id;
 
     var hoy = new Date();
     var fechaHora = (e.fechaIngreso || hoy.toISOString().split('T')[0]) + ' ' + (e.horaIngreso || hoy.toTimeString().slice(0, 5));
@@ -1023,6 +1027,7 @@ window.srCambiarTipoOT = function() {
 window.srEnviarOT = function() {
     var placa      = (document.getElementById('sr-ot-placa-hid') || {}).value || '';
     var rampa      = (document.getElementById('sr-ot-rampa-hid') || {}).value || '';
+    var idRampa    = (document.getElementById('sr-ot-id-rampa-hid') || {}).value || null;
     var tipo       = (document.getElementById('sr-ot-tipo')       || {}).value || '';
     var subtipo    = (document.getElementById('sr-ot-subtipo')    || {}).value || '';
     var supervisor = (document.getElementById('sr-ot-supervisor') || {}).value || '';
@@ -1042,6 +1047,7 @@ window.srEnviarOT = function() {
         body: JSON.stringify({
             placa:        placa,
             estado:       'Pendiente',
+            id_rampa:     idRampa,
             detalles_json: JSON.stringify({
                 tipo_ot:           tipo,
                 sub_tipo:          subtipo,
@@ -2122,7 +2128,8 @@ window.srEliminarRegistroGeneral = function(idRampa, ticketOT) {
             }).then(function() {
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Registro y OT vinculada eliminados', 'success');
                 srCerrarDrawers();
-                srFetchData();
+                srCargarEntradas();
+                srCargarHistorial();
             }).catch(function(err) {
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger');
                 console.error(err);
