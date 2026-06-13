@@ -237,14 +237,14 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
 
 router.delete('/ordenes-trabajo/:id', (req, res) => {
     const ticketId = req.params.id;
-    // Cascade: borrar trabajos y materiales asociados primero
-    db.query('DELETE FROM trabajos_ot WHERE id_ot = ?', [ticketId], (err1) => {
-        if (err1) return res.status(500).json({ error: err1.message });
-        db.query('DELETE FROM ot_materiales WHERE ticket_ot = ?', [ticketId], (err2) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err3) => {
-                if (err3) return res.status(500).json({ error: err3.message });
-                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+    // Cascade: borrar trabajos, salidas de inv e inspecciones
+    db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [ticketId], (err1) => {
+        db.query('DELETE FROM salidas_inv WHERE ticket_ot = ?', [ticketId], (err2) => {
+            db.query('DELETE FROM inspecciones WHERE id_ot = ?', [ticketId], (err3) => {
+                db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err4) => {
+                    if (err4) return res.status(500).json({ error: err4.message });
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+                });
             });
         });
     });
@@ -652,9 +652,28 @@ router.put('/taller-rampas/:id', (req, res) => {
 });
 
 router.delete('/taller-rampas/:id', (req, res) => {
-    db.query('DELETE FROM taller_rampas WHERE id = ?', [req.params.id], (err) => {
+    const idRampa = req.params.id;
+    db.query('SELECT ticket_entrada FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        const tickets = rows.map(r => r.ticket_entrada);
+        const finishDelete = () => {
+            db.query('DELETE FROM taller_rampas WHERE id = ?', [idRampa], (errDel) => {
+                if (errDel) return res.status(500).json({ error: errDel.message });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } 
+                res.json({ ok: true });
+            });
+        };
+        if (tickets.length === 0) return finishDelete();
+
+        db.query('DELETE FROM trabajos_ot WHERE ticket_visita IN (?)', [tickets], () => {
+            db.query('DELETE FROM salidas_inv WHERE ticket_ot IN (?)', [tickets], () => {
+                db.query('DELETE FROM inspecciones WHERE id_ot IN (?)', [tickets], () => {
+                    db.query('DELETE FROM ordenes_trabajo WHERE id_rampa = ?', [idRampa], () => {
+                        finishDelete();
+                    });
+                });
+            });
+        });
     });
 });
 
