@@ -2117,16 +2117,15 @@ function srLimpiarFormRegistro() {
     if (sR) { sR.value = ''; sR.disabled = false; }
 }
 
-window.srEliminarRegistroGeneral = function(idRampa, ticketOT) {
+window.srEliminarRegistroGeneral = function(idRampa) {
     srConfirmModerno(
         '¿Eliminar registro de rampa?',
-        '¡ATENCIÓN! Esto también eliminará permanentemente la Orden de Trabajo asociada (' + ticketOT + '), sus trabajos, repuestos e inspecciones vinculadas. <b>Esta acción no se puede deshacer.</b>',
+        '¡ATENCIÓN! Esto también eliminará permanentemente TODAS las Órdenes de Trabajo vinculadas a este registro, junto con sus trabajos, repuestos e inspecciones. <b>Esta acción no se puede deshacer.</b>',
         function() {
-            var p1 = ticketOT ? fetch('/api/ordenes-trabajo/' + encodeURIComponent(ticketOT), { method: 'DELETE' }).then(function(r){return r.json();}) : Promise.resolve();
-            p1.then(function() {
-                return fetch('/api/taller-rampas/' + idRampa, { method: 'DELETE' }).then(function(r){return r.json();});
-            }).then(function() {
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Registro y OT vinculada eliminados', 'success');
+            fetch('/api/taller-rampas/' + idRampa, { method: 'DELETE' })
+            .then(function(r){ return r.json(); })
+            .then(function() {
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Registro y OTs vinculadas eliminados', 'success');
                 srCerrarDrawers();
                 srCargarEntradas();
                 srCargarHistorial();
