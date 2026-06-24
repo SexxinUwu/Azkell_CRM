@@ -2186,7 +2186,7 @@ function srConfirmModerno(titulo, mensaje, onConfirm) {
     });
 }
 
-// Navegación Swipe para Panel Detalle
+// Navegaciï¿½n Swipe para Panel Detalle
 window.srNavegarDetalle = function(direccion) {
     var trActiva = document.querySelector('#sr-tbody tr.sr-activa');
     if (!trActiva) return;
@@ -2195,7 +2195,7 @@ window.srNavegarDetalle = function(direccion) {
     while (trDestino && (!trDestino.getAttribute('data-id') || trDestino.style.display === 'none')) {
         trDestino = direccion === 'next' ? trDestino.nextElementSibling : trDestino.previousElementSibling;
     }
-    if (!trDestino) return; // No hay más
+    if (!trDestino) return; // No hay mï¿½s
     
     var idDestino = parseInt(trDestino.getAttribute('data-id'), 10);
     if (!isNaN(idDestino)) {
@@ -2245,7 +2245,7 @@ window.srNavegarDetalle = function(direccion) {
             var diffX = touchStartX - touchEndX;
             var diffY = touchStartY - touchEndY;
             
-            // Solo activar si el deslizamiento es más horizontal que vertical y supera los 60px
+            // Solo activar si el deslizamiento es mï¿½s horizontal que vertical y supera los 60px
             if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
                 if (diffX > 0) {
                     window.srNavegarDetalle('next');
