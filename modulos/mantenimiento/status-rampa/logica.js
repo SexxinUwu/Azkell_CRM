@@ -37,6 +37,10 @@ var SR_COLORES = [
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_status_rampa = function() {
+    window.srDetalleId = null;
+    var panelD = document.getElementById('sr-panel-detalle');
+    if (panelD) panelD.classList.remove('open');
+
     window.srTabActual = 'rampas';
     window.srHistPage  = 1;
     var paneR = document.getElementById('sr-pane-rampas');
