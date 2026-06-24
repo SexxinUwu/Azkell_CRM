@@ -770,7 +770,6 @@ setTimeout(verificarAlertasRetraso, 30000);
 // 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
 // ============================================================
 const globalRBAC = require('./rbac');
-app.use('/api', globalRBAC);
 
 function requirePerm(modulo, accion) {
     // Retenemos requirePerm como stub vacío en caso de que alguna ruta antigua lo llame
@@ -806,6 +805,7 @@ function verifyToken(req, res, next) {
     }
 }
 app.use('/api', verifyToken);
+app.use('/api', globalRBAC);
 
 // ============================================================
 // 🛡️ MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
