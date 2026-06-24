@@ -394,7 +394,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</td>';
+            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
