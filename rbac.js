@@ -48,36 +48,47 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/familias') || path.startsWith('/marcas') || path.startsWith('/sistemas')) mod = 'cfg_almacen';
 
     // MANTENIMIENTO
-    else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) mod = 'status_rampa';
-    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) mod = 'ot';
-    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = 'trabajos_ot';
-    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = 'ot';
-    else if (path.startsWith('/taller/historial')) mod = 'ot';
-    else if (path.startsWith('/inspecciones')) mod = 'insp';
-    else if (path.startsWith('/planificacion')) mod = 'plan';
-    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = 'cfg_mant';
-    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = 'ot';
-    else if (path.startsWith('/fleetrun')) mod = 'fleet';
+    else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) mod = ['status_rampa'];
+    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) mod = ['ot', 'status_rampa', 'trabajos_ot', 'reportes_ot'];
+    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = ['trabajos_ot', 'ot', 'status_rampa'];
+    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa'];
+    else if (path.startsWith('/taller/historial')) mod = ['ot'];
+    else if (path.startsWith('/inspecciones')) mod = ['insp'];
+    else if (path.startsWith('/planificacion')) mod = ['plan'];
+    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
+    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
+    else if (path.startsWith('/fleetrun')) mod = ['fleet'];
+    else if (path.startsWith('/taller-rampas')) mod = ['status_rampa', 'ot', 'trabajos_ot'];
+    else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
     // Legacy /api/script endpoints that use req.body.coleccion
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
-        if (col === 'usuarios') mod = 'usuarios';
-        else if (col === 'placas') mod = 'placas';
-        else if (col === 'proveedores') mod = 'prov_inv';
-        else if (col === 'inventario') mod = 'inv';
-        else if (col === 'entradas_almacen') mod = 'ent_inv';
-        else if (col === 'salidas_almacen') mod = 'sal_inv';
-        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = 'ot';
-        else if (col === 'mantenimiento_preventivo') mod = 'cfg_mant';
-        else if (col === 'planificacion_mps') mod = 'plan';
+        if (col === 'usuarios') mod = ['usuarios'];
+        else if (col === 'placas') mod = ['placas'];
+        else if (col === 'proveedores') mod = ['prov_inv'];
+        else if (col === 'inventario') mod = ['inv'];
+        else if (col === 'entradas_almacen') mod = ['ent_inv'];
+        else if (col === 'salidas_almacen') mod = ['sal_inv'];
+        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', 'status_rampa', 'trabajos_ot'];
+        else if (col === 'mantenimiento_preventivo') mod = ['cfg_mant'];
+        else if (col === 'planificacion_mps') mod = ['plan'];
     }
 
     if (mod) {
-        let m = p[mod];
-        if (!m) return res.status(403).json({ error: `RBAC: Módulo denegado (${mod})` });
-        if (m[accion] !== 1 && m[accion] !== true) {
-            return res.status(403).json({ error: `RBAC: Acción '${accion}' denegada en módulo '${mod}'` });
+        let mods = Array.isArray(mod) ? mod : [mod];
+        let hasAccess = false;
+        
+        for (let mKey of mods) {
+            let m = p[mKey];
+            if (m && (m[accion] === 1 || m[accion] === true)) {
+                hasAccess = true;
+                break;
+            }
+        }
+        
+        if (!hasAccess) {
+            return res.status(403).json({ error: `RBAC: Permiso denegado para la acción '${accion}' en las áreas [${mods.join(', ')}]` });
         }
         return next();
     }
