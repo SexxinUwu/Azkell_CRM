@@ -2,8 +2,13 @@
 module.exports = function globalRBAC(req, res, next) {
     const path = req.path;
     // Rutas públicas o helpers que no requieren permisos de módulo
-    const ignoredPaths = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/clientes-placas', '/marcas-placas', '/proxy/documento', '/notificaciones'];
-    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip + '/'))) return next();
+    const ignoredPaths = [
+        '/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', 
+        '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', 
+        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/notificaciones',
+        '/script/obtener', '/script/buscar', '/integraciones'
+    ];
+    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip))) return next();
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
     if (req.user.rol === 'Fundador') return next();

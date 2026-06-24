@@ -9,33 +9,37 @@ window._guEsNuevo         = window._guEsNuevo         || false;
 
 // ── Módulos de permisos ──────────────────────────────────────────
 window._GU_MODULOS = window._GU_MODULOS || [
-    // MANTENIMIENTO
-    { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual de vehículos en taller',  lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones',    lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',           lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificación',    desc:'MPs planificadas vs ejecutadas',          lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'ot',            nombre:'Órdenes de Mto.',  desc:'Órdenes de trabajo correctivos y talleres', lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Trabajos OT',      desc:'Gestión de técnicos y trabajos asignados',lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Informes y métricas de mantenimiento',   lcad:false },
-    { grupo:'MANTENIMIENTO', key:'cfg_mant',      nombre:'Config. Preventivos', desc:'Frecuencias MP, Kits, Tipos, Métrica (solo admin)', lcad:true  },
-    // ALMACÉN
-    { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',           lcad:true  },
-    { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos y stock',          lcad:true  },
-    { grupo:'ALMACÉN',       key:'ent_inv',       nombre:'Entradas',         desc:'Registro de ingresos al almacén',        lcad:true  },
-    { grupo:'ALMACÉN',       key:'sal_inv',       nombre:'Salidas',          desc:'Registro de egresos del almacén',        lcad:true  },
-    { grupo:'ALMACÉN',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',              lcad:true  },
-    { grupo:'ALMACÉN',       key:'kardex',        nombre:'Kardex',           desc:'Historial de movimientos por artículo',  lcad:false },
-    { grupo:'ALMACÉN',       key:'costos_inv',    nombre:'Costos',           desc:'Análisis de costos e índices',           lcad:false },
-    { grupo:'ALMACÉN',       key:'cfg_almacen',   nombre:'Config. Almacén',  desc:'Familias, Unidades, Sistemas y Marcas',  lcad:true  },
     // FLOTA
-    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades',        lcad:true  },
-    { grupo:'FLOTA',         key:'cond',          nombre:'Personal',         desc:'Directorio de personal operativo',       lcad:true  },
-    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',           lcad:false },
+    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicaci�n',  desc:'Visualizaci�n en tiempo real',  lcad:false },
+    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupaci�n de unidades', lcad:true  },
+
+    // MANTENIMIENTO
+    { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gesti�n visual en taller',      lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro de inspecciones',      lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',  lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'ot',            nombre:'�rdenes / Backlog',desc:'�rdenes de trabajo correctivos',lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Trabajos OT',      desc:'Gesti�n de t�cnicos',           lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'M�tricas de mantenimiento',     lcad:false },
+    { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificaci�n',    desc:'Mantenimientos planificados',   lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'cfg_mant',      nombre:'Config. Mant.',    desc:'Kits y Tipos de Mantenimiento', lcad:true  },
+
+    // ALMAC�N
+    { grupo:'ALMAC�N',       key:'inv',           nombre:'Inventario',       desc:'Cat�logo de art�culos',         lcad:true  },
+    { grupo:'ALMAC�N',       key:'ent_inv',       nombre:'Entradas',         desc:'Ingresos al almac�n',           lcad:true  },
+    { grupo:'ALMAC�N',       key:'sal_inv',       nombre:'Salidas',          desc:'Egresos del almac�n',           lcad:true  },
+    { grupo:'ALMAC�N',       key:'kardex',        nombre:'Kardex',           desc:'Movimientos por art�culo',      lcad:false },
+    { grupo:'ALMAC�N',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',     lcad:true  },
+    { grupo:'ALMAC�N',       key:'cfg_almacen',   nombre:'Config. Almac�n',  desc:'Familias y Unidades',           lcad:true  },
+
+    // DIRECTORIO Y SEGURIDAD
+    { grupo:'DIRECTORIO',    key:'cond',          nombre:'Personal',         desc:'Directorio operativo',          lcad:true  },
+    { grupo:'SEGURIDAD',     key:'placas',        nombre:'Unidades (Placas)',desc:'Fichas t�cnicas',               lcad:true  },
+    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Asistencia',       desc:'Asistencia del personal',       lcad:true  },
+
     // SISTEMA
-    { grupo:'SISTEMA',       key:'usuarios',      nombre:'Gestión de Usuarios', desc:'Registro de usuarios y sesiones', lcad:true },
-    { grupo:'SISTEMA',       key:'roles',         nombre:'Roles y Permisos', desc:'Gestión de roles de seguridad', lcad:true },
-    { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',              lcad:true  },
-    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',      lcad:true  },
+    { grupo:'SISTEMA',       key:'usuarios',      nombre:'Usuarios',         desc:'Gesti�n de accesos',            lcad:true  },
+    { grupo:'SISTEMA',       key:'roles',         nombre:'Roles',            desc:'Permisos y roles',              lcad:true  },
+    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditor�a',        desc:'Bit�cora de actividad',         lcad:true  }
 ];
 
 window._GU_COLORS = window._GU_COLORS || [
@@ -688,3 +692,4 @@ window.init_usuarios = function() {
     window._guTabActiva       = 'roles';
     window.guCargarTodo(true);
 };
+
