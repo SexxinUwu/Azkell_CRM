@@ -15,8 +15,13 @@ module.exports = function globalRBAC(req, res, next) {
     if (p.admin === true) return next();
 
     const methodMap = { GET: 'l', POST: 'c', PUT: 'e', DELETE: 'd' };
-    const accion = methodMap[req.method] || 'l';
+    let accion = methodMap[req.method] || 'l';
     let mod = null;
+
+    // Si es un script legacy, forzar la acción según el nombre de la operación
+    if (path.startsWith('/script/obtener') || path.startsWith('/script/buscar')) accion = 'l';
+    else if (path.startsWith('/script/actualizar') || path.startsWith('/script/editar')) accion = 'e';
+    else if (path.startsWith('/script/eliminar')) accion = 'd';
 
     // SISTEMA
     if (path.startsWith('/roles')) mod = 'roles';
