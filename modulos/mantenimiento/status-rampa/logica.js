@@ -392,7 +392,7 @@ function srRenderTabla() {
                   }).join('') + (otsPlaca.length > 3 ? '<span style="font-size:0.72rem;color:var(--subtext)">+' + (otsPlaca.length - 3) + '</span>' : '')
                 : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
-            html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
+            html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" data-id="' + e._id + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
             html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
