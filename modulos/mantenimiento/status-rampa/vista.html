@@ -535,14 +535,14 @@
             <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas">
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas" data-perm-e="status_rampa">
                 <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
             </button>
             <div id="col-picker-sr"></div>
             <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
                 <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
             </button>
-            <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()">
+            <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa">
                 <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
             </button>
         </div>
@@ -683,7 +683,7 @@
 </style>
 
 <!-- FAB: Registrar Unidad (sólo móvil) -->
-<button id="sr-fab" onclick="window.srRegistrar()" title="Registrar Unidad">
+<button id="sr-fab" onclick="window.srRegistrar()" title="Registrar Unidad" data-perm-c="status_rampa">
     <i class="bi bi-plus-lg"></i>
 </button>
 
