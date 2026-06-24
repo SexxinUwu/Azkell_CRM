@@ -205,32 +205,35 @@ window.verificarSesionGuardada = function() {
     var _cL = function(key) { return isAdm || window.checkPerm(key, 'l'); };
 
     // MANTENIMIENTO — ítems individuales
-    var vInsp    = _cL('insp');
-    var vPlacas  = _cL('placas');
-    var vFleet   = _cL('fleet');
-    var vPlan    = _cL('plan');
-    var vOT      = _cL('ot');
-    var vCfgMant = _cL('cfg_mant');
+    var vInsp        = _cL('insp');
+    var vPlacas      = _cL('placas');
+    var vFleet       = _cL('fleet');
+    var vPlan        = _cL('plan');
+    var vOT          = _cL('ot');
+    var vCfgMant     = _cL('cfg_mant');
+    var vStatusRampa = _cL('status_rampa');
+    var vReportesOT  = _cL('reportes_ot');
+    var vTrabajosOT  = _cL('trabajos_ot');
 
     safe('nav-inspecciones',    vInsp);
     safe('mbnav-inspecciones',  vInsp);
     safe('nav-placas',          vPlacas);
     safe('nav-fleetrun',        vFleet);
     safe('mbnav-fleetrun',      vFleet);
-    safe('nav-status-rampa',    vOT);
-    safe('mbnav-status-rampa',  vOT);
-    safe('nav-reportes-ot',     vOT);
-    safe('mbnav-reportes-ot',   vOT);
-    safe('nav-trabajos-ot',     vOT);
-    safe('mbnav-trabajos-ot',   vOT);
-    safe('nav-otros-mant',      vOT || vPlan);
-    safe('mbnav-otros-mant',    vOT || vPlan);
+    safe('nav-status-rampa',    vStatusRampa);
+    safe('mbnav-status-rampa',  vStatusRampa);
+    safe('nav-reportes-ot',     vReportesOT);
+    safe('mbnav-reportes-ot',   vReportesOT);
+    safe('nav-trabajos-ot',     vTrabajosOT);
+    safe('mbnav-trabajos-ot',   vTrabajosOT);
+    safe('nav-otros-mant',      vOT || vPlan || vCfgMant);
+    safe('mbnav-otros-mant',    vOT || vPlan || vCfgMant);
     safe('nav-ordenes',         vOT);
     // planificacion/backlog/kpis/productividad/finanzas están ocultos del sidebar
     // (accesibles vía hub Otros) — no llamar safe() sobre ellos
 
 
-    var showMant = vInsp || vPlacas || vFleet || vPlan || vOT;
+    var showMant = vInsp || vPlacas || vFleet || vPlan || vOT || vStatusRampa || vReportesOT || vTrabajosOT || vCfgMant;
     safe('wrap-mantenimiento', showMant);
 
     // ALMACÉN — ítems individuales
