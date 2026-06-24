@@ -1,5 +1,10 @@
 // Global RBAC Middleware
 module.exports = function globalRBAC(req, res, next) {
+    const path = req.path;
+    // Rutas públicas o helpers que no requieren permisos de módulo
+    const ignoredPaths = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/clientes-placas', '/marcas-placas', '/proxy/documento', '/notificaciones'];
+    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip + '/'))) return next();
+
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
     if (req.user.rol === 'Fundador') return next();
 
@@ -8,11 +13,6 @@ module.exports = function globalRBAC(req, res, next) {
         p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
     } catch(e) {}
     if (p.admin === true) return next();
-
-    const path = req.path;
-    // Rutas públicas o helpers que no requieren permisos de módulo
-    const ignoredPaths = ['/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/clientes-placas', '/marcas-placas', '/proxy/documento'];
-    if (ignoredPaths.some(ip => path === ip || path.startsWith(ip + '/'))) return next();
 
     const methodMap = { GET: 'l', POST: 'c', PUT: 'e', DELETE: 'd' };
     const accion = methodMap[req.method] || 'l';
@@ -38,7 +38,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/familias') || path.startsWith('/marcas') || path.startsWith('/sistemas')) mod = 'cfg_almacen';
 
     // MANTENIMIENTO
-    else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status')) mod = 'status_rampa';
+    else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) mod = 'status_rampa';
     else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) mod = 'ot';
     else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = 'trabajos_ot';
     else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = 'ot';
