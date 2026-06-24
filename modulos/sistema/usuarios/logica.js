@@ -10,10 +10,13 @@ window._guEsNuevo         = window._guEsNuevo         || false;
 // ── Módulos de permisos ──────────────────────────────────────────
 window._GU_MODULOS = window._GU_MODULOS || [
     // MANTENIMIENTO
+    { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual de vehículos en taller',  lcad:true  },
     { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro y análisis de inspecciones',    lcad:true  },
     { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',           lcad:true  },
     { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificación',    desc:'MPs planificadas vs ejecutadas',          lcad:true  },
     { grupo:'MANTENIMIENTO', key:'ot',            nombre:'Órdenes de Mto.',  desc:'Órdenes de trabajo correctivos y talleres', lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Trabajos OT',      desc:'Gestión de técnicos y trabajos asignados',lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Informes y métricas de mantenimiento',   lcad:false },
     { grupo:'MANTENIMIENTO', key:'cfg_mant',      nombre:'Config. Preventivos', desc:'Frecuencias MP, Kits, Tipos, Métrica (solo admin)', lcad:true  },
     // ALMACÉN
     { grupo:'ALMACÉN',       key:'placas',        nombre:'Placas',           desc:'Fichas técnicas de vehículos',           lcad:true  },
@@ -29,6 +32,8 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'FLOTA',         key:'cond',          nombre:'Personal',         desc:'Directorio de personal operativo',       lcad:true  },
     { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',           lcad:false },
     // SISTEMA
+    { grupo:'SISTEMA',       key:'usuarios',      nombre:'Gestión de Usuarios', desc:'Registro de usuarios y sesiones', lcad:true },
+    { grupo:'SISTEMA',       key:'roles',         nombre:'Roles y Permisos', desc:'Gestión de roles de seguridad', lcad:true },
     { grupo:'SISTEMA',       key:'seg',           nombre:'Gestión Usuarios', desc:'Administración de accesos',              lcad:true  },
     { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad del sistema',      lcad:true  },
 ];
@@ -120,6 +125,15 @@ window.guSetTab = function(tab) {
     if (pc) { pc.style.display = 'none'; pc.innerHTML = ''; }
     if (pa) { pa.style.display = 'none'; pa.innerHTML = ''; }
     if (pe) pe.style.display = '';
+
+    var ph = document.getElementById('top-actions-placeholder');
+    if (ph) {
+        if (tab === 'roles') {
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
+        } else {
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
+        }
+    }
 };
 
 function _guRelTime(dt) {

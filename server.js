@@ -765,6 +765,18 @@ async function verificarAlertasRetraso() {
 setInterval(verificarAlertasRetraso, 24 * 60 * 60 * 1000);
 // Correr también al arrancar (con 30s de delay para que el pool esté listo)
 setTimeout(verificarAlertasRetraso, 30000);
+
+// ============================================================
+// 🚨 MIDDLEWARE RBAC (Control de Acceso Basado en Roles)
+// ============================================================
+const globalRBAC = require('./rbac');
+app.use('/api', globalRBAC);
+
+function requirePerm(modulo, accion) {
+    // Retenemos requirePerm como stub vacío en caso de que alguna ruta antigua lo llame
+    return (req, res, next) => next();
+}
+
 function logAudit(usuario, modulo, accion, detalle) {
     db.query(
         'INSERT INTO auditoria (usuario, modulo, accion, detalle) VALUES (?, ?, ?, ?)',
