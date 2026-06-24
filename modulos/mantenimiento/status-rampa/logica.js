@@ -366,7 +366,11 @@ function srRenderTabla() {
                 html += '<td></td><td></td><td></td>';
                 html += '<td><span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span></td>';
                 html += '<td></td><td></td><td></td><td></td>';
-                html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
+                if (window.checkPerm('status_rampa', 'c')) {
+                    html += '<td><button class="btn-sr-reg" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')"><i class="bi bi-plus-lg me-1"></i>Ingresar</button></td>';
+                } else {
+                    html += '<td></td>';
+                }
                 html += '</tr>';
             }
             return;
@@ -2256,3 +2260,6 @@ window.srNavegarDetalle = function(direccion) {
         }
     }, {passive: true});
 })();
+
+window.enforceModuleUI('status_rampa');
+
