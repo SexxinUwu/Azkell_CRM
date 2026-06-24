@@ -2185,3 +2185,74 @@ function srConfirmModerno(titulo, mensaje, onConfirm) {
         onConfirm();
     });
 }
+
+// Navegación Swipe para Panel Detalle
+window.srNavegarDetalle = function(direccion) {
+    var trActiva = document.querySelector('#sr-tbody tr.sr-activa');
+    if (!trActiva) return;
+    
+    var trDestino = direccion === 'next' ? trActiva.nextElementSibling : trActiva.previousElementSibling;
+    while (trDestino && (!trDestino.getAttribute('data-id') || trDestino.style.display === 'none')) {
+        trDestino = direccion === 'next' ? trDestino.nextElementSibling : trDestino.previousElementSibling;
+    }
+    if (!trDestino) return; // No hay más
+    
+    var idDestino = parseInt(trDestino.getAttribute('data-id'), 10);
+    if (!isNaN(idDestino)) {
+        var scroll = document.getElementById('sr-detalle-scroll');
+        if (scroll) {
+            scroll.style.transition = 'transform 0.15s ease-in, opacity 0.15s ease-in';
+            scroll.style.transform = direccion === 'next' ? 'translateX(-30px)' : 'translateX(30px)';
+            scroll.style.opacity = '0';
+            setTimeout(function() {
+                window.srAbrirDetalle(idDestino);
+                scroll.style.transition = 'none';
+                scroll.style.transform = direccion === 'next' ? 'translateX(30px)' : 'translateX(-30px)';
+                scroll.style.opacity = '0';
+                
+                void scroll.offsetWidth; // Reflow
+                
+                scroll.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+                scroll.style.transform = 'translateX(0)';
+                scroll.style.opacity = '1';
+            }, 150);
+        } else {
+            window.srAbrirDetalle(idDestino);
+        }
+    }
+};
+
+(function() {
+    var touchStartX = 0;
+    var touchEndX = 0;
+    var touchStartY = 0;
+    var touchEndY = 0;
+
+    document.addEventListener('touchstart', function(e) {
+        var panel = document.getElementById('sr-panel-detalle');
+        if (panel && panel.classList.contains('open') && panel.contains(e.target)) {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }
+    }, {passive: true});
+
+    document.addEventListener('touchend', function(e) {
+        var panel = document.getElementById('sr-panel-detalle');
+        if (panel && panel.classList.contains('open') && panel.contains(e.target)) {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            
+            var diffX = touchStartX - touchEndX;
+            var diffY = touchStartY - touchEndY;
+            
+            // Solo activar si el deslizamiento es más horizontal que vertical y supera los 60px
+            if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    window.srNavegarDetalle('next');
+                } else {
+                    window.srNavegarDetalle('prev');
+                }
+            }
+        }
+    }, {passive: true});
+})();
