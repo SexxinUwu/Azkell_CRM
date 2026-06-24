@@ -565,9 +565,9 @@ window.srEditarRampa = function(id) {
     if (hid) hid.value = String(id);
 
     var sR = document.getElementById('sr-f-rampa');
-    if (sR) { sR.value = String(e.rampa); sR.disabled = true; }
+    if (sR) { sR.value = String(e.rampa); sR.disabled = false; }
     var hidR = document.getElementById('sr-f-rampa-id');
-    if (hidR) hidR.value = String(e.rampa);
+    if (hidR) hidR.value = '';
 
     var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = val || ''; };
     if (typeof window._cbSet === 'function') {
