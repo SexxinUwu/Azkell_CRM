@@ -1,0 +1,56 @@
+<!-- Módulo de Personal de Taller -->
+<div style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Gestión de Personal de Taller</h2>
+        <button class="btn btn-primary" onclick="ptAbrirModal()"><i class="bi bi-person-plus"></i> Nuevo Personal</button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Sueldo Mensual (S/)</th>
+                    <th>Costo por Hora (S/)</th>
+                    <th style="width: 120px;" class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="pt-tbody">
+                <!-- Se llena por JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Personal -->
+<div class="modal fade" id="ptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ptModalTitle">Nuevo Personal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pt-id">
+                <div class="mb-3">
+                    <label class="form-label">Nombre del Técnico</label>
+                    <input type="text" id="pt-nombre" class="form-control" placeholder="Ej. Juan Pérez" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Sueldo Mensual (S/)</label>
+                    <input type="number" step="0.01" id="pt-sueldo" class="form-control" placeholder="Ej. 1664.00" oninput="ptCalcularCosto()" required>
+                    <small class="text-muted">Calcularemos 208 horas/mes (48h semanales).</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Costo por Hora (S/) - Calculado Auto</label>
+                    <input type="number" step="0.01" id="pt-costo" class="form-control" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="ptGuardar()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>

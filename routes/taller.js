@@ -679,7 +679,44 @@ router.delete('/taller-rampas/:id', (req, res) => {
     });
 });
 
+// ✨ TALLER PERSONAL ✨
+router.get('/taller-personal', (req, res) => {
+    db.query('SELECT * FROM taller_personal ORDER BY nombre ASC', (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
 
+router.post('/taller-personal', (req, res) => {
+    const { nombre, sueldo_mensual, costo_hora } = req.body;
+    db.query(
+        'INSERT INTO taller_personal (nombre, sueldo_mensual, costo_hora) VALUES (?, ?, ?)',
+        [nombre, sueldo_mensual || 0, costo_hora || 0],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: result.insertId });
+        }
+    );
+});
+
+router.put('/taller-personal/:id', (req, res) => {
+    const { nombre, sueldo_mensual, costo_hora } = req.body;
+    db.query(
+        'UPDATE taller_personal SET nombre=?, sueldo_mensual=?, costo_hora=? WHERE id=?',
+        [nombre, sueldo_mensual || 0, costo_hora || 0, req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
+});
+
+router.delete('/taller-personal/:id', (req, res) => {
+    db.query('DELETE FROM taller_personal WHERE id=?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ ok: true });
+    });
+});
 
     return router;
 };
