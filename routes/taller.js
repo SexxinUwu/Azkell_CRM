@@ -45,6 +45,7 @@ function generarId(tabla, columna, prefijo, anio, cb) {
 router.get('/ordenes-trabajo', (req, res) => {
     const sql = `
         SELECT o.*,
+            r.rampa AS rampa_origen,
             COALESCE((
                 SELECT SUM(COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.costo')) AS DECIMAL(10,2)), 0))
                 FROM trabajos_ot t WHERE t.id_ot = o.ticket_entrada AND t.estado = 'Aprobado'
@@ -55,6 +56,7 @@ router.get('/ordenes-trabajo', (req, res) => {
                 FROM salidas_inv s WHERE s.ticket_ot = o.ticket_entrada AND s.estado = 'Despachado'
             ), 0) AS costo_total
         FROM ordenes_trabajo o
+        LEFT JOIN taller_rampas r ON r.id = o.id_rampa
         ORDER BY o.fecha_ingreso DESC`;
     db.query(sql, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
