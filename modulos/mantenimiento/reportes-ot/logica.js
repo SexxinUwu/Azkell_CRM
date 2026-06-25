@@ -1095,36 +1095,66 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     var htmlMateriales = '';
     var matArr = materiales || [];
     var matRows = [];
+    var totalMontoMateriales = 0;
     matArr.forEach(function(m) {
         var items = Array.isArray(m.items) ? m.items : [];
         items.forEach(function(it) {
             var desc = it.descripcion || '';
+            var codigo = it.inventario_id || '';
+            var pDesc = desc.replace(/ —\s*$/, '').trim();
             var pMarca = '';
-            var pDesc = desc;
-            if (desc.includes(' — ')) {
-                var parts = desc.split(' — ');
-                if (parts.length >= 3) {
-                    pMarca = parts.pop();
-                    pDesc = parts.slice(1).join(' — ').trim();
-                } else if (parts.length === 2) {
-                    pDesc = parts[1].trim();
+
+            // Limpiar prefijo repetido (ej. "INV-0642 — INV-0642 — Tuerca...")
+            if (codigo) {
+                while (pDesc.startsWith(codigo + ' — ') || pDesc.startsWith(codigo + ' - ')) {
+                    pDesc = pDesc.substring(codigo.length + 3).trim();
+                }
+                if (pDesc === codigo) pDesc = '';
+            }
+
+            var lastDash = pDesc.lastIndexOf(' — ');
+            if (lastDash !== -1) {
+                var posMarca = pDesc.substring(lastDash + 3).trim();
+                if (posMarca.toUpperCase() === 'SIN MARCA') {
+                    pMarca = 'SIN MARCA';
+                    pDesc = pDesc.substring(0, lastDash).trim();
                 }
             }
+
+            var lastSlash = pDesc.lastIndexOf(' / ');
+            if (lastSlash !== -1) {
+                if (!pMarca || pMarca === 'SIN MARCA') {
+                    pMarca = pDesc.substring(lastSlash + 3).trim();
+                }
+                pDesc = pDesc.substring(0, lastSlash).trim();
+            } else if (pDesc.endsWith('/')) {
+                pDesc = pDesc.substring(0, pDesc.length - 1).trim();
+            }
+
+            if (pDesc.endsWith('/')) {
+                pDesc = pDesc.substring(0, pDesc.length - 1).trim();
+            }
+
+            if (!pDesc && codigo) {
+                pDesc = desc; // Fallback
+            }
+
+            var itemTotal = parseFloat(it.importe) || 0;
+            totalMontoMateriales += itemTotal;
+
             matRows.push({
-                id: m.id,
                 codigo: it.inventario_id || '',
                 producto: pDesc,
                 marca: pMarca,
                 cantidad: it.cantidad,
                 costo: it.costo_unitario,
-                total: it.importe,
-                tecnico: m.responsable || m.creado_por || ''
+                total: itemTotal
             });
         });
     });
 
     if (matRows.length === 0) {
-        htmlMateriales = '<tr><td colspan="8" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay salidas registradas.</td></tr>';
+        htmlMateriales = '<tr><td colspan="7" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay salidas registradas.</td></tr>';
     } else {
         matRows.forEach(function(r, idx) {
             htmlMateriales += '<tr>'
@@ -1135,9 +1165,9 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
                 + '<td class="text-center">' + rotEscHtml(r.cantidad) + '</td>'
                 + '<td class="text-center">' + parseFloat(r.costo||0).toFixed(2) + '</td>'
                 + '<td class="text-center">' + parseFloat(r.total||0).toFixed(2) + '</td>'
-                + '<td class="text-center">' + rotEscHtml(r.tecnico) + '</td>'
                 + '</tr>';
         });
+        htmlMateriales += '<tr><td colspan="6" style="text-align: right; font-weight: bold; padding-right: 10px;">TOTAL:</td><td class="text-center" style="font-weight: bold; background-color: #f2f2f2;">' + totalMontoMateriales.toFixed(2) + '</td></tr>';
     }
 
     var htmlMaterialesTable = `
@@ -1152,7 +1182,6 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
                     <th style="width: 40px;" class="text-center">Cant.</th>
                     <th style="width: 55px;" class="text-center">Costo</th>
                     <th style="width: 60px;" class="text-center">Total</th>
-                    <th style="width: 90px;" class="text-center">Técnico</th>
                 </tr>
             </thead>
             <tbody>
@@ -1288,9 +1317,6 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
             </tbody>
         </table>
 
-        <div class="section-title">Observaciones</div>
-        <div class="observaciones-box"></div>
-        
         ${htmlMaterialesTable}
         
         <div class="footer">
