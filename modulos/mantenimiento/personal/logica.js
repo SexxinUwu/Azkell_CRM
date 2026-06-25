@@ -6,17 +6,22 @@ window.init_mantenimiento_personal = function() {
 window._ptConductoresCache = [];
 
 function ptCargarSelectConductores() {
-    fetch('/api/conductores-lista')
+    fetch('/api/conductores')
         .then(res => res.json())
         .then(data => {
-            window._ptConductoresCache = data || [];
+            const lista = Array.isArray(data) ? data : (data.data || []);
+            window._ptConductoresCache = lista;
             const select = document.getElementById('pt-nombre');
             if (!select) return;
             select.innerHTML = '<option value="">Seleccione un personal...</option>';
-            window._ptConductoresCache.forEach(c => {
+            lista.forEach(c => {
+                var nom = (c.nombre_completo || c.nombre || '').trim();
+                if (!nom) return;
+                var nFormateado = nom.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
+                
                 const opt = document.createElement('option');
-                opt.value = c.nombre;
-                opt.textContent = c.nombre + (c.dni ? ` (DNI: ${c.dni})` : '');
+                opt.value = nFormateado;
+                opt.textContent = nFormateado + (c.dni ? ` (DNI: ${c.dni})` : '');
                 select.appendChild(opt);
             });
         })
