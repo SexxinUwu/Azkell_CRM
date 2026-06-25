@@ -35,7 +35,10 @@
                 <input type="hidden" id="pt-id">
                 <div class="mb-3">
                     <label class="form-label">Nombre del Técnico</label>
-                    <input type="text" id="pt-nombre" class="form-control" placeholder="Ej. Juan Pérez" required>
+                    <select id="pt-nombre" class="form-select" required>
+                        <option value="">Seleccione un personal...</option>
+                        <!-- Opciones cargadas desde la BD -->
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Sueldo Mensual (S/)</label>

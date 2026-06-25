@@ -1,6 +1,27 @@
 window.init_mantenimiento_personal = function() {
     ptCargarLista();
+    ptCargarSelectConductores();
 };
+
+window._ptConductoresCache = [];
+
+function ptCargarSelectConductores() {
+    fetch('/api/conductores-lista')
+        .then(res => res.json())
+        .then(data => {
+            window._ptConductoresCache = data || [];
+            const select = document.getElementById('pt-nombre');
+            if (!select) return;
+            select.innerHTML = '<option value="">Seleccione un personal...</option>';
+            window._ptConductoresCache.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nombre;
+                opt.textContent = c.nombre + (c.dni ? ` (DNI: ${c.dni})` : '');
+                select.appendChild(opt);
+            });
+        })
+        .catch(err => console.error('Error cargando conductores:', err));
+}
 
 function ptCargarLista() {
     fetch('/api/taller-personal')
@@ -45,7 +66,23 @@ function ptAbrirModal() {
 
 function ptEditar(id, nombre, sueldo, costo) {
     document.getElementById('pt-id').value = id;
-    document.getElementById('pt-nombre').value = nombre;
+    
+    // Si el nombre no está en el select, agregarlo temporalmente
+    const select = document.getElementById('pt-nombre');
+    let found = false;
+    for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === nombre) {
+            found = true; break;
+        }
+    }
+    if (!found) {
+        const opt = document.createElement('option');
+        opt.value = nombre;
+        opt.textContent = nombre;
+        select.appendChild(opt);
+    }
+    
+    select.value = nombre;
     document.getElementById('pt-sueldo').value = parseFloat(sueldo || 0).toFixed(2);
     document.getElementById('pt-costo').value = parseFloat(costo || 0).toFixed(2);
     document.getElementById('ptModalTitle').innerText = 'Editar Personal';
