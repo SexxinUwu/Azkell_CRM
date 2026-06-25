@@ -16,21 +16,17 @@ function ptCargarSelectConductores() {
 }
 
 function ptLlenarSelect() {
-    const select = document.getElementById('pt-nombre');
-    if (!select) return;
-    
-    // Si ya tiene opciones (además del placeholder), limpiar para evitar duplicados en caso de re-fetch
-    select.innerHTML = '<option value="">Seleccione un personal...</option>';
-    (window._ptConductoresCache || []).forEach(c => {
+    const items = (window._ptConductoresCache || []).map(c => {
         var nom = (c.nombre_completo || c.nombre || '').trim();
-        if (!nom) return;
+        if (!nom) return null;
         var nFormateado = nom.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
-        
-        const opt = document.createElement('option');
-        opt.value = nFormateado;
-        opt.textContent = nFormateado + (c.dni ? ` (DNI: ${c.dni})` : '');
-        select.appendChild(opt);
-    });
+        var label = nFormateado + (c.dni ? ` (DNI: ${c.dni})` : '');
+        return { value: nFormateado, label: label };
+    }).filter(Boolean);
+    
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('pt-nombre', items, 'Buscar personal...');
+    }
 }
 
 function ptCargarLista() {
@@ -88,15 +84,18 @@ function ptAbrirModal() {
     document.getElementById('pt-costo').value = '';
     document.getElementById('ptModalTitle').innerText = 'Registrar Técnico';
     
-    // Cargar y llenar el select en el momento en que se abre el modal para garantizar que se renderice
+    if (typeof window._cbReset === 'function') window._cbReset('pt-nombre');
+    const txtBox = document.getElementById('pt-nombre-txt');
+    if (txtBox) txtBox.value = '';
+    const hiddenVal = document.getElementById('pt-nombre');
+    if (hiddenVal) hiddenVal.value = '';
+
     if (!window._ptConductoresCache || window._ptConductoresCache.length === 0) {
         ptCargarSelectConductores().then(() => {
             ptLlenarSelect();
-            document.getElementById('pt-nombre').value = '';
         });
     } else {
         ptLlenarSelect();
-        document.getElementById('pt-nombre').value = '';
     }
 
     var myModal = new bootstrap.Modal(document.getElementById('ptModal'));
@@ -106,7 +105,6 @@ function ptAbrirModal() {
 function ptEditar(id, nombre, sueldo, costo) {
     document.getElementById('pt-id').value = id;
     
-    // Llenar select si no se llenó
     if (!window._ptConductoresCache || window._ptConductoresCache.length === 0) {
         ptCargarSelectConductores().then(() => {
             ptLlenarSelect();
@@ -119,21 +117,13 @@ function ptEditar(id, nombre, sueldo, costo) {
 }
 
 function ptEditarAsignar(nombre, sueldo, costo) {
-    const select = document.getElementById('pt-nombre');
-    let found = false;
-    for (let i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === nombre) {
-            found = true; break;
-        }
-    }
-    if (!found) {
-        const opt = document.createElement('option');
-        opt.value = nombre;
-        opt.textContent = nombre;
-        select.appendChild(opt);
+    if (typeof window._cbSet === 'function') {
+        window._cbSet('pt-nombre', nombre, nombre);
+    } else {
+        const txtBox = document.getElementById('pt-nombre-txt');
+        if (txtBox) txtBox.value = nombre;
     }
     
-    select.value = nombre;
     document.getElementById('pt-sueldo').value = parseFloat(sueldo || 0).toFixed(2);
     document.getElementById('pt-costo').value = parseFloat(costo || 0).toFixed(2);
     document.getElementById('ptModalTitle').innerText = 'Editar Personal';
@@ -143,14 +133,19 @@ function ptEditarAsignar(nombre, sueldo, costo) {
 
 function ptCalcularCosto() {
     const sueldo = parseFloat(document.getElementById('pt-sueldo').value) || 0;
-    // 208 horas al mes
     const costoHora = sueldo / 208;
     document.getElementById('pt-costo').value = costoHora.toFixed(2);
 }
 
 function ptGuardar() {
     const id = document.getElementById('pt-id').value;
-    const nombre = document.getElementById('pt-nombre').value.trim();
+    let nombre = '';
+    if (typeof window._cbGetText === 'function') {
+        nombre = window._cbGetText('pt-nombre') || document.getElementById('pt-nombre-txt').value.trim();
+    } else {
+        nombre = document.getElementById('pt-nombre-txt').value.trim();
+    }
+    
     const sueldo = parseFloat(document.getElementById('pt-sueldo').value) || 0;
     const costo = parseFloat(document.getElementById('pt-costo').value) || 0;
 
