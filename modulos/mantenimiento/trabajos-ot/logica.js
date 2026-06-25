@@ -347,22 +347,68 @@ function totMsInit(valorActual) {
     var cnt = document.getElementById('tot-ms-count');
     if (cnt) cnt.textContent = window._totSeleccionados.length + ' seleccionados';
 
-    var doRender = function() { totMsRenderOptions(''); };
+    var doRender = function() { totMsRenderOptions(''); window.totCalcularCostoAuto(); };
     if (window._totPersonalLista.length > 0) { doRender(); return; }
-    fetch('/api/conductores')
+    
+    // ✨ Cargar personal desde nueva BD taller_personal ✨
+    window._totPersonalDatos = {};
+    fetch('/api/taller-personal')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(data) {
-            var lista = Array.isArray(data) ? data : (data.data || []);
-            window._totPersonalLista = lista.map(function(p) {
-                var n = (p.nombre_completo || p.nombre || '').trim();
-                return n.split(' ').map(function(w) {
-                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
-                }).join(' ');
+            window._totPersonalLista = data.map(function(p) {
+                var n = (p.nombre || '').trim();
+                window._totPersonalDatos[n] = parseFloat(p.costo_hora || 0);
+                return n;
             }).filter(Boolean).sort();
             doRender();
         })
         .catch(function() {});
 }
+
+// ✨ Algoritmo de autocalculo de costo basado en horas netas trabajadas ✨
+window.totCalcularCostoAuto = function() {
+    var fIni = document.getElementById('tot-ed-fecha-ini').value;
+    var fFin = document.getElementById('tot-ed-fecha-fin').value;
+    if (!fIni || !fFin) return;
+
+    var inicio = new Date(fIni);
+    var fin = new Date(fFin);
+    if (fin <= inicio) return;
+
+    var esMinutoLaboral = function(d) {
+        var day = d.getDay(); // 0=Domingo, 1=Lunes..6=Sábado
+        var h = d.getHours();
+        if (day === 0) return false;
+        if (h < 8) return false;
+        if (day >= 1 && day <= 5 && h >= 18) return false;
+        if (day === 6 && h >= 14) return false;
+        if (day >= 1 && day <= 5 && h === 13) return false; // Almuerzo
+        return true;
+    };
+
+    var minutosNetos = 0;
+    var current = new Date(inicio.getTime());
+    while(current < fin) {
+        var nextMinute = new Date(current.getTime() + 60000);
+        if (nextMinute > fin) {
+            var diff = (fin - current) / 60000;
+            if (esMinutoLaboral(current)) minutosNetos += diff;
+            break;
+        } else {
+            if (esMinutoLaboral(current)) minutosNetos += 1;
+            current = nextMinute;
+        }
+    }
+
+    var costoHoraTotal = 0;
+    window._totSeleccionados.forEach(function(n) {
+        costoHoraTotal += window._totPersonalDatos[n] || 0;
+    });
+
+    var total = (minutosNetos / 60) * costoHoraTotal;
+    var costoInput = document.getElementById('tot-ed-costo');
+    if (costoInput) costoInput.value = total.toFixed(2);
+};
 
 window.totMsToggle = function() {
     var dd = document.getElementById('tot-ms-dropdown');
@@ -397,12 +443,14 @@ function totMsRenderOptions(query) {
     container.innerHTML = filtrados.map(function(n) {
         var checked = window._totSeleccionados.indexOf(n) !== -1;
         var nEsc = n.replace(/'/g, "\\'");
-        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
+        var costoStr = (window._totPersonalDatos[n] || 0).toFixed(2);
+        return '<label style="display:flex; align-items:center; justify-content:space-between; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
             + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
-            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+            + '<div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" ' + (checked ? 'checked' : '') + ' '
             + 'onclick="event.stopPropagation(); totMsToggleItem(\'' + nEsc + '\')" '
             + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
-            + n + '</label>';
+            + n + '</div>'
+            + '<small style="color:var(--subtext)">S/ ' + costoStr + '/h</small></label>';
     }).join('');
 }
 
@@ -416,6 +464,7 @@ window.totMsToggleItem = function(nombre) {
     if (cnt) cnt.textContent = window._totSeleccionados.length + ' seleccionados';
     var hidden = document.getElementById('tot-ed-personal');
     if (hidden) hidden.value = window._totSeleccionados.join(', ');
+    window.totCalcularCostoAuto();
 };
 
 window.totMsLimpiar = function() {
@@ -426,6 +475,7 @@ window.totMsLimpiar = function() {
     if (cnt) cnt.textContent = '0 seleccionados';
     var hidden = document.getElementById('tot-ed-personal');
     if (hidden) hidden.value = '';
+    window.totCalcularCostoAuto();
 };
 
 function totMsRenderBox() {

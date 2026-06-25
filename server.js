@@ -394,6 +394,20 @@ db.query(
         else   console.log('✅ Tabla tipos_mantenimiento verificada');
     }
 );
+// ✨ Crear tabla taller_personal si no existe ✨
+db.query(
+    `CREATE TABLE IF NOT EXISTS taller_personal (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        nombre          VARCHAR(100) NOT NULL,
+        sueldo_mensual  DECIMAL(10,2) DEFAULT 0,
+        costo_hora      DECIMAL(10,2) DEFAULT 0,
+        creado_en       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
+    (e) => {
+        if (e) console.warn('CREATE taller_personal:', e.message);
+        else   console.log('✅ Tabla taller_personal verificada');
+    }
+);
 // ── Migración: columna frecuencia_horas en tipos_mantenimiento ────────────
 db.query(
     `ALTER TABLE tipos_mantenimiento ADD COLUMN frecuencia_horas VARCHAR(50) NULL DEFAULT NULL`,
