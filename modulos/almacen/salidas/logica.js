@@ -905,10 +905,30 @@ window.salGuardarNuevo = function() {
 
     // Validar el stock acumulado
     var stockErrors = [];
+    var editId = window._salEditId || null;
+    var isDespachado = false;
+    var oldItems = [];
+
+    if (editId) {
+        var oldSalida = window.salData.find(function(x) { return x.id === editId; });
+        if (oldSalida && (oldSalida.estado === 'Despachado' || !oldSalida.estado)) {
+            isDespachado = true;
+            oldItems = oldSalida.items || [];
+        }
+    }
+
     for (var invIdKey in requestedStock) {
         var invItem = (window._salInvData || []).find(function(d) { return d.id === invIdKey; });
         if (invItem) {
             var stock = parseFloat(invItem.stock_actual || 0);
+            
+            if (isDespachado) {
+                var oldItemMatches = oldItems.filter(function(it) { return it.inventario_id === invIdKey; });
+                oldItemMatches.forEach(function(old) {
+                    stock += parseFloat(old.cantidad || 0);
+                });
+            }
+
             if (requestedStock[invIdKey] > stock) {
                 var descCorta = invItem.descripcion || invIdKey;
                 stockErrors.push({
