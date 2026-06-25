@@ -1069,8 +1069,10 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
     var htmlTrabajos = '';
     var trbArr = trabajos || [];
-    for (var i=0; i<10; i++) {
-        if (i < trbArr.length) {
+    if (trbArr.length === 0) {
+        htmlTrabajos = '<tr><td colspan="5" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay trabajos registrados.</td></tr>';
+    } else {
+        for (var i=0; i<trbArr.length; i++) {
             var t = trbArr[i];
             var det2 = {};
             try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
@@ -1087,10 +1089,77 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
                 + '<td class="text-center">' + rotEscHtml(det2.personal || t.tecnico || '—') + '</td>'
                 + '<td class="text-center">' + tFinStr + '</td>'
                 + '</tr>';
-        } else {
-            htmlTrabajos += '<tr><td class="text-center">' + (i+1) + '</td><td></td><td></td><td></td><td></td></tr>';
         }
     }
+
+    var htmlMateriales = '';
+    var matArr = materiales || [];
+    var matRows = [];
+    matArr.forEach(function(m) {
+        var items = Array.isArray(m.items) ? m.items : [];
+        items.forEach(function(it) {
+            var desc = it.descripcion || '';
+            var pMarca = '';
+            var pDesc = desc;
+            if (desc.includes(' — ')) {
+                var parts = desc.split(' — ');
+                if (parts.length >= 3) {
+                    pMarca = parts.pop();
+                    pDesc = parts.slice(1).join(' — ').trim();
+                } else if (parts.length === 2) {
+                    pDesc = parts[1].trim();
+                }
+            }
+            matRows.push({
+                id: m.id,
+                codigo: it.inventario_id || '',
+                producto: pDesc,
+                marca: pMarca,
+                cantidad: it.cantidad,
+                costo: it.costo_unitario,
+                total: it.importe,
+                tecnico: m.responsable || m.creado_por || ''
+            });
+        });
+    });
+
+    if (matRows.length === 0) {
+        htmlMateriales = '<tr><td colspan="8" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay salidas registradas.</td></tr>';
+    } else {
+        matRows.forEach(function(r) {
+            htmlMateriales += '<tr>'
+                + '<td class="text-center">' + rotEscHtml(r.id) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(r.codigo) + '</td>'
+                + '<td>' + rotEscHtml(r.producto) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(r.marca) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(r.cantidad) + '</td>'
+                + '<td class="text-center">' + parseFloat(r.costo||0).toFixed(2) + '</td>'
+                + '<td class="text-center">' + parseFloat(r.total||0).toFixed(2) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(r.tecnico) + '</td>'
+                + '</tr>';
+        });
+    }
+
+    var htmlMaterialesTable = `
+        <div class="section-title">Salidas de Almacén</div>
+        <table class="content-table trabajos-table">
+            <thead>
+                <tr>
+                    <th style="width: 85px;" class="text-center">ID</th>
+                    <th style="width: 70px;" class="text-center">Cód. Producto</th>
+                    <th>Producto</th>
+                    <th style="width: 75px;" class="text-center">Marca</th>
+                    <th style="width: 40px;" class="text-center">Cant.</th>
+                    <th style="width: 55px;" class="text-center">Costo</th>
+                    <th style="width: 60px;" class="text-center">Total</th>
+                    <th style="width: 90px;" class="text-center">Técnico</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${htmlMateriales}
+            </tbody>
+        </table>
+    `;
 
     var htmlBacklog = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay mantenimientos pendientes reportados.</td></tr>';
 
@@ -1221,6 +1290,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
         <div class="section-title">Observaciones</div>
         <div class="observaciones-box"></div>
+        
+        ${htmlMaterialesTable}
         
         <div class="footer">
             <div class="sign-box">
