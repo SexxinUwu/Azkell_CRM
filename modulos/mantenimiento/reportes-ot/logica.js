@@ -1126,9 +1126,9 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
     if (matRows.length === 0) {
         htmlMateriales = '<tr><td colspan="8" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay salidas registradas.</td></tr>';
     } else {
-        matRows.forEach(function(r) {
+        matRows.forEach(function(r, idx) {
             htmlMateriales += '<tr>'
-                + '<td class="text-center">' + rotEscHtml(r.id) + '</td>'
+                + '<td class="text-center">' + (idx + 1) + '</td>'
                 + '<td class="text-center">' + rotEscHtml(r.codigo) + '</td>'
                 + '<td>' + rotEscHtml(r.producto) + '</td>'
                 + '<td class="text-center">' + rotEscHtml(r.marca) + '</td>'
@@ -1145,7 +1145,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         <table class="content-table trabajos-table">
             <thead>
                 <tr>
-                    <th style="width: 85px;" class="text-center">ID</th>
+                    <th style="width: 30px;" class="text-center">#</th>
                     <th style="width: 70px;" class="text-center">Cód. Producto</th>
                     <th>Producto</th>
                     <th style="width: 75px;" class="text-center">Marca</th>
