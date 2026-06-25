@@ -38,14 +38,17 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     
     // ALMACEN
-    else if (path.startsWith('/inventario')) mod = 'inv';
-    else if (path.startsWith('/entradas') && !path.startsWith('/taller')) mod = 'ent_inv';
-    else if (path.startsWith('/salidas') && !path.startsWith('/taller')) mod = 'sal_inv';
-    else if (path.startsWith('/proveedores')) mod = 'prov_inv';
-    else if (path.startsWith('/placas')) mod = 'placas';
-    else if (path.startsWith('/kardex')) mod = 'kardex';
-    else if (path.startsWith('/costos')) mod = 'costos_inv';
-    else if (path.startsWith('/familias') || path.startsWith('/marcas') || path.startsWith('/sistemas')) mod = 'cfg_almacen';
+    else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
+    else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
+    else if (path.startsWith('/almacen/salidas')) mod = ['sal_inv'];
+    else if (path.startsWith('/almacen/proveedores')) mod = ['prov_inv'];
+    else if (path.startsWith('/almacen/placas') || path.startsWith('/almacen/marcas-placas')) mod = ['placas'];
+    else if (path.startsWith('/almacen/kardex')) mod = ['kardex'];
+    else if (path.startsWith('/almacen/costos')) mod = ['costos_inv'];
+    else if (path.startsWith('/almacen/familias') || path.startsWith('/almacen/marcas') || path.startsWith('/almacen/sistemas')) mod = ['cfg_almacen'];
+    else if (path.startsWith('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen'];
+    else if (path.startsWith('/almacen/unidades')) mod = ['inv', 'ent_inv', 'sal_inv'];
+    else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO
     else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) mod = ['status_rampa'];
