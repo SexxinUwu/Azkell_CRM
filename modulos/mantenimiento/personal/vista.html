@@ -239,12 +239,16 @@
                 
                 <div class="mb-4">
                     <label class="pt-form-label">Nombre del Técnico</label>
-                    <div class="input-group">
+                    <div class="input-group position-relative">
                         <span class="input-group-text" style="background: #fff; border-right: none; border-color:#cbd5e1;"><i class="bi bi-person text-muted"></i></span>
-                        <select id="pt-nombre" class="form-select pt-form-control" style="border-left: none;" required>
-                            <option value="">Seleccione un personal...</option>
-                            <!-- Opciones cargadas desde la BD -->
-                        </select>
+                        <input type="text" id="pt-nombre-txt" class="form-control pt-form-control"
+                               placeholder="Buscar personal..."
+                               autocomplete="off" style="border-left: none;"
+                               oninput="window._cbFiltrar('pt-nombre')"
+                               onfocus="window._cbFiltrar('pt-nombre')"
+                               onblur="window._cbHide('pt-nombre')" required>
+                        <input type="hidden" id="pt-nombre">
+                        <div id="pt-nombre-dd" class="cb-dropdown" style="top: 100%; left: 0; right: 0;"></div>
                     </div>
                 </div>
                 
