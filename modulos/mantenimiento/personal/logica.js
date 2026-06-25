@@ -1,31 +1,36 @@
 window.init_mantenimiento_personal = function() {
-    ptCargarLista();
     ptCargarSelectConductores();
+    ptCargarLista();
 };
 
 window._ptConductoresCache = [];
 
 function ptCargarSelectConductores() {
-    fetch('/api/conductores')
+    return fetch('/api/conductores')
         .then(res => res.json())
         .then(data => {
             const lista = Array.isArray(data) ? data : (data.data || []);
             window._ptConductoresCache = lista;
-            const select = document.getElementById('pt-nombre');
-            if (!select) return;
-            select.innerHTML = '<option value="">Seleccione un personal...</option>';
-            lista.forEach(c => {
-                var nom = (c.nombre_completo || c.nombre || '').trim();
-                if (!nom) return;
-                var nFormateado = nom.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
-                
-                const opt = document.createElement('option');
-                opt.value = nFormateado;
-                opt.textContent = nFormateado + (c.dni ? ` (DNI: ${c.dni})` : '');
-                select.appendChild(opt);
-            });
         })
         .catch(err => console.error('Error cargando conductores:', err));
+}
+
+function ptLlenarSelect() {
+    const select = document.getElementById('pt-nombre');
+    if (!select) return;
+    
+    // Si ya tiene opciones (además del placeholder), limpiar para evitar duplicados en caso de re-fetch
+    select.innerHTML = '<option value="">Seleccione un personal...</option>';
+    (window._ptConductoresCache || []).forEach(c => {
+        var nom = (c.nombre_completo || c.nombre || '').trim();
+        if (!nom) return;
+        var nFormateado = nom.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
+        
+        const opt = document.createElement('option');
+        opt.value = nFormateado;
+        opt.textContent = nFormateado + (c.dni ? ` (DNI: ${c.dni})` : '');
+        select.appendChild(opt);
+    });
 }
 
 function ptCargarLista() {
@@ -79,10 +84,21 @@ function ptCargarLista() {
 
 function ptAbrirModal() {
     document.getElementById('pt-id').value = '';
-    document.getElementById('pt-nombre').value = '';
     document.getElementById('pt-sueldo').value = '';
     document.getElementById('pt-costo').value = '';
-    document.getElementById('ptModalTitle').innerText = 'Nuevo Personal';
+    document.getElementById('ptModalTitle').innerText = 'Registrar Técnico';
+    
+    // Cargar y llenar el select en el momento en que se abre el modal para garantizar que se renderice
+    if (!window._ptConductoresCache || window._ptConductoresCache.length === 0) {
+        ptCargarSelectConductores().then(() => {
+            ptLlenarSelect();
+            document.getElementById('pt-nombre').value = '';
+        });
+    } else {
+        ptLlenarSelect();
+        document.getElementById('pt-nombre').value = '';
+    }
+
     var myModal = new bootstrap.Modal(document.getElementById('ptModal'));
     myModal.show();
 }
@@ -90,7 +106,19 @@ function ptAbrirModal() {
 function ptEditar(id, nombre, sueldo, costo) {
     document.getElementById('pt-id').value = id;
     
-    // Si el nombre no está en el select, agregarlo temporalmente
+    // Llenar select si no se llenó
+    if (!window._ptConductoresCache || window._ptConductoresCache.length === 0) {
+        ptCargarSelectConductores().then(() => {
+            ptLlenarSelect();
+            ptEditarAsignar(nombre, sueldo, costo);
+        });
+    } else {
+        ptLlenarSelect();
+        ptEditarAsignar(nombre, sueldo, costo);
+    }
+}
+
+function ptEditarAsignar(nombre, sueldo, costo) {
     const select = document.getElementById('pt-nombre');
     let found = false;
     for (let i = 0; i < select.options.length; i++) {
@@ -127,7 +155,11 @@ function ptGuardar() {
     const costo = parseFloat(document.getElementById('pt-costo').value) || 0;
 
     if (!nombre) {
-        alert('Por favor ingrese el nombre del técnico.');
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('Por favor seleccione el técnico.', 'danger');
+        } else {
+            alert('Por favor seleccione el técnico.');
+        }
         return;
     }
 
@@ -150,12 +182,10 @@ function ptGuardar() {
         if (data.error) {
             alert('Error al guardar: ' + data.error);
         } else {
-            // Cerrar modal
             const modalEl = document.getElementById('ptModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
             
-            // Recargar lista
             ptCargarLista();
         }
     })
