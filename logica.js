@@ -259,6 +259,18 @@ window.verificarSesionGuardada = function() {
     var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos;
     safe('wrap-almacen', showAlm);
 
+    // SEGURIDAD
+    var vAsist   = _cL('asist');
+    var vSegUnid = _cL('placas') || _cL('unid');
+    safe('nav-seg-unidades',    vSegUnid);
+    safe('mbnav-seg-unidades',  vSegUnid);
+    safe('nav-seg-asistencia',  vAsist);
+    safe('mbnav-seg-asistencia',vAsist);
+
+    var showSeg = vSegUnid || vAsist;
+    safe('wrap-seguridad', showSeg);
+    safe('bnav-seguridad', showSeg);
+
     // PREFERENCIAS — Config. Preventivos + Config. Taller + Config. Almacén (admin-only por defecto)
     safe('nav-configuracion-mp', vCfgMant);
     safe('nav-kits-mp',          vCfgMant);
