@@ -1,58 +1,282 @@
+<style>
+/* Estilos modernos para Gestión de Personal */
+.pt-container {
+    padding: 30px;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+.pt-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+.pt-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pt-title i {
+    color: #4f46e5;
+    background: #e0e7ff;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+}
+.btn-pt-new {
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-pt-new:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+    color: white;
+}
+
+/* Tabla moderna */
+.pt-table-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+}
+.pt-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.pt-table thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 16px 20px;
+    border-bottom: 2px solid #e2e8f0;
+    border-top: none;
+}
+.pt-table tbody td {
+    padding: 16px 20px;
+    vertical-align: middle;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+    transition: background-color 0.2s;
+}
+.pt-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+.pt-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Detalles del personal */
+.pt-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.pt-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #4f46e5;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
+}
+.pt-name {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+.pt-id-badge {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.pt-money-badge {
+    background: #ecfdf5;
+    color: #059669;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.pt-money-badge.hourly {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+/* Botones de acción */
+.pt-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    transition: all 0.2s;
+    margin: 0 3px;
+}
+.pt-action-btn.edit:hover {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+.pt-action-btn.delete:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+/* Modal styling */
+.pt-modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.pt-modal-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 20px 24px;
+}
+.pt-modal-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 1.25rem;
+}
+.pt-modal-body {
+    padding: 24px;
+}
+.pt-form-label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+.pt-form-control {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: all 0.2s;
+    background-color: #f8fafc;
+}
+.pt-form-control:focus {
+    background-color: #fff;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+</style>
+
 <!-- Módulo de Personal de Taller -->
-<div style="padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>Gestión de Personal de Taller</h2>
-        <button class="btn btn-primary" onclick="ptAbrirModal()"><i class="bi bi-person-plus"></i> Nuevo Personal</button>
+<div class="pt-container">
+    <div class="pt-header-wrapper">
+        <h2 class="pt-title"><i class="bi bi-people-fill"></i> Personal de Taller</h2>
+        <button class="btn-pt-new" onclick="ptAbrirModal()">
+            <i class="bi bi-plus-lg"></i> Nuevo Técnico
+        </button>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover bg-white">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Sueldo Mensual (S/)</th>
-                    <th>Costo por Hora (S/)</th>
-                    <th style="width: 120px;" class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="pt-tbody">
-                <!-- Se llena por JS -->
-            </tbody>
-        </table>
+    <div class="pt-table-container">
+        <div class="table-responsive">
+            <table class="pt-table">
+                <thead>
+                    <tr>
+                        <th style="width:80px">ID</th>
+                        <th>Técnico</th>
+                        <th>Sueldo Mensual</th>
+                        <th>Costo por Hora</th>
+                        <th class="text-center" style="width: 120px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="pt-tbody">
+                    <!-- Se llena por JS -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <!-- Modal Personal -->
 <div class="modal fade" id="ptModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="ptModalTitle">Nuevo Personal</h5>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pt-modal-content">
+            <div class="modal-header pt-modal-header">
+                <h5 class="modal-title pt-modal-title" id="ptModalTitle">Registrar Técnico</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body pt-modal-body">
                 <input type="hidden" id="pt-id">
-                <div class="mb-3">
-                    <label class="form-label">Nombre del Técnico</label>
-                    <select id="pt-nombre" class="form-select" required>
-                        <option value="">Seleccione un personal...</option>
-                        <!-- Opciones cargadas desde la BD -->
-                    </select>
+                
+                <div class="mb-4">
+                    <label class="pt-form-label">Nombre del Técnico</label>
+                    <div class="input-group">
+                        <span class="input-group-text" style="background: #fff; border-right: none; border-color:#cbd5e1;"><i class="bi bi-person text-muted"></i></span>
+                        <select id="pt-nombre" class="form-select pt-form-control" style="border-left: none;" required>
+                            <option value="">Seleccione un personal...</option>
+                            <!-- Opciones cargadas desde la BD -->
+                        </select>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Sueldo Mensual (S/)</label>
-                    <input type="number" step="0.01" id="pt-sueldo" class="form-control" placeholder="Ej. 1664.00" oninput="ptCalcularCosto()" required>
-                    <small class="text-muted">Calcularemos 208 horas/mes (48h semanales).</small>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="pt-form-label">Sueldo Mensual</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: #fff; border-right: none; border-color:#cbd5e1;">S/</span>
+                            <input type="number" step="0.01" id="pt-sueldo" class="form-control pt-form-control" style="border-left: none;" placeholder="Ej. 1664.00" oninput="ptCalcularCosto()" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="pt-form-label">Costo por Hora</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: #f8fafc; border-right: none; border-color:#cbd5e1; color:#94a3b8;">S/</span>
+                            <input type="number" step="0.01" id="pt-costo" class="form-control pt-form-control" style="border-left: none; background:#f8fafc; font-weight:600; color:#2563eb;" readonly>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Costo por Hora (S/) - Calculado Auto</label>
-                    <input type="number" step="0.01" id="pt-costo" class="form-control" readonly>
+                
+                <div class="p-3 mb-2 rounded" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+                    <div class="d-flex gap-2 align-items-start">
+                        <i class="bi bi-info-circle-fill text-success" style="margin-top:2px;"></i>
+                        <p class="mb-0 text-success" style="font-size:0.85rem;">
+                            El costo por hora se calcula automáticamente basándose en <strong>208 horas/mes</strong> (semana laboral de 48h). Este valor será usado en los Trabajos de Mantenimiento.
+                        </p>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="ptGuardar()">Guardar</button>
+            <div class="modal-footer" style="border-top: none; padding: 0 24px 24px 24px;">
+                <button type="button" class="btn btn-light" style="font-weight:600; color:#64748b;" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-pt-new" style="margin: 0;" onclick="ptGuardar()">Guardar Cambios</button>
             </div>
         </div>
     </div>

@@ -43,14 +43,32 @@ function ptCargarLista() {
 
             data.forEach(p => {
                 const tr = document.createElement('tr');
+                const inicial = (p.nombre || 'U').charAt(0).toUpperCase();
                 tr.innerHTML = `
-                    <td>${p.id}</td>
-                    <td><strong>${p.nombre}</strong></td>
-                    <td>S/ ${parseFloat(p.sueldo_mensual || 0).toFixed(2)}</td>
-                    <td>S/ ${parseFloat(p.costo_hora || 0).toFixed(2)}</td>
+                    <td><span class="pt-id-badge">#${p.id}</span></td>
+                    <td>
+                        <div class="pt-avatar-wrapper">
+                            <div class="pt-avatar">${inicial}</div>
+                            <span class="pt-name">${p.nombre}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="pt-money-badge">
+                            S/ ${parseFloat(p.sueldo_mensual || 0).toFixed(2)}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="pt-money-badge hourly">
+                            S/ ${parseFloat(p.costo_hora || 0).toFixed(2)}
+                        </div>
+                    </td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="ptEditar(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.sueldo_mensual}, ${p.costo_hora})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="ptEliminar(${p.id})"><i class="bi bi-trash"></i></button>
+                        <button class="pt-action-btn edit" onclick="ptEditar(${p.id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.sueldo_mensual}, ${p.costo_hora})" title="Editar">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="pt-action-btn delete" onclick="ptEliminar(${p.id})" title="Eliminar">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
