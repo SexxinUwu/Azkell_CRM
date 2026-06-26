@@ -103,19 +103,19 @@
                         </a>
                         <a id="nav-fleetrun" class="nav-item" onclick="cargarModuloAislado('mantenimiento/fleetrun')">
                             <i class="bi bi-speedometer2 nav-icon"></i>
-                            <span class="link-text" data-i18n="nav.fleetrun">Sistema Fleetrun</span>
+                            <span class="link-text" data-i18n="nav.fleetrun">Mantenimiento Preventivo</span>
                         </a>
                         <a id="nav-reportes-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/reportes-ot')">
                             <i class="bi bi-file-earmark-text nav-icon"></i>
-                            <span class="link-text">Reportes OT</span>
+                            <span class="link-text" data-i18n="nav.reportes_ot">Reportes OT</span>
                         </a>
                         <a id="nav-trabajos-ot" class="nav-item" onclick="cargarModuloAislado('mantenimiento/trabajos-ot')">
                             <i class="bi bi-person-gear nav-icon"></i>
-                            <span class="link-text">Trabajos Anexos</span>
+                            <span class="link-text" data-i18n="nav.trabajos_ot">Historial de Trabajos</span>
                         </a>
                         <a id="nav-otros-mant" class="nav-item" onclick="cargarModuloAislado('mantenimiento/otros')">
                             <i class="bi bi-grid-fill nav-icon"></i>
-                            <span class="link-text">Otros</span>
+                            <span class="link-text" data-i18n="nav.otros">Otros</span>
                         </a>
                         <!-- Ítems accesibles vía hub "Otros" (permanentemente ocultos del sidebar) -->
                         <a id="nav-planificacion"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/planificacion')"></a>
@@ -140,19 +140,19 @@
                         <div class="nav-sub-label"><i class="bi bi-arrow-left-right me-1"></i>Movimientos</div>
                         <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
                             <i class="bi bi-box-fill nav-icon"></i>
-                            <span class="link-text">Inventario</span>
+                            <span class="link-text" data-i18n="nav.inventario">Inventario</span>
                         </a>
                         <a id="nav-entradas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/entradas')">
                             <i class="bi bi-arrow-down-circle-fill nav-icon"></i>
-                            <span class="link-text">Entradas</span>
+                            <span class="link-text" data-i18n="nav.entradas">Entradas</span>
                         </a>
                         <a id="nav-salidas-inv" class="nav-item" onclick="cargarModuloAislado('almacen/salidas')">
                             <i class="bi bi-arrow-up-circle-fill nav-icon"></i>
-                            <span class="link-text">Salidas</span>
+                            <span class="link-text" data-i18n="nav.salidas">Salidas</span>
                         </a>
                         <a id="nav-kardex" class="nav-item" onclick="cargarModuloAislado('almacen/kardex')">
                             <i class="bi bi-journal-text nav-icon"></i>
-                            <span class="link-text">Kardex</span>
+                            <span class="link-text" data-i18n="nav.kardex">Kardex</span>
                         </a>
                     </div>
                 </div>
@@ -182,11 +182,11 @@
                     <div class="nav-section-items nav-section-collapsed" id="section-items-seguridad">
                         <a id="nav-seg-unidades" class="nav-item" onclick="cargarModuloAislado('seguridad/unidades')">
                             <i class="bi bi-truck-front-fill nav-icon"></i>
-                            <span class="link-text">Unidades</span>
+                            <span class="link-text">CheckList de Ingreso/Salidas de Unidades</span>
                         </a>
                         <a id="nav-seg-asistencia" class="nav-item" onclick="cargarModuloAislado('seguridad/asistencia')">
                             <i class="bi bi-people-fill nav-icon"></i>
-                            <span class="link-text">Asistencia</span>
+                            <span class="link-text" data-i18n="nav.tareo">Tareo</span>
                         </a>
                     </div>
                 </div>
@@ -228,7 +228,7 @@
                         <div id="wrap-administracion">
                             <a id="nav-administracion" class="nav-item" onclick="cargarModuloAislado('administracion')">
                                 <i class="bi bi-grid-fill nav-icon"></i>
-                                <span class="link-text">Administración</span>
+                                <span class="link-text" data-i18n="nav.administracion">Administración</span>
                                 <span class="section-badge" style="margin-left:auto;">11</span>
                             </a>
                         </div>
@@ -637,19 +637,19 @@
             </div>
             <div id="mbnav-fleetrun" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/fleetrun'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-speedometer2"></i></div>
-                <div><p class="bnav-card-title" data-i18n="nav.fleetrun">Sistema Fleetrun</p><p class="bnav-card-desc">Monitoreo de componentes</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.fleetrun">Mantenimiento Preventivo</p><p class="bnav-card-desc">Monitoreo de componentes</p></div>
             </div>
             <div id="mbnav-reportes-ot" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/reportes-ot'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-file-earmark-text"></i></div>
-                <div><p class="bnav-card-title">Reportes OT</p><p class="bnav-card-desc">Historial de trabajos</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.reportes_ot">Reportes OT</p><p class="bnav-card-desc">Historial de trabajos</p></div>
             </div>
             <div id="mbnav-trabajos-ot" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/trabajos-ot'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-person-gear"></i></div>
-                <div><p class="bnav-card-title">Trabajos Anexos</p><p class="bnav-card-desc">Tareas adicionales</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.trabajos_ot">Historial de Trabajos</p><p class="bnav-card-desc">Tareas adicionales</p></div>
             </div>
             <div id="mbnav-otros-mant" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/otros'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-fill"></i></div>
-                <div><p class="bnav-card-title">Otros</p><p class="bnav-card-desc">Módulos complementarios</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.otros">Otros</p><p class="bnav-card-desc">Módulos complementarios</p></div>
             </div>
         </div>
     </div>
@@ -663,19 +663,19 @@
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-inventario" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/inventario'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(22,163,74,.1); color: #16a34a;"><i class="bi bi-box-fill"></i></div>
-                <div><p class="bnav-card-title">Inventario</p><p class="bnav-card-desc">Stock actual</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.inventario">Inventario</p><p class="bnav-card-desc">Stock actual</p></div>
             </div>
             <div id="mbnav-entradas-inv" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/entradas'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(34,197,94,.1); color: #22c55e;"><i class="bi bi-arrow-down-circle-fill"></i></div>
-                <div><p class="bnav-card-title">Entradas</p><p class="bnav-card-desc">Ingresos al almacén</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.entradas">Entradas</p><p class="bnav-card-desc">Ingresos al almacén</p></div>
             </div>
             <div id="mbnav-salidas-inv" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/salidas'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-arrow-up-circle-fill"></i></div>
-                <div><p class="bnav-card-title">Salidas</p><p class="bnav-card-desc">Despachos y egresos</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.salidas">Salidas</p><p class="bnav-card-desc">Despachos y egresos</p></div>
             </div>
             <div id="mbnav-kardex" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/kardex'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(20,184,166,.1); color: #14b8a6;"><i class="bi bi-journal-text"></i></div>
-                <div><p class="bnav-card-title">Kardex</p><p class="bnav-card-desc">Movimientos de artículos</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.kardex">Kardex</p><p class="bnav-card-desc">Movimientos de artículos</p></div>
             </div>
         </div>
     </div>
@@ -689,7 +689,7 @@
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-conductores" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetDirectorio')).hide(); cargarModuloAislado('directorio/conductores'); setBottomNavActive('bnav-directorio');">
                 <div class="bnav-card-icon" style="background: rgba(6,182,212,.1); color: #06b6d4;"><i class="bi bi-person-vcard-fill"></i></div>
-                <div><p class="bnav-card-title">Personal</p><p class="bnav-card-desc">Conductores y operarios</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.conductores">Personal</p><p class="bnav-card-desc">Conductores y operarios</p></div>
             </div>
         </div>
     </div>
@@ -703,11 +703,11 @@
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-seg-unidades" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/unidades'); setBottomNavActive('bnav-seguridad');">
                 <div class="bnav-card-icon" style="background: rgba(37,99,235,.1); color: #2563eb;"><i class="bi bi-truck-front-fill"></i></div>
-                <div><p class="bnav-card-title">Unidades</p><p class="bnav-card-desc">Checklist de salida y llegada</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.unidades">CheckList de Ingreso/Salidas de Unidades</p><p class="bnav-card-desc">Checklist de salida y llegada</p></div>
             </div>
             <div id="mbnav-seg-asistencia" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetSeguridad')).hide(); cargarModuloAislado('seguridad/asistencia'); setBottomNavActive('bnav-seguridad');">
                 <div class="bnav-card-icon" style="background: rgba(16,185,129,.1); color: #10b981;"><i class="bi bi-people-fill"></i></div>
-                <div><p class="bnav-card-title">Asistencia</p><p class="bnav-card-desc">Control de personal con QR</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.tareo">Tareo</p><p class="bnav-card-desc">Control de personal con QR</p></div>
             </div>
         </div>
     </div>
@@ -742,7 +742,7 @@
             </div>
             <div id="mbnav-administracion" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetConfiguracion')).hide(); cargarModuloAislado('administracion'); setBottomNavActive('bnav-config');">
                 <div class="bnav-card-icon" style="background: rgba(71,85,105,.1); color: #475569;"><i class="bi bi-grid-fill"></i></div>
-                <div><p class="bnav-card-title">Administración</p><p class="bnav-card-desc">Catálogos y mantenimientos</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.administracion">Administración</p><p class="bnav-card-desc">Catálogos y mantenimientos</p></div>
             </div>
         </div>
     </div>

@@ -98,6 +98,7 @@
     <div class="gu-tabs">
         <button class="gu-tab active" id="gu-tab-roles" onclick="window.guSetTab && window.guSetTab('roles')"><i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="ms-1 opacity-60"></span></button>
         <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Miembros <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+        <button class="gu-tab" id="gu-tab-simulador" onclick="window.guSetTab && window.guSetTab('simulador')"><i class="bi bi-magic me-1"></i>Simulador Efectivo</button>
     </div>
 
     <!-- Body split -->
@@ -129,7 +130,7 @@
 
     <!-- FAB Menu Usuarios (Estilo Inventario) -->
     <div id="us-fab-container" style="position:fixed;bottom:24px;right:24px;z-index:1030;display:flex;flex-direction:column;align-items:flex-end;">
-      <div id="us-fab-backdrop" onclick="document.getElementById('us-fab-menu').style.display='none'; document.getElementById('us-fab-backdrop').style.display='none'; document.getElementById('us-fab-icon').style.transform='rotate(0deg)';" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;-webkit-backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
+      <div id="us-fab-backdrop" onclick="document.getElementById('us-fab-menu').style.display='none'; document.getElementById('us-fab-backdrop').style.display='none'; document.getElementById('us-fab-icon').style.transform='rotate(0deg)';" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
       
       <!-- Menú expandido -->
       <div id="us-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">

@@ -307,23 +307,23 @@ router.post('/:metodo', async (req, res) => {
 
             if (isEdit) {
                 if (passwordPlain) {
-                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, password_visible=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
-                    db.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, idFinal], (err) => {
+                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, password=?, password_visible=?, estado=?, permisos_json=?, rol=?, rol_id=?, roles_ids=? WHERE idUsuario=?";
+                    db.query(sqlUpdate, [nombre, cargo, correo, password, passwordPlain, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
                         return res.json({ data: "Éxito" });
                     });
                 } else {
-                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, estado=?, permisos_json=?, rol=?, rol_id=? WHERE idUsuario=?";
-                    db.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, idFinal], (err) => {
+                    const sqlUpdate = "UPDATE usuarios SET nombre=?, cargo=?, correo=?, estado=?, permisos_json=?, rol=?, rol_id=?, roles_ids=? WHERE idUsuario=?";
+                    db.query(sqlUpdate, [nombre, cargo, correo, estado, permisos, rol, rolId, req.body.roles_ids || "[]", idFinal], (err) => {
                         if (err) return res.json({ data: "Error BD: " + err.message });
                         broadcast('usuarios', 'actualizar');
                         return res.json({ data: "Éxito" });
                     });
                 }
             } else {
-                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId], (err) => {
+                const sqlInsert = "INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id, roles_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                db.query(sqlInsert, [idFinal, nombre, cargo, correo, password, passwordPlain, rol, estado, permisos, rolId, req.body.roles_ids || "[]"], (err) => {
                     if (err) return res.json({ data: "Error BD: " + err.message });
                     broadcast('usuarios', 'guardar');
                     return res.json({ data: "Éxito" });
