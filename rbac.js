@@ -11,6 +11,21 @@ module.exports = function globalRBAC(req, res, next) {
     if (ignoredPaths.some(ip => path === ip || path.startsWith(ip))) return next();
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
+
+    // Datos de referencia globales (Solo lectura para usuarios autenticados)
+    const globalReferenceGets = [
+        '/config-metrica',
+        '/km-historico',
+        '/almacen/marcas-placas',
+        '/almacen/familias',
+        '/almacen/marcas',
+        '/almacen/sistemas',
+        '/catalogos_taller'
+    ];
+    if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
+        return next();
+    }
+
     if (req.user.rol === 'Fundador') return next();
 
     let p = {};
