@@ -94,7 +94,7 @@
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
                         <a id="nav-status-rampa" class="nav-item" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
                             <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
-                            <span class="link-text">Status Rampa</span>
+                            <span class="link-text" data-i18n="nav.status_rampa">Status Rampa</span>
                         </a>
                         <a id="nav-inspecciones" class="nav-item" onclick="cargarModuloAislado('mantenimiento/inspecciones')">
                             <i class="bi bi-clipboard2-pulse-fill nav-icon"></i>
@@ -137,7 +137,7 @@
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
                         <!-- Movimientos -->
-                        <div class="nav-sub-label"><i class="bi bi-arrow-left-right me-1"></i>Movimientos</div>
+                        <div class="nav-sub-label"><i class="bi bi-arrow-left-right me-1"></i><span data-i18n="nav.movimientos">Movimientos</span></div>
                         <a id="nav-inventario" class="nav-item" onclick="cargarModuloAislado('almacen/inventario')">
                             <i class="bi bi-box-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.inventario">Inventario</span>
@@ -175,14 +175,14 @@
                 <!-- SEGURIDAD -->
                 <div id="wrap-seguridad">
                     <button class="nav-section-toggle" data-section="seguridad" aria-expanded="false" onclick="window.toggleNavSection('seguridad')">
-                        <span class="link-text">Seguridad</span>
+                        <span class="link-text" data-i18n="nav.seguridad">Seguridad</span>
                         <span class="section-badge">2</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-seguridad">
                         <a id="nav-seg-unidades" class="nav-item" onclick="cargarModuloAislado('seguridad/unidades')">
                             <i class="bi bi-truck-front-fill nav-icon"></i>
-                            <span class="link-text">CheckList de Ingreso/Salidas de Unidades</span>
+                            <span class="link-text" data-i18n="nav.unidades">CheckList de Ingreso/Salidas de Unidades</span>
                         </a>
                         <a id="nav-seg-asistencia" class="nav-item" onclick="cargarModuloAislado('seguridad/asistencia')">
                             <i class="bi bi-people-fill nav-icon"></i>
@@ -534,7 +534,7 @@
             <i class="bi bi-person-lines-fill"></i><span>Directorio</span>
         </a>
         <a class="bottom-nav-item" id="bnav-seguridad" data-bs-toggle="offcanvas" data-bs-target="#bnavSheetSeguridad">
-            <i class="bi bi-shield-lock-fill"></i><span>Seguridad</span>
+            <i class="bi bi-shield-lock-fill"></i><span data-i18n="nav.seguridad">Seguridad</span>
         </a>
         <a class="bottom-nav-item" id="bnav-config" onclick="cargarModuloAislado('sistema/ajustes'); setBottomNavActive('bnav-config')">
             <i class="bi bi-gear-fill"></i><span>Ajustes</span>
@@ -629,7 +629,7 @@
         <div class="offcanvas-body px-4 pb-4">
             <div id="mbnav-status-rampa" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/status-rampa'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-3x3-gap-fill"></i></div>
-                <div><p class="bnav-card-title">Status Rampa</p><p class="bnav-card-desc">Estado de ocupación</p></div>
+                <div><p class="bnav-card-title" data-i18n="nav.status_rampa">Status Rampa</p><p class="bnav-card-desc">Estado de ocupación</p></div>
             </div>
             <div id="mbnav-inspecciones" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/inspecciones'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-clipboard2-pulse-fill"></i></div>
@@ -697,7 +697,7 @@
     <!-- Seguridad -->
     <div class="offcanvas offcanvas-bottom bnav-sheet h-auto" tabindex="-1" id="bnavSheetSeguridad">
         <div class="bnav-sheet-header">
-            <div class="bnav-sheet-title"><i class="bi bi-shield-lock-fill text-danger"></i> Seguridad</div>
+            <div class="bnav-sheet-title"><i class="bi bi-shield-lock-fill text-danger"></i> <span data-i18n="nav.seguridad">Seguridad</span></div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body px-4 pb-4">
