@@ -1886,50 +1886,7 @@ window.FLEET_I18N = {
   "login.btn": "Qallariy"
 }
 
-};
-
-// ── Helpers globales ────────────────────────────────────────
-window.t = function(key) {
-    const lang = localStorage.getItem('fleet_idioma') || 'es';
-    const dict = (window.FLEET_I18N || {})[lang] || {};
-    const fallback = ((window.FLEET_I18N || {})['es'] || {})[key] || key;
-    return dict[key] !== undefined ? dict[key] : fallback;
-};
-
-window.applyI18n = function() {
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        const text = window.t(key);
-        if (el.tagName === 'INPUT' && el.type !== 'submit' && el.type !== 'button') {
-            el.placeholder = text;
-        } else {
-            el.textContent = text;
-        }
-    });
-    // Topbar search placeholder
-    const searchSpan = document.querySelector('.fake-search-bar .search-text');
-    if (searchSpan) searchSpan.textContent = window.t('topbar.search');
-    // GPS Off text
-    const wialonTxt = document.getElementById('wialon-text');
-    if (wialonTxt && wialonTxt.textContent.trim() === 'GPS Off') {
-        wialonTxt.textContent = window.t('topbar.gpsOff');
-    }
-};
-
-window.setLanguage = function(lang) {
-    localStorage.setItem('fleet_idioma', lang);
-    window.applyI18n();
-    document.querySelectorAll('.lang-card').forEach(c => {
-        c.classList.toggle('lang-card-active', c.dataset.lang === lang);
-    });
-    const toast = document.getElementById('cfg-toast');
-    if (toast) {
-        if (window._cfgToastTimer) clearTimeout(window._cfgToastTimer);
-        toast.classList.add('show');
-        window._cfgToastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
-    }
 ,
-
 qu: {
     // Navegación
     'nav.dashboard':      'Qhaway (Dashboard)',
@@ -2499,9 +2456,52 @@ ay: {
     'login.remember':     'Recordarme',
     'login.btn':          'Ingresar',
   },
+};
+
+// ── Helpers globales ────────────────────────────────────────
+window.t = function(key) {
+    const lang = localStorage.getItem('fleet_idioma') || 'es';
+    const dict = (window.FLEET_I18N || {})[lang] || {};
+    const fallback = ((window.FLEET_I18N || {})['es'] || {})[key] || key;
+    return dict[key] !== undefined ? dict[key] : fallback;
+};
+
+window.applyI18n = function() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const text = window.t(key);
+        if (el.tagName === 'INPUT' && el.type !== 'submit' && el.type !== 'button') {
+            el.placeholder = text;
+        } else {
+            el.textContent = text;
+        }
+    });
+    // Topbar search placeholder
+    const searchSpan = document.querySelector('.fake-search-bar .search-text');
+    if (searchSpan) searchSpan.textContent = window.t('topbar.search');
+    // GPS Off text
+    const wialonTxt = document.getElementById('wialon-text');
+    if (wialonTxt && wialonTxt.textContent.trim() === 'GPS Off') {
+        wialonTxt.textContent = window.t('topbar.gpsOff');
+    }
+};
+
+window.setLanguage = function(lang) {
+    localStorage.setItem('fleet_idioma', lang);
+    window.applyI18n();
+    document.querySelectorAll('.lang-card').forEach(c => {
+        c.classList.toggle('lang-card-active', c.dataset.lang === lang);
+    });
+    const toast = document.getElementById('cfg-toast');
+    if (toast) {
+        if (window._cfgToastTimer) clearTimeout(window._cfgToastTimer);
+        toast.classList.add('show');
+        window._cfgToastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+};
+
 
   // ── 🇺🇸 English (US) ───────────────────────────────────────
-};
 
 // Aplicar idioma guardado en cuanto se carga este script
 (function() {
