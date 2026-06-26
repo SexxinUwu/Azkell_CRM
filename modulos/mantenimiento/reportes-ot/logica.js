@@ -988,7 +988,7 @@ window.rotExportarPDF = function() {
 };
 
 // ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
-window.generarPDF_OT = function(ot, trabajos, materiales) {
+window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     if (typeof window.html2pdf !== 'function') {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería html2pdf no cargada.', 'danger');
         return;
@@ -1069,7 +1069,11 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
 
     var htmlTrabajos = '';
     var trbArr = trabajos || [];
-    if (trbArr.length === 0) {
+    if (isPlantilla) {
+        for (var i=0; i<10; i++) {
+            htmlTrabajos += '<tr><td class="text-center">' + (i+1) + '</td><td></td><td></td><td></td><td></td></tr>';
+        }
+    } else if (trbArr.length === 0) {
         htmlTrabajos = '<tr><td colspan="5" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay trabajos registrados.</td></tr>';
     } else {
         for (var i=0; i<trbArr.length; i++) {
@@ -1170,7 +1174,9 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         htmlMateriales += '<tr><td colspan="6" style="text-align: right; font-weight: bold; padding-right: 10px;">TOTAL:</td><td class="text-center" style="font-weight: bold; background-color: #f2f2f2;">' + totalMontoMateriales.toFixed(2) + '</td></tr>';
     }
 
-    var htmlMaterialesTable = `
+    var htmlMaterialesTable = '';
+    if (!isPlantilla) {
+        htmlMaterialesTable = `
         <div class="section-title">Salidas de Almacén</div>
         <table class="content-table trabajos-table">
             <thead>
@@ -1188,7 +1194,16 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
                 ${htmlMateriales}
             </tbody>
         </table>
-    `;
+        `;
+    }
+
+    var htmlObservaciones = '';
+    if (isPlantilla) {
+        htmlObservaciones = `
+        <div class="section-title">OBSERVACIONES</div>
+        <div class="observaciones-box"></div>
+        `;
+    }
 
     var htmlBacklog = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay mantenimientos pendientes reportados.</td></tr>';
 
@@ -1318,6 +1333,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales) {
         </table>
 
         ${htmlMaterialesTable}
+        ${htmlObservaciones}
         
         <div class="footer">
             <div class="sign-box">
@@ -2387,7 +2403,7 @@ window.rotDescargarPlantillaOT = function(idOt, placa) {
     if (!ot && window.srEntradas) ot = window.srEntradas.find(function(o) { return String(o.ticket_entrada||o.id_ot||o.ticket) === String(idOt); });
 
     if (ot) {
-        window.generarPDF_OT(ot, [], []);
+        window.generarPDF_OT(ot, [], [], true);
         return;
     }
 
@@ -2398,11 +2414,11 @@ window.rotDescargarPlantillaOT = function(idOt, placa) {
           if (!window.rotData) window.rotData = data;
           var found = data.find(function(o) { return String(o.ticket_entrada||o.id_ot) === String(idOt); });
           if (!found) found = { ticket_entrada: idOt, placa: placa };
-          window.generarPDF_OT(found, [], []);
+          window.generarPDF_OT(found, [], [], true);
       })
       .catch(function(e) {
           console.error(e);
-          window.generarPDF_OT({ ticket_entrada: idOt, placa: placa }, [], []);
+          window.generarPDF_OT({ ticket_entrada: idOt, placa: placa }, [], [], true);
       });
 };
 
