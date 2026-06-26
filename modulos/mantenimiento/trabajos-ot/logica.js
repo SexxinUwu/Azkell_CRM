@@ -22,7 +22,7 @@ window.init_trabajos_ot = function() {
 // ── Carga de datos ────────────────────────────────────────────────
 window.totCargar = function() {
     var tbody = document.getElementById('tot-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><div class="spinner-border spinner-border-sm text-secondary"></div></td></tr>';
 
     fetch('/api/ot-trabajos')
         .then(function(r) {
@@ -39,7 +39,7 @@ window.totCargar = function() {
                 window.mostrarAlerta('Error al cargar trabajos de OT', 'danger');
             }
             var tb = document.getElementById('tot-tbody');
-            if (tb) tb.innerHTML = '<tr><td colspan="7" class="td-placeholder">Error al cargar datos</td></tr>';
+            if (tb) tb.innerHTML = '<tr><td colspan="9" class="td-placeholder">Error al cargar datos</td></tr>';
         });
 };
 
@@ -138,7 +138,7 @@ window.totRenderTabla = function() {
     window.totDatosFil = datos;
 
     if (datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
         return;
     }
 
@@ -160,6 +160,7 @@ window.totRenderTabla = function() {
         tr.innerHTML =
             '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(totGetId(t) || '—') + '</span></td>'
             + '<td><strong>' + totEsc(t.ot_id || '—') + '</strong></td>'
+            + '<td><strong>' + totEsc(t.placa || '—') + '</strong></td>'
             + '<td style="font-size:0.79rem;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
             + '<td style="max-width:200px;white-space:normal;font-size:0.81rem;">' + totEsc(t.trabajo_realizado || '—') + '</td>'
             + '<td>' + totEsc(det.personal || t.tecnico || '—') + '</td>'
