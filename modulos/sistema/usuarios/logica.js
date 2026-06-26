@@ -14,7 +14,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
     { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Análisis de Inspecciones', desc:'Registro de inspecciones', lcad:true  },
     { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Mantenimiento Preventivo', desc:'Datos operativos de la flota',  lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Métricas de mantenimiento',     lcad:false },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Métricas de mantenimiento',     lcad:true  },
     { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Historial de Trabajos', desc:'Gestión de técnicos',           lcad:true  },
     { grupo:'MANTENIMIENTO', key:'otros_mant',    nombre:'Otros',            desc:'Módulos complementarios',       lcad:true  },
     { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos',         lcad:true  },
