@@ -313,7 +313,7 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-conductores', vCond);
     safe('nav-talleres',     false); // no implementado aún
 
-    var showFlota = vGps || vStatus || vCond;
+    var showFlota = vGps || vStatus;
     safe('wrap-flota', showFlota);
     safe('wrap-directorio', vCond);
 
