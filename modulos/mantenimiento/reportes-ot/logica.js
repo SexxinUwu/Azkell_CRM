@@ -283,7 +283,7 @@ window.rotAbrirDetalle = function(idOT) {
 
     var det    = rotDetalles(ot);
     var estado = ot.estado || 'Pendiente';
-    var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada');
+    var esAprobada = (estado === 'Aprobada' || estado === 'En Proceso' || estado === 'Pausada' || estado === 'Finalizado' || estado === 'Cerrada');
     var puedeAgregarMaterial = esAprobada;
     var puedeEditar = window.checkPerm('ot', 'e');
 
@@ -658,6 +658,27 @@ function rotPromptKm(currentKm, onConfirm) {
 window.rotAccion = function(accion, idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot && accion !== 'pdf') return;
+
+        if (accion === 'reactivar') {
+        if (!window.guardAction('ot', 'e')) return;
+        rotConfirmModerno('Reactivar OT', '¿Deseas reactivar la OT ' + idOT + '? Volverá a estar En Proceso.', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'reanudar' })
+            })
+            .then(function(res) { if(!res.ok) throw new Error(res.status); return res.json(); })
+            .then(function() {
+                if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT reactivada', 'success');
+                window.rotCerrarDetalle();
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al reactivar OT', 'danger');
+            });
+        }, 'success');
+        return;
+    }
 
     if (accion === 'eliminar') {
         if (!window.guardAction('ot', 'd')) return;
@@ -1809,7 +1830,7 @@ window.rotEliminarTrabajo = function() {
 window.rotAgregarSalida = function(idOt) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
     var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
-    if (estadoOT === 'Finalizado' || estadoOT === 'Cerrada' || estadoOT === 'Anulado') {
+    if (estadoOT === 'Anulado') {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT está cerrada. No se pueden agregar salidas de material.', 'warning');
         return;
     }
