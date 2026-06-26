@@ -9,37 +9,27 @@ window._guEsNuevo         = window._guEsNuevo         || false;
 
 // ── Módulos de permisos ──────────────────────────────────────────
 window._GU_MODULOS = window._GU_MODULOS || [
-﻿    // FLOTA
     { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
     { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades', lcad:true  },
-
-    // MANTENIMIENTO
     { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Inspecciones',     desc:'Registro de inspecciones',      lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Fleetrun',         desc:'Datos operativos de la flota',  lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'ot',            nombre:'Órdenes / Backlog',desc:'Órdenes de trabajo correctivos',lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Trabajos OT',      desc:'Gestión de técnicos',           lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Análisis de Inspecciones', desc:'Registro de inspecciones', lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Mantenimiento Preventivo', desc:'Datos operativos de la flota',  lcad:true  },
     { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Métricas de mantenimiento',     lcad:false },
-    { grupo:'MANTENIMIENTO', key:'plan',          nombre:'Planificación',    desc:'Mantenimientos planificados',   lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'cfg_mant',      nombre:'Config. Mant.',    desc:'Kits y Tipos de Mantenimiento', lcad:true  },
-
-    // ALMACÉN
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Historial de Trabajos', desc:'Gestión de técnicos',           lcad:true  },
+    { grupo:'MANTENIMIENTO', key:'otros_mant',    nombre:'Otros',            desc:'Módulos complementarios',       lcad:true  },
     { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos',         lcad:true  },
     { grupo:'ALMACÉN',       key:'ent_inv',       nombre:'Entradas',         desc:'Ingresos al almacén',           lcad:true  },
     { grupo:'ALMACÉN',       key:'sal_inv',       nombre:'Salidas',          desc:'Egresos del almacén',           lcad:true  },
     { grupo:'ALMACÉN',       key:'kardex',        nombre:'Kardex',           desc:'Movimientos por artículo',      lcad:false },
-    { grupo:'ALMACÉN',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',     lcad:true  },
-    { grupo:'ALMACÉN',       key:'cfg_almacen',   nombre:'Config. Almacén',  desc:'Familias y Unidades',           lcad:true  },
-
-    // DIRECTORIO Y SEGURIDAD
     { grupo:'DIRECTORIO',    key:'cond',          nombre:'Personal',         desc:'Directorio operativo',          lcad:true  },
-    { grupo:'SEGURIDAD',     key:'placas',        nombre:'Unidades (Placas)',desc:'Fichas técnicas',               lcad:true  },
-    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Asistencia',       desc:'Asistencia del personal',       lcad:true  },
-
-    // SISTEMA
-    { grupo:'SISTEMA',       key:'usuarios',      nombre:'Usuarios',         desc:'Gestión de accesos',            lcad:true  },
-    { grupo:'SISTEMA',       key:'roles',         nombre:'Roles',            desc:'Permisos y roles',              lcad:true  },
-    { grupo:'SISTEMA',       key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad',         lcad:true  }
+    { grupo:'SEGURIDAD',     key:'placas',        nombre:'CheckList de Ingreso/Salidas de Unidades',desc:'Fichas técnicas', lcad:true  },
+    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo',            desc:'Asistencia del personal',       lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios',         desc:'Gestión de accesos',            lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad',         lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',nombre:'Apariencia',       desc:'Personalización visual',        lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad', desc:'Ajustes de uso',                lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',    nombre:'Idioma',           desc:'Idiomas del sistema',           lcad:true  },
+    { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración',   desc:'Hub de administración',         lcad:true  }
 ];
 
 
@@ -98,7 +88,7 @@ window.guCargarTodo = async function(forzar) {
         var jUsers = await resUsers.json();
         window.dataGlobalRoles = jRoles.data || [];
         var rawUsers = jUsers.data || [];
-        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
+        // fila: [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo [13]roles_ids
         window.dataGlobalUsuarios = rawUsers.map(function(r) {
             return { id:r[0], nombre:r[1], cargo:r[2], correo:r[3], rol_label:r[4],
                      estado:r[5], password:r[6], permisos:r[7], rol_id:r[8], rol_color:r[9],
@@ -265,7 +255,7 @@ function _guBuildRolPanel(rol) {
             html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
                 + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
-                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + '>'
+                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
                 + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
                 + '<span class="gu-perm-label">Leer</span></div></div></div>';
         } else {
@@ -275,7 +265,7 @@ function _guBuildRolPanel(rol) {
             html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
             accs.forEach(function(a,i) {
-                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + '>'
+                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
                     + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
                     + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
             });
@@ -694,3 +684,83 @@ window.init_usuarios = function() {
     window.guCargarTodo(true);
 };
 
+
+
+window._guCheckCascade = function(el, modKey, action) {
+    if (!el || el.classList.contains('readonly')) return;
+    var chk = el.checked;
+    
+    // Auto-activación: Si se activa c, e, d => activa l
+    if (chk && (action === 'c' || action === 'e' || action === 'd')) {
+        var lEl = document.getElementById('pt-' + modKey + '-l');
+        if (lEl && !lEl.checked) lEl.checked = true;
+    }
+    
+    // Auto-desactivación: Si se desactiva l => desactiva c, e, d
+    if (!chk && action === 'l') {
+        ['c', 'e', 'd'].forEach(function(a) {
+            var subEl = document.getElementById('pt-' + modKey + '-' + a);
+            if (subEl && subEl.checked) subEl.checked = false;
+        });
+    }
+};
+
+window.guSimularUsuario = function(id) {
+    var u = window.dataGlobalUsuarios.find(x => x.id == id);
+    if (!u) return;
+    window._guSeleccionado = { tipo:'usuario', id:u.id };
+    window.guRenderLista();
+
+    var misRoles = (u.roles_ids || []).map(id => window.dataGlobalRoles.find(x => x.id == id)).filter(Boolean);
+    var nombresRoles = misRoles.map(x => x.nombre).join(', ') || 'Ninguno';
+    var esAdmin = misRoles.some(x => x.es_admin);
+    var p = {};
+    try { p = (typeof u.permisos === 'string') ? JSON.parse(u.permisos) : u.permisos; } catch(e) {}
+
+    var html = '<div class="gu-section-header">Simulador de Permisos Efectivos</div>'
+             + '<div style="font-size:0.8rem; color:var(--subtext); margin-bottom:15px;">Viendo los permisos que tiene el usuario <b>' + _guEsc(u.nombre||u.correo) + '</b> basado en sus roles <b>' + _guEsc(nombresRoles) + '</b>.</div>';
+
+    if (esAdmin) {
+        html += '<div class="alert alert-danger" style="background:rgba(237,66,69,0.1); border:1px solid #ED4245; color:#ED4245; font-size:0.85rem; font-weight:bold;"><i class="bi bi-shield-lock-fill me-2"></i>Este usuario tiene acceso TOTAL (Administrador).</div>';
+    }
+
+    var lastGrp = '';
+    window._GU_MODULOS.forEach(function(mod) {
+        if (mod.grupo !== lastGrp) {
+            html += '<div class="gu-perm-group" style="margin-top:10px;">' + mod.grupo + '</div>';
+            lastGrp = mod.grupo;
+        }
+        var acc = p[mod.key] || {};
+        var l = esAdmin || acc['l'];
+        var c = esAdmin || acc['c'];
+        var e = esAdmin || acc['e'];
+        var d = esAdmin || acc['d'];
+
+        html += '<div class="gu-perm-row" style="opacity:' + (l ? '1' : '0.5') + ';">'
+              + '<div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div></div>'
+              + '<div class="gu-perm-actions">';
+        if (!mod.lcad) {
+            html += '<span class="badge ' + (l?'bg-success':'bg-secondary') + '" style="padding:5px 10px;">Leer</span>';
+        } else {
+            html += '<span class="badge ' + (l?'bg-success':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Leer</span>'
+                  + '<span class="badge ' + (c?'bg-primary':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Crear</span>'
+                  + '<span class="badge ' + (e?'bg-warning text-dark':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Editar</span>'
+                  + '<span class="badge ' + (d?'bg-danger':'bg-secondary') + '" style="padding:5px 8px;">Eliminar</span>';
+        }
+        html += '</div></div>';
+    });
+
+    document.getElementById('guPanelEmpty').style.display = 'none';
+    var pc = document.getElementById('guPanelContent');
+    pc.innerHTML = html;
+    pc.style.display = 'block';
+    var pa = document.getElementById('guPanelActions');
+    if (pa) pa.style.display = 'none';
+
+    if(window.innerWidth <= 767) {
+        document.getElementById('guOffcanvasContent').innerHTML = pc.innerHTML;
+        document.getElementById('guOffcanvasActions').style.display = 'none';
+        var bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasGU'));
+        bsOffcanvas.show();
+    }
+};
