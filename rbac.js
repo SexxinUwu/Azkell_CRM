@@ -41,7 +41,9 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
     else if (path.startsWith('/almacen/salidas')) mod = ['sal_inv'];
-    else if (path.startsWith('/almacen/proveedores')) mod = ['prov_inv'];
+    else if (path.startsWith('/almacen/proveedores')) {
+        mod = (req.method === 'GET') ? ['prov_inv', 'ent_inv', 'sal_inv'] : ['prov_inv'];
+    }
     else if (path.startsWith('/almacen/placas') || path.startsWith('/almacen/marcas-placas')) mod = ['placas'];
     else if (path.startsWith('/almacen/kardex')) mod = ['kardex'];
     else if (path.startsWith('/almacen/costos')) mod = ['costos_inv'];
