@@ -689,7 +689,7 @@ window.rotAccion = function(accion, idOT) {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accion: 'reanudar' })
+                body: JSON.stringify({ accion: 'reactivar' })
             })
             .then(function(res) { if(!res.ok) throw new Error(res.status); return res.json(); })
             .then(function() {

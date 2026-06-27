@@ -153,6 +153,14 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
         return;
     }
 
+    if (accion === 'reactivar') {
+        db.query("UPDATE ordenes_trabajo SET estado = 'En Proceso' WHERE ticket_entrada = ?", [ticketId], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+        });
+        return;
+    }
+
     if (accion === 'aprobar') {
         db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
