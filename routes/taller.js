@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
+function _calcularTotalPen(items, tc) {
+    return items.reduce((sum, item) => {
+        const cant = parseFloat(item.cantidad) || 0;
+        const costo = parseFloat(item.costo_unitario) || 0;
+        let importe = cant * costo;
+        if (item.moneda === 'USD' && tc) importe *= parseFloat(tc);
+        return sum + importe;
+    }, 0);
+}
+
 
 // ============================================================
 // MÓDULO: ÓRDENES DE MANTENIMIENTO (OT)
