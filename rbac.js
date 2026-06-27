@@ -20,7 +20,8 @@ module.exports = function globalRBAC(req, res, next) {
         '/almacen/familias',
         '/almacen/marcas',
         '/almacen/sistemas',
-        '/catalogos_taller'
+        '/catalogos_taller',
+        '/almacen/notificaciones/resumen'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
@@ -84,7 +85,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
     // Legacy /api/script endpoints that use req.body.coleccion
-    else if (path.startsWith('/script/guardarStatusFlota')) mod = ['status_rampa', 'fleet', 'ot'];
+    else if (path.startsWith('/script/guardarStatusFlota')) mod = ['status_rampa', 'fleet', 'ot', 'status'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
