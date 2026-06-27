@@ -758,12 +758,7 @@ router.post('/salidas', (req, res) => {
             if (errOT) return res.status(500).json({ error: errOT.message });
             if (!rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
             const estadoOT = rowsOT[0].estado;
-            if (estadoOT !== 'En Proceso' && estadoOT !== 'Pausada') {
-                const msg = estadoOT === 'Finalizado'
-                    ? 'La OT ' + ticket_ot + ' ya está cerrada. No se pueden registrar salidas.'
-                    : 'La OT ' + ticket_ot + ' no ha sido iniciada. Debes iniciar la OT antes de registrar salidas.';
-                return res.status(400).json({ error: msg });
-            }
+            // Bloqueo removido: Permitir salidas a OT cerradas para regularizaciones de almacén
             crearSalida();
         });
     } else {
