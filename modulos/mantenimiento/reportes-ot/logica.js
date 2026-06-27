@@ -459,6 +459,9 @@ window.rotAbrirDetalle = function(idOT) {
         } else if (estado === 'Aprobada') {
             ftHtml += '<button class="btn btn-sm btn-primary" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
                     + '<i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>';
+        } else if (estado === 'Finalizado' || estado === 'Cerrada') {
+            ftHtml += '<button class="btn btn-sm btn-outline-success" onclick="window.rotAccion(\'reactivar\',\'' + esc(idOT) + '\')">'
+                    + '<i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar OT</button>';
         }
     }
     ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
@@ -658,6 +661,27 @@ function rotPromptKm(currentKm, onConfirm) {
 window.rotAccion = function(accion, idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot && accion !== 'pdf') return;
+
+        if (accion === 'reactivar') {
+        if (!window.guardAction('ot', 'e')) return;
+        rotConfirmModerno('Reactivar OT', '¿Deseas reactivar la OT ' + idOT + '? Volverá a estar En Proceso.', function() {
+            fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'reanudar' })
+            })
+            .then(function(res) { if(!res.ok) throw new Error(res.status); return res.json(); })
+            .then(function() {
+                if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT reactivada', 'success');
+                window.rotCerrarDetalle();
+                window.rotCargar();
+            })
+            .catch(function(err) {
+                if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al reactivar OT', 'danger');
+            });
+        }, 'success');
+        return;
+    }
 
         if (accion === 'reactivar') {
         if (!window.guardAction('ot', 'e')) return;
