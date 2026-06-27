@@ -73,7 +73,7 @@ module.exports = function globalRBAC(req, res, next) {
         mod = (req.method === 'GET') ? ['ot', 'status_rampa', 'trabajos_ot', 'reportes_ot', 'sal_inv'] : ['ot', 'status_rampa', 'trabajos_ot'];
     }
     else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = ['trabajos_ot', 'ot', 'status_rampa'];
-    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa'];
+    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
     else if (path.startsWith('/taller/historial')) mod = ['ot'];
     else if (path.startsWith('/inspecciones')) mod = ['insp'];
     else if (path.startsWith('/planificacion')) mod = ['plan'];
@@ -84,6 +84,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
     // Legacy /api/script endpoints that use req.body.coleccion
+    else if (path.startsWith('/script/guardarStatusFlota')) mod = ['status_rampa', 'fleet', 'ot'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
