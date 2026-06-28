@@ -111,7 +111,9 @@ router.put('/ordenes-trabajo/:id/fechas', (req, res) => {
             res.json({ ok: true });
         }
     );
-});\n\nrouter.put('/ordenes-trabajo/:id', (req, res) => {
+});
+
+router.put('/ordenes-trabajo/:id', (req, res) => {
     const ticketId = req.params.id;
     const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
 
