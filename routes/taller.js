@@ -92,7 +92,26 @@ router.post('/ordenes-trabajo', (req, res) => {
     });
 });
 
-router.put('/ordenes-trabajo/:id', (req, res) => {
+router.put('/ordenes-trabajo/:id/fechas', (req, res) => {
+    const ticketId = req.params.id;
+    const { fecha_inicio_ot, fecha_hora_salida } = req.body;
+    
+    // Convert undefined to null for SQL
+    const fInicio = fecha_inicio_ot ? fecha_inicio_ot : null;
+    const fSalida = fecha_hora_salida ? fecha_hora_salida : null;
+
+    db.query(
+        "UPDATE ordenes_trabajo SET fecha_inicio_ot=?, fecha_hora_salida=? WHERE ticket_entrada=?",
+        [fInicio, fSalida, ticketId],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if(typeof logAudit === 'function' && req.body && req.body.usuario) {
+                logAudit(req.body.usuario, 'ot', 'MODIFICÓ', `Editó fechas de OT ${ticketId}`);
+            }
+            res.json({ ok: true });
+        }
+    );
+});\n\nrouter.put('/ordenes-trabajo/:id', (req, res) => {
     const ticketId = req.params.id;
     const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
 
