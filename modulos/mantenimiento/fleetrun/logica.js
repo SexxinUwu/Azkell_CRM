@@ -1040,14 +1040,7 @@ window.frPlacaToggle = function(prefix) {
         dd.style.display = 'none';
         if (box) box.style.borderColor = '';
     } else {
-        if (box) {
-            var rect = box.getBoundingClientRect();
-            dd.style.position = 'fixed';
-            dd.style.top  = (rect.bottom + 2) + 'px';
-            dd.style.left = rect.left + 'px';
-            dd.style.width = rect.width + 'px';
-            dd.style.right = 'auto';
-        }
+        
         dd.style.display = 'block';
         if (box) box.style.borderColor = 'var(--primary, #5865F2)';
         var busq = document.getElementById('frPlacaBusq-' + prefix);
@@ -1151,14 +1144,7 @@ window.frTipoToggle = function(prefix) {
         dd.style.display = 'none';
         if (box) box.style.borderColor = '';
     } else {
-        if (box) {
-            var rect = box.getBoundingClientRect();
-            dd.style.position = 'fixed';
-            dd.style.top  = (rect.bottom + 2) + 'px';
-            dd.style.left = rect.left + 'px';
-            dd.style.width = rect.width + 'px';
-            dd.style.right = 'auto';
-        }
+        
         dd.style.display = 'block';
         if (box) box.style.borderColor = 'var(--primary, #5865F2)';
         var busq = document.getElementById('frTipoBusq-' + prefix);
