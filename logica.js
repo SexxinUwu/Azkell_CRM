@@ -1143,6 +1143,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const body = document.body;
   const saved = localStorage.getItem('theme');
   const btnTheme = document.getElementById('btn-theme-toggle');
+  
+  // ── FETCH CONFIGURACION GLOBAL ERP ──
+  fetch('/api/configuracion')
+    .then(res => res.json())
+    .then(data => {
+        if (data.empresa_nombre) localStorage.setItem('fleet_empresa_nombre', data.empresa_nombre);
+        if (data.empresa_logo) localStorage.setItem('fleet_empresa_logo', data.empresa_logo);
+    })
+    .catch(err => console.error("Error loading ERP config:", err));
 
   // Restaurar acento guardado
   const savedAccent = localStorage.getItem('fleet_accent');

@@ -77,6 +77,33 @@ app.use(express.static(__dirname, {
     }
 }));
 
+// ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
+app.get('/api/configuracion', async (req, res) => {
+    try {
+        const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
+        let config = {};
+        rows.forEach(r => config[r.clave] = r.valor);
+        res.json(config);
+    } catch (error) {
+        console.error("Error obteniendo configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+app.post('/api/configuracion', async (req, res) => {
+    try {
+        const payload = req.body;
+        for (const clave in payload) {
+            let valor = payload[clave] || '';
+            await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
+        }
+        res.json({ success: true, message: "Configuración guardada" });
+    } catch (error) {
+        console.error("Error guardando configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 app.get('/api/proxy/documento', async (req, res) => {
     let tipo = req.query.tipo;
     let numero = req.query.numero;

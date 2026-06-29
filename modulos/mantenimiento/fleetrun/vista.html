@@ -138,12 +138,12 @@
             <!-- Botones icono solo-móvil: gráfico + reload -->
             <div class="d-flex d-md-none align-items-center gap-2 ms-auto">
                 <button class="btn btn-sm btn-outline-warning fw-bold px-2" id="btnToggleGraficosFleetrunMob" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill"></i></button>
-                <button class="btn-reload-cache" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-sm btn-outline-secondary fw-bold px-2 btn-reload-cache" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <!-- Derecha: acciones (ocultas en móvil — el FAB las cubre) -->
             <div class="d-none d-md-flex align-items-center gap-2">
                 <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn-reload-cache" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-sm btn-outline-secondary fw-bold px-2 btn-reload-cache" id="btn-reload-fleetrun" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
                 <button class="btn btn-outline-secondary fw-bold btn-sm" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
                 <div id="col-picker-fleet"></div>
                 <button class="btn btn-outline-info fw-bold btn-sm" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun" data-i18n="common.history">Historial</span></button>
