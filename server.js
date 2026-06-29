@@ -11,6 +11,7 @@ const multer = require('multer');
 const fs = require('fs');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('./utils/s3');
 
 const app = express();
 
@@ -95,6 +96,54 @@ app.post('/api/configuracion', async (req, res) => {
         const payload = req.body;
         for (const clave in payload) {
             let valor = payload[clave] || '';
+            await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
+        }
+        res.json({ success: true, message: "Configuración guardada" });
+    } catch (error) {
+        console.error("Error guardando configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// ── CONFIGURACION ERP ─────────────────────────────────────────────────────────
+app.get('/api/configuracion', async (req, res) => {
+    try {
+        const [rows] = await db.promise().query("SELECT clave, valor FROM configuracion_erp");
+        let config = {};
+        rows.forEach(r => config[r.clave] = r.valor);
+        res.json(config);
+    } catch (error) {
+        console.error("Error obteniendo configuracion:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+app.post('/api/configuracion', async (req, res) => {
+    try {
+        const payload = req.body;
+        for (const clave in payload) {
+            let valor = payload[clave] || '';
+            
+            // Subir a AWS S3 si es una imagen base64
+            if (clave === 'empresa_logo' && typeof valor === 'string' && valor.startsWith('data:image')) {
+                const matches = valor.match(/^data:(image\/\w+);base64,(.+)$/);
+                if (matches) {
+                    const ext = matches[1].split('/')[1] || 'jpeg';
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const key = `configuracion/logo_empresa_${Date.now()}.${ext}`;
+                    
+                    try {
+                        const [oldRows] = await db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_logo'");
+                        if (oldRows.length > 0 && oldRows[0].valor && oldRows[0].valor.includes('amazonaws.com')) {
+                            const oldKey = s3KeyFromUrl(oldRows[0].valor);
+                            if (oldKey) await deleteFromS3(oldKey);
+                        }
+                    } catch(e) { console.warn("Error deleting old logo:", e); }
+                    
+                    valor = await uploadToS3(buffer, key, matches[1]);
+                }
+            }
+
             await db.promise().query("INSERT INTO configuracion_erp (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?", [clave, valor, valor]);
         }
         res.json({ success: true, message: "Configuración guardada" });
