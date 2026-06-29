@@ -2907,11 +2907,14 @@ window.rotGuardarFechas = function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La fecha de inicio no puede ser mayor al término.', 'warning');
         return;
     }
+
+    var iniStr = ini ? new Date(ini).toISOString().slice(0, 19).replace('T', ' ') : null;
+    var finStr = fin ? new Date(fin).toISOString().slice(0, 19).replace('T', ' ') : null;
     
     fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT) + '/fechas', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha_inicio_ot: ini || null, fecha_hora_salida: fin || null })
+        body: JSON.stringify({ fecha_inicio_ot: iniStr, fecha_hora_salida: finStr })
     })
     .then(function(r) { if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(r) {
