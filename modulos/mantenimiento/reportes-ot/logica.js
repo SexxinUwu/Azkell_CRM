@@ -2877,7 +2877,7 @@ window.rotAbrirEditarFechas = function(idOT) {
     
     window.rotEditFechasId = idOT;
     
-    var fIniStr = ot.fecha_ingreso || ot.fecha_inicio_ot || '';
+    var fIniStr = ot.fecha_inicio_ot || ot.fecha_ingreso || '';
     var fFinStr = ot.fecha_hora_salida || '';
     
     var formatForInput = function(isoStr) {
