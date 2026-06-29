@@ -70,12 +70,15 @@
         <div class="d-flex justify-content-between flex-wrap gap-2 px-3">
             <!-- Izquierda: búsqueda + filtros embudo (siempre visible) -->
             <div class="d-flex align-items-center gap-2">
-                <div class="input-group input-group-sm shadow-sm" style="max-width: 250px; border-radius: 50px; overflow: hidden;"><span class="input-group-text border-end-0 bg-white"><i class="bi bi-search" style="color: var(--subtext);"></i></span><input type="text" class="form-control border-start-0 ps-0 bg-white" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico..."></div>
+                <div class="input-group input-group-sm" style="max-width: 250px;">
+                    <span class="input-group-text bg-transparent border-0 border-bottom rounded-0 px-2 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control bg-transparent border-0 border-bottom rounded-0 shadow-none px-1" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar Placa, Técnico...">
+                </div>
                 <!-- Botón embudo — abre panel con todos los filtros -->
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-light border fw-semibold rounded-pill px-3 shadow-sm" id="btnFiltrosFleetrun" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filtros">
-                        <i class="bi bi-funnel-fill"></i> Filtros
-                        <span class="badge bg-primary ms-1 d-none" id="badge-filtros-fleet" style="font-size:0.65rem; vertical-align:middle;"></span>
+                    <button class="btn btn-sm btn-light border rounded-circle shadow-sm position-relative d-flex align-items-center justify-content-center" style="width:32px; height:32px;" id="btnFiltrosFleetrun" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filtros">
+                        <i class="bi bi-funnel"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle d-none" id="badge-filtros-fleet" style="width: 10px; height: 10px;"></span>
                     </button>
                     <div class="dropdown-menu shadow p-0" style="min-width:290px; max-height:calc(100dvh - 80px); overflow-y:auto;">
                         <!-- Header fijo -->
@@ -137,13 +140,13 @@
             </div>
             <!-- Botones icono solo-móvil: gráfico + reload -->
             <div class="d-flex d-md-none align-items-center gap-2 ms-auto">
-                <button class="btn btn-sm btn-light border fw-bold rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0;" id="btnToggleGraficosFleetrunMob" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill text-warning"></i></button>
-                <button class="btn btn-sm btn-light border fw-bold rounded-circle shadow-sm btn-reload-cache" style="width: 32px; height: 32px; padding: 0;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-sm btn-light border fw-bold rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; padding: 0;" id="btnToggleGraficosFleetrunMob" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill text-warning"></i></button>
+                <button class="btn btn-sm btn-light border fw-bold rounded-circle shadow-sm btn-reload-cache d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; padding: 0;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <!-- Derecha: acciones (ocultas en móvil — el FAB las cubre) -->
             <div class="d-none d-md-flex align-items-center gap-2">
                 <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn btn-sm btn-light border fw-semibold shadow-sm rounded-circle btn-reload-cache" id="btn-reload-fleetrun" style="width: 32px; height: 32px; padding: 0;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-sm btn-light border shadow-sm rounded-circle btn-reload-cache d-flex align-items-center justify-content-center" id="btn-reload-fleetrun" style="width: 32px; height: 32px; padding: 0;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
                 <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded-pill px-3" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand"></i> <span data-i18n="common.expand">Expandir</span></button>
                 <div id="col-picker-fleet"></div>
                 <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded-pill px-3 text-info" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history"></i> <span id="text-toggle-fleetrun" data-i18n="common.history">Historial</span></button>
