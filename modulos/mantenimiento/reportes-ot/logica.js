@@ -339,10 +339,10 @@ window.rotAbrirDetalle = function(idOT) {
     }
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
-        html += fld('Inicio OT', rotFmtFecha(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
+        html += fld('Inicio OT', rotFmtFechaHora(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
     }
     if (t.fin) {
-        html += fld('Cierre OT', rotFmtFecha(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
+        html += fld('Cierre OT', rotFmtFechaHora(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
     }
     if (t.inicio) {
         html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
@@ -1463,6 +1463,16 @@ function rotFmtFecha(iso) {
     if (p.length !== 3) return iso;
     var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return p[2] + ' ' + meses[parseInt(p[1],10)-1] + ' ' + p[0].slice(2);
+}
+
+function rotFmtFechaHora(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    var hh = String(d.getHours()).padStart(2, '0');
+    var mm = String(d.getMinutes()).padStart(2, '0');
+    return String(d.getDate()).padStart(2, '0') + ' ' + meses[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2) + ' ' + hh + ':' + mm;
 }
 
 function rotFechaISO(iso) {
