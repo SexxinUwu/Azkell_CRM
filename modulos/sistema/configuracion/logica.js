@@ -227,13 +227,16 @@ function _mostrarToast() {
 }
 
 // ---- Datos de Empresa ----
-window.guardarDatosEmpresa = function() {
+window.guardarDatosEmpresa = async function() {
     const nombre = document.getElementById('cfg-empresa-nombre').value.trim();
+    let payload = {};
     if (nombre) {
-        localStorage.setItem('fleet_empresa_nombre', nombre);
+        payload.empresa_nombre = nombre;
     }
 
     const inputLogo = document.getElementById('cfg-empresa-logo');
+    let b64Logo = null;
+    
     if (inputLogo.files && inputLogo.files[0]) {
         const file = inputLogo.files[0];
         if (file.size > 1024 * 1024) {
@@ -244,18 +247,38 @@ window.guardarDatosEmpresa = function() {
             }
             return;
         }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const b64 = e.target.result;
-            localStorage.setItem('fleet_empresa_logo', b64);
-            document.getElementById('cfg-empresa-logo-preview').src = b64;
-            document.getElementById('cfg-empresa-logo-preview').style.display = 'inline-block';
-            document.getElementById('cfg-empresa-logo-placeholder').style.display = 'none';
+        
+        b64Logo = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        payload.empresa_logo = b64Logo;
+    }
+
+    try {
+        const res = await fetch('/api/configuracion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            if (payload.empresa_nombre) localStorage.setItem('fleet_empresa_nombre', payload.empresa_nombre);
+            if (payload.empresa_logo) {
+                localStorage.setItem('fleet_empresa_logo', payload.empresa_logo);
+                document.getElementById('cfg-empresa-logo-preview').src = payload.empresa_logo;
+                document.getElementById('cfg-empresa-logo-preview').style.display = 'inline-block';
+                document.getElementById('cfg-empresa-logo-placeholder').style.display = 'none';
+            }
             _mostrarToast();
-        };
-        reader.readAsDataURL(file);
-    } else {
-        _mostrarToast();
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Configuración global guardada correctamente', 'success');
+        } else {
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error guardando configuración global', 'error');
+        }
+    } catch (e) {
+        console.error("Error saving ERP config:", e);
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error de conexión', 'error');
     }
 };
 

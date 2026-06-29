@@ -7,6 +7,13 @@
 
 const TABLAS = [
     {
+        nombre: 'configuracion_erp',
+        sql: `CREATE TABLE IF NOT EXISTS configuracion_erp (
+            clave VARCHAR(50) PRIMARY KEY,
+            valor LONGTEXT
+        )`
+    },
+    {
         nombre: 'usuarios',
         sql: `CREATE TABLE IF NOT EXISTS usuarios (
             idUsuario          VARCHAR(20)  NOT NULL PRIMARY KEY,
@@ -362,6 +369,14 @@ async function initDB(db) {
     const ok = resultados.filter(r => r.ok).length;
     const fail = resultados.filter(r => !r.ok).length;
     console.log(`\n📦 init_db.js — ${ok} tablas OK, ${fail} con error\n`);
+
+    try {
+        await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
+        await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
+        console.log(`✅ Default configurations seeded`);
+    } catch (err) {
+        console.error(`❌ Error seeding configurations:`, err.message);
+    }
 }
 
 module.exports = { initDB };

@@ -163,7 +163,10 @@ function mostrarFleetrun(datos) {
               });
           }
       });
-      tbodyFleetrun.innerHTML = html;
+  }
+  
+  tbodyFleetrun.innerHTML = html;
+  if(datosAMostrar && datosAMostrar.length > 0) {
       // ── Restaurar grupos que estaban abiertos ────────────────────────────────
       _expandedGroupsBefore.forEach(function(groupClass) {
           document.querySelectorAll('#cuerpoTablaFleetrun .' + groupClass + '.child-row-fleetrun').forEach(function(row) {
