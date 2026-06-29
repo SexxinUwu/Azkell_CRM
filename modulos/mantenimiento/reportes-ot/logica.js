@@ -467,11 +467,7 @@ window.rotAbrirDetalle = function(idOT) {
     if (puedeEditar) {
         ftHtml += '<button class="btn btn-sm btn-outline-info" onclick="window.rotAbrirEditarFechas(\'' + esc(idOT) + '\')">'
                 + '<i class="bi bi-calendar3 me-1"></i>Editar Fechas</button>';
-    }
-    if (puedeEditar) {
-        ftHtml += '<button class="btn btn-sm btn-outline-info" onclick="window.rotAbrirEditarFechas(\'' + esc(idOT) + '\')">'
-                + '<i class="bi bi-calendar3 me-1"></i>Editar Fechas</button>';
-    }
+    }
     ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
             + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>';
     ftHtml += '</div>';
