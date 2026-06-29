@@ -8,33 +8,64 @@
 </style>
 
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
-    <div id="panelGraficosFleetrun" class="row mb-4" style="display: none;">
-        <div class="col-12 col-md-6 mx-md-auto">
-            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pie-chart-fill"></i> <span data-i18n="fleet.health">Salud de Mantenimientos</span></h6>
-                <div style="position: relative; height: 220px; width: 100%;">
+    <div id="scaniaDashboard" class="row mb-3 gx-2">
+        <!-- Logo y Datos de Empresa -->
+        <div class="col-12 col-xl-2 mb-2">
+            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-width: 100%; max-height: 80px; display: none; object-fit: contain;">
+                <h5 id="scania-nombre-empresa" class="fw-bold mt-2 mb-2 text-center" style="font-size: 0.9rem;">—</h5>
+                <div id="scania-fecha-actual" class="badge bg-dark text-white p-2 w-100 text-center" style="font-size: 0.85rem; border-radius: 4px;"></div>
+            </div>
+        </div>
+
+        <!-- Estado de Unidades (Dona) -->
+        <div class="col-12 col-md-5 col-xl-3 mb-2">
+            <div class="kpi-card h-100 d-flex flex-column p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="fw-bold text-center mb-1" style="font-size: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Estado de Unidades</div>
+                <div style="position: relative; height: 160px; width: 100%; flex: 1;">
                     <canvas id="chartFleetrunStatus"></canvas>
                 </div>
             </div>
         </div>
+
+        <!-- Situación de Mantenimientos de Flota -->
+        <div class="col-12 col-md-7 col-xl-7 mb-2">
+            <div class="kpi-card h-100 d-flex flex-column p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="fw-bold text-center mb-2" style="font-size: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Situación de Mantenimientos de Flota</div>
+                <div class="d-flex w-100 h-100 text-center align-items-stretch" style="gap: 4px;">
+                    <!-- Flota Total -->
+                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #1f2937; color: white; border-radius: 6px;">
+                        <div id="sca-kpi-total" class="fw-bold fs-2">0</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase;">Flota<br>Total</div>
+                    </div>
+                    <!-- Críticos -->
+                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;">
+                        <div id="sca-kpi-critico" class="fw-bold fs-2">0</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase;">Críticos</div>
+                        <div id="sca-pct-critico" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    </div>
+                    <!-- En Riesgo -->
+                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;">
+                        <div id="sca-kpi-riesgo" class="fw-bold fs-2">0</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase;">En<br>Riesgo</div>
+                        <div id="sca-pct-riesgo" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    </div>
+                    <!-- Inmediatos -->
+                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #fff8d6; color: #ffc107; border-radius: 6px;">
+                        <div id="sca-kpi-inmediato" class="fw-bold fs-2">0</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase;">Inmediatos</div>
+                        <div id="sca-pct-inmediato" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    </div>
+                    <!-- Operativos -->
+                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;">
+                        <div id="sca-kpi-operativo" class="fw-bold fs-2">0</div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase;">Operativos</div>
+                        <div id="sca-pct-operativo" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="controls-row">
-        <div class="d-none d-md-flex justify-content-end mb-2">
-            <button class="btn btn-sm btn-outline-warning fw-bold" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill"></i></button>
-        </div>
-
-        <div class="kpi-wrapper mb-3">
-            <div class="kpi-card" id="kpi-fleet-card-vigente">
-                <div class="kpi-title">Mantenimientos Vigentes</div><div class="kpi-value text-success" id="kpi-fleet-vigentes">0</div>
-            </div>
-            <div class="kpi-card" id="kpi-fleet-card-porvencer">
-                <div class="kpi-title">Por Vencer (&lt; 1000 KM)</div><div class="kpi-value text-warning" id="kpi-fleet-porvencer">0</div>
-            </div>
-            <div class="kpi-card" id="kpi-fleet-card-vencido">
-                <div class="kpi-title">Vencidos</div><div class="kpi-value text-danger" id="kpi-fleet-vencidos">0</div>
-            </div>
-        </div>
 
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <!-- Izquierda: búsqueda + filtros embudo (siempre visible) -->
@@ -135,7 +166,7 @@
     </div>
     <div id="fleetrunCardContainer" class="flex-grow-1 overflow-auto px-2 pb-2" style="display:none;"></div>
     <div id="fleetrun-tabla-wrap" class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column"><div class="table-container flex-grow-1 overflow-auto"><table class="table table-custom m-0" id="tablaFleetrun">
-        <thead><tr><th data-i18n="fleet.col.plate">Placa / Registro</th><th data-i18n="common.date">Fecha</th><th data-i18n="fleet.col.type">Tipo de Mantt</th><th data-i18n="common.kmchange">KM de Cambio</th><th data-i18n="common.remaining">Falta</th><th data-i18n="common.nextchange">Próximo Cambio</th><th data-i18n="common.obs">Observación</th><th data-i18n="common.freq">Frecuencia</th><th data-i18n="fleet.col.kmgps">KM GPS</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
+        <thead><tr><th>Placa y Marca</th><th>Sucursal / UTS</th><th>Fecha Últ. Mantt</th><th>KM Últ. Mantt</th><th>Tipo MP</th><th>Lectura KM Actual</th><th>KM Desde Últ. Serv.</th><th>KMs para Próx. Serv.</th><th>Situación</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
         <tbody id="cuerpoTablaFleetrun"><tr><td colspan="10" class="text-center py-5" data-i18n="common.loading">Cargando módulo Fleetrun...</td></tr></tbody>
     </table></div></div>
 </div>

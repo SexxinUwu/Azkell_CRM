@@ -19,6 +19,19 @@ window.init_configuracion = function() {
     const elRol    = document.getElementById('cfg-perfil-rol-badge');
     const elAcceso = document.getElementById('cfg-perfil-acceso');
 
+    // Cargar datos de empresa
+    const empNombre = localStorage.getItem('fleet_empresa_nombre') || '';
+    const empLogo = localStorage.getItem('fleet_empresa_logo') || '';
+    const inputEmpNombre = document.getElementById('cfg-empresa-nombre');
+    const imgEmpLogo = document.getElementById('cfg-empresa-logo-preview');
+    const placeholderEmpLogo = document.getElementById('cfg-empresa-logo-placeholder');
+    if (inputEmpNombre) inputEmpNombre.value = empNombre;
+    if (imgEmpLogo && empLogo) {
+        imgEmpLogo.src = empLogo;
+        imgEmpLogo.style.display = 'inline-block';
+        if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'none';
+    }
+
     if (elNombre) elNombre.textContent = nombre;
     if (elCorreo) elCorreo.textContent = correo;
 
@@ -212,4 +225,37 @@ function _mostrarToast() {
         toast.classList.remove('show');
     }, 2000);
 }
+
+// ---- Datos de Empresa ----
+window.guardarDatosEmpresa = function() {
+    const nombre = document.getElementById('cfg-empresa-nombre').value.trim();
+    if (nombre) {
+        localStorage.setItem('fleet_empresa_nombre', nombre);
+    }
+
+    const inputLogo = document.getElementById('cfg-empresa-logo');
+    if (inputLogo.files && inputLogo.files[0]) {
+        const file = inputLogo.files[0];
+        if (file.size > 1024 * 1024) {
+            if (typeof window.mostrarAlerta === 'function') {
+                window.mostrarAlerta('El logo debe pesar menos de 1MB.', 'warning');
+            } else {
+                alert('El logo debe pesar menos de 1MB.');
+            }
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const b64 = e.target.result;
+            localStorage.setItem('fleet_empresa_logo', b64);
+            document.getElementById('cfg-empresa-logo-preview').src = b64;
+            document.getElementById('cfg-empresa-logo-preview').style.display = 'inline-block';
+            document.getElementById('cfg-empresa-logo-placeholder').style.display = 'none';
+            _mostrarToast();
+        };
+        reader.readAsDataURL(file);
+    } else {
+        _mostrarToast();
+    }
+};
 

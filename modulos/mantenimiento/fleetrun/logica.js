@@ -17,7 +17,7 @@ function cargarTablaFleetrun(forzarRefresh = false) {
     const cuerpo = document.getElementById('cuerpoTablaFleetrun');
     if (cuerpo) {
         cuerpo.innerHTML = typeof generarSkeletonHtml === 'function'
-            ? generarSkeletonHtml(10, 6)
+            ? generarSkeletonHtml(10, 10)
             : '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
     }
     fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
@@ -76,8 +76,8 @@ function mostrarFleetrun(datos) {
   }
 
   let html = '';
-  let cntVig = 0, cntPV = 0, cntVenc = 0;
-  let placaEstadoMap = new Map(); let estadoPrio = { 'VIGENTE': 0, 'POR_VENCER': 1, 'VENCIDO': 2 };
+  let cntCrit = 0, cntRiesgo = 0, cntInmed = 0, cntOper = 0;
+  let placaEstadoMap = new Map(); let estadoPrio = { 'OPERATIVO': 0, 'INMEDIATO': 1, 'RIESGO': 2, 'CRITICO': 3 };
   if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="10" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; }
   else {
       let canEditF = window.checkPerm('fleet','e'); let canDeleteF = window.checkPerm('fleet','d'); let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map();
@@ -110,12 +110,18 @@ function mostrarFleetrun(datos) {
                   isLive = true;
               }
 
-              let falta_km = km_prox - km_gps; let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
-              if (falta_km <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO";
-              } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) { badgeClass = "bg-warning text-dark"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "POR_VENCER";
-              } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; }
+              let km_desde = km_gps - km_cambio;
+              let km_restante = frecuencia - km_desde;
+              if (km_restante < 0 && !isHistorialFleetrun) km_restante = km_prox - km_gps; // fallback si es data antigua que usaba km_prox
+              let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
+              
+              if (km_restante <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "CRITICO";
+              } else if (km_restante <= 1000) { badgeClass = "bg-warning text-dark"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "RIESGO";
+              } else if (km_restante <= 2500) { badgeClass = "bg-info text-dark"; iconFalta = `<i class="bi bi-info-circle-fill"></i>`; estadoKpi = "INMEDIATO";
+              } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "OPERATIVO"; }
+              
               let _prio = estadoPrio[estadoKpi] || 0; let _prevE = placaEstadoMap.get(placaRaw); if (_prevE === undefined || _prio > (estadoPrio[_prevE] || 0)) { placaEstadoMap.set(placaRaw, estadoKpi); }
-              let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`; let fmtFrec = `<span style="color: orange; font-weight: bold;">${frecuencia.toLocaleString()}</span>`;
+              let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`;
 
               let gpsBadgeColor = esHoras ? 'bg-warning text-dark' : 'bg-primary';
               let gpsIcon       = esHoras ? 'bi-clock' : 'bi-broadcast';
@@ -123,15 +129,27 @@ function mostrarFleetrun(datos) {
               let fmtKmGps = isLive
                   ? `<span class="badge ${gpsBadgeColor} shadow-sm px-2"><i class="bi ${gpsIcon}"></i> ${km_gps.toLocaleString()}${gpsUnit}</span>`
                   : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}${gpsUnit}</span>`;
-              let fmtFalta = `<span class="badge ${badgeClass} shadow-sm" style="font-size: 0.8rem; padding: 0.4em 0.6em;">${iconFalta} ${falta_km.toLocaleString()}</span>`;
+              let fmtFalta = `<span class="badge ${badgeClass} shadow-sm" style="font-size: 0.8rem; padding: 0.4em 0.6em;">${iconFalta} ${km_restante.toLocaleString()}</span>`;
 
               let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}"><td class="text-end text-muted" style="font-size: 0.75rem;" data-value="${placaRaw}">${chkHtml}∟</td><td>${fechaLimpia}</td><td>${fmtTipo}</td><td>${km_cambio.toLocaleString()}</td><td>${fmtFalta}</td><td>${km_prox.toLocaleString()}</td><td class="text-truncate" style="max-width: 150px;">${obs}</td><td>${fmtFrec}</td><td>${fmtKmGps}</td><td>${menuAcciones}</td></tr>`;
+              
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}">
+                  <td class="text-start" style="font-size: 0.85rem;" data-value="${placaRaw}">${chkHtml}∟ <b>${placaRaw}</b></td>
+                  <td>${utsDisplay}</td>
+                  <td>${fechaLimpia}</td>
+                  <td>${km_cambio.toLocaleString()}</td>
+                  <td>${fmtTipo}</td>
+                  <td>${fmtKmGps}</td>
+                  <td style="color: #64748b; font-weight: bold;">${km_desde.toLocaleString()}</td>
+                  <td>${fmtFalta}</td>
+                  <td class="text-center"><span class="badge ${badgeClass} w-100">${estadoKpi}</span></td>
+                  <td>${menuAcciones}</td>
+              </tr>`;
           });
       });
-      placaEstadoMap.forEach(function(estado) { if (estado === 'VENCIDO') cntVenc++; else if (estado === 'POR_VENCER') cntPV++; else cntVig++; });
+      placaEstadoMap.forEach(function(estado) { if (estado === 'CRITICO') cntCrit++; else if (estado === 'RIESGO') cntRiesgo++; else if (estado === 'INMEDIATO') cntInmed++; else cntOper++; });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
   }
   // ── Preservar grupos expandidos antes de re-render ───────────────────────
@@ -167,10 +185,10 @@ function mostrarFleetrun(datos) {
           window._fleetrunDetalleId = null;
       }
   }
-  let kpiV = document.getElementById('kpi-fleet-vigentes'); if(kpiV) kpiV.textContent = cntVig;
-  let kpiP = document.getElementById('kpi-fleet-porvencer'); if(kpiP) kpiP.textContent = cntPV;
-  let kpiVe = document.getElementById('kpi-fleet-vencidos'); if(kpiVe) kpiVe.textContent = cntVenc;
-  if (!isHistorialFleetrun) { updateGraficoFleetrun(cntVig, cntPV, cntVenc); }
+  
+  if (!isHistorialFleetrun) { 
+      updateGraficoFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper, placaEstadoMap.size); 
+  }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
           {label: 'Fecha',         idx: 1, visible: true},
@@ -787,20 +805,66 @@ window.initGraficoFleetrun = function() {
     });
 };
 
-window.updateGraficoFleetrun = function(vigentes, porVencer, vencidos) {
+window.updateGraficoFleetrun = function(criticos, riesgo, inmediatos, operativos, totalFlota) {
+    // 1. Actualizar Datos de Empresa y Fecha
+    const empNombre = localStorage.getItem('fleet_empresa_nombre') || 'Azkell Fleet';
+    const empLogo = localStorage.getItem('fleet_empresa_logo') || '';
+    
+    const elNombreEmp = document.getElementById('scania-nombre-empresa');
+    if (elNombreEmp) elNombreEmp.textContent = empNombre;
+    
+    const elLogoEmp = document.getElementById('scania-logo-empresa');
+    if (elLogoEmp && empLogo) {
+        elLogoEmp.src = empLogo;
+        elLogoEmp.style.display = 'block';
+    }
+
+    const elFecha = document.getElementById('scania-fecha-actual');
+    if (elFecha) {
+        const ahora = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        let fecStr = ahora.toLocaleDateString('es-ES', opciones);
+        fecStr = fecStr.charAt(0).toUpperCase() + fecStr.slice(1);
+        elFecha.textContent = fecStr;
+    }
+
+    // 2. Actualizar KPIs Numéricos
+    const kpiTotal = document.getElementById('sca-kpi-total');
+    const kpiCrit = document.getElementById('sca-kpi-critico');
+    const pctCrit = document.getElementById('sca-pct-critico');
+    const kpiRiesgo = document.getElementById('sca-kpi-riesgo');
+    const pctRiesgo = document.getElementById('sca-pct-riesgo');
+    const kpiInm = document.getElementById('sca-kpi-inmediato');
+    const pctInm = document.getElementById('sca-pct-inmediato');
+    const kpiOper = document.getElementById('sca-kpi-operativo');
+    const pctOper = document.getElementById('sca-pct-operativo');
+
+    if (kpiTotal) kpiTotal.textContent = totalFlota || 0;
+    
+    const calcPct = (val) => totalFlota ? Math.round((val / totalFlota) * 100) + '%' : '0%';
+    
+    if (kpiCrit) { kpiCrit.textContent = criticos || 0; pctCrit.textContent = calcPct(criticos); }
+    if (kpiRiesgo) { kpiRiesgo.textContent = riesgo || 0; pctRiesgo.textContent = calcPct(riesgo); }
+    if (kpiInm) { kpiInm.textContent = inmediatos || 0; pctInm.textContent = calcPct(inmediatos); }
+    if (kpiOper) { kpiOper.textContent = operativos || 0; pctOper.textContent = calcPct(operativos); }
+
+    // 3. Actualizar Gráfico Donut
     if(!window.chartFleetrunInst) window.chartFleetrunInst = initGraficoFleetrun();
     if(!window.chartFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
     window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
     window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    if(vigentes + porVencer + vencidos === 0) {
+    
+    let totalMant = (criticos || 0) + (riesgo || 0) + (inmediatos || 0) + (operativos || 0);
+    if(totalMant === 0) {
         window.chartFleetrunInst.data.labels = ['Sin Datos'];
         window.chartFleetrunInst.data.datasets[0].data = [1];
         window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        window.chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
-        window.chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
-        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+        window.chartFleetrunInst.data.labels = ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'];
+        window.chartFleetrunInst.data.datasets[0].data = [criticos, riesgo, inmediatos, operativos];
+        // Colores Scania-like: Rojo, Naranja, Amarillo, Verde
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#fd7e14', '#ffc107', '#198754'];
     }
     window.chartFleetrunInst.update();
 };
@@ -811,7 +875,7 @@ window.procesarFleetrunParaDashboard = function() {
         return;
     }
 
-    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
+    let cntCrit = 0, cntRiesgo = 0, cntInmed = 0, cntOper = 0;
     let parseFecha = (str) => {
         if(!str) return 0;
         if(str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
@@ -834,29 +898,31 @@ window.procesarFleetrunParaDashboard = function() {
 
     datosActuales.forEach((item) => {
         let fila = item.row;
-        let infoPlaca = item.infoPlaca;
-
-        let placaRaw = fila[4];
         let km_prox = parseFloat(fila[11]) || 0;
-
-        let utsRaw = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (fila[7] || "-");
+        let km_cambio = parseFloat(fila[9]) || 0;
+        let frecuencia = parseFloat(fila[10]) || 0;
+        let placaRaw = fila[4];
 
         let km_gps = 0;
         let wialonData = buscarWialonPorPlaca(placaRaw);
         if (wialonData) { km_gps = wialonData.km; }
 
-        let falta_km = km_prox - km_gps;
+        let km_desde = km_gps - km_cambio;
+        let km_restante = frecuencia - km_desde;
+        if (km_restante < 0 && !isHistorialFleetrun) km_restante = km_prox - km_gps;
 
-        if (falta_km <= 0) {
-            cntTotalVenc++;
-        } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) || (normalizeStr(utsRaw) === "LOCAL" && falta_km <= 100))) {
-            cntTotalPV++;
+        if (km_restante <= 0) {
+            cntCrit++;
+        } else if (km_restante <= 1000) {
+            cntRiesgo++;
+        } else if (km_restante <= 2500) {
+            cntInmed++;
         } else {
-            cntTotalVig++;
+            cntOper++;
         }
     });
 
-    updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+    updateGraficoDashFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper);
 };
 
 window.initGraficoDashFleetrun = function() {
@@ -900,20 +966,21 @@ window.initGraficoDashFleetrun = function() {
     });
 };
 
-window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
+window.updateGraficoDashFleetrun = function(criticos, riesgo, inmediatos, operativos) {
     if(!chartDashFleetrunInst) chartDashFleetrunInst = initGraficoDashFleetrun();
     if(!chartDashFleetrunInst) return;
     let isDark = document.body.classList.contains('dark');
     chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
     chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    if(vigentes + porVencer + vencidos === 0) {
+    let totalMant = (criticos || 0) + (riesgo || 0) + (inmediatos || 0) + (operativos || 0);
+    if(totalMant === 0) {
         chartDashFleetrunInst.data.labels = ['Sin Datos'];
         chartDashFleetrunInst.data.datasets[0].data = [1];
         chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        chartDashFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
-        chartDashFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
-        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+        chartDashFleetrunInst.data.labels = ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'];
+        chartDashFleetrunInst.data.datasets[0].data = [criticos, riesgo, inmediatos, operativos];
+        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#fd7e14', '#ffc107', '#198754'];
     }
     chartDashFleetrunInst.update();
 };
