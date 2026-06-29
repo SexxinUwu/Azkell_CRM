@@ -16,9 +16,7 @@ function cargarTablaFleetrun(forzarRefresh = false) {
     if (!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; }
     const cuerpo = document.getElementById('cuerpoTablaFleetrun');
     if (cuerpo) {
-        cuerpo.innerHTML = typeof generarSkeletonHtml === 'function'
-            ? generarSkeletonHtml(10, 10)
-            : '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
+        cuerpo.innerHTML = '<tr><td colspan="10" class="td-empty text-center py-5" style="color: var(--subtext); font-weight: 500;"><span class="spinner-border spinner-border-sm text-warning me-2"></span>Cargando mantenimientos...</td></tr>';
     }
     fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
         .then(function(r) { return r.json(); })
