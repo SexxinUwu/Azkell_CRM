@@ -327,6 +327,10 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-auditoria', vAudit);
     safe('wrap-usuarios',  vSeg);
     safe('wrap-auditoria', vAudit);
+    
+    // Configuración
+    safe('nav-cfg-empresa', vSeg);
+    safe('mbnav-cfg-empresa', vSeg);
     // ─────────────────────────────────────────────────────────────────
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---
@@ -2647,7 +2651,7 @@ window.cargarConfigSection = function(section) {
     window._pendingCfgSection = section;
     document.querySelectorAll('#sidebarMenu .nav-item').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.nav-section-toggle').forEach(b => b.classList.remove('section-has-active'));
-    const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma' };
+    const cfgMap = { perfil:'nav-cfg-perfil', apariencia:'nav-cfg-apariencia', accesibilidad:'nav-cfg-accesibilidad', idioma:'nav-cfg-idioma', empresa:'nav-cfg-empresa', usuarios:'nav-cfg-admin', auditoria:'nav-cfg-auditoria' };
     const el = document.getElementById(cfgMap[section] || 'nav-cfg-perfil');
     if (el) el.classList.add('active');
     // Marcar sección configuración como activa
@@ -2907,6 +2911,11 @@ function rellenarDatalist(id, setObj) {
         Array.from(setObj).sort().forEach(v => { el.innerHTML += `<option value="${v}">`; });
     }
 }
+window.showConfig = function(panel) {
+    const panels  = ['apariencia', 'accesibilidad', 'idioma', 'empresa'];
+    const buttons = document.querySelectorAll('.config-nav-btn');
+    // ... rest of the function implementation
+};
 function autocompletarRuc(clienteIngresado, inputRucId) { let rucInput = document.getElementById(inputRucId); if (!rucInput || !clienteIngresado) return; let match = dataGlobalPlacas.find(p => p[1] && p[1].trim().toLowerCase() === clienteIngresado.trim().toLowerCase() && p[2] && p[2].trim() !== "" && p[2].trim() !== "-"); if (match) { rucInput.value = match[2].trim(); } }
 function rellenarFiltroCheck(idLista, setObj, fnName) {
     const ul = document.getElementById(idLista);

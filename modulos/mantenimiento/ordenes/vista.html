@@ -365,7 +365,7 @@
 
             <!-- TAB OTS -->
             <div id="ot-panel-ots">
-                <table id="ot-tabla-ots">
+                <div class="table-container flex-grow-1 overflow-auto"><table id="ot-tabla-ots" class="table table-custom m-0">
                     <thead>
                         <tr>
                             <th>N° OT</th>
@@ -378,13 +378,12 @@
                             <th>Costo Total</th>
                         </tr>
                     </thead>
-                    <tbody id="ot-tbody-ots"></tbody>
-                </table>
+                    <tbody id="ot-tbody-ots"></tbody></table></div>
             </div>
 
             <!-- TAB TRABAJOS -->
             <div id="ot-panel-trabajos" style="display:none">
-                <table id="ot-tabla-trabajos">
+                <div class="table-container flex-grow-1 overflow-auto"><table id="ot-tabla-trabajos" class="table table-custom m-0">
                     <thead>
                         <tr>
                             <th>ID Trabajo</th>
@@ -397,8 +396,7 @@
                             <th>Estado</th>
                         </tr>
                     </thead>
-                    <tbody id="ot-tbody-trabajos"></tbody>
-                </table>
+                    <tbody id="ot-tbody-trabajos"></tbody></table></div>
             </div>
 
             <!-- TAB MATERIALES -->
@@ -407,7 +405,7 @@
                     <div class="ot-tab" id="mat-tab-pend" onclick="window.otMatTab('pend')" style="padding:10px 0; margin-right:1.5rem;">Solicitudes Pendientes</div>
                     <div class="ot-tab" id="mat-tab-desp" onclick="window.otMatTab('desp')">Despachadas</div>
                 </div>
-                <table id="ot-tabla-materiales">
+                <div class="table-container flex-grow-1 overflow-auto"><table id="ot-tabla-materiales" class="table table-custom m-0">
                     <thead>
                         <tr>
                             <th>ID Solicitud</th>
@@ -420,8 +418,7 @@
                             <th>Estado</th>
                         </tr>
                     </thead>
-                    <tbody id="ot-tbody-materiales"></tbody>
-                </table>
+                    <tbody id="ot-tbody-materiales"></tbody></table></div>
             </div>
 
             <!-- TAB BACKLOG -->
@@ -433,7 +430,7 @@
                         <i class="bi bi-plus-lg me-1"></i>Registrar
                     </button>
                 </div>
-                <table id="ot-tabla-backlog">
+                <div class="table-container flex-grow-1 overflow-auto"><table id="ot-tabla-backlog" class="table table-custom m-0">
                     <thead>
                         <tr>
                             <th>F. Registro</th>
@@ -445,8 +442,7 @@
                             <th>Estado</th>
                         </tr>
                     </thead>
-                    <tbody id="ot-tbody-backlog"></tbody>
-                </table>
+                    <tbody id="ot-tbody-backlog"></tbody></table></div>
             </div>
 
         </div>
