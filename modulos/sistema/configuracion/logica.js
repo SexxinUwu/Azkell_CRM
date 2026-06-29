@@ -107,7 +107,7 @@ window.init_configuracion = function() {
 
 // ---- Navegación de paneles ----
 window.showConfig = function(panel) {
-    const panels  = ['apariencia', 'accesibilidad', 'idioma'];
+    const panels  = ['apariencia', 'accesibilidad', 'idioma', 'usuarios', 'auditoria', 'empresa'];
     const buttons = document.querySelectorAll('.config-nav-btn');
 
     panels.forEach(p => {

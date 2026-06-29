@@ -3564,3 +3564,6 @@ html, body { width: 100vw !important; max-width: 100vw !important; margin: 0 !im
 #app-crm, .content, .main-area, .modulo-wrapper { padding: 0 !important; margin: 0 !important; max-width: none !important; border-radius: 0 !important; box-shadow: none !important; }
 .topbar { margin: 0 !important; border-radius: 0 !important; }
 @media (max-width: 1024px) { .sidebar { display: none !important; } }
+
+/* Fix btn-reload focus ring */
+.btn-reload-cache:focus, .btn-reload-cache:active, .btn-outline-secondary:focus, .btn-outline-secondary:active { box-shadow: none !important; outline: none !important; }

@@ -1225,6 +1225,18 @@ window.init_fleetrun = function() {
     }
     var btnNuevoFR = document.getElementById('btnNuevoFleetrun');
     if (btnNuevoFR) btnNuevoFR.style.display = window.checkPerm('fleet','c') ? '' : 'none';
+
+    // Ocultar filtro Empresa para no administradores/fundadores
+    let role = window.userRole || localStorage.getItem('fleet_rol') || 'tecnico';
+    let wrapFiltroEmp = document.getElementById('filtroFleetClienteWrap');
+    if (wrapFiltroEmp) {
+        if (role !== 'admin' && role !== 'fundador' && role !== 'Administrador') {
+            wrapFiltroEmp.style.display = 'none';
+        } else {
+            wrapFiltroEmp.style.display = 'inline-block';
+        }
+    }
+
     if (window.chartFleetrunInst) {
         window.chartFleetrunInst.destroy();
         window.chartFleetrunInst = null;
