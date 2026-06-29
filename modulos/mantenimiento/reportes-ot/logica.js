@@ -1998,6 +1998,7 @@ window.rotGuardarMaterial = function() {
     var cants = document.querySelectorAll('.rot-mat-item-cant');
     var cus   = document.querySelectorAll('.rot-mat-item-cu');
     var imps  = document.querySelectorAll('.rot-mat-item-imp');
+    var invIds = document.querySelectorAll('.rot-mat-item-inv-id');
     var items = [];
     for (var i = 0; i < cants.length; i++) {
         var desc = descs[i] ? descs[i].value.trim() : '';
@@ -2005,8 +2006,9 @@ window.rotGuardarMaterial = function() {
         var cant = parseFloat(cants[i].value) || 0;
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
+        var invId = (invIds[i] && invIds[i].value) ? invIds[i].value : null;
         if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
-        items.push({ descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
+        items.push({ inventario_id: invId, descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
     }
     if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
