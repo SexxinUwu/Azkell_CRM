@@ -80,7 +80,14 @@ function mostrarFleetrun(datos) {
   else {
       let canEditF = window.checkPerm('fleet','e'); let canDeleteF = window.checkPerm('fleet','d'); let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map();
       datosAMostrar.forEach((fila) => { let placaRaw = fila[4] || "-"; if(!mapPlacas.has(placaRaw)) mapPlacas.set(placaRaw, []); mapPlacas.get(placaRaw).push(fila); });
+      window._totalGruposFleetrun = mapPlacas.size;
+      window.fleetrunTotalPages = Math.ceil(mapPlacas.size / window.fleetrunPageSize) || 1;
+      if(window.fleetrunCurrentPage > window.fleetrunTotalPages) window.fleetrunCurrentPage = window.fleetrunTotalPages;
+      if(window.fleetrunCurrentPage < 1) window.fleetrunCurrentPage = 1;
+      let _groupIndex = 0;
       mapPlacas.forEach((mantenimientos, placaRaw) => {
+          let pageNum = Math.floor(_groupIndex / window.fleetrunPageSize) + 1;
+          _groupIndex++;
           let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
           let isActive = infoP && infoP[18] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
@@ -94,7 +101,7 @@ function mostrarFleetrun(datos) {
                   kmDiaBadge = `<span class="badge bg-dark ms-2" style="font-size:0.65rem;opacity:0.75"><i class="bi bi-graph-up me-1"></i>${Number(val).toLocaleString()} ${unit}</span>`;
               }
           }
-          html += `<tr class="group-header data-row-fleetrun" style="cursor:pointer;" onclick="toggleGroupRow('child-${classPlaca}', this)" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}">
+          html += `<tr class="group-header data-row-fleetrun fleet-page fleet-page-${pageNum}" style="cursor:pointer;" onclick="toggleGroupRow('child-${classPlaca}', this)" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}">
               <td colspan="10" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span>${kmDiaBadge}<span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[12] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
@@ -133,7 +140,7 @@ function mostrarFleetrun(datos) {
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
               
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}">
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun fleet-page fleet-page-${pageNum}" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}">
                   <td class="text-start" style="font-size: 0.85rem;" data-value="${placaRaw}">${chkHtml}∟ <b>${placaRaw}</b></td>
                   <td>${utsDisplay}</td>
                   <td>${fechaLimpia}</td>
@@ -164,6 +171,7 @@ function mostrarFleetrun(datos) {
   }
   
   tbodyFleetrun.innerHTML = html;
+  if(typeof window.fleetrunPaginar === 'function') window.fleetrunPaginar(0);
   if(datosAMostrar && datosAMostrar.length > 0) {
       // ── Restaurar grupos que estaban abiertos ────────────────────────────────
       _expandedGroupsBefore.forEach(function(groupClass) {
