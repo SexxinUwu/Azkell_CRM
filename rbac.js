@@ -12,7 +12,7 @@ module.exports = function globalRBAC(req, res, next) {
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
-    // Datos de referencia globales (Solo lectura para usuarios autenticados)
+    // Datos de referencia globales ampliados: Listas desplegables permitidas para cualquier usuario autenticado
     const globalReferenceGets = [
         '/config-metrica',
         '/km-historico',
@@ -20,8 +20,18 @@ module.exports = function globalRBAC(req, res, next) {
         '/almacen/familias',
         '/almacen/marcas',
         '/almacen/sistemas',
+        '/almacen/unidades',
+        '/almacen/proveedores',
+        '/almacen/placas',
         '/catalogos_taller',
-        '/almacen/notificaciones/resumen'
+        '/almacen/notificaciones/resumen',
+        '/tipos-preventivo',
+        '/tipos-mantenimiento',
+        '/mantenimiento-kits',
+        '/taller-rampas',
+        '/taller-personal',
+        '/roles',
+        '/usuarios-v2'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
         return next();
