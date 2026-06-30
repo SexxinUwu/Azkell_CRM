@@ -1,0 +1,51 @@
+<div id="moduloFleetrunConfig" class="d-flex flex-column" style="height: 100%; background-color: var(--bg);">
+    <div class="px-3 py-2 border-bottom shadow-sm d-flex justify-content-between align-items-center" style="background-color: var(--surface);">
+        <h5 class="m-0 fw-bold text-primary d-flex align-items-center">
+            <i class="bi bi-gear-wide-connected me-2"></i> Configuración Fleetrun (Umbrales UTS)
+        </h5>
+        <div>
+            <button class="btn btn-light border btn-sm shadow-sm" onclick="cargarModuloAislado('administracion')">
+                <i class="bi bi-arrow-left"></i> Volver a Administración
+            </button>
+            <button class="btn btn-primary btn-sm shadow-sm ms-2" onclick="guardarFleetrunConfig()">
+                <i class="bi bi-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto p-4">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="alert alert-info border-0 shadow-sm rounded-4" style="font-size: 0.85rem;">
+                    <i class="bi bi-info-circle-fill me-1"></i> 
+                    Configura el umbral de "KMs (u Horas) para Próximo Servicio" que determina cuándo un mantenimiento pasa al estado <strong>Próximo a Vencer (Amarillo)</strong>. Si falta más de este umbral, estará <strong>Vigente (Verde)</strong>. Si faltan 0 o menos, estará <strong>Vencido (Rojo)</strong>.
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 mt-3">
+                    <div class="card-header bg-transparent border-bottom px-4 py-3 fw-bold">
+                        Umbrales por UTS
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover m-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Nombre UTS (Ej: Local, Nacional)</th>
+                                    <th>Umbral (KMs / Horas)</th>
+                                    <th class="text-center pe-4" style="width: 80px;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleetrunConfigUtsTbody">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-transparent border-top p-3 text-center">
+                        <button class="btn btn-light border btn-sm fw-bold text-primary rounded-pill px-4" onclick="addFleetrunConfigUtsRow('', 2000)">
+                            <i class="bi bi-plus-lg me-1"></i> Agregar Nueva UTS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
