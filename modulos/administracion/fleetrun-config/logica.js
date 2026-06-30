@@ -29,8 +29,8 @@ window.renderFleetrunConfigUtsTable = function(umbrales) {
     tbody.innerHTML = '';
     let keys = Object.keys(umbrales);
     if(keys.length === 0) {
-        // Al menos una fila vacía por defecto
-        addFleetrunConfigUtsRow('', 2000);
+        addFleetrunConfigUtsRow('Nacional', 2000);
+        addFleetrunConfigUtsRow('Local', 100);
     } else {
         keys.forEach(k => {
             addFleetrunConfigUtsRow(k, umbrales[k]);
@@ -50,20 +50,26 @@ window.addFleetrunConfigUtsRow = function(utsNombre = 'Nacional', umbral = 2000)
     let tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="ps-4">
-            <select class="form-select form-select-sm fleetrun-cfg-uts">
+            <select class="form-select form-select-sm fleetrun-cfg-uts fw-bold text-primary border-primary">
                 <option value="Nacional" ${isNacional}>Nacional</option>
                 <option value="Local" ${isLocal}>Local</option>
                 ${isOther}
             </select>
         </td>
         <td>
-            <input type="number" class="form-control form-control-sm fleetrun-cfg-umbral" placeholder="2000" value="${umbral}" oninput="updateFleetrunCfgIndicators(this)">
+            <div class="badge bg-danger bg-opacity-10 text-danger border border-danger w-100 p-2 text-start fs-6">
+                <i class="bi bi-exclamation-circle-fill me-1"></i> &le; 0
+            </div>
         </td>
         <td>
-            <div class="d-flex flex-column gap-1" style="font-size: 0.8rem;">
-                <span class="badge bg-success text-start w-100" style="padding: 0.5em;"><i class="bi bi-check-circle-fill"></i> Vigente (> <span class="ind-val">${umbral}</span>)</span>
-                <span class="badge bg-warning text-dark text-start w-100" style="padding: 0.5em;"><i class="bi bi-exclamation-triangle-fill"></i> Próximo a Vencer (0 a <span class="ind-val">${umbral}</span>)</span>
-                <span class="badge bg-danger text-start w-100" style="padding: 0.5em;"><i class="bi bi-exclamation-circle-fill"></i> Vencido (<= 0)</span>
+            <div class="d-flex align-items-center bg-warning bg-opacity-10 text-dark border border-warning rounded p-1 w-100">
+                <span class="ms-1 me-2 fw-bold text-warning-emphasis">> 0 y &le;</span>
+                <input type="number" class="form-control form-control-sm fleetrun-cfg-umbral fw-bold text-center" style="max-width: 100px;" value="${umbral}" oninput="updateFleetrunCfgIndicators(this)">
+            </div>
+        </td>
+        <td>
+            <div class="badge bg-success bg-opacity-10 text-success border border-success w-100 p-2 text-start fs-6">
+                <i class="bi bi-check-circle-fill me-1"></i> > <span class="ind-val">${umbral}</span>
             </div>
         </td>
         <td class="text-center pe-4 align-middle">
