@@ -795,7 +795,7 @@ window.importarExcelFleetrun = function(event) {
             let frecStr = String(r['FRECUENCIA'] || '0').replace(/,/g, '');
             let frec = parseFloat(frecStr) || 0;
             
-            let placaVal = r['PLACA'] || '';
+            let placaVal = r['PLACA'] || r['PLACA Y MARCA'] || r['PLACA / MARCA'] || r['PLACA/MARCA'] || '';
             let marca = '', dueno = '', uts = '', combustible = '', modelo = '', wialonKm = '';
             
             let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0].toLowerCase() === placaVal.toLowerCase());
