@@ -408,6 +408,12 @@ function _filtrarDatosAMostrar(datos) {
     });
 }
 
+
+window._cbOnSelect('f_placa', function() { window.autocompletarFleetrun('f'); window.calcularFrecuenciaFleetrun('f'); });
+window._cbOnSelect('eF_placa', function() { window.autocompletarFleetrun('eF'); window.calcularFrecuenciaFleetrun('eF'); });
+window._cbOnSelect('f_tipomp', function() { window.calcularFrecuenciaFleetrun('f'); });
+window._cbOnSelect('eF_tipomp', function() { window.calcularFrecuenciaFleetrun('eF'); });
+
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
     if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
     if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
@@ -1318,3 +1324,55 @@ window.init_fleetrun = function() {
     cargarTablaFleetrun(true); // fetch fresco en paralelo (actualiza la tabla al llegar)
 };
 // NOTA: cargarTablaFleetrun es function declaration — va a window automáticamente al cargar el script.
+
+
+window.calcularFrecuenciaFleetrun = function(prefix) {
+    if (!window.dataTiposMant || window.dataTiposMant.length === 0) return;
+    
+    let marca = (document.getElementById(prefix + '_marca').value || '').trim().toLowerCase();
+    let tipoMP = (document.getElementById(prefix + '_tipomp').value || '').trim().toLowerCase();
+    let uts = (document.getElementById(prefix + '_uts').value || '').trim().toLowerCase();
+    let combustible = (document.getElementById(prefix + '_combustible').value || '').trim().toLowerCase();
+    let modelo = (document.getElementById(prefix + '_modelo').value || '').trim().toLowerCase();
+
+    if (!marca || !tipoMP) return;
+
+    let match = window.dataTiposMant.find(t => {
+        let tMarca = (t.marca || '').trim().toLowerCase();
+        let tTipoMP = (t.tipo_mp || '').trim().toLowerCase();
+        let tUts = (t.uts || '').trim().toLowerCase();
+        let tComb = (t.combustible || '').trim().toLowerCase();
+        let tMod = (t.modelo || '').trim().toLowerCase();
+        
+        let matchMarca = (!tMarca || tMarca === marca);
+        let matchTipoMP = (!tTipoMP || tTipoMP === tipoMP);
+        let matchUts = (!tUts || tUts === uts);
+        let matchComb = (!tComb || tComb === combustible);
+        let matchMod = (!tMod || tMod === modelo);
+        
+        return matchMarca && matchTipoMP && matchUts && matchComb && matchMod;
+    });
+
+    if (match) {
+        let placaInput = document.getElementById(prefix + '_placa').value;
+        let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0] === placaInput);
+        let metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
+        
+        let frec = 0;
+        if (metrica.includes('HR') || metrica.includes('HORA')) {
+            frec = match.frecuencia_horas || match.frecuencia_km || 0;
+        } else {
+            frec = match.frecuencia_km || match.frecuencia_horas || 0;
+        }
+
+        if (frec > 0) {
+            let elemFrec = document.getElementById(prefix + '_freckm');
+            if (elemFrec) {
+                elemFrec.value = frec;
+                if (typeof window.calcularProximo === 'function') {
+                    window.calcularProximo(prefix);
+                }
+            }
+        }
+    }
+};
