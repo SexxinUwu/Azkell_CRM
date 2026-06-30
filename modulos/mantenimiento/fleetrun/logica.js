@@ -795,7 +795,7 @@ window.importarExcelFleetrun = function(event) {
             let frecStr = String(r['FRECUENCIA'] || '0').replace(/,/g, '');
             let frec = parseFloat(frecStr) || 0;
             
-            let placaVal = r['PLACA'] || r['PLACA Y MARCA'] || r['PLACA / MARCA'] || r['PLACA/MARCA'] || '';
+            let placaVal = String(r['PLACA'] || r['PLACA Y MARCA'] || r['PLACA / MARCA'] || r['UNIDAD'] || r['VEHICULO'] || '').trim();
             let marca = '', dueno = '', uts = '', combustible = '', modelo = '', wialonKm = '';
             
             let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0].toLowerCase() === placaVal.toLowerCase());
@@ -835,6 +835,13 @@ window.importarExcelFleetrun = function(event) {
             };
 
         });
+
+        if (registrosProcesados.length > 0 && registrosProcesados.every(r => !r.placa || r.placa.trim() === '')) {
+            let keys = Object.keys(rawJson[0] || {}).join(', ');
+            alert(`Error crítico: No se encontró la columna PLACA o está vacía en todas las filas.\nColumnas detectadas en tu Excel: ${keys}\nPor favor verifica que la columna se llame exactamente PLACA.`);
+            document.body.style.cursor = 'default'; event.target.value = '';
+            return;
+        }
 
         fetch('/api/importarFleetrunMasivo', {
             method: 'POST',
