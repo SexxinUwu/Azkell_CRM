@@ -842,7 +842,7 @@ window.importarExcelFleetrun = function(event) {
             body: JSON.stringify({ registros: registrosProcesados })
         }).then(res => res.json()).then(r => {
             document.body.style.cursor = 'default'; event.target.value = '';
-            alert(`Importación completada.\nProcesados: ${r.ok}\nErrores: ${r.errores}`);
+            alert(`Importación completada.\nProcesados: ${r.ok}\nErrores: ${r.errores}\nDetalle: ${r.detalle || 'Ninguno'}`);
             recargarModulo('fleetrun');
         }).catch(err => {
             document.body.style.cursor = 'default'; event.target.value = '';
