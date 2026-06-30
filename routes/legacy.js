@@ -4,6 +4,313 @@ const router = express.Router();
 
 module.exports = (db, broadcast, logAudit) => {
 
+
+
+// ── IMPORTACIÓN MASIVA DE PLACAS (23 CAMPOS) ─────────────────────────────────
+
+
+router.post('/importarPlacasMasivo', async (req, res) => {
+    const { registros } = req.body;
+    if (!Array.isArray(registros) || !registros.length) {
+        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
+    }
+
+    const query = `
+        INSERT INTO placas (
+            placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
+            nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
+            combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
+        ) VALUES ?
+        ON DUPLICATE KEY UPDATE
+            cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
+            modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
+            color=VALUES(color), nro_motor=VALUES(nro_motor), nro_caja=VALUES(nro_caja),
+            nro_corona=VALUES(nro_corona), nro_vin=VALUES(nro_vin), configuracion=VALUES(configuracion),
+            anio=VALUES(anio), combustible=VALUES(combustible), carga_util=VALUES(carga_util),
+            peso_neto=VALUES(peso_neto), peso_bruto=VALUES(peso_bruto), estado=VALUES(estado),
+            uts=VALUES(uts), motora=VALUES(motora), llantas=VALUES(llantas), en_uso=VALUES(en_uso)
+    `;
+
+    let ok = 0, errores = 0;
+    const validos = registros.filter(r => {
+        const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
+        if (!placa) { errores++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
+                r.cliente || r.CLIENTE || '',
+                r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
+                r.marca || r.MARCA || '',
+                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
+                r.tipo || r.TIPO || '',
+                r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
+                r.color || r.COLOR || '',
+                r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
+                r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
+                r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
+                r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
+                r.configuracion || r.CONFIGURACION || '',
+                r.anio || r.AÑO || r.ANIO || '',
+                (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
+                r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
+                r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
+                r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
+                r.estado || r.ESTADO || 'Activa',
+                r.uts || r.UTS || '',
+                r.motora || r.MOTORA || '',
+                r.llantas || r.LLANTAS || '',
+                r.en_uso || r['EN USO?'] || r.EN_USO || ''
+            ]);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(query, [vals], (err) => {
+                        if (err) return reject(err);
+                        ok += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error('Import error bulk placas:', e.message);
+                errores += lote.length;
+            }
+        }
+    }
+    broadcast('placas', 'importar');
+    res.json({ ok, errores });
+});
+
+// ============================================================
+// 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
+// ============================================================
+router.post('/importarInspeccionesMasivo', async (req, res) => {
+    const registros = req.body.registros;
+    if (!registros || !Array.isArray(registros)) {
+        return res.status(400).json({ error: "Datos inválidos" });
+    }
+
+    // Sanitiza fecha a YYYY-MM-DD o null
+    function sanitizarFecha(val) {
+        if (!val || String(val).trim() === '') return null;
+        let s = String(val).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        // DD/MM/YYYY o DD-MM-YYYY
+        let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+        // Fallback: Date.parse
+        let d = new Date(s);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return null;
+    }
+
+    let okCount = 0;
+    let errCount = 0;
+    let primerError = null;
+
+    const sql = `
+        INSERT INTO inspecciones
+        (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
+        VALUES ?
+        ON DUPLICATE KEY UPDATE
+        fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
+        cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
+    `;
+
+    const validos = registros.filter(r => {
+        const placa = r.PLACA || r.placa || '';
+        if (!placa || placa === "") { errCount++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                sanitizarFecha(r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso),
+                (r.PLACA || r.placa || '').toString().toUpperCase().trim(),
+                parseInt(r['KM TABLERO'] || r.KM || r.km_tablero || '0') || 0,
+                (r.CLIENTE || r.cliente || '').toString().trim(),
+                (r.TECNICO || r.tecnico || '').toString().trim(),
+                parseInt(r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30') || 30,
+                r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]'
+            ]);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(sql, [vals], (err) => {
+                        if (err) return reject(err);
+                        okCount += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error("Error bulk inspecciones:", e.message);
+                if (!primerError) primerError = e.message;
+                errCount += lote.length;
+            }
+        }
+    }
+
+    broadcast('inspecciones', 'importar');
+    res.json({ ok: okCount, errores: errCount, detalle: primerError || null });
+});
+
+// ============================================================
+// 🔥 IMPORTACIÓN MASIVA DE FLEETRUN (DESDE EXCEL)
+// ============================================================
+router.post('/importarFleetrunMasivo', async (req, res) => {
+    const registros = req.body.registros;
+    if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
+
+    let okCount = 0; let errCount = 0;
+
+    const sql = `
+        INSERT INTO fleetrun
+        (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion, combustible, modelo)
+        VALUES ?
+        ON DUPLICATE KEY UPDATE
+        fecha=VALUES(fecha), placa=VALUES(placa), marca=VALUES(marca), dueno=VALUES(dueno), uts=VALUES(uts), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
+        frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), km_gps=VALUES(km_gps), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
+        mes=VALUES(mes), anio=VALUES(anio), combustible=VALUES(combustible), modelo=VALUES(modelo)
+    `;
+
+    const validos = registros.filter(r => {
+        if (!r.placa || r.placa === "") { errCount++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            
+            const vals = lote.map(r => {
+                let marca = r.marca || '';
+                let dueno = r.dueno || '';
+                let uts = r.uts || '';
+                let comb = r.combustible || '';
+                let mod = r.modelo || '';
+                let wkm = r.km_gps || '';
+                return [r.id, r.mes, r.anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, r.kmact, r.freckm, r.kmprox, wkm, r.tec, r.obs, comb, mod];
+            });
+
+
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(sql, [vals], (err) => {
+                        if (err) return reject(err);
+                        okCount += lote.length;
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                console.error("Error bulk fleetrun:", e.message);
+                errCount += lote.length;
+            }
+        }
+    }
+    broadcast('fleetrun', 'importar');
+    res.json({ ok: okCount, errores: errCount });
+});
+
+// ============================================================
+// 🔥 ELIMINACIÓN MASIVA SEGURA (CON DESBLOQUEO DE LLAVES FORÁNEAS)
+// ============================================================
+router.post('/eliminarMasivo', (req, res) => {
+    const { ids, coleccion } = req.body;
+    if (!ids || !ids.length || !coleccion) return res.status(400).json({ error: "Datos incompletos" });
+
+    // 🛡️ VALIDACIÓN DE ROLES PARA ELIMINACIÓN MASIVA
+    if (req.user && req.user.rol !== 'Fundador') {
+        try {
+            let p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
+            if (!p.admin) {
+                let mapPerm = { Placas:'placas', Fleetrun:'fleet', Mantenimientos:'fleet', Inspecciones:'insp', statusMant:'insp', StatusFlota:'status', statusFlota:'status', Usuarios:'seg' };
+                let mod = mapPerm[coleccion];
+                if (!mod || !p[mod] || (p[mod].d !== 1 && p[mod].d !== true)) {
+                    console.warn(`[RBAC] Bloqueado eliminarMasivo en ${coleccion}`);
+                    return res.status(403).json({ error: 'Permisos insuficientes para eliminar masivamente' });
+                }
+            }
+        } catch(e) {}
+    }
+
+    let tabla = '';
+
+    // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota)
+    let campoId = 'idRegistro';
+
+    if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
+    else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
+    else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; campoId = 'id'; }
+    else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
+    else return res.status(400).json({ error: "Colección no válida" });
+
+    const sql = `DELETE FROM ${tabla} WHERE ${campoId} IN (?)`;
+
+    // Obtenemos una conexión exclusiva para apagar los seguros
+    db.getConnection((err, connection) => {
+        if (err) {
+            console.error("Error obteniendo conexión:", err);
+            return res.status(500).json({ error: "Error interno de servidor" });
+        }
+
+        // 1. Apagamos las llaves foráneas para que no bloquee el borrado
+        connection.query('SET FOREIGN_KEY_CHECKS=0;', (err) => {
+            if (err) {
+                connection.release();
+                return res.status(500).json({ error: "No se pudo apagar el seguro de MySQL" });
+            }
+
+            // 2. Eliminamos los registros
+            connection.query(sql, [ids], (errDelete, result) => {
+
+                // 3. Volvemos a prender las llaves foráneas (MUY IMPORTANTE)
+                connection.query('SET FOREIGN_KEY_CHECKS=1;', () => {
+                    connection.release();
+
+                    if (errDelete) {
+                        console.error("Error MySQL en eliminación masiva:", errDelete);
+                        return res.status(500).json({ error: "MySQL dice: " + errDelete.message });
+                    }
+
+                    const COLECCION_MODULO2 = { Placas:'placas', Fleetrun:'fleetrun', Mantenimientos:'fleetrun', Inspecciones:'inspecciones', statusMant:'inspecciones', StatusFlota:'status', statusFlota:'status' };
+                    broadcast(COLECCION_MODULO2[coleccion] || coleccion.toLowerCase(), 'eliminarMasivo');
+                    res.json({ data: 'Éxito', afectados: result.affectedRows });
+                });
+            });
+        });
+    });
+});
+
+// ============================================================
+// 🔥 MÓDULO TALLER V2 (CATÁLOGOS E IDs INTELIGENTES)
+// ============================================================
+
+// ── CRUD cat_rampas ──────────────────────────────────────────────
+// Migración: agregar columna orden si no existe
+db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) => {
+    if (!e) db.query(`UPDATE cat_rampas SET orden=id WHERE orden=0`);
+});
+
+// Auto-seed: si la tabla está vacía, insertar 12 rampas por defecto
+function _seedRampasIfEmpty(cb) {
+    db.query('SELECT COUNT(*) AS cnt FROM cat_rampas', (err, rows) => {
+        if (err || rows[0].cnt > 0) return cb();
+        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible', i+1]);
+        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado, orden) VALUES ?', [vals], cb);
+    });
+}
+
+
+
+    
+// --- RUTA COMODIN MOVIDA AL FINAL ---
 router.post('/:metodo', async (req, res) => {
     const metodo = req.params.metodo;
     console.log(`📡 El sistema solicitó: ${metodo}`);
@@ -629,309 +936,6 @@ router.post('/:metodo', async (req, res) => {
 
     res.json({ data: [] });
 });
-
-// ── IMPORTACIÓN MASIVA DE PLACAS (23 CAMPOS) ─────────────────────────────────
-
-
-router.post('/importarPlacasMasivo', async (req, res) => {
-    const { registros } = req.body;
-    if (!Array.isArray(registros) || !registros.length) {
-        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
-    }
-
-    const query = `
-        INSERT INTO placas (
-            placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
-            nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
-            combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
-        ) VALUES ?
-        ON DUPLICATE KEY UPDATE
-            cliente=VALUES(cliente), ruc_dni=VALUES(ruc_dni), marca=VALUES(marca),
-            modelo_uts=VALUES(modelo_uts), tipo=VALUES(tipo), sub_tipo=VALUES(sub_tipo),
-            color=VALUES(color), nro_motor=VALUES(nro_motor), nro_caja=VALUES(nro_caja),
-            nro_corona=VALUES(nro_corona), nro_vin=VALUES(nro_vin), configuracion=VALUES(configuracion),
-            anio=VALUES(anio), combustible=VALUES(combustible), carga_util=VALUES(carga_util),
-            peso_neto=VALUES(peso_neto), peso_bruto=VALUES(peso_bruto), estado=VALUES(estado),
-            uts=VALUES(uts), motora=VALUES(motora), llantas=VALUES(llantas), en_uso=VALUES(en_uso)
-    `;
-
-    let ok = 0, errores = 0;
-    const validos = registros.filter(r => {
-        const placa = (r.placa || r.PLACA || '').toString().trim().toUpperCase();
-        if (!placa) { errores++; return false; }
-        return true;
-    });
-
-    if (validos.length > 0) {
-        for (let i = 0; i < validos.length; i += 500) {
-            const lote = validos.slice(i, i + 500);
-            const vals = lote.map(r => [
-                (r.placa || r.PLACA || '').toString().trim().toUpperCase(),
-                r.cliente || r.CLIENTE || '',
-                r.ruc_dni || r['RUC / DNI'] || r.RUC_DNI || '',
-                r.marca || r.MARCA || '',
-                r.modelo_uts || r['MODELO UTS'] || r.MODELO_UTS || r.modelo || '',
-                r.tipo || r.TIPO || '',
-                r.sub_tipo || r['SUB TIPO'] || r.SUB_TIPO || '',
-                r.color || r.COLOR || '',
-                r.nro_motor || r['Nº MOTOR'] || r.NRO_MOTOR || '',
-                r.nro_caja || r['Nº CAJA'] || r.NRO_CAJA || '',
-                r.nro_corona || r['Nº CORONA'] || r.NRO_CORONA || '',
-                r.nro_vin || r['Nº VIN'] || r.NRO_VIN || '',
-                r.configuracion || r.CONFIGURACION || '',
-                r.anio || r.AÑO || r.ANIO || '',
-                (r.combustible || r.COMBUSTIBLE || '').replace('Dií©sel','DIESEL').replace('DIÍ©SEL','DIESEL'),
-                r.carga_util || r['CARGA UTIL'] || r.CARGA_UTIL || '',
-                r.peso_neto || r['PESO NETO'] || r.PESO_NETO || '',
-                r.peso_bruto || r['PESO BRUTO'] || r.PESO_BRUTO || '',
-                r.estado || r.ESTADO || 'Activa',
-                r.uts || r.UTS || '',
-                r.motora || r.MOTORA || '',
-                r.llantas || r.LLANTAS || '',
-                r.en_uso || r['EN USO?'] || r.EN_USO || ''
-            ]);
-
-            try {
-                await new Promise((resolve, reject) => {
-                    db.query(query, [vals], (err) => {
-                        if (err) return reject(err);
-                        ok += lote.length;
-                        resolve();
-                    });
-                });
-            } catch (e) {
-                console.error('Import error bulk placas:', e.message);
-                errores += lote.length;
-            }
-        }
-    }
-    broadcast('placas', 'importar');
-    res.json({ ok, errores });
-});
-
-// ============================================================
-// 🔥 IMPORTACIÓN MASIVA DE INSPECCIONES (DESDE EXCEL)
-// ============================================================
-router.post('/importarInspeccionesMasivo', async (req, res) => {
-    const registros = req.body.registros;
-    if (!registros || !Array.isArray(registros)) {
-        return res.status(400).json({ error: "Datos inválidos" });
-    }
-
-    // Sanitiza fecha a YYYY-MM-DD o null
-    function sanitizarFecha(val) {
-        if (!val || String(val).trim() === '') return null;
-        let s = String(val).trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-        // DD/MM/YYYY o DD-MM-YYYY
-        let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-        // Fallback: Date.parse
-        let d = new Date(s);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return null;
-    }
-
-    let okCount = 0;
-    let errCount = 0;
-    let primerError = null;
-
-    const sql = `
-        INSERT INTO inspecciones
-        (id, fecha_ingreso, placa, km_tablero, cliente, tecnico, dias_propuestos, detalles_json)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE
-        fecha_ingreso=VALUES(fecha_ingreso), placa=VALUES(placa), km_tablero=VALUES(km_tablero),
-        cliente=VALUES(cliente), tecnico=VALUES(tecnico), dias_propuestos=VALUES(dias_propuestos), detalles_json=VALUES(detalles_json)
-    `;
-
-    const validos = registros.filter(r => {
-        const placa = r.PLACA || r.placa || '';
-        if (!placa || placa === "") { errCount++; return false; }
-        return true;
-    });
-
-    if (validos.length > 0) {
-        for (let i = 0; i < validos.length; i += 500) {
-            const lote = validos.slice(i, i + 500);
-            const vals = lote.map(r => [
-                r['ID (NO MODIFICAR)'] || r.ID || r.id || `INSP-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                sanitizarFecha(r['FECHA INGRESO'] || r.FECHA || r.fecha_ingreso),
-                (r.PLACA || r.placa || '').toString().toUpperCase().trim(),
-                parseInt(r['KM TABLERO'] || r.KM || r.km_tablero || '0') || 0,
-                (r.CLIENTE || r.cliente || '').toString().trim(),
-                (r.TECNICO || r.tecnico || '').toString().trim(),
-                parseInt(r['DIAS PROPUESTOS'] || r.DIAS || r.dias_propuestos || '30') || 30,
-                r['DETALLES JSON'] || r.DETALLES || r.detalles_json || '[]'
-            ]);
-
-            try {
-                await new Promise((resolve, reject) => {
-                    db.query(sql, [vals], (err) => {
-                        if (err) return reject(err);
-                        okCount += lote.length;
-                        resolve();
-                    });
-                });
-            } catch (e) {
-                console.error("Error bulk inspecciones:", e.message);
-                if (!primerError) primerError = e.message;
-                errCount += lote.length;
-            }
-        }
-    }
-
-    broadcast('inspecciones', 'importar');
-    res.json({ ok: okCount, errores: errCount, detalle: primerError || null });
-});
-
-// ============================================================
-// 🔥 IMPORTACIÓN MASIVA DE FLEETRUN (DESDE EXCEL)
-// ============================================================
-router.post('/importarFleetrunMasivo', async (req, res) => {
-    const registros = req.body.registros;
-    if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
-
-    let okCount = 0; let errCount = 0;
-
-    const sql = `
-        INSERT INTO fleetrun
-        (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion, combustible, modelo)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE
-        fecha=VALUES(fecha), placa=VALUES(placa), marca=VALUES(marca), dueno=VALUES(dueno), uts=VALUES(uts), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
-        frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), km_gps=VALUES(km_gps), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
-        mes=VALUES(mes), anio=VALUES(anio), combustible=VALUES(combustible), modelo=VALUES(modelo)
-    `;
-
-    const validos = registros.filter(r => {
-        if (!r.placa || r.placa === "") { errCount++; return false; }
-        return true;
-    });
-
-    if (validos.length > 0) {
-        for (let i = 0; i < validos.length; i += 500) {
-            const lote = validos.slice(i, i + 500);
-            
-            const vals = lote.map(r => {
-                let marca = r.marca || '';
-                let dueno = r.dueno || '';
-                let uts = r.uts || '';
-                let comb = r.combustible || '';
-                let mod = r.modelo || '';
-                let wkm = r.km_gps || '';
-                return [r.id, r.mes, r.anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, r.kmact, r.freckm, r.kmprox, wkm, r.tec, r.obs, comb, mod];
-            });
-
-
-            try {
-                await new Promise((resolve, reject) => {
-                    db.query(sql, [vals], (err) => {
-                        if (err) return reject(err);
-                        okCount += lote.length;
-                        resolve();
-                    });
-                });
-            } catch (e) {
-                console.error("Error bulk fleetrun:", e.message);
-                errCount += lote.length;
-            }
-        }
-    }
-    broadcast('fleetrun', 'importar');
-    res.json({ ok: okCount, errores: errCount });
-});
-
-// ============================================================
-// 🔥 ELIMINACIÓN MASIVA SEGURA (CON DESBLOQUEO DE LLAVES FORÁNEAS)
-// ============================================================
-router.post('/eliminarMasivo', (req, res) => {
-    const { ids, coleccion } = req.body;
-    if (!ids || !ids.length || !coleccion) return res.status(400).json({ error: "Datos incompletos" });
-
-    // 🛡️ VALIDACIÓN DE ROLES PARA ELIMINACIÓN MASIVA
-    if (req.user && req.user.rol !== 'Fundador') {
-        try {
-            let p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
-            if (!p.admin) {
-                let mapPerm = { Placas:'placas', Fleetrun:'fleet', Mantenimientos:'fleet', Inspecciones:'insp', statusMant:'insp', StatusFlota:'status', statusFlota:'status', Usuarios:'seg' };
-                let mod = mapPerm[coleccion];
-                if (!mod || !p[mod] || (p[mod].d !== 1 && p[mod].d !== true)) {
-                    console.warn(`[RBAC] Bloqueado eliminarMasivo en ${coleccion}`);
-                    return res.status(403).json({ error: 'Permisos insuficientes para eliminar masivamente' });
-                }
-            }
-        } catch(e) {}
-    }
-
-    let tabla = '';
-
-    // Por defecto, busca 'idRegistro' (Fleetrun, Inspecciones, StatusFlota)
-    let campoId = 'idRegistro';
-
-    if (coleccion === 'Placas') { tabla = 'placas'; campoId = 'placa'; }
-    else if (coleccion === 'Fleetrun' || coleccion === 'Mantenimientos') { tabla = 'fleetrun'; }
-    else if (coleccion === 'Inspecciones' || coleccion === 'statusMant') { tabla = 'inspecciones'; campoId = 'id'; }
-    else if (coleccion === 'StatusFlota' || coleccion === 'statusFlota') { tabla = 'status_flota'; }
-    else return res.status(400).json({ error: "Colección no válida" });
-
-    const sql = `DELETE FROM ${tabla} WHERE ${campoId} IN (?)`;
-
-    // Obtenemos una conexión exclusiva para apagar los seguros
-    db.getConnection((err, connection) => {
-        if (err) {
-            console.error("Error obteniendo conexión:", err);
-            return res.status(500).json({ error: "Error interno de servidor" });
-        }
-
-        // 1. Apagamos las llaves foráneas para que no bloquee el borrado
-        connection.query('SET FOREIGN_KEY_CHECKS=0;', (err) => {
-            if (err) {
-                connection.release();
-                return res.status(500).json({ error: "No se pudo apagar el seguro de MySQL" });
-            }
-
-            // 2. Eliminamos los registros
-            connection.query(sql, [ids], (errDelete, result) => {
-
-                // 3. Volvemos a prender las llaves foráneas (MUY IMPORTANTE)
-                connection.query('SET FOREIGN_KEY_CHECKS=1;', () => {
-                    connection.release();
-
-                    if (errDelete) {
-                        console.error("Error MySQL en eliminación masiva:", errDelete);
-                        return res.status(500).json({ error: "MySQL dice: " + errDelete.message });
-                    }
-
-                    const COLECCION_MODULO2 = { Placas:'placas', Fleetrun:'fleetrun', Mantenimientos:'fleetrun', Inspecciones:'inspecciones', statusMant:'inspecciones', StatusFlota:'status', statusFlota:'status' };
-                    broadcast(COLECCION_MODULO2[coleccion] || coleccion.toLowerCase(), 'eliminarMasivo');
-                    res.json({ data: 'Éxito', afectados: result.affectedRows });
-                });
-            });
-        });
-    });
-});
-
-// ============================================================
-// 🔥 MÓDULO TALLER V2 (CATÁLOGOS E IDs INTELIGENTES)
-// ============================================================
-
-// ── CRUD cat_rampas ──────────────────────────────────────────────
-// Migración: agregar columna orden si no existe
-db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) => {
-    if (!e) db.query(`UPDATE cat_rampas SET orden=id WHERE orden=0`);
-});
-
-// Auto-seed: si la tabla está vacía, insertar 12 rampas por defecto
-function _seedRampasIfEmpty(cb) {
-    db.query('SELECT COUNT(*) AS cnt FROM cat_rampas', (err, rows) => {
-        if (err || rows[0].cnt > 0) return cb();
-        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible', i+1]);
-        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado, orden) VALUES ?', [vals], cb);
-    });
-}
-
-
 
     return router;
 };
