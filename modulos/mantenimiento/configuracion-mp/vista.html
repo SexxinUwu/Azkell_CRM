@@ -76,6 +76,8 @@
             <th style="min-width:80px">Marca</th>
             <th style="min-width:140px">Tipo MP</th>
             <th>UTS</th>
+            <th>Combustible</th>
+            <th>Modelo</th>
             <th>Frec. KM</th>
             <th>Frec. Horas</th>
             <th>Frec. Días</th>
@@ -111,7 +113,7 @@
         <datalist id="cf-dl-tipomps"></datalist>
         <datalist id="cf-dl-sistemas"></datalist>
         <div class="row g-3">
-          <div class="col-sm-5">
+          <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
             <input type="text" class="form-control form-control-sm text-uppercase" id="cf-marca"
                    placeholder="VOLVO, SCANIA..." list="cf-dl-marcas" autocomplete="off">
@@ -121,12 +123,22 @@
             <input type="text" class="form-control form-control-sm text-uppercase" id="cf-tipo-mp"
                    placeholder="MP1, FILTRO DE AIRE..." list="cf-dl-tipomps" autocomplete="off">
           </div>
-          <div class="col-sm-3">
+          <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">UTS</label>
             <select class="form-select form-select-sm" id="cf-uts">
               <option value="LOCAL">LOCAL</option>
               <option value="NACIONAL">NACIONAL</option>
             </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Combustible</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="cf-combustible"
+                   placeholder="DIESEL, GNV..." autocomplete="off">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-bold" style="font-size:0.8rem">Modelo</label>
+            <input type="text" class="form-control form-control-sm text-uppercase" id="cf-modelo"
+                   placeholder="FMX, G460..." autocomplete="off">
           </div>
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia KM</label>
