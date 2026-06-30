@@ -421,13 +421,12 @@ router.post('/:metodo', async (req, res) => {
                 isEdit ? form.editF_kmprox  : form.f_kmprox,
                 isEdit ? form.editF_obs     : form.f_obs,
                 isEdit ? form.editF_tec     : form.f_tec,
-                isEdit ? form.editF_kmgps   : form.f_kmgps
+                isEdit ? form.editF_kmgps   : form.f_kmgps,
+                isEdit ? form.editF_combustible : form.f_combustible,
+                isEdit ? form.editF_modelo      : form.f_modelo
             ];
             const query = `
-                INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?
+                INSERT INTO fleetrun (idRegistro, fecha, mes, anio, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, observacion, tecnico, km_gps, combustible, modelo)\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ON DUPLICATE KEY UPDATE\n                fecha=?, mes=?, anio=?, placa=?, marca=?, dueno=?, uts=?, tipo_mp=?, km_actual=?, frecuencia_km=?, km_proximo=?, observacion=?, tecnico=?, km_gps=?, combustible=?, modelo=?
             `;
             db.query(query, [...values, ...values.slice(1)], (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
