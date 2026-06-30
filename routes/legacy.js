@@ -182,7 +182,6 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
 
     const validos = registros.filter(r => {
         if (!r.placa || String(r.placa).trim() === "") { errCount++; return false; }
-        if (!r.fecha || String(r.fecha).trim() === "") { errCount++; return false; }
         return true;
     });
 
@@ -196,13 +195,16 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 let uts = r.uts || '';
                 let comb = r.combustible || '';
                 let mod = r.modelo || '';
-                let wkm = (r.km_gps === '' || r.km_gps == null) ? null : Number(r.km_gps);
+                let wkm = (r.km_gps === '' || r.km_gps == null) ? null : (Number(r.km_gps) || null);
                 let mes = Number(r.mes) || null;
                 let anio = Number(r.anio) || null;
                 let kmact = Number(r.kmact) || 0;
-                let freckm = Number(r.freckm) || null;
-                let kmprox = Number(r.kmprox) || null;
-                return [r.id, mes, anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, kmact, freckm, kmprox, wkm, r.tec, r.obs, comb, mod];
+                let freckm = (r.freckm === '' || r.freckm == null) ? null : (Number(r.freckm) || 0);
+                let kmprox = (r.kmprox === '' || r.kmprox == null) ? null : (Number(r.kmprox) || 0);
+                // Fecha: si viene vacía o inválida, usar fecha de hoy
+                let fecha = r.fecha && String(r.fecha).trim() !== '' ? String(r.fecha).trim() : new Date().toISOString().split('T')[0];
+                if (!/^\d{4}-\d{2}-\d{2}/.test(fecha)) fecha = new Date().toISOString().split('T')[0];
+                return [r.id, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
             });
 
 
