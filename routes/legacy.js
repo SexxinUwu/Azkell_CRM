@@ -181,7 +181,8 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
     `;
 
     const validos = registros.filter(r => {
-        if (!r.placa || r.placa === "") { errCount++; return false; }
+        if (!r.placa || String(r.placa).trim() === "") { errCount++; return false; }
+        if (!r.fecha || String(r.fecha).trim() === "") { errCount++; return false; }
         return true;
     });
 
@@ -195,8 +196,13 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 let uts = r.uts || '';
                 let comb = r.combustible || '';
                 let mod = r.modelo || '';
-                let wkm = r.km_gps || '';
-                return [r.id, r.mes, r.anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, r.kmact, r.freckm, r.kmprox, wkm, r.tec, r.obs, comb, mod];
+                let wkm = (r.km_gps === '' || r.km_gps == null) ? null : Number(r.km_gps);
+                let mes = Number(r.mes) || null;
+                let anio = Number(r.anio) || null;
+                let kmact = Number(r.kmact) || 0;
+                let freckm = Number(r.freckm) || null;
+                let kmprox = Number(r.kmprox) || null;
+                return [r.id, mes, anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, kmact, freckm, kmprox, wkm, r.tec, r.obs, comb, mod];
             });
 
 
