@@ -648,53 +648,54 @@ window.mostrarDetalleFleetrun = function(index) {
     let unidadFalta   = esHorasDet ? 'h'                   : 'km';
 
     let html = `
-        <div class="text-center mb-4">
-            <h3 class="fw-bold text-primary mb-1">${fila[4] || '-'}</h3>
-            <div class="text-muted small mb-2">${marca} • ${dueno}</div>
-            <span class="badge bg-primary text-white shadow-sm me-1">${tipo_mp}</span>
-            <span class="badge shadow-sm px-2 py-1" style="background-color: var(--text) !important; color: var(--surface) !important; border: 1px solid var(--border); font-weight: bold;">${utsRaw}</span>
+        <div class="px-2 mb-4">
+            <h4 class="fw-bolder text-dark mb-0">${fila[4] || '-'}</h4>
+            <div class="text-secondary" style="font-size: 0.8rem;">${marca} • ${dueno}</div>
         </div>
-        <ul class="list-group list-group-flush shadow-sm rounded border" style="font-size: 0.9rem;">
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-hash"></i> ID Mantenimiento</span>
-                <span class="fw-bold">${idStr}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-calendar3"></i> Fecha Registro</span>
-                <span>${fecha}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-speedometer"></i> ${esHorasDet ? 'Horas de Registro' : 'KM de Registro'}</span>
-                <span>${km_actual.toLocaleString()} ${unidadFalta}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-arrow-repeat"></i> Frecuencia</span>
-                <span class="text-warning fw-bold">${frecuencia.toLocaleString()} ${unidadFalta}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-flag"></i> ${esHorasDet ? 'Horas Próximo' : 'KM Próximo'}</span>
-                <span class="fw-bold">${km_prox.toLocaleString()} ${unidadFalta}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi ${gpsIcon}"></i> ${gpsLabel}</span>
-                ${isLive ? `<span class="badge ${gpsBadgeCls} px-2 py-1"><i class="bi ${gpsIcon}"></i> ${km_gps.toLocaleString()}${gpsUnit}</span>` : `<span class="text-secondary fw-bold">${km_gps.toLocaleString()}${gpsUnit}</span>`}
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-heart-pulse"></i> Estado</span>
-                <span class="badge ${badgeClass} shadow-sm px-2 py-1" style="font-size: 0.8rem;">${estadoText} (Faltan ${falta_km.toLocaleString()} ${unidadFalta})</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: var(--surface); color: var(--text); padding: 12px 15px;">
-                <span class="fw-bold text-muted small"><i class="bi bi-person-badge"></i> Técnico</span>
-                <span class="text-end" style="max-width: 55%;">${tecnico}</span>
-            </li>
-        </ul>
+        
+        <div class="border rounded-4 bg-white shadow-sm overflow-hidden mb-3">
+            <ul class="list-group list-group-flush" style="font-size: 0.85rem;">
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">ID Mantenimiento</span>
+                    <span class="fw-bolder text-dark">${idStr}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">Fecha Registro</span>
+                    <span class="fw-bold text-dark">${fecha}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">${esHorasDet ? 'Horas de Registro' : 'KM de Registro'}</span>
+                    <span class="fw-bold text-dark">${km_actual.toLocaleString()} ${unidadFalta}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">Frecuencia</span>
+                    <span class="fw-bolder" style="color: #d97706;">${frecuencia.toLocaleString()} ${unidadFalta}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">${esHorasDet ? 'Horas Próximo' : 'KM Próximo'}</span>
+                    <span class="fw-bolder text-dark">${km_prox.toLocaleString()} ${unidadFalta}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">${gpsLabel}</span>
+                    <span class="fw-bolder" style="color: #0284c7;">${km_gps.toLocaleString()} ${unidadFalta}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">Estado</span>
+                    <span class="badge ${badgeClass} shadow-sm px-2 py-1 rounded-3" style="font-size: 0.75rem;">${estadoText} (Faltan ${falta_km.toLocaleString()} ${unidadFalta})</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <span class="text-secondary">Técnico</span>
+                    <span class="fw-bolder text-dark">${tecnico}</span>
+                </li>
+            </ul>
+        </div>
     `;
 
     if (obs && obs.trim() !== "" && obs.trim() !== "-") {
         html += `
-            <div class="mt-4 p-3 rounded shadow-sm border" style="background-color: var(--surface);">
-                <h6 class="fw-bold text-danger mb-2" style="font-size: 0.8rem;"><i class="bi bi-card-text"></i> OBSERVACIONES</h6>
-                <p class="mb-0" style="color: var(--text); font-size: 0.85rem; line-height: 1.4;">${obs}</p>
+            <div class="p-3 rounded-4 bg-white shadow-sm border">
+                <h6 class="fw-bolder mb-2" style="font-size: 0.75rem; color: #1e293b;">OBSERVACIONES</h6>
+                <p class="mb-0 text-dark" style="font-size: 0.85rem; line-height: 1.4;">${obs}</p>
             </div>
         `;
     }
