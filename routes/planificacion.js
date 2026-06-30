@@ -8,24 +8,22 @@ module.exports = (db, broadcast, logAudit) => {
 // GENERADORES DE ID
 // ============================================================
 
-// Genera ID legible para Fleetrun: FL-AJH832-MP1-20260415
-// Si ya existe ese ID (mismo placa+tipomp+fecha), agrega -2, -3, etc.
+// Genera ID legible para Fleetrun: Prev-2026-0001
+// Secuencial por año
 function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
-    const p = (placa || 'XX').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
-    const t = (tipoMp || 'MP').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
-    const fechaStr = (fecha || new Date().toISOString().split('T')[0]).split('T')[0].replace(/-/g, '');
-    const base = `FL-${p}-${t}-${fechaStr}`;
+    const anio = new Date().getFullYear();
+    const prefix = `Prev-${anio}-`;
     db.query(
-        'SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 10',
-        [base + '%'],
+        `SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 1`,
+        [`${prefix}%`],
         (err, rows) => {
-            if (err || !rows.length) return cb(base);
-            // Si existe el base exacto, buscar el próximo número
-            const existing = rows.map(r => r.idRegistro);
-            if (!existing.includes(base)) return cb(base);
-            let seq = 2;
-            while (existing.includes(`${base}-${seq}`)) seq++;
-            cb(`${base}-${seq}`);
+            let seq = 1;
+            if (!err && rows.length) {
+                const lastId = rows[0].idRegistro;
+                const lastSeq = parseInt(lastId.split('-').pop(), 10);
+                if (!isNaN(lastSeq)) seq = lastSeq + 1;
+            }
+            cb(`${prefix}${String(seq).padStart(4, '0')}`);
         }
     );
 }
