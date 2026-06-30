@@ -796,12 +796,12 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
 
     const sql = `
         INSERT INTO fleetrun
-        (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion, combustible, modelo)
+        (idRegistro, mes, anio, fecha, placa, marca, dueno, uts, tipo_mp, km_actual, frecuencia_km, km_proximo, km_gps, tecnico, observacion)
         VALUES ?
         ON DUPLICATE KEY UPDATE
-        fecha=VALUES(fecha), placa=VALUES(placa), marca=VALUES(marca), dueno=VALUES(dueno), uts=VALUES(uts), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
-        frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), km_gps=VALUES(km_gps), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
-        mes=VALUES(mes), anio=VALUES(anio), combustible=VALUES(combustible), modelo=VALUES(modelo)
+        fecha=VALUES(fecha), placa=VALUES(placa), tipo_mp=VALUES(tipo_mp), km_actual=VALUES(km_actual),
+        frecuencia_km=VALUES(frecuencia_km), km_proximo=VALUES(km_proximo), tecnico=VALUES(tecnico), observacion=VALUES(observacion),
+        mes=VALUES(mes), anio=VALUES(anio)
     `;
 
     const validos = registros.filter(r => {
@@ -812,17 +812,9 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
     if (validos.length > 0) {
         for (let i = 0; i < validos.length; i += 500) {
             const lote = validos.slice(i, i + 500);
-            
-            const vals = lote.map(r => {
-                let marca = r.marca || '';
-                let dueno = r.dueno || '';
-                let uts = r.uts || '';
-                let comb = r.combustible || '';
-                let mod = r.modelo || '';
-                let wkm = r.km_gps || '';
-                return [r.id, r.mes, r.anio, r.fecha, r.placa, marca, dueno, uts, r.tipomp, r.kmact, r.freckm, r.kmprox, wkm, r.tec, r.obs, comb, mod];
-            });
-
+            const vals = lote.map(r => [
+                r.id, r.mes, r.anio, r.fecha, r.placa, '', '', '', r.tipomp, r.kmact, r.freckm, r.kmprox, '', r.tec, r.obs
+            ]);
 
             try {
                 await new Promise((resolve, reject) => {
