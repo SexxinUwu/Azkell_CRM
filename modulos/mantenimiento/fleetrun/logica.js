@@ -432,7 +432,8 @@ window.autocompletarFleetrun = function(prefix) {
         let combustibleElem = document.getElementById(prefix + '_combustible');
         if (combustibleElem) {
             let combVal = match[14] || "";
-            combustibleElem.value = combVal.toUpperCase();
+            combVal = combVal.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            combustibleElem.value = combVal;
             if (!combustibleElem.value && combVal) {
                 // If it doesn't match the dropdown options, just set the text if it was a text input, but it's a select.
             }
