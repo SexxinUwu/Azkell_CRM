@@ -321,35 +321,58 @@ function mostrarFleetrunCards(datosAMostrar) {
         var falta_km   = km_prox - km_gps;
         var originalIndex = dataGlobalFleetrun.findIndex(function(x) { return x[0] === criticalMp[0]; });
 
-        var badgeCls, badgeIcon, badgeLabel, badgeTextColor;
-        if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeIcon = 'bi-exclamation-circle-fill';    badgeLabel = 'Vencido';    badgeTextColor = 'text-danger'; }
-        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeIcon = 'bi-exclamation-triangle-fill'; badgeLabel = 'Por Vencer'; badgeTextColor = 'text-dark'; }
-        else                                   { badgeCls = 'success'; badgeIcon = 'bi-check-circle-fill';          badgeLabel = 'Vigente';    badgeTextColor = 'text-success'; }
+        var badgeCls, badgeTextCls, badgeLabel;
+        if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeLabel = 'VENCIDO';    badgeTextCls = 'text-danger'; }
+        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeLabel = 'POR VENCER'; badgeTextCls = 'text-dark'; }
+        else                                   { badgeCls = 'success'; badgeLabel = 'VIGENTE';    badgeTextCls = 'text-success'; }
 
-        var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">${utsRaw}</span>` : '';
         var numMPs = mantenimientos.length;
-        var mpBadgeHtml = numMPs > 1 
-            ? `<div class="d-flex align-items-center bg-light border rounded px-2 py-1"><i class="bi bi-tools text-secondary me-2" style="font-size:0.8rem;"></i><span class="text-dark fw-bold" style="font-size: 0.75rem;">${numMPs} <span class="fw-normal text-muted">MPs</span></span></div>`
-            : `<div class="d-flex align-items-center bg-light border rounded px-2 py-1"><i class="bi bi-wrench-adjustable text-secondary me-2" style="font-size:0.8rem;"></i><span class="text-dark fw-bold" style="font-size: 0.75rem;">1 <span class="fw-normal text-muted">MP</span></span></div>`;
+        var frecuencia = parseFloat(criticalMp[10]) || 0;
+        var freqText = frecuencia > 0 ? `(${(frecuencia/1000).toFixed(0)}K)` : '';
+        var nombreMP = (criticalMp[8] || '') + ' ' + freqText;
 
-        html += `<div class="card mb-3 border-0 shadow-sm position-relative overflow-hidden" style="border-radius: 12px; cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
-            <div class="position-absolute bg-${badgeCls}" style="width: 5px; height: 100%; left: 0; top: 0;"></div>
-            <div class="card-body py-3 px-4 ms-1">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="d-flex flex-column gap-1">
-                        <h5 class="mb-0 fw-bolder text-dark" style="font-size: 1.15rem; letter-spacing: -0.5px;">${placaRaw}</h5>
-                        ${utsHtml}
+        var kmDesdeUlt = 0;
+        var desgastePct = 0;
+        if (frecuencia > 0) {
+            var kmUltimo = km_prox - frecuencia;
+            kmDesdeUlt = Math.max(0, km_gps - kmUltimo);
+            desgastePct = Math.min(100, Math.round((kmDesdeUlt / frecuencia) * 100));
+        }
+        var barColor = (criticalEstado === 'VENCIDO') ? '#ef4444' : ((criticalEstado === 'POR_VENCER') ? '#f59e0b' : '#10b981');
+        var esHorasLocal = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
+        var unitL = esHorasLocal ? ' h' : ' km';
+
+        html += `<div class="card mb-3 border border-light shadow-sm bg-white" style="border-radius: 16px; cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="border rounded px-2 py-1 fw-bolder text-dark" style="font-size: 0.95rem; background-color: #f8fafc; border-color: #e2e8f0 !important;">${placaRaw}</div>
+                        <div class="rounded px-2 py-1 text-secondary" style="font-size: 0.75rem; background-color: #f1f5f9;">${cli}</div>
                     </div>
-                    <span class="badge bg-${badgeCls} bg-opacity-10 ${badgeTextColor} border border-${badgeCls} rounded-pill px-2 py-1" style="font-size:0.7rem;">
-                        <i class="bi ${badgeIcon} me-1"></i> ${badgeLabel}
-                    </span>
+                    <div class="rounded-pill px-2 py-1 fw-bold ${badgeTextCls}" style="font-size: 0.75rem; background-color: color-mix(in srgb, var(--bs-${badgeCls}) 15%, transparent);">${badgeLabel}</div>
                 </div>
-                <div class="d-flex justify-content-between align-items-end mt-2 pt-2" style="border-top: 1px dashed var(--border);">
-                    <div class="d-flex flex-column">
-                        <span class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Cliente</span>
-                        <span class="text-dark fw-semibold" style="font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cli}</span>
+                
+                <div class="d-flex justify-content-between align-items-end mb-1">
+                    <div style="font-size: 0.75rem; color: #64748b;">${esHorasLocal ? 'Horas Motor' : 'KM GPS'} Actual: <span class="fw-bolder text-dark" style="font-size: 0.85rem;">${km_gps.toLocaleString()}${unitL}</span></div>
+                    <div style="font-size: 0.75rem; color: #64748b;">Próximo: ${km_prox.toLocaleString()}${unitL}</div>
+                </div>
+                
+                <div class="progress mb-1" style="height: 6px; background-color: #e2e8f0; border-radius: 4px;">
+                    <div class="progress-bar" role="progressbar" style="width: ${desgastePct}%; background-color: ${barColor}; border-radius: 4px;"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div style="font-size: 0.7rem; color: #94a3b8;">${kmDesdeUlt.toLocaleString()}${unitL} desde últ. serv.</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">${desgastePct}% de desgaste</div>
+                </div>
+                
+                <hr class="my-2" style="border-top: 1px dashed #cbd5e1; opacity: 1;">
+                
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="fw-bold d-flex align-items-center" style="font-size: 0.85rem; color: #0284c7;">
+                        <i class="bi bi-wrench-adjustable me-2" style="font-size: 1rem;"></i>${nombreMP}
                     </div>
-                    ${mpBadgeHtml}
+                    <div class="rounded-pill px-2 py-1 fw-bold" style="font-size: 0.7rem; color: #0284c7; background-color: #e0f2fe;">${numMPs} Registros</div>
                 </div>
             </div>
         </div>`;

@@ -892,8 +892,20 @@ window._buildFleetTab = function(mode) {
     } else {
         recsToShow = recs.slice().sort(function(a, b) { return parseInt(b[0]) - parseInt(a[0]); });
     }
-    var html = '<div class="px-2 pt-2 pb-1"><input type="text" class="form-control form-control-sm" placeholder="Buscar tipo de MP..." oninput="var q=this.value.toLowerCase();var fl=document.getElementById(\'odp-tab-fleet\');if(fl)fl.querySelectorAll(\'[data-mp-tipo]\').forEach(function(el){el.hidden=!el.dataset.mpTipo.toLowerCase().includes(q);});"></div>'
-        + '<div style="font-size:0.82rem;">';
+    var html = '';
+    if (mode === 'all') {
+        html += '<div class="d-flex justify-content-between align-items-center px-2 pt-2 pb-2 mb-2">'
+            + '<div class="d-flex flex-column">'
+            + '<span class="text-muted" style="font-size: 0.7rem;">Historial para</span>'
+            + '<span class="fw-bolder text-dark" style="font-size: 1.1rem; color: #0369a1 !important;">' + placaCurrent + '</span>'
+            + '</div>'
+            + '<button class="btn btn-sm fw-bold" style="background-color: #f1f5f9; color: #475569; border-radius: 8px;" onclick="window._toggleFleetTab(\'current\')">Volver a Actuales</button>'
+            + '</div>';
+    } else {
+        html += '<div class="px-2 pt-2 pb-2 mb-2"><input type="text" class="form-control form-control-sm" placeholder="Buscar tipo de MP..." style="border-radius: 8px; background-color: #f8fafc;" oninput="var q=this.value.toLowerCase();var fl=document.getElementById(\'odp-tab-fleet\');if(fl)fl.querySelectorAll(\'[data-mp-tipo]\').forEach(function(el){el.hidden=!el.dataset.mpTipo.toLowerCase().includes(q);});"></div>';
+    }
+    html += '<div style="font-size:0.82rem; padding: 0 4px;">';
+    
     recsToShow.forEach(function(r) {
         var kmProx = parseFloat(r[11]) || 0;
         var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
@@ -901,31 +913,41 @@ window._buildFleetTab = function(mode) {
         var falta = kmProx - kmGps;
         var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
         var unitL = esHoras ? ' h' : ' km';
-        var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + unitL;
+        var faltaLabel = Math.abs(falta).toLocaleString() + unitL;
         var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
         var globalIdx = (window._odpFleetRecs || []).indexOf(r);
         
         var txtCls = bCl === 'warning' ? 'dark' : bCl;
+        var bLabel = falta <= 0 ? 'VENCIDO' : (falta <= umbral ? 'POR VENCER' : 'VIGENTE');
+        var statusColor = (falta <= 0) ? '#ef4444' : ((falta <= umbral) ? '#f59e0b' : '#10b981');
         
-        html += '<div class="d-flex align-items-center gap-3 py-3 px-3 mb-3 bg-white rounded shadow-sm border border-light" data-mp-tipo="' + (r[8] || '').replace(/"/g,'') + '" style="cursor:pointer;" onclick="window._showMPDetail(' + globalIdx + ')">'
-            + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' bg-opacity-10 text-' + bCl + '" style="width:2.8rem;height:2.8rem;flex-shrink:0;">'
-            + '<i class="bi bi-wrench-adjustable" style="font-size:1.2rem;"></i></div>'
-            + '<div class="flex-grow-1 min-width-0">'
-            + '<div class="fw-bolder text-dark mb-1" style="font-size: 0.95rem; white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r[8] || '—') + '</div>'
-            + (fechaMost !== '-' ? '<div class="text-muted" style="font-size:0.75rem;"><i class="bi bi-calendar-event me-1"></i>' + fechaMost + '</div>' : '')
-            + '</div>'
-            + '<div class="text-end flex-shrink-0 d-flex flex-column align-items-end">'
-            + '<span class="badge bg-' + bCl + ' bg-opacity-10 text-' + txtCls + ' border border-' + bCl + ' rounded-pill px-2 py-1 mb-1" style="font-size:0.75rem;">' + faltaLabel + '</span>'
-            + '<div class="text-muted" style="font-size:0.7rem;">Próx: <span class="fw-semibold text-dark">' + kmProx.toLocaleString() + '</span></div>'
-            + '</div>'
-            + '<i class="bi bi-chevron-right text-muted ms-2 flex-shrink-0" style="font-size:0.9rem;"></i>'
-            + '</div>';
+        var frecuencia = parseFloat(r[10]) || 0;
+        var kmRegistro = parseFloat(r[2]) || 0;
+
+        html += `<div class="card mb-3 border border-light shadow-sm bg-white" data-mp-tipo="${(r[8] || '').replace(/"/g,'')}" style="border-radius: 12px; cursor:pointer;" onclick="window._showMPDetail(${globalIdx})">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="fw-bolder text-dark" style="font-size: 0.95rem;">${r[8] || '—'}</div>
+                    <div class="rounded px-2 py-1 fw-bold" style="font-size: 0.75rem; color: #0284c7; background-color: #e0f2fe;">
+                        <i class="bi bi-stopwatch me-1"></i>${frecuencia.toLocaleString()}${unitL}
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2" style="border-bottom: 1px dashed #e2e8f0;">
+                    <div style="font-size: 0.75rem; color: #64748b;">Último: <span class="text-dark">${fechaMost} a ${kmRegistro.toLocaleString()}${unitL}</span></div>
+                    <div style="font-size: 0.75rem; color: #64748b;">GPS: <span class="text-dark">${kmGps.toLocaleString()}${unitL}</span></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="fw-bold" style="font-size: 0.75rem; color: ${statusColor};">${bLabel} (${falta > 0 ? 'Faltan' : 'Exceso de'} ${faltaLabel})</div>
+                    <i class="bi bi-arrow-right text-muted" style="font-size: 0.9rem;"></i>
+                </div>
+            </div>
+        </div>`;
     });
-    var toggleMode = mode === 'current' ? 'all' : 'current';
-    var toggleLabel = mode === 'current'
-        ? '<i class="bi bi-clock-history me-1"></i>Ver Historial Completo'
-        : '<i class="bi bi-arrow-left me-1"></i>← Ver actuales';
-    html += '</div><div class="p-2"><button class="btn btn-outline-secondary btn-sm w-100" onclick="window._toggleFleetTab(\'' + toggleMode + '\')">' + toggleLabel + '</button></div>';
+    
+    html += '</div>';
+    if (mode === 'current') {
+        html += '<div class="p-2 mt-2"><button class="btn fw-bold w-100" style="background-color: #f1f5f9; color: #475569; border-radius: 12px;" onclick="window._toggleFleetTab(\'all\')"><i class="bi bi-clock-history me-2"></i>Ver Historial Completo</button></div>';
+    }
     fleetEl.innerHTML = html;
 };
 
@@ -959,30 +981,61 @@ window._showMPDetail = function(idx) {
     var kmGps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(r[14]) || 0);
     var falta = kmProx - kmGps;
     var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
-    var bLabel = falta <= 0 ? 'Vencido' : (falta <= umbral ? 'Por Vencer' : 'Vigente');
-    var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
-    var txtCls = bCl === 'warning' ? 'dark' : bCl;
     var unitL = esHoras ? ' h' : ' km';
+    var faltaLabel = Math.abs(falta).toLocaleString() + unitL;
+    var bLabel = falta <= 0 ? 'VENCIDO' : (falta <= umbral ? 'POR VENCER' : 'VIGENTE');
+    var statusColor = (falta <= 0) ? '#ef4444' : ((falta <= umbral) ? '#f59e0b' : '#10b981');
+    var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
+    var frecuencia = parseFloat(r[10]) || 0;
+    var kmRegistro = parseFloat(r[2]) || 0;
+    var observaciones = r[9] || 'Sin observaciones registradas.';
 
-    fleetEl.innerHTML = '<div style="font-size:0.82rem;" class="pb-4">'
-        + '<button class="btn btn-sm btn-light border shadow-sm rounded-pill mb-3 fw-semibold text-secondary" onclick="window._buildFleetTab(window._odpFleetMode||\'current\')">'
-        + '<i class="bi bi-arrow-left me-1"></i>Volver</button>'
-        + '<div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border border-light mb-3">'
-        + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' bg-opacity-10 text-' + bCl + ' me-3" style="width:3rem;height:3rem;flex-shrink:0;">'
-        + '<i class="bi bi-gear-wide-connected fs-4"></i></div>'
-        + '<div><span class="badge bg-' + bCl + ' bg-opacity-10 text-' + txtCls + ' border border-' + bCl + ' rounded-pill px-2 py-1 mb-1" style="font-size:0.7rem;">' + bLabel + '</span>'
-        + '<div class="fw-bolder text-dark" style="font-size:1.1rem; letter-spacing: -0.5px;">' + (r[8] || '—') + '</div></div>'
-        + '</div>'
-        + '<div class="bg-white rounded shadow-sm border border-light overflow-hidden">'
-        + _odpFila2('ID Mantenimiento', '#' + (r[0] || '—'))
-        + _odpFila2('Fecha Registro', fechaMost)
-        + _odpFila2(esHoras ? 'Horas de Registro' : 'KM de Registro', (parseFloat(r[2]) || 0).toLocaleString() + unitL)
-        + _odpFila2('Frecuencia', r[10] ? (parseFloat(r[10]).toLocaleString() + unitL) : '—')
-        + _odpFila2(esHoras ? 'Horas Próximo' : 'KM Próximo', kmProx.toLocaleString() + unitL)
-        + _odpFila2(esHoras ? 'Horas Motor Actual' : 'KM GPS Actual', kmGps.toLocaleString() + unitL)
-        + _odpFila2('Falta / Exceso', '<span class="text-' + bCl + ' fw-bolder">' + (falta > 0 ? '+' : '') + falta.toLocaleString() + unitL + '</span>')
-        + _odpFila2('Técnico', r[13] || '—')
-        + '</div></div>';
+    function _fila(label, val, valStyle = 'color: #1e293b;') {
+        return `<div class="d-flex justify-content-between py-3 px-3" style="border-bottom: 1px dashed #e2e8f0;">
+            <span class="text-muted" style="font-size: 0.8rem; font-weight: 500;">${label}</span>
+            <span class="fw-bold" style="font-size: 0.85rem; ${valStyle}">${val}</span>
+        </div>`;
+    }
+
+    fleetEl.innerHTML = `
+        <div class="pb-4">
+            <div class="d-flex justify-content-center mb-2">
+                <div style="width: 40px; height: 4px; background-color: #cbd5e1; border-radius: 4px;"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-start mb-3 px-1">
+                <div>
+                    <h4 class="mb-0 fw-bolder text-dark" style="letter-spacing: -0.5px;">${placaCurrent}</h4>
+                    <div class="text-muted" style="font-size: 0.75rem;">${r[8] || 'Detalle MP'}</div>
+                </div>
+                <button class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="window._buildFleetTab(window._odpFleetMode||'current')">
+                    <i class="bi bi-x-lg" style="font-size: 0.8rem;"></i>
+                </button>
+            </div>
+
+            <div class="card border border-light shadow-sm bg-white mb-3" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    ${_fila('ID Mantenimiento', r[0] ? ('#' + r[0]) : '—')}
+                    ${_fila('Fecha Registro', fechaMost)}
+                    ${_fila(esHoras ? 'Horas de Registro' : 'KM de Registro', kmRegistro.toLocaleString() + unitL)}
+                    ${_fila('Frecuencia', frecuencia > 0 ? frecuencia.toLocaleString() + unitL : '—', 'color: #b45309;')}
+                    ${_fila(esHoras ? 'Horas Próximo' : 'KM Próximo', kmProx.toLocaleString() + unitL)}
+                    ${_fila(esHoras ? 'Horas Motor Actual' : 'KM GPS Actual', kmGps.toLocaleString() + unitL, 'color: #0284c7;')}
+                    <div class="d-flex justify-content-between align-items-center py-3 px-3" style="border-bottom: 1px dashed #e2e8f0;">
+                        <span class="text-muted" style="font-size: 0.8rem; font-weight: 500;">Estado</span>
+                        <span class="badge" style="background-color: color-mix(in srgb, ${statusColor} 15%, transparent); color: ${statusColor}; font-size: 0.7rem; border: 1px solid color-mix(in srgb, ${statusColor} 30%, transparent);">${bLabel} (${falta > 0 ? 'Faltan' : 'Exceso'} ${faltaLabel})</span>
+                    </div>
+                    ${_fila('Técnico', r[13] || 'Sin asignar')}
+                </div>
+            </div>
+
+            <div class="card border border-light shadow-sm bg-white" style="border-radius: 12px;">
+                <div class="card-body p-3">
+                    <div class="fw-bolder mb-2" style="font-size: 0.7rem; color: #475569; letter-spacing: 0.5px;">OBSERVACIONES</div>
+                    <div style="font-size: 0.85rem; color: #1e293b; line-height: 1.4;">${observaciones}</div>
+                </div>
+            </div>
+        </div>
+    `;
 };
 
 window.compartirPlacaWhatsApp = function() {
