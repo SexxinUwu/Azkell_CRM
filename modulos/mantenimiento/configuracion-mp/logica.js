@@ -67,7 +67,7 @@ function _cfPopularDatalists() {
 window.cargarTablaConfigFlota = function() {
     var tb = document.getElementById('cfg-flota-tbody');
     if (!tb) return;
-    tb.innerHTML = '<tr><td colspan="11" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="13" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></td></tr>';
     fetch('/api/tipos-mantenimiento')
         .then(function(r) { return r.ok ? r.json() : r.json().then(function(e){ throw new Error(e.error || ('HTTP ' + r.status)); }); })
         .then(function(j) {
@@ -89,7 +89,7 @@ window.cargarTablaConfigFlota = function() {
         .catch(function(e) {
             console.error('cargarTablaConfigFlota:', e);
             var tb2 = document.getElementById('cfg-flota-tbody');
-            if (tb2) tb2.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:#dc2626">'
+            if (tb2) tb2.innerHTML = '<tr><td colspan="13" class="text-center py-4" style="color:#dc2626">'
                 + '<i class="bi bi-exclamation-triangle me-1"></i>Error al cargar datos. '
                 + '<a href="#" onclick="window.cargarTablaConfigFlota();return false">Reintentar</a>'
                 + '</td></tr>';
@@ -111,7 +111,7 @@ window.filtrarTablaConfigFlota = function() {
     var tb = document.getElementById('cfg-flota-tbody');
     if (!tb) return;
     if (!window.cfgDataFlotaFil.length) {
-        tb.innerHTML = '<tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Sin tipos de mantenimiento</td></tr>';
+        tb.innerHTML = '<tr><td colspan="13" class="text-center py-4" style="color:var(--subtext)">Sin tipos de mantenimiento</td></tr>';
         return;
     }
     var sel = window._cfgSeleccionados || [];
@@ -125,6 +125,8 @@ window.filtrarTablaConfigFlota = function() {
             '<td class="fw-bold">' + (r.marca||'') + '</td>' +
             '<td><span class="badge bg-primary">' + (r.tipo_mp||'') + '</span></td>' +
             '<td>' + utsBadge + '</td>' +
+            '<td>' + (r.combustible || '—') + '</td>' +
+            '<td>' + (r.modelo || '—') + '</td>' +
             '<td>' + (r.frecuencia_km   ? (parseInt(r.frecuencia_km)||0).toLocaleString('es-PE') + ' km' : '—') + '</td>' +
             '<td>' + (r.frecuencia_horas ? (parseInt(r.frecuencia_horas)||0) + ' h'                      : '—') + '</td>' +
             '<td>' + (r.frecuencia_dias  ? (parseInt(r.frecuencia_dias)||0) + ' días'                    : '—') + '</td>' +
@@ -187,7 +189,7 @@ window.eliminarMasivoConfigFlota = function() {
 };
 
 window.abrirModalConfigFlota = function() {
-    ['cf-id','cf-marca','cf-tipo-mp','cf-frec-km','cf-frec-horas','cf-frec-dias','cf-tipo','cf-sistema','cf-descripcion'].forEach(function(id){
+    ['cf-id','cf-marca','cf-tipo-mp','cf-combustible','cf-modelo','cf-frec-km','cf-frec-horas','cf-frec-dias','cf-tipo','cf-sistema','cf-descripcion'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.value='';
     });
     var el = document.getElementById('cf-uts'); if(el) el.value='LOCAL';
@@ -207,6 +209,8 @@ window.editarConfigFlota = function(id) {
         setStr('cf-marca',       r.marca);
         setStr('cf-tipo-mp',     r.tipo_mp);
         setStr('cf-uts',         r.uts || 'LOCAL');
+        setStr('cf-combustible', r.combustible);
+        setStr('cf-modelo',      r.modelo);
         set('cf-frec-km',        r.frecuencia_km);
         set('cf-frec-horas',     r.frecuencia_horas);
         set('cf-frec-dias',      r.frecuencia_dias);
@@ -231,6 +235,8 @@ window.guardarConfigFlota = function() {
         marca:            get('cf-marca').toUpperCase(),
         tipo_mp:          get('cf-tipo-mp').toUpperCase(),
         uts:              get('cf-uts').toUpperCase(),
+        combustible:      get('cf-combustible').toUpperCase(),
+        modelo:           get('cf-modelo').toUpperCase(),
         frecuencia_km:    parseInt(get('cf-frec-km'))    || null,
         frecuencia_horas: parseInt(get('cf-frec-horas')) || null,
         frecuencia_dias:  parseInt(get('cf-frec-dias'))  || null,
@@ -264,13 +270,15 @@ window.cmpExportarExcel = function() {
     if (!window.cfgDataFlota || !window.cfgDataFlota.length) {
         return window.mostrarToast('No hay datos para exportar', 'warning');
     }
-    var headers = ['MARCA','TIPO MP','UTS','FREC. KM','FREC. HORAS','FREC. DÍAS','TIPO','SISTEMA','DESCRIPCIÓN'];
+    var headers = ['MARCA','TIPO MP','UTS','COMBUSTIBLE','MODELO','FREC. KM','FREC. HORAS','FREC. DÍAS','TIPO','SISTEMA','DESCRIPCIÓN'];
     var rows = [headers];
     window.cfgDataFlota.forEach(function(r) {
         rows.push([
             r.marca        || '',
             r.tipo_mp      || '',
             r.uts          || '',
+            r.combustible  || '',
+            r.modelo       || '',
             r.frecuencia_km    != null ? parseInt(r.frecuencia_km)    : '',
             r.frecuencia_horas != null ? parseInt(r.frecuencia_horas) : '',
             r.frecuencia_dias  != null ? parseInt(r.frecuencia_dias)  : '',
@@ -288,13 +296,13 @@ window.cmpExportarExcel = function() {
 
 window.cmpDescargarPlantilla = function() {
     var rows = [
-        ['MARCA','TIPO MP','UTS','FREC. KM','FREC. HORAS','FREC. DÍAS','TIPO','SISTEMA','DESCRIPCIÓN'],
-        ['ISUZU','MP1','NACIONAL',10000,'',35,'Cambio','Motor','Cambio de aceite de motor'],
-        ['ISUZU','MP1','LOCAL',6000,'','','Cambio','Motor','Cambio de aceite de motor LOCAL'],
-        ['VOLVO','MP2','NACIONAL',20000,500,180,'Cambio','Transmisión','Cambio de aceite de caja']
+        ['MARCA','TIPO MP','UTS','COMBUSTIBLE','MODELO','FREC. KM','FREC. HORAS','FREC. DÍAS','TIPO','SISTEMA','DESCRIPCIÓN'],
+        ['ISUZU','MP1','NACIONAL','DIESEL','MODELO 1',10000,'',35,'Cambio','Motor','Cambio de aceite de motor'],
+        ['ISUZU','MP1','LOCAL','DIESEL','MODELO 2',6000,'','','Cambio','Motor','Cambio de aceite de motor LOCAL'],
+        ['VOLVO','MP2','NACIONAL','DIESEL','MODELO 3',20000,500,180,'Cambio','Transmisión','Cambio de aceite de caja']
     ];
     var ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [12,18,10,10,12,10,12,14,35].map(function(w){ return {wch:w}; });
+    ws['!cols'] = [12,18,10,12,12,10,10,12,10,12,14,35].map(function(w){ return {wch:w}; });
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
     XLSX.writeFile(wb, 'Plantilla_Tipos_Mantenimiento.xlsx');
@@ -315,15 +323,17 @@ window.cmpImportarExcel = function(input) {
 
             var hdr = raw[0].map(function(h){ return (h+'').trim().toUpperCase(); });
             var idx = {
-                marca:    hdr.indexOf('MARCA'),
-                tipo_mp:  hdr.indexOf('TIPO MP'),
-                uts:     ['UTS','CATEGORÍA','CATEGORIA'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
-                frec_km: ['FREC. KM','FREC KM','FRECUENCIA KM','FRECUENCIA_KM'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
-                frec_h:  ['FREC. HORAS','FREC HORAS','FRECUENCIA HORAS'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
-                frec_d:  ['FREC. DÍAS','FREC DÍAS','FREC. DIAS','FRECUENCIA DÍAS'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
-                tipo:    hdr.indexOf('TIPO'),
-                sistema: hdr.indexOf('SISTEMA'),
-                desc:   ['DESCRIPCIÓN','DESCRIPCION'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1)
+                marca:       hdr.indexOf('MARCA'),
+                tipo_mp:     hdr.indexOf('TIPO MP'),
+                uts:         ['UTS','CATEGORÍA','CATEGORIA'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
+                combustible: hdr.indexOf('COMBUSTIBLE'),
+                modelo:      hdr.indexOf('MODELO'),
+                frec_km:     ['FREC. KM','FREC KM','FRECUENCIA KM','FRECUENCIA_KM'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
+                frec_h:      ['FREC. HORAS','FREC HORAS','FRECUENCIA HORAS'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
+                frec_d:      ['FREC. DÍAS','FREC DÍAS','FREC. DIAS','FRECUENCIA DÍAS'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1),
+                tipo:        hdr.indexOf('TIPO'),
+                sistema:     hdr.indexOf('SISTEMA'),
+                desc:        ['DESCRIPCIÓN','DESCRIPCION'].reduce(function(r,k){ return r>=0?r:hdr.indexOf(k); }, -1)
             };
 
             if (idx.marca < 0 || idx.tipo_mp < 0) {
@@ -340,6 +350,8 @@ window.cmpImportarExcel = function(input) {
                     marca:            marca,
                     tipo_mp:          tipo,
                     uts:              idx.uts >= 0     ? ((row[idx.uts]+'').trim().toUpperCase()||'LOCAL') : 'LOCAL',
+                    combustible:      idx.combustible >= 0 ? ((row[idx.combustible]+'').trim().toUpperCase()||null) : null,
+                    modelo:           idx.modelo >= 0      ? ((row[idx.modelo]+'').trim().toUpperCase()||null) : null,
                     frecuencia_km:    idx.frec_km >= 0 ? (parseInt(row[idx.frec_km])||null) : null,
                     frecuencia_horas: idx.frec_h >= 0  ? (parseInt(row[idx.frec_h]) ||null) : null,
                     frecuencia_dias:  idx.frec_d >= 0  ? (parseInt(row[idx.frec_d]) ||null) : null,
