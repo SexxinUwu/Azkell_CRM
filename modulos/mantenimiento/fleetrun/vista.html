@@ -6,6 +6,17 @@
     flex-direction: column;
 }
 
+.kpi-clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
+}
+.kpi-clickable:hover {
+    transform: scale(0.98);
+    opacity: 0.9;
+    filter: brightness(0.95);
+}
+
+
 /* Layout PC: 40% Dashboard, 60% Tabla */
 @media (min-width: 992px) {
     #scaniaDashboard {
@@ -53,24 +64,24 @@
                 <div class="fw-bold text-center mb-1" style="font-size: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 2px;">Situación de Mantenimientos de Flota</div>
                 <div class="d-flex w-100 h-100 text-center align-items-stretch" style="gap: 4px;">
                     <!-- Flota Total -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #1f2937; color: white; border-radius: 6px;">
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #1f2937; color: white; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('')">
                         <div id="sca-kpi-total" class="fw-bold fs-4">0</div>
                         <div style="font-size: 0.65rem; text-transform: uppercase;">Flota<br>Total</div>
                     </div>
                     <!-- Vencidos -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;">
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO')">
                         <div id="sca-kpi-critico" class="fw-bold fs-4">0</div>
                         <div style="font-size: 0.65rem; text-transform: uppercase;">Vencidos</div>
                         <div id="sca-pct-critico" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
                     </div>
                     <!-- Próximo a Vencer -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;">
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO')">
                         <div id="sca-kpi-riesgo" class="fw-bold fs-4">0</div>
                         <div style="font-size: 0.65rem; text-transform: uppercase;">Próximos<br>a Vencer</div>
                         <div id="sca-pct-riesgo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
                     </div>
                     <!-- Vigentes -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;">
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE')">
                         <div id="sca-kpi-operativo" class="fw-bold fs-4">0</div>
                         <div style="font-size: 0.65rem; text-transform: uppercase;">Vigentes</div>
                         <div id="sca-pct-operativo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
@@ -221,11 +232,12 @@
 </div>
 </div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo de Mantt</label>
 <div class="position-relative">
-  <input type="text" id="f_tipomp-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar tipo…" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="window._cbFiltrar('f_tipomp')" onfocus="window._cbFiltrar('f_tipomp')" onblur="window._cbHide('f_tipomp')">
+  <input type="text" id="f_tipomp-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar tipo…" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="window._cbFiltrar('f_tipomp')" onfocus="window._cbFiltrar('f_tipomp')" onblur="window.onBlurTipomp(this)">
   <input type="hidden" id="f_tipomp" name="f_tipomp">
   <div id="f_tipomp-dd" class="cb-dropdown"></div>
 </div>
-</div></div><div class="row d-none"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Marca</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Dueño</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">UTS</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div><div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Actual</label><input type="number" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" placeholder="Ej: 150000" required></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Frecuencia</label><input type="number" class="form-control form-control-sm fw-bold shadow-sm" style="border-radius:12px;min-height:44px;" name="f_freckm" id="f_freckm" placeholder="Calculando..." oninput="calcularProximo('f')"></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Próximo</label><input type="number" class="form-control form-control-sm bg-light fw-bold" style="border-radius:12px;min-height:44px;" name="f_kmprox" id="f_kmprox" placeholder="Calculando..." readonly></div></div>
+<div id="f_tipomp-tags" class="d-flex flex-wrap gap-1 mt-2"></div>
+</div></div><div class="row d-none"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Marca</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Dueño</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">UTS</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div><div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Actual</label><input type="number" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" placeholder="Ej: 150000" required></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Frecuencia</label><input type="text" class="form-control form-control-sm fw-bold shadow-sm" style="border-radius:12px;min-height:44px;background-color: #f8fafc;" name="f_freckm" id="f_freckm" placeholder="Calculando..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Próximo</label><input type="text" class="form-control form-control-sm fw-bold shadow-sm" style="border-radius:12px;min-height:44px;background-color: #f8fafc;" name="f_kmprox" id="f_kmprox" placeholder="Calculando..." readonly></div></div>
 <div class="row">
   <div class="col-6 mb-3">
     <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Combustible</label>
