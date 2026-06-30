@@ -38,24 +38,47 @@ window.renderFleetrunConfigUtsTable = function(umbrales) {
     }
 };
 
-window.addFleetrunConfigUtsRow = function(utsNombre = '', umbral = 2000) {
+window.addFleetrunConfigUtsRow = function(utsNombre = 'Nacional', umbral = 2000) {
     let tbody = document.getElementById('fleetrunConfigUtsTbody');
     if(!tbody) return;
+    
+    if(!utsNombre) utsNombre = 'Nacional';
+    let isNacional = utsNombre.toUpperCase() === 'NACIONAL' ? 'selected' : '';
+    let isLocal = utsNombre.toUpperCase() === 'LOCAL' ? 'selected' : '';
+    let isOther = !isNacional && !isLocal ? `<option value="${utsNombre}" selected>${utsNombre}</option>` : '';
+
     let tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="ps-4">
-            <input type="text" class="form-control form-control-sm fleetrun-cfg-uts" placeholder="Ej: Nacional" value="${utsNombre}">
+            <select class="form-select form-select-sm fleetrun-cfg-uts">
+                <option value="Nacional" ${isNacional}>Nacional</option>
+                <option value="Local" ${isLocal}>Local</option>
+                ${isOther}
+            </select>
         </td>
         <td>
-            <input type="number" class="form-control form-control-sm fleetrun-cfg-umbral" placeholder="2000" value="${umbral}">
+            <input type="number" class="form-control form-control-sm fleetrun-cfg-umbral" placeholder="2000" value="${umbral}" oninput="updateFleetrunCfgIndicators(this)">
         </td>
-        <td class="text-center pe-4">
+        <td>
+            <div class="d-flex flex-column gap-1" style="font-size: 0.8rem;">
+                <span class="badge bg-success text-start w-100" style="padding: 0.5em;"><i class="bi bi-check-circle-fill"></i> Vigente (> <span class="ind-val">${umbral}</span>)</span>
+                <span class="badge bg-warning text-dark text-start w-100" style="padding: 0.5em;"><i class="bi bi-exclamation-triangle-fill"></i> Próximo a Vencer (0 a <span class="ind-val">${umbral}</span>)</span>
+                <span class="badge bg-danger text-start w-100" style="padding: 0.5em;"><i class="bi bi-exclamation-circle-fill"></i> Vencido (<= 0)</span>
+            </div>
+        </td>
+        <td class="text-center pe-4 align-middle">
             <button class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="this.closest('tr').remove()" title="Eliminar fila">
                 <i class="bi bi-trash"></i>
             </button>
         </td>
     `;
     tbody.appendChild(tr);
+};
+
+window.updateFleetrunCfgIndicators = function(input) {
+    let val = input.value || '0';
+    let tr = input.closest('tr');
+    tr.querySelectorAll('.ind-val').forEach(el => el.textContent = val);
 };
 
 window.guardarFleetrunConfig = function() {
