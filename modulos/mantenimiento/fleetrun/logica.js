@@ -492,12 +492,63 @@ function _filtrarDatosAMostrar(datos) {
 }
 
 
+window.fleetrunTiposMulti = [];
+
+window.agregarTipoMulti = function(val) {
+    if(!val) return;
+    val = val.toUpperCase().trim();
+    if(window.fleetrunTiposMulti.includes(val)) return;
+    window.fleetrunTiposMulti.push(val);
+    window.renderTiposMulti();
+};
+
+window.eliminarTipoMulti = function(val) {
+    window.fleetrunTiposMulti = window.fleetrunTiposMulti.filter(t => t !== val);
+    window.renderTiposMulti();
+};
+
+window.renderTiposMulti = function() {
+    let container = document.getElementById('f_tipomp-tags');
+    if(!container) return;
+    container.innerHTML = window.fleetrunTiposMulti.map(t => 
+        `<span class="badge d-flex align-items-center gap-1" style="background-color: #0369a1; font-size: 0.75rem; border-radius: 6px; padding: 4px 8px;">
+            ${t} <i class="bi bi-x ms-1" style="cursor:pointer; font-size:1rem;" onclick="window.eliminarTipoMulti('${t}')"></i>
+         </span>`
+    ).join('');
+    let hid = document.getElementById('f_tipomp');
+    if (hid) hid.value = JSON.stringify(window.fleetrunTiposMulti);
+    
+    // Set frequency to informative text
+    let freqEl = document.getElementById('f_freckm');
+    let proxEl = document.getElementById('f_kmprox');
+    if (window.fleetrunTiposMulti.length > 1) {
+        if (freqEl) freqEl.value = 'Múltiple...';
+        if (proxEl) proxEl.value = 'Múltiple...';
+    } else if (window.fleetrunTiposMulti.length === 1) {
+        window.calcularFrecuenciaFleetrunMulti(window.fleetrunTiposMulti[0], 'f');
+    } else {
+        if (freqEl) freqEl.value = '';
+        if (proxEl) proxEl.value = '';
+    }
+};
+
+window.onBlurTipomp = function(el) {
+    setTimeout(function() {
+        var val = el.value.trim().toUpperCase();
+        if (val) {
+            window.agregarTipoMulti(val);
+        }
+        el.value = '';
+        window._cbHide('f_tipomp');
+    }, 200);
+};
+
 window._cbOnSelect('f_placa', function() { window.autocompletarFleetrun('f'); window.calcularFrecuenciaFleetrun('f'); });
 window._cbOnSelect('eF_placa', function() { window.autocompletarFleetrun('eF'); window.calcularFrecuenciaFleetrun('eF'); });
-window._cbOnSelect('f_tipomp', function() { window.calcularFrecuenciaFleetrun('f'); });
+window._cbOnSelect('f_tipomp', function(val) { window.agregarTipoMulti(val); document.getElementById('f_tipomp-txt').value = ''; });
 window._cbOnSelect('eF_tipomp', function() { window.calcularFrecuenciaFleetrun('eF'); });
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
+function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; window.fleetrunTiposMulti = []; window.renderTiposMulti(); let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
     if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
     if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
     if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores, 'Buscar responsable…');
@@ -663,7 +714,6 @@ function enviarFleetrun(event, formObj) {
     const btn = document.getElementById('btnGuardarFleetrun');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-    if (!formObj.f_id.value) formObj.f_id.value = 'FL-' + Date.now();
     formObj.usuarioAutor.value = usuarioLogueado;
     const data = {};
     for (let i = 0; i < formObj.elements.length; i++) {
@@ -674,17 +724,90 @@ function enviarFleetrun(event, formObj) {
             data[el.name] = val;
         }
     }
-    fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
-        .then(function(r) { return r.json(); })
-        .then(function(r) {
-            if (r.data === 'Éxito') {
-                formObj.reset();
-                bootstrap.Offcanvas.getInstance(document.getElementById('drawerFleetrun')).hide();
-                cargarTablaFleetrun(true);
-            } else { alert(r.data); }
-            btn.disabled = false; btn.innerHTML = 'Guardar';
-        })
-        .catch(function(e) { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; });
+    
+    let tipos = [];
+    try {
+        if (data.f_tipomp && data.f_tipomp.startsWith('[')) {
+            tipos = JSON.parse(data.f_tipomp);
+        } else {
+            tipos = data.f_tipomp ? [data.f_tipomp] : [];
+        }
+    } catch(e) {
+        tipos = data.f_tipomp ? [data.f_tipomp] : [];
+    }
+    
+    if (tipos.length === 0) {
+        alert("Selecciona al menos un tipo de mantenimiento.");
+        btn.disabled = false; btn.innerHTML = 'Guardar';
+        return;
+    }
+
+    let baseId = 'FL-' + Date.now();
+    let promises = tipos.map((tipo, index) => {
+        let recData = {...data};
+        recData.f_tipomp = tipo;
+        // Si hay varios, usar ID secuencial
+        recData.f_id = (tipos.length > 1) ? (baseId + '-' + (index + 1)) : baseId;
+        
+        // Recalcular frecuencia y próximo KM para cada tipo
+        let freq = 0;
+        let kmAct = parseFloat(recData.f_kmact) || 0;
+        
+        if (window.dataTiposMant) {
+            let marca = (recData.f_marca || '').trim().toLowerCase();
+            let uts = (recData.f_uts || '').trim().toLowerCase();
+            let combustible = (recData.f_combustible || '').trim().toLowerCase();
+            let modelo = (recData.f_modelo || '').trim().toLowerCase();
+            let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0] === (recData.f_placa||''));
+            let metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
+            
+            let match = window.dataTiposMant.find(t => {
+                return (!t.marca || t.marca.trim().toLowerCase() === marca) &&
+                       (!t.tipo_mp || t.tipo_mp.trim().toLowerCase() === tipo.trim().toLowerCase()) &&
+                       (!t.uts || t.uts.trim().toLowerCase() === uts) &&
+                       (!t.combustible || t.combustible.trim().toLowerCase() === combustible) &&
+                       (!t.modelo || t.modelo.trim().toLowerCase() === modelo);
+            });
+            if (match) {
+                if (metrica.includes('HR') || metrica.includes('HORA')) {
+                    freq = match.frecuencia_horas || match.frecuencia_km || 0;
+                } else {
+                    freq = match.frecuencia_km || match.frecuencia_horas || 0;
+                }
+            }
+        }
+        recData.f_freckm = freq;
+        recData.f_kmprox = freq > 0 ? (kmAct + freq) : '';
+
+        return fetch('/api/script/guardarFleetrun', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ args: [recData] }) 
+        }).then(r => r.json());
+    });
+
+    Promise.all(promises).then(results => {
+        let allSuccess = results.every(r => r.data === 'Éxito');
+        if (allSuccess) {
+            formObj.reset();
+            window.fleetrunTiposMulti = [];
+            window.renderTiposMulti();
+            let offcanvasEl = document.getElementById('drawerFleetrun');
+            if (offcanvasEl) {
+                let instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (instance) instance.hide();
+            }
+            cargarTablaFleetrun(true);
+        } else {
+            let errors = results.filter(r => r.data !== 'Éxito').map(r => r.data).join('\\n');
+            alert("Algunos registros fallaron:\\n" + errors);
+            cargarTablaFleetrun(true);
+        }
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
+    }).catch(e => {
+        alert('Error de red: ' + e.message);
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
+    });
 }
 
 function enviarEdicionFleetrun(event, formObj) {
@@ -1010,14 +1133,20 @@ window.initGraficoFleetrun = function() {
                 if (elements.length > 0 && chart.data.labels[0] !== 'Sin Datos') {
                     const index = elements[0].index;
                     let estadoVal = ['VENCIDO', 'PROXIMO', 'VIGENTE'][index] || '';
-                    document.querySelectorAll('#filtroFleetEstado input:checked').forEach(c => c.checked = false);
-                    let checkbox = document.querySelector(`#filtroFleetEstado input[value="${estadoVal}"]`);
-                    if(checkbox) checkbox.checked = true;
-                    filtrarFleetrunAvanzado();
+                    window.filtrarDesdeKpiFleetrun(estadoVal);
                 }
             }
         }
     });
+};
+
+window.filtrarDesdeKpiFleetrun = function(estadoVal) {
+    document.querySelectorAll('#filtroFleetEstado input:checked').forEach(c => c.checked = false);
+    if (estadoVal) {
+        let checkbox = document.querySelector(`#filtroFleetEstado input[value="${estadoVal}"]`);
+        if(checkbox) checkbox.checked = true;
+    }
+    filtrarFleetrunAvanzado();
 };
 
 window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota) {
@@ -1478,9 +1607,25 @@ window.init_fleetrun = function() {
 
 window.calcularFrecuenciaFleetrun = function(prefix) {
     if (!window.dataTiposMant || window.dataTiposMant.length === 0) return;
+    let tipoMP = (document.getElementById(prefix + '_tipomp').value || '').trim().toLowerCase();
+    
+    // Si el valor empieza por [ es porque es JSON (modo multi)
+    if (tipoMP.startsWith('[')) {
+        try {
+            let arr = JSON.parse(tipoMP);
+            if (arr.length === 1) tipoMP = arr[0].toLowerCase();
+            else return; // If 0 or >1, we don't calculate a single frequency
+        } catch(e) {}
+    }
+    
+    window.calcularFrecuenciaFleetrunMulti(tipoMP, prefix);
+};
+
+window.calcularFrecuenciaFleetrunMulti = function(tipoMP, prefix) {
+    if (!window.dataTiposMant || window.dataTiposMant.length === 0) return;
     
     let marca = (document.getElementById(prefix + '_marca').value || '').trim().toLowerCase();
-    let tipoMP = (document.getElementById(prefix + '_tipomp').value || '').trim().toLowerCase();
+    tipoMP = (tipoMP || '').trim().toLowerCase();
     let uts = (document.getElementById(prefix + '_uts').value || '').trim().toLowerCase();
     let combustible = (document.getElementById(prefix + '_combustible').value || '').trim().toLowerCase();
     let modelo = (document.getElementById(prefix + '_modelo').value || '').trim().toLowerCase();
