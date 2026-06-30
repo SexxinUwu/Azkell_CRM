@@ -2933,7 +2933,7 @@ function cargarTablaFleetrun(forzarRefresh = false) {
         return;
     }
     let cuerpoTablaFleetrunEl = document.getElementById('cuerpoTablaFleetrun');
-    if (cuerpoTablaFleetrunEl) cuerpoTablaFleetrunEl.innerHTML = '<tr><td colspan="10" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
+    if (cuerpoTablaFleetrunEl) cuerpoTablaFleetrunEl.innerHTML = '<tr><td colspan="11" class="text-center py-4"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</td></tr>';
     fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => mostrarFleetrun(r.data || []));
 }
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
