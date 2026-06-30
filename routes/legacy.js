@@ -226,7 +226,17 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 let kmprox = (r.kmprox === '' || r.kmprox == null) ? null : (Number(r.kmprox) || 0);
                 // Fecha: si viene vacía, guardar como null
                 let fecha = r.fecha && String(r.fecha).trim() !== '' ? String(r.fecha).trim() : null;
-                if (fecha && !/^\d{4}-\d{2}-\d{2}/.test(fecha)) fecha = null;
+                if (fecha) {
+                    // Si viene como DD/MM/YYYY convertir a YYYY-MM-DD
+                    if (/^\d{2}\/\d{2}\/\d{4}$/.test(fecha)) {
+                        const partes = fecha.split('/');
+                        fecha = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                    } else if (fecha.includes('T')) {
+                        fecha = fecha.split('T')[0];
+                    } else if (!/^\d{4}-\d{2}-\d{2}/.test(fecha)) {
+                        fecha = null;
+                    }
+                }
                 return [idRegistro, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
             });
 
