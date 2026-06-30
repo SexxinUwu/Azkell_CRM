@@ -58,7 +58,9 @@ function mostrarFleetrun(datos) {
       let bFuturo = tb > _hoy + 86400000;
       if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
       if (tb !== ta) return tb - ta; // más reciente primero
-      return parseInt(b[9] || 0) - parseInt(a[9] || 0); // mismo día (o sin fecha) → mayor km_actual gana
+      let idA = parseInt((a[0].match(/\d+$/) || [0])[0], 10);
+      let idB = parseInt((b[0].match(/\d+$/) || [0])[0], 10);
+      return idB - idA; // mismo día (o sin fecha) → mayor ID gana
   });
 
   let datosAMostrar = [];
@@ -766,7 +768,7 @@ window.importarExcelFleetrun = function(event) {
         document.body.style.cursor = 'wait';
 
         let registrosProcesados = rawJson.map((r, idx) => {
-            let fechaIngreso = r['FECHA INGRESO'] || '';
+            let fechaIngreso = r['FECHA INGRESO'] || r['FECHA REGISTRO'] || '';
             if (fechaIngreso.includes('/')) {
                 let p = fechaIngreso.split('/');
                 if (p[2] && p[2].length === 4) fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
