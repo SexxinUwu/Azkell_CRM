@@ -767,11 +767,6 @@ window.importarExcelFleetrun = function(event) {
 
         document.body.style.cursor = 'wait';
 
-        // --- DEBUG: muestra columnas detectadas en la primera fila ---
-        let dbgKeys = Object.keys(rawJson[0] || {}).map(k => JSON.stringify(k)).join(', ');
-        console.log('[Fleetrun Import] Columnas detectadas:', dbgKeys);
-        alert('[DEBUG columnas Excel] ' + dbgKeys);
-        // ---------------------------------------------------------------
 
         let registrosProcesados = rawJson.map((rawRow, idx) => {
             let r = {};

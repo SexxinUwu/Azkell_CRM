@@ -168,7 +168,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
     const registros = req.body.registros;
     if (!registros || !Array.isArray(registros)) return res.status(400).json({ error: "Datos inválidos" });
 
-    let okCount = 0; let errCount = 0;
+    let okCount = 0; let errCount = 0; let lastError = null;
 
     const sql = `
         INSERT INTO fleetrun
@@ -260,11 +260,12 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
             } catch (e) {
                 console.error("Error bulk fleetrun:", e.message);
                 errCount += lote.length;
+                lastError = e.message;
             }
         }
     }
     broadcast('fleetrun', 'importar');
-    res.json({ ok: okCount, errores: errCount });
+    res.json({ ok: okCount, errores: errCount, detalle: lastError || (okCount === 0 && errCount === 0 ? 'Sin datos válidos' : undefined) });
 });
 
 // ============================================================
