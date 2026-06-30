@@ -40,7 +40,7 @@
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
     <div id="scaniaDashboard" class="row mb-2 gx-2 flex-shrink-0">
         <!-- Logo y Datos de Empresa -->
-        <div class="col-12 col-xl-2 mb-2">
+        <div class="col-12 col-xl-2 mb-2 d-none d-md-block">
             <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
                 <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-width: 100%; max-height: 50px; display: none; object-fit: contain;">
                 <h5 id="scania-nombre-empresa" class="fw-bold mt-1 mb-1 text-center" style="font-size: 0.85rem;">—</h5>
@@ -208,18 +208,21 @@
             </div>
         </div>
     </div>
+    
+    <!-- Botón flotante móvil para registrar -->
+    <button class="btn btn-primary shadow-lg rounded-4 d-md-none position-fixed d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; bottom: 85px; left: 50%; transform: translateX(-50%); z-index: 1050; border: 2px solid var(--surface);" onclick="abrirModalNuevoFleetrun()">
+        <i class="bi bi-plus" style="font-size: 2rem;"></i>
+    </button>
 </div>
 
 <!-- Modales y Offcanvas de Fleetrun -->
 
-<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="width: 450px; border-left: 1px solid var(--border);">
-    <div class="offcanvas-header border-bottom" style="background-color: var(--surface);">
-        <h5 class="offcanvas-title fw-bold text-primary" id="offcanvasFleetrunLabel">
-            <i class="bi bi-tools"></i> <span data-i18n="fleet.offcanvas">Historial de Mantenimiento</span>
-        </h5>
-        <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+<div class="offcanvas offcanvas-bottom shadow-lg mx-auto" tabindex="-1" id="offcanvasFleetrun" aria-labelledby="offcanvasFleetrunLabel" style="height: auto; max-height: 92vh; border-radius: 24px 24px 0 0; background-color: var(--surface); max-width: 500px;">
+    <div class="offcanvas-header d-flex flex-column align-items-center pb-0 border-0 position-relative">
+        <div style="width: 40px; height: 5px; background-color: #cbd5e1; border-radius: 10px; margin-bottom: 10px;"></div>
+        <button type="button" class="btn-close shadow-none position-absolute top-0 end-0 mt-4 me-4" data-bs-dismiss="offcanvas" aria-label="Close" style="background-color: #f1f5f9; border-radius: 50%; padding: 0.5rem; font-size: 0.6rem; opacity: 1;"></button>
     </div>
-    <div class="offcanvas-body p-4" style="background-color: var(--bg);">
+    <div class="offcanvas-body p-4 pt-1" style="background-color: var(--surface);">
         <div id="detalleFleetrunContenido"></div>
     </div>
 </div>
