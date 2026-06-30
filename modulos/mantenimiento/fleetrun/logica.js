@@ -158,7 +158,7 @@ function mostrarFleetrun(datos) {
                   <td>${fechaLimpia}</td>
                   <td>${km_cambio.toLocaleString()}</td>
                   <td>${fmtTipo}</td>
-                  <td>${frecuencia.toLocaleString()}</td>
+                  <td><span class="badge bg-light text-primary border border-primary shadow-sm px-2 py-1"><i class="bi bi-arrow-repeat me-1"></i>${frecuencia.toLocaleString()}</span></td>
                   <td>${fmtKmGps}</td>
                   <td style="color: #64748b; font-weight: bold;">${km_desde.toLocaleString()}</td>
                   <td>${fmtFalta}</td>
@@ -327,7 +327,8 @@ window.filtrarFleetrunAvanzado = function() {
     const chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(e=>e.value);
 
     let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || chkEst.length > 0;
-    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
+    let cntOper = 0, cntInmed = 0, cntRiesgo = 0, cntCrit = 0;
+    let placasMostradas = new Set();
 
     const headers = document.querySelectorAll('#cuerpoTablaFleetrun tr.group-header');
     headers.forEach(header => {
@@ -347,9 +348,11 @@ window.filtrarFleetrunAvanzado = function() {
                 if(matchTxt && matchDate && matchKpi) {
                     row.style.display = isFiltering ? '' : (expandAllState ? '' : 'none');
                     hasVisibleChild = true;
-                    if (kpiFila === 'VIGENTE') cntTotalVig++;
-                    else if (kpiFila === 'POR_VENCER') cntTotalPV++;
-                    else if (kpiFila === 'VENCIDO') cntTotalVenc++;
+                    placasMostradas.add(placaRaw);
+                    if (kpiFila === 'OPERATIVO') cntOper++;
+                    else if (kpiFila === 'INMEDIATO') cntInmed++;
+                    else if (kpiFila === 'RIESGO') cntRiesgo++;
+                    else if (kpiFila === 'CRITICO') cntCrit++;
                 } else {
                     row.style.display = 'none';
                 }
@@ -364,7 +367,7 @@ window.filtrarFleetrunAvanzado = function() {
         }
         header.style.display = hasVisibleChild ? '' : 'none';
     });
-    updateGraficoFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+    updateGraficoFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper, placasMostradas.size);
 
     // En móvil: re-renderizar cards con datos filtrados
     if (window.innerWidth < 768 && window._fleetrunDatosAMostrar) {
@@ -902,8 +905,8 @@ window.initGraficoFleetrun = function() {
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
-            datasets: [{ data: [1, 0, 0], backgroundColor: ['#16a34a', '#eab308', '#dc2626'], borderWidth: 2, hoverOffset: 4 }]
+            labels: ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'],
+            datasets: [{ data: [1, 0, 0, 0], backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754'], borderWidth: 2, hoverOffset: 4 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '65%',
@@ -929,7 +932,7 @@ window.initGraficoFleetrun = function() {
             onClick: (e, elements, chart) => {
                 if (elements.length > 0 && chart.data.labels[0] !== 'Sin Datos') {
                     const index = elements[0].index;
-                    let estadoVal = ['VIGENTE', 'POR_VENCER', 'VENCIDO'][index] || '';
+                    let estadoVal = ['CRITICO', 'RIESGO', 'INMEDIATO', 'OPERATIVO'][index] || '';
                     document.querySelectorAll('#filtroFleetEstado input:checked').forEach(c => c.checked = false);
                     let checkbox = document.querySelector(`#filtroFleetEstado input[value="${estadoVal}"]`);
                     if(checkbox) checkbox.checked = true;
@@ -1068,10 +1071,10 @@ window.initGraficoDashFleetrun = function() {
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: ['Vigentes', 'Por Vencer', 'Vencidos'],
+            labels: ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'],
             datasets: [{
-                data: [1, 0, 0],
-                backgroundColor: ['#16a34a', '#eab308', '#dc2626'],
+                data: [1, 0, 0, 0],
+                backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754'],
                 borderWidth: 2,
                 hoverOffset: 4
             }]
