@@ -321,28 +321,36 @@ function mostrarFleetrunCards(datosAMostrar) {
         var falta_km   = km_prox - km_gps;
         var originalIndex = dataGlobalFleetrun.findIndex(function(x) { return x[0] === criticalMp[0]; });
 
-        var badgeCls, badgeIcon, badgeLabel, borderColor;
-        if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeIcon = 'bi-exclamation-circle-fill';    badgeLabel = 'Vencido';    borderColor = 'var(--bs-danger)'; }
-        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeIcon = 'bi-exclamation-triangle-fill'; badgeLabel = 'Por Vencer'; borderColor = 'var(--bs-warning)'; }
-        else                                   { badgeCls = 'success'; badgeIcon = 'bi-check-circle-fill';          badgeLabel = 'Vigente';    borderColor = 'var(--bs-success)'; }
+        var badgeCls, badgeIcon, badgeLabel, badgeTextColor;
+        if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeIcon = 'bi-exclamation-circle-fill';    badgeLabel = 'Vencido';    badgeTextColor = 'text-danger'; }
+        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeIcon = 'bi-exclamation-triangle-fill'; badgeLabel = 'Por Vencer'; badgeTextColor = 'text-dark'; }
+        else                                   { badgeCls = 'success'; badgeIcon = 'bi-check-circle-fill';          badgeLabel = 'Vigente';    badgeTextColor = 'text-success'; }
 
-        var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-info text-dark ms-1" style="font-size:0.68rem;">${utsRaw}</span>` : '';
-        var multiHtml = mantenimientos.length > 1 ? `<div class="mt-1" style="font-size:0.71rem;color:var(--subtext);"><i class="bi bi-layers me-1"></i>${mantenimientos.length} tipos de MP</div>` : '';
+        var utsHtml = (utsRaw && utsRaw !== '-') ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill" style="font-size:0.65rem;">${utsRaw}</span>` : '';
+        var numMPs = mantenimientos.length;
+        var mpBadgeHtml = numMPs > 1 
+            ? `<div class="d-flex align-items-center bg-light border rounded px-2 py-1"><i class="bi bi-tools text-secondary me-2" style="font-size:0.8rem;"></i><span class="text-dark fw-bold" style="font-size: 0.75rem;">${numMPs} <span class="fw-normal text-muted">MPs</span></span></div>`
+            : `<div class="d-flex align-items-center bg-light border rounded px-2 py-1"><i class="bi bi-wrench-adjustable text-secondary me-2" style="font-size:0.8rem;"></i><span class="text-dark fw-bold" style="font-size: 0.75rem;">1 <span class="fw-normal text-muted">MP</span></span></div>`;
 
-        html += `<div class="card mb-2 shadow-sm" style="border-left:4px solid ${borderColor};cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
-            <div class="card-body py-2 px-3">
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div>
-                        <span class="fw-bold" style="font-size:1rem;color:var(--text);">${placaRaw}</span>
-                        <i class="bi bi-info-circle-fill text-info ms-1" style="font-size:0.8rem;cursor:pointer;" title="Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')"></i>
-                        <span class="badge bg-secondary ms-2" style="font-size:0.68rem;">${cli}</span>
+        html += `<div class="card mb-3 border-0 shadow-sm position-relative overflow-hidden" style="border-radius: 12px; cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
+            <div class="position-absolute bg-${badgeCls}" style="width: 5px; height: 100%; left: 0; top: 0;"></div>
+            <div class="card-body py-3 px-4 ms-1">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex flex-column gap-1">
+                        <h5 class="mb-0 fw-bolder text-dark" style="font-size: 1.15rem; letter-spacing: -0.5px;">${placaRaw}</h5>
                         ${utsHtml}
                     </div>
-                    <span class="badge bg-${badgeCls}" style="font-size:0.71rem;color:${badgeCls==='warning'?'#000':'#fff'};">
-                        <i class="bi ${badgeIcon}"></i> ${badgeLabel}
+                    <span class="badge bg-${badgeCls} bg-opacity-10 ${badgeTextColor} border border-${badgeCls} rounded-pill px-2 py-1" style="font-size:0.7rem;">
+                        <i class="bi ${badgeIcon} me-1"></i> ${badgeLabel}
                     </span>
                 </div>
-                ${multiHtml}
+                <div class="d-flex justify-content-between align-items-end mt-2 pt-2" style="border-top: 1px dashed var(--border);">
+                    <div class="d-flex flex-column">
+                        <span class="text-muted" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Cliente</span>
+                        <span class="text-dark fw-semibold" style="font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cli}</span>
+                    </div>
+                    ${mpBadgeHtml}
+                </div>
             </div>
         </div>`;
     });
