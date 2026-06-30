@@ -767,9 +767,19 @@ window.importarExcelFleetrun = function(event) {
 
         document.body.style.cursor = 'wait';
 
+        // --- DEBUG: muestra columnas detectadas en la primera fila ---
+        let dbgKeys = Object.keys(rawJson[0] || {}).map(k => JSON.stringify(k)).join(', ');
+        console.log('[Fleetrun Import] Columnas detectadas:', dbgKeys);
+        alert('[DEBUG columnas Excel] ' + dbgKeys);
+        // ---------------------------------------------------------------
+
         let registrosProcesados = rawJson.map((rawRow, idx) => {
             let r = {};
-            for (let k in rawRow) r[k.toUpperCase().trim()] = rawRow[k];
+            // Limpieza agresiva: elimina BOM, espacios no-breaking y cualquier char invisible
+            for (let k in rawRow) {
+                let clean = k.replace(/[\u0000-\u001F\u007F-\u00A0\uFEFF]/g, '').toUpperCase().trim();
+                r[clean] = rawRow[k];
+            }
 
             let fechaIngreso = String(r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '').trim();
             if (fechaIngreso.includes('/')) {
@@ -837,8 +847,8 @@ window.importarExcelFleetrun = function(event) {
         });
 
         if (registrosProcesados.length > 0 && registrosProcesados.every(r => !r.placa || r.placa.trim() === '')) {
-            let keys = Object.keys(rawJson[0] || {}).join(', ');
-            alert(`Error crítico: No se encontró la columna PLACA o está vacía en todas las filas.\nColumnas detectadas en tu Excel: ${keys}\nPor favor verifica que la columna se llame exactamente PLACA.`);
+            let keys = Object.keys(rawJson[0] || {}).map(k => JSON.stringify(k)).join(', ');
+            alert(`Error: no se encontró placa en ninguna fila.\nColumnas raw del Excel: ${keys}`);
             document.body.style.cursor = 'default'; event.target.value = '';
             return;
         }
