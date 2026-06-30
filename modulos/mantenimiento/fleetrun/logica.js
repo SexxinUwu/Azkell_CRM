@@ -398,7 +398,11 @@ function _filtrarDatosAMostrar(datos) {
     });
 }
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); frPlacaInit('f', ''); frTipoInit('f', ''); new bootstrap.Offcanvas(document.getElementById('drawerFleetrun')).show(); }
+function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
+    if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
+    if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
+    if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores.map(function(c){ return {value:c, label:c}; }), 'Buscar técnico...');
+  new bootstrap.Offcanvas(document.getElementById('drawerFleetrun')).show(); }
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
@@ -540,7 +544,11 @@ function enviarFleetrun(event, formObj) {
     const data = {};
     for (let i = 0; i < formObj.elements.length; i++) {
         const el = formObj.elements[i];
-        if (el.name) data[el.name] = el.value;
+        if (el.name) {
+            let val = el.value;
+            if (!val && document.getElementById(el.id + '-txt')) val = document.getElementById(el.id + '-txt').value;
+            data[el.name] = val;
+        }
     }
     fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
         .then(function(r) { return r.json(); })
@@ -565,7 +573,11 @@ function enviarEdicionFleetrun(event, formObj) {
     const data = {};
     for (let i = 0; i < formObj.elements.length; i++) {
         const el = formObj.elements[i];
-        if (el.name) data[el.name] = el.value;
+        if (el.name) {
+            let val = el.value;
+            if (!val && document.getElementById(el.id + '-txt')) val = document.getElementById(el.id + '-txt').value;
+            data[el.name] = val;
+        }
     }
     fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
         .then(function(r) { return r.json(); })
@@ -1121,6 +1133,11 @@ function frTipoInit(prefix, valorActual) {
 
     var doRender = function() { frTipoRender('', prefix); };
     if (window._frTipoLista.length > 0) { doRender(); return; }
+    fetch('/api/conductores-lista')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            window.dataGlobalConductores = (d || []).map(function(c) { return c.nombre || ''; }).filter(Boolean);
+        }).catch(function() {});
     fetch('/api/tipos-preventivo')
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
         .then(function(resp) {
