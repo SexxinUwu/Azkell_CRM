@@ -765,17 +765,17 @@
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasDetallePlacaGlobal"
          aria-labelledby="offcanvasDetallePlacaLabel"
          style="width: min(420px, 100vw); border-left: 1px solid var(--border);">
-        <div class="offcanvas-header border-bottom" style="background: var(--surface);">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-truck-front-fill text-primary fs-5"></i>
-                <div>
-                    <h6 class="offcanvas-title fw-bold m-0" id="offcanvasDetallePlacaLabel">
+        <div class="offcanvas-header border-bottom position-relative pb-3 pt-3" style="background: var(--surface);">
+            <div class="d-flex align-items-start gap-2">
+                <i class="bi bi-bus-front-fill text-primary mt-1" style="font-size: 1.2rem;"></i>
+                <div class="d-flex flex-column">
+                    <h5 class="offcanvas-title fw-bolder m-0 text-dark" id="offcanvasDetallePlacaLabel">
                         <span id="odp-placa">—</span>
-                    </h6>
-                    <div id="odp-badges" style="margin-top:2px;"></div>
+                    </h5>
+                    <div id="odp-badges" class="d-flex flex-wrap gap-1 mt-1"></div>
                 </div>
             </div>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas"></button>
+            <button type="button" class="btn-close shadow-none position-absolute top-0 end-0 mt-3 me-3" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0" style="background: var(--bg); overflow-y: auto;">
             <ul class="nav nav-tabs nav-fill px-2 pt-2" id="odpTabs" style="border-bottom: 1px solid var(--border);">
@@ -791,7 +791,7 @@
                 <div class="tab-pane fade" id="odp-tab-gps"></div>
             </div>
         </div>
-        <div class="offcanvas-footer border-top p-2 d-flex gap-2" style="background:var(--surface);flex-shrink:0;">
+        <div class="offcanvas-footer border-top p-2 d-flex gap-2" id="odp-footer" style="background:var(--surface);flex-shrink:0;">
             <button class="btn btn-success fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2" onclick="window.compartirPlacaWhatsApp()" style="font-size:0.85rem;">
                 <i class="bi bi-whatsapp"></i> WhatsApp
             </button>

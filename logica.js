@@ -721,7 +721,12 @@ window.abrirDetallePlacaGlobal = function(placa, defaultTab) {
     if (elPlaca) elPlaca.textContent = placa;
     var isFleetView = (defaultTab === 'fleet');
 
-    // Mostrar solo pestaña MP cuando se abre desde Fleetrun
+    // Ocultar pestañas y footer si se abre desde Fleetrun (solo importa MP)
+    var elTabs = document.getElementById('odpTabs');
+    var elFooter = document.getElementById('odp-footer');
+    if (elTabs) elTabs.style.display = isFleetView ? 'none' : 'flex';
+    if (elFooter) elFooter.style.display = isFleetView ? 'none' : 'flex';
+    
     document.querySelectorAll('#odpTabs .nav-item').forEach(function(li, idx) {
         li.style.display = isFleetView ? (idx === 2 ? '' : 'none') : '';
     });
