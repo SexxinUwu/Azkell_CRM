@@ -58,7 +58,7 @@ function mostrarFleetrun(datos) {
       let bFuturo = tb > _hoy + 86400000;
       if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
       if (tb !== ta) return tb - ta; // más reciente primero
-      return parseInt(b[15] || 0) - parseInt(a[15] || 0); // mismo día → mayor id DB gana (último registrado)
+      return parseInt(b[9] || 0) - parseInt(a[9] || 0); // mismo día (o sin fecha) → mayor km_actual gana
   });
 
   let datosAMostrar = [];
