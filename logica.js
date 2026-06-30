@@ -855,7 +855,20 @@ window._buildFleetTab = function(mode) {
     if (!fleetEl) return;
     var recs = window._odpFleetRecs || [];
     var utsPlaca = window._odpFleetUts || '';
-    var umbral = normalizeStr(utsPlaca) === 'LOCAL' ? 100 : 1500;
+    
+    var placaCurrent = (window._odpPlacaActual || '').toUpperCase();
+    var esHoras = window._metricaMap && window._metricaMap[placaCurrent] === 'horas';
+    var metricSuffix = esHoras ? '_HORAS' : '_KM';
+    var combinedKey = (utsPlaca || '').toUpperCase() + metricSuffix;
+    var umbral = 2000;
+    if (window._fleetrun_umbrales_uts) {
+        if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+            umbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+        } else if (window._fleetrun_umbrales_uts[(utsPlaca || '').toUpperCase()] !== undefined) {
+            umbral = parseFloat(window._fleetrun_umbrales_uts[(utsPlaca || '').toUpperCase()]);
+        }
+    }
+    
     if (!recs.length) {
         fleetEl.innerHTML = '<p class="text-muted text-center py-4">Sin registros de mantenimiento.</p>';
         return;
@@ -884,24 +897,28 @@ window._buildFleetTab = function(mode) {
     recsToShow.forEach(function(r) {
         var kmProx = parseFloat(r[11]) || 0;
         var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
-        var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
+        var kmGps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(r[14]) || 0);
         var falta = kmProx - kmGps;
         var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
-        var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km';
+        var unitL = esHoras ? ' h' : ' km';
+        var faltaLabel = (falta > 0 ? '+' : '') + falta.toLocaleString() + unitL;
         var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
         var globalIdx = (window._odpFleetRecs || []).indexOf(r);
-        html += '<div class="d-flex align-items-center gap-2 py-2 px-1" data-mp-tipo="' + (r[8] || '').replace(/"/g,'') + '" style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="window._showMPDetail(' + globalIdx + ')">'
-            + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + '" style="width:2rem;height:2rem;flex-shrink:0;">'
-            + '<i class="bi bi-tools text-white" style="font-size:0.7rem;"></i></div>'
+        
+        var txtCls = bCl === 'warning' ? 'dark' : bCl;
+        
+        html += '<div class="d-flex align-items-center gap-3 py-3 px-3 mb-3 bg-white rounded shadow-sm border border-light" data-mp-tipo="' + (r[8] || '').replace(/"/g,'') + '" style="cursor:pointer;" onclick="window._showMPDetail(' + globalIdx + ')">'
+            + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' bg-opacity-10 text-' + bCl + '" style="width:2.8rem;height:2.8rem;flex-shrink:0;">'
+            + '<i class="bi bi-wrench-adjustable" style="font-size:1.2rem;"></i></div>'
             + '<div class="flex-grow-1 min-width-0">'
-            + '<div class="fw-bold" style="color:var(--crm-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r[8] || '—') + '</div>'
-            + (fechaMost !== '-' ? '<div style="color:var(--subtext);font-size:0.72rem;">' + fechaMost + '</div>' : '')
+            + '<div class="fw-bolder text-dark mb-1" style="font-size: 0.95rem; white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r[8] || '—') + '</div>'
+            + (fechaMost !== '-' ? '<div class="text-muted" style="font-size:0.75rem;"><i class="bi bi-calendar-event me-1"></i>' + fechaMost + '</div>' : '')
             + '</div>'
-            + '<div class="text-end flex-shrink-0">'
-            + '<span class="badge bg-' + bCl + '" style="font-size:0.7rem;">' + faltaLabel + '</span>'
-            + '<div style="font-size:0.68rem;color:var(--subtext);margin-top:1px;">Próx: ' + kmProx.toLocaleString() + '</div>'
+            + '<div class="text-end flex-shrink-0 d-flex flex-column align-items-end">'
+            + '<span class="badge bg-' + bCl + ' bg-opacity-10 text-' + txtCls + ' border border-' + bCl + ' rounded-pill px-2 py-1 mb-1" style="font-size:0.75rem;">' + faltaLabel + '</span>'
+            + '<div class="text-muted" style="font-size:0.7rem;">Próx: <span class="fw-semibold text-dark">' + kmProx.toLocaleString() + '</span></div>'
             + '</div>'
-            + '<i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size:0.75rem;"></i>'
+            + '<i class="bi bi-chevron-right text-muted ms-2 flex-shrink-0" style="font-size:0.9rem;"></i>'
             + '</div>';
     });
     var toggleMode = mode === 'current' ? 'all' : 'current';
@@ -923,27 +940,47 @@ window._showMPDetail = function(idx) {
     var fleetEl = document.getElementById('odp-tab-fleet');
     if (!fleetEl) return;
     var utsPlaca = window._odpFleetUts || '';
-    var umbral = normalizeStr(utsPlaca) === 'LOCAL' ? 100 : 1500;
+    
+    var placaCurrent = (window._odpPlacaActual || '').toUpperCase();
+    var esHoras = window._metricaMap && window._metricaMap[placaCurrent] === 'horas';
+    var metricSuffix = esHoras ? '_HORAS' : '_KM';
+    var combinedKey = (utsPlaca || '').toUpperCase() + metricSuffix;
+    var umbral = 2000;
+    if (window._fleetrun_umbrales_uts) {
+        if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+            umbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+        } else if (window._fleetrun_umbrales_uts[(utsPlaca || '').toUpperCase()] !== undefined) {
+            umbral = parseFloat(window._fleetrun_umbrales_uts[(utsPlaca || '').toUpperCase()]);
+        }
+    }
+
     var kmProx = parseFloat(r[11]) || 0;
     var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(r[4]) : null;
-    var kmGps = wD ? wD.km : (parseFloat(r[14]) || 0);
+    var kmGps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(r[14]) || 0);
     var falta = kmProx - kmGps;
     var bCl = falta <= 0 ? 'danger' : (falta <= umbral ? 'warning' : 'success');
     var bLabel = falta <= 0 ? 'Vencido' : (falta <= umbral ? 'Por Vencer' : 'Vigente');
     var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
-    fleetEl.innerHTML = '<div style="font-size:0.82rem;">'
-        + '<button class="btn btn-link text-decoration-none ps-0 mb-2" style="color:var(--crm-accent);font-size:0.85rem;" onclick="window._buildFleetTab(window._odpFleetMode||\'current\')">'
-        + '<i class="bi bi-arrow-left me-1"></i>← Volver a preventivos</button>'
-        + '<div class="fw-bold mb-3" style="font-size:1rem;color:var(--text);">'
-        + '<span class="badge bg-' + bCl + ' me-2">' + bLabel + '</span>' + (r[8] || '—') + '</div>'
-        + '<div class="d-flex flex-column">'
+    var txtCls = bCl === 'warning' ? 'dark' : bCl;
+    var unitL = esHoras ? ' h' : ' km';
+
+    fleetEl.innerHTML = '<div style="font-size:0.82rem;" class="pb-4">'
+        + '<button class="btn btn-sm btn-light border shadow-sm rounded-pill mb-3 fw-semibold text-secondary" onclick="window._buildFleetTab(window._odpFleetMode||\'current\')">'
+        + '<i class="bi bi-arrow-left me-1"></i>Volver</button>'
+        + '<div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border border-light mb-3">'
+        + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' bg-opacity-10 text-' + bCl + ' me-3" style="width:3rem;height:3rem;flex-shrink:0;">'
+        + '<i class="bi bi-gear-wide-connected fs-4"></i></div>'
+        + '<div><span class="badge bg-' + bCl + ' bg-opacity-10 text-' + txtCls + ' border border-' + bCl + ' rounded-pill px-2 py-1 mb-1" style="font-size:0.7rem;">' + bLabel + '</span>'
+        + '<div class="fw-bolder text-dark" style="font-size:1.1rem; letter-spacing: -0.5px;">' + (r[8] || '—') + '</div></div>'
+        + '</div>'
+        + '<div class="bg-white rounded shadow-sm border border-light overflow-hidden">'
         + _odpFila2('ID Mantenimiento', '#' + (r[0] || '—'))
         + _odpFila2('Fecha Registro', fechaMost)
-        + _odpFila2('KM de Registro', (parseFloat(r[2]) || 0).toLocaleString() + ' km')
-        + _odpFila2('Frecuencia', r[10] ? (parseFloat(r[10]).toLocaleString() + ' km') : '—')
-        + _odpFila2('KM Próximo', kmProx.toLocaleString() + ' km')
-        + _odpFila2('KM GPS Actual', kmGps.toLocaleString() + ' km')
-        + _odpFila2('Falta / Exceso', (falta > 0 ? '+' : '') + falta.toLocaleString() + ' km')
+        + _odpFila2(esHoras ? 'Horas de Registro' : 'KM de Registro', (parseFloat(r[2]) || 0).toLocaleString() + unitL)
+        + _odpFila2('Frecuencia', r[10] ? (parseFloat(r[10]).toLocaleString() + unitL) : '—')
+        + _odpFila2(esHoras ? 'Horas Próximo' : 'KM Próximo', kmProx.toLocaleString() + unitL)
+        + _odpFila2(esHoras ? 'Horas Motor Actual' : 'KM GPS Actual', kmGps.toLocaleString() + unitL)
+        + _odpFila2('Falta / Exceso', '<span class="text-' + bCl + ' fw-bolder">' + (falta > 0 ? '+' : '') + falta.toLocaleString() + unitL + '</span>')
         + _odpFila2('Técnico', r[13] || '—')
         + '</div></div>';
 };
