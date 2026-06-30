@@ -755,9 +755,9 @@ window.importarExcelFleetrun = function(event) {
     const reader = new FileReader();
     reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: true });
 
         if (rawJson.length === 0) { alert("Archivo vacío o inválido."); return; }
 
@@ -777,27 +777,35 @@ window.importarExcelFleetrun = function(event) {
                 r[clean] = rawRow[k];
             }
 
-            let fechaIngreso = String(r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '').trim();
-            if (fechaIngreso.includes('/')) {
-                let p = fechaIngreso.split('/');
-                let p0 = p[0].trim().padStart(2, '0'); // primer segmento
-                let p1 = p[1].trim().padStart(2, '0'); // segundo segmento
-                let p2 = p[2] ? p[2].trim() : '';      // año
-                if (p2.length === 2) p2 = '20' + p2;
-                if (p2.length === 4) {
-                    // Si el segundo segmento > 12 → es día → formato MM/DD/YYYY
-                    if (parseInt(p1) > 12) {
-                        fechaIngreso = `${p2}-${p0}-${p1}`; // MM/DD/YYYY → YYYY-MM-DD
-                    } else {
-                        fechaIngreso = `${p2}-${p1}-${p0}`; // DD/MM/YYYY → YYYY-MM-DD
+            let rawFecha = r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '';
+            let fechaIngreso = '';
+            if (rawFecha instanceof Date && !isNaN(rawFecha)) {
+                let y = rawFecha.getFullYear();
+                let m = String(rawFecha.getMonth() + 1).padStart(2, '0');
+                let d = String(rawFecha.getDate()).padStart(2, '0');
+                fechaIngreso = `${y}-${m}-${d}`;
+            } else {
+                fechaIngreso = String(rawFecha).trim();
+                if (fechaIngreso.includes('/')) {
+                    let p = fechaIngreso.split('/');
+                    let p0 = p[0].trim().padStart(2, '0');
+                    let p1 = p[1].trim().padStart(2, '0');
+                    let p2 = p[2] ? p[2].trim() : '';
+                    if (p2.length === 2) p2 = '20' + p2;
+                    if (p2.length === 4) {
+                        if (parseInt(p1) > 12) {
+                            fechaIngreso = `${p2}-${p0}-${p1}`;
+                        } else {
+                            fechaIngreso = `${p2}-${p1}-${p0}`;
+                        }
                     }
-                }
-            } else if (fechaIngreso.includes('-')) {
-                let p = fechaIngreso.split('-');
-                let p0 = p[0].trim();
-                let p2 = p[2].trim();
-                if (p0.length === 2 && p2.length === 4) { // DD-MM-YYYY
-                    fechaIngreso = `${p2}-${p[1].trim().padStart(2, '0')}-${p0.padStart(2, '0')}`;
+                } else if (fechaIngreso.includes('-')) {
+                    let p = fechaIngreso.split('-');
+                    let p0 = p[0].trim();
+                    let p2 = p[2].trim();
+                    if (p0.length === 2 && p2.length === 4) {
+                        fechaIngreso = `${p2}-${p[1].trim().padStart(2, '0')}-${p0.padStart(2, '0')}`;
+                    }
                 }
             }
             let kmactStr = String(r['KM ACTUAL'] || '0').replace(/,/g, '');
