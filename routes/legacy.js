@@ -186,10 +186,33 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
     });
 
     if (validos.length > 0) {
+        // Obtener el último secuencial del año actual para generar IDs Prev-YYYY-XXXX
+        const anio = new Date().getFullYear();
+        const prefix = `Prev-${anio}-`;
+        let startSeq = 1;
+        try {
+            const [rows] = await new Promise((resolve, reject) => {
+                db.query(
+                    `SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 1`,
+                    [`${prefix}%`],
+                    (err, rows) => {
+                        if (err) return resolve([[]]);
+                        resolve([rows]);
+                    }
+                );
+            });
+            if (rows.length) {
+                const lastSeq = parseInt(rows[0].idRegistro.split('-').pop(), 10);
+                if (!isNaN(lastSeq)) startSeq = lastSeq + 1;
+            }
+        } catch(e) { /* si falla, empezamos en 1 */ }
+
         for (let i = 0; i < validos.length; i += 500) {
             const lote = validos.slice(i, i + 500);
             
-            const vals = lote.map(r => {
+            const vals = lote.map((r, idx) => {
+                const seqNum = startSeq + (i + idx);
+                const idRegistro = `${prefix}${String(seqNum).padStart(4, '0')}`;
                 let marca = r.marca || '';
                 let dueno = r.dueno || '';
                 let uts = r.uts || '';
@@ -204,7 +227,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 // Fecha: si viene vacía, guardar como null
                 let fecha = r.fecha && String(r.fecha).trim() !== '' ? String(r.fecha).trim() : null;
                 if (fecha && !/^\d{4}-\d{2}-\d{2}/.test(fecha)) fecha = null;
-                return [r.id, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
+                return [idRegistro, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
             });
 
 
