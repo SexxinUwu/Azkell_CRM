@@ -779,13 +779,17 @@ window.importarExcelFleetrun = function(event) {
             let fechaIngreso = String(r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '').trim();
             if (fechaIngreso.includes('/')) {
                 let p = fechaIngreso.split('/');
-                let p2 = p[2].trim();
-                let p0 = p[0].trim().padStart(2, '0');
-                let p1 = p[1].trim().padStart(2, '0');
+                let p0 = p[0].trim().padStart(2, '0'); // primer segmento
+                let p1 = p[1].trim().padStart(2, '0'); // segundo segmento
+                let p2 = p[2] ? p[2].trim() : '';      // año
+                if (p2.length === 2) p2 = '20' + p2;
                 if (p2.length === 4) {
-                    fechaIngreso = `${p2}-${p1}-${p0}`;
-                } else if (p2.length === 2) {
-                    fechaIngreso = `20${p2}-${p1}-${p0}`;
+                    // Si el segundo segmento > 12 → es día → formato MM/DD/YYYY
+                    if (parseInt(p1) > 12) {
+                        fechaIngreso = `${p2}-${p0}-${p1}`; // MM/DD/YYYY → YYYY-MM-DD
+                    } else {
+                        fechaIngreso = `${p2}-${p1}-${p0}`; // DD/MM/YYYY → YYYY-MM-DD
+                    }
                 }
             } else if (fechaIngreso.includes('-')) {
                 let p = fechaIngreso.split('-');
