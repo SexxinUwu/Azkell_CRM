@@ -767,8 +767,11 @@ window.importarExcelFleetrun = function(event) {
 
         document.body.style.cursor = 'wait';
 
-        let registrosProcesados = rawJson.map((r, idx) => {
-            let fechaIngreso = r['FECHA INGRESO'] || r['FECHA REGISTRO'] || '';
+        let registrosProcesados = rawJson.map((rawRow, idx) => {
+            let r = {};
+            for (let k in rawRow) r[k.toUpperCase().trim()] = rawRow[k];
+
+            let fechaIngreso = r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '';
             if (fechaIngreso.includes('/')) {
                 let p = fechaIngreso.split('/');
                 if (p[2] && p[2].length === 4) fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
