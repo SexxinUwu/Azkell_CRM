@@ -8,21 +8,21 @@
 </style>
 
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
-    <div id="scaniaDashboard" class="row mb-3 gx-2">
+    <div id="scaniaDashboard" class="row mb-2 gx-2" style="max-height: 140px;">
         <!-- Logo y Datos de Empresa -->
         <div class="col-12 col-xl-2 mb-2">
-            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-3" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-width: 100%; max-height: 80px; display: none; object-fit: contain;">
-                <h5 id="scania-nombre-empresa" class="fw-bold mt-2 mb-2 text-center" style="font-size: 0.9rem;">—</h5>
-                <div id="scania-fecha-actual" class="badge bg-dark text-white p-2 w-100 text-center" style="font-size: 0.85rem; border-radius: 4px;"></div>
+            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-width: 100%; max-height: 50px; display: none; object-fit: contain;">
+                <h5 id="scania-nombre-empresa" class="fw-bold mt-1 mb-1 text-center" style="font-size: 0.85rem;">—</h5>
+                <div id="scania-fecha-actual" class="badge bg-dark text-white p-1 w-100 text-center" style="font-size: 0.75rem; border-radius: 4px;"></div>
             </div>
         </div>
 
         <!-- Estado de Unidades (Dona) -->
         <div class="col-12 col-md-5 col-xl-3 mb-2">
-            <div class="kpi-card h-100 d-flex flex-column p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <div class="fw-bold text-center mb-1" style="font-size: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Estado de Unidades</div>
-                <div style="position: relative; height: 160px; width: 100%; flex: 1;">
+            <div class="kpi-card h-100 d-flex flex-column p-1" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="fw-bold text-center mb-0" style="font-size: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 2px;">Estado de Unidades</div>
+                <div class="mt-1" style="position: relative; height: 100px; width: 100%; flex: 1;">
                     <canvas id="chartFleetrunStatus"></canvas>
                 </div>
             </div>
@@ -30,31 +30,31 @@
 
         <!-- Situación de Mantenimientos de Flota -->
         <div class="col-12 col-md-7 col-xl-7 mb-2">
-            <div class="kpi-card h-100 d-flex flex-column p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <div class="fw-bold text-center mb-2" style="font-size: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Situación de Mantenimientos de Flota</div>
+            <div class="kpi-card h-100 d-flex flex-column p-1" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="fw-bold text-center mb-1" style="font-size: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 2px;">Situación de Mantenimientos de Flota</div>
                 <div class="d-flex w-100 h-100 text-center align-items-stretch" style="gap: 4px;">
                     <!-- Flota Total -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #1f2937; color: white; border-radius: 6px;">
-                        <div id="sca-kpi-total" class="fw-bold fs-2">0</div>
-                        <div style="font-size: 0.7rem; text-transform: uppercase;">Flota<br>Total</div>
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #1f2937; color: white; border-radius: 6px;">
+                        <div id="sca-kpi-total" class="fw-bold fs-4">0</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase;">Flota<br>Total</div>
                     </div>
                     <!-- Vencidos -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;">
-                        <div id="sca-kpi-critico" class="fw-bold fs-2">0</div>
-                        <div style="font-size: 0.7rem; text-transform: uppercase;">Vencidos</div>
-                        <div id="sca-pct-critico" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;">
+                        <div id="sca-kpi-critico" class="fw-bold fs-4">0</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase;">Vencidos</div>
+                        <div id="sca-pct-critico" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
                     </div>
                     <!-- Próximo a Vencer -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;">
-                        <div id="sca-kpi-riesgo" class="fw-bold fs-2">0</div>
-                        <div style="font-size: 0.7rem; text-transform: uppercase;">Próximos<br>a Vencer</div>
-                        <div id="sca-pct-riesgo" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;">
+                        <div id="sca-kpi-riesgo" class="fw-bold fs-4">0</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase;">Próximos<br>a Vencer</div>
+                        <div id="sca-pct-riesgo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
                     </div>
                     <!-- Vigentes -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;">
-                        <div id="sca-kpi-operativo" class="fw-bold fs-2">0</div>
-                        <div style="font-size: 0.7rem; text-transform: uppercase;">Vigentes</div>
-                        <div id="sca-pct-operativo" class="fw-bold mt-1" style="font-size: 0.75rem;">0%</div>
+                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;">
+                        <div id="sca-kpi-operativo" class="fw-bold fs-4">0</div>
+                        <div style="font-size: 0.65rem; text-transform: uppercase;">Vigentes</div>
+                        <div id="sca-pct-operativo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
                     </div>
                 </div>
             </div>
