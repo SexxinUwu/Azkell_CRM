@@ -5,10 +5,29 @@
     display: flex !important;
     flex-direction: column;
 }
+
+/* Layout PC: 40% Dashboard, 60% Tabla */
+@media (min-width: 992px) {
+    #scaniaDashboard {
+        flex: 0 0 40%;
+        max-height: 40%;
+        margin-bottom: 0.5rem !important;
+    }
+    #scaniaDashboard .col-12 {
+        height: 100%;
+    }
+    #scaniaDashboard .kpi-card {
+        height: 100% !important;
+    }
+    #fleetrun-tabla-wrap {
+        flex: 1 1 auto;
+        min-height: 0; /* Important for flex-column scrolling */
+    }
+}
 </style>
 
 <div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
-    <div id="scaniaDashboard" class="row mb-2 gx-2">
+    <div id="scaniaDashboard" class="row mb-2 gx-2 flex-shrink-0">
         <!-- Logo y Datos de Empresa -->
         <div class="col-12 col-xl-2 mb-2">
             <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
