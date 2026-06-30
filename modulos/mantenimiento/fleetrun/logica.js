@@ -139,8 +139,15 @@ function mostrarFleetrun(datos) {
               let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
               
               let utsUmbral = 2000;
-              if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
-                  utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+              let metricSuffix = esHoras ? '_HORAS' : '_KM';
+              let combinedKey = utsDisplay.toUpperCase() + metricSuffix;
+              
+              if (window._fleetrun_umbrales_uts) {
+                  if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+                      utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+                  } else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
+                      utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+                  }
               }
               
               if (km_restante <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO";
@@ -279,16 +286,23 @@ function mostrarFleetrunCards(datosAMostrar) {
 
         // Determinar el MP más crítico
         var criticalMp = null, criticalEstado = 'VIGENTE';
+        var esHorasGrp = (window._metricaMap[(placaRaw||'').toUpperCase()] === 'horas');
         mantenimientos.forEach(function(fila) {
             var km_prox = parseFloat(fila[11]) || 0;
-            var km_gps  = wialonData ? wialonData.km : (parseFloat(fila[14]) || 0);
+            var km_gps  = wialonData ? (esHorasGrp ? wialonData.horas : wialonData.km) : (parseFloat(fila[14]) || 0);
             var falta   = km_prox - km_gps;
             var estado;
             
             var utsUmbral = 2000;
             var utsDisp = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
-            if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
-                utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+            let metricSuffix = esHorasGrp ? '_HORAS' : '_KM';
+            let combinedKey = utsDisp.toUpperCase() + metricSuffix;
+            if (window._fleetrun_umbrales_uts) {
+                if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+                } else if (window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
+                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+                }
             }
             
             if (falta <= 0) estado = 'VENCIDO';
@@ -422,8 +436,15 @@ function _filtrarDatosAMostrar(datos) {
         var falta_km  = km_prox - km_actual;
         var estado;
         var utsUmbral = 2000;
-        if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
-            utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+        var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
+        var metricSuffix = esHoras ? '_HORAS' : '_KM';
+        var combinedKey = utsDisp.toUpperCase() + metricSuffix;
+        if (window._fleetrun_umbrales_uts) {
+            if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+                utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+            } else if (window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
+                utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+            }
         }
         if (falta_km <= 0) estado = 'VENCIDO';
         else if (falta_km <= utsUmbral) estado = 'PROXIMO';
