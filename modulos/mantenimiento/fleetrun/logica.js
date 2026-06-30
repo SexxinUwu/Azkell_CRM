@@ -771,13 +771,29 @@ window.importarExcelFleetrun = function(event) {
             let r = {};
             for (let k in rawRow) r[k.toUpperCase().trim()] = rawRow[k];
 
-            let fechaIngreso = r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '';
+            let fechaIngreso = String(r['FECHA INGRESO'] || r['FECHA'] || r['FECHA REGISTRO'] || '').trim();
             if (fechaIngreso.includes('/')) {
                 let p = fechaIngreso.split('/');
-                if (p[2] && p[2].length === 4) fechaIngreso = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+                let p2 = p[2].trim();
+                let p0 = p[0].trim().padStart(2, '0');
+                let p1 = p[1].trim().padStart(2, '0');
+                if (p2.length === 4) {
+                    fechaIngreso = `${p2}-${p1}-${p0}`;
+                } else if (p2.length === 2) {
+                    fechaIngreso = `20${p2}-${p1}-${p0}`;
+                }
+            } else if (fechaIngreso.includes('-')) {
+                let p = fechaIngreso.split('-');
+                let p0 = p[0].trim();
+                let p2 = p[2].trim();
+                if (p0.length === 2 && p2.length === 4) { // DD-MM-YYYY
+                    fechaIngreso = `${p2}-${p[1].trim().padStart(2, '0')}-${p0.padStart(2, '0')}`;
+                }
             }
-            let kmact = parseFloat(r['KM ACTUAL'] || 0);
-            let frec = parseFloat(r['FRECUENCIA'] || 0);
+            let kmactStr = String(r['KM ACTUAL'] || '0').replace(/,/g, '');
+            let kmact = parseFloat(kmactStr) || 0;
+            let frecStr = String(r['FRECUENCIA'] || '0').replace(/,/g, '');
+            let frec = parseFloat(frecStr) || 0;
             
             let placaVal = r['PLACA'] || '';
             let marca = '', dueno = '', uts = '', combustible = '', modelo = '', wialonKm = '';
