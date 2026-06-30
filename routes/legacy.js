@@ -185,6 +185,14 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
         return true;
     });
 
+    if (validos.length === 0 && registros.length > 0) {
+        return res.json({ 
+            ok: 0, 
+            errores: errCount, 
+            detalle: "No hay registros con PLACA válida. Primera fila recibida: " + JSON.stringify(registros[0]) 
+        });
+    }
+
     if (validos.length > 0) {
         // Obtener el último secuencial del año actual para generar IDs Prev-YYYY-XXXX
         const anio = new Date().getFullYear();
