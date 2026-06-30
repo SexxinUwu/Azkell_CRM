@@ -22,16 +22,22 @@ window._metricaMap          = window._metricaMap          || {}; // placa.toUppe
 window._kmDiaMap            = window._kmDiaMap            || {}; // placa.toUpperCase() → km/día promedio
 window._fleetrunDetalleId   = window._fleetrunDetalleId   || null; // ID del registro abierto en offcanvas
 
+window._fleetrun_umbrales_uts = window._fleetrun_umbrales_uts || null;
+
 function cargarTablaFleetrun(forzarRefresh = false) {
-    if (!forzarRefresh && dataGlobalFleetrun.length > 0) { mostrarFleetrun(dataGlobalFleetrun); return; }
+    if (!forzarRefresh && dataGlobalFleetrun.length > 0 && window._fleetrun_umbrales_uts !== null) { mostrarFleetrun(dataGlobalFleetrun); return; }
     const cuerpo = document.getElementById('cuerpoTablaFleetrun');
     if (cuerpo) {
         cuerpo.innerHTML = '<tr><td colspan="10" class="td-empty text-center py-5" style="color: var(--subtext); font-weight: 500;"><span class="spinner-border spinner-border-sm text-warning me-2"></span>Cargando mantenimientos...</td></tr>';
     }
-    fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
-        .then(function(r) { return r.json(); })
-        .then(function(r) { mostrarFleetrun(r.data || []); })
-        .catch(function() { mostrarFleetrun([]); });
+    Promise.all([
+        fetch('/api/configuracion').then(r => r.json()).catch(() => ({})),
+        fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
+    ]).then(([configData, r]) => {
+        let confStr = configData['fleetrun_uts_umbrales'] || '{}';
+        try { window._fleetrun_umbrales_uts = JSON.parse(confStr); } catch(e) { window._fleetrun_umbrales_uts = {}; }
+        mostrarFleetrun(r.data || []);
+    });
 }
 
 function toggleVistaFleetrun() { isHistorialFleetrun = !isHistorialFleetrun; let textBtn = document.getElementById('text-toggle-fleetrun'); if(textBtn) { textBtn.innerText = isHistorialFleetrun ? "Ver Últimos Preventivos" : "Ver Historial Completo"; } expandAllState = false; mostrarFleetrun(dataGlobalFleetrun); }
@@ -86,8 +92,8 @@ function mostrarFleetrun(datos) {
   }
 
   let html = '';
-  let cntCrit = 0, cntRiesgo = 0, cntInmed = 0, cntOper = 0;
-  let placaEstadoMap = new Map(); let estadoPrio = { 'OPERATIVO': 0, 'INMEDIATO': 1, 'RIESGO': 2, 'CRITICO': 3 };
+  let cntVencido = 0, cntProximo = 0, cntVigente = 0;
+  let placaEstadoMap = new Map(); let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
   if(!datosAMostrar || datosAMostrar.length === 0) { html = '<tr><td colspan="11" class="text-center py-4" style="color: var(--subtext) !important;">No hay mantenimientos.</td></tr>'; }
   else {
       let canEditF = window.checkPerm('fleet','e'); let canDeleteF = window.checkPerm('fleet','d'); let setFClientes = new Set(); let setFUts = new Set(); let mapPlacas = new Map();
@@ -132,10 +138,14 @@ function mostrarFleetrun(datos) {
               if (km_restante < 0 && !isHistorialFleetrun) km_restante = km_prox - km_gps; // fallback si es data antigua que usaba km_prox
               let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
               
-              if (km_restante <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "CRITICO";
-              } else if (km_restante <= 1000) { badgeClass = "bg-warning text-dark"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "RIESGO";
-              } else if (km_restante <= 2500) { badgeClass = "bg-info text-dark"; iconFalta = `<i class="bi bi-info-circle-fill"></i>`; estadoKpi = "INMEDIATO";
-              } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "OPERATIVO"; }
+              let utsUmbral = 2000;
+              if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
+                  utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+              }
+              
+              if (km_restante <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO";
+              } else if (km_restante <= utsUmbral) { badgeClass = "bg-warning text-dark"; iconFalta = `<i class="bi bi-exclamation-triangle-fill"></i>`; estadoKpi = "PROXIMO";
+              } else { badgeClass = "bg-success text-white"; iconFalta = `<i class="bi bi-check-circle-fill"></i>`; estadoKpi = "VIGENTE"; }
               
               let _prio = estadoPrio[estadoKpi] || 0; let _prevE = placaEstadoMap.get(placaRaw); if (_prevE === undefined || _prio > (estadoPrio[_prevE] || 0)) { placaEstadoMap.set(placaRaw, estadoKpi); }
               let fmtTipo = `<span style="color: #2D438A; font-weight: bold;">${tipo_mp}</span>`;
@@ -167,7 +177,7 @@ function mostrarFleetrun(datos) {
               </tr>`;
           });
       });
-      placaEstadoMap.forEach(function(estado) { if (estado === 'CRITICO') cntCrit++; else if (estado === 'RIESGO') cntRiesgo++; else if (estado === 'INMEDIATO') cntInmed++; else cntOper++; });
+      placaEstadoMap.forEach(function(estado) { if (estado === 'VENCIDO') cntVencido++; else if (estado === 'PROXIMO') cntProximo++; else cntVigente++; });
       rellenarFiltroCheck('filtroFleetCliente', setFClientes, 'filtrarFleetrunAvanzado'); rellenarFiltroCheck('filtroFleetUts', setFUts, 'filtrarFleetrunAvanzado');
   }
   // ── Preservar grupos expandidos antes de re-render ───────────────────────
@@ -209,7 +219,7 @@ function mostrarFleetrun(datos) {
   }
   
   if (!isHistorialFleetrun) { 
-      updateGraficoFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper, placaEstadoMap.size); 
+      updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placaEstadoMap.size); 
   }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
@@ -274,8 +284,15 @@ function mostrarFleetrunCards(datosAMostrar) {
             var km_gps  = wialonData ? wialonData.km : (parseFloat(fila[14]) || 0);
             var falta   = km_prox - km_gps;
             var estado;
+            
+            var utsUmbral = 2000;
+            var utsDisp = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
+            if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
+                utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+            }
+            
             if (falta <= 0) estado = 'VENCIDO';
-            else if ((normalizeStr(utsRaw) === 'NACIONAL' && falta <= 1500) || (normalizeStr(utsRaw) === 'LOCAL' && falta <= 100)) estado = 'POR_VENCER';
+            else if (falta <= utsUmbral) estado = 'PROXIMO';
             else estado = 'VIGENTE';
             if (estadoOrder[estado] < estadoOrder[criticalEstado] || !criticalMp) {
                 criticalMp = fila; criticalEstado = estado;
@@ -327,8 +344,9 @@ window.filtrarFleetrunAvanzado = function() {
     const chkEst = Array.from(document.querySelectorAll('#filtroFleetEstado input:checked')).map(e=>e.value);
 
     let isFiltering = txt !== '' || dateCompare !== '' || chkCli.length > 0 || chkUts.length > 0 || chkEst.length > 0;
-    let cntOper = 0, cntInmed = 0, cntRiesgo = 0, cntCrit = 0;
+    let cntVigente = 0, cntProximo = 0, cntVencido = 0;
     let placasMostradas = new Set();
+    let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
     const headers = document.querySelectorAll('#cuerpoTablaFleetrun tr.group-header');
     headers.forEach(header => {
@@ -337,6 +355,7 @@ window.filtrarFleetrunAvanzado = function() {
         let childRows = document.querySelectorAll(`.child-${classPlaca}`);
         let hasVisibleChild = false;
         let matchCli = (!chkCli.length || chkCli.includes(cli)); let matchUts = (!chkUts.length || chkUts.includes(uts));
+        let bestKpiFila = null;
         if(matchCli && matchUts) {
             childRows.forEach(row => {
                 let textoRow = row.innerText.toLowerCase() + " " + placaRaw.toLowerCase();
@@ -348,15 +367,17 @@ window.filtrarFleetrunAvanzado = function() {
                 if(matchTxt && matchDate && matchKpi) {
                     row.style.display = isFiltering ? '' : (expandAllState ? '' : 'none');
                     hasVisibleChild = true;
-                    placasMostradas.add(placaRaw);
-                    if (kpiFila === 'OPERATIVO') cntOper++;
-                    else if (kpiFila === 'INMEDIATO') cntInmed++;
-                    else if (kpiFila === 'RIESGO') cntRiesgo++;
-                    else if (kpiFila === 'CRITICO') cntCrit++;
+                    if (!bestKpiFila || estadoPrio[kpiFila] > estadoPrio[bestKpiFila]) { bestKpiFila = kpiFila; }
                 } else {
                     row.style.display = 'none';
                 }
             });
+            if (hasVisibleChild) {
+                placasMostradas.add(placaRaw);
+                if (bestKpiFila === 'VIGENTE') cntVigente++;
+                else if (bestKpiFila === 'PROXIMO') cntProximo++;
+                else if (bestKpiFila === 'VENCIDO') cntVencido++;
+            }
             let icon = header.querySelector('i');
             if(icon) {
                 if (isFiltering && hasVisibleChild) icon.className = "bi bi-chevron-down ms-1 me-2 text-warning";
@@ -367,7 +388,7 @@ window.filtrarFleetrunAvanzado = function() {
         }
         header.style.display = hasVisibleChild ? '' : 'none';
     });
-    updateGraficoFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper, placasMostradas.size);
+    updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placasMostradas.size);
 
     // En móvil: re-renderizar cards con datos filtrados
     if (window.innerWidth < 768 && window._fleetrunDatosAMostrar) {
@@ -400,8 +421,12 @@ function _filtrarDatosAMostrar(datos) {
         var km_prox   = parseFloat(fila[12]) || 0;
         var falta_km  = km_prox - km_actual;
         var estado;
+        var utsUmbral = 2000;
+        if (window._fleetrun_umbrales_uts && window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
+            utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+        }
         if (falta_km <= 0) estado = 'VENCIDO';
-        else if (falta_km <= 1000) estado = 'POR_VENCER';
+        else if (falta_km <= utsUmbral) estado = 'PROXIMO';
         else estado = 'VIGENTE';
 
         var textoFila = placaRaw + ' ' + tipo + ' ' + dueno;
@@ -905,8 +930,8 @@ window.initGraficoFleetrun = function() {
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'],
-            datasets: [{ data: [1, 0, 0, 0], backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754'], borderWidth: 2, hoverOffset: 4 }]
+            labels: ['Vencidos', 'Próximos a Vencer', 'Vigentes'],
+            datasets: [{ data: [1, 0, 0], backgroundColor: ['#dc3545', '#ffc107', '#198754'], borderWidth: 2, hoverOffset: 4 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '65%',
@@ -932,7 +957,7 @@ window.initGraficoFleetrun = function() {
             onClick: (e, elements, chart) => {
                 if (elements.length > 0 && chart.data.labels[0] !== 'Sin Datos') {
                     const index = elements[0].index;
-                    let estadoVal = ['CRITICO', 'RIESGO', 'INMEDIATO', 'OPERATIVO'][index] || '';
+                    let estadoVal = ['VENCIDO', 'PROXIMO', 'VIGENTE'][index] || '';
                     document.querySelectorAll('#filtroFleetEstado input:checked').forEach(c => c.checked = false);
                     let checkbox = document.querySelector(`#filtroFleetEstado input[value="${estadoVal}"]`);
                     if(checkbox) checkbox.checked = true;
@@ -943,7 +968,7 @@ window.initGraficoFleetrun = function() {
     });
 };
 
-window.updateGraficoFleetrun = function(criticos, riesgo, inmediatos, operativos, totalFlota) {
+window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota) {
     // 1. Actualizar Datos de Empresa y Fecha
     const empNombre = localStorage.getItem('fleet_empresa_nombre') || 'Azkell Fleet';
     const empLogo = localStorage.getItem('fleet_empresa_logo') || '';
@@ -972,8 +997,6 @@ window.updateGraficoFleetrun = function(criticos, riesgo, inmediatos, operativos
     const pctCrit = document.getElementById('sca-pct-critico');
     const kpiRiesgo = document.getElementById('sca-kpi-riesgo');
     const pctRiesgo = document.getElementById('sca-pct-riesgo');
-    const kpiInm = document.getElementById('sca-kpi-inmediato');
-    const pctInm = document.getElementById('sca-pct-inmediato');
     const kpiOper = document.getElementById('sca-kpi-operativo');
     const pctOper = document.getElementById('sca-pct-operativo');
 
@@ -981,10 +1004,9 @@ window.updateGraficoFleetrun = function(criticos, riesgo, inmediatos, operativos
     
     const calcPct = (val) => totalFlota ? Math.round((val / totalFlota) * 100) + '%' : '0%';
     
-    if (kpiCrit) { kpiCrit.textContent = criticos || 0; pctCrit.textContent = calcPct(criticos); }
-    if (kpiRiesgo) { kpiRiesgo.textContent = riesgo || 0; pctRiesgo.textContent = calcPct(riesgo); }
-    if (kpiInm) { kpiInm.textContent = inmediatos || 0; pctInm.textContent = calcPct(inmediatos); }
-    if (kpiOper) { kpiOper.textContent = operativos || 0; pctOper.textContent = calcPct(operativos); }
+    if (kpiCrit) { kpiCrit.textContent = vencidos || 0; pctCrit.textContent = calcPct(vencidos); }
+    if (kpiRiesgo) { kpiRiesgo.textContent = proximos || 0; pctRiesgo.textContent = calcPct(proximos); }
+    if (kpiOper) { kpiOper.textContent = vigentes || 0; pctOper.textContent = calcPct(vigentes); }
 
     // 3. Actualizar Gráfico Donut
     if(!window.chartFleetrunInst) window.chartFleetrunInst = initGraficoFleetrun();
@@ -993,16 +1015,15 @@ window.updateGraficoFleetrun = function(criticos, riesgo, inmediatos, operativos
     window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
     window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
     
-    let totalMant = (criticos || 0) + (riesgo || 0) + (inmediatos || 0) + (operativos || 0);
+    let totalMant = (vencidos || 0) + (proximos || 0) + (vigentes || 0);
     if(totalMant === 0) {
         window.chartFleetrunInst.data.labels = ['Sin Datos'];
         window.chartFleetrunInst.data.datasets[0].data = [1];
         window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        window.chartFleetrunInst.data.labels = ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'];
-        window.chartFleetrunInst.data.datasets[0].data = [criticos, riesgo, inmediatos, operativos];
-        // Colores Scania-like: Rojo, Naranja, Amarillo, Verde
-        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#fd7e14', '#ffc107', '#198754'];
+        window.chartFleetrunInst.data.labels = ['Vencidos', 'Próximos', 'Vigentes'];
+        window.chartFleetrunInst.data.datasets[0].data = [vencidos, proximos, vigentes];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#ffc107', '#198754'];
     }
     window.chartFleetrunInst.update();
 };
