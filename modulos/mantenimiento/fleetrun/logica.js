@@ -1,3 +1,13 @@
+
+fetch('/api/conductores-lista')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        window.dataGlobalConductores = (d || []).map(function(c) {
+            var nom = (c.nombre || '').trim();
+            return nom ? { value: nom, label: nom } : null;
+        }).filter(Boolean);
+    }).catch(function() {});
+
 // ================================================================
 // MÓDULO: FLEETRUN — Sistema de Mantenimiento Preventivo
 // Aislado en SPA: Modulos/Mantenimiento/fleetrun/
@@ -401,7 +411,7 @@ function _filtrarDatosAMostrar(datos) {
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
     if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
     if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
-    if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores.map(function(c){ return {value:c, label:c}; }), 'Buscar técnico...');
+    if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores, 'Buscar responsable…');
   new bootstrap.Offcanvas(document.getElementById('drawerFleetrun')).show(); }
 
 window.autocompletarFleetrun = function(prefix) {
@@ -412,6 +422,30 @@ window.autocompletarFleetrun = function(prefix) {
         document.getElementById(prefix + '_marca').value = match[3] || "";
         document.getElementById(prefix + '_dueno').value = match[1] || "";
         document.getElementById(prefix + '_uts').value = match[19] || "";
+        
+        let combustibleElem = document.getElementById(prefix + '_combustible');
+        if (combustibleElem) {
+            let combVal = match[14] || "";
+            combustibleElem.value = combVal.toUpperCase();
+            if (!combustibleElem.value && combVal) {
+                // If it doesn't match the dropdown options, just set the text if it was a text input, but it's a select.
+            }
+        }
+        let modeloElem = document.getElementById(prefix + '_modelo');
+        if (modeloElem) {
+            modeloElem.value = match[4] || "";
+        }
+
+        let wialonElem = document.getElementById(prefix + '_kmgps');
+        if (wialonElem && typeof buscarWialonPorPlaca === 'function') {
+            let wD = buscarWialonPorPlaca(match[0]);
+            if (wD && wD.km) {
+                wialonElem.value = Math.round(wD.km);
+            } else {
+                wialonElem.value = '';
+            }
+        }
+
         calcularFrecuencia(prefix);
     } else {
         document.getElementById(prefix + '_marca').value = "";
@@ -1133,11 +1167,7 @@ function frTipoInit(prefix, valorActual) {
 
     var doRender = function() { frTipoRender('', prefix); };
     if (window._frTipoLista.length > 0) { doRender(); return; }
-    fetch('/api/conductores-lista')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            window.dataGlobalConductores = (d || []).map(function(c) { return c.nombre || ''; }).filter(Boolean);
-        }).catch(function() {});
+    
     fetch('/api/tipos-preventivo')
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
         .then(function(resp) {

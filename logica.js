@@ -366,7 +366,7 @@ window.verificarSesionGuardada = function() {
                 mostrarFleetrun(dataGlobalFleetrun);
             }
         });
-    fetch('/api/script/obtenerTiposMantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { dataTiposMant = r.data || []; });
+    fetch('/api/script/obtenerTiposMantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { dataTiposMant = r.data || []; window.dataTiposMant = dataTiposMant; });
     fetch('/api/script/obtenerTPMP', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { rellenarDatalist('dl-tpmp', new Set(r.data || [])); });
 
     // Precarga Fleetrun: llenar window.dataGlobalFleetrun y disparar re-render si el usuario ya está en ese módulo
