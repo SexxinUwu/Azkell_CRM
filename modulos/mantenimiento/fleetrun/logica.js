@@ -546,9 +546,9 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
     var pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(function(p) { return p[0] === placaInput; });
     var metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
     if (metrica.includes('HR') || metrica.includes('HORA')) {
-        return match.frecuencia_horas || match.frecuencia_km || 0;
+        return parseFloat(match.frecuencia_horas) || parseFloat(match.frecuencia_km) || 0;
     }
-    return match.frecuencia_km || match.frecuencia_horas || 0;
+    return parseFloat(match.frecuencia_km) || parseFloat(match.frecuencia_horas) || 0;
 };
 
 // ── Agregar tipo con cálculo inteligente ─────────────────────────
