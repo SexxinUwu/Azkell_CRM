@@ -95,7 +95,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
     // Legacy /api/script endpoints that use req.body.coleccion
-    else if (path.startsWith('/script/guardarStatusFlota')) mod = ['status_rampa', 'fleet', 'ot', 'status'];
+    else if (path.startsWith('/script/guardarStatusFlota') || path.startsWith('/script/obtenerDatosStatusFlota')) mod = ['status_rampa', 'fleet', 'ot', 'status'];
+    else if (path.startsWith('/script/guardarInspeccion') || path.startsWith('/script/obtenerDatosInspecciones')) mod = ['insp'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
