@@ -68,29 +68,31 @@
       </button>
     </div>
     <!-- Tabla -->
-    <div class="flex-1 overflow-auto px-2 py-2">
-      <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
-        <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
-          <tr style="border-bottom:2px solid var(--border)">
-            <th style="width:32px"><input type="checkbox" class="form-check-input" id="cfg-chk-all" onchange="window._cfgToggleSelAll(this.checked)" title="Seleccionar todos"></th>
-            <th style="min-width:80px">Marca</th>
-            <th style="min-width:140px">Tipo MP</th>
-            <th>UTS</th>
-            <th>Combustible</th>
-            <th>Modelo</th>
-            <th>Frec. KM</th>
-            <th>Frec. Horas</th>
-            <th>Frec. Días</th>
-            <th>Tipo</th>
-            <th>Sistema</th>
-            <th style="min-width:160px">Descripción</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="cfg-flota-tbody">
-          <tr><td colspan="11" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
-        </tbody>
-      </table>
+    <div class="flex-1 overflow-auto px-3 py-3">
+      <div class="border rounded-4 shadow-sm" style="background:var(--surface); overflow:hidden;">
+        <table class="table table-hover table-borderless align-middle w-100 mb-0" style="font-size:0.85rem">
+          <thead style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+            <tr style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">
+              <th class="ps-4 py-3" style="width:40px"><input type="checkbox" class="form-check-input rounded-1" id="cfg-chk-all" onchange="window._cfgToggleSelAll(this.checked)" title="Seleccionar todos" style="border-color:#cbd5e1;"></th>
+              <th class="py-3" style="min-width:80px; font-weight:600;">Marca</th>
+              <th class="py-3" style="min-width:140px; font-weight:600;">Tipo MP</th>
+              <th class="py-3" style="font-weight:600;">UTS</th>
+              <th class="py-3" style="font-weight:600;">Combustible</th>
+              <th class="py-3" style="font-weight:600;">Modelo</th>
+              <th class="py-3" style="font-weight:600;">Frec. KM</th>
+              <th class="py-3" style="font-weight:600;">Frec. Horas</th>
+              <th class="py-3" style="font-weight:600;">Frec. Días</th>
+              <th class="py-3" style="font-weight:600;">Tipo</th>
+              <th class="py-3" style="font-weight:600;">Sistema</th>
+              <th class="py-3" style="min-width:160px; font-weight:600;">Descripción</th>
+              <th class="pe-4 py-3 text-end"></th>
+            </tr>
+          </thead>
+          <tbody id="cfg-flota-tbody">
+            <tr><td colspan="13" class="text-center py-4" style="color:var(--subtext)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -112,6 +114,9 @@
         <datalist id="cf-dl-marcas"></datalist>
         <datalist id="cf-dl-tipomps"></datalist>
         <datalist id="cf-dl-sistemas"></datalist>
+        <datalist id="cf-dl-modelos"></datalist>
+        <datalist id="cf-dl-combustibles"></datalist>
+        <datalist id="cf-dl-tipos"></datalist>
         <div class="row g-3">
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
@@ -133,12 +138,12 @@
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Combustible</label>
             <input type="text" class="form-control form-control-sm text-uppercase" id="cf-combustible"
-                   placeholder="DIESEL, GNV..." autocomplete="off">
+                   placeholder="DIESEL, GNV..." list="cf-dl-combustibles" autocomplete="off">
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Modelo</label>
             <input type="text" class="form-control form-control-sm text-uppercase" id="cf-modelo"
-                   placeholder="FMX, G460..." autocomplete="off">
+                   placeholder="FMX, G460..." list="cf-dl-modelos" autocomplete="off">
           </div>
           <div class="col-sm-4">
             <label class="form-label fw-bold" style="font-size:0.8rem">Frecuencia KM</label>
@@ -158,7 +163,7 @@
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Tipo</label>
             <input type="text" class="form-control form-control-sm" id="cf-tipo"
-                   placeholder="Cambio, Campaña, Correctivo...">
+                   placeholder="Cambio, Campaña, Correctivo..." list="cf-dl-tipos" autocomplete="off">
           </div>
           <div class="col-sm-6">
             <label class="form-label fw-bold" style="font-size:0.8rem">Sistema</label>

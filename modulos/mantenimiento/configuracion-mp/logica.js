@@ -24,6 +24,12 @@ window['init_configuracion-mp'] = function() {
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('cfg-flota-fil-marca', function() { window.filtrarTablaConfigFlota(); });
     }
+    var cfMarca = document.getElementById('cf-marca');
+    if (cfMarca) {
+        cfMarca.addEventListener('input', function(e) {
+            if (window._cfPopularModelos) window._cfPopularModelos(e.target.value);
+        });
+    }
     window.cargarTablaConfigFlota();
 };
 
@@ -49,12 +55,34 @@ function _cfPopularDatalists() {
     });
     sistemas.sort();
 
+    var combustibles = [];
+    if (window.dataGlobalPlacas) {
+        window.dataGlobalPlacas.forEach(function(p) {
+            var c = (p[14] || '').trim().toUpperCase();
+            if (c && !combustibles.includes(c)) combustibles.push(c);
+        });
+    }
+    (window.cfgDataFlota || []).forEach(function(r) {
+        var c = (r.combustible || '').trim().toUpperCase();
+        if (c && !combustibles.includes(c)) combustibles.push(c);
+    });
+    combustibles.sort();
+
+    var tipos = [];
+    (window.cfgDataFlota || []).forEach(function(r) {
+        var t = (r.tipo || '').trim();
+        if (t && !tipos.includes(t)) tipos.push(t);
+    });
+    tipos.sort();
+
     function _fill(id, vals) {
         var dl = document.getElementById(id);
         if (dl) dl.innerHTML = vals.map(function(v){ return '<option value="'+v+'">'; }).join('');
     }
     _fill('cf-dl-marcas',   marcas);
     _fill('cf-dl-sistemas', sistemas);
+    _fill('cf-dl-combustibles', combustibles);
+    _fill('cf-dl-tipos', tipos);
 
     // Tipos de Preventivo: desde tabla maestra
     fetch('/api/tipos-preventivo')
@@ -62,6 +90,30 @@ function _cfPopularDatalists() {
         .then(function(j) { _fill('cf-dl-tipomps', (j.data || []).map(function(t) { return t.nombre; })); })
         .catch(function() {});
 }
+
+window._cfPopularModelos = function(marcaSeleccionada) {
+    var modelos = [];
+    var marcaFiltro = (marcaSeleccionada || '').trim().toUpperCase();
+    if (window.dataGlobalPlacas) {
+        window.dataGlobalPlacas.forEach(function(p) {
+            var m = (p[3] || '').trim().toUpperCase(); // marca
+            if (!marcaFiltro || m === marcaFiltro) {
+                var mod = (p[4] || '').trim().toUpperCase(); // modelo
+                if (mod && !modelos.includes(mod)) modelos.push(mod);
+            }
+        });
+    }
+    (window.cfgDataFlota || []).forEach(function(r) {
+        var m = (r.marca || '').trim().toUpperCase();
+        if (!marcaFiltro || m === marcaFiltro) {
+            var mod = (r.modelo || '').trim().toUpperCase();
+            if (mod && !modelos.includes(mod)) modelos.push(mod);
+        }
+    });
+    modelos.sort();
+    var dl = document.getElementById('cf-dl-modelos');
+    if (dl) dl.innerHTML = modelos.map(function(v){ return '<option value="'+v+'">'; }).join('');
+};
 
 // ── TIPOS DE MANTENIMIENTO ────────────────────────────────────────
 window.cargarTablaConfigFlota = function() {
@@ -118,24 +170,24 @@ window.filtrarTablaConfigFlota = function() {
     tb.innerHTML = window.cfgDataFlotaFil.map(function(r) {
         var checked = sel.indexOf(r.id) !== -1 ? 'checked' : '';
         var utsBadge = r.uts === 'LOCAL'
-            ? '<span class="badge bg-info text-dark">LOCAL</span>'
-            : (r.uts === 'NACIONAL' ? '<span class="badge bg-warning text-dark">NACIONAL</span>' : (r.uts || '—'));
-        return '<tr>' +
-            '<td><input type="checkbox" class="form-check-input cfg-chk" value="' + r.id + '" ' + checked + ' onchange="window._cfgToggleSel(' + r.id + ',this.checked)"></td>' +
-            '<td class="fw-bold">' + (r.marca||'') + '</td>' +
-            '<td><span class="badge bg-primary">' + (r.tipo_mp||'') + '</span></td>' +
+            ? '<span class="badge bg-info text-dark rounded-pill shadow-sm px-2">LOCAL</span>'
+            : (r.uts === 'NACIONAL' ? '<span class="badge bg-warning text-dark rounded-pill shadow-sm px-2">NACIONAL</span>' : (r.uts || '—'));
+        return '<tr class="align-middle" style="transition:background-color 0.2s">' +
+            '<td class="ps-4 py-2"><input type="checkbox" class="form-check-input cfg-chk rounded-1" value="' + r.id + '" ' + checked + ' onchange="window._cfgToggleSel(' + r.id + ',this.checked)"></td>' +
+            '<td class="fw-bold" style="color:var(--text)">' + (r.marca||'') + '</td>' +
+            '<td><span class="badge bg-primary text-white shadow-sm px-2 py-1 rounded-pill" style="font-weight:600; letter-spacing:0.3px">' + (r.tipo_mp||'') + '</span></td>' +
             '<td>' + utsBadge + '</td>' +
-            '<td>' + (r.combustible || '—') + '</td>' +
-            '<td>' + (r.modelo || '—') + '</td>' +
+            '<td style="color:var(--subtext)">' + (r.combustible || '—') + '</td>' +
+            '<td style="color:var(--subtext)">' + (r.modelo || '—') + '</td>' +
             '<td>' + (r.frecuencia_km   ? (parseInt(r.frecuencia_km)||0).toLocaleString('es-PE') + ' km' : '—') + '</td>' +
             '<td>' + (r.frecuencia_horas ? (parseInt(r.frecuencia_horas)||0) + ' h'                      : '—') + '</td>' +
             '<td>' + (r.frecuencia_dias  ? (parseInt(r.frecuencia_dias)||0) + ' días'                    : '—') + '</td>' +
-            '<td style="font-size:0.78rem; color:var(--subtext)">' + (r.tipo    || '—') + '</td>' +
-            '<td style="font-size:0.78rem; color:var(--subtext)">' + (r.sistema || '—') + '</td>' +
-            '<td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.78rem">' + (r.descripcion || '—') + '</td>' +
-            '<td class="text-end">' +
-                '<button class="btn btn-xs btn-outline-secondary me-1" onclick="window.editarConfigFlota(' + r.id + ')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-pencil"></i></button>' +
-                '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarConfigFlota(' + r.id + ',\'' + (r.marca + ' ' + r.tipo_mp).replace(/'/g,'') + '\')" style="font-size:0.7rem;padding:1px 6px"><i class="bi bi-trash"></i></button>' +
+            '<td style="font-size:0.8rem; color:var(--primary)">' + (r.tipo    || '—') + '</td>' +
+            '<td style="font-size:0.8rem; color:var(--subtext)">' + (r.sistema || '—') + '</td>' +
+            '<td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.8rem; color:var(--text)">' + (r.descripcion || '—') + '</td>' +
+            '<td class="pe-4 text-end">' +
+                '<button class="btn btn-sm btn-light text-primary border-0 me-1 rounded-circle shadow-sm" onclick="window.editarConfigFlota(' + r.id + ')" title="Editar" style="width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center"><i class="bi bi-pencil" style="font-size:0.85rem"></i></button>' +
+                '<button class="btn btn-sm btn-light text-danger border-0 rounded-circle shadow-sm" onclick="window.eliminarConfigFlota(' + r.id + ',\'' + (r.marca + ' ' + r.tipo_mp).replace(/'/g,'') + '\')" title="Eliminar" style="width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center"><i class="bi bi-trash" style="font-size:0.85rem"></i></button>' +
             '</td></tr>';
     }).join('');
 };
@@ -196,6 +248,7 @@ window.abrirModalConfigFlota = function() {
     var t = document.getElementById('modalConfigFlota-titulo');
     if(t) t.innerHTML='<i class="bi bi-plus-circle me-1 text-primary"></i>Nuevo Tipo de Mantenimiento';
     _cfPopularDatalists();
+    if (window._cfPopularModelos) window._cfPopularModelos('');
     _bsModal(document.getElementById('modalConfigFlota')).show();
 };
 
@@ -220,6 +273,7 @@ window.editarConfigFlota = function(id) {
         var t = document.getElementById('modalConfigFlota-titulo');
         if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar — ' + r.marca + ' ' + r.tipo_mp;
         _cfPopularDatalists();
+        if (window._cfPopularModelos) window._cfPopularModelos(r.marca);
         _bsModal(document.getElementById('modalConfigFlota')).show();
     };
     fetch('/api/tipos-mantenimiento')
