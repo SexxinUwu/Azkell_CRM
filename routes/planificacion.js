@@ -1038,17 +1038,20 @@ router.post('/tipos-mantenimiento/importar', async (req, res) => {
             const uts     = (r.uts     || 'LOCAL').toUpperCase().trim();
             if (!marca || !tipo_mp) continue;
 
+            const combustible = (r.combustible || '').toUpperCase().trim();
+            const modelo = (r.modelo || '').toUpperCase().trim();
+
             const [existing] = await db.promise().query(
-                'SELECT id FROM tipos_mantenimiento WHERE UPPER(marca)=? AND UPPER(tipo_mp)=? AND UPPER(uts)=? LIMIT 1',
-                [marca, tipo_mp, uts]
+                'SELECT id FROM tipos_mantenimiento WHERE UPPER(marca)=? AND UPPER(tipo_mp)=? AND UPPER(uts)=? AND UPPER(IFNULL(combustible,""))=? AND UPPER(IFNULL(modelo,""))=? LIMIT 1',
+                [marca, tipo_mp, uts, combustible, modelo]
             );
             if (existing.length) {
                 await db.promise().query(
                     `UPDATE tipos_mantenimiento SET
-                        combustible=?, modelo=?, frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
+                        frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
                         tipo=?, sistema=?, descripcion=?
                      WHERE id=?`,
-                    [r.combustible||null, r.modelo||null, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                    [r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
                      r.tipo||null, r.sistema||null, r.descripcion||null, existing[0].id]
                 );
                 actualizados++;
