@@ -405,9 +405,10 @@ window.rotAbrirDetalle = function(idOT) {
           + '</div>';
 
     // Inspección General (placeholder)
+    var puedeCrearInsp = puedeEditar || (window.checkPerm && window.checkPerm('insp', 'c'));
     html += '<div class="rot-sec" id="rot-sec-inspecciones">'
           + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspección General '
-          + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+          + (puedeCrearInsp ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
@@ -1085,7 +1086,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
         } catch(e) { return { d: '—', h: '—' }; }
     }
 
-    var iniDT = formatDT(ot.fecha_ingreso || ot.fecha_inicio_ot);
+    var iniDT = formatDT(ot.fecha_inicio_ot || ot.fecha_ingreso);
     var finDT = formatDT(ot.fecha_hora_salida);
 
     var htmlMotivos = '';
@@ -1109,8 +1110,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
             var det2 = {};
             try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
             
-            var tIni = formatDT(t.fecha_inicio || t.fecha || t.fecha_creacion);
-            var tFin = formatDT(t.fecha_fin || t.fecha_cierre);
+            var tIni = formatDT(t.fecha_trabajo || t.fecha_inicio || t.fecha || t.fecha_creacion);
+            var tFin = formatDT(t.fecha_salida || t.fecha_fin || t.fecha_cierre);
             var tIniStr = (tIni.d !== '—') ? tIni.d + ' ' + tIni.h : '—';
             var tFinStr = (tFin.d !== '—') ? tFin.d + ' ' + tFin.h : '—';
             
