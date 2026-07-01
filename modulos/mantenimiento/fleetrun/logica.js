@@ -25,6 +25,12 @@ fetch('/api/tipos-preventivo')
         }
     }).catch(function() {});
 
+fetch('/api/tipos-mantenimiento')
+    .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+    .then(function(j) {
+        window.dataTiposMant = j.data || [];
+    }).catch(function() {});
+
 
 // ================================================================
 // MÓDULO: FLEETRUN — Sistema de Mantenimiento Preventivo
