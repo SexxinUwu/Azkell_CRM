@@ -521,19 +521,27 @@ window.fleetrunTiposMulti = [];
 // ── Buscar frecuencia para un tipo desde dataTiposMant ──────────
 window._buscarFrecuenciaTipo = function(tipoMP) {
     if (!window.dataTiposMant || !window.dataTiposMant.length) return 0;
-    var marca = (document.getElementById('f_marca').value || '').trim().toLowerCase();
-    var uts = (document.getElementById('f_uts').value || '').trim().toLowerCase();
-    var combustible = (document.getElementById('f_combustible').value || '').trim().toLowerCase();
-    var modelo = (document.getElementById('f_modelo').value || '').trim().toLowerCase();
-    tipoMP = (tipoMP || '').trim().toLowerCase();
+    
+    var _normStr = function(s) {
+        if (!s) return '';
+        return s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+    };
+
+    var marca = _normStr(document.getElementById('f_marca').value);
+    var uts = _normStr(document.getElementById('f_uts').value);
+    var combustible = _normStr(document.getElementById('f_combustible').value);
+    var modelo = _normStr(document.getElementById('f_modelo').value);
+    tipoMP = _normStr(tipoMP);
+    
     if (!marca || !tipoMP) return 0;
 
     var match = window.dataTiposMant.find(function(t) {
-        var tMarca = (t.marca || '').trim().toLowerCase();
-        var tTipoMP = (t.tipo_mp || '').trim().toLowerCase();
-        var tUts = (t.uts || '').trim().toLowerCase();
-        var tComb = (t.combustible || '').trim().toLowerCase();
-        var tMod = (t.modelo || '').trim().toLowerCase();
+        var tMarca = _normStr(t.marca);
+        var tTipoMP = _normStr(t.tipo_mp);
+        var tUts = _normStr(t.uts);
+        var tComb = _normStr(t.combustible);
+        var tMod = _normStr(t.modelo);
+        
         return (!tMarca || tMarca === marca) &&
                (!tTipoMP || tTipoMP === tipoMP) &&
                (!tUts || tUts === uts) &&
