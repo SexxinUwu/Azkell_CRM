@@ -299,8 +299,27 @@ function _guBuildRolPanel(rol) {
                 + '<div class="gu-member-cargo">' + _guEsc(u.cargo||u.correo) + '</div></div></div>';
         });
     }
+    if (rol.id) {
+        html += '<div style="margin-top:32px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;">'
+            + '<div style="font-weight:700; color:var(--text); margin-bottom:4px;">Ver servidor como un rol</div>'
+            + '<div style="font-size:0.8rem; color:var(--subtext); margin-bottom:12px;">Esto te permitirá probar qué acciones puede realizar este rol y qué áreas puede ver.</div>'
+            + '<button class="btn btn-sm" style="background:var(--crm-accent); color:#fff; font-weight:600; padding:6px 16px; border-radius:6px; border:none; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="window.guVerComoRol(' + rol.id + ')">Ver servidor como rol <i class="bi bi-arrow-right ms-1"></i></button>'
+            + '</div>';
+    }
     return html;
 }
+
+window.guVerComoRol = function(rolId) {
+    var rol = window.dataGlobalRoles.find(function(r){ return r.id == rolId; });
+    if (!rol) return;
+    localStorage.setItem('fleet_simulated_role', JSON.stringify({
+        id: rol.id,
+        nombre: rol.nombre,
+        permisos: rol.permisos_json || '{}',
+        es_admin: !!rol.es_admin
+    }));
+    window.location.reload();
+};
 
 window.guSeleccionarRol = function(id) {
     window._guSeleccionado = { tipo:'rol', id:id };
