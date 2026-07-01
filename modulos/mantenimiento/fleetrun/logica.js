@@ -494,41 +494,110 @@ function _filtrarDatosAMostrar(datos) {
 
 window.fleetrunTiposMulti = [];
 
+// ── Buscar frecuencia para un tipo desde dataTiposMant ──────────
+window._buscarFrecuenciaTipo = function(tipoMP) {
+    if (!window.dataTiposMant || !window.dataTiposMant.length) return 0;
+    var marca = (document.getElementById('f_marca').value || '').trim().toLowerCase();
+    var uts = (document.getElementById('f_uts').value || '').trim().toLowerCase();
+    var combustible = (document.getElementById('f_combustible').value || '').trim().toLowerCase();
+    var modelo = (document.getElementById('f_modelo').value || '').trim().toLowerCase();
+    tipoMP = (tipoMP || '').trim().toLowerCase();
+    if (!marca || !tipoMP) return 0;
+
+    var match = window.dataTiposMant.find(function(t) {
+        var tMarca = (t.marca || '').trim().toLowerCase();
+        var tTipoMP = (t.tipo_mp || '').trim().toLowerCase();
+        var tUts = (t.uts || '').trim().toLowerCase();
+        var tComb = (t.combustible || '').trim().toLowerCase();
+        var tMod = (t.modelo || '').trim().toLowerCase();
+        return (!tMarca || tMarca === marca) &&
+               (!tTipoMP || tTipoMP === tipoMP) &&
+               (!tUts || tUts === uts) &&
+               (!tComb || tComb === combustible) &&
+               (!tMod || tMod === modelo);
+    });
+    if (!match) return 0;
+
+    var placaInput = document.getElementById('f_placa').value;
+    var pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(function(p) { return p[0] === placaInput; });
+    var metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
+    if (metrica.includes('HR') || metrica.includes('HORA')) {
+        return match.frecuencia_horas || match.frecuencia_km || 0;
+    }
+    return match.frecuencia_km || match.frecuencia_horas || 0;
+};
+
+// ── Agregar tipo con cálculo inteligente ─────────────────────────
 window.agregarTipoMulti = function(val) {
-    if(!val) return;
+    if (!val) return;
     val = val.toUpperCase().trim();
-    if(window.fleetrunTiposMulti.includes(val)) return;
-    window.fleetrunTiposMulti.push(val);
-    window.renderTiposMulti();
-};
-
-window.eliminarTipoMulti = function(val) {
-    window.fleetrunTiposMulti = window.fleetrunTiposMulti.filter(t => t !== val);
-    window.renderTiposMulti();
-};
-
-window.renderTiposMulti = function() {
-    let container = document.getElementById('f_tipomp-tags');
-    if(!container) return;
-    container.innerHTML = window.fleetrunTiposMulti.map(t => 
-        `<span class="badge d-flex align-items-center gap-1" style="background-color: #0369a1; font-size: 0.75rem; border-radius: 6px; padding: 4px 8px;">
-            ${t} <i class="bi bi-x ms-1" style="cursor:pointer; font-size:1rem;" onclick="window.eliminarTipoMulti('${t}')"></i>
-         </span>`
-    ).join('');
-    let hid = document.getElementById('f_tipomp');
-    if (hid) hid.value = JSON.stringify(window.fleetrunTiposMulti);
+    if (window.fleetrunTiposMulti.find(function(t) { return t.tipo === val; })) return;
     
-    // Set frequency to informative text
-    let freqEl = document.getElementById('f_freckm');
-    let proxEl = document.getElementById('f_kmprox');
-    if (window.fleetrunTiposMulti.length > 1) {
-        if (freqEl) freqEl.value = 'Múltiple...';
-        if (proxEl) proxEl.value = 'Múltiple...';
-    } else if (window.fleetrunTiposMulti.length === 1) {
-        window.calcularFrecuenciaFleetrunMulti(window.fleetrunTiposMulti[0], 'f');
+    var frec = window._buscarFrecuenciaTipo(val);
+    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    var kmProx = frec > 0 ? (kmAct + frec) : 0;
+    
+    window.fleetrunTiposMulti.push({ tipo: val, frecuencia: frec, kmProximo: kmProx });
+    window.renderTiposMulti();
+};
+
+// ── Eliminar tipo ────────────────────────────────────────────────
+window.eliminarTipoMulti = function(val) {
+    window.fleetrunTiposMulti = window.fleetrunTiposMulti.filter(function(t) { return t.tipo !== val; });
+    window.renderTiposMulti();
+};
+
+// ── Recalcular todos los tipos cuando cambia KM Actual ──────────
+window.recalcularTodosMulti = function() {
+    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    window.fleetrunTiposMulti.forEach(function(item) {
+        if (item.frecuencia > 0) {
+            item.kmProximo = kmAct + item.frecuencia;
+        }
+    });
+    window.renderTiposMulti();
+};
+
+// ── Detectar unidad de métrica ──────────────────────────────────
+window._frGetUnidad = function() {
+    var placaInput = (document.getElementById('f_placa') || {}).value || '';
+    var metrica = (window._metricaMap[(placaInput).toUpperCase()] || 'km');
+    return (metrica === 'horas') ? 'h' : 'km';
+};
+
+// ── Renderizar tabla multi-item ──────────────────────────────────
+window.renderTiposMulti = function() {
+    var tbody = document.getElementById('f_tipomp-items-tbody');
+    if (!tbody) return;
+    var unidad = window._frGetUnidad();
+
+    if (!window.fleetrunTiposMulti.length) {
+        tbody.innerHTML = '<tr id="f_tipomp-empty-row"><td colspan="4" class="text-center py-3" style="color:#94a3b8; font-size:0.8rem;"><i class="bi bi-inbox me-1"></i>Agrega tipos de mantenimiento</td></tr>';
     } else {
-        if (freqEl) freqEl.value = '';
-        if (proxEl) proxEl.value = '';
+        tbody.innerHTML = window.fleetrunTiposMulti.map(function(item, idx) {
+            var frecStr = item.frecuencia > 0 
+                ? item.frecuencia.toLocaleString('es-PE') + ' ' + unidad 
+                : '<span style="color:#f59e0b"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin frec.</span>';
+            var proxStr = item.kmProximo > 0 
+                ? '<span class="fw-bold" style="color:#059669">' + item.kmProximo.toLocaleString('es-PE') + ' ' + unidad + '</span>' 
+                : '—';
+            return '<tr style="border-top:1px solid #e2e8f0; transition:background 0.15s;" onmouseenter="this.style.background=\'#f1f5f9\'" onmouseleave="this.style.background=\'transparent\'">' +
+                '<td class="ps-3 py-2"><span class="badge rounded-pill px-2 py-1 shadow-sm" style="background:#0369a1; font-size:0.78rem; font-weight:600;">' + item.tipo + '</span></td>' +
+                '<td class="text-center py-2" style="font-size:0.82rem; color:#334155;">' + frecStr + '</td>' +
+                '<td class="text-center py-2" style="font-size:0.82rem;">' + proxStr + '</td>' +
+                '<td class="pe-3 py-2 text-center"><button type="button" class="btn btn-sm p-0 border-0" style="width:24px;height:24px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseenter="this.style.background=\'#dc2626\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'#fee2e2\';this.style.color=\'#dc2626\'" onclick="window.eliminarTipoMulti(\'' + item.tipo + '\')"><i class="bi bi-x" style="font-size:0.9rem;"></i></button></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // Update hidden field with tipos array for form submission
+    var hid = document.getElementById('f_tipomp');
+    if (hid) hid.value = JSON.stringify(window.fleetrunTiposMulti.map(function(t) { return t.tipo; }));
+
+    // Sync count badge on table wrapper
+    var wrap = document.getElementById('f_tipomp-table-wrap');
+    if (wrap) {
+        wrap.style.borderColor = window.fleetrunTiposMulti.length > 0 ? '#818cf8' : '#e2e8f0';
     }
 };
 
@@ -543,10 +612,21 @@ window.onBlurTipomp = function(el) {
     }, 200);
 };
 
-window._cbOnSelect('f_placa', function() { window.autocompletarFleetrun('f'); window.calcularFrecuenciaFleetrun('f'); });
+window._cbOnSelect('f_placa', function() { window.autocompletarFleetrun('f'); window.recalcularTodosMultiDesdeAutocompletar(); });
 window._cbOnSelect('eF_placa', function() { window.autocompletarFleetrun('eF'); window.calcularFrecuenciaFleetrun('eF'); });
 window._cbOnSelect('f_tipomp', function(val) { window.agregarTipoMulti(val); document.getElementById('f_tipomp-txt').value = ''; });
 window._cbOnSelect('eF_tipomp', function() { window.calcularFrecuenciaFleetrun('eF'); });
+
+// When placa changes, recalculate all existing types with the new vehicle data
+window.recalcularTodosMultiDesdeAutocompletar = function() {
+    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    window.fleetrunTiposMulti.forEach(function(item) {
+        var frec = window._buscarFrecuenciaTipo(item.tipo);
+        item.frecuencia = frec;
+        item.kmProximo = frec > 0 ? (kmAct + frec) : 0;
+    });
+    window.renderTiposMulti();
+};
 
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; window.fleetrunTiposMulti = []; window.renderTiposMulti(); let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
     if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
@@ -726,59 +806,25 @@ function enviarFleetrun(event, formObj) {
         }
     }
     
-    let tipos = [];
-    try {
-        if (data.f_tipomp && data.f_tipomp.startsWith('[')) {
-            tipos = JSON.parse(data.f_tipomp);
-        } else {
-            tipos = data.f_tipomp ? [data.f_tipomp] : [];
-        }
-    } catch(e) {
-        tipos = data.f_tipomp ? [data.f_tipomp] : [];
-    }
+    // Use the pre-calculated multi-tipo objects
+    let tiposData = window.fleetrunTiposMulti || [];
     
-    if (tipos.length === 0) {
+    if (tiposData.length === 0) {
         alert("Selecciona al menos un tipo de mantenimiento.");
-        btn.disabled = false; btn.innerHTML = 'Guardar';
+        btn.disabled = false; btn.innerHTML = 'Guardar Registro';
         return;
     }
 
     let baseId = 'FL-' + Date.now();
-    let promises = tipos.map((tipo, index) => {
+    let promises = tiposData.map((item, index) => {
         let recData = {...data};
-        recData.f_tipomp = tipo;
+        recData.f_tipomp = item.tipo;
         // Si hay varios, usar ID secuencial
-        recData.f_id = (tipos.length > 1) ? (baseId + '-' + (index + 1)) : baseId;
+        recData.f_id = (tiposData.length > 1) ? (baseId + '-' + (index + 1)) : baseId;
         
-        // Recalcular frecuencia y próximo KM para cada tipo
-        let freq = 0;
-        let kmAct = parseFloat(recData.f_kmact) || 0;
-        
-        if (window.dataTiposMant) {
-            let marca = (recData.f_marca || '').trim().toLowerCase();
-            let uts = (recData.f_uts || '').trim().toLowerCase();
-            let combustible = (recData.f_combustible || '').trim().toLowerCase();
-            let modelo = (recData.f_modelo || '').trim().toLowerCase();
-            let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0] === (recData.f_placa||''));
-            let metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
-            
-            let match = window.dataTiposMant.find(t => {
-                return (!t.marca || t.marca.trim().toLowerCase() === marca) &&
-                       (!t.tipo_mp || t.tipo_mp.trim().toLowerCase() === tipo.trim().toLowerCase()) &&
-                       (!t.uts || t.uts.trim().toLowerCase() === uts) &&
-                       (!t.combustible || t.combustible.trim().toLowerCase() === combustible) &&
-                       (!t.modelo || t.modelo.trim().toLowerCase() === modelo);
-            });
-            if (match) {
-                if (metrica.includes('HR') || metrica.includes('HORA')) {
-                    freq = match.frecuencia_horas || match.frecuencia_km || 0;
-                } else {
-                    freq = match.frecuencia_km || match.frecuencia_horas || 0;
-                }
-            }
-        }
-        recData.f_freckm = freq;
-        recData.f_kmprox = freq > 0 ? (kmAct + freq) : '';
+        // Use pre-calculated values from the intelligent table
+        recData.f_freckm = item.frecuencia || 0;
+        recData.f_kmprox = item.kmProximo || '';
 
         return fetch('/api/script/guardarFleetrun', { 
             method: 'POST', 
