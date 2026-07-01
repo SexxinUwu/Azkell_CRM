@@ -1120,7 +1120,24 @@ window._permCache = null; // Se invalida en login/logout
 window.checkPerm = function(modKey, action) {
     try {
         if (!window._permCache) {
-            window._permCache = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+            var simRoleStr = localStorage.getItem('fleet_simulated_role');
+            if (simRoleStr) {
+                var simRole = JSON.parse(simRoleStr);
+                window._permCache = typeof simRole.permisos === 'string' ? JSON.parse(simRole.permisos) : (simRole.permisos || {});
+                if (simRole.es_admin) window._permCache.admin = true;
+                
+                if (!document.getElementById('guSimulatedRoleBanner')) {
+                    var banner = document.createElement('div');
+                    banner.id = 'guSimulatedRoleBanner';
+                    banner.style.cssText = 'background:#5865F2; color:#fff; text-align:center; padding:8px 16px; font-size:0.85rem; font-weight:600; display:flex; justify-content:center; align-items:center; gap:16px; position:fixed; top:0; left:0; right:0; z-index:99999; box-shadow:0 2px 10px rgba(0,0,0,0.3);';
+                    banner.innerHTML = '<div>Estás viendo la aplicación como el rol <b style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:12px; margin-left:6px;">' + (simRole.nombre || 'Simulado').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</b></div>'
+                        + '<button style="background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff; padding:4px 12px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.1)\'" onmouseout="this.style.background=\'transparent\'" onclick="localStorage.removeItem(\'fleet_simulated_role\'); window.location.reload();">Desactivar</button>';
+                    document.body.prepend(banner);
+                    document.body.style.paddingTop = '40px';
+                }
+            } else {
+                window._permCache = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+            }
         }
         var p = window._permCache;
         if (p.admin === true) return true;
