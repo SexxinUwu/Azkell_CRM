@@ -100,7 +100,7 @@ window.guCargarTodo = async function(forzar) {
         var cm = document.getElementById('gu-count-miembros');
         if (cr) cr.textContent = '(' + window.dataGlobalRoles.length + ')';
         if (cm) cm.textContent = '(' + window.dataGlobalUsuarios.length + ')';
-        window.guRenderLista();
+        window.guSetTab(window._guTabActiva || 'roles');
     } catch(e) {
         if (list) list.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>' + e.message + '</div>';
     }
@@ -111,10 +111,8 @@ window.guSetTab = function(tab) {
     window._guSeleccionado = null;
     var tr = document.getElementById('gu-tab-roles');
     var tm = document.getElementById('gu-tab-miembros');
-    var ts = document.getElementById('gu-tab-simulador');
     if (tr) tr.classList.toggle('active', tab === 'roles');
     if (tm) tm.classList.toggle('active', tab === 'miembros');
-    if (ts) ts.classList.toggle('active', tab === 'simulador');
     window.guRenderLista();
     var pc = document.getElementById('guPanelContent');
     var pa = document.getElementById('guPanelActions');
@@ -150,7 +148,7 @@ function _guRelTime(dt) {
 function _guRenderUserItem(u) {
     var color = u.rol_color || _guColorFrom(u.nombre||u.correo||'U');
     var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'usuario' && window._guSeleccionado.id === u.id;
-    var fnClick = (window._guTabActiva === 'simulador') ? 'window.guSimularUsuario' : 'window.guSeleccionarUsuario';
+    var fnClick = 'window.guSeleccionarUsuario';
     return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="' + fnClick + '(\'' + u.id + '\')">'
         + '<div class="gu-role-dot" style="background:' + color + ';font-size:.65rem;">' + _guInitials(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(u.nombre||u.correo) + '</div>'
@@ -729,68 +727,4 @@ window._guCheckCascade = function(el, modKey, action) {
     }
 };
 
-window.guSimularUsuario = function(id) {
-    var u = window.dataGlobalUsuarios.find(x => x.id == id);
-    if (!u) return;
-    window._guSeleccionado = { tipo:'usuario', id:u.id };
-    window.guRenderLista();
 
-    var misRoles = (u.roles_ids || []).map(id => window.dataGlobalRoles.find(x => x.id == id)).filter(Boolean);
-    var nombresRoles = misRoles.map(x => x.nombre).join(', ') || 'Ninguno';
-    var esAdmin = misRoles.some(x => x.es_admin);
-    var p = {};
-    try { p = (typeof u.permisos === 'string') ? JSON.parse(u.permisos) : u.permisos; } catch(e) {}
-
-    var html = '<div class="gu-section-header">Simulador de Permisos Efectivos</div>'
-             + '<div style="font-size:0.8rem; color:var(--subtext); margin-bottom:15px;">Viendo los permisos que tiene el usuario <b>' + _guEsc(u.nombre||u.correo) + '</b> basado en sus roles <b>' + _guEsc(nombresRoles) + '</b>.</div>';
-
-    if (esAdmin) {
-        html += '<div class="alert alert-danger" style="background:rgba(237,66,69,0.1); border:1px solid #ED4245; color:#ED4245; font-size:0.85rem; font-weight:bold;"><i class="bi bi-shield-lock-fill me-2"></i>Este usuario tiene acceso TOTAL (Administrador).</div>';
-    }
-
-    var lastGrp = '';
-    window._GU_MODULOS.forEach(function(mod) {
-        if (mod.grupo !== lastGrp) {
-            html += '<div class="gu-perm-group" style="margin-top:24px; margin-bottom: 8px; color:var(--subtext); font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">' + mod.grupo + '</div>';
-            lastGrp = mod.grupo;
-        }
-        var acc = p[mod.key] || {};
-        var l = esAdmin || acc['l'];
-        var c = esAdmin || acc['c'];
-        var e = esAdmin || acc['e'];
-        var d = esAdmin || acc['d'];
-
-        var renderRow = function(name, hasPerm) {
-            var icon = hasPerm 
-                ? '<i class="bi bi-check-circle-fill" style="color:#23a559; font-size:1.1rem;"></i>' 
-                : '<i class="bi bi-x-circle-fill" style="color:#da373c; font-size:1.1rem;"></i>';
-            return '<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 8px; border-bottom: 1px solid var(--border);">'
-                 + '<div style="font-weight: 500; font-size: 0.85rem; color: ' + (hasPerm ? 'var(--text)' : 'var(--subtext)') + ';">' + name + '</div>'
-                 + '<div>' + icon + '</div>'
-                 + '</div>';
-        };
-
-        if (!mod.lcad) {
-            html += renderRow('Acceso a ' + mod.nombre, l);
-        } else {
-            html += renderRow('Ver ' + mod.nombre, l);
-            html += renderRow('Crear en ' + mod.nombre, c);
-            html += renderRow('Editar ' + mod.nombre, e);
-            html += renderRow('Eliminar de ' + mod.nombre, d);
-        }
-    });
-
-    document.getElementById('guPanelEmpty').style.display = 'none';
-    var pc = document.getElementById('guPanelContent');
-    pc.innerHTML = html;
-    pc.style.display = 'block';
-    var pa = document.getElementById('guPanelActions');
-    if (pa) pa.style.display = 'none';
-
-    if(window.innerWidth <= 767) {
-        document.getElementById('guOffcanvasContent').innerHTML = pc.innerHTML;
-        document.getElementById('guOffcanvasActions').style.display = 'none';
-        var bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasGU'));
-        bsOffcanvas.show();
-    }
-};
