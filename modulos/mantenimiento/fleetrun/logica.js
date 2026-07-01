@@ -855,25 +855,29 @@ function enviarFleetrun(event, formObj) {
         return;
     }
 
-    let baseId = 'FL-' + Date.now();
-    let promises = tiposData.map((item, index) => {
-        let recData = {...data};
-        recData.f_tipomp = item.tipo;
-        // Si hay varios, usar ID secuencial
-        recData.f_id = (tiposData.length > 1) ? (baseId + '-' + (index + 1)) : baseId;
-        
-        // Use pre-calculated values from the intelligent table
-        recData.f_freckm = item.frecuencia || 0;
-        recData.f_kmprox = item.kmProximo || '';
+    let results = [];
+    let chain = Promise.resolve();
 
-        return fetch('/api/script/guardarFleetrun', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ args: [recData] }) 
-        }).then(r => r.json());
+    tiposData.forEach((item) => {
+        chain = chain.then(() => {
+            let recData = {...data};
+            recData.f_tipomp = item.tipo;
+            
+            // Use pre-calculated values from the intelligent table
+            recData.f_freckm = item.frecuencia || 0;
+            recData.f_kmprox = item.kmProximo || '';
+
+            return fetch('/api/script/guardarFleetrun', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ args: [recData] }) 
+            }).then(r => r.json()).then(r => {
+                results.push(r);
+            });
+        });
     });
 
-    Promise.all(promises).then(results => {
+    chain.then(() => {
         let allSuccess = results.every(r => r.data === 'Éxito');
         if (allSuccess) {
             formObj.reset();
