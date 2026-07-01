@@ -4,6 +4,23 @@ const router = express.Router();
 
 module.exports = (db, broadcast, logAudit) => {
 
+function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
+    const anio = new Date().getFullYear();
+    const prefix = `Prev-${anio}-`;
+    db.query(
+        `SELECT idRegistro FROM fleetrun WHERE idRegistro LIKE ? ORDER BY idRegistro DESC LIMIT 1`,
+        [`${prefix}%`],
+        (err, rows) => {
+            let seq = 1;
+            if (!err && rows.length) {
+                const lastId = rows[0].idRegistro;
+                const lastSeq = parseInt(lastId.split('-').pop(), 10);
+                if (!isNaN(lastSeq)) seq = lastSeq + 1;
+            }
+            cb(`${prefix}${String(seq).padStart(4, '0')}`);
+        }
+    );
+}
 
 
 // ── IMPORTACIÓN MASIVA DE PLACAS (23 CAMPOS) ─────────────────────────────────
