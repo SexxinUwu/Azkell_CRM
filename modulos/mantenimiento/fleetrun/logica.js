@@ -189,7 +189,7 @@ function mostrarFleetrun(datos) {
                   : `<span style="color: #64748b; font-weight: bold;">${km_gps.toLocaleString()}${gpsUnit}</span>`;
               let fmtFalta = `<span class="badge ${badgeClass} shadow-sm" style="font-size: 0.8rem; padding: 0.4em 0.6em;">${iconFalta} ${km_restante.toLocaleString()}</span>`;
 
-              let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="#" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
+              let menuAcciones = ''; if (canEditF || canDeleteF) { let items = ''; if(canEditF) items += `<li><a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalEditarFleetrun('${id}')"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`; if(canEditF && canDeleteF) items += `<li><hr class="dropdown-divider"></li>`; if(canDeleteF) items += `<li><a class="dropdown-item text-danger fw-bold" href="javascript:void(0)" onclick="eliminarRegistro('${id}', 'Fleetrun')"><i class="bi bi-trash"></i> Eliminar</a></li>`; menuAcciones = `<div class="dropstart text-center"><button class="btn-icon-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow">${items}</ul></div>`; } else { menuAcciones = `<span class="text-muted"><i class="bi bi-dash"></i></span>`; }
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
               
@@ -819,7 +819,72 @@ window.mostrarDetalleFleetrun = function(index) {
     bsOffcanvas.show();
 };
 
-function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : ''; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; frPlacaInit('eF', p[4]); frTipoInit('eF', p[8]);const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Offcanvas(document.getElementById('drawerEditarFleetrun')).show(); }
+function abrirModalEditarFleetrun(idReg) {
+    try {
+        const p = dataGlobalFleetrun.find(x => x[0] === idReg);
+        if (!p) return;
+        
+        document.getElementById('formEditarFleetrun').reset();
+        
+        let dDate = new Date(p[1]);
+        let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0];
+        
+        document.getElementById('eF_id').value = p[0] || '';
+        document.getElementById('eF_fecha').value = fechaFormat;
+        document.getElementById('eF_mes').value = p[2] || '';
+        document.getElementById('eF_anio').value = fechaFormat ? fechaFormat.split('-')[0] : '';
+        
+        // Placa
+        document.getElementById('eF_placa').value = p[4] || '';
+        let placaTxt = document.getElementById('eF_placa-txt');
+        if (placaTxt) placaTxt.value = p[4] || '';
+        
+        document.getElementById('eF_marca').value = p[5] || '';
+        document.getElementById('eF_dueno').value = p[6] || '';
+        document.getElementById('eF_uts').value = p[7] || '';
+        
+        // Tipo MP
+        let efTipomp = document.getElementById('eF_tipomp');
+        if (efTipomp) efTipomp.value = p[8] || '';
+        let tipoMpTxt = document.getElementById('eF_tipomp-txt');
+        if (tipoMpTxt) tipoMpTxt.value = p[8] || '';
+        
+        document.getElementById('eF_kmact').value = p[9] || '';
+        document.getElementById('eF_freckm').value = p[10] || '';
+        document.getElementById('eF_kmprox').value = p[11] || '';
+        document.getElementById('eF_obs').value = p[12] || '';
+        
+        // Tecnico
+        document.getElementById('eF_tec').value = p[13] || '';
+        let tecTxt = document.getElementById('eF_tec-txt');
+        if (tecTxt) tecTxt.value = p[13] || '';
+        
+        document.getElementById('eF_kmgps').value = p[14] || '';
+        
+        // Combustible y Modelo (new fields)
+        let combField = document.getElementById('eF_combustible');
+        if (combField) combField.value = p[15] || '';
+        let modField = document.getElementById('eF_modelo');
+        if (modField) modField.value = p[16] || '';
+        
+        const btn = document.getElementById('btnActualizarFleetrun');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Actualizar Registro';
+        }
+        
+        let offcanvasEl = document.getElementById('drawerEditarFleetrun');
+        if (offcanvasEl) {
+            let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+            if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
+            bsOffcanvas.show();
+        } else {
+            console.error("Modal de edicion no encontrado en el DOM");
+        }
+    } catch (e) {
+        console.error("Error al abrir modal de edicion:", e);
+    }
+}
 
 function enviarFleetrun(event, formObj) {
     event.preventDefault();
