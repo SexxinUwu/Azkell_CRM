@@ -964,7 +964,7 @@ router.put('/config-metrica/:placa', (req, res) => {
 // ============================================================
 router.get('/tipos-mantenimiento', (req, res) => {
     const { marca, uts } = req.query;
-    let sql = `SELECT id, marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias,
+    let sql = `SELECT id, marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias,
                       tipo, sistema, descripcion
                FROM tipos_mantenimiento WHERE 1=1`;
     const params = [];
@@ -978,12 +978,12 @@ router.get('/tipos-mantenimiento', (req, res) => {
 });
 
 router.post('/tipos-mantenimiento', (req, res) => {
-    const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    const { marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     if (!marca || !tipo_mp) return res.status(400).json({ error: 'Marca y tipo_mp son requeridos' });
     db.query(
-        `INSERT INTO tipos_mantenimiento (marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
-        [marca, tipo_mp, uts || '', frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || ''],
+        `INSERT INTO tipos_mantenimiento (marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        [marca, tipo_mp, uts || '', combustible || null, modelo || null, frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || ''],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
@@ -993,11 +993,11 @@ router.post('/tipos-mantenimiento', (req, res) => {
 
 router.put('/tipos-mantenimiento/:id', (req, res) => {
     const { id } = req.params;
-    const { marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    const { marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     db.query(
-        `UPDATE tipos_mantenimiento SET marca=?, tipo_mp=?, uts=?, frecuencia_km=?,
+        `UPDATE tipos_mantenimiento SET marca=?, tipo_mp=?, uts=?, combustible=?, modelo=?, frecuencia_km=?,
          frecuencia_horas=?, frecuencia_dias=?, tipo=?, sistema=?, descripcion=? WHERE id=?`,
-        [marca, tipo_mp, uts || '', frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || '', id],
+        [marca, tipo_mp, uts || '', combustible || null, modelo || null, frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || '', id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
@@ -1045,19 +1045,19 @@ router.post('/tipos-mantenimiento/importar', async (req, res) => {
             if (existing.length) {
                 await db.promise().query(
                     `UPDATE tipos_mantenimiento SET
-                        frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
+                        combustible=?, modelo=?, frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
                         tipo=?, sistema=?, descripcion=?
                      WHERE id=?`,
-                    [r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                    [r.combustible||null, r.modelo||null, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
                      r.tipo||null, r.sistema||null, r.descripcion||null, existing[0].id]
                 );
                 actualizados++;
             } else {
                 await db.promise().query(
                     `INSERT INTO tipos_mantenimiento
-                        (marca, tipo_mp, uts, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
-                     VALUES (?,?,?,?,?,?,?,?,?)`,
-                    [marca, tipo_mp, uts, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                        (marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                    [marca, tipo_mp, uts, r.combustible||null, r.modelo||null, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
                      r.tipo||null, r.sistema||null, r.descripcion||null]
                 );
                 insertados++;

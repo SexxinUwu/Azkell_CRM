@@ -340,6 +340,14 @@ window.cmpImportarExcel = function(input) {
                 return window.mostrarToast('El archivo no tiene columnas MARCA y TIPO MP', 'danger');
             }
 
+            function limpiarNumero(val) {
+                if (val === null || val === undefined || val === '') return null;
+                if (typeof val === 'number') return Math.round(val);
+                var str = (val+'').replace(/,/g, '').trim();
+                var num = parseFloat(str);
+                return isNaN(num) ? null : Math.round(num);
+            }
+
             var registros = [];
             for (var i = 1; i < raw.length; i++) {
                 var row = raw[i];
@@ -352,9 +360,9 @@ window.cmpImportarExcel = function(input) {
                     uts:              idx.uts >= 0     ? ((row[idx.uts]+'').trim().toUpperCase()||'LOCAL') : 'LOCAL',
                     combustible:      idx.combustible >= 0 ? ((row[idx.combustible]+'').trim().toUpperCase()||null) : null,
                     modelo:           idx.modelo >= 0      ? ((row[idx.modelo]+'').trim().toUpperCase()||null) : null,
-                    frecuencia_km:    idx.frec_km >= 0 ? (parseInt(row[idx.frec_km])||null) : null,
-                    frecuencia_horas: idx.frec_h >= 0  ? (parseInt(row[idx.frec_h]) ||null) : null,
-                    frecuencia_dias:  idx.frec_d >= 0  ? (parseInt(row[idx.frec_d]) ||null) : null,
+                    frecuencia_km:    idx.frec_km >= 0 ? limpiarNumero(row[idx.frec_km]) : null,
+                    frecuencia_horas: idx.frec_h >= 0  ? limpiarNumero(row[idx.frec_h]) : null,
+                    frecuencia_dias:  idx.frec_d >= 0  ? limpiarNumero(row[idx.frec_d]) : null,
                     tipo:             idx.tipo >= 0    ? ((row[idx.tipo]+'').trim()||null) : null,
                     sistema:          idx.sistema >= 0 ? ((row[idx.sistema]+'').trim()||null) : null,
                     descripcion:      idx.desc >= 0    ? ((row[idx.desc]+'').trim()||null) : null
