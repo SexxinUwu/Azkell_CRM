@@ -111,8 +111,10 @@ window.guSetTab = function(tab) {
     window._guSeleccionado = null;
     var tr = document.getElementById('gu-tab-roles');
     var tm = document.getElementById('gu-tab-miembros');
+    var ts = document.getElementById('gu-tab-simulador');
     if (tr) tr.classList.toggle('active', tab === 'roles');
     if (tm) tm.classList.toggle('active', tab === 'miembros');
+    if (ts) ts.classList.toggle('active', tab === 'simulador');
     window.guRenderLista();
     var pc = document.getElementById('guPanelContent');
     var pa = document.getElementById('guPanelActions');
@@ -125,8 +127,10 @@ window.guSetTab = function(tab) {
     if (ph) {
         if (tab === 'roles') {
             ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
-        } else {
+        } else if (tab === 'miembros') {
             ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
+        } else {
+            ph.innerHTML = '';
         }
     }
 };
@@ -146,7 +150,8 @@ function _guRelTime(dt) {
 function _guRenderUserItem(u) {
     var color = u.rol_color || _guColorFrom(u.nombre||u.correo||'U');
     var isSel = window._guSeleccionado && window._guSeleccionado.tipo === 'usuario' && window._guSeleccionado.id === u.id;
-    return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="window.guSeleccionarUsuario(\'' + u.id + '\')">'
+    var fnClick = (window._guTabActiva === 'simulador') ? 'window.guSimularUsuario' : 'window.guSeleccionarUsuario';
+    return '<div class="gu-list-item' + (isSel?' selected':'') + '" onclick="' + fnClick + '(\'' + u.id + '\')">'
         + '<div class="gu-role-dot" style="background:' + color + ';font-size:.65rem;">' + _guInitials(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-info"><div class="gu-list-name">' + _guEsc(u.nombre||u.correo) + '</div>'
         + '<div class="gu-list-sub">' + _guEsc(u.cargo||u.correo||'') + (u.ultimo_acceso ? ' · ' + _guRelTime(u.ultimo_acceso) : '') + '</div></div>'
