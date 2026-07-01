@@ -732,7 +732,7 @@ window.guSimularUsuario = function(id) {
     var lastGrp = '';
     window._GU_MODULOS.forEach(function(mod) {
         if (mod.grupo !== lastGrp) {
-            html += '<div class="gu-perm-group" style="margin-top:10px;">' + mod.grupo + '</div>';
+            html += '<div class="gu-perm-group" style="margin-top:24px; margin-bottom: 8px; color:var(--subtext); font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">' + mod.grupo + '</div>';
             lastGrp = mod.grupo;
         }
         var acc = p[mod.key] || {};
@@ -741,18 +741,24 @@ window.guSimularUsuario = function(id) {
         var e = esAdmin || acc['e'];
         var d = esAdmin || acc['d'];
 
-        html += '<div class="gu-perm-row" style="opacity:' + (l ? '1' : '0.5') + ';">'
-              + '<div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div></div>'
-              + '<div class="gu-perm-actions">';
+        var renderRow = function(name, hasPerm) {
+            var icon = hasPerm 
+                ? '<i class="bi bi-check-circle-fill" style="color:#23a559; font-size:1.1rem;"></i>' 
+                : '<i class="bi bi-x-circle-fill" style="color:#da373c; font-size:1.1rem;"></i>';
+            return '<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 8px; border-bottom: 1px solid var(--border);">'
+                 + '<div style="font-weight: 500; font-size: 0.85rem; color: ' + (hasPerm ? 'var(--text)' : 'var(--subtext)') + ';">' + name + '</div>'
+                 + '<div>' + icon + '</div>'
+                 + '</div>';
+        };
+
         if (!mod.lcad) {
-            html += '<span class="badge ' + (l?'bg-success':'bg-secondary') + '" style="padding:5px 10px;">Leer</span>';
+            html += renderRow('Acceso a ' + mod.nombre, l);
         } else {
-            html += '<span class="badge ' + (l?'bg-success':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Leer</span>'
-                  + '<span class="badge ' + (c?'bg-primary':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Crear</span>'
-                  + '<span class="badge ' + (e?'bg-warning text-dark':'bg-secondary') + '" style="padding:5px 8px;margin-right:4px;">Editar</span>'
-                  + '<span class="badge ' + (d?'bg-danger':'bg-secondary') + '" style="padding:5px 8px;">Eliminar</span>';
+            html += renderRow('Ver ' + mod.nombre, l);
+            html += renderRow('Crear en ' + mod.nombre, c);
+            html += renderRow('Editar ' + mod.nombre, e);
+            html += renderRow('Eliminar de ' + mod.nombre, d);
         }
-        html += '</div></div>';
     });
 
     document.getElementById('guPanelEmpty').style.display = 'none';
