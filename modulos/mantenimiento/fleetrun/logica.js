@@ -838,6 +838,14 @@ function enviarFleetrun(event, formObj) {
         }
     }
     
+    if (data.f_fecha) {
+        let dDate = new Date(data.f_fecha + "T00:00:00");
+        if (!isNaN(dDate.getTime())) {
+            data.f_mes = (dDate.getMonth() + 1).toString();
+            data.f_anio = dDate.getFullYear().toString();
+        }
+    }
+
     // Use the pre-calculated multi-tipo objects
     let tiposData = window.fleetrunTiposMulti || [];
     
@@ -905,6 +913,15 @@ function enviarEdicionFleetrun(event, formObj) {
             data[el.name] = val;
         }
     }
+    
+    if (data.editF_fecha) {
+        let dDate = new Date(data.editF_fecha + "T00:00:00");
+        if (!isNaN(dDate.getTime())) {
+            data.editF_mes = (dDate.getMonth() + 1).toString();
+            data.editF_anio = dDate.getFullYear().toString();
+        }
+    }
+
     fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) })
         .then(function(r) { return r.json(); })
         .then(function(r) {
