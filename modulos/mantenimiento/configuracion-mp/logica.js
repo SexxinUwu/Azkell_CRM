@@ -77,17 +77,17 @@ function _cfPopularDatalists() {
 
     function _fill(id, vals) {
         var dl = document.getElementById(id);
-        if (dl) dl.innerHTML = vals.map(function(v){ return '<option value="'+v+'">'; }).join('');
+        if (dl) dl.innerHTML = '<option value="">Seleccionar...</option>' + vals.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
     }
-    _fill('cf-dl-marcas',   marcas);
-    _fill('cf-dl-sistemas', sistemas);
-    _fill('cf-dl-combustibles', combustibles);
-    _fill('cf-dl-tipos', tipos);
+    _fill('cf-marca',   marcas);
+    _fill('cf-sistema', sistemas);
+    _fill('cf-combustible', combustibles);
+    _fill('cf-tipo', tipos);
 
     // Tipos de Preventivo: desde tabla maestra
     fetch('/api/tipos-preventivo')
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
-        .then(function(j) { _fill('cf-dl-tipomps', (j.data || []).map(function(t) { return t.nombre; })); })
+        .then(function(j) { _fill('cf-tipo-mp', (j.data || []).map(function(t) { return t.nombre; })); })
         .catch(function() {});
 }
 
@@ -111,8 +111,8 @@ window._cfPopularModelos = function(marcaSeleccionada) {
         }
     });
     modelos.sort();
-    var dl = document.getElementById('cf-dl-modelos');
-    if (dl) dl.innerHTML = modelos.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    var dl = document.getElementById('cf-modelo');
+    if (dl) dl.innerHTML = '<option value="">Seleccionar...</option>' + modelos.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
 };
 
 // ── TIPOS DE MANTENIMIENTO ────────────────────────────────────────
