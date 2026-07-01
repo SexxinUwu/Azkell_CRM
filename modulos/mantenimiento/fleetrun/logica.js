@@ -8,6 +8,24 @@ fetch('/api/conductores-lista')
         }).filter(Boolean);
     }).catch(function() {});
 
+window._frTipoLista = window._frTipoLista || [];
+fetch('/api/tipos-preventivo')
+    .then(function(r) { return r.ok ? r.json() : { data: [] }; })
+    .then(function(resp) {
+        var lista = Array.isArray(resp) ? resp : (resp.data || []);
+        window._frTipoLista = lista
+            .filter(function(t) { return t.activo !== 0; })
+            .map(function(t) { return (t.nombre || '').trim(); })
+            .filter(function(n) { return n.length > 0; })
+            .sort(function(a, b) { return a.localeCompare(b); });
+            
+        // Re-init if elements are already in DOM
+        if (typeof window._cbInit === 'function') {
+            window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
+        }
+    }).catch(function() {});
+
+
 // ================================================================
 // MÓDULO: FLEETRUN — Sistema de Mantenimiento Preventivo
 // Aislado en SPA: Modulos/Mantenimiento/fleetrun/
