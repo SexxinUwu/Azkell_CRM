@@ -263,21 +263,60 @@
         <div id="detalleFleetrunContenido"></div>
     </div>
 </div>
-
 <div class="offcanvas offcanvas-end" tabindex="-1" id="drawerFleetrun" style="width:420px;max-width:96vw;"><div class="offcanvas-header" style="border-bottom:1px solid var(--border);background:var(--surface);"><h5 class="offcanvas-title fw-bold"><i class="bi bi-speedometer2 text-warning me-2"></i><span data-i18n="fleet.modal.new">Registrar Mantenimiento Preventivo</span></h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div><form id="formFleetrun" onsubmit="enviarFleetrun(event, this)" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;"><input type="hidden" name="usuarioAutor"><input type="hidden" name="f_id" id="f_id"><input type="hidden" name="f_mes" id="f_mes"><input type="hidden" name="f_anio" id="f_anio"><div class="offcanvas-body" style="overflow-y:auto;"><div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha</label><input type="date" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_fecha" id="f_fecha" onchange="autocompletarFecha('f')" required></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa *</label>
 <div class="position-relative">
   <input type="text" id="f_placa-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar placa…" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_placa')" onfocus="window._cbFiltrar('f_placa')" onblur="window._cbHide('f_placa')">
   <input type="hidden" id="f_placa" name="f_placa" onchange="window.autocompletarFleetrun('f')">
   <div id="f_placa-dd" class="cb-dropdown"></div>
 </div>
-</div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo de Mantt</label>
-<div class="position-relative">
-  <input type="text" id="f_tipomp-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar tipo…" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="window._cbFiltrar('f_tipomp')" onfocus="window._cbFiltrar('f_tipomp')" onblur="window.onBlurTipomp(this)">
-  <input type="hidden" id="f_tipomp" name="f_tipomp">
-  <div id="f_tipomp-dd" class="cb-dropdown"></div>
+</div></div>
+<!-- Hidden fields for autocompletado -->
+<div class="row d-none"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Marca</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Dueño</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">UTS</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div>
+<!-- KM Actual -->
+<div class="row">
+  <div class="col-6 mb-3">
+    <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Actual</label>
+    <input type="number" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_kmact" id="f_kmact" oninput="window.recalcularTodosMulti()" placeholder="Ej: 150000" required>
+  </div>
+  <div class="col-6 mb-3">
+    <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Wialon</label>
+    <input type="number" class="form-control form-control-sm text-primary fw-bold bg-light" style="border-radius:12px;min-height:44px;" name="f_kmgps" id="f_kmgps" placeholder="Autocompletado..." readonly>
+  </div>
 </div>
-<div id="f_tipomp-tags" class="d-flex flex-wrap gap-1 mt-2"></div>
-</div></div><div class="row d-none"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Marca</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_marca" id="f_marca" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Dueño</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_dueno" id="f_dueno" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">UTS</label><input type="text" class="form-control form-control-sm bg-light" style="border-radius:12px;min-height:44px;" name="f_uts" id="f_uts" placeholder="Autocompletado..." readonly></div></div><div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Actual</label><input type="number" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_kmact" id="f_kmact" oninput="calcularProximo('f')" placeholder="Ej: 150000" required></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Frecuencia</label><input type="text" class="form-control form-control-sm fw-bold shadow-sm" style="border-radius:12px;min-height:44px;background-color: #f8fafc;" name="f_freckm" id="f_freckm" placeholder="Calculando..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Próximo</label><input type="text" class="form-control form-control-sm fw-bold shadow-sm" style="border-radius:12px;min-height:44px;background-color: #f8fafc;" name="f_kmprox" id="f_kmprox" placeholder="Calculando..." readonly></div></div>
+<!-- Hidden frecuencia/kmprox (used by enviarFleetrun) -->
+<input type="hidden" name="f_freckm" id="f_freckm">
+<input type="hidden" name="f_kmprox" id="f_kmprox">
+<input type="hidden" id="f_tipomp" name="f_tipomp">
+<!-- ═══ SECCIÓN MULTI-ITEMS: Tipos de Mantenimiento ═══ -->
+<div class="mb-3">
+  <label class="form-label fw-bold d-flex align-items-center gap-2" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">
+    <i class="bi bi-wrench-adjustable-circle" style="font-size:.85rem;color:var(--primary)"></i> Tipos de Mantenimiento
+  </label>
+  <!-- Input para buscar y agregar tipos -->
+  <div class="d-flex gap-2 mb-2">
+    <div class="position-relative flex-grow-1">
+      <input type="text" id="f_tipomp-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar tipo MP..." autocomplete="off" style="border-radius:12px;min-height:40px;" oninput="window._cbFiltrar('f_tipomp')" onfocus="window._cbFiltrar('f_tipomp')" onblur="window.onBlurTipomp(this)">
+      <div id="f_tipomp-dd" class="cb-dropdown"></div>
+    </div>
+  </div>
+  <!-- Tabla de items agregados -->
+  <div id="f_tipomp-table-wrap" class="rounded-3 overflow-hidden" style="border:1px solid #e2e8f0; background:#f8fafc;">
+    <table class="table table-sm table-borderless align-middle mb-0" style="font-size:0.82rem;">
+      <thead>
+        <tr style="background:#eef2ff; color:#4338ca; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">
+          <th class="ps-3 py-2 fw-semibold">Tipo MP</th>
+          <th class="py-2 fw-semibold text-center">Frecuencia</th>
+          <th class="py-2 fw-semibold text-center">KM Próximo</th>
+          <th class="pe-3 py-2" style="width:32px;"></th>
+        </tr>
+      </thead>
+      <tbody id="f_tipomp-items-tbody">
+        <tr id="f_tipomp-empty-row"><td colspan="4" class="text-center py-3" style="color:#94a3b8; font-size:0.8rem;"><i class="bi bi-inbox me-1"></i>Agrega tipos de mantenimiento</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="f_tipomp-tags" class="d-none"></div>
+</div>
 <div class="row">
   <div class="col-6 mb-3">
     <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Combustible</label>
@@ -293,9 +332,10 @@
     <input type="text" class="form-control form-control-sm text-uppercase shadow-sm" style="border-radius:12px;min-height:44px;" name="f_modelo" id="f_modelo" placeholder="Ej: FH 460">
   </div>
 </div>
-<div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">KM Wialon</label><input type="number" class="form-control form-control-sm text-primary fw-bold bg-light" style="border-radius:12px;min-height:44px;" name="f_kmgps" id="f_kmgps" placeholder="Autocompletado..." readonly></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Técnico Encargado</label>
+<div class="row">
+  <div class="col-12 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Técnico Encargado</label>
 <div class="position-relative">
-  <input type="text" id="f_tec-txt" class="form-control form-control-sm text-uppercase border-primary shadow-sm" placeholder="Ej: Juan Perez" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_tec')" onfocus="window._cbFiltrar('f_tec')" onblur="window._cbHide('f_tec')">
+  <input type="text" id="f_tec-txt" class="form-control form-control-sm text-uppercase border-primary shadow-sm" placeholder="Buscar responsable..." autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_tec')" onfocus="window._cbFiltrar('f_tec')" onblur="window._cbHide('f_tec')">
   <input type="hidden" id="f_tec" name="f_tec">
   <div id="f_tec-dd" class="cb-dropdown"></div>
 </div>
