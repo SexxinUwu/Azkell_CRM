@@ -611,6 +611,48 @@ router.post('/:metodo', async (req, res) => {
         return;
     }
 
+    if (metodo === 'obtenerDatosDocumentosFlota') {
+        db.query('SELECT * FROM documentos_flota ORDER BY fecha_vencimiento ASC', (err, results) => {
+            if (err) return res.json({ data: [] });
+            return res.json({ data: results });
+        });
+        return;
+    }
+
+    if (metodo === 'guardarDocumentoFlota') {
+        const d = req.body.args[0] || {};
+        const idFinal = d.id || `DOC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+        
+        // Convertir formato DD/MM/YYYY a YYYY-MM-DD
+        const formatearFecha = (f) => {
+            if (!f) return null;
+            if (/^\\d{4}-\\d{2}-\\d{2}$/.test(f)) return f;
+            if (f.includes('T')) return f.split('T')[0];
+            const p = f.split('/');
+            if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
+            return null;
+        };
+
+        const query = `
+            INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            placa=?, tipo_documento=?, entidad=?, nro_constancia=?, fecha_emision=?, fecha_vencimiento=?, pago=?, asesor=?, observaciones=?, usuario=?
+        `;
+
+        const values = [
+            idFinal, d.placa, d.tipo_documento, d.entidad || '', d.nro_constancia || '', formatearFecha(d.fecha_emision), formatearFecha(d.fecha_vencimiento), d.pago || '', d.asesor || '', d.observaciones || '', d.usuario || 'sistema',
+            d.placa, d.tipo_documento, d.entidad || '', d.nro_constancia || '', formatearFecha(d.fecha_emision), formatearFecha(d.fecha_vencimiento), d.pago || '', d.asesor || '', d.observaciones || '', d.usuario || 'sistema'
+        ];
+
+        db.query(query, values, (err) => {
+            if (err) { console.error("Error BD Documentos Flota:", err); return res.json({ data: "Error al guardar documento" }); }
+            broadcast('documentosflota', 'guardar');
+            return res.json({ data: "Éxito" });
+        });
+        return;
+    }
+
     if (metodo === 'eliminarDocumento') {
         const { id, ids, coleccion } = req.body;
 
@@ -624,6 +666,7 @@ router.post('/:metodo', async (req, res) => {
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
+        else if (coleccion === 'DocumentosFlota') sql = 'DELETE FROM documentos_flota WHERE id IN (?)';
 
         if (!sql) return res.json({ data: "Colección no válida" });
 
