@@ -304,7 +304,7 @@ function mostrarFleetrunCards(datosAMostrar) {
     });
 
     var html = '';
-    var estadoOrder = { VENCIDO: 0, POR_VENCER: 1, VIGENTE: 2 };
+    var estadoOrder = { VENCIDO: 0, PROXIMO: 1, VIGENTE: 2 };
 
     mapPlacas.forEach(function(mantenimientos, placaRaw) {
         var infoP = (dataGlobalPlacas || []).find(function(p) { return p[0] === placaRaw; });
@@ -351,7 +351,7 @@ function mostrarFleetrunCards(datosAMostrar) {
 
         var badgeCls, badgeTextCls, badgeLabel;
         if (criticalEstado === 'VENCIDO')      { badgeCls = 'danger';  badgeLabel = 'VENCIDO';    badgeTextCls = 'text-danger'; }
-        else if (criticalEstado === 'POR_VENCER') { badgeCls = 'warning'; badgeLabel = 'POR VENCER'; badgeTextCls = 'text-dark'; }
+        else if (criticalEstado === 'PROXIMO') { badgeCls = 'warning'; badgeLabel = 'POR VENCER'; badgeTextCls = 'text-dark'; }
         else                                   { badgeCls = 'success'; badgeLabel = 'VIGENTE';    badgeTextCls = 'text-success'; }
 
         var numMPs = mantenimientos.length;
@@ -366,7 +366,7 @@ function mostrarFleetrunCards(datosAMostrar) {
             kmDesdeUlt = Math.max(0, km_gps - kmUltimo);
             desgastePct = Math.min(100, Math.round((kmDesdeUlt / frecuencia) * 100));
         }
-        var barColor = (criticalEstado === 'VENCIDO') ? '#ef4444' : ((criticalEstado === 'POR_VENCER') ? '#f59e0b' : '#10b981');
+        var barColor = (criticalEstado === 'VENCIDO') ? '#ef4444' : ((criticalEstado === 'PROXIMO') ? '#f59e0b' : '#10b981');
         var esHorasLocal = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
         var unitL = esHorasLocal ? ' h' : ' km';
 
