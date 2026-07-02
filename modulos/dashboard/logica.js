@@ -68,7 +68,11 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
         window.chartDashFleetrunInst.data.datasets[0].data = [1];
         window.chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        window.chartDashFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
+        let total = vigentes + porVencer + vencidos;
+        let pVig = Math.round(vigentes/total*100);
+        let pPv = Math.round(porVencer/total*100);
+        let pVen = Math.round(vencidos/total*100);
+        window.chartDashFleetrunInst.data.labels = [pVig+'% Vigentes', pPv+'% Por Vencer', pVen+'% Vencidos'];
         window.chartDashFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
         window.chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
     }
@@ -252,7 +256,9 @@ window.procesarInspeccionesParaDashboard = async function() {
         window.chartInspDashInst.data.datasets[0].data = [1];
         window.chartInspDashInst.data.datasets[0].backgroundColor = ['#475569'];
     } else {
-        window.chartInspDashInst.data.labels = ['Vigentes', 'Vencidas'];
+        let pVig = Math.round(vigentes/total*100);
+        let pVen = Math.round(vencidas/total*100);
+        window.chartInspDashInst.data.labels = [pVig+'% Vigentes', pVen+'% Vencidas'];
         window.chartInspDashInst.data.datasets[0].data = [vigentes, vencidas];
         window.chartInspDashInst.data.datasets[0].backgroundColor = ['#16a34a', '#dc2626'];
     }
