@@ -9,12 +9,15 @@ window.init_ajustes = function() {
     let emailEl  = document.getElementById('ajustes-user-email');
     let avatarEl = document.getElementById('ajustes-user-avatar');
     
-    let userData = typeof getSessionData === 'function' ? getSessionData() : null;
-    if (userData) {
-        let nombre = userData.nombre || userData.user || 'Usuario';
+    let lsUser = localStorage.getItem('fleet_user');
+    let lsRol = localStorage.getItem('fleet_rol');
+    let lsCorreo = localStorage.getItem('fleet_correo');
+
+    if (lsUser) {
+        let nombre = lsUser;
         if (nombreEl) nombreEl.textContent = nombre;
-        if (roleEl)   roleEl.textContent   = userData.rol || 'Rol Desconocido';
-        if (emailEl)  emailEl.textContent  = userData.correo || 'admin@azkell.com';
+        if (roleEl)   roleEl.textContent   = lsRol && lsRol !== 'null' ? lsRol : 'USUARIO';
+        if (emailEl)  emailEl.textContent  = lsCorreo && lsCorreo !== 'null' ? lsCorreo : '';
         if (avatarEl) {
             let partes = nombre.trim().split(' ');
             let iniciales = partes.length > 1 ? (partes[0][0] + partes[1][0]) : nombre.substring(0,2);
