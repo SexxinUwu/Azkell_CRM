@@ -2114,4 +2114,23 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
+    // Migración: crear tabla documentos_flota si no existe
+    db.query(`
+        CREATE TABLE IF NOT EXISTS documentos_flota (
+            id VARCHAR(50) PRIMARY KEY,
+            placa VARCHAR(50) NOT NULL,
+            tipo_documento VARCHAR(100) NOT NULL,
+            entidad VARCHAR(100),
+            nro_constancia VARCHAR(100),
+            fecha_emision DATE,
+            fecha_vencimiento DATE,
+            pago VARCHAR(50),
+            asesor VARCHAR(100),
+            observaciones TEXT,
+            usuario VARCHAR(100),
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (e) => {
+        if (e) console.error("Error creando tabla documentos_flota:", e.message);
+    });
 });
