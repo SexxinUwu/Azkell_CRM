@@ -91,35 +91,61 @@ window.procesarFleetrunParaDashboard = function() {
         return new Date(str).getTime() || 0;
     };
     let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
-    let mapa = new Map();
-    [...window.dataGlobalFleetrun].sort((a,b) => parseFecha(b[3]) - parseFecha(a[3])).forEach(row => {
-        let placa = normalizeStr(row[4]);
-        let tipo  = normalizeStr(row[8]);
-        let key   = placa + "_" + tipo;
-        let infoPlaca = window.dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
-        if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
-            mapa.set(key, { row: row, infoPlaca: infoPlaca });
+    let placaEstadoMap = new Map();
+    let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
+
+    (window.dataGlobalFleetrun || []).forEach(row => {
+        let placaRaw = row[4];
+        let placa = normalizeStr(placaRaw);
+        let infoPlaca = (window.dataGlobalPlacas || []).find(p => normalizeStr(p[0]) === placa);
+        
+        if (infoPlaca && infoPlaca[18] === 'Activa') {
+            let km_cambio = parseFloat(row[9]) || 0;
+            let frecuencia = parseFloat(row[10]) || 0;
+            let km_prox = parseFloat(row[11]) || 0;
+            
+            let km_gps = 0;
+            let wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
+            let esHoras = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
+            if (wialonData) {
+                km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
+            }
+            
+            let km_desde = km_gps - km_cambio;
+            let km_restante = frecuencia - km_desde;
+            if (km_restante < 0) km_restante = km_prox - km_gps;
+            
+            let utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || "-");
+            let utsUmbral = 2000;
+            let metricSuffix = esHoras ? '_HORAS' : '_KM';
+            let combinedKey = utsDisplay.toUpperCase() + metricSuffix;
+            
+            if (window._fleetrun_umbrales_uts) {
+                if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
+                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+                } else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
+                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+                }
+            } else {
+                if (normalizeStr(utsDisplay) === "nacional") utsUmbral = 1500;
+                else if (normalizeStr(utsDisplay) === "local") utsUmbral = 100;
+            }
+            
+            let estadoKpi = 'VIGENTE';
+            if (km_restante <= 0) estadoKpi = 'VENCIDO';
+            else if (km_restante <= utsUmbral) estadoKpi = 'PROXIMO';
+            
+            let prevKpi = placaEstadoMap.get(placa);
+            if (prevKpi === undefined || estadoPrio[estadoKpi] > estadoPrio[prevKpi]) {
+                placaEstadoMap.set(placa, estadoKpi);
+            }
         }
     });
-    Array.from(mapa.values()).forEach(item => {
-        let fila = item.row;
-        let infoPlaca = item.infoPlaca;
-        let placaRaw = fila[4];
-        let km_prox  = parseFloat(fila[11]) || 0;
-        let utsRaw   = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '')
-                       ? infoPlaca[19] : (fila[7] || "-");
-        let km_gps   = 0;
-        let wialonData = buscarWialonPorPlaca(placaRaw);
-        if (wialonData) { km_gps = wialonData.km; }
-        let falta_km = km_prox - km_gps;
-        if (falta_km <= 0) {
-            cntTotalVenc++;
-        } else if (falta_km > 0 && ((normalizeStr(utsRaw) === "NACIONAL" && falta_km <= 1500) ||
-                                    (normalizeStr(utsRaw) === "LOCAL"    && falta_km <= 100))) {
-            cntTotalPV++;
-        } else {
-            cntTotalVig++;
-        }
+
+    placaEstadoMap.forEach(estado => {
+        if (estado === 'VENCIDO') cntTotalVenc++;
+        else if (estado === 'PROXIMO') cntTotalPV++;
+        else cntTotalVig++;
     });
     updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
     // Actualizar contadores móvil Fleetrun
