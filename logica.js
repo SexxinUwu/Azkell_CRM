@@ -1021,6 +1021,10 @@ window._showMPDetail = function(idx) {
         </div>`;
     }
 
+    var canEditF = typeof tienePermisoMenu === 'function' ? tienePermisoMenu('Mantenimiento', 'Fleetrun', 'Editar') : true;
+    var btnEditHtml = (typeof abrirModalEditarFleetrun === 'function' && canEditF) ? 
+        `<button class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="abrirModalEditarFleetrun('${r[0]}')"><i class="bi bi-pencil" style="font-size: 0.8rem;"></i></button>` : '';
+
     fleetEl.innerHTML = `
         <div class="pb-4">
             <div class="d-flex justify-content-center mb-2">
@@ -1031,9 +1035,12 @@ window._showMPDetail = function(idx) {
                     <h4 class="mb-0 fw-bolder text-dark" style="letter-spacing: -0.5px;">${placaCurrent}</h4>
                     <div class="text-muted" style="font-size: 0.75rem;">${r[8] || 'Detalle MP'}</div>
                 </div>
-                <button class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="window._buildFleetTab(window._odpFleetMode||'current')">
-                    <i class="bi bi-x-lg" style="font-size: 0.8rem;"></i>
-                </button>
+                <div class="d-flex gap-2">
+                    ${btnEditHtml}
+                    <button class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="window._buildFleetTab(window._odpFleetMode||'current')">
+                        <i class="bi bi-x-lg" style="font-size: 0.8rem;"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="card border border-light shadow-sm bg-white mb-3" style="border-radius: 12px;">
