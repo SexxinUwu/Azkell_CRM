@@ -193,17 +193,20 @@ function mostrarFleetrun(datos) {
               let chkHtml = (window.modoSeleccion && window.modoSeleccion['fleetrun']) ? `<input type="checkbox" class="form-check-input float-start ms-2 chk-bulk-fleetrun" value="${id}" onclick="event.stopPropagation(); toggleBulkBtn('fleetrun')">` : '';
               let originalIndex = dataGlobalFleetrun.findIndex(x => x[0] === id);
               
+              let modelo = infoP ? (infoP[4] || "-") : "-";
+              let obsBadgeHtml = `<span class="badge ${badgeClass} w-100 mt-1">${estadoKpi}</span>`;
+              
               html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun fleet-page fleet-page-${pageNum}" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}">
                   <td class="text-start" style="font-size: 0.85rem;" data-value="${placaRaw}">${chkHtml}∟ <b>${placaRaw}</b></td>
-                  <td>${utsDisplay}</td>
                   <td>${fechaLimpia}</td>
-                  <td>${km_cambio.toLocaleString()}</td>
+                  <td>${modelo}</td>
                   <td>${fmtTipo}</td>
-                  <td><span class="badge bg-light text-primary border border-primary shadow-sm px-2 py-1"><i class="bi bi-arrow-repeat me-1"></i>${frecuencia.toLocaleString()}</span></td>
-                  <td>${fmtKmGps}</td>
-                  <td style="color: #64748b; font-weight: bold;">${km_desde.toLocaleString()}</td>
+                  <td>${km_cambio.toLocaleString()}</td>
                   <td>${fmtFalta}</td>
-                  <td class="text-center"><span class="badge ${badgeClass} w-100">${estadoKpi}</span></td>
+                  <td>${km_prox.toLocaleString()}</td>
+                  <td><span class="badge bg-light text-primary border border-primary shadow-sm px-2 py-1"><i class="bi bi-arrow-repeat me-1"></i>${frecuencia.toLocaleString()}</span></td>
+                  <td class="text-center" style="font-size:0.8rem;">${obs ? obs + '<br>' : ''}${obsBadgeHtml}</td>
+                  <td style="color: #64748b; font-weight: bold;" class="text-center">${km_desde.toLocaleString()}</td>
                   <td>${menuAcciones}</td>
               </tr>`;
           });
@@ -254,15 +257,15 @@ function mostrarFleetrun(datos) {
   }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
-          {label: 'UTS',           idx: 1, visible: true},
-          {label: 'Fecha',         idx: 2, visible: true},
-          {label: 'KM Cambio',     idx: 3, visible: true},
-          {label: 'Tipo MP',       idx: 4, visible: true},
-          {label: 'Frecuencia',    idx: 5, visible: true},
-          {label: 'KM Actual',     idx: 6, visible: true},
-          {label: 'KM Recorrido',  idx: 7, visible: true},
-          {label: 'Falta',         idx: 8, visible: true},
-          {label: 'Estado',        idx: 9, visible: true}
+          {label: 'Fecha',                  idx: 1, visible: true},
+          {label: 'Modelo',                 idx: 2, visible: true},
+          {label: 'Tipo de Preventivo',     idx: 3, visible: true},
+          {label: 'Kilometraje de cambio',  idx: 4, visible: true},
+          {label: 'Cuanto Falta',           idx: 5, visible: true},
+          {label: 'Kilometraje proximo',    idx: 6, visible: true},
+          {label: 'Frecuencia',             idx: 7, visible: true},
+          {label: 'Observacion',            idx: 8, visible: true},
+          {label: 'KM Recorrido',           idx: 9, visible: true}
       ], 'fleet_cols_fleetrun');
   }
 
