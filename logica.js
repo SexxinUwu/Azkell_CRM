@@ -340,7 +340,7 @@ window.verificarSesionGuardada = function() {
     let appCrmEl = document.getElementById('app-crm');
     if (appCrmEl) appCrmEl.style.display = 'flex';
 
-    let rutaGuardada = localStorage.getItem('fleet_rutaActual');
+    let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
     if (rutaGuardada && rutaGuardada !== 'login') {
         cargarModuloAislado(rutaGuardada);
     } else {
@@ -360,7 +360,7 @@ window.verificarSesionGuardada = function() {
             }
             recargarWialon();
             // Si el usuario llegó a Fleetrun antes que las placas cargaran, re-renderizar ahora con el filtro correcto
-            if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
+            if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun'
                 && typeof mostrarFleetrun === 'function'
                 && dataGlobalFleetrun && dataGlobalFleetrun.length > 0) {
                 mostrarFleetrun(dataGlobalFleetrun);
@@ -375,7 +375,7 @@ window.verificarSesionGuardada = function() {
         let d = r.data || [];
         window.dataGlobalFleetrun = d;
         dataGlobalFleetrun = d;
-        if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun') {
+        if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun') {
             if (typeof window.init_fleetrun === 'function') window.init_fleetrun();
         }
     });
@@ -548,7 +548,7 @@ window.initSSE = function() {
         var d; try { d = JSON.parse(e.data); } catch(err) { return; }
         var cacheKey = CACHE_KEY_MAP[d.modulo];
         if (cacheKey) { CACHE[cacheKey] = null; CACHE_TIME[cacheKey] = null; }
-        var rutaActual = localStorage.getItem('fleet_rutaActual') || '';
+        var rutaActual = sessionStorage.getItem('fleet_rutaActual') || '';
         if (MODULO_RUTA[d.modulo] === rutaActual) {
             setTimeout(function() { recargarModulo(d.modulo); }, 800);
         }
@@ -1852,7 +1852,7 @@ function recargarWialon(forzarVista = false) {
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
             if (document.getElementById('moduloStatus')?.style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
             // SPA: verificar ruta actual en lugar del elemento legacy #moduloFleetrun
-            if (localStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun' && typeof window.mostrarFleetrun === 'function') {
+            if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun' && typeof window.mostrarFleetrun === 'function') {
                 window.mostrarFleetrun(window.dataGlobalFleetrun);
             }
             if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(d);
@@ -2369,17 +2369,17 @@ window.addEventListener('popstate', function(e) {
         var bsOffcanvas = bootstrap.Offcanvas.getInstance(openOffcanvas);
         if (bsOffcanvas) { bsOffcanvas.hide(); }
         // Reinsert state para no retroceder más
-        var ruta = localStorage.getItem('fleet_rutaActual') || 'dashboard';
+        var ruta = sessionStorage.getItem('fleet_rutaActual') || 'dashboard';
         history.pushState({ ruta: ruta }, '', '#' + ruta.replace(/\//g, '-'));
         return;
     }
-    var ruta = (e.state && e.state.ruta) ? e.state.ruta : (localStorage.getItem('fleet_rutaActual') || 'dashboard');
+    var ruta = (e.state && e.state.ruta) ? e.state.ruta : (sessionStorage.getItem('fleet_rutaActual') || 'dashboard');
     window._navFromPopstate = true;
     cargarModuloAislado(ruta);
 });
 // Estado inicial en history al cargar la app
 (function() {
-    var rutaActual = localStorage.getItem('fleet_rutaActual') || 'dashboard';
+    var rutaActual = sessionStorage.getItem('fleet_rutaActual') || 'dashboard';
     if (!history.state) {
         history.replaceState({ ruta: rutaActual }, '', '#' + rutaActual.replace(/\//g, '-'));
     }
@@ -2806,7 +2806,7 @@ window.cargarConfigSection = function(section) {
 window.cargarModuloAislado = async function(rutaModulo) {
     // 🔒 GUARDAR RUTA ACTUAL — ignora login para evitar infinite loop
     if (rutaModulo !== 'login') {
-        localStorage.setItem('fleet_rutaActual', rutaModulo);
+        sessionStorage.setItem('fleet_rutaActual', rutaModulo);
         pushReciente(rutaModulo);
         // 📍 HISTORY API — botón atrás nativo en móvil
         if (!window._navFromPopstate) {
@@ -3872,7 +3872,7 @@ function actualizarFAB() {
     if (window.innerWidth > 768) return;
     var fabContainer = document.querySelector('.fab-container');
     if (!fabContainer) return;
-    var ruta = localStorage.getItem('fleet_rutaActual') || '';
+    var ruta = sessionStorage.getItem('fleet_rutaActual') || '';
     // Si está explícitamente mapeado como null → ocultar FAB
     if (FAB_ACCIONES_POR_RUTA.hasOwnProperty(ruta) && FAB_ACCIONES_POR_RUTA[ruta] === null) {
         fabContainer.style.visibility = 'hidden';
@@ -3887,7 +3887,7 @@ function generarListaAccionesFab() {
     const listContent = document.getElementById('fabActionListContent');
     listContent.innerHTML = '';
 
-    const ruta = localStorage.getItem('fleet_rutaActual') || '';
+    const ruta = sessionStorage.getItem('fleet_rutaActual') || '';
     const accionesRuta = FAB_ACCIONES_POR_RUTA[ruta];
 
     // Usar acciones del mapa si están definidas
