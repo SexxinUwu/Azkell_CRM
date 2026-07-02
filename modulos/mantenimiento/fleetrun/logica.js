@@ -52,7 +52,7 @@ function cargarTablaFleetrun(forzarRefresh = false) {
     if (!forzarRefresh && dataGlobalFleetrun.length > 0 && window._fleetrun_umbrales_uts !== null) { mostrarFleetrun(dataGlobalFleetrun); return; }
     const cuerpo = document.getElementById('cuerpoTablaFleetrun');
     if (cuerpo) {
-        cuerpo.innerHTML = '<tr><td colspan="10" class="td-empty text-center py-5" style="color: var(--subtext); font-weight: 500;"><span class="spinner-border spinner-border-sm text-warning me-2"></span>Cargando mantenimientos...</td></tr>';
+        cuerpo.innerHTML = '<tr><td colspan="11" class="td-empty text-center py-5" style="color: var(--subtext); font-weight: 500;"><span class="spinner-border spinner-border-sm text-warning me-2"></span>Cargando mantenimientos...</td></tr>';
     }
     Promise.all([
         fetch('/api/configuracion').then(r => r.json()).catch(() => ({})),
@@ -254,14 +254,15 @@ function mostrarFleetrun(datos) {
   }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
-          {label: 'Fecha',         idx: 1, visible: true},
-          {label: 'Tipo MP',       idx: 2, visible: true},
+          {label: 'UTS',           idx: 1, visible: true},
+          {label: 'Fecha',         idx: 2, visible: true},
           {label: 'KM Cambio',     idx: 3, visible: true},
-          {label: 'Falta',         idx: 4, visible: true},
-          {label: 'Prox. Cambio',  idx: 5, visible: true},
-          {label: 'Observación',   idx: 6, visible: true},
-          {label: 'Frecuencia',    idx: 7, visible: true},
-          {label: 'KM GPS',        idx: 8, visible: true}
+          {label: 'Tipo MP',       idx: 4, visible: true},
+          {label: 'Frecuencia',    idx: 5, visible: true},
+          {label: 'KM Actual',     idx: 6, visible: true},
+          {label: 'KM Recorrido',  idx: 7, visible: true},
+          {label: 'Falta',         idx: 8, visible: true},
+          {label: 'Estado',        idx: 9, visible: true}
       ], 'fleet_cols_fleetrun');
   }
 
