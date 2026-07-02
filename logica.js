@@ -881,9 +881,28 @@ window._buildFleetTab = function(mode) {
     var recsToShow;
     if (mode === 'current') {
         var byTipo = {};
+        var parseFechaLocal = function(str) {
+            if(!str) return 0;
+            var p = str.split('/');
+            if(p.length === 3) return new Date(p[2], p[1]-1, p[0]).getTime();
+            return new Date(str).getTime() || 0;
+        };
+
         recs.forEach(function(r) {
             var tipo = (r[8] || '').toUpperCase().trim();
-            if (!byTipo[tipo] || parseInt(r[0]) > parseInt(byTipo[tipo][0])) byTipo[tipo] = r;
+            if (!byTipo[tipo]) {
+                byTipo[tipo] = r;
+            } else {
+                var ta = parseFechaLocal(r[3]);
+                var tb = parseFechaLocal(byTipo[tipo][3]);
+                if (ta > tb) {
+                    byTipo[tipo] = r;
+                } else if (ta === tb) {
+                    var idA = parseInt((String(r[0]).match(/\d+$/) || [0])[0], 10);
+                    var idB = parseInt((String(byTipo[tipo][0]).match(/\d+$/) || [0])[0], 10);
+                    if (idA > idB) byTipo[tipo] = r;
+                }
+            }
         });
         recsToShow = Object.values(byTipo);
         recsToShow.sort(function(a, b) {
