@@ -277,10 +277,10 @@ function mostrarFleetrun(datos) {
   var tableWrap = document.getElementById('fleetrun-tabla-wrap');
   var cardCont  = document.getElementById('fleetrunCardContainer');
   if (isMovil) {
-      if (tableWrap) tableWrap.style.display = 'none';
+      if (tableWrap) { tableWrap.classList.remove('d-flex'); tableWrap.classList.add('d-none'); }
       if (cardCont)  { cardCont.style.display = ''; mostrarFleetrunCards(datosAMostrar); }
   } else {
-      if (tableWrap) tableWrap.style.display = '';
+      if (tableWrap) { tableWrap.classList.remove('d-none'); tableWrap.classList.add('d-flex'); }
       if (cardCont)  cardCont.style.display = 'none';
   }
 
@@ -490,9 +490,11 @@ function _filtrarDatosAMostrar(datos) {
         var utsDisp  = utsRaw ? utsRaw.charAt(0).toUpperCase()+utsRaw.slice(1).toLowerCase() : '-';
 
         // Cálculo estado KPI
-        var km_actual = parseFloat(fila[2]) || 0;
-        var km_prox   = parseFloat(fila[12]) || 0;
-        var falta_km  = km_prox - km_actual;
+        var km_prox   = parseFloat(fila[11]) || 0;
+        var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
+        var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
+        var km_gps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(fila[14]) || 0);
+        var falta_km  = km_prox - km_gps;
         var estado;
         var utsUmbral = 2000;
         var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
