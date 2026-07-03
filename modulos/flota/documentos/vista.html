@@ -1,202 +1,629 @@
-<div id="moduloDocumentosFlota" class="modulo-aislado h-100" style="background-color: var(--surface);">
-    
-    <!-- Topbar -->
-    <div class="topbar w-100 d-flex justify-content-between align-items-center mb-3 sticky-top p-3" style="background-color: var(--surface); z-index:100; border-bottom: 1px solid var(--border);">
-        <div class="d-flex flex-column">
-            <h4 class="mb-0 fw-bold" style="color: var(--text);">Documentos</h4>
-            <span style="font-size: 0.85rem; color: var(--subtext);">Flota / Control de Documentos</span>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+#fleet-module-container {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    height: 100%; /* Adapts to #root-dinamico */
+    min-height: calc(100vh - 60px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: #f1f5f9;
+    color: #1e293b;
+    box-sizing: border-box;
+}
+
+#fleet-module-container * {
+    box-sizing: border-box;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.kpi-card {
+    flex: 1;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+.kpi-card.active { border: 2px solid; }
+
+.kpi-total.active { border-color: #64748b; background: rgba(248, 250, 252, 0.9); }
+.kpi-vigente.active { border-color: #10b981; background: rgba(209, 250, 229, 0.4); }
+.kpi-alerta.active { border-color: #f59e0b; background: rgba(254, 243, 199, 0.4); }
+.kpi-vencido.active { border-color: #ef4444; background: rgba(254, 226, 226, 0.4); }
+
+.kpi-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+.kpi-value { font-size: 2rem; font-weight: 700; color: #0f172a; margin-top: 0.5rem; }
+
+/* Main layout split */
+.fleet-main-split {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 1rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+/* Sidebar */
+.fleet-sidebar {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+}
+.search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px;
+    outline: none;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+    background: #fff url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%2394a3b8" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') no-repeat 12px center;
+}
+.search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+.vehicle-item {
+    padding: 1rem;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+    margin-bottom: 0.5rem;
+}
+.vehicle-item:hover { border-color: #cbd5e1; background: #f8fafc; }
+.vehicle-item.selected { border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1); }
+.v-plate { font-weight: 700; font-size: 1rem; color: #0f172a; }
+.v-type { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px; margin-top: 0.2rem; display: inline-block;}
+.status-dot { width: 12px; height: 12px; border-radius: 50%; }
+.bg-green { background-color: #10b981; }
+.bg-yellow { background-color: #f59e0b; }
+.bg-orange { background-color: #f97316; }
+.bg-red { background-color: #ef4444; }
+
+/* Right Panel */
+.fleet-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+/* Ficha Superior */
+.ficha-tecnica {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+.ficha-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+.fh-title { font-size: 1.5rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.75rem;}
+.fh-subtitle { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
+.health-bar-container { width: 200px; }
+.health-bar-bg { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 0.25rem;}
+.health-bar-fill { height: 100%; background: #10b981; transition: width 0.5s ease; }
+
+.docs-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+.doc-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+}
+.doc-card-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.doc-card-body { padding: 1rem; flex: 1; font-size: 0.8rem; color: #475569; display: flex; flex-direction: column; gap: 0.25rem; }
+.doc-card-body strong { color: #1e293b; }
+.doc-card-footer {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Colors for Doc Cards (similar to the screenshot) */
+.c-tc { border-top: 3px solid #ef4444; }
+.c-soat { border-top: 3px solid #3b82f6; }
+.c-matpel { border-top: 3px solid #f59e0b; }
+.c-rt { border-top: 3px solid #f97316; }
+.c-boni { border-top: 3px solid #14b8a6; }
+.c-sv { border-top: 3px solid #10b981; }
+.c-sc { border-top: 3px solid #d946ef; }
+.c-fum { border-top: 3px solid #8b5cf6; }
+.c-ext { border-top: 3px solid #6366f1; }
+
+.badge-num { 
+    background: #1e293b; color: white; border-radius: 4px; padding: 2px 6px; 
+}
+.c-tc .badge-num { background: #ef4444; }
+.c-soat .badge-num { background: #3b82f6; }
+.c-matpel .badge-num { background: #f59e0b; }
+.c-rt .badge-num { background: #f97316; }
+.c-boni .badge-num { background: #14b8a6; }
+.c-sv .badge-num { background: #10b981; }
+.c-sc .badge-num { background: #d946ef; }
+.c-fum .badge-num { background: #8b5cf6; }
+.c-ext .badge-num { background: #6366f1; }
+
+.s-green { color: #047857; background: #d1fae5; }
+.s-yellow { color: #b45309; background: #fef3c7; }
+.s-orange { color: #c2410c; background: #ffedd5; }
+.s-red { color: #b91c1c; background: #fee2e2; }
+
+/* Matriz Inferior */
+.matriz-container {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.matriz-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.table-wrapper {
+    flex: 1;
+    overflow: auto;
+}
+.matriz-table {
+    width: max-content;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+.matriz-table th, .matriz-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    white-space: nowrap;
+}
+.matriz-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.matriz-table .sticky-col {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 11;
+    border-right: 2px solid #e2e8f0;
+}
+.matriz-table th.sticky-col { z-index: 12; background: #f8fafc; }
+.matriz-table tbody tr:hover td { background: #f8fafc; }
+.matriz-table tbody tr:hover td.sticky-col { background: #f1f5f9; }
+
+/* Header groups */
+.th-group-gen { border-top: 3px solid #94a3b8; }
+.th-group-tc { border-top: 3px solid #ef4444; background: #fef2f2 !important; }
+.th-group-soat { border-top: 3px solid #3b82f6; background: #eff6ff !important; }
+.th-group-matpel { border-top: 3px solid #f59e0b; background: #fffbeb !important; }
+.th-group-rt { border-top: 3px solid #f97316; background: #fff7ed !important; }
+.th-group-boni { border-top: 3px solid #14b8a6; background: #f0fdfa !important; }
+.th-group-sv { border-top: 3px solid #10b981; background: #ecfdf5 !important; }
+.th-group-sc { border-top: 3px solid #d946ef; background: #fdf4ff !important; }
+.th-group-fum { border-top: 3px solid #8b5cf6; background: #f5f3ff !important; }
+.th-group-ext { border-top: 3px solid #6366f1; background: #e0e7ff !important; }
+
+/* Buttons */
+.btn-primary {
+    background: #1e293b;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-primary:hover { background: #0f172a; }
+.btn-outline {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-outline:hover { background: #f8fafc; }
+.btn-danger {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-danger:hover { background: #fee2e2; }
+
+/* Modal Custom */
+.fleet-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+.fleet-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 1000px;
+    height: 80vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+.fm-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #fff; }
+.fm-header h3 { margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+.fm-body { display: flex; flex: 1; overflow: hidden; }
+.fm-sidebar { width: 220px; background: #f8fafc; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 1rem 0; }
+.fm-tab { padding: 0.75rem 1.5rem; font-size: 0.9rem; color: #64748b; cursor: pointer; border-left: 3px solid transparent; }
+.fm-tab:hover { background: #f1f5f9; color: #0f172a; }
+.fm-tab.active { background: #eff6ff; color: #2563eb; border-left-color: #2563eb; font-weight: 600; }
+.fm-content { flex: 1; padding: 2rem; overflow-y: auto; }
+.fm-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 1rem; background: #f8fafc; }
+
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;}
+.form-control { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;}
+.form-control:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Empty state */
+.empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; color: #94a3b8; text-align: center;
+}
+</style>
+
+<div id="fleet-module-container">
+    <!-- A. PANEL SUPERIOR -->
+    <div style="padding: 1.5rem; display: flex; gap: 1rem;">
+        <div class="glass-panel kpi-card kpi-total active" onclick="filtrarKPI('total', this)">
+            <div class="kpi-title">Flota Total</div>
+            <div class="kpi-value" id="kpi-total">0</div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span id="cache-badge-docflota" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-docflota">Sin cargar</span></span>
-            <button class="btn btn-sm btn-light border shadow-sm rounded btn-reload-cache d-flex align-items-center justify-content-center px-2" style="height: 32px;" onclick="recargarModulo('flota/documentos')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-primary fw-bold text-white shadow-sm d-flex align-items-center btn-sm px-3 rounded-pill" onclick="abrirModalDocumentoFlota()"><i class="bi bi-plus-lg me-1"></i> Registrar Doc</button>
+        <div class="glass-panel kpi-card kpi-vigente" onclick="filtrarKPI('vigente', this)">
+            <div class="kpi-title" style="color: #10b981;">Vigentes</div>
+            <div class="kpi-value" id="kpi-vigente">0</div>
+        </div>
+        <div class="glass-panel kpi-card kpi-alerta" onclick="filtrarKPI('alerta', this)">
+            <div class="kpi-title" style="color: #f59e0b;">En Alerta</div>
+            <div class="kpi-value" id="kpi-alerta">0</div>
+        </div>
+        <div class="glass-panel kpi-card kpi-vencido" onclick="filtrarKPI('vencido', this)">
+            <div class="kpi-title" style="color: #ef4444;">Vencidos</div>
+            <div class="kpi-value" id="kpi-vencido">0</div>
         </div>
     </div>
 
-    <div class="container-fluid px-3 pb-4">
-        
-        <!-- Cards de KPI -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="card h-100 border-0 shadow-sm" style="background-color: #2c3e50; color: white; border-radius: 12px;">
-                    <div class="card-body text-center p-3">
-                        <h2 class="fw-bolder mb-1" id="kpi-doc-total">0</h2>
-                        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Documentos</span>
-                    </div>
-                </div>
+    <div class="fleet-main-split">
+        <!-- B. BARRA LATERAL IZQUIERDA -->
+        <div class="fleet-sidebar">
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="fleet-search" class="search-input" placeholder="Buscar placa, tipo..." oninput="filtrarListaLocal()">
+                <button class="btn-primary" onclick="abrirModalEdicion(null)" title="Nuevo Vehículo"><i class="bi bi-plus-lg"></i></button>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100 border-0 shadow-sm" style="background-color: #fee2e2; border-radius: 12px; cursor: pointer;" onclick="filtrarDocumentosPorEstado('VENCIDO')">
-                    <div class="card-body text-center p-3">
-                        <h2 class="fw-bolder mb-1 text-danger" id="kpi-doc-vencido">0</h2>
-                        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: #ef4444; letter-spacing: 0.5px;">Vencidos</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100 border-0 shadow-sm" style="background-color: #fef3c7; border-radius: 12px; cursor: pointer;" onclick="filtrarDocumentosPorEstado('PROXIMO')">
-                    <div class="card-body text-center p-3">
-                        <h2 class="fw-bolder mb-1 text-warning" id="kpi-doc-proximo">0</h2>
-                        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: #f59e0b; letter-spacing: 0.5px;">Próximos a Vencer</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card h-100 border-0 shadow-sm" style="background-color: #d1fae5; border-radius: 12px; cursor: pointer;" onclick="filtrarDocumentosPorEstado('VIGENTE')">
-                    <div class="card-body text-center p-3">
-                        <h2 class="fw-bolder mb-1 text-success" id="kpi-doc-vigente">0</h2>
-                        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: #10b981; letter-spacing: 0.5px;">Vigentes</span>
-                    </div>
-                </div>
+            <div id="vehicle-list" style="flex:1; overflow-y:auto; padding-right: 0.25rem;">
+                <!-- Vehículos se inyectan aquí -->
+                <div class="text-center" style="margin-top:2rem; font-size:0.9rem; color:#94a3b8;">Cargando flota...</div>
             </div>
         </div>
 
-        <!-- Toolbar de Búsqueda -->
-        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3 bg-white p-2 rounded shadow-sm border border-light">
-            <div class="d-flex flex-grow-1 gap-2 align-items-center">
-                <div class="input-group" style="max-width: 300px;">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" id="inputBuscarDocFlota" class="form-control border-start-0 bg-light" placeholder="Buscar placa, constancia..." oninput="filtrarTablaDocFlota()">
-                </div>
-                <select id="filtroTipoDocFlota" class="form-select bg-light" style="max-width: 200px;" onchange="filtrarTablaDocFlota()">
-                    <option value="">Todos los Tipos</option>
-                    <option value="Tarjeta de Circulación">Tarjeta de Circulación</option>
-                    <option value="SOAT">SOAT</option>
-                    <option value="Certificado MATPEL">Certificado MATPEL</option>
-                    <option value="Revisión Técnica">Revisión Técnica</option>
-                    <option value="Bonificación">Bonificación</option>
-                    <option value="Seguro Vehicular">Seguro Vehicular</option>
-                    <option value="Seguro Carga">Seguro Carga</option>
-                    <option value="Certificado Fumigación">Certificado Fumigación</option>
-                    <option value="Extintores">Extintores</option>
-                </select>
-                <button class="btn btn-light border text-secondary shadow-sm" onclick="filtrarDocumentosPorEstado('')" title="Limpiar Filtros"><i class="bi bi-funnel"></i> Limpiar</button>
-            </div>
-            <div class="d-flex gap-2">
-                <input type="file" id="inputFileImportDoc" accept=".csv" style="display:none" onchange="procesarImportacionDocumentos(event)">
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary btn-sm fw-bold shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-cloud-upload"></i> Importar</button>
-                    <ul class="dropdown-menu shadow">
-                        <li><a class="dropdown-item fw-bold" href="#" onclick="descargarPlantillaDocs()"><i class="bi bi-download me-2 text-primary"></i>Descargar Plantilla CSV</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="document.getElementById('inputFileImportDoc').click()"><i class="bi bi-file-earmark-arrow-up me-2 text-success"></i>Subir datos completados</a></li>
-                    </ul>
-                </div>
-                <button class="btn btn-outline-success btn-sm fw-bold shadow-sm" onclick="exportarExcelDocFlota()"><i class="bi bi-file-earmark-excel"></i> Exportar</button>
-            </div>
-        </div>
-
-        <!-- Tabla -->
-        <div class="card shadow-sm border-0 bg-white" style="border-radius: 12px; overflow: hidden;">
-            <div class="table-responsive" style="max-height: calc(100vh - 280px); overflow-y: auto;">
-                <table class="table table-hover align-middle mb-0" id="tablaDocFlota" style="font-size: 0.85rem;">
-                    <thead style="position: sticky; top: 0; background-color: var(--surface); z-index: 10;">
-                        <tr>
-                            <th class="border-0 text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">PLACA</th>
-                            <th class="border-0 text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">TIPO DOCUMENTO</th>
-                            <th class="border-0 text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">CONSTANCIA</th>
-                            <th class="border-0 text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">VENCIMIENTO</th>
-                            <th class="border-0 text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">FALTAN (DÍAS)</th>
-                            <th class="border-0 text-secondary text-center" style="font-size: 0.75rem; letter-spacing: 0.5px;">ESTADO</th>
-                            <th class="border-0 text-secondary text-center" style="width: 50px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbDocFlota">
-                        <tr><td colspan="7" class="text-center py-4 text-muted">Cargando documentos...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL REGISTRO / EDICIÓN -->
-    <div class="modal fade" id="modalDocFlota" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow" style="border-radius: 16px;">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="modalDocFlotaTitle">Registrar Documento</h5>
-                    <button type="button" class="btn-close shadow-sm bg-light rounded-circle" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formDocFlota" onsubmit="guardarDocumentoFlota(event)">
-                        <input type="hidden" name="id" id="docflota_id">
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Placa de la Unidad <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control bg-light" name="placa" id="docflota_placa" placeholder="Ej. BDA828" required style="text-transform: uppercase;">
+        <!-- C. PANEL DERECHO -->
+        <div class="fleet-content">
+            
+            <div id="right-content-wrapper" style="display:none; height:100%; flex-direction:column; gap:1rem;">
+                <!-- C.1. FICHA TÉCNICA -->
+                <div class="ficha-tecnica">
+                    <div class="ficha-header">
+                        <div>
+                            <div class="fh-title">
+                                <i class="bi bi-arrow-left-right" style="padding:8px; background:#1e293b; color:#fff; border-radius:12px; font-size:1.2rem;"></i>
+                                <span id="ft-placa">---</span> 
+                                <span class="v-type" style="font-size:0.9rem; margin:0;" id="ft-tipo">---</span>
+                            </div>
+                            <div class="fh-subtitle"><span id="ft-marca-modelo">---</span> | Año: <span id="ft-anio">---</span> | Chasis: <span id="ft-chasis">---</span></div>
                         </div>
+                        <div style="display:flex; align-items:flex-end; flex-direction:column; gap:1rem;">
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn-outline" onclick="abrirModalEdicion(currentPlaca)"><i class="bi bi-pencil"></i> Editar Documentos</button>
+                                <button class="btn-danger" onclick="eliminarVehiculoActual()"><i class="bi bi-trash"></i></button>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; font-weight:600; color:#64748b;">
+                                SALUD: 
+                                <div class="health-bar-container">
+                                    <div class="health-bar-bg"><div class="health-bar-fill" id="ft-health-bar" style="width: 0%;"></div></div>
+                                </div>
+                                <span id="ft-health-txt">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="docs-grid">
+                        <div class="doc-card c-tc" id="card-tc"></div>
+                        <div class="doc-card c-soat" id="card-soat"></div>
+                        <div class="doc-card c-matpel" id="card-matpel"></div>
+                        <div class="doc-card c-rt" id="card-rt"></div>
+                        <div class="doc-card c-boni" id="card-boni"></div>
+                        <div class="doc-card c-sv" id="card-sv"></div>
+                        <div class="doc-card c-sc" id="card-sc"></div>
+                        <div class="doc-card c-fum" id="card-fum"></div>
+                        <div class="doc-card c-ext" id="card-ext"></div>
+                    </div>
+                </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Tipo de Documento <span class="text-danger">*</span></label>
-                                <select class="form-select bg-light" name="tipo_documento" id="docflota_tipo" required>
-                                    <option value="" disabled selected>Seleccione...</option>
-                                    <option value="Tarjeta de Circulación">Tarjeta de Circulación</option>
-                                    <option value="SOAT">SOAT</option>
-                                    <option value="Certificado MATPEL">Certificado MATPEL</option>
-                                    <option value="Revisión Técnica">Revisión Técnica</option>
-                                    <option value="Bonificación">Bonificación</option>
-                                    <option value="Seguro Vehicular">Seguro Vehicular</option>
-                                    <option value="Seguro Carga">Seguro Carga</option>
-                                    <option value="Certificado Fumigación">Certificado Fumigación</option>
-                                    <option value="Extintores">Extintores</option>
+                <!-- C.2. MATRIZ INFERIOR -->
+                <div class="matriz-container">
+                    <div class="matriz-header">
+                        <div style="font-weight:600; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="bi bi-table text-muted"></i> Matriz General de Control
+                        </div>
+                        <button class="btn-outline" style="color:#047857; border-color:#047857;" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel"></i> Exportar Vista</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="matriz-table" id="tabla-matriz">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col th-group-gen text-center">N°</th>
+                                    <th class="sticky-col th-group-gen">PLACA</th>
+                                    <th class="th-group-gen">PROPIEDAD</th>
+                                    <th class="th-group-gen">EMPRESA</th>
+                                    <th class="th-group-gen">F. ENTREGA</th>
+                                    <th class="th-group-gen">TIPO</th>
+                                    <th class="th-group-gen text-center">AÑO</th>
+                                    <th class="th-group-gen">MODELO</th>
+                                    <th class="th-group-gen">COLOR</th>
+                                    <th class="th-group-gen">MARCA</th>
+                                    <th class="th-group-gen">SERIE/CHASIS</th>
+                                    
+                                    <th class="th-group-tc">TC VENCIMIENTO</th>
+                                    <th class="th-group-tc">ESTADO DÍAS</th>
+                                    
+                                    <th class="th-group-soat">SOAT CONSTANCIA</th>
+                                    <th class="th-group-soat">ENTIDAD</th>
+                                    <th class="th-group-soat text-end">PAGO</th>
+                                    <th class="th-group-soat">VENCIMIENTO</th>
+                                    <th class="th-group-soat">ESTADO DÍAS</th>
+
+                                    <th class="th-group-matpel">MATPEL CONST.</th>
+                                    <th class="th-group-matpel">EMISIÓN</th>
+                                    <th class="th-group-matpel">VENCIMIENTO</th>
+                                    <th class="th-group-matpel">ESTADO DÍAS</th>
+
+                                    <th class="th-group-rt">RT EMISIÓN</th>
+                                    <th class="th-group-rt">VENCIMIENTO</th>
+                                    <th class="th-group-rt">ESTADO DÍAS</th>
+
+                                    <th class="th-group-boni">BONI VENCIMIENTO</th>
+                                    <th class="th-group-boni">ESTADO DÍAS</th>
+
+                                    <th class="th-group-sv">SV ENTIDAD</th>
+                                    <th class="th-group-sv">ASESOR</th>
+                                    <th class="th-group-sv">VENCIMIENTO</th>
+                                    <th class="th-group-sv">ESTADO DÍAS</th>
+
+                                    <th class="th-group-sc">SC ENTIDAD</th>
+                                    <th class="th-group-sc">ASESOR</th>
+                                    <th class="th-group-sc">EMISIÓN</th>
+                                    <th class="th-group-sc">VENCIMIENTO</th>
+                                    <th class="th-group-sc">ESTADO DÍAS</th>
+
+                                    <th class="th-group-fum">FUM EMISIÓN</th>
+                                    <th class="th-group-fum">VENCIMIENTO</th>
+                                    <th class="th-group-fum">ESTADO DÍAS</th>
+
+                                    <th class="th-group-ext">EXT VENCIMIENTO</th>
+                                    <th class="th-group-ext text-center">CANTIDAD</th>
+                                    <th class="th-group-ext">ESTADO DÍAS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matriz-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="empty-state-panel" class="empty-state">
+                <i class="bi bi-truck" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
+                <h4>Selecciona un vehículo</h4>
+                <p>Haz clic en un vehículo de la lista para ver su expediente documental.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- D. MODAL DE EDICIÓN -->
+<div class="fleet-modal-overlay" id="modalEdicionVehiculo">
+    <div class="fleet-modal">
+        <div class="fm-header">
+            <h3><i class="bi bi-sliders"></i> Configuración de Unidad</h3>
+            <button class="btn-close" style="filter: invert(1); opacity:0.8;" onclick="cerrarModalEdicion()"></button>
+        </div>
+        <div class="fm-body">
+            <div class="fm-sidebar">
+                <div style="padding:0 1.5rem 0.5rem 1.5rem; font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Identificación</div>
+                <div class="fm-tab active" onclick="switchTab(0, this)">General</div>
+                <div style="padding:1.5rem 1.5rem 0.5rem 1.5rem; font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Documentación (9)</div>
+                <div class="fm-tab" onclick="switchTab(1, this)">1. Tarj. Circulación</div>
+                <div class="fm-tab" onclick="switchTab(2, this)">2. SOAT</div>
+                <div class="fm-tab" onclick="switchTab(3, this)">3. MATPEL</div>
+                <div class="fm-tab" onclick="switchTab(4, this)">4. Rev. Técnica</div>
+                <div class="fm-tab" onclick="switchTab(5, this)">5. Bonificación</div>
+                <div class="fm-tab" onclick="switchTab(6, this)">6. Seg. Vehicular</div>
+                <div class="fm-tab" onclick="switchTab(7, this)">7. Seg. de Carga</div>
+                <div class="fm-tab" onclick="switchTab(8, this)">8. Fumigación</div>
+                <div class="fm-tab" onclick="switchTab(9, this)">9. Extintores</div>
+            </div>
+            <div class="fm-content">
+                <form id="formVehiculoFlota" onsubmit="event.preventDefault(); guardarVehiculo();">
+                    <div class="tab-pane active" id="tab-0">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">Identidad del Vehículo</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Placa Principal *</label><input type="text" id="f_placa" class="form-control" required placeholder="EJ: BDA828" style="font-size:1.1rem; font-weight:700;"></div>
+                            <div class="form-group"><label>Tipo de Unidad</label>
+                                <select id="f_tipo" class="form-control">
+                                    <option value="">Seleccione...</option>
+                                    <option value="CAMION">CAMIÓN</option>
+                                    <option value="AUTO">AUTO</option>
+                                    <option value="CARRETA">CARRETA</option>
+                                    <option value="CAMIONETA">CAMIONETA</option>
+                                    <option value="MOTO">MOTO</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Entidad Emitente</label>
-                                <input type="text" class="form-control bg-light" name="entidad" id="docflota_entidad" placeholder="Ej. RIMAC, MTC">
+                        </div>
+                        <div style="border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; margin-top:1rem;">
+                            <div class="form-grid">
+                                <div class="form-group"><label>Propiedad</label><input type="text" id="f_propiedad" class="form-control" placeholder="PROPIA"></div>
+                                <div class="form-group"><label>Empresa</label><input type="text" id="f_empresa" class="form-control" placeholder="MARSISA"></div>
+                                <div class="form-group"><label>Marca</label><input type="text" id="f_marca" class="form-control"></div>
+                                <div class="form-group"><label>Modelo</label><input type="text" id="f_modelo" class="form-control"></div>
+                                <div class="form-group"><label>Año</label><input type="number" id="f_anio" class="form-control"></div>
+                                <div class="form-group"><label>Color</label><input type="text" id="f_color" class="form-control"></div>
+                                <div class="form-group"><label>F. Entrega</label><input type="date" id="f_fecha_entrega" class="form-control"></div>
+                                <div class="form-group"><label>Serie/Chasis</label><input type="text" id="f_chasis" class="form-control"></div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">N° Constancia / Póliza</label>
-                            <input type="text" class="form-control bg-light" name="nro_constancia" id="docflota_constancia" placeholder="Ej. 15M24051767E">
+                    <div class="tab-pane" id="tab-1">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">1. Tarjeta de Circulación</h4>
+                        <div class="form-group" style="max-width:50%;"><label>Fecha de Vencimiento</label><input type="date" id="f_tc_vencimiento" class="form-control"></div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-2">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">2. SOAT</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>N° Constancia</label><input type="text" id="f_soat_constancia" class="form-control"></div>
+                            <div class="form-group"><label>Entidad Emisora</label><input type="text" id="f_soat_entidad" class="form-control"></div>
+                            <div class="form-group"><label>Pago (Monto)</label><input type="number" step="0.01" id="f_soat_pago" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_soat_vencimiento" class="form-control"></div>
                         </div>
+                    </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Fecha de Emisión</label>
-                                <input type="date" class="form-control bg-light" name="fecha_emision" id="docflota_emision">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Fecha Vencimiento <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control bg-light" name="fecha_vencimiento" id="docflota_vencimiento" required>
-                            </div>
+                    <div class="tab-pane" id="tab-3">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">3. Certificado MATPEL</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>N° Constancia MTC</label><input type="text" id="f_matpel_constancia" class="form-control"></div>
+                            <div class="form-group"></div>
+                            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="f_matpel_emision" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_matpel_vencimiento" class="form-control"></div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary" style="font-size: 0.8rem;">Observaciones / Notas</label>
-                            <textarea class="form-control bg-light" name="observaciones" id="docflota_obs" rows="2" placeholder="Notas adicionales sobre el documento..."></textarea>
+                    <div class="tab-pane" id="tab-4">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">4. Revisión Técnica (CITV)</h4>
+                        <div class="form-grid" style="max-width:50%;">
+                            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="f_rt_emision" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_rt_vencimiento" class="form-control"></div>
                         </div>
+                    </div>
 
-                        <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow" id="btnGuardarDocFlota">Guardar Documento</button>
-                    </form>
-                </div>
+                    <div class="tab-pane" id="tab-5">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">5. Bonificación</h4>
+                        <div class="form-group" style="max-width:50%;"><label>Fecha de Vencimiento</label><input type="date" id="f_boni_vencimiento" class="form-control"></div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-6">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">6. Seguro Vehicular</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Entidad Aseguradora</label><input type="text" id="f_sv_entidad" class="form-control"></div>
+                            <div class="form-group"><label>Asesor Comercial</label><input type="text" id="f_sv_asesor" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_sv_vencimiento" class="form-control"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-7">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">7. Seguro de Carga</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Entidad Aseguradora</label><input type="text" id="f_sc_entidad" class="form-control"></div>
+                            <div class="form-group"><label>Asesor Comercial</label><input type="text" id="f_sc_asesor" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="f_sc_emision" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_sc_vencimiento" class="form-control"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-8">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">8. Certificado de Fumigación</h4>
+                        <div class="form-grid" style="max-width:50%;">
+                            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="f_fum_emision" class="form-control"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_fum_vencimiento" class="form-control"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-9">
+                        <h4 style="font-weight:700; margin-bottom:1.5rem; color:#0f172a;">9. Extintores</h4>
+                        <div class="form-grid" style="max-width:50%;">
+                            <div class="form-group"><label>Cantidad</label><input type="number" id="f_ext_cantidad" class="form-control" value="1" min="1"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento</label><input type="date" id="f_ext_vencimiento" class="form-control"></div>
+                        </div>
+                    </div>
+                </form>
             </div>
+        </div>
+        <div class="fm-footer">
+            <button type="button" class="btn-outline" onclick="cerrarModalEdicion()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="guardarVehiculo()">Guardar Configuración</button>
         </div>
     </div>
-
-    <!-- DRAWER EXPEDIENTE POR PLACA -->
-    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="drawerExpedientePlaca" style="width: 400px; border-top-left-radius: 16px; border-bottom-left-radius: 16px; border-left: 0;">
-        <div class="offcanvas-header pb-0" style="border-bottom: 1px solid var(--border);">
-            <div class="d-flex align-items-center gap-3 pb-3 w-100">
-                <div style="width: 48px; height: 48px; border-radius: 12px; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-truck fs-4 text-primary"></i>
-                </div>
-                <div>
-                    <h4 class="mb-0 fw-bold text-dark" id="expediente-placa-title">PLACA</h4>
-                    <span class="text-muted" style="font-size: 0.8rem;">Expediente de Documentos</span>
-                </div>
-                <button type="button" class="btn-close ms-auto bg-light rounded-circle shadow-sm" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-        </div>
-        <div class="offcanvas-body" style="background-color: var(--surface);">
-            <div id="listaExpedienteDocs" class="d-flex flex-column gap-3">
-                <!-- Se inyectan las tarjetas de documentos aquí -->
-            </div>
-        </div>
-    </div>
-
 </div>
 
 <script src="/modulos/flota/documentos/logica.js"></script>
