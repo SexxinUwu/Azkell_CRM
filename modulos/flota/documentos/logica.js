@@ -1,9 +1,19 @@
 var vehiculosFlota = [];
+var placasCatalogo = [];
 var currentPlaca = null;
 var currentFiltroKPI = 'total';
 
 function init_docflota() {
+    cargarDatosPlacasCatalogo();
     cargarDatosVehiculos();
+}
+
+function cargarDatosPlacasCatalogo() {
+    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
+    .then(r => r.json())
+    .then(r => {
+        placasCatalogo = Array.isArray(r.data) ? r.data : [];
+    }).catch(e => console.error("Error cargando catálogo de placas:", e));
 }
 
 function calcularEstado(fechaVencimiento) {
@@ -372,7 +382,18 @@ function switchTab(index, element) {
 
 function abrirModalEdicion(placa) {
     document.getElementById('formVehiculoFlota').reset();
-    document.getElementById('f_placa').readOnly = !!placa;
+    
+    const selectPlaca = document.getElementById('f_placa');
+    let opts = '<option value="">Seleccione una placa...</option>';
+    placasCatalogo.forEach(p => {
+        opts += `<option value="${p.placa}">${p.placa} ${p.tipo ? '('+p.tipo+')' : ''}</option>`;
+    });
+    // Si la placa actual no está en el catálogo, la agregamos al select
+    if (placa && !placasCatalogo.find(p => p.placa === placa)) {
+        opts += `<option value="${placa}">${placa}</option>`;
+    }
+    selectPlaca.innerHTML = opts;
+    selectPlaca.disabled = !!placa; // Solo lectura si estamos editando uno existente
     
     // Switch to first tab
     switchTab(0, document.querySelector('.fm-tab'));
@@ -425,6 +446,34 @@ function abrirModalEdicion(placa) {
     }
     
     document.getElementById('modalEdicionVehiculo').style.display = 'flex';
+}
+
+function autocompletarDatosPlaca(placaSeleccionada) {
+    if(!placaSeleccionada) {
+        document.getElementById('formVehiculoFlota').reset();
+        return;
+    }
+    
+    // 1. Ver si ya está en vehiculosFlota (editar)
+    const v = vehiculosFlota.find(x => x.placa === placaSeleccionada);
+    if(v) {
+        abrirModalEdicion(placaSeleccionada);
+        return;
+    }
+
+    // 2. Si no, llenar con datos del catálogo
+    const p = placasCatalogo.find(x => x.placa === placaSeleccionada);
+    if(p) {
+        document.getElementById('f_tipo').value = p.tipo || '';
+        document.getElementById('f_propiedad').value = p.propiedad || 'PROPIA';
+        document.getElementById('f_empresa').value = p.empresa || 'MARSISA';
+        document.getElementById('f_marca').value = p.marca || '';
+        document.getElementById('f_modelo').value = p.modelo || '';
+        document.getElementById('f_anio').value = p.anio || '';
+        document.getElementById('f_color').value = p.color || '';
+        document.getElementById('f_chasis').value = p.chasis_vin || p.chasis || '';
+        document.getElementById('f_fecha_entrega').value = (p.fecha_ingreso || p.fecha_entrega || '').split('T')[0];
+    }
 }
 
 function cerrarModalEdicion() {
