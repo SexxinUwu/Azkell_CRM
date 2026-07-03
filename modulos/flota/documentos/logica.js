@@ -34,27 +34,7 @@ function actualizarDatalistPlacas() {
     }
 }
 
-function autocompletarDatosPlaca(placaVal) {
-    if(!placaVal) return;
-    placaVal = placaVal.toUpperCase().trim();
-    let p = placasCatalogo.find(x => x.placa && x.placa.toUpperCase() === placaVal);
-    if (!p) {
-        // Fallback to vehiculosFlota
-        p = vehiculosFlota.find(x => x.placa && x.placa.toUpperCase() === placaVal);
-        if (p && p.modelo) {
-            p = { ...p, modelo_uts: p.modelo }; // map differences in field names
-        }
-    }
-    
-    if(p) {
-        document.getElementById('f_marca').value = p.marca || '';
-        document.getElementById('f_modelo').value = p.modelo_uts || p.modelo || '';
-        document.getElementById('f_tipo').value = p.tipo || '';
-        document.getElementById('f_color').value = p.color || '';
-        document.getElementById('f_chasis').value = p.nro_vin || p.chasis || '';
-        document.getElementById('f_anio').value = p.anio || '';
-    }
-}
+// First autocompletarDatosPlaca removed to avoid duplication
 
 function calcularEstado(fechaVencimiento) {
     if (!fechaVencimiento) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
@@ -497,14 +477,23 @@ function autocompletarDatosPlaca(placaSeleccionada) {
     // 2. Si no, llenar con datos del catálogo
     const p = placasCatalogo.find(x => x.placa === placaSeleccionada);
     if(p) {
-        document.getElementById('f_tipo').value = p.tipo || '';
+        // Handle "tipo de unidad" mapping safely (accents and variations)
+        let tipoStr = (p.tipo || p.modelo_uts || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let selectTipo = document.getElementById('f_tipo');
+        if (tipoStr.includes('CAMIONETA')) selectTipo.value = 'CAMIONETA';
+        else if (tipoStr.includes('CAMION')) selectTipo.value = 'CAMION';
+        else if (tipoStr.includes('CARRETA')) selectTipo.value = 'CARRETA';
+        else if (tipoStr.includes('AUTO')) selectTipo.value = 'AUTO';
+        else if (tipoStr.includes('MOTO')) selectTipo.value = 'MOTO';
+        else selectTipo.value = p.tipo || '';
+
         document.getElementById('f_propiedad').value = p.propiedad || 'PROPIA';
         document.getElementById('f_empresa').value = p.empresa || 'MARSISA';
         document.getElementById('f_marca').value = p.marca || '';
-        document.getElementById('f_modelo').value = p.modelo || '';
+        document.getElementById('f_modelo').value = p.modelo_uts || p.modelo || '';
         document.getElementById('f_anio').value = p.anio || '';
         document.getElementById('f_color').value = p.color || '';
-        document.getElementById('f_chasis').value = p.chasis_vin || p.chasis || '';
+        document.getElementById('f_chasis').value = p.nro_vin || p.chasis_vin || p.chasis || '';
         document.getElementById('f_fecha_entrega').value = (p.fecha_ingreso || p.fecha_entrega || '').split('T')[0];
     }
 }
