@@ -13,22 +13,40 @@ function cargarDatosPlacasCatalogo() {
     .then(r => r.json())
     .then(rows => {
         placasCatalogo = Array.isArray(rows) ? rows : [];
-        let dt = document.getElementById('fd_placa_list');
-        if (dt) {
-            dt.innerHTML = placasCatalogo.map(p => `<option value="${p.placa}">`).join('');
-        }
+        actualizarDatalistPlacas();
     }).catch(e => console.error('Error cargando catálogo de placas:', e));
+}
+
+function actualizarDatalistPlacas() {
+    let dt = document.getElementById('fd_placa_list');
+    if (!dt) return;
+    
+    let opciones = new Set();
+    placasCatalogo.forEach(p => opciones.add(p.placa));
+    vehiculosFlota.forEach(v => opciones.add(v.placa));
+    
+    let html = '';
+    opciones.forEach(placa => { html += `<option value="${placa}"></option>`; });
+    dt.innerHTML = html;
 }
 
 function autocompletarDatosPlaca(placaVal) {
     if(!placaVal) return;
-    const p = placasCatalogo.find(x => x.placa === placaVal);
+    let p = placasCatalogo.find(x => x.placa === placaVal);
+    if (!p) {
+        // Fallback to vehiculosFlota
+        p = vehiculosFlota.find(x => x.placa === placaVal);
+        if (p && p.modelo) {
+            p = { ...p, modelo_uts: p.modelo }; // map differences in field names
+        }
+    }
+    
     if(p) {
         document.getElementById('f_marca').value = p.marca || '';
-        document.getElementById('f_modelo').value = p.modelo_uts || '';
+        document.getElementById('f_modelo').value = p.modelo_uts || p.modelo || '';
         document.getElementById('f_tipo').value = p.tipo || '';
         document.getElementById('f_color').value = p.color || '';
-        document.getElementById('f_chasis').value = p.nro_vin || '';
+        document.getElementById('f_chasis').value = p.nro_vin || p.chasis || '';
         document.getElementById('f_anio').value = p.anio || '';
     }
 }
@@ -107,6 +125,7 @@ function cargarDatosVehiculos() {
         vehiculosFlota.forEach(v => { v._meta = calcularMetadatos(v); });
         actualizarKPIs();
         renderizarListaLateral();
+        actualizarDatalistPlacas();
         
         if(currentPlaca) {
             const existe = vehiculosFlota.find(x => x.placa === currentPlaca);
