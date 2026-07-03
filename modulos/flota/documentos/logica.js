@@ -1,4 +1,4 @@
-let dataDocFlota = [];
+var dataDocFlota = [];
 
 function init_docflota() {
     cargarTablaDocFlota();
