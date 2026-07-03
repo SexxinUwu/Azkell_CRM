@@ -3,7 +3,7 @@ var placasCatalogo = [];
 var currentPlaca = null;
 var currentFiltroKPI = 'total';
 
-function init_docflota() {
+function init_documentos() {
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('fd_placa', function(val) {
             autocompletarDatosPlaca(val);
