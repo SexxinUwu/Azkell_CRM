@@ -391,21 +391,6 @@ function abrirModalEdicion(placa) {
     if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
         autocompletarDatosPlaca(val);
     });
-    // Reposicionar dropdown con coordenadas fijas para que escape del overflow:hidden del modal
-    var txtInputFd = document.getElementById('fd_placa-txt');
-    if (txtInputFd) {
-        var _reposFdDropdown = function() {
-            var dd = document.getElementById('fd_placa-dd');
-            var rect = txtInputFd.getBoundingClientRect();
-            if (dd) {
-                dd.style.top = (rect.bottom + window.scrollY) + 'px';
-                dd.style.left = rect.left + 'px';
-                dd.style.width = rect.width + 'px';
-            }
-        };
-        txtInputFd.addEventListener('focus', _reposFdDropdown);
-        txtInputFd.addEventListener('input', _reposFdDropdown);
-    }
     
     // Bloquear si es edición
     var txtEl = document.getElementById('fd_placa-txt');

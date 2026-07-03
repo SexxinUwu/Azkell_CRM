@@ -522,12 +522,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
     flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
-    /* Allow dropdowns to escape via JS positioning */
-}
-/* Force cb-dropdown inside modal to use position fixed so it escapes overflow:hidden */
-.fleet-modal .cb-dropdown {
-    position: fixed !important;
-    z-index: 99999 !important;
 }
 .fm-header {
     padding: 1.25rem 1.5rem;
@@ -563,7 +557,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
 }
 .fm-close:hover { background: rgba(255,255,255,0.2); }
 
-.fm-body { display: flex; flex: 1; overflow: visible; }
+.fm-body { display: flex; flex: 1; overflow: hidden; }
 .fm-sidebar {
     width: 240px;
     background: #ffffff;
@@ -571,7 +565,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
     overflow-y: auto;
     padding: 1.5rem 1rem;
     border-radius: 0;
+    flex-shrink: 0;
 }
+
 .fm-section-title {
     font-size: 0.65rem;
     font-weight: 700;
@@ -593,7 +589,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
 .fm-tab:hover { background: #f8fafc; }
 .fm-tab.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
 
-.fm-content { flex: 1; padding: 2rem; overflow-y: auto; background: #ffffff; }
+.fm-content { flex: 1; padding: 2rem; overflow-y: auto; overflow-x: hidden; background: #ffffff; position: relative; }
 .fm-content-title {
     font-size: 1.25rem;
     font-weight: 700;
