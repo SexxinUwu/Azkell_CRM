@@ -9,16 +9,10 @@ function init_docflota() {
 }
 
 function cargarDatosPlacasCatalogo() {
-    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
+    fetch('/api/placas-lista')
     .then(r => r.json())
-    .then(r => {
-        placasCatalogo = Array.isArray(r.data) ? r.data : [];
-        // Inicializar combobox con la lista de placas
-        var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
-        if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
-        if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
-            autocompletarDatosPlaca(val);
-        });
+    .then(rows => {
+        placasCatalogo = Array.isArray(rows) ? rows : [];
     }).catch(e => console.error('Error cargando catálogo de placas:', e));
 }
 
@@ -89,13 +83,11 @@ function calcularMetadatos(v) {
 function cargarDatosVehiculos() {
     document.getElementById('vehicle-list').innerHTML = '<div class="text-center" style="margin-top:2rem; color:#94a3b8;">Cargando flota...</div>';
     
-    fetch('/api/script/obtenerVehiculosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
+    fetch('/api/vehiculos-flota')
     .then(r => r.json())
-    .then(r => {
-        vehiculosFlota = Array.isArray(r.data) ? r.data : [];
-        vehiculosFlota.forEach(v => {
-            v._meta = calcularMetadatos(v);
-        });
+    .then(rows => {
+        vehiculosFlota = Array.isArray(rows) ? rows : [];
+        vehiculosFlota.forEach(v => { v._meta = calcularMetadatos(v); });
         actualizarKPIs();
         renderizarListaLateral();
         renderizarMatriz();
@@ -103,7 +95,7 @@ function cargarDatosVehiculos() {
         if(currentPlaca) {
             const existe = vehiculosFlota.find(x => x.placa === currentPlaca);
             if(existe) seleccionarVehiculo(currentPlaca);
-            else seleccionarVehiculo(null);
+            else seleccionarVehiculo(vehiculosFlota.length > 0 ? vehiculosFlota[0].placa : null);
         } else if(vehiculosFlota.length > 0) {
             seleccionarVehiculo(vehiculosFlota[0].placa);
         } else {
@@ -111,7 +103,7 @@ function cargarDatosVehiculos() {
         }
     }).catch(e => {
         console.error(e);
-        document.getElementById('vehicle-list').innerHTML = '<div class="text-center text-danger" style="margin-top:2rem;">Error al cargar</div>';
+        document.getElementById('vehicle-list').innerHTML = '<div class="text-center" style="margin-top:2rem;color:#ef4444;">Error al cargar</div>';
     });
 }
 
@@ -395,7 +387,7 @@ function abrirModalEdicion(placa) {
     if (placa && !placasCatalogo.find(p => p.placa === placa)) {
         items.push({ value: placa, label: placa });
     }
-    if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
+    if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa\u2026');
     if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
         autocompletarDatosPlaca(val);
     });
@@ -527,14 +519,14 @@ function guardarVehiculo() {
         ext_vencimiento: document.getElementById('f_ext_vencimiento').value,
     };
 
-    fetch('/api/script/guardarVehiculoFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [data] }) })
+    fetch('/api/vehiculos-flota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
     .then(r => r.json())
     .then(r => {
-        if(r.data === 'Éxito') {
+        if(r.ok) {
             cerrarModalEdicion();
             cargarDatosVehiculos();
         } else {
-            alert(r.data);
+            alert(r.error || 'Error al guardar');
         }
     }).catch(e => console.error(e));
 }
@@ -542,12 +534,9 @@ function guardarVehiculo() {
 function eliminarVehiculoActual() {
     if(!currentPlaca) return;
     if(confirm(`¿Estás seguro de eliminar el expediente del vehículo ${currentPlaca}? Esta acción es irreversible.`)) {
-        fetch('/api/script/eliminarDocumento', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ coleccion: 'VehiculosFlota', id: currentPlaca }) })
+        fetch('/api/vehiculos-flota/' + encodeURIComponent(currentPlaca), { method: 'DELETE' })
         .then(r => r.json())
-        .then(r => {
-            currentPlaca = null;
-            cargarDatosVehiculos();
-        });
+        .then(() => { currentPlaca = null; cargarDatosVehiculos(); });
     }
 }
 
