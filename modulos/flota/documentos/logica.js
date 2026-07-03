@@ -562,5 +562,88 @@ function eliminarVehiculoActual() {
 function exportarExcel() {
     if (typeof XLSX === 'undefined') return alert("XLSX no cargado");
     let wb = XLSX.utils.table_to_book(document.getElementById('tabla-matriz'), {sheet: "Control Flota"});
-    XLSX.writeFile(wb, `Control_Flota_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, "Control_Documentos_Flota.xlsx");
 }
+
+// ── Importación Excel ────────────────────────────────────────────
+window.descargarPlantillaVehiculos = function() {
+    if (typeof XLSX === 'undefined') return alert("XLSX no cargado");
+    const ws_data = [
+        [
+            'PLACA', 'TIPO', 'PROPIEDAD', 'EMPRESA', 'F. ENTREGA', 'AÑO', 'MODELO', 'COLOR', 'MARCA', 'SERIE/CHASIS',
+            'TC N° CONST.', 'TC F. VENC.',
+            'SOAT ENTIDAD', 'SOAT PAGO', 'SOAT F. VENC.',
+            'MATPEL N° CONST.', 'MATPEL F. VENC.',
+            'RT F. EMISIÓN', 'RT F. VENC.',
+            'BONI F. EMISIÓN', 'BONI F. VENC.',
+            'SV ENTIDAD', 'SV ASESOR', 'SV F. VENC.',
+            'SC ENTIDAD', 'SC ASESOR', 'SC F. VENC.',
+            'FUM F. EMISIÓN', 'FUM F. VENC.',
+            'EXT CANTIDAD', 'EXT F. EMISIÓN', 'EXT F. VENC.'
+        ],
+        [
+            'ABC-123', 'CAMION', 'PROPIA', 'MARSISA', '2024-01-15', '2023', 'FMX', 'BLANCO', 'VOLVO', 'VIN1234567890',
+            '123456', '2025-01-15',
+            'PACIFICO', '120.50', '2025-01-15',
+            'MAT-987', '2025-01-15',
+            '2024-01-15', '2025-01-15',
+            '2024-01-15', '2025-01-15',
+            'MAPFRE', 'JUAN PEREZ', '2025-01-15',
+            'RIMAC', 'MARIA GOMEZ', '2025-01-15',
+            '2024-01-15', '2024-07-15',
+            '1', '2024-01-15', '2025-01-15'
+        ]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Documentos_Flota");
+    XLSX.writeFile(wb, "Plantilla_Documentos_Flota.xlsx");
+};
+
+window.importarExcelVehiculos = function(event) {
+    if (typeof XLSX === 'undefined') return alert("XLSX no cargado");
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        if (rawJson.length === 0) {
+            alert("El archivo Excel está vacío o no tiene datos válidos.");
+            return;
+        }
+
+        const confirmacion = await (typeof window.confirmar === 'function'
+            ? window.confirmar({ titulo: 'Importar Flota', mensaje: `Se importarán <strong>${rawJson.length} registros</strong>. ¿Continuar?`, textoConfirmar: 'Sí, importar' })
+            : Promise.resolve(confirm(`Se importarán ${rawJson.length} registros.\n¿Continuar?`)));
+            
+        if (!confirmacion) { event.target.value = ''; return; }
+
+        document.body.style.cursor = 'wait';
+
+        fetch('/api/importarVehiculosFlotaMasivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registros: rawJson })
+        })
+        .then(res => res.json())
+        .then(r => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
+            cargarDatosVehiculos();
+        })
+        .catch(err => {
+            document.body.style.cursor = 'default';
+            event.target.value = '';
+            alert("❌ Error subiendo archivo: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+};
