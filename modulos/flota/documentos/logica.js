@@ -13,11 +13,10 @@ function cargarDatosPlacasCatalogo() {
     .then(r => r.json())
     .then(rows => {
         placasCatalogo = Array.isArray(rows) ? rows : [];
-        var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
-        if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
-        if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
-            autocompletarDatosPlaca(val);
-        });
+        let dt = document.getElementById('fd_placa_list');
+        if (dt) {
+            dt.innerHTML = placasCatalogo.map(p => `<option value="${p.placa}">`).join('');
+        }
     }).catch(e => console.error('Error cargando catálogo de placas:', e));
 }
 
@@ -397,25 +396,16 @@ function switchTab(index, element) {
 function abrirModalEdicion(placa) {
     document.getElementById('formVehiculoFlota').reset();
     
-    // Reset combobox de placa
-    if (window._cbReset) window._cbReset('fd_placa');
-    var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
-    if (placa && !placasCatalogo.find(p => p.placa === placa)) {
-        items.push({ value: placa, label: placa });
+    // Configurar combobox de placa
+    var inputEl = document.getElementById('fd_placa');
+    if (inputEl) {
+        inputEl.value = placa || '';
+        inputEl.readOnly = !!placa;
     }
-    if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa\u2026');
-    if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
-        autocompletarDatosPlaca(val);
-    });
-    
-    // Bloquear si es edición
-    var txtEl = document.getElementById('fd_placa-txt');
-    if (txtEl) txtEl.readOnly = !!placa;
     
     switchTab(0, document.querySelector('.fm-tab'));
 
     if(placa) {
-        if (window._cbSet) window._cbSet('fd_placa', placa, placa);
         const v = vehiculosFlota.find(x => x.placa === placa);
         if(v) {
             document.getElementById('f_tipo').value = v.tipo || '';
@@ -497,7 +487,7 @@ function cerrarModalEdicion() {
 }
 
 function guardarVehiculo() {
-    const placa = window._cbGet ? window._cbGet('fd_placa') : (document.getElementById('fd_placa')||{}).value;
+    const placa = (document.getElementById('fd_placa')||{}).value;
     if(!placa || !placa.trim()) return alert('La placa es obligatoria');
 
     const data = {
