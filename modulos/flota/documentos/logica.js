@@ -118,7 +118,7 @@ function calcularMetadatos(v) {
 function cargarDatosVehiculos() {
     document.getElementById('vehicle-list').innerHTML = '<div class="text-center" style="margin-top:2rem; color:#94a3b8;">Cargando flota...</div>';
     
-    fetch('/api/vehiculos-flota')
+    fetch('/api/vehiculos-flota?t=' + Date.now())
     .then(r => r.json())
     .then(rows => {
         vehiculosFlota = Array.isArray(rows) ? rows : [];
