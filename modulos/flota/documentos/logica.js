@@ -7,23 +7,22 @@ function init_docflota() {
 }
 
 function calcularEstado(fechaVencimiento) {
-    if (!fechaVencimiento) return { text: 'Indefinido', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary', score: -1, diff: null };
+    if (!fechaVencimiento) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
     
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
     const ven = new Date(fechaVencimiento);
     ven.setHours(0,0,0,0);
     
-    // Check for invalid date
-    if(isNaN(ven.getTime())) return { text: 'Indefinido', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary', score: -1, diff: null };
+    if(isNaN(ven.getTime())) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
 
     const diffTime = ven.getTime() - hoy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return { text: 'Vencido', class: 's-red', color: '#ef4444', bgClass: 'bg-red', score: 0, diff: diffDays };
-    if (diffDays <= 15) return { text: 'Crítico', class: 's-orange', color: '#f97316', bgClass: 'bg-orange', score: 1, diff: diffDays };
-    if (diffDays <= 30) return { text: 'Alerta', class: 's-yellow', color: '#f59e0b', bgClass: 'bg-yellow', score: 2, diff: diffDays };
-    return { text: 'Vigente', class: 's-green', color: '#10b981', bgClass: 'bg-green', score: 3, diff: diffDays };
+    if (diffDays < 0) return { text: 'Vencido', class: 's-red', color: '#ef4444', bgClass: 'bg-red', bdgClass: 'bdg-red', score: 0, diff: diffDays };
+    if (diffDays <= 15) return { text: 'Crítico', class: 's-orange', color: '#ea580c', bgClass: 'bg-orange', bdgClass: 'bdg-red', score: 1, diff: diffDays };
+    if (diffDays <= 30) return { text: 'Alerta', class: 's-yellow', color: '#f59e0b', bgClass: 'bg-yellow', bdgClass: 'bdg-red', score: 2, diff: diffDays };
+    return { text: 'Vigente', class: 's-green', color: '#10b981', bgClass: 'bg-green', bdgClass: 'bdg-green', score: 3, diff: diffDays };
 }
 
 function formatearFechaVista(fechaIso) {
@@ -66,13 +65,13 @@ function calcularMetadatos(v) {
     });
 
     let salud = docsRegistrados === 0 ? 0 : Math.round((docsVerdes / docsRegistrados) * 100);
-    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary' };
+    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray' };
 
     return { salud, peorEstado, docs };
 }
 
 function cargarDatosVehiculos() {
-    document.getElementById('vehicle-list').innerHTML = '<div class="text-center text-muted" style="margin-top:2rem;">Cargando...</div>';
+    document.getElementById('vehicle-list').innerHTML = '<div class="text-center" style="margin-top:2rem; color:#94a3b8;">Cargando flota...</div>';
     
     fetch('/api/script/obtenerVehiculosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
     .then(r => r.json())
@@ -91,6 +90,8 @@ function cargarDatosVehiculos() {
             else seleccionarVehiculo(null);
         } else if(vehiculosFlota.length > 0) {
             seleccionarVehiculo(vehiculosFlota[0].placa);
+        } else {
+            seleccionarVehiculo(null);
         }
     }).catch(e => {
         console.error(e);
@@ -143,7 +144,7 @@ function renderizarListaLateral() {
     });
 
     if(filtrados.length === 0) {
-        listDiv.innerHTML = '<div class="text-center text-muted" style="margin-top:2rem; font-size:0.9rem;">No se encontraron vehículos.</div>';
+        listDiv.innerHTML = '<div class="text-center" style="margin-top:2rem; font-size:0.9rem; color:#94a3b8;">No se encontraron vehículos.</div>';
         return;
     }
 
@@ -151,9 +152,10 @@ function renderizarListaLateral() {
         let selCls = (currentPlaca === v.placa) ? 'selected' : '';
         html += `
         <div class="vehicle-item ${selCls}" onclick="seleccionarVehiculo('${v.placa}')" id="vi-${v.placa}">
-            <div>
-                <div class="v-plate">${v.placa}</div>
-                <div class="v-type">${v.tipo || 'Sin tipo'}</div>
+            <div class="v-icon-circle"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="v-info">
+                <span class="v-plate">${v.placa}</span>
+                <span class="v-type">${v.tipo || '---'}</span>
             </div>
             <div class="status-dot ${v._meta.peorEstado.bgClass}"></div>
         </div>`;
@@ -183,7 +185,7 @@ function seleccionarVehiculo(placa) {
     const v = vehiculosFlota.find(x => x.placa === placa);
     if(!v) return;
 
-    // Llenar header
+    // Ficha Header
     document.getElementById('ft-placa').innerText = v.placa;
     document.getElementById('ft-tipo').innerText = v.tipo || '---';
     document.getElementById('ft-marca-modelo').innerText = `${v.marca || '---'} - ${v.modelo || '---'}`;
@@ -193,45 +195,81 @@ function seleccionarVehiculo(placa) {
     document.getElementById('ft-health-bar').style.width = `${v._meta.salud}%`;
     document.getElementById('ft-health-txt').innerText = `${v._meta.salud}%`;
 
-    // Renderizar tarjetas
+    // Renderizar tarjetas de documentos exactas a la imagen
     const m = v._meta.docs;
     
-    const renderCard = (id, title, badge, num, content, est) => {
+    const renderCard = (id, title, num, bgClass, contentRows, est) => {
+        let rowsHtml = '';
+        contentRows.forEach(row => {
+            rowsHtml += `
+            <div class="doc-row">
+                <span class="doc-label">${row.label}</span>
+                <span class="doc-value">${row.val}</span>
+            </div>`;
+        });
+        
+        let estHtml = `<span class="footer-label">ESTADO</span>`;
+        if(est.diff !== null) {
+            estHtml += `<span class="footer-status ${est.class}">${est.diff}d (${est.text})</span>`;
+        } else {
+            estHtml += `<span class="footer-status" style="color:#94a3b8;">-</span>`;
+        }
+
         let html = `
-        <div class="doc-card-header"><span class="badge-num">${num}</span> ${title}</div>
-        <div class="doc-card-body">${content}</div>
-        <div class="doc-card-footer ${est.class}">
-            ESTADO: ${est.diff !== null ? est.diff + 'd ' : ''}(${est.text})
+        <div class="doc-card-header">
+            <div class="num-circle ${bgClass}">${num}</div>
+            ${title}
+        </div>
+        <div class="doc-card-body">
+            ${rowsHtml}
+        </div>
+        <div class="doc-card-footer">
+            ${estHtml}
         </div>`;
         document.getElementById(id).innerHTML = html;
     };
 
-    renderCard('card-tc', 'TARJ. CIRCULACIÓN', 'c-tc', 1, 
-        `<div>Emisión: <strong>---</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.tc_vencimiento)}</strong></div>`, m[0]);
+    renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
+        {label: 'Emisión', val: '---'},
+        {label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento)}
+    ], m[0]);
     
-    renderCard('card-soat', 'SOAT', 'c-soat', 2, 
-        `<div>N°: <strong>${v.soat_constancia||'---'}</strong></div><div>Entidad: <strong>${v.soat_entidad||'---'}</strong></div><div>Pago: <strong>${v.soat_pago||'---'}</strong></div>`, m[1]);
+    renderCard('card-soat', 'SOAT', 2, 'bg-c2', [
+        {label: 'N°', val: v.soat_constancia||'---'},
+        {label: 'Entidad', val: v.soat_entidad||'---'},
+        {label: 'Pago', val: v.soat_pago||'---'}
+    ], m[1]);
         
-    renderCard('card-matpel', 'MATPEL', 'c-matpel', 3, 
-        `<div>N°: <strong>${v.matpel_constancia||'---'}</strong></div><div>Emisión: <strong>${formatearFechaVista(v.matpel_emision)}</strong></div>`, m[2]);
+    renderCard('card-matpel', 'MATPEL', 3, 'bg-c3', [
+        {label: 'N°', val: v.matpel_constancia||'---'},
+        {label: 'Emisión', val: formatearFechaVista(v.matpel_emision)}
+    ], m[2]);
         
-    renderCard('card-rt', 'REV. TÉCNICA', 'c-rt', 4, 
-        `<div>Emisión: <strong>${formatearFechaVista(v.rt_emision)}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.rt_vencimiento)}</strong></div>`, m[3]);
+    renderCard('card-rt', 'REV. TÉCN...', 4, 'bg-c4', [
+        {label: 'Emisión', val: formatearFechaVista(v.rt_emision)}
+    ], m[3]);
         
-    renderCard('card-boni', 'BONIFICACIÓN', 'c-boni', 5, 
-        `<div>Vencimiento: <strong>${formatearFechaVista(v.boni_vencimiento)}</strong></div>`, m[4]);
+    renderCard('card-boni', 'BONIFICA...', 5, 'bg-c5', [
+        {label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento)}
+    ], m[4]);
         
-    renderCard('card-sv', 'SEG. VEHICULAR', 'c-sv', 6, 
-        `<div>Entidad: <strong>${v.sv_entidad||'---'}</strong></div><div>Asesor: <strong>${v.sv_asesor||'---'}</strong></div>`, m[5]);
+    renderCard('card-sv', 'SEG. VEHI...', 6, 'bg-c6', [
+        {label: 'Entidad', val: v.sv_entidad||'---'},
+        {label: 'Asesor', val: v.sv_asesor||'---'}
+    ], m[5]);
         
-    renderCard('card-sc', 'SEG. CARGA', 'c-sc', 7, 
-        `<div>Entidad: <strong>${v.sc_entidad||'---'}</strong></div><div>Emisión: <strong>${formatearFechaVista(v.sc_emision)}</strong></div>`, m[6]);
+    renderCard('card-sc', 'SEG. CAR...', 7, 'bg-c7', [
+        {label: 'Entidad', val: v.sc_entidad||'---'},
+        {label: 'Emisión', val: formatearFechaVista(v.sc_emision)}
+    ], m[6]);
         
-    renderCard('card-fum', 'FUMIGACIÓN', 'c-fum', 8, 
-        `<div>Emisión: <strong>${formatearFechaVista(v.fum_emision)}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.fum_vencimiento)}</strong></div>`, m[7]);
+    renderCard('card-fum', 'FUMIGACI...', 8, 'bg-c8', [
+        {label: 'Emisión', val: formatearFechaVista(v.fum_emision)}
+    ], m[7]);
         
-    renderCard('card-ext', 'EXTINTORES', 'c-ext', 9, 
-        `<div>Cantidad: <strong>${v.ext_cantidad||1}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.ext_vencimiento)}</strong></div>`, m[8]);
+    renderCard('card-ext', 'EXTINTOR...', 9, 'bg-c9', [
+        {label: 'Cantidad', val: v.ext_cantidad||1}
+    ], m[8]);
 }
 
 function renderizarMatriz() {
@@ -239,7 +277,6 @@ function renderizarMatriz() {
     let html = '';
     let filtrados = vehiculosFlota;
 
-    // Aplicar filtros a la matriz también
     const term = (document.getElementById('fleet-search').value || '').toLowerCase();
     filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
@@ -251,69 +288,74 @@ function renderizarMatriz() {
     });
 
     if(filtrados.length === 0){
-        tbody.innerHTML = '<tr><td colspan="41" class="text-center text-muted py-4">No hay datos para mostrar en la matriz.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="41" class="text-center" style="color:#94a3b8; padding:2rem;">No hay datos para mostrar en la matriz.</td></tr>';
         return;
     }
 
     filtrados.forEach((v, i) => {
         const m = v._meta.docs;
         const eD = (obj) => {
-            if(!obj || obj.diff === null) return '-';
-            return `<span class="${obj.class}" style="padding:2px 6px; border-radius:4px; font-weight:600;">${obj.diff}d</span>`;
+            if(!obj || obj.diff === null) return `<span class="badge-dias bdg-gray">-</span>`;
+            return `<span class="badge-dias ${obj.bdgClass}">${obj.diff}</span>`;
+        };
+        const fB = (f) => {
+            let fv = formatearFechaVista(f);
+            if (fv !== '-') return `<span class="date-purple">${fv}</span>`;
+            return fv;
         };
 
         html += `
         <tr>
-            <td class="sticky-col text-center text-muted">${i+1}</td>
-            <td class="sticky-col fw-bold">${v.placa}</td>
+            <td class="sticky-col" style="border-right: none; color:#94a3b8;">${i+1}</td>
+            <td class="sticky-col-2">${v.placa}</td>
             <td>${v.propiedad||''}</td>
             <td>${v.empresa||''}</td>
             <td>${formatearFechaVista(v.fecha_entrega)}</td>
             <td>${v.tipo||''}</td>
-            <td class="text-center">${v.anio||''}</td>
+            <td>${v.anio||''}</td>
             <td>${v.modelo||''}</td>
             <td>${v.color||''}</td>
             <td>${v.marca||''}</td>
             <td>${v.chasis||''}</td>
             
-            <td>${formatearFechaVista(v.tc_vencimiento)}</td>
+            <td>${fB(v.tc_vencimiento)}</td>
             <td>${eD(m[0])}</td>
             
             <td>${v.soat_constancia||''}</td>
             <td>${v.soat_entidad||''}</td>
-            <td class="text-end">${v.soat_pago||''}</td>
-            <td>${formatearFechaVista(v.soat_vencimiento)}</td>
+            <td class="text-right">${v.soat_pago||''}</td>
+            <td>${fB(v.soat_vencimiento)}</td>
             <td>${eD(m[1])}</td>
 
             <td>${v.matpel_constancia||''}</td>
             <td>${formatearFechaVista(v.matpel_emision)}</td>
-            <td>${formatearFechaVista(v.matpel_vencimiento)}</td>
+            <td>${fB(v.matpel_vencimiento)}</td>
             <td>${eD(m[2])}</td>
 
             <td>${formatearFechaVista(v.rt_emision)}</td>
-            <td>${formatearFechaVista(v.rt_vencimiento)}</td>
+            <td>${fB(v.rt_vencimiento)}</td>
             <td>${eD(m[3])}</td>
 
-            <td>${formatearFechaVista(v.boni_vencimiento)}</td>
+            <td>${fB(v.boni_vencimiento)}</td>
             <td>${eD(m[4])}</td>
 
             <td>${v.sv_entidad||''}</td>
             <td>${v.sv_asesor||''}</td>
-            <td>${formatearFechaVista(v.sv_vencimiento)}</td>
+            <td>${fB(v.sv_vencimiento)}</td>
             <td>${eD(m[5])}</td>
 
             <td>${v.sc_entidad||''}</td>
             <td>${v.sc_asesor||''}</td>
             <td>${formatearFechaVista(v.sc_emision)}</td>
-            <td>${formatearFechaVista(v.sc_vencimiento)}</td>
+            <td>${fB(v.sc_vencimiento)}</td>
             <td>${eD(m[6])}</td>
 
             <td>${formatearFechaVista(v.fum_emision)}</td>
-            <td>${formatearFechaVista(v.fum_vencimiento)}</td>
+            <td>${fB(v.fum_vencimiento)}</td>
             <td>${eD(m[7])}</td>
 
-            <td>${formatearFechaVista(v.ext_vencimiento)}</td>
-            <td class="text-center">${v.ext_cantidad||1}</td>
+            <td>${fB(v.ext_vencimiento)}</td>
+            <td>${v.ext_cantidad||1}</td>
             <td>${eD(m[8])}</td>
         </tr>`;
     });
@@ -370,7 +412,7 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_sv_vencimiento').value = (v.sv_vencimiento||'').split('T')[0];
             
             document.getElementById('f_sc_entidad').value = v.sc_entidad || '';
-            document.getElementById('f_sc_asesor').value = v.sc_sc_asesor || '';
+            document.getElementById('f_sc_asesor').value = v.sc_asesor || ''; // fixed typo
             document.getElementById('f_sc_emision').value = (v.sc_emision||'').split('T')[0];
             document.getElementById('f_sc_vencimiento').value = (v.sc_vencimiento||'').split('T')[0];
             
