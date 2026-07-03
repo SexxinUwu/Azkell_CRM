@@ -4,6 +4,11 @@ var currentPlaca = null;
 var currentFiltroKPI = 'total';
 
 function init_docflota() {
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('fd_placa', function(val) {
+            autocompletarDatosPlaca(val);
+        });
+    }
     cargarDatosPlacasCatalogo();
     cargarDatosVehiculos();
 }
@@ -18,24 +23,24 @@ function cargarDatosPlacasCatalogo() {
 }
 
 function actualizarDatalistPlacas() {
-    let dt = document.getElementById('fd_placa_list');
-    if (!dt) return;
-    
     let opciones = new Set();
-    placasCatalogo.forEach(p => opciones.add(p.placa));
-    vehiculosFlota.forEach(v => opciones.add(v.placa));
+    placasCatalogo.forEach(p => { if (p.placa) opciones.add(p.placa.toUpperCase()); });
+    vehiculosFlota.forEach(v => { if (v.placa) opciones.add(v.placa.toUpperCase()); });
     
-    let html = '';
-    opciones.forEach(placa => { html += `<option value="${placa}"></option>`; });
-    dt.innerHTML = html;
+    let items = Array.from(opciones).sort().map(placa => ({ value: placa, label: placa }));
+    
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('fd_placa', items, 'BUSCAR PLACA...');
+    }
 }
 
 function autocompletarDatosPlaca(placaVal) {
     if(!placaVal) return;
-    let p = placasCatalogo.find(x => x.placa === placaVal);
+    placaVal = placaVal.toUpperCase().trim();
+    let p = placasCatalogo.find(x => x.placa && x.placa.toUpperCase() === placaVal);
     if (!p) {
         // Fallback to vehiculosFlota
-        p = vehiculosFlota.find(x => x.placa === placaVal);
+        p = vehiculosFlota.find(x => x.placa && x.placa.toUpperCase() === placaVal);
         if (p && p.modelo) {
             p = { ...p, modelo_uts: p.modelo }; // map differences in field names
         }
@@ -416,10 +421,13 @@ function abrirModalEdicion(placa) {
     document.getElementById('formVehiculoFlota').reset();
     
     // Configurar combobox de placa
-    var inputEl = document.getElementById('fd_placa');
-    if (inputEl) {
-        inputEl.value = placa || '';
-        inputEl.readOnly = !!placa;
+    if (window._cbReset) window._cbReset('fd_placa');
+    var txtEl = document.getElementById('fd_placa-txt');
+    if (placa) {
+        if (window._cbSet) window._cbSet('fd_placa', placa, placa);
+        if (txtEl) txtEl.readOnly = true;
+    } else {
+        if (txtEl) txtEl.readOnly = false;
     }
     
     switchTab(0, document.querySelector('.fm-tab'));
