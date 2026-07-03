@@ -158,6 +158,7 @@ function mostrarFleetrun(datos) {
               }
 
               let km_desde = km_gps - km_cambio;
+              if (km_desde < 0) km_desde = 0; // Evitar que la distancia recorrida sea negativa si el GPS está desincronizado
               let km_restante = frecuencia - km_desde;
               if (km_restante < 0 && !isHistorialFleetrun) km_restante = km_prox - km_gps; // fallback si es data antigua que usaba km_prox
               let badgeClass = ""; let iconFalta = ""; let estadoKpi = "";
@@ -1420,6 +1421,7 @@ window.procesarFleetrunParaDashboard = function() {
         if (wialonData) { km_gps = wialonData.km; }
 
         let km_desde = km_gps - km_cambio;
+        if (km_desde < 0) km_desde = 0;
         let km_restante = frecuencia - km_desde;
         if (km_restante < 0 && !isHistorialFleetrun) km_restante = km_prox - km_gps;
 
