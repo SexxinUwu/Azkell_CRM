@@ -110,6 +110,7 @@ function cargarDatosVehiculos() {
         vehiculosFlota.forEach(v => { v._meta = calcularMetadatos(v); });
         actualizarKPIs();
         renderizarListaLateral();
+        renderizarMatriz();
         actualizarDatalistPlacas();
         
         if(currentPlaca) {
@@ -148,10 +149,12 @@ function filtrarKPI(tipo, element) {
     element.classList.add('active');
     currentFiltroKPI = tipo;
     renderizarListaLateral();
+    renderizarMatriz();
 }
 
 function filtrarListaLocal() {
     renderizarListaLateral();
+    renderizarMatriz();
 }
 
 function renderizarListaLateral() {
