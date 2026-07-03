@@ -879,13 +879,10 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                             <div class="form-group">
                                 <label>Placa Principal *</label>
                                 <div class="position-relative">
-                                    <input type="text" id="fd_placa-txt" class="form-control-large" placeholder="Buscar placa…" autocomplete="off"
-                                           style="text-transform:uppercase;"
-                                           oninput="this.value=this.value.toUpperCase();window._cbFiltrar('fd_placa')"
-                                           onfocus="window._cbFiltrar('fd_placa')"
-                                           onblur="window._cbHide('fd_placa')">
-                                    <input type="hidden" id="fd_placa" name="fd_placa">
-                                    <div id="fd_placa-dd" class="cb-dropdown"></div>
+                                    <input type="text" id="fd_placa" class="form-control-large" placeholder="Buscar placa…" autocomplete="off"
+                                           style="text-transform:uppercase;" list="fd_placa_list"
+                                           oninput="this.value=this.value.toUpperCase(); autocompletarDatosPlaca(this.value)">
+                                    <datalist id="fd_placa_list"></datalist>
                                 </div>
                             </div>
                             <div class="form-group">
