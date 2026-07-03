@@ -36,40 +36,48 @@
     border-radius: 16px;
     padding: 1.25rem 1.5rem;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: space-between;
+    min-height: 110px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
 }
 .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-.kpi-card.active { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+.kpi-card.active { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
 
 .kpi-info {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
 }
 .kpi-title {
-    font-size: 0.75rem;
-    font-weight: 800;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 .kpi-value {
     font-size: 2.5rem;
     font-weight: 800;
-    line-height: 1;
+    line-height: 1.1;
 }
 
 .kpi-icon-wrapper {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
 }
 
 /* Colores específicos KPIs */
@@ -79,15 +87,15 @@
 
 .kpi-vigente .kpi-title { color: #10b981; }
 .kpi-vigente .kpi-value { color: #10b981; }
-.kpi-vigente .kpi-icon-wrapper { background: #f0fdf4; color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+.kpi-vigente .kpi-icon-wrapper { background: #f0fdf4; color: #10b981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
 
 .kpi-alerta .kpi-title { color: #f59e0b; }
 .kpi-alerta .kpi-value { color: #f59e0b; }
-.kpi-alerta .kpi-icon-wrapper { background: #fffbeb; color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
+.kpi-alerta .kpi-icon-wrapper { background: #fffbeb; color: #f59e0b; box-shadow: 0 0 20px rgba(245,158,11,0.2); }
 
 .kpi-vencido .kpi-title { color: #ef4444; }
 .kpi-vencido .kpi-value { color: #ef4444; }
-.kpi-vencido .kpi-icon-wrapper { background: #ef4444; color: #ffffff; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4); }
+.kpi-vencido .kpi-icon-wrapper { background: #ef4444; color: #fff; box-shadow: 0 8px 20px rgba(239,68,68,0.4); }
 
 /* Main split */
 .fleet-main-split {
@@ -863,9 +871,15 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                         <div class="form-grid-2">
                             <div class="form-group">
                                 <label>Placa Principal *</label>
-                                <select id="f_placa" class="form-control-large" required onchange="autocompletarDatosPlaca(this.value)">
-                                    <option value="">Seleccione una placa...</option>
-                                </select>
+                                <div class="position-relative">
+                                    <input type="text" id="fd_placa-txt" class="form-control-large" placeholder="Buscar placa…" autocomplete="off"
+                                           style="text-transform:uppercase;"
+                                           oninput="this.value=this.value.toUpperCase();window._cbFiltrar('fd_placa')"
+                                           onfocus="window._cbFiltrar('fd_placa')"
+                                           onblur="window._cbHide('fd_placa')">
+                                    <input type="hidden" id="fd_placa" name="fd_placa">
+                                    <div id="fd_placa-dd" class="cb-dropdown"></div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Tipo de Unidad</label>

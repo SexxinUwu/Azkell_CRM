@@ -13,7 +13,13 @@ function cargarDatosPlacasCatalogo() {
     .then(r => r.json())
     .then(r => {
         placasCatalogo = Array.isArray(r.data) ? r.data : [];
-    }).catch(e => console.error("Error cargando catálogo de placas:", e));
+        // Inicializar combobox con la lista de placas
+        var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
+        if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
+        if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
+            autocompletarDatosPlaca(val);
+        });
+    }).catch(e => console.error('Error cargando catálogo de placas:', e));
 }
 
 function calcularEstado(fechaVencimiento) {
@@ -383,25 +389,27 @@ function switchTab(index, element) {
 function abrirModalEdicion(placa) {
     document.getElementById('formVehiculoFlota').reset();
     
-    const selectPlaca = document.getElementById('f_placa');
-    let opts = '<option value="">Seleccione una placa...</option>';
-    placasCatalogo.forEach(p => {
-        opts += `<option value="${p.placa}">${p.placa} ${p.tipo ? '('+p.tipo+')' : ''}</option>`;
-    });
-    // Si la placa actual no está en el catálogo, la agregamos al select
+    // Reset combobox de placa
+    if (window._cbReset) window._cbReset('fd_placa');
+    var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
     if (placa && !placasCatalogo.find(p => p.placa === placa)) {
-        opts += `<option value="${placa}">${placa}</option>`;
+        items.push({ value: placa, label: placa });
     }
-    selectPlaca.innerHTML = opts;
-    selectPlaca.disabled = !!placa; // Solo lectura si estamos editando uno existente
+    if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
+    if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
+        autocompletarDatosPlaca(val);
+    });
     
-    // Switch to first tab
+    // Bloquear si es edición
+    var txtEl = document.getElementById('fd_placa-txt');
+    if (txtEl) txtEl.readOnly = !!placa;
+    
     switchTab(0, document.querySelector('.fm-tab'));
 
     if(placa) {
+        if (window._cbSet) window._cbSet('fd_placa', placa, placa);
         const v = vehiculosFlota.find(x => x.placa === placa);
         if(v) {
-            document.getElementById('f_placa').value = v.placa || '';
             document.getElementById('f_tipo').value = v.tipo || '';
             document.getElementById('f_propiedad').value = v.propiedad || '';
             document.getElementById('f_empresa').value = v.empresa || '';
@@ -481,11 +489,11 @@ function cerrarModalEdicion() {
 }
 
 function guardarVehiculo() {
-    const placa = document.getElementById('f_placa').value.trim();
-    if(!placa) return alert('La placa es obligatoria');
+    const placa = window._cbGet ? window._cbGet('fd_placa') : (document.getElementById('fd_placa')||{}).value;
+    if(!placa || !placa.trim()) return alert('La placa es obligatoria');
 
     const data = {
-        placa: placa,
+        placa: placa.trim().toUpperCase(),
         tipo: document.getElementById('f_tipo').value,
         propiedad: document.getElementById('f_propiedad').value,
         empresa: document.getElementById('f_empresa').value,
