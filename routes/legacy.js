@@ -611,81 +611,77 @@ router.post('/:metodo', async (req, res) => {
         return;
     }
 
-    if (metodo === 'importarDocumentosFlota') {
-        const documentos = req.body.args[0] || [];
-        if (!Array.isArray(documentos) || documentos.length === 0) return res.json({ data: "No hay datos para importar" });
-
-        const values = documentos.map(d => {
-            const idFinal = `DOC-${Date.now()}-${Math.floor(Math.random()*100000)}`;
-            return [
-                idFinal, 
-                d.placa?.toUpperCase() || '', 
-                d.tipo_documento || '', 
-                d.entidad || '', 
-                d.nro_constancia || '', 
-                d.fecha_emision || null, 
-                d.fecha_vencimiento || null, 
-                d.pago || '', 
-                d.asesor || '', 
-                d.observaciones || '', 
-                d.usuario || 'import'
-            ];
-        });
-
-        const query = `
-            INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
-            VALUES ?
-        `;
-
-        db.query(query, [values], (err, result) => {
-            if (err) { console.error("Error Importación:", err); return res.json({ data: "Error al importar" }); }
-            broadcast('documentosflota', 'importar');
-            return res.json({ data: "Éxito" });
-        });
-        return;
-    }
-
-    if (metodo === 'obtenerDatosDocumentosFlota') {
-        db.query('SELECT * FROM documentos_flota ORDER BY fecha_vencimiento ASC', (err, results) => {
+    if (metodo === 'obtenerVehiculosFlota') {
+        db.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err, results) => {
             if (err) return res.json({ data: [] });
             return res.json({ data: results });
         });
         return;
     }
 
-    if (metodo === 'guardarDocumentoFlota') {
+    if (metodo === 'guardarVehiculoFlota') {
         const d = req.body.args[0] || {};
-        const idFinal = d.id || `DOC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
         
-        // Convertir formato DD/MM/YYYY a YYYY-MM-DD
         const formatearFecha = (f) => {
             if (!f) return null;
-            if (/^\\d{4}-\\d{2}-\\d{2}$/.test(f)) return f;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f;
             if (f.includes('T')) return f.split('T')[0];
             const p = f.split('/');
             if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`;
             return null;
         };
 
+        const placa = d.placa?.toUpperCase() || '';
+        if (!placa) return res.json({ data: "La placa es obligatoria" });
+
         const query = `
-            INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO vehiculos_flota (
+                placa, tipo, propiedad, empresa, fecha_entrega, anio, marca, modelo, color, chasis,
+                tc_vencimiento,
+                soat_constancia, soat_entidad, soat_pago, soat_vencimiento,
+                matpel_constancia, matpel_emision, matpel_vencimiento,
+                rt_emision, rt_vencimiento,
+                boni_vencimiento,
+                sv_entidad, sv_asesor, sv_vencimiento,
+                sc_entidad, sc_asesor, sc_emision, sc_vencimiento,
+                fum_emision, fum_vencimiento,
+                ext_vencimiento, ext_cantidad
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE
-            placa=?, tipo_documento=?, entidad=?, nro_constancia=?, fecha_emision=?, fecha_vencimiento=?, pago=?, asesor=?, observaciones=?, usuario=?
+                tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa), fecha_entrega=VALUES(fecha_entrega), 
+                anio=VALUES(anio), marca=VALUES(marca), modelo=VALUES(modelo), color=VALUES(color), chasis=VALUES(chasis),
+                tc_vencimiento=VALUES(tc_vencimiento),
+                soat_constancia=VALUES(soat_constancia), soat_entidad=VALUES(soat_entidad), soat_pago=VALUES(soat_pago), soat_vencimiento=VALUES(soat_vencimiento),
+                matpel_constancia=VALUES(matpel_constancia), matpel_emision=VALUES(matpel_emision), matpel_vencimiento=VALUES(matpel_vencimiento),
+                rt_emision=VALUES(rt_emision), rt_vencimiento=VALUES(rt_vencimiento),
+                boni_vencimiento=VALUES(boni_vencimiento),
+                sv_entidad=VALUES(sv_entidad), sv_asesor=VALUES(sv_asesor), sv_vencimiento=VALUES(sv_vencimiento),
+                sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor), sc_emision=VALUES(sc_emision), sc_vencimiento=VALUES(sc_vencimiento),
+                fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
+                ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad)
         `;
 
         const values = [
-            idFinal, d.placa, d.tipo_documento, d.entidad || '', d.nro_constancia || '', formatearFecha(d.fecha_emision), formatearFecha(d.fecha_vencimiento), d.pago || '', d.asesor || '', d.observaciones || '', d.usuario || 'sistema',
-            d.placa, d.tipo_documento, d.entidad || '', d.nro_constancia || '', formatearFecha(d.fecha_emision), formatearFecha(d.fecha_vencimiento), d.pago || '', d.asesor || '', d.observaciones || '', d.usuario || 'sistema'
+            placa, d.tipo || null, d.propiedad || 'PROPIA', d.empresa || 'MARSISA', formatearFecha(d.fecha_entrega), d.anio || null, d.marca || null, d.modelo || null, d.color || null, d.chasis || null,
+            formatearFecha(d.tc_vencimiento),
+            d.soat_constancia || null, d.soat_entidad || null, d.soat_pago || null, formatearFecha(d.soat_vencimiento),
+            d.matpel_constancia || null, formatearFecha(d.matpel_emision), formatearFecha(d.matpel_vencimiento),
+            formatearFecha(d.rt_emision), formatearFecha(d.rt_vencimiento),
+            formatearFecha(d.boni_vencimiento),
+            d.sv_entidad || null, d.sv_asesor || null, formatearFecha(d.sv_vencimiento),
+            d.sc_entidad || null, d.sc_asesor || null, formatearFecha(d.sc_emision), formatearFecha(d.sc_vencimiento),
+            formatearFecha(d.fum_emision), formatearFecha(d.fum_vencimiento),
+            formatearFecha(d.ext_vencimiento), d.ext_cantidad || 1
         ];
 
         db.query(query, values, (err) => {
-            if (err) { console.error("Error BD Documentos Flota:", err); return res.json({ data: "Error al guardar documento" }); }
-            broadcast('documentosflota', 'guardar');
+            if (err) { console.error("Error BD vehiculos_flota:", err); return res.json({ data: "Error al guardar el vehículo" }); }
+            broadcast('vehiculosflota', 'guardar');
             return res.json({ data: "Éxito" });
         });
         return;
     }
+
 
     if (metodo === 'eliminarDocumento') {
         const { id, ids, coleccion } = req.body;
@@ -700,7 +696,7 @@ router.post('/:metodo', async (req, res) => {
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
-        else if (coleccion === 'DocumentosFlota') sql = 'DELETE FROM documentos_flota WHERE id IN (?)';
+        else if (coleccion === 'VehiculosFlota') sql = 'DELETE FROM vehiculos_flota WHERE placa IN (?)';
 
         if (!sql) return res.json({ data: "Colección no válida" });
 

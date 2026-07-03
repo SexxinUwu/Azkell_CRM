@@ -2114,23 +2114,66 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
-    // Migración: crear tabla documentos_flota si no existe
+    // Migración: crear tabla vehiculos_flota si no existe
     db.query(`
-        CREATE TABLE IF NOT EXISTS documentos_flota (
-            id VARCHAR(50) PRIMARY KEY,
-            placa VARCHAR(50) NOT NULL,
-            tipo_documento VARCHAR(100) NOT NULL,
-            entidad VARCHAR(100),
-            nro_constancia VARCHAR(100),
-            fecha_emision DATE,
-            fecha_vencimiento DATE,
-            pago VARCHAR(50),
-            asesor VARCHAR(100),
-            observaciones TEXT,
-            usuario VARCHAR(100),
-            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS vehiculos_flota (
+            -- Datos Generales
+            placa VARCHAR(10) PRIMARY KEY,
+            tipo VARCHAR(50) DEFAULT NULL,
+            propiedad VARCHAR(50) DEFAULT 'PROPIA',
+            empresa VARCHAR(100) DEFAULT 'MARSISA',
+            fecha_entrega DATE DEFAULT NULL,
+            anio INT(4) DEFAULT NULL,
+            marca VARCHAR(50) DEFAULT NULL,
+            modelo VARCHAR(50) DEFAULT NULL,
+            color VARCHAR(50) DEFAULT NULL,
+            chasis VARCHAR(100) DEFAULT NULL,
+
+            -- 1. Tarjeta Circulación
+            tc_vencimiento DATE DEFAULT NULL,
+
+            -- 2. SOAT
+            soat_constancia VARCHAR(50) DEFAULT NULL,
+            soat_entidad VARCHAR(50) DEFAULT NULL,
+            soat_pago DECIMAL(10,2) DEFAULT NULL,
+            soat_vencimiento DATE DEFAULT NULL,
+
+            -- 3. MATPEL
+            matpel_constancia VARCHAR(50) DEFAULT NULL,
+            matpel_emision DATE DEFAULT NULL,
+            matpel_vencimiento DATE DEFAULT NULL,
+
+            -- 4. Revisión Técnica (CITV)
+            rt_emision DATE DEFAULT NULL,
+            rt_vencimiento DATE DEFAULT NULL,
+
+            -- 5. Bonificación
+            boni_vencimiento DATE DEFAULT NULL,
+
+            -- 6. Seguro Vehicular
+            sv_entidad VARCHAR(50) DEFAULT NULL,
+            sv_asesor VARCHAR(100) DEFAULT NULL,
+            sv_vencimiento DATE DEFAULT NULL,
+
+            -- 7. Seguro de Carga
+            sc_entidad VARCHAR(50) DEFAULT NULL,
+            sc_asesor VARCHAR(100) DEFAULT NULL,
+            sc_emision DATE DEFAULT NULL,
+            sc_vencimiento DATE DEFAULT NULL,
+
+            -- 8. Fumigación
+            fum_emision DATE DEFAULT NULL,
+            fum_vencimiento DATE DEFAULT NULL,
+
+            -- 9. Extintores
+            ext_vencimiento DATE DEFAULT NULL,
+            ext_cantidad INT DEFAULT 1,
+
+            -- Auditoría
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
     `, (e) => {
-        if (e) console.error("Error creando tabla documentos_flota:", e.message);
+        if (e) console.error("Error creando tabla vehiculos_flota:", e.message);
     });
 });

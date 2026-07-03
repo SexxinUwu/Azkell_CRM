@@ -1,387 +1,459 @@
-var dataDocFlota = [];
+var vehiculosFlota = [];
+var currentPlaca = null;
+var currentFiltroKPI = 'total';
 
 function init_docflota() {
-    cargarTablaDocFlota();
+    cargarDatosVehiculos();
 }
 
-function cargarTablaDocFlota(forzarServer = false) {
-    if(!forzarServer && dataDocFlota.length > 0) {
-        mostrarTablaDocFlota(dataDocFlota);
-        return;
-    }
-    
-    document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> <span id="cache-label-docflota">Cargando...</span>';
-    
-    fetch('/api/script/obtenerDatosDocumentosFlota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
-    .then(r => r.json())
-    .then(r => {
-        dataDocFlota = r.data || [];
-        mostrarTablaDocFlota(dataDocFlota);
-        document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-database-check"></i> <span id="cache-label-docflota">Actualizado</span>';
-        document.getElementById('cache-badge-docflota').classList.add('updated');
-        setTimeout(() => document.getElementById('cache-badge-docflota').classList.remove('updated'), 2000);
-    })
-    .catch(e => {
-        console.error("Error al cargar documentos flota:", e);
-        document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-exclamation-triangle"></i> <span id="cache-label-docflota">Error</span>';
-    });
-}
-
-function calcularEstadoDocumento(fechaVencimiento) {
-    if(!fechaVencimiento) return { texto: 'Indefinido', color: 'secondary', dias: '-' };
-    
-    // Si la fecha está en formato DD/MM/YYYY, convertir a YYYY-MM-DD para el parseo
-    let dStr = fechaVencimiento;
-    if(dStr.includes('/')) {
-        let p = dStr.split('/');
-        dStr = `${p[2]}-${p[1]}-${p[0]}`;
-    } else if (dStr.includes('T')) {
-        dStr = dStr.split('T')[0];
-    }
-    
-    const dVenc = new Date(dStr + "T00:00:00");
-    if(isNaN(dVenc.getTime())) return { texto: 'Error Fecha', color: 'secondary', dias: '-' };
+function calcularEstado(fechaVencimiento) {
+    if (!fechaVencimiento) return { text: 'Indefinido', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary', score: -1, diff: null };
     
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
+    const ven = new Date(fechaVencimiento);
+    ven.setHours(0,0,0,0);
     
-    const diffTime = dVenc - hoy;
+    // Check for invalid date
+    if(isNaN(ven.getTime())) return { text: 'Indefinido', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary', score: -1, diff: null };
+
+    const diffTime = ven.getTime() - hoy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays <= 0) return { texto: 'VENCIDO', color: 'danger', bg: '#fee2e2', colorText: '#ef4444', dias: diffDays };
-    if (diffDays <= 30) return { texto: 'PRÓXIMO', color: 'warning', bg: '#fef3c7', colorText: '#f59e0b', dias: diffDays };
-    return { texto: 'VIGENTE', color: 'success', bg: '#d1fae5', colorText: '#10b981', dias: diffDays };
+    if (diffDays < 0) return { text: 'Vencido', class: 's-red', color: '#ef4444', bgClass: 'bg-red', score: 0, diff: diffDays };
+    if (diffDays <= 15) return { text: 'Crítico', class: 's-orange', color: '#f97316', bgClass: 'bg-orange', score: 1, diff: diffDays };
+    if (diffDays <= 30) return { text: 'Alerta', class: 's-yellow', color: '#f59e0b', bgClass: 'bg-yellow', score: 2, diff: diffDays };
+    return { text: 'Vigente', class: 's-green', color: '#10b981', bgClass: 'bg-green', score: 3, diff: diffDays };
 }
 
-function formatearFechaDoc(fechaStr) {
-    if(!fechaStr) return '-';
-    let dStr = fechaStr;
-    if(dStr.includes('/')) return dStr; // ya está formateada
-    if(dStr.includes('T')) dStr = dStr.split('T')[0];
-    
-    const p = dStr.split('-');
-    if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
-    return dStr;
+function formatearFechaVista(fechaIso) {
+    if(!fechaIso) return '-';
+    let d = new Date(fechaIso);
+    if(isNaN(d.getTime())) return '-';
+    if(d.getFullYear() === 2000 && d.getMonth() === 0) return '-';
+    let day = d.getUTCDate().toString().padStart(2, '0');
+    let month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+    return `${day}/${month}/${d.getUTCFullYear()}`;
 }
 
-function mostrarTablaDocFlota(datos) {
-    const tbody = document.getElementById('tbDocFlota');
-    tbody.innerHTML = '';
+function calcularMetadatos(v) {
+    let docs = [
+        calcularEstado(v.tc_vencimiento),
+        calcularEstado(v.soat_vencimiento),
+        calcularEstado(v.matpel_vencimiento),
+        calcularEstado(v.rt_vencimiento),
+        calcularEstado(v.boni_vencimiento),
+        calcularEstado(v.sv_vencimiento),
+        calcularEstado(v.sc_vencimiento),
+        calcularEstado(v.fum_vencimiento),
+        calcularEstado(v.ext_vencimiento)
+    ];
+
+    let docsRegistrados = 0;
+    let docsVerdes = 0;
+    let peorScore = 99;
+    let peorEstado = { text: 'Ok', class: 's-green', color: '#10b981', bgClass: 'bg-green' };
+
+    docs.forEach(est => {
+        if (est.score !== -1) {
+            docsRegistrados++;
+            if (est.score === 3) docsVerdes++;
+            if (est.score < peorScore) {
+                peorScore = est.score;
+                peorEstado = est;
+            }
+        }
+    });
+
+    let salud = docsRegistrados === 0 ? 0 : Math.round((docsVerdes / docsRegistrados) * 100);
+    if(docsRegistrados === 0) peorEstado = { text: 'Sin Info', class: 'text-muted', color: '#94a3b8', bgClass: 'bg-secondary' };
+
+    return { salud, peorEstado, docs };
+}
+
+function cargarDatosVehiculos() {
+    document.getElementById('vehicle-list').innerHTML = '<div class="text-center text-muted" style="margin-top:2rem;">Cargando...</div>';
     
-    let kpiTot = 0, kpiVig = 0, kpiProx = 0, kpiVen = 0;
+    fetch('/api/script/obtenerVehiculosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
+    .then(r => r.json())
+    .then(r => {
+        vehiculosFlota = Array.isArray(r.data) ? r.data : [];
+        vehiculosFlota.forEach(v => {
+            v._meta = calcularMetadatos(v);
+        });
+        actualizarKPIs();
+        renderizarListaLateral();
+        renderizarMatriz();
+        
+        if(currentPlaca) {
+            const existe = vehiculosFlota.find(x => x.placa === currentPlaca);
+            if(existe) seleccionarVehiculo(currentPlaca);
+            else seleccionarVehiculo(null);
+        } else if(vehiculosFlota.length > 0) {
+            seleccionarVehiculo(vehiculosFlota[0].placa);
+        }
+    }).catch(e => {
+        console.error(e);
+        document.getElementById('vehicle-list').innerHTML = '<div class="text-center text-danger" style="margin-top:2rem;">Error al cargar</div>';
+    });
+}
+
+function actualizarKPIs() {
+    let t = vehiculosFlota.length;
+    let vig = 0, ale = 0, ven = 0;
     
-    if(datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay documentos registrados.</td></tr>';
-        actualizarKPIDocs(0,0,0,0);
+    vehiculosFlota.forEach(v => {
+        if(v._meta.peorEstado.score === 3) vig++;
+        else if(v._meta.peorEstado.score === 2 || v._meta.peorEstado.score === 1) ale++;
+        else if(v._meta.peorEstado.score === 0) ven++;
+    });
+
+    document.getElementById('kpi-total').innerText = t;
+    document.getElementById('kpi-vigente').innerText = vig;
+    document.getElementById('kpi-alerta').innerText = ale;
+    document.getElementById('kpi-vencido').innerText = ven;
+}
+
+function filtrarKPI(tipo, element) {
+    document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
+    element.classList.add('active');
+    currentFiltroKPI = tipo;
+    renderizarListaLateral();
+    renderizarMatriz();
+}
+
+function filtrarListaLocal() {
+    renderizarListaLateral();
+}
+
+function renderizarListaLateral() {
+    const listDiv = document.getElementById('vehicle-list');
+    const term = (document.getElementById('fleet-search').value || '').toLowerCase();
+    
+    let html = '';
+    
+    let filtrados = vehiculosFlota.filter(v => {
+        let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
+        let matchKpi = true;
+        if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
+        else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
+        else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
+        
+        return matchTerm && matchKpi;
+    });
+
+    if(filtrados.length === 0) {
+        listDiv.innerHTML = '<div class="text-center text-muted" style="margin-top:2rem; font-size:0.9rem;">No se encontraron vehículos.</div>';
         return;
     }
-    
-    datos.forEach(d => {
-        kpiTot++;
-        const estado = calcularEstadoDocumento(d.fecha_vencimiento);
-        if(estado.texto === 'VIGENTE') kpiVig++;
-        else if(estado.texto === 'PRÓXIMO') kpiProx++;
-        else if(estado.texto === 'VENCIDO') kpiVen++;
-        
-        let colorPlaca = '#2563eb';
-        
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.onclick = (e) => {
-            // Evitar si hace clic en botón eliminar o en sí mismo
-            if(e.target.closest('.btn-delete-doc')) return;
-            abrirExpedientePlaca(d.placa);
-        };
-        
-        tr.innerHTML = `
-            <td><span class="fw-bold" style="color: ${colorPlaca}; background-color: #eff6ff; padding: 4px 8px; border-radius: 6px;">${d.placa}</span></td>
-            <td><span class="fw-bold text-dark">${d.tipo_documento}</span></td>
-            <td><span class="text-muted">${d.nro_constancia || '-'}</span> <br> <small style="font-size:0.7rem; color:var(--subtext);">${d.entidad || ''}</small></td>
-            <td><span class="fw-bold" style="color:var(--text);">${formatearFechaDoc(d.fecha_vencimiento)}</span></td>
-            <td><span class="badge" style="background-color: ${estado.bg}; color: ${estado.colorText}; font-size: 0.8rem; padding: 6px 10px; border-radius: 8px;">${estado.dias} días</span></td>
-            <td class="text-center"><span class="badge" style="background-color: ${estado.bg}; color: ${estado.colorText}; font-weight: 600;">${estado.texto}</span></td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-light text-danger rounded-circle shadow-sm btn-delete-doc" style="width:32px; height:32px;" onclick="eliminarDocumentoFlota('${d.id}', event)" title="Eliminar Documento">
-                    <i class="bi bi-trash3"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+
+    filtrados.forEach(v => {
+        let selCls = (currentPlaca === v.placa) ? 'selected' : '';
+        html += `
+        <div class="vehicle-item ${selCls}" onclick="seleccionarVehiculo('${v.placa}')" id="vi-${v.placa}">
+            <div>
+                <div class="v-plate">${v.placa}</div>
+                <div class="v-type">${v.tipo || 'Sin tipo'}</div>
+            </div>
+            <div class="status-dot ${v._meta.peorEstado.bgClass}"></div>
+        </div>`;
     });
     
-    actualizarKPIDocs(kpiTot, kpiVig, kpiProx, kpiVen);
+    listDiv.innerHTML = html;
 }
 
-function actualizarKPIDocs(t, vi, pr, ve) {
-    document.getElementById('kpi-doc-total').textContent = t;
-    document.getElementById('kpi-doc-vigente').textContent = vi;
-    document.getElementById('kpi-doc-proximo').textContent = pr;
-    document.getElementById('kpi-doc-vencido').textContent = ve;
-}
-
-function filtrarTablaDocFlota() {
-    const q = document.getElementById('inputBuscarDocFlota').value.toLowerCase();
-    const tipo = document.getElementById('filtroTipoDocFlota').value;
-    
-    let filtrados = dataDocFlota.filter(d => {
-        let matchTexto = (d.placa && d.placa.toLowerCase().includes(q)) || 
-                         (d.nro_constancia && d.nro_constancia.toLowerCase().includes(q));
-        let matchTipo = tipo ? d.tipo_documento === tipo : true;
-        return matchTexto && matchTipo;
-    });
-    
-    mostrarTablaDocFlota(filtrados);
-}
-
-function filtrarDocumentosPorEstado(estadoText) {
-    // estadoText: 'VENCIDO', 'PROXIMO', 'VIGENTE', ''
-    document.getElementById('inputBuscarDocFlota').value = '';
-    document.getElementById('filtroTipoDocFlota').value = '';
-    
-    if(!estadoText) {
-        mostrarTablaDocFlota(dataDocFlota);
-        return;
-    }
-    
-    let filtrados = dataDocFlota.filter(d => {
-        let est = calcularEstadoDocumento(d.fecha_vencimiento);
-        if(estadoText === 'PROXIMO' && est.texto === 'PRÓXIMO') return true;
-        if(estadoText === 'VIGENTE' && est.texto === 'VIGENTE') return true;
-        if(estadoText === 'VENCIDO' && est.texto === 'VENCIDO') return true;
-        return false;
-    });
-    
-    mostrarTablaDocFlota(filtrados);
-}
-
-function abrirModalDocumentoFlota(placa = '') {
-    document.getElementById('formDocFlota').reset();
-    document.getElementById('docflota_id').value = '';
+function seleccionarVehiculo(placa) {
+    document.querySelectorAll('.vehicle-item').forEach(el => el.classList.remove('selected'));
     if(placa) {
-        document.getElementById('docflota_placa').value = placa;
-        document.getElementById('docflota_placa').readOnly = true;
-    } else {
-        document.getElementById('docflota_placa').readOnly = false;
+        const el = document.getElementById(`vi-${placa}`);
+        if(el) el.classList.add('selected');
     }
-    var myModal = new bootstrap.Modal(document.getElementById('modalDocFlota'));
-    myModal.show();
+    
+    currentPlaca = placa;
+    
+    if(!placa) {
+        document.getElementById('right-content-wrapper').style.display = 'none';
+        document.getElementById('empty-state-panel').style.display = 'flex';
+        return;
+    }
+    
+    document.getElementById('right-content-wrapper').style.display = 'flex';
+    document.getElementById('empty-state-panel').style.display = 'none';
+    
+    const v = vehiculosFlota.find(x => x.placa === placa);
+    if(!v) return;
+
+    // Llenar header
+    document.getElementById('ft-placa').innerText = v.placa;
+    document.getElementById('ft-tipo').innerText = v.tipo || '---';
+    document.getElementById('ft-marca-modelo').innerText = `${v.marca || '---'} - ${v.modelo || '---'}`;
+    document.getElementById('ft-anio').innerText = v.anio || '---';
+    document.getElementById('ft-chasis').innerText = v.chasis || '---';
+    
+    document.getElementById('ft-health-bar').style.width = `${v._meta.salud}%`;
+    document.getElementById('ft-health-txt').innerText = `${v._meta.salud}%`;
+
+    // Renderizar tarjetas
+    const m = v._meta.docs;
+    
+    const renderCard = (id, title, badge, num, content, est) => {
+        let html = `
+        <div class="doc-card-header"><span class="badge-num">${num}</span> ${title}</div>
+        <div class="doc-card-body">${content}</div>
+        <div class="doc-card-footer ${est.class}">
+            ESTADO: ${est.diff !== null ? est.diff + 'd ' : ''}(${est.text})
+        </div>`;
+        document.getElementById(id).innerHTML = html;
+    };
+
+    renderCard('card-tc', 'TARJ. CIRCULACIÓN', 'c-tc', 1, 
+        `<div>Emisión: <strong>---</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.tc_vencimiento)}</strong></div>`, m[0]);
+    
+    renderCard('card-soat', 'SOAT', 'c-soat', 2, 
+        `<div>N°: <strong>${v.soat_constancia||'---'}</strong></div><div>Entidad: <strong>${v.soat_entidad||'---'}</strong></div><div>Pago: <strong>${v.soat_pago||'---'}</strong></div>`, m[1]);
+        
+    renderCard('card-matpel', 'MATPEL', 'c-matpel', 3, 
+        `<div>N°: <strong>${v.matpel_constancia||'---'}</strong></div><div>Emisión: <strong>${formatearFechaVista(v.matpel_emision)}</strong></div>`, m[2]);
+        
+    renderCard('card-rt', 'REV. TÉCNICA', 'c-rt', 4, 
+        `<div>Emisión: <strong>${formatearFechaVista(v.rt_emision)}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.rt_vencimiento)}</strong></div>`, m[3]);
+        
+    renderCard('card-boni', 'BONIFICACIÓN', 'c-boni', 5, 
+        `<div>Vencimiento: <strong>${formatearFechaVista(v.boni_vencimiento)}</strong></div>`, m[4]);
+        
+    renderCard('card-sv', 'SEG. VEHICULAR', 'c-sv', 6, 
+        `<div>Entidad: <strong>${v.sv_entidad||'---'}</strong></div><div>Asesor: <strong>${v.sv_asesor||'---'}</strong></div>`, m[5]);
+        
+    renderCard('card-sc', 'SEG. CARGA', 'c-sc', 7, 
+        `<div>Entidad: <strong>${v.sc_entidad||'---'}</strong></div><div>Emisión: <strong>${formatearFechaVista(v.sc_emision)}</strong></div>`, m[6]);
+        
+    renderCard('card-fum', 'FUMIGACIÓN', 'c-fum', 8, 
+        `<div>Emisión: <strong>${formatearFechaVista(v.fum_emision)}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.fum_vencimiento)}</strong></div>`, m[7]);
+        
+    renderCard('card-ext', 'EXTINTORES', 'c-ext', 9, 
+        `<div>Cantidad: <strong>${v.ext_cantidad||1}</strong></div><div>Vencimiento: <strong>${formatearFechaVista(v.ext_vencimiento)}</strong></div>`, m[8]);
 }
 
-function guardarDocumentoFlota(e) {
-    e.preventDefault();
-    const btn = document.getElementById('btnGuardarDocFlota');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-    
-    const form = document.getElementById('formDocFlota');
-    const data = {};
-    const elements = form.elements;
-    for(let i=0; i<elements.length; i++) {
-        if(elements[i].name) data[elements[i].name] = elements[i].value;
+function renderizarMatriz() {
+    const tbody = document.getElementById('matriz-body');
+    let html = '';
+    let filtrados = vehiculosFlota;
+
+    // Aplicar filtros a la matriz también
+    const term = (document.getElementById('fleet-search').value || '').toLowerCase();
+    filtrados = vehiculosFlota.filter(v => {
+        let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
+        let matchKpi = true;
+        if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
+        else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
+        else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
+        return matchTerm && matchKpi;
+    });
+
+    if(filtrados.length === 0){
+        tbody.innerHTML = '<tr><td colspan="41" class="text-center text-muted py-4">No hay datos para mostrar en la matriz.</td></tr>';
+        return;
     }
-    data.usuario = usuarioLogueado;
+
+    filtrados.forEach((v, i) => {
+        const m = v._meta.docs;
+        const eD = (obj) => {
+            if(!obj || obj.diff === null) return '-';
+            return `<span class="${obj.class}" style="padding:2px 6px; border-radius:4px; font-weight:600;">${obj.diff}d</span>`;
+        };
+
+        html += `
+        <tr>
+            <td class="sticky-col text-center text-muted">${i+1}</td>
+            <td class="sticky-col fw-bold">${v.placa}</td>
+            <td>${v.propiedad||''}</td>
+            <td>${v.empresa||''}</td>
+            <td>${formatearFechaVista(v.fecha_entrega)}</td>
+            <td>${v.tipo||''}</td>
+            <td class="text-center">${v.anio||''}</td>
+            <td>${v.modelo||''}</td>
+            <td>${v.color||''}</td>
+            <td>${v.marca||''}</td>
+            <td>${v.chasis||''}</td>
+            
+            <td>${formatearFechaVista(v.tc_vencimiento)}</td>
+            <td>${eD(m[0])}</td>
+            
+            <td>${v.soat_constancia||''}</td>
+            <td>${v.soat_entidad||''}</td>
+            <td class="text-end">${v.soat_pago||''}</td>
+            <td>${formatearFechaVista(v.soat_vencimiento)}</td>
+            <td>${eD(m[1])}</td>
+
+            <td>${v.matpel_constancia||''}</td>
+            <td>${formatearFechaVista(v.matpel_emision)}</td>
+            <td>${formatearFechaVista(v.matpel_vencimiento)}</td>
+            <td>${eD(m[2])}</td>
+
+            <td>${formatearFechaVista(v.rt_emision)}</td>
+            <td>${formatearFechaVista(v.rt_vencimiento)}</td>
+            <td>${eD(m[3])}</td>
+
+            <td>${formatearFechaVista(v.boni_vencimiento)}</td>
+            <td>${eD(m[4])}</td>
+
+            <td>${v.sv_entidad||''}</td>
+            <td>${v.sv_asesor||''}</td>
+            <td>${formatearFechaVista(v.sv_vencimiento)}</td>
+            <td>${eD(m[5])}</td>
+
+            <td>${v.sc_entidad||''}</td>
+            <td>${v.sc_asesor||''}</td>
+            <td>${formatearFechaVista(v.sc_emision)}</td>
+            <td>${formatearFechaVista(v.sc_vencimiento)}</td>
+            <td>${eD(m[6])}</td>
+
+            <td>${formatearFechaVista(v.fum_emision)}</td>
+            <td>${formatearFechaVista(v.fum_vencimiento)}</td>
+            <td>${eD(m[7])}</td>
+
+            <td>${formatearFechaVista(v.ext_vencimiento)}</td>
+            <td class="text-center">${v.ext_cantidad||1}</td>
+            <td>${eD(m[8])}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+// Modal Logic
+function switchTab(index, element) {
+    document.querySelectorAll('.fm-tab').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${index}`).classList.add('active');
+}
+
+function abrirModalEdicion(placa) {
+    document.getElementById('formVehiculoFlota').reset();
+    document.getElementById('f_placa').readOnly = !!placa;
     
-    fetch('/api/script/guardarDocumentoFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [data] }) })
+    // Switch to first tab
+    switchTab(0, document.querySelector('.fm-tab'));
+
+    if(placa) {
+        const v = vehiculosFlota.find(x => x.placa === placa);
+        if(v) {
+            document.getElementById('f_placa').value = v.placa || '';
+            document.getElementById('f_tipo').value = v.tipo || '';
+            document.getElementById('f_propiedad').value = v.propiedad || '';
+            document.getElementById('f_empresa').value = v.empresa || '';
+            document.getElementById('f_marca').value = v.marca || '';
+            document.getElementById('f_modelo').value = v.modelo || '';
+            document.getElementById('f_anio').value = v.anio || '';
+            document.getElementById('f_color').value = v.color || '';
+            document.getElementById('f_chasis').value = v.chasis || '';
+            document.getElementById('f_fecha_entrega').value = (v.fecha_entrega||'').split('T')[0];
+            
+            document.getElementById('f_tc_vencimiento').value = (v.tc_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_soat_constancia').value = v.soat_constancia || '';
+            document.getElementById('f_soat_entidad').value = v.soat_entidad || '';
+            document.getElementById('f_soat_pago').value = v.soat_pago || '';
+            document.getElementById('f_soat_vencimiento').value = (v.soat_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_matpel_constancia').value = v.matpel_constancia || '';
+            document.getElementById('f_matpel_emision').value = (v.matpel_emision||'').split('T')[0];
+            document.getElementById('f_matpel_vencimiento').value = (v.matpel_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_rt_emision').value = (v.rt_emision||'').split('T')[0];
+            document.getElementById('f_rt_vencimiento').value = (v.rt_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_boni_vencimiento').value = (v.boni_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_sv_entidad').value = v.sv_entidad || '';
+            document.getElementById('f_sv_asesor').value = v.sv_asesor || '';
+            document.getElementById('f_sv_vencimiento').value = (v.sv_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_sc_entidad').value = v.sc_entidad || '';
+            document.getElementById('f_sc_asesor').value = v.sc_sc_asesor || '';
+            document.getElementById('f_sc_emision').value = (v.sc_emision||'').split('T')[0];
+            document.getElementById('f_sc_vencimiento').value = (v.sc_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_fum_emision').value = (v.fum_emision||'').split('T')[0];
+            document.getElementById('f_fum_vencimiento').value = (v.fum_vencimiento||'').split('T')[0];
+            
+            document.getElementById('f_ext_cantidad').value = v.ext_cantidad || 1;
+            document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
+        }
+    }
+    
+    document.getElementById('modalEdicionVehiculo').style.display = 'flex';
+}
+
+function cerrarModalEdicion() {
+    document.getElementById('modalEdicionVehiculo').style.display = 'none';
+}
+
+function guardarVehiculo() {
+    const placa = document.getElementById('f_placa').value.trim();
+    if(!placa) return alert('La placa es obligatoria');
+
+    const data = {
+        placa: placa,
+        tipo: document.getElementById('f_tipo').value,
+        propiedad: document.getElementById('f_propiedad').value,
+        empresa: document.getElementById('f_empresa').value,
+        marca: document.getElementById('f_marca').value,
+        modelo: document.getElementById('f_modelo').value,
+        anio: document.getElementById('f_anio').value,
+        color: document.getElementById('f_color').value,
+        chasis: document.getElementById('f_chasis').value,
+        fecha_entrega: document.getElementById('f_fecha_entrega').value,
+        tc_vencimiento: document.getElementById('f_tc_vencimiento').value,
+        soat_constancia: document.getElementById('f_soat_constancia').value,
+        soat_entidad: document.getElementById('f_soat_entidad').value,
+        soat_pago: document.getElementById('f_soat_pago').value,
+        soat_vencimiento: document.getElementById('f_soat_vencimiento').value,
+        matpel_constancia: document.getElementById('f_matpel_constancia').value,
+        matpel_emision: document.getElementById('f_matpel_emision').value,
+        matpel_vencimiento: document.getElementById('f_matpel_vencimiento').value,
+        rt_emision: document.getElementById('f_rt_emision').value,
+        rt_vencimiento: document.getElementById('f_rt_vencimiento').value,
+        boni_vencimiento: document.getElementById('f_boni_vencimiento').value,
+        sv_entidad: document.getElementById('f_sv_entidad').value,
+        sv_asesor: document.getElementById('f_sv_asesor').value,
+        sv_vencimiento: document.getElementById('f_sv_vencimiento').value,
+        sc_entidad: document.getElementById('f_sc_entidad').value,
+        sc_asesor: document.getElementById('f_sc_asesor').value,
+        sc_emision: document.getElementById('f_sc_emision').value,
+        sc_vencimiento: document.getElementById('f_sc_vencimiento').value,
+        fum_emision: document.getElementById('f_fum_emision').value,
+        fum_vencimiento: document.getElementById('f_fum_vencimiento').value,
+        ext_cantidad: document.getElementById('f_ext_cantidad').value,
+        ext_vencimiento: document.getElementById('f_ext_vencimiento').value,
+    };
+
+    fetch('/api/script/guardarVehiculoFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [data] }) })
     .then(r => r.json())
     .then(r => {
         if(r.data === 'Éxito') {
-            bootstrap.Modal.getInstance(document.getElementById('modalDocFlota')).hide();
-            cargarTablaDocFlota(true);
-            
-            // Si el drawer está abierto para esa placa, recargarlo
-            let placaActualDrawer = document.getElementById('expediente-placa-title').textContent;
-            if(placaActualDrawer && placaActualDrawer === data.placa.toUpperCase()) {
-                setTimeout(() => abrirExpedientePlaca(data.placa), 500);
-            }
+            cerrarModalEdicion();
+            cargarDatosVehiculos();
         } else {
             alert(r.data);
         }
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Documento';
-    })
-    .catch(err => {
-        alert("Error de red");
-        btn.disabled = false;
-        btn.innerHTML = 'Guardar Documento';
-    });
+    }).catch(e => console.error(e));
 }
 
-function abrirExpedientePlaca(placa) {
-    document.getElementById('expediente-placa-title').textContent = placa.toUpperCase();
-    
-    const docs = dataDocFlota.filter(d => d.placa.toUpperCase() === placa.toUpperCase());
-    docs.sort((a,b) => {
-        let da = new Date(a.fecha_vencimiento); let db = new Date(b.fecha_vencimiento);
-        return da - db;
-    });
-    
-    const container = document.getElementById('listaExpedienteDocs');
-    container.innerHTML = '';
-    
-    if(docs.length === 0) {
-        container.innerHTML = '<div class="text-center text-muted py-4">No hay documentos registrados para esta unidad.</div>';
-    } else {
-        docs.forEach(d => {
-            const estado = calcularEstadoDocumento(d.fecha_vencimiento);
-            const emision = formatearFechaDoc(d.fecha_emision);
-            const vencimiento = formatearFechaDoc(d.fecha_vencimiento);
-            
-            let cardHtml = `
-            <div class="card border-0 shadow-sm mb-2" style="border-radius: 12px; border-left: 4px solid ${estado.colorText} !important;">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <h6 class="fw-bold mb-0 text-dark">${d.tipo_documento}</h6>
-                            <small class="text-muted">${d.nro_constancia || 'Sin constancia'}</small>
-                        </div>
-                        <span class="badge" style="background-color: ${estado.bg}; color: ${estado.colorText}; font-size: 0.7rem;">${estado.texto}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2 pt-2 border-top">
-                        <div><small class="text-muted d-block" style="font-size:0.7rem;">Emisión</small><span class="fw-bold" style="font-size:0.85rem;">${emision}</span></div>
-                        <div class="text-end"><small class="text-muted d-block" style="font-size:0.7rem;">Vencimiento</small><span class="fw-bold" style="font-size:0.85rem; color:${estado.colorText}">${vencimiento}</span></div>
-                    </div>
-                    ${d.entidad ? `<div class="mt-2"><small class="text-muted d-block" style="font-size:0.7rem;">Entidad Emitente</small><span style="font-size:0.85rem;">${d.entidad}</span></div>` : ''}
-                    ${d.observaciones ? `<div class="mt-2 p-2 bg-light rounded"><small class="text-muted d-block" style="font-size:0.7rem;">Observaciones</small><span style="font-size:0.8rem;">${d.observaciones}</span></div>` : ''}
-                </div>
-            </div>
-            `;
-            container.innerHTML += cardHtml;
+function eliminarVehiculoActual() {
+    if(!currentPlaca) return;
+    if(confirm(`¿Estás seguro de eliminar el expediente del vehículo ${currentPlaca}? Esta acción es irreversible.`)) {
+        fetch('/api/script/eliminarDocumento', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ coleccion: 'VehiculosFlota', id: currentPlaca }) })
+        .then(r => r.json())
+        .then(r => {
+            currentPlaca = null;
+            cargarDatosVehiculos();
         });
     }
-    
-    const btnHtml = `<button class="btn btn-primary w-100 fw-bold shadow-sm rounded-pill mt-3" onclick="abrirModalDocumentoFlota('${placa}')"><i class="bi bi-plus-lg"></i> Agregar Documento</button>`;
-    container.innerHTML += btnHtml;
-    
-    var offcanvas = new bootstrap.Offcanvas(document.getElementById('drawerExpedientePlaca'));
-    offcanvas.show();
 }
 
-function eliminarDocumentoFlota(idDoc, event) {
-    if(event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-    if(!confirm("¿Estás seguro de eliminar este documento? Esta acción no se puede deshacer.")) return;
-    
-    fetch('/api/script/eliminarDocumento', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: idDoc, coleccion: 'DocumentosFlota', usuario: usuarioLogueado }) })
-    .then(r => r.json())
-    .then(r => {
-        if(r.data === 'Éxito') {
-            cargarTablaDocFlota(true);
-        } else {
-            alert(r.data);
-        }
-    });
-}
-
-function exportarExcelDocFlota() {
-    if(dataDocFlota.length === 0) return alert("No hay datos para exportar.");
-    
-    let csv = "PLACA,TIPO DOCUMENTO,ENTIDAD,CONSTANCIA,FECHA EMISION,FECHA VENCIMIENTO,ESTADO,DIAS RESTANTES,OBSERVACIONES\n";
-    dataDocFlota.forEach(d => {
-        let est = calcularEstadoDocumento(d.fecha_vencimiento);
-        csv += `${d.placa},${d.tipo_documento},${d.entidad || ''},${d.nro_constancia || ''},${formatearFechaDoc(d.fecha_emision)},${formatearFechaDoc(d.fecha_vencimiento)},${est.texto},${est.dias},"${(d.observaciones || '').replace(/"/g, '""')}"\n`;
-    });
-    
-    let blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement("a");
-    let url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Documentos_Flota_${Date.now()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function descargarPlantillaDocs() {
-    if (typeof XLSX === 'undefined') return alert('Librería XLSX no cargada.');
-    const headers = [["PLACA","TC_VENCIMIENTO","SOAT_CONSTANCIA","SOAT_VENCIMIENTO","MATPEL_CONSTANCIA","MATPEL_EMISION","MATPEL_VENCIMIENTO","RT_EMISION","RT_VENCIMIENTO","BONI_VENCIMIENTO","SEGVEH_ENTIDAD","SEGVEH_ASESOR","SEGVEH_VENCIMIENTO","SEGCARGA_ENTIDAD","SEGCARGA_ASESOR","SEGCARGA_EMISION","SEGCARGA_VENCIMIENTO","FUMIG_EMISION","FUMIG_VENCIMIENTO","EXTINTORES_CANT","EXTINTORES_VENCIMIENTO"]];
-    const ws = XLSX.utils.aoa_to_sheet(headers);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
-    XLSX.writeFile(wb, "Plantilla_Documentos_Flota.xlsx");
-}
-
-function procesarImportacionDocumentos(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (typeof XLSX === 'undefined') {
-        alert("La librería XLSX no está disponible para procesar el archivo.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            // Format dates correctly instead of raw serial numbers
-            const json = XLSX.utils.sheet_to_json(worksheet, {defval: "", raw: false, dateNF: "dd/mm/yyyy"});
-            
-            if(json.length === 0) return alert("El archivo está vacío o no tiene el formato correcto.");
-            
-            let documentosAImportar = [];
-            
-            for(let i=0; i<json.length; i++) {
-                let obj = {};
-                // Normalize keys to uppercase and trim strings
-                for (let k in json[i]) {
-                    obj[k.trim().toUpperCase()] = typeof json[i][k] === 'string' ? json[i][k].trim() : String(json[i][k]);
-                }
-                
-                let placa = obj['PLACA'];
-                if(!placa) continue;
-                
-                const pushDoc = (tipo, emision, vencimiento, constancia='', entidad='', asesor='', observaciones='') => {
-                    if (vencimiento || emision || constancia || observaciones) {
-                        documentosAImportar.push({
-                            placa: placa, tipo_documento: tipo, entidad: entidad, 
-                            nro_constancia: constancia, fecha_emision: emision, 
-                            fecha_vencimiento: vencimiento, asesor: asesor, observaciones: observaciones
-                        });
-                    }
-                };
-                
-                pushDoc('Tarjeta de Circulación', null, obj['TC_VENCIMIENTO']);
-                pushDoc('SOAT', null, obj['SOAT_VENCIMIENTO'], obj['SOAT_CONSTANCIA']);
-                pushDoc('Certificado MATPEL', obj['MATPEL_EMISION'], obj['MATPEL_VENCIMIENTO'], obj['MATPEL_CONSTANCIA']);
-                pushDoc('Revisión Técnica', obj['RT_EMISION'], obj['RT_VENCIMIENTO']);
-                pushDoc('Bonificación', null, obj['BONI_VENCIMIENTO']);
-                pushDoc('Seguro Vehicular', null, obj['SEGVEH_VENCIMIENTO'], '', obj['SEGVEH_ENTIDAD'], obj['SEGVEH_ASESOR']);
-                pushDoc('Seguro Carga', obj['SEGCARGA_EMISION'], obj['SEGCARGA_VENCIMIENTO'], '', obj['SEGCARGA_ENTIDAD'], obj['SEGCARGA_ASESOR']);
-                pushDoc('Certificado Fumigación', obj['FUMIG_EMISION'], obj['FUMIG_VENCIMIENTO']);
-                
-                let notasExtintor = obj['EXTINTORES_CANT'] ? `Cantidad: ${obj['EXTINTORES_CANT']}` : '';
-                if (obj['EXTINTORES_VENCIMIENTO'] || notasExtintor) {
-                    pushDoc('Extintores', null, obj['EXTINTORES_VENCIMIENTO'], '', '', '', notasExtintor);
-                }
-            }
-            
-            if (documentosAImportar.length === 0) return alert("No se encontraron documentos válidos para importar.");
-            
-            document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> <span id="cache-label-docflota">Importando...</span>';
-            
-            fetch('/api/script/importarDocumentosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [documentosAImportar] }) })
-            .then(r => r.json())
-            .then(r => {
-                if(r.data === 'Éxito') {
-                    alert(`¡Importación exitosa! Se procesaron ${documentosAImportar.length} documentos.`);
-                    cargarTablaDocFlota(true);
-                } else {
-                    alert("Hubo un error al importar: " + r.data);
-                }
-            });
-            
-            event.target.value = '';
-        } catch(err) {
-            console.error(err);
-            alert("Ocurrió un error al leer el archivo Excel/CSV.");
-            event.target.value = '';
-        }
-    };
-    reader.readAsArrayBuffer(file);
+function exportarExcel() {
+    if (typeof XLSX === 'undefined') return alert("XLSX no cargado");
+    let wb = XLSX.utils.table_to_book(document.getElementById('tabla-matriz'), {sheet: "Control Flota"});
+    XLSX.writeFile(wb, `Control_Flota_${Date.now()}.xlsx`);
 }
