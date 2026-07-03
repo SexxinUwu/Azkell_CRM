@@ -9,11 +9,30 @@ function init_docflota() {
 }
 
 function cargarDatosPlacasCatalogo() {
-    fetch('/api/placas-lista')
+    fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [] }) })
     .then(r => r.json())
-    .then(rows => {
-        placasCatalogo = Array.isArray(rows) ? rows : [];
+    .then(r => {
+        placasCatalogo = Array.isArray(r.data) ? r.data : [];
+        // placasCatalogo es un array de arrays: [0] Placa, [1] Cliente, [3] Marca, [4] Modelo, [5] Tipo, [7] Color, [11] Chasis, [13] Año
+        var items = placasCatalogo.map(p => ({ value: p[0], label: p[0] }));
+        if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa…');
+        if (window._cbOnSelect) window._cbOnSelect('fd_placa', function(val) {
+            autocompletarDatosPlaca(val);
+        });
     }).catch(e => console.error('Error cargando catálogo de placas:', e));
+}
+
+function autocompletarDatosPlaca(placaVal) {
+    if(!placaVal) return;
+    const p = placasCatalogo.find(x => x[0] === placaVal);
+    if(p) {
+        document.getElementById('f_marca').value = p[3] || '';
+        document.getElementById('f_modelo').value = p[4] || '';
+        document.getElementById('f_tipo').value = p[5] || '';
+        document.getElementById('f_color').value = p[7] || '';
+        document.getElementById('f_chasis').value = p[11] || '';
+        document.getElementById('f_anio').value = p[13] || '';
+    }
 }
 
 function calcularEstado(fechaVencimiento) {
@@ -383,8 +402,8 @@ function abrirModalEdicion(placa) {
     
     // Reset combobox de placa
     if (window._cbReset) window._cbReset('fd_placa');
-    var items = placasCatalogo.map(p => ({ value: p.placa, label: p.placa }));
-    if (placa && !placasCatalogo.find(p => p.placa === placa)) {
+    var items = placasCatalogo.map(p => ({ value: p[0], label: p[0] }));
+    if (placa && !placasCatalogo.find(p => p[0] === placa)) {
         items.push({ value: placa, label: placa });
     }
     if (window._cbInit) window._cbInit('fd_placa', items, 'Buscar placa\u2026');
