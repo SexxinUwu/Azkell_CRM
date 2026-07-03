@@ -72,7 +72,9 @@
                 </select>
                 <button class="btn btn-light border text-secondary shadow-sm" onclick="filtrarDocumentosPorEstado('')" title="Limpiar Filtros"><i class="bi bi-funnel"></i> Limpiar</button>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <input type="file" id="inputFileImportDoc" accept=".csv" style="display:none" onchange="procesarImportacionDocumentos(event)">
+                <button class="btn btn-outline-primary btn-sm fw-bold shadow-sm" onclick="document.getElementById('inputFileImportDoc').click()"><i class="bi bi-cloud-upload"></i> Importar CSV</button>
                 <button class="btn btn-outline-success btn-sm fw-bold shadow-sm" onclick="exportarExcelDocFlota()"><i class="bi bi-file-earmark-excel"></i> Exportar</button>
             </div>
         </div>

@@ -611,6 +611,40 @@ router.post('/:metodo', async (req, res) => {
         return;
     }
 
+    if (metodo === 'importarDocumentosFlota') {
+        const documentos = req.body.args[0] || [];
+        if (!Array.isArray(documentos) || documentos.length === 0) return res.json({ data: "No hay datos para importar" });
+
+        const values = documentos.map(d => {
+            const idFinal = `DOC-${Date.now()}-${Math.floor(Math.random()*100000)}`;
+            return [
+                idFinal, 
+                d.placa?.toUpperCase() || '', 
+                d.tipo_documento || '', 
+                d.entidad || '', 
+                d.nro_constancia || '', 
+                d.fecha_emision || null, 
+                d.fecha_vencimiento || null, 
+                d.pago || '', 
+                d.asesor || '', 
+                d.observaciones || '', 
+                d.usuario || 'import'
+            ];
+        });
+
+        const query = `
+            INSERT INTO documentos_flota (id, placa, tipo_documento, entidad, nro_constancia, fecha_emision, fecha_vencimiento, pago, asesor, observaciones, usuario)
+            VALUES ?
+        `;
+
+        db.query(query, [values], (err, result) => {
+            if (err) { console.error("Error Importación:", err); return res.json({ data: "Error al importar" }); }
+            broadcast('documentosflota', 'importar');
+            return res.json({ data: "Éxito" });
+        });
+        return;
+    }
+
     if (metodo === 'obtenerDatosDocumentosFlota') {
         db.query('SELECT * FROM documentos_flota ORDER BY fecha_vencimiento ASC', (err, results) => {
             if (err) return res.json({ data: [] });
