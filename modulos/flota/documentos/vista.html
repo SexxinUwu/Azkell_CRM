@@ -781,53 +781,38 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                                 <tr>
                                     <th class="sticky-col" rowspan="2" style="border-right: none;">N°</th>
                                     <th class="sticky-col-2" rowspan="2">PLACA</th>
-                                    <th colspan="9" class="super-header text-center">DATOS GENERALES</th>
-                                    <!-- Add other supers if needed -->
+                                    <th colspan="9" class="super-header text-center" style="background:#f1f5f9; color:#334155; border-bottom: 2px solid #e2e8f0; font-size: 11px; padding: 6px;">DATOS GENERALES</th>
+                                    <th colspan="3" class="super-header text-center" style="background:#e0f2fe; color:#0369a1; border-bottom: 2px solid #bae6fd; font-size: 11px; padding: 6px;">TARJ. CIRCULACIÓN</th>
+                                    <th colspan="4" class="super-header text-center" style="background:#fce7f3; color:#be185d; border-bottom: 2px solid #fbcfe8; font-size: 11px; padding: 6px;">SOAT</th>
+                                    <th colspan="3" class="super-header text-center" style="background:#fef3c7; color:#b45309; border-bottom: 2px solid #fde68a; font-size: 11px; padding: 6px;">MATPEL</th>
+                                    <th colspan="3" class="super-header text-center" style="background:#dcfce7; color:#15803d; border-bottom: 2px solid #bbf7d0; font-size: 11px; padding: 6px;">REV. TÉCNICA</th>
+                                    <th colspan="3" class="super-header text-center" style="background:#fae8ff; color:#a21caf; border-bottom: 2px solid #f5d0fe; font-size: 11px; padding: 6px;">BONIFICACIÓN</th>
+                                    <th colspan="4" class="super-header text-center" style="background:#ede9fe; color:#6d28d9; border-bottom: 2px solid #ddd6fe; font-size: 11px; padding: 6px;">SEG. VEHICULAR</th>
+                                    <th colspan="4" class="super-header text-center" style="background:#ffedd5; color:#c2410c; border-bottom: 2px solid #fed7aa; font-size: 11px; padding: 6px;">SEG. DE CARGA</th>
+                                    <th colspan="3" class="super-header text-center" style="background:#e0e7ff; color:#4338ca; border-bottom: 2px solid #c7d2fe; font-size: 11px; padding: 6px;">FUMIGACIÓN</th>
+                                    <th colspan="4" class="super-header text-center" style="background:#ffe4e6; color:#be123c; border-bottom: 2px solid #fecdd3; font-size: 11px; padding: 6px;">EXTINTORES</th>
                                 </tr>
                                 <tr>
                                     <!-- General -->
-                                    <th>PROPIEDAD</th>
-                                    <th>EMPRESA</th>
-                                    <th>F. ENTREGA</th>
-                                    <th>TIPO</th>
-                                    <th>AÑO</th>
-                                    <th>MODELO</th>
-                                    <th>COLOR</th>
-                                    <th>MARCA</th>
-                                    <th>SERIE/CHASIS</th>
-                                    
-                                    <!-- Docs -->
-                                    <th>TC VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>SOAT CONSTANCIA</th>
-                                    <th>ENTIDAD</th>
-                                    <th>PAGO</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>MATPEL CONST.</th>
-                                    <th>EMISIÓN</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>RT EMISIÓN</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>BONI VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>SV ENTIDAD</th>
-                                    <th>ASESOR</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>SC ENTIDAD</th>
-                                    <th>ASESOR</th>
-                                    <th>EMISIÓN</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>FUM EMISIÓN</th>
-                                    <th>VENCIMIENTO</th>
-                                    <th>ESTADO DÍAS</th>
-                                    <th>EXT VENCIMIENTO</th>
-                                    <th>CANTIDAD</th>
-                                    <th>ESTADO DÍAS</th>
+                                    <th>PROPIEDAD</th><th>EMPRESA</th><th>F. ENTREGA</th><th>TIPO</th><th>AÑO</th><th>MODELO</th><th>COLOR</th><th>MARCA</th><th>SERIE/CHASIS</th>
+                                    <!-- Tarjeta Circulacion -->
+                                    <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- SOAT -->
+                                    <th>ENTIDAD</th><th>PAGO</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- MATPEL -->
+                                    <th>N° CONST.</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- RT -->
+                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- BONI -->
+                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- SV -->
+                                    <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- SC -->
+                                    <th>ENTIDAD</th><th>ASESOR</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- FUM -->
+                                    <th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
+                                    <!-- EXT -->
+                                    <th>CANTIDAD</th><th>F. EMISIÓN</th><th>F. VENC.</th><th>DÍAS</th>
                                 </tr>
                             </thead>
                             <tbody id="matriz-body">
@@ -890,14 +875,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                             </div>
                             <div class="form-group">
                                 <label>Tipo de Unidad</label>
-                                <select id="f_tipo" class="form-control-large">
-                                    <option value="">Seleccione...</option>
-                                    <option value="CAMION">CAMIÓN</option>
-                                    <option value="AUTO">AUTO</option>
-                                    <option value="CARRETA">CARRETA</option>
-                                    <option value="CAMIONETA">CAMIONETA</option>
-                                    <option value="MOTO">MOTO</option>
-                                </select>
+                                <input type="text" id="f_tipo" class="form-control-large" readonly>
                             </div>
                         </div>
 
@@ -917,7 +895,8 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                     <!-- Repetir tab-pane con form-control-clean para los documentos -->
                     <div class="tab-pane" id="tab-1">
                         <div class="fm-content-title">1. Tarjeta de Circulación</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr;">
+                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
+                            <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_tc_constancia" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_tc_vencimiento" class="form-control-clean"></div>
                         </div>
                     </div>
@@ -925,7 +904,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                     <div class="tab-pane" id="tab-2">
                         <div class="fm-content-title">2. SOAT</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
-                            <div class="form-group-clean"><label>N° Constancia</label><input type="text" id="f_soat_constancia" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Entidad Emisora</label><input type="text" id="f_soat_entidad" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Pago (Monto)</label><input type="number" step="0.01" id="f_soat_pago" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_soat_vencimiento" class="form-control-clean"></div>
@@ -936,8 +914,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                         <div class="fm-content-title">3. Certificado MATPEL</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_matpel_constancia" class="form-control-clean"></div>
-                            <div class="form-group-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_matpel_emision" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_matpel_vencimiento" class="form-control-clean"></div>
                         </div>
                     </div>
@@ -952,7 +928,8 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
 
                     <div class="tab-pane" id="tab-5">
                         <div class="fm-content-title">5. Bonificación</div>
-                        <div class="grouped-box" style="grid-template-columns: 1fr;">
+                        <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
+                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_boni_emision" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_boni_vencimiento" class="form-control-clean"></div>
                         </div>
                     </div>
@@ -971,7 +948,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Entidad Aseguradora</label><input type="text" id="f_sc_entidad" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Asesor Comercial</label><input type="text" id="f_sc_asesor" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_sc_emision" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sc_vencimiento" class="form-control-clean"></div>
                         </div>
                     </div>
@@ -988,6 +964,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                         <div class="fm-content-title">9. Extintores</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Cantidad</label><input type="number" id="f_ext_cantidad" class="form-control-clean" value="1"></div>
+                            <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_ext_emision" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_ext_vencimiento" class="form-control-clean"></div>
                         </div>
                     </div>

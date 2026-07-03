@@ -260,19 +260,18 @@ function seleccionarVehiculo(placa) {
     };
 
     renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
-        {label: 'Emisión', val: '---'},
+        {label: 'N°', val: v.tc_constancia||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento)}
     ], m[0]);
     
     renderCard('card-soat', 'SOAT', 2, 'bg-c2', [
-        {label: 'N°', val: v.soat_constancia||'---'},
         {label: 'Entidad', val: v.soat_entidad||'---'},
         {label: 'Pago', val: v.soat_pago||'---'}
     ], m[1]);
         
     renderCard('card-matpel', 'MATPEL', 3, 'bg-c3', [
         {label: 'N°', val: v.matpel_constancia||'---'},
-        {label: 'Emisión', val: formatearFechaVista(v.matpel_emision)}
+        {label: 'Vencimiento', val: formatearFechaVista(v.matpel_vencimiento)}
     ], m[2]);
         
     renderCard('card-rt', 'REV. TÉCN...', 4, 'bg-c4', [
@@ -280,7 +279,7 @@ function seleccionarVehiculo(placa) {
     ], m[3]);
         
     renderCard('card-boni', 'BONIFICA...', 5, 'bg-c5', [
-        {label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento)}
+        {label: 'Emisión', val: formatearFechaVista(v.boni_emision)}
     ], m[4]);
         
     renderCard('card-sv', 'SEG. VEHI...', 6, 'bg-c6', [
@@ -290,7 +289,7 @@ function seleccionarVehiculo(placa) {
         
     renderCard('card-sc', 'SEG. CAR...', 7, 'bg-c7', [
         {label: 'Entidad', val: v.sc_entidad||'---'},
-        {label: 'Emisión', val: formatearFechaVista(v.sc_emision)}
+        {label: 'Asesor', val: v.sc_asesor||'---'}
     ], m[6]);
         
     renderCard('card-fum', 'FUMIGACI...', 8, 'bg-c8', [
@@ -298,7 +297,8 @@ function seleccionarVehiculo(placa) {
     ], m[7]);
         
     renderCard('card-ext', 'EXTINTOR...', 9, 'bg-c9', [
-        {label: 'Cantidad', val: v.ext_cantidad||1}
+        {label: 'Cantidad', val: v.ext_cantidad||1},
+        {label: 'Emisión', val: formatearFechaVista(v.ext_emision)}
     ], m[8]);
 }
 
@@ -348,17 +348,16 @@ function renderizarMatriz() {
             <td>${v.marca||''}</td>
             <td>${v.chasis||''}</td>
             
+            <td>${v.tc_constancia||''}</td>
             <td>${fB(v.tc_vencimiento)}</td>
             <td>${eD(m[0])}</td>
             
-            <td>${v.soat_constancia||''}</td>
             <td>${v.soat_entidad||''}</td>
             <td class="text-right">${v.soat_pago||''}</td>
             <td>${fB(v.soat_vencimiento)}</td>
             <td>${eD(m[1])}</td>
 
             <td>${v.matpel_constancia||''}</td>
-            <td>${formatearFechaVista(v.matpel_emision)}</td>
             <td>${fB(v.matpel_vencimiento)}</td>
             <td>${eD(m[2])}</td>
 
@@ -366,6 +365,7 @@ function renderizarMatriz() {
             <td>${fB(v.rt_vencimiento)}</td>
             <td>${eD(m[3])}</td>
 
+            <td>${formatearFechaVista(v.boni_emision)}</td>
             <td>${fB(v.boni_vencimiento)}</td>
             <td>${eD(m[4])}</td>
 
@@ -376,7 +376,6 @@ function renderizarMatriz() {
 
             <td>${v.sc_entidad||''}</td>
             <td>${v.sc_asesor||''}</td>
-            <td>${formatearFechaVista(v.sc_emision)}</td>
             <td>${fB(v.sc_vencimiento)}</td>
             <td>${eD(m[6])}</td>
 
@@ -384,8 +383,9 @@ function renderizarMatriz() {
             <td>${fB(v.fum_vencimiento)}</td>
             <td>${eD(m[7])}</td>
 
-            <td>${fB(v.ext_vencimiento)}</td>
             <td>${v.ext_cantidad||1}</td>
+            <td>${formatearFechaVista(v.ext_emision)}</td>
+            <td>${fB(v.ext_vencimiento)}</td>
             <td>${eD(m[8])}</td>
         </tr>`;
     });
@@ -482,13 +482,7 @@ function autocompletarDatosPlaca(placaSeleccionada) {
     if(p) {
         // Handle "tipo de unidad" mapping safely (accents and variations)
         let tipoStr = (p.tipo || p.modelo_uts || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        let selectTipo = document.getElementById('f_tipo');
-        if (tipoStr.includes('CAMIONETA')) selectTipo.value = 'CAMIONETA';
-        else if (tipoStr.includes('CAMION')) selectTipo.value = 'CAMION';
-        else if (tipoStr.includes('CARRETA')) selectTipo.value = 'CARRETA';
-        else if (tipoStr.includes('AUTO')) selectTipo.value = 'AUTO';
-        else if (tipoStr.includes('MOTO')) selectTipo.value = 'MOTO';
-        else selectTipo.value = p.tipo || '';
+        document.getElementById('f_tipo').value = p.tipo || '';
 
         document.getElementById('f_propiedad').value = p.propiedad || 'PROPIA';
         document.getElementById('f_empresa').value = p.empresa || 'MARSISA';
@@ -521,26 +515,26 @@ function guardarVehiculo() {
         chasis: document.getElementById('f_chasis').value,
         fecha_entrega: document.getElementById('f_fecha_entrega').value,
         tc_vencimiento: document.getElementById('f_tc_vencimiento').value,
-        soat_constancia: document.getElementById('f_soat_constancia').value,
+        tc_constancia: document.getElementById('f_tc_constancia').value,
         soat_entidad: document.getElementById('f_soat_entidad').value,
         soat_pago: document.getElementById('f_soat_pago').value,
         soat_vencimiento: document.getElementById('f_soat_vencimiento').value,
         matpel_constancia: document.getElementById('f_matpel_constancia').value,
-        matpel_emision: document.getElementById('f_matpel_emision').value,
         matpel_vencimiento: document.getElementById('f_matpel_vencimiento').value,
         rt_emision: document.getElementById('f_rt_emision').value,
         rt_vencimiento: document.getElementById('f_rt_vencimiento').value,
+        boni_emision: document.getElementById('f_boni_emision').value,
         boni_vencimiento: document.getElementById('f_boni_vencimiento').value,
         sv_entidad: document.getElementById('f_sv_entidad').value,
         sv_asesor: document.getElementById('f_sv_asesor').value,
         sv_vencimiento: document.getElementById('f_sv_vencimiento').value,
         sc_entidad: document.getElementById('f_sc_entidad').value,
         sc_asesor: document.getElementById('f_sc_asesor').value,
-        sc_emision: document.getElementById('f_sc_emision').value,
         sc_vencimiento: document.getElementById('f_sc_vencimiento').value,
         fum_emision: document.getElementById('f_fum_emision').value,
         fum_vencimiento: document.getElementById('f_fum_vencimiento').value,
         ext_cantidad: document.getElementById('f_ext_cantidad').value,
+        ext_emision: document.getElementById('f_ext_emision').value,
         ext_vencimiento: document.getElementById('f_ext_vencimiento').value,
     };
 
