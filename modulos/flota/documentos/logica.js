@@ -294,6 +294,19 @@ function exportarExcelDocFlota() {
     document.body.removeChild(link);
 }
 
+function descargarPlantillaDocs() {
+    let csv = "PLACA,TC_VENCIMIENTO,SOAT_CONSTANCIA,SOAT_VENCIMIENTO,MATPEL_CONSTANCIA,MATPEL_EMISION,MATPEL_VENCIMIENTO,RT_EMISION,RT_VENCIMIENTO,BONI_VENCIMIENTO,SEGVEH_ENTIDAD,SEGVEH_ASESOR,SEGVEH_VENCIMIENTO,SEGCARGA_ENTIDAD,SEGCARGA_ASESOR,SEGCARGA_EMISION,SEGCARGA_VENCIMIENTO,FUMIG_EMISION,FUMIG_VENCIMIENTO,EXTINTORES_CANT,EXTINTORES_VENCIMIENTO\n";
+    let blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Plantilla_Documentos_Flota.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 function procesarImportacionDocumentos(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -304,11 +317,12 @@ function procesarImportacionDocumentos(event) {
         const lineas = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         if(lineas.length < 2) return alert("El archivo está vacío o no tiene el formato correcto.");
         
-        const headers = lineas[0].split(',');
+        const delimitador = lineas[0].includes(';') ? ';' : ',';
+        const headers = lineas[0].split(delimitador);
         let documentosAImportar = [];
         
         for(let i=1; i<lineas.length; i++) {
-            let row = lineas[i].split(',');
+            let row = lineas[i].split(delimitador);
             if(row.length < headers.length) continue;
             
             let obj = {};
@@ -335,7 +349,11 @@ function procesarImportacionDocumentos(event) {
             pushDoc('Seguro Vehicular', null, obj['SEGVEH_VENCIMIENTO'], '', obj['SEGVEH_ENTIDAD'], obj['SEGVEH_ASESOR']);
             pushDoc('Seguro Carga', obj['SEGCARGA_EMISION'], obj['SEGCARGA_VENCIMIENTO'], '', obj['SEGCARGA_ENTIDAD'], obj['SEGCARGA_ASESOR']);
             pushDoc('Certificado Fumigación', obj['FUMIG_EMISION'], obj['FUMIG_VENCIMIENTO']);
-            if (obj['EXTINTORES_CANT']) pushDoc('Extintores', null, null, '', '', '', `Cantidad: ${obj['EXTINTORES_CANT']}`);
+            
+            let notasExtintor = obj['EXTINTORES_CANT'] ? `Cantidad: ${obj['EXTINTORES_CANT']}` : '';
+            if (obj['EXTINTORES_VENCIMIENTO'] || notasExtintor) {
+                pushDoc('Extintores', null, obj['EXTINTORES_VENCIMIENTO'], '', '', '', notasExtintor);
+            }
         }
         
         if (documentosAImportar.length === 0) return alert("No se encontraron documentos válidos para importar.");
