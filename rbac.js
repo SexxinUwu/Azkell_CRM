@@ -91,6 +91,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
     else if (path.startsWith('/fleetrun')) mod = ['fleet'];
+    else if (path.startsWith('/vehiculos-flota')) mod = ['fleet', 'placas', 'status'];
     else if (path.startsWith('/taller-rampas')) mod = ['status_rampa', 'ot', 'trabajos_ot'];
     else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
