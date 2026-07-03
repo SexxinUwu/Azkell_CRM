@@ -773,7 +773,12 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
                 <div class="matriz-container">
                     <div class="matriz-header">
                         <div class="mh-title"><i class="bi bi-table"></i> Matriz General de Control</div>
-                        <button class="btn-export" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel"></i> Exportar Vista</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-export" onclick="descargarPlantillaVehiculos()" style="background-color: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer;"><i class="bi bi-download"></i> Descargar Plantilla</button>
+                            <button class="btn-export" onclick="document.getElementById('file-import-flota').click()" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer;"><i class="bi bi-upload"></i> Importar Datos</button>
+                            <button class="btn-export" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel"></i> Exportar Vista</button>
+                            <input type="file" id="file-import-flota" accept=".xlsx, .xls" style="display:none;" onchange="importarExcelVehiculos(event)">
+                        </div>
                     </div>
                     <div class="table-wrapper">
                         <table class="matriz-table" id="tabla-matriz">

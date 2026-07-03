@@ -1836,6 +1836,118 @@ app.delete('/api/vehiculos-flota/:placa', (req, res) => {
     });
 });
 
+// ── POST /api/importarVehiculosFlotaMasivo ────────────────────────────────────
+app.post('/api/importarVehiculosFlotaMasivo', async (req, res) => {
+    const { registros } = req.body;
+    if (!Array.isArray(registros) || !registros.length) {
+        return res.status(400).json({ ok: 0, errores: 0, msg: 'Sin registros' });
+    }
+
+    const query = `
+        INSERT INTO vehiculos_flota (
+            placa, tipo, propiedad, empresa, fecha_entrega, anio, modelo, color, marca, chasis,
+            tc_constancia, tc_vencimiento,
+            soat_entidad, soat_pago, soat_vencimiento,
+            matpel_constancia, matpel_vencimiento,
+            rt_emision, rt_vencimiento,
+            boni_emision, boni_vencimiento,
+            sv_entidad, sv_asesor, sv_vencimiento,
+            sc_entidad, sc_asesor, sc_vencimiento,
+            fum_emision, fum_vencimiento,
+            ext_cantidad, ext_emision, ext_vencimiento
+        ) VALUES ?
+        ON DUPLICATE KEY UPDATE
+            tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa), 
+            fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), modelo=VALUES(modelo), 
+            color=VALUES(color), marca=VALUES(marca), chasis=VALUES(chasis),
+            tc_constancia=VALUES(tc_constancia), tc_vencimiento=VALUES(tc_vencimiento),
+            soat_entidad=VALUES(soat_entidad), soat_pago=VALUES(soat_pago), soat_vencimiento=VALUES(soat_vencimiento),
+            matpel_constancia=VALUES(matpel_constancia), matpel_vencimiento=VALUES(matpel_vencimiento),
+            rt_emision=VALUES(rt_emision), rt_vencimiento=VALUES(rt_vencimiento),
+            boni_emision=VALUES(boni_emision), boni_vencimiento=VALUES(boni_vencimiento),
+            sv_entidad=VALUES(sv_entidad), sv_asesor=VALUES(sv_asesor), sv_vencimiento=VALUES(sv_vencimiento),
+            sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor), sc_vencimiento=VALUES(sc_vencimiento),
+            fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
+            ext_cantidad=VALUES(ext_cantidad), ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento)
+    `;
+
+    const cleanDate = (d) => {
+        if (!d || d.trim() === '-' || d.trim() === '') return null;
+        let p = d.trim().split('/');
+        if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`; // Convert from DD/MM/YYYY to YYYY-MM-DD
+        if (d.includes('-')) return d.trim(); // Handle native YYYY-MM-DD if exported like that
+        return null;
+    };
+
+    let ok = 0, errores = 0;
+    const validos = registros.filter(r => {
+        const placa = (r['PLACA'] || r.placa || '').toString().trim().toUpperCase();
+        if (!placa) { errores++; return false; }
+        return true;
+    });
+
+    if (validos.length > 0) {
+        for (let i = 0; i < validos.length; i += 500) {
+            const lote = validos.slice(i, i + 500);
+            const vals = lote.map(r => [
+                (r['PLACA'] || r.placa || '').toString().trim().toUpperCase(),
+                (r['TIPO'] || r.tipo || '').toString().trim(),
+                (r['PROPIEDAD'] || r.propiedad || '').toString().trim(),
+                (r['EMPRESA'] || r.empresa || '').toString().trim(),
+                cleanDate(r['F. ENTREGA'] || r.fecha_entrega || ''),
+                r['AÑO'] || r.anio || null,
+                (r['MODELO'] || r.modelo || '').toString().trim(),
+                (r['COLOR'] || r.color || '').toString().trim(),
+                (r['MARCA'] || r.marca || '').toString().trim(),
+                (r['SERIE/CHASIS'] || r.chasis || '').toString().trim(),
+                
+                (r['TC N° CONST.'] || r.tc_constancia || '').toString().trim(),
+                cleanDate(r['TC F. VENC.'] || r.tc_vencimiento || ''),
+                
+                (r['SOAT ENTIDAD'] || r.soat_entidad || '').toString().trim(),
+                r['SOAT PAGO'] || r.soat_pago || null,
+                cleanDate(r['SOAT F. VENC.'] || r.soat_vencimiento || ''),
+                
+                (r['MATPEL N° CONST.'] || r.matpel_constancia || '').toString().trim(),
+                cleanDate(r['MATPEL F. VENC.'] || r.matpel_vencimiento || ''),
+                
+                cleanDate(r['RT F. EMISIÓN'] || r.rt_emision || ''),
+                cleanDate(r['RT F. VENC.'] || r.rt_vencimiento || ''),
+                
+                cleanDate(r['BONI F. EMISIÓN'] || r.boni_emision || ''),
+                cleanDate(r['BONI F. VENC.'] || r.boni_vencimiento || ''),
+                
+                (r['SV ENTIDAD'] || r.sv_entidad || '').toString().trim(),
+                (r['SV ASESOR'] || r.sv_asesor || '').toString().trim(),
+                cleanDate(r['SV F. VENC.'] || r.sv_vencimiento || ''),
+                
+                (r['SC ENTIDAD'] || r.sc_entidad || '').toString().trim(),
+                (r['SC ASESOR'] || r.sc_asesor || '').toString().trim(),
+                cleanDate(r['SC F. VENC.'] || r.sc_vencimiento || ''),
+                
+                cleanDate(r['FUM F. EMISIÓN'] || r.fum_emision || ''),
+                cleanDate(r['FUM F. VENC.'] || r.fum_vencimiento || ''),
+                
+                r['EXT CANTIDAD'] || r.ext_cantidad || 1,
+                cleanDate(r['EXT F. EMISIÓN'] || r.ext_emision || ''),
+                cleanDate(r['EXT F. VENC.'] || r.ext_vencimiento || '')
+            ]);
+            try {
+                await new Promise((resolve, reject) => {
+                    db.query(query, [vals], (err, res) => {
+                        if (err) reject(err); else resolve(res);
+                    });
+                });
+                ok += lote.length;
+            } catch (error) {
+                console.error("Error importando lote de flota:", error);
+                errores += lote.length;
+            }
+        }
+    }
+    res.json({ ok, errores });
+});
+
 
 app.put('/api/placas/:placa', (req, res) => {
     const placa   = req.params.placa;
