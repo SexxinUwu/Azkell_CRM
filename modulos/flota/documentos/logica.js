@@ -295,83 +295,93 @@ function exportarExcelDocFlota() {
 }
 
 function descargarPlantillaDocs() {
-    let csv = "PLACA,TC_VENCIMIENTO,SOAT_CONSTANCIA,SOAT_VENCIMIENTO,MATPEL_CONSTANCIA,MATPEL_EMISION,MATPEL_VENCIMIENTO,RT_EMISION,RT_VENCIMIENTO,BONI_VENCIMIENTO,SEGVEH_ENTIDAD,SEGVEH_ASESOR,SEGVEH_VENCIMIENTO,SEGCARGA_ENTIDAD,SEGCARGA_ASESOR,SEGCARGA_EMISION,SEGCARGA_VENCIMIENTO,FUMIG_EMISION,FUMIG_VENCIMIENTO,EXTINTORES_CANT,EXTINTORES_VENCIMIENTO\n";
-    let blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement("a");
-    let url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Plantilla_Documentos_Flota.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (typeof XLSX === 'undefined') return alert('Librería XLSX no cargada.');
+    const headers = [["PLACA","TC_VENCIMIENTO","SOAT_CONSTANCIA","SOAT_VENCIMIENTO","MATPEL_CONSTANCIA","MATPEL_EMISION","MATPEL_VENCIMIENTO","RT_EMISION","RT_VENCIMIENTO","BONI_VENCIMIENTO","SEGVEH_ENTIDAD","SEGVEH_ASESOR","SEGVEH_VENCIMIENTO","SEGCARGA_ENTIDAD","SEGCARGA_ASESOR","SEGCARGA_EMISION","SEGCARGA_VENCIMIENTO","FUMIG_EMISION","FUMIG_VENCIMIENTO","EXTINTORES_CANT","EXTINTORES_VENCIMIENTO"]];
+    const ws = XLSX.utils.aoa_to_sheet(headers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
+    XLSX.writeFile(wb, "Plantilla_Documentos_Flota.xlsx");
 }
 
 function procesarImportacionDocumentos(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (typeof XLSX === 'undefined') {
+        alert("La librería XLSX no está disponible para procesar el archivo.");
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = function(e) {
-        const text = e.target.result;
-        const lineas = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if(lineas.length < 2) return alert("El archivo está vacío o no tiene el formato correcto.");
-        
-        const delimitador = lineas[0].includes(';') ? ';' : ',';
-        const headers = lineas[0].split(delimitador);
-        let documentosAImportar = [];
-        
-        for(let i=1; i<lineas.length; i++) {
-            let row = lineas[i].split(delimitador);
-            if(row.length < headers.length) continue;
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            // Format dates correctly instead of raw serial numbers
+            const json = XLSX.utils.sheet_to_json(worksheet, {defval: "", raw: false, dateNF: "dd/mm/yyyy"});
             
-            let obj = {};
-            headers.forEach((h, idx) => { obj[h.trim()] = row[idx]?.trim(); });
+            if(json.length === 0) return alert("El archivo está vacío o no tiene el formato correcto.");
             
-            let placa = obj['PLACA'];
-            if(!placa) continue;
+            let documentosAImportar = [];
             
-            const pushDoc = (tipo, emision, vencimiento, constancia='', entidad='', asesor='', observaciones='') => {
-                if (vencimiento || emision || constancia || observaciones) {
-                    documentosAImportar.push({
-                        placa: placa, tipo_documento: tipo, entidad: entidad, 
-                        nro_constancia: constancia, fecha_emision: emision, 
-                        fecha_vencimiento: vencimiento, asesor: asesor, observaciones: observaciones
-                    });
+            for(let i=0; i<json.length; i++) {
+                let obj = {};
+                // Normalize keys to uppercase and trim strings
+                for (let k in json[i]) {
+                    obj[k.trim().toUpperCase()] = typeof json[i][k] === 'string' ? json[i][k].trim() : String(json[i][k]);
                 }
-            };
-            
-            pushDoc('Tarjeta de Circulación', null, obj['TC_VENCIMIENTO']);
-            pushDoc('SOAT', null, obj['SOAT_VENCIMIENTO'], obj['SOAT_CONSTANCIA']);
-            pushDoc('Certificado MATPEL', obj['MATPEL_EMISION'], obj['MATPEL_VENCIMIENTO'], obj['MATPEL_CONSTANCIA']);
-            pushDoc('Revisión Técnica', obj['RT_EMISION'], obj['RT_VENCIMIENTO']);
-            pushDoc('Bonificación', null, obj['BONI_VENCIMIENTO']);
-            pushDoc('Seguro Vehicular', null, obj['SEGVEH_VENCIMIENTO'], '', obj['SEGVEH_ENTIDAD'], obj['SEGVEH_ASESOR']);
-            pushDoc('Seguro Carga', obj['SEGCARGA_EMISION'], obj['SEGCARGA_VENCIMIENTO'], '', obj['SEGCARGA_ENTIDAD'], obj['SEGCARGA_ASESOR']);
-            pushDoc('Certificado Fumigación', obj['FUMIG_EMISION'], obj['FUMIG_VENCIMIENTO']);
-            
-            let notasExtintor = obj['EXTINTORES_CANT'] ? `Cantidad: ${obj['EXTINTORES_CANT']}` : '';
-            if (obj['EXTINTORES_VENCIMIENTO'] || notasExtintor) {
-                pushDoc('Extintores', null, obj['EXTINTORES_VENCIMIENTO'], '', '', '', notasExtintor);
+                
+                let placa = obj['PLACA'];
+                if(!placa) continue;
+                
+                const pushDoc = (tipo, emision, vencimiento, constancia='', entidad='', asesor='', observaciones='') => {
+                    if (vencimiento || emision || constancia || observaciones) {
+                        documentosAImportar.push({
+                            placa: placa, tipo_documento: tipo, entidad: entidad, 
+                            nro_constancia: constancia, fecha_emision: emision, 
+                            fecha_vencimiento: vencimiento, asesor: asesor, observaciones: observaciones
+                        });
+                    }
+                };
+                
+                pushDoc('Tarjeta de Circulación', null, obj['TC_VENCIMIENTO']);
+                pushDoc('SOAT', null, obj['SOAT_VENCIMIENTO'], obj['SOAT_CONSTANCIA']);
+                pushDoc('Certificado MATPEL', obj['MATPEL_EMISION'], obj['MATPEL_VENCIMIENTO'], obj['MATPEL_CONSTANCIA']);
+                pushDoc('Revisión Técnica', obj['RT_EMISION'], obj['RT_VENCIMIENTO']);
+                pushDoc('Bonificación', null, obj['BONI_VENCIMIENTO']);
+                pushDoc('Seguro Vehicular', null, obj['SEGVEH_VENCIMIENTO'], '', obj['SEGVEH_ENTIDAD'], obj['SEGVEH_ASESOR']);
+                pushDoc('Seguro Carga', obj['SEGCARGA_EMISION'], obj['SEGCARGA_VENCIMIENTO'], '', obj['SEGCARGA_ENTIDAD'], obj['SEGCARGA_ASESOR']);
+                pushDoc('Certificado Fumigación', obj['FUMIG_EMISION'], obj['FUMIG_VENCIMIENTO']);
+                
+                let notasExtintor = obj['EXTINTORES_CANT'] ? `Cantidad: ${obj['EXTINTORES_CANT']}` : '';
+                if (obj['EXTINTORES_VENCIMIENTO'] || notasExtintor) {
+                    pushDoc('Extintores', null, obj['EXTINTORES_VENCIMIENTO'], '', '', '', notasExtintor);
+                }
             }
+            
+            if (documentosAImportar.length === 0) return alert("No se encontraron documentos válidos para importar.");
+            
+            document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> <span id="cache-label-docflota">Importando...</span>';
+            
+            fetch('/api/script/importarDocumentosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [documentosAImportar] }) })
+            .then(r => r.json())
+            .then(r => {
+                if(r.data === 'Éxito') {
+                    alert(`¡Importación exitosa! Se procesaron ${documentosAImportar.length} documentos.`);
+                    cargarTablaDocFlota(true);
+                } else {
+                    alert("Hubo un error al importar: " + r.data);
+                }
+            });
+            
+            event.target.value = '';
+        } catch(err) {
+            console.error(err);
+            alert("Ocurrió un error al leer el archivo Excel/CSV.");
+            event.target.value = '';
         }
-        
-        if (documentosAImportar.length === 0) return alert("No se encontraron documentos válidos para importar.");
-        
-        document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> <span id="cache-label-docflota">Importando...</span>';
-        
-        fetch('/api/script/importarDocumentosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [documentosAImportar] }) })
-        .then(r => r.json())
-        .then(r => {
-            if(r.data === 'Éxito') {
-                alert(`¡Importación exitosa! Se procesaron ${documentosAImportar.length} documentos.`);
-                cargarTablaDocFlota(true);
-            } else {
-                alert("Hubo un error al importar: " + r.data);
-            }
-        });
-        
-        event.target.value = '';
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
 }
