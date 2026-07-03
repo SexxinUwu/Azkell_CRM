@@ -1788,38 +1788,38 @@ app.post('/api/vehiculos-flota', (req, res) => {
 
     const query = `INSERT INTO vehiculos_flota
         (placa, tipo, propiedad, empresa, fecha_entrega, anio, marca, modelo, color, chasis,
-         tc_vencimiento, soat_constancia, soat_entidad, soat_pago, soat_vencimiento,
-         matpel_constancia, matpel_emision, matpel_vencimiento,
-         rt_emision, rt_vencimiento, boni_vencimiento,
+         tc_vencimiento, tc_constancia, soat_entidad, soat_pago, soat_vencimiento,
+         matpel_constancia, matpel_vencimiento,
+         rt_emision, rt_vencimiento, boni_emision, boni_vencimiento,
          sv_entidad, sv_asesor, sv_vencimiento,
-         sc_entidad, sc_asesor, sc_emision, sc_vencimiento,
-         fum_emision, fum_vencimiento, ext_vencimiento, ext_cantidad)
+         sc_entidad, sc_asesor, sc_vencimiento,
+         fum_emision, fum_vencimiento, ext_emision, ext_vencimiento, ext_cantidad)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
         tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa),
         fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), marca=VALUES(marca),
         modelo=VALUES(modelo), color=VALUES(color), chasis=VALUES(chasis),
-        tc_vencimiento=VALUES(tc_vencimiento), soat_constancia=VALUES(soat_constancia),
+        tc_vencimiento=VALUES(tc_vencimiento), tc_constancia=VALUES(tc_constancia),
         soat_entidad=VALUES(soat_entidad), soat_pago=VALUES(soat_pago),
         soat_vencimiento=VALUES(soat_vencimiento), matpel_constancia=VALUES(matpel_constancia),
-        matpel_emision=VALUES(matpel_emision), matpel_vencimiento=VALUES(matpel_vencimiento),
+        matpel_vencimiento=VALUES(matpel_vencimiento),
         rt_emision=VALUES(rt_emision), rt_vencimiento=VALUES(rt_vencimiento),
-        boni_vencimiento=VALUES(boni_vencimiento), sv_entidad=VALUES(sv_entidad),
+        boni_emision=VALUES(boni_emision), boni_vencimiento=VALUES(boni_vencimiento), sv_entidad=VALUES(sv_entidad),
         sv_asesor=VALUES(sv_asesor), sv_vencimiento=VALUES(sv_vencimiento),
         sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor),
-        sc_emision=VALUES(sc_emision), sc_vencimiento=VALUES(sc_vencimiento),
+        sc_vencimiento=VALUES(sc_vencimiento),
         fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
-        ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad)`;
+        ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad)`;
 
     const values = [
         d.placa.toUpperCase(), d.tipo||null, d.propiedad||'PROPIA', d.empresa||'MARSISA',
         fmt(d.fecha_entrega), d.anio||null, d.marca||null, d.modelo||null, d.color||null, d.chasis||null,
-        fmt(d.tc_vencimiento), d.soat_constancia||null, d.soat_entidad||null, d.soat_pago||null, fmt(d.soat_vencimiento),
-        d.matpel_constancia||null, fmt(d.matpel_emision), fmt(d.matpel_vencimiento),
-        fmt(d.rt_emision), fmt(d.rt_vencimiento), fmt(d.boni_vencimiento),
+        fmt(d.tc_vencimiento), d.tc_constancia||null, d.soat_entidad||null, d.soat_pago||null, fmt(d.soat_vencimiento),
+        d.matpel_constancia||null, fmt(d.matpel_vencimiento),
+        fmt(d.rt_emision), fmt(d.rt_vencimiento), fmt(d.boni_emision), fmt(d.boni_vencimiento),
         d.sv_entidad||null, d.sv_asesor||null, fmt(d.sv_vencimiento),
-        d.sc_entidad||null, d.sc_asesor||null, fmt(d.sc_emision), fmt(d.sc_vencimiento),
-        fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_vencimiento), d.ext_cantidad||1
+        d.sc_entidad||null, d.sc_asesor||null, fmt(d.sc_vencimiento),
+        fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_emision), fmt(d.ext_vencimiento), d.ext_cantidad||1
     ];
 
     db.query(query, values, (err) => {
@@ -2203,16 +2203,15 @@ app.listen(process.env.PORT || 3000, () => {
 
             -- 1. Tarjeta Circulación
             tc_vencimiento DATE DEFAULT NULL,
+            tc_constancia VARCHAR(50) DEFAULT NULL,
 
             -- 2. SOAT
-            soat_constancia VARCHAR(50) DEFAULT NULL,
             soat_entidad VARCHAR(50) DEFAULT NULL,
             soat_pago DECIMAL(10,2) DEFAULT NULL,
             soat_vencimiento DATE DEFAULT NULL,
 
             -- 3. MATPEL
             matpel_constancia VARCHAR(50) DEFAULT NULL,
-            matpel_emision DATE DEFAULT NULL,
             matpel_vencimiento DATE DEFAULT NULL,
 
             -- 4. Revisión Técnica (CITV)
@@ -2220,6 +2219,7 @@ app.listen(process.env.PORT || 3000, () => {
             rt_vencimiento DATE DEFAULT NULL,
 
             -- 5. Bonificación
+            boni_emision DATE DEFAULT NULL,
             boni_vencimiento DATE DEFAULT NULL,
 
             -- 6. Seguro Vehicular
@@ -2230,7 +2230,6 @@ app.listen(process.env.PORT || 3000, () => {
             -- 7. Seguro de Carga
             sc_entidad VARCHAR(50) DEFAULT NULL,
             sc_asesor VARCHAR(100) DEFAULT NULL,
-            sc_emision DATE DEFAULT NULL,
             sc_vencimiento DATE DEFAULT NULL,
 
             -- 8. Fumigación
@@ -2238,6 +2237,7 @@ app.listen(process.env.PORT || 3000, () => {
             fum_vencimiento DATE DEFAULT NULL,
 
             -- 9. Extintores
+            ext_emision DATE DEFAULT NULL,
             ext_vencimiento DATE DEFAULT NULL,
             ext_cantidad INT DEFAULT 1,
 
