@@ -293,3 +293,67 @@ function exportarExcelDocFlota() {
     link.click();
     document.body.removeChild(link);
 }
+
+function procesarImportacionDocumentos(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lineas = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if(lineas.length < 2) return alert("El archivo está vacío o no tiene el formato correcto.");
+        
+        const headers = lineas[0].split(',');
+        let documentosAImportar = [];
+        
+        for(let i=1; i<lineas.length; i++) {
+            let row = lineas[i].split(',');
+            if(row.length < headers.length) continue;
+            
+            let obj = {};
+            headers.forEach((h, idx) => { obj[h.trim()] = row[idx]?.trim(); });
+            
+            let placa = obj['PLACA'];
+            if(!placa) continue;
+            
+            const pushDoc = (tipo, emision, vencimiento, constancia='', entidad='', asesor='', observaciones='') => {
+                if (vencimiento || emision || constancia || observaciones) {
+                    documentosAImportar.push({
+                        placa: placa, tipo_documento: tipo, entidad: entidad, 
+                        nro_constancia: constancia, fecha_emision: emision, 
+                        fecha_vencimiento: vencimiento, asesor: asesor, observaciones: observaciones
+                    });
+                }
+            };
+            
+            pushDoc('Tarjeta de Circulación', null, obj['TC_VENCIMIENTO']);
+            pushDoc('SOAT', null, obj['SOAT_VENCIMIENTO'], obj['SOAT_CONSTANCIA']);
+            pushDoc('Certificado MATPEL', obj['MATPEL_EMISION'], obj['MATPEL_VENCIMIENTO'], obj['MATPEL_CONSTANCIA']);
+            pushDoc('Revisión Técnica', obj['RT_EMISION'], obj['RT_VENCIMIENTO']);
+            pushDoc('Bonificación', null, obj['BONI_VENCIMIENTO']);
+            pushDoc('Seguro Vehicular', null, obj['SEGVEH_VENCIMIENTO'], '', obj['SEGVEH_ENTIDAD'], obj['SEGVEH_ASESOR']);
+            pushDoc('Seguro Carga', obj['SEGCARGA_EMISION'], obj['SEGCARGA_VENCIMIENTO'], '', obj['SEGCARGA_ENTIDAD'], obj['SEGCARGA_ASESOR']);
+            pushDoc('Certificado Fumigación', obj['FUMIG_EMISION'], obj['FUMIG_VENCIMIENTO']);
+            if (obj['EXTINTORES_CANT']) pushDoc('Extintores', null, null, '', '', '', `Cantidad: ${obj['EXTINTORES_CANT']}`);
+        }
+        
+        if (documentosAImportar.length === 0) return alert("No se encontraron documentos válidos para importar.");
+        
+        document.getElementById('cache-badge-docflota').innerHTML = '<i class="bi bi-arrow-repeat spin"></i> <span id="cache-label-docflota">Importando...</span>';
+        
+        fetch('/api/script/importarDocumentosFlota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ args: [documentosAImportar] }) })
+        .then(r => r.json())
+        .then(r => {
+            if(r.data === 'Éxito') {
+                alert(`¡Importación exitosa! Se procesaron ${documentosAImportar.length} documentos.`);
+                cargarTablaDocFlota(true);
+            } else {
+                alert("Hubo un error al importar: " + r.data);
+            }
+        });
+        
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
