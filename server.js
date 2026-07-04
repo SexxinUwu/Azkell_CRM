@@ -1950,7 +1950,7 @@ app.post('/api/importarVehiculosFlotaMasivo', async (req, res) => {
                 ok += lote.length;
             } catch (error) {
                 console.error("Error importando lote de flota:", error);
-                errores += lote.length;
+                return res.status(500).json({ ok: 0, errores: lote.length, msg: error.message });
             }
         }
     }

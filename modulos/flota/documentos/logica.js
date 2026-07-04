@@ -636,7 +636,9 @@ window.importarExcelVehiculos = function(event) {
         .then(r => {
             document.body.style.cursor = 'default';
             event.target.value = '';
-            alert(`✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`);
+            let alertMsg = `✅ Importación completada.\nProcesados con éxito: ${r.ok}\nErrores/Omitidos: ${r.errores}`;
+            if (r.msg) alertMsg += `\nDetalle del error: ${r.msg}`;
+            alert(alertMsg);
             cargarDatosVehiculos();
         })
         .catch(err => {
