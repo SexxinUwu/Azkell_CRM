@@ -1872,10 +1872,19 @@ app.post('/api/importarVehiculosFlotaMasivo', async (req, res) => {
     `;
 
     const cleanDate = (d) => {
-        if (!d || d.trim() === '-' || d.trim() === '') return null;
-        let p = d.trim().split('/');
-        if (p.length === 3) return `${p[2]}-${p[1]}-${p[0]}`; // Convert from DD/MM/YYYY to YYYY-MM-DD
-        if (d.includes('-')) return d.trim(); // Handle native YYYY-MM-DD if exported like that
+        if (d === null || d === undefined || d === '') return null;
+        let str = d.toString().trim();
+        if (str === '-' || str === '') return null;
+        
+        // Si Excel lo pasa como número de serie (ej: 45306)
+        if (!isNaN(str) && Number(str) > 10000) {
+            let date = new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
+            return date.toISOString().split('T')[0];
+        }
+
+        let p = str.split('/');
+        if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; // Convert from DD/MM/YYYY to YYYY-MM-DD
+        if (str.includes('-')) return str; // Handle native YYYY-MM-DD if exported like that
         return null;
     };
 
