@@ -1528,11 +1528,27 @@ window._cbHide = function(id) {
     setTimeout(function() {
         var dd  = document.getElementById(id + '-dd');
         if (dd) dd.style.display = 'none';
-        // Free-text fallback: si escribió algo pero no seleccionó opción, preservar texto
+        
         var txt = document.getElementById(id + '-txt');
         var hid = document.getElementById(id);
-        if (txt && hid && txt !== hid && txt.value.trim() && !hid.value) {
-            hid.value = txt.value.trim().toUpperCase();
+        
+        if (txt && hid && txt !== hid) {
+            var typedText = txt.value.trim().toUpperCase();
+            if (typedText === '') {
+                hid.value = '';
+            } else {
+                // Verificar si el texto tipeado coincide con algún label conocido
+                var match = (window._cbData[id] || []).find(function(it) {
+                    return it.label.trim().toUpperCase() === typedText;
+                });
+                
+                if (match) {
+                    hid.value = match.value;
+                } else {
+                    // Es un valor nuevo / custom
+                    hid.value = typedText;
+                }
+            }
         }
     }, 180);
 };
