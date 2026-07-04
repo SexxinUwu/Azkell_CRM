@@ -240,7 +240,17 @@ function seleccionarVehiculo(placa) {
         
         let estHtml = `<span class="footer-label">ESTADO</span>`;
         if(est.diff !== null) {
-            estHtml += `<span class="footer-status ${est.class}">${est.diff}d (${est.text})</span>`;
+            let labelText = '';
+            if (est.diff < 0) {
+                labelText = `Vencido hace ${Math.abs(est.diff)} días`;
+            } else if (est.diff === 0) {
+                labelText = `Vence hoy (Alerta)`;
+            } else if (est.diff <= 30) {
+                labelText = `Faltan ${est.diff} días (${est.text})`;
+            } else {
+                labelText = `${est.diff} días (${est.text})`;
+            }
+            estHtml += `<span class="footer-status ${est.class}">${labelText}</span>`;
         } else {
             estHtml += `<span class="footer-status" style="color:#94a3b8;">-</span>`;
         }
@@ -256,7 +266,23 @@ function seleccionarVehiculo(placa) {
         <div class="doc-card-footer">
             ${estHtml}
         </div>`;
-        document.getElementById(id).innerHTML = html;
+        
+        const cardEl = document.getElementById(id);
+        cardEl.innerHTML = html;
+        
+        let shadowColor = '';
+        if (est.class === 's-green') shadowColor = 'rgba(16, 185, 129, 0.4)';
+        else if (est.class === 's-yellow' || est.class === 's-orange') shadowColor = 'rgba(245, 158, 11, 0.4)';
+        else if (est.class === 's-red') shadowColor = 'rgba(239, 68, 68, 0.4)';
+        else shadowColor = 'rgba(148, 163, 184, 0.2)';
+
+        if (shadowColor) {
+            cardEl.style.boxShadow = `0 4px 6px -1px ${shadowColor}, 0 2px 4px -2px ${shadowColor}`;
+            if (est.class === 's-green') cardEl.style.border = '1px solid #10b981';
+            else if (est.class === 's-yellow' || est.class === 's-orange') cardEl.style.border = '1px solid #f59e0b';
+            else if (est.class === 's-red') cardEl.style.border = '1px solid #ef4444';
+            else cardEl.style.border = '1px solid #e2e8f0';
+        }
     };
 
     renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
@@ -428,20 +454,20 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_chasis').value = v.chasis || '';
             document.getElementById('f_fecha_entrega').value = (v.fecha_entrega||'').split('T')[0];
             
+            document.getElementById('f_tc_constancia').value = v.tc_constancia || '';
             document.getElementById('f_tc_vencimiento').value = (v.tc_vencimiento||'').split('T')[0];
             
-            document.getElementById('f_soat_constancia').value = v.soat_constancia || '';
             document.getElementById('f_soat_entidad').value = v.soat_entidad || '';
             document.getElementById('f_soat_pago').value = v.soat_pago || '';
             document.getElementById('f_soat_vencimiento').value = (v.soat_vencimiento||'').split('T')[0];
             
             document.getElementById('f_matpel_constancia').value = v.matpel_constancia || '';
-            document.getElementById('f_matpel_emision').value = (v.matpel_emision||'').split('T')[0];
             document.getElementById('f_matpel_vencimiento').value = (v.matpel_vencimiento||'').split('T')[0];
             
             document.getElementById('f_rt_emision').value = (v.rt_emision||'').split('T')[0];
             document.getElementById('f_rt_vencimiento').value = (v.rt_vencimiento||'').split('T')[0];
             
+            document.getElementById('f_boni_emision').value = (v.boni_emision||'').split('T')[0];
             document.getElementById('f_boni_vencimiento').value = (v.boni_vencimiento||'').split('T')[0];
             
             document.getElementById('f_sv_entidad').value = v.sv_entidad || '';
@@ -449,14 +475,14 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_sv_vencimiento').value = (v.sv_vencimiento||'').split('T')[0];
             
             document.getElementById('f_sc_entidad').value = v.sc_entidad || '';
-            document.getElementById('f_sc_asesor').value = v.sc_asesor || ''; // fixed typo
-            document.getElementById('f_sc_emision').value = (v.sc_emision||'').split('T')[0];
+            document.getElementById('f_sc_asesor').value = v.sc_asesor || '';
             document.getElementById('f_sc_vencimiento').value = (v.sc_vencimiento||'').split('T')[0];
             
             document.getElementById('f_fum_emision').value = (v.fum_emision||'').split('T')[0];
             document.getElementById('f_fum_vencimiento').value = (v.fum_vencimiento||'').split('T')[0];
             
             document.getElementById('f_ext_cantidad').value = v.ext_cantidad || 1;
+            document.getElementById('f_ext_emision').value = (v.ext_emision||'').split('T')[0];
             document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
         }
     }
