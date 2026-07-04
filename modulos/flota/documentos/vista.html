@@ -831,7 +831,11 @@ th.sticky-col, th.sticky-col-2 { z-index: 12; background: #f8fafc; }
             <div id="empty-state-panel" class="empty-state">
                 <i class="bi bi-truck empty-icon"></i>
                 <div class="empty-title">Selecciona un vehículo</div>
-                <div class="empty-desc">Haz clic en un vehículo de la lista para ver su expediente documental.</div>
+                <div class="empty-desc">Haz clic en un vehículo de la lista para ver su expediente documental.<br><br>¿Tu flota está vacía o eres nuevo? Sube todos tus vehículos rápidamente desde un Excel.</div>
+                <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                    <button class="btn-outline-modal" onclick="descargarPlantillaVehiculos()"><i class="bi bi-download"></i> Descargar Plantilla</button>
+                    <button class="btn-primary" onclick="document.getElementById('file-import-flota').click()"><i class="bi bi-upload"></i> Importar Datos</button>
+                </div>
             </div>
 
         </div>
