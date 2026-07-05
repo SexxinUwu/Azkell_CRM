@@ -248,7 +248,7 @@ function seleccionarVehiculo(placa) {
             } else if (est.diff <= 30) {
                 labelText = `Faltan ${est.diff} días (${est.text})`;
             } else {
-                labelText = `${est.diff} días (${est.text})`;
+                labelText = `Faltan ${est.diff} días (${est.text})`;
             }
             estHtml += `<span class="footer-status ${est.class}">${labelText}</span>`;
         } else {
