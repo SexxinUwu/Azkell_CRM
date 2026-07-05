@@ -722,8 +722,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         <!-- Sidebar Izquierda -->
         <div class="fleet-sidebar">
             <div class="search-container">
-                <input type="text" id="fleet-search" class="search-input" placeholder="Buscar placa, tipo..." oninput="filtrarListaLocal()">
-                <button class="btn-dark-square" onclick="abrirModalEdicion(null)"><i class="bi bi-plus"></i></button>
+                <input type="text" id="fleet-search" class="search-input" placeholder="Buscar placa, tipo..." oninput="filtrarListaLocal()" style="flex:1; min-width: 0;">
+                
+                <div style="position:relative; width: 42px; height: 42px; flex-shrink: 0;">
+                    <button style="width: 100%; height: 100%; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #475569; display:flex; align-items:center; justify-content:center; font-size: 1.1rem; pointer-events:none;">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    <select id="fleet-empresa-select" onchange="filtrarListaLocal()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;" title="Filtrar por empresa">
+                        <option value="">Todas las empresas</option>
+                    </select>
+                </div>
+
+                <button class="btn-dark-square" onclick="abrirModalEdicion()"><i class="bi bi-plus-lg"></i></button>
             </div>
             <div class="vehicle-list-wrapper" id="vehicle-list">
                 <div class="text-center" style="margin-top:2rem; font-size:0.9rem; color:#94a3b8;">Cargando flota...</div>
