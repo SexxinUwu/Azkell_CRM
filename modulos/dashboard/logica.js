@@ -94,7 +94,29 @@ window.procesarFleetrunParaDashboard = function() {
     let placaEstadoMap = new Map();
     let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
-    (window.dataGlobalFleetrun || []).forEach(row => {
+    let _hoy = Date.now();
+    let datosOrdenados = [...(window.dataGlobalFleetrun || [])].sort((a, b) => {
+        let ta = parseFecha(a[3]), tb = parseFecha(b[3]);
+        let aFuturo = ta > _hoy + 86400000;
+        let bFuturo = tb > _hoy + 86400000;
+        if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
+        if (tb !== ta) return tb - ta;
+        let idA = parseInt((String(a[0]).match(/\d+$/) || [0])[0], 10);
+        let idB = parseInt((String(b[0]).match(/\d+$/) || [0])[0], 10);
+        return idB - idA;
+    });
+
+    let mapaFiltrado = new Map();
+    datosOrdenados.forEach(row => {
+        let placa = normalizeStr(row[4]);
+        let tipo = normalizeStr(row[8]);
+        let key = placa + "_" + tipo;
+        if (!mapaFiltrado.has(key)) {
+            mapaFiltrado.set(key, row);
+        }
+    });
+
+    Array.from(mapaFiltrado.values()).forEach(row => {
         let placaRaw = row[4];
         let placa = normalizeStr(placaRaw);
         let infoPlaca = (window.dataGlobalPlacas || []).find(p => normalizeStr(p[0]) === placa);
@@ -104,7 +126,7 @@ window.procesarFleetrunParaDashboard = function() {
             let frecuencia = parseFloat(row[10]) || 0;
             let km_prox = parseFloat(row[11]) || 0;
             
-            let km_gps = 0;
+            let km_gps = parseFloat(row[14]) || 0;
             let wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
             let esHoras = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
             if (wialonData) {
