@@ -257,7 +257,28 @@ window.editarConfigFlota = function(id) {
         var r = (window.cfgDataFlota||[]).find(function(x){ return x.id==id; });
         if (!r) return;
         var set    = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v != null ? v : ''; };
-        var setStr = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v || ''; };
+        var setStr = function(elId, v){
+            var el=document.getElementById(elId);
+            if(el) {
+                var val = (v || '').trim().toUpperCase();
+                if (!val) { el.value = ''; return; }
+                var exists = false;
+                for (var i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value.toUpperCase() === val) {
+                        exists = true;
+                        val = el.options[i].value;
+                        break;
+                    }
+                }
+                if (!exists && el.tagName === 'SELECT') {
+                    var opt = document.createElement('option');
+                    opt.value = val;
+                    opt.text = val;
+                    el.add(opt);
+                }
+                el.value = val;
+            }
+        };
         var p = _cfPopularDatalists() || Promise.resolve();
         p.then(function() {
             if (window._cfPopularModelos) window._cfPopularModelos(r.marca);
