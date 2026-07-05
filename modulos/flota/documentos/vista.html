@@ -107,7 +107,8 @@
 }
 
 /* Sidebar (Left) */
-.fleet-sidebar {
+.vehicle-list-wrapper { padding-bottom: 6rem !important; }
+    .fleet-sidebar {
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -683,6 +684,19 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }/* ================= RESPONSIVE MÓVIL ================= */
 @media (max-width: 768px) {
+    #fleet-module-container {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        padding-bottom: 75px !important; /* Make room for bottom nav */
+        margin: 0 !important;
+        border-radius: 0 !important;
+        z-index: 100 !important; /* Keep under bottom nav if it has higher z-index */
+        box-sizing: border-box !important;
+    }
+
     .kpi-container {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -693,7 +707,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         min-width: 140px;
     }
     .fleet-main-split {
-        display: block;
+        display: flex; flex-direction: column; height: 100%; overflow: hidden;
     }
     .fleet-sidebar {
         width: 100%;
@@ -1278,7 +1292,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     .fleet-dashboard { flex-direction: column !important; }
     .fleet-sidebar {
         width: 100% !important; border-right: none !important;
-        padding: 0 0 6rem 0 !important; background: #f4f7fb;
+        padding: 0 !important; background: #f4f7fb; flex: 1; overflow: hidden;
     }
     .fleet-content {
         display: none !important; /* hidden by default on mobile */
