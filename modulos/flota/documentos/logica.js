@@ -206,36 +206,14 @@ function renderizarListaLateral() {
 
     filtrados.forEach(v => {
         let selCls = (currentPlaca === v.placa) ? 'selected' : '';
-        let estadoTexto = (v._meta.peorEstado.score === 3) ? 'VIGENTE' : (v._meta.peorEstado.score === 0 ? 'CRÍTICO' : 'ALERTA');
-        let estadoColor = (v._meta.peorEstado.score === 3) ? '#10b981' : (v._meta.peorEstado.score === 0 ? '#ef4444' : '#f59e0b');
-        let estadoBg = (v._meta.peorEstado.score === 3) ? '#f0fdf4' : (v._meta.peorEstado.score === 0 ? '#fef2f2' : '#fffbeb');
-        
         html += `
         <div class="vehicle-item ${selCls}" onclick="seleccionarVehiculo('${v.placa}')" id="vi-${v.placa}">
-            <!-- Desktop Layout -->
-            <div class="v-icon-circle hide-on-mobile"><i class="bi bi-arrow-left-right"></i></div>
-            
-            <!-- Mobile Layout -->
-            <div class="v-icon-square hide-on-desktop" style="width:40px; height:40px; background:#f1f5f9; color:#475569; border-radius:8px; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;"><i class="bi bi-bus-front"></i></div>
-            
-            <div class="v-info hide-on-mobile">
+            <div class="v-icon-circle"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="v-info">
                 <span class="v-plate">${v.placa}</span>
                 <span class="v-type">${v.tipo || '---'}</span>
             </div>
-            
-            <div class="v-info hide-on-desktop" style="display:flex; flex-direction:column; justify-content:center; flex:1; gap:0.1rem;">
-                <span class="v-plate" style="font-size:1rem; font-weight:800; color:#0f172a; line-height:1;">${v.placa}</span>
-                <span class="v-type" style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">${v.tipo || '---'}</span>
-            </div>
-            
-            <!-- Desktop Status -->
-            <div class="status-dot ${v._meta.peorEstado.bgClass} hide-on-mobile"></div>
-            
-            <!-- Mobile Status -->
-            <div class="v-mobile-status hide-on-desktop" style="align-items:center; gap:0.5rem;">
-                <span style="background:${estadoBg}; color:${estadoColor}; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.65rem; font-weight:800;">${estadoTexto}</span>
-                <i class="bi bi-chevron-right" style="color:#94a3b8; font-size:1rem;"></i>
-            </div>
+            <div class="status-dot ${v._meta.peorEstado.bgClass}"></div>
         </div>`;
     });
     
@@ -270,7 +248,7 @@ function volverListaMovil() {
     if(splitContainer) splitContainer.classList.remove('show-detail');
 }
 
-window.abrirDocModal = function(title, contentRows, est, docUrl, tabIndex) {
+window.abrirDocModal = function(title, contentRows, est, docUrl) {
     document.getElementById('dm-title').innerText = title;
     
     let html = '';
@@ -302,15 +280,6 @@ window.abrirDocModal = function(title, contentRows, est, docUrl, tabIndex) {
         } else {
             dlBtn.style.display = 'none';
         }
-    }
-
-    
-    const editBtn = document.querySelector('.doc-modal-btn.primary');
-    if(editBtn) {
-        editBtn.onclick = () => {
-            abrirModalEdicion(currentPlaca, tabIndex);
-            cerrarDocModal();
-        };
     }
 
     document.getElementById('docModalOverlay').classList.add('active');
@@ -391,7 +360,7 @@ window.cerrarDocModal = function(e) {
         }
         
         cardEl.style.cursor = 'pointer';
-        cardEl.onclick = () => window.abrirDocModal(title, contentRows, est, docUrl, num);
+        cardEl.onclick = () => window.abrirDocModal(title, contentRows, est, docUrl);
     };
 
     renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
@@ -544,7 +513,7 @@ function switchTab(index, element) {
     document.getElementById(`tab-${index}`).classList.add('active');
 }
 
-function abrirModalEdicion(placa, targetTab = 0) {
+function abrirModalEdicion(placa) {
     document.getElementById('formVehiculoFlota').reset();
     
     // Configurar combobox de placa
@@ -557,14 +526,7 @@ function abrirModalEdicion(placa, targetTab = 0) {
         if (txtEl) txtEl.readOnly = false;
     }
     
-    
-    let tabs = document.querySelectorAll('.fm-tab');
-    if(targetTab >= 0 && targetTab < tabs.length) {
-        switchTab(targetTab, tabs[targetTab]);
-    } else {
-        switchTab(0, tabs[0]);
-    }
-
+    switchTab(0, document.querySelector('.fm-tab'));
 
     if(placa) {
         const v = vehiculosFlota.find(x => x.placa === placa);
