@@ -262,21 +262,25 @@ window.editarConfigFlota = function(id) {
             if(el) {
                 var val = (v || '').trim().toUpperCase();
                 if (!val) { el.value = ''; return; }
-                var exists = false;
-                for (var i = 0; i < el.options.length; i++) {
-                    if (el.options[i].value.toUpperCase() === val) {
-                        exists = true;
-                        val = el.options[i].value;
-                        break;
+                if (el.tagName === 'SELECT' && el.options) {
+                    var exists = false;
+                    for (var i = 0; i < el.options.length; i++) {
+                        if (el.options[i].value.toUpperCase() === val) {
+                            exists = true;
+                            val = el.options[i].value;
+                            break;
+                        }
                     }
+                    if (!exists) {
+                        var opt = document.createElement('option');
+                        opt.value = val;
+                        opt.text = val;
+                        el.add(opt);
+                    }
+                    el.value = val;
+                } else {
+                    el.value = (v || '').trim(); // Normal inputs retain original case
                 }
-                if (!exists && el.tagName === 'SELECT') {
-                    var opt = document.createElement('option');
-                    opt.value = val;
-                    opt.text = val;
-                    el.add(opt);
-                }
-                el.value = val;
             }
         };
         var p = _cfPopularDatalists() || Promise.resolve();
