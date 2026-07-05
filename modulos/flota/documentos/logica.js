@@ -248,7 +248,7 @@ function volverListaMovil() {
     if(splitContainer) splitContainer.classList.remove('show-detail');
 }
 
-window.abrirDocModal = function(title, contentRows, est) {
+window.abrirDocModal = function(title, contentRows, est, docUrl) {
     document.getElementById('dm-title').innerText = title;
     
     let html = '';
@@ -271,6 +271,17 @@ window.abrirDocModal = function(title, contentRows, est) {
     }
     
     document.getElementById('dm-data').innerHTML = html;
+    
+    const dlBtn = document.querySelector('.doc-modal-btn.secondary');
+    if(dlBtn) {
+        if(docUrl) {
+            dlBtn.style.display = 'block';
+            dlBtn.onclick = () => window.open(docUrl, '_blank');
+        } else {
+            dlBtn.style.display = 'none';
+        }
+    }
+
     document.getElementById('docModalOverlay').classList.add('active');
 };
 
@@ -292,7 +303,7 @@ window.cerrarDocModal = function(e) {
     // Renderizar tarjetas de documentos exactas a la imagen
     const m = v._meta.docs;
     
-    const renderCard = (id, title, num, bgClass, contentRows, est) => {
+    const renderCard = (id, title, num, bgClass, contentRows, est, docUrl) => {
         let rowsHtml = '';
         contentRows.forEach(row => {
             rowsHtml += `
@@ -349,7 +360,7 @@ window.cerrarDocModal = function(e) {
         }
         
         cardEl.style.cursor = 'pointer';
-        cardEl.onclick = () => window.abrirDocModal(title, contentRows, est);
+        cardEl.onclick = () => window.abrirDocModal(title, contentRows, est, docUrl);
     };
 
     renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
@@ -560,6 +571,124 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_ext_cantidad').value = v.ext_cantidad || 1;
             document.getElementById('f_ext_emision').value = (v.ext_emision||'').split('T')[0];
             document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
+
+            document.getElementById('f_tc_url').value = v.tc_url || '';
+            if(v.tc_url) {
+                const lnk = document.getElementById('link_tc');
+                if(lnk) { lnk.href = v.tc_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_tc');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_tc');
+                if(lnk) lnk.style.display = 'none';
+                var dLnk = document.getElementById('del_ext');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_fum');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_sc');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_sv');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_boni');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_rt');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_matpel');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_soat');
+                if(dLnk) dLnk.style.display = 'none';
+                var dLnk = document.getElementById('del_tc');
+                if(dLnk) dLnk.style.display = 'none';
+            }
+
+            document.getElementById('f_soat_url').value = v.soat_url || '';
+            if(v.soat_url) {
+                const lnk = document.getElementById('link_soat');
+                if(lnk) { lnk.href = v.soat_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_soat');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_soat');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_matpel_url').value = v.matpel_url || '';
+            if(v.matpel_url) {
+                const lnk = document.getElementById('link_matpel');
+                if(lnk) { lnk.href = v.matpel_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_matpel');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_matpel');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_rt_url').value = v.rt_url || '';
+            if(v.rt_url) {
+                const lnk = document.getElementById('link_rt');
+                if(lnk) { lnk.href = v.rt_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_rt');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_rt');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_boni_url').value = v.boni_url || '';
+            if(v.boni_url) {
+                const lnk = document.getElementById('link_boni');
+                if(lnk) { lnk.href = v.boni_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_boni');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_boni');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_sv_url').value = v.sv_url || '';
+            if(v.sv_url) {
+                const lnk = document.getElementById('link_sv');
+                if(lnk) { lnk.href = v.sv_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_sv');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_sv');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_sc_url').value = v.sc_url || '';
+            if(v.sc_url) {
+                const lnk = document.getElementById('link_sc');
+                if(lnk) { lnk.href = v.sc_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_sc');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_sc');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_fum_url').value = v.fum_url || '';
+            if(v.fum_url) {
+                const lnk = document.getElementById('link_fum');
+                if(lnk) { lnk.href = v.fum_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_fum');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_fum');
+                if(lnk) lnk.style.display = 'none';
+            }
+
+            document.getElementById('f_ext_url').value = v.ext_url || '';
+            if(v.ext_url) {
+                const lnk = document.getElementById('link_ext');
+                if(lnk) { lnk.href = v.ext_url; lnk.style.display = 'inline-flex'; }
+                var dLnk = document.getElementById('del_ext');
+                if(dLnk) dLnk.style.display = 'inline-flex';
+            } else {
+                const lnk = document.getElementById('link_ext');
+                if(lnk) lnk.style.display = 'none';
+            }
+
         }
     }
     
@@ -638,6 +767,15 @@ function guardarVehiculo() {
         ext_cantidad: document.getElementById('f_ext_cantidad').value,
         ext_emision: document.getElementById('f_ext_emision').value,
         ext_vencimiento: document.getElementById('f_ext_vencimiento').value,
+        tc_url: document.getElementById('f_tc_url').value,
+        soat_url: document.getElementById('f_soat_url').value,
+        matpel_url: document.getElementById('f_matpel_url').value,
+        rt_url: document.getElementById('f_rt_url').value,
+        boni_url: document.getElementById('f_boni_url').value,
+        sv_url: document.getElementById('f_sv_url').value,
+        sc_url: document.getElementById('f_sc_url').value,
+        fum_url: document.getElementById('f_fum_url').value,
+        ext_url: document.getElementById('f_ext_url').value,
     };
 
     fetch('/api/vehiculos-flota', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
@@ -750,4 +888,76 @@ window.importarExcelVehiculos = function(event) {
         });
     };
     reader.readAsArrayBuffer(file);
+};
+
+window.subirDocumentoS3 = async function(input, hiddenId, linkId, docId) {
+    if(!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    if(file.size > 5 * 1024 * 1024) return alert('El archivo es muy pesado (Máx 5MB)');
+    
+    const spin = document.getElementById('spin_' + docId);
+    if(spin) spin.style.display = 'inline-block';
+    
+    try {
+        const token = localStorage.getItem('token');
+        const resUrl = await fetch('/api/documentos-flota/upload-url?filename=' + encodeURIComponent(file.name) + '&contentType=' + encodeURIComponent(file.type), {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const urlData = await resUrl.json();
+        
+        if(!urlData.uploadUrl) throw new Error(urlData.error || 'Error obteniendo URL');
+        
+        const resUp = await fetch(urlData.uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type }
+        });
+        
+        if(!resUp.ok) throw new Error('Error al subir a S3');
+        
+        document.getElementById(hiddenId).value = urlData.fileUrl;
+        document.getElementById(linkId).href = urlData.fileUrl;
+        document.getElementById(linkId).style.display = 'inline-flex';
+        const dLnkBtn = document.getElementById('del_' + docId);
+        if(dLnkBtn) dLnkBtn.style.display = 'inline-flex';
+        alert('Documento subido. Recuerda Guardar Configuración.');
+    } catch(e) {
+        console.error(e);
+        alert('Error: ' + e.message);
+    } finally {
+        if(spin) spin.style.display = 'none';
+        input.value = '';
+    }
+};
+
+window.eliminarDocumentoS3 = async function(hiddenId, linkId, btnId, docId) {
+    if(!confirm('¿Estás seguro de eliminar este documento físico?')) return;
+    
+    const url = document.getElementById(hiddenId).value;
+    if(!url) return;
+    
+    const spin = document.getElementById('spin_' + docId);
+    if(spin) spin.style.display = 'inline-block';
+    
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/documentos-flota/delete?url=' + encodeURIComponent(url), {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if(!res.ok) throw new Error('Error al eliminar en servidor');
+        
+        document.getElementById(hiddenId).value = '';
+        document.getElementById(linkId).href = '#';
+        document.getElementById(linkId).style.display = 'none';
+        document.getElementById(btnId).style.display = 'none';
+        
+        alert('Documento eliminado temporalmente. Recuerda hacer clic en "Guardar Configuración" para aplicar este cambio.');
+    } catch (e) {
+        console.error(e);
+        alert(e.message);
+    } finally {
+        if(spin) spin.style.display = 'none';
+    }
 };
