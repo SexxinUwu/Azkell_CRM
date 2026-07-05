@@ -292,7 +292,8 @@ function seleccionarVehiculo(placa) {
     
     renderCard('card-soat', 'SOAT', 2, 'bg-c2', [
         {label: 'Entidad', val: v.soat_entidad||'---'},
-        {label: 'Pago', val: v.soat_pago||'---'}
+        {label: 'Pago', val: v.soat_pago||'---'},
+        {label: 'Vencimiento', val: formatearFechaVista(v.soat_vencimiento)}
     ], m[1]);
         
     renderCard('card-matpel', 'MATPEL', 3, 'bg-c3', [
@@ -301,30 +302,36 @@ function seleccionarVehiculo(placa) {
     ], m[2]);
         
     renderCard('card-rt', 'REV. TÉCN...', 4, 'bg-c4', [
-        {label: 'Emisión', val: formatearFechaVista(v.rt_emision)}
+        {label: 'Emisión', val: formatearFechaVista(v.rt_emision)},
+        {label: 'Vencimiento', val: formatearFechaVista(v.rt_vencimiento)}
     ], m[3]);
         
     renderCard('card-boni', 'BONIFICA...', 5, 'bg-c5', [
-        {label: 'Emisión', val: formatearFechaVista(v.boni_emision)}
+        {label: 'Emisión', val: formatearFechaVista(v.boni_emision)},
+        {label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento)}
     ], m[4]);
         
     renderCard('card-sv', 'SEG. VEHI...', 6, 'bg-c6', [
         {label: 'Entidad', val: v.sv_entidad||'---'},
-        {label: 'Asesor', val: v.sv_asesor||'---'}
+        {label: 'Asesor', val: v.sv_asesor||'---'},
+        {label: 'Vencimiento', val: formatearFechaVista(v.sv_vencimiento)}
     ], m[5]);
         
     renderCard('card-sc', 'SEG. CAR...', 7, 'bg-c7', [
         {label: 'Entidad', val: v.sc_entidad||'---'},
-        {label: 'Asesor', val: v.sc_asesor||'---'}
+        {label: 'Asesor', val: v.sc_asesor||'---'},
+        {label: 'Vencimiento', val: formatearFechaVista(v.sc_vencimiento)}
     ], m[6]);
         
     renderCard('card-fum', 'FUMIGACI...', 8, 'bg-c8', [
-        {label: 'Emisión', val: formatearFechaVista(v.fum_emision)}
+        {label: 'Emisión', val: formatearFechaVista(v.fum_emision)},
+        {label: 'Vencimiento', val: formatearFechaVista(v.fum_vencimiento)}
     ], m[7]);
         
     renderCard('card-ext', 'EXTINTOR...', 9, 'bg-c9', [
         {label: 'Cantidad', val: v.ext_cantidad||1},
-        {label: 'Emisión', val: formatearFechaVista(v.ext_emision)}
+        {label: 'Emisión', val: formatearFechaVista(v.ext_emision)},
+        {label: 'Vencimiento', val: formatearFechaVista(v.ext_vencimiento)}
     ], m[8]);
 }
 
