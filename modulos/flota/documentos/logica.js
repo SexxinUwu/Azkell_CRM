@@ -298,6 +298,20 @@ window.cerrarDocModal = function(e) {
     document.getElementById('ft-chasis').innerText = v.chasis || '---';
     
     document.getElementById('ft-health-bar').style.width = `${v._meta.salud}%`;
+    
+    let detEstTexto = (v._meta.peorEstado.score === 3) ? 'VIGENTE' : (v._meta.peorEstado.score === 0 ? 'VENCIDO' : 'ALERTA');
+    let detEstColor = (v._meta.peorEstado.score === 3) ? '#10b981' : (v._meta.peorEstado.score === 0 ? '#ef4444' : '#f59e0b');
+    let detEstBg = (v._meta.peorEstado.score === 3) ? '#f0fdf4' : (v._meta.peorEstado.score === 0 ? '#fef2f2' : '#fffbeb');
+    
+    const placaMovil = document.getElementById('ft-placa-movil');
+    if (placaMovil) {
+        let badgeHTMLMovil = `<span style="display:inline-block; background:${detEstBg}; color:${detEstColor}; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.65rem; font-weight:800; margin-left:0.5rem; vertical-align:middle;">${detEstTexto}</span>`;
+        placaMovil.innerHTML = v.placa + badgeHTMLMovil;
+        document.getElementById('ft-marca-modelo-movil').innerText = `${v.empresa || ''} - ${v.modelo || ''}`;
+        document.getElementById('ft-anio-movil').innerText = v.anio || '---';
+        document.getElementById('ft-health-txt-movil').innerText = `${Math.round(v._meta.salud)}%`;
+        document.getElementById('ft-health-bar-movil').style.width = `${v._meta.salud}%`;
+    }
     document.getElementById('ft-health-txt').innerText = `${v._meta.salud}%`;
 
     // Renderizar tarjetas de documentos exactas a la imagen
