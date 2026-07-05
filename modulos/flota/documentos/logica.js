@@ -130,10 +130,17 @@ function cargarDatosVehiculos() {
 }
 
 function actualizarKPIs() {
-    let t = vehiculosFlota.length;
-    let vig = 0, ale = 0, ven = 0;
+    let empFilter = '';
+    let sel = document.getElementById('fleet-empresa-select');
+    if(sel) empFilter = sel.value || '';
+    
+    let t = 0, vig = 0, ale = 0, ven = 0;
     
     vehiculosFlota.forEach(v => {
+        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
+        if(!matchEmp) return;
+        
+        t++;
         if(v._meta.peorEstado.score === 3) vig++;
         else if(v._meta.peorEstado.score === 2 || v._meta.peorEstado.score === 1) ale++;
         else if(v._meta.peorEstado.score === 0) ven++;
@@ -154,6 +161,7 @@ function filtrarKPI(tipo, element) {
 }
 
 function filtrarListaLocal() {
+    actualizarKPIs();
     renderizarListaLateral();
     renderizarMatriz();
 }
