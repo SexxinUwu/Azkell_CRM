@@ -108,6 +108,7 @@ function cargarDatosVehiculos() {
     .then(rows => {
         vehiculosFlota = Array.isArray(rows) ? rows : [];
         vehiculosFlota.forEach(v => { v._meta = calcularMetadatos(v); });
+        actualizarFiltroEmpresas();
         actualizarKPIs();
         renderizarListaLateral();
         renderizarMatriz();
@@ -157,20 +158,37 @@ function filtrarListaLocal() {
     renderizarMatriz();
 }
 
+function actualizarFiltroEmpresas() {
+    let sel = document.getElementById('fleet-empresa-select');
+    if(!sel) return;
+    let current = sel.value;
+    let empresas = new Set();
+    vehiculosFlota.forEach(v => { if(v.empresa) empresas.add(v.empresa.trim()); });
+    
+    let html = '<option value="">Todas las empresas</option>';
+    Array.from(empresas).sort().forEach(emp => {
+        html += `<option value="${emp}">${emp}</option>`;
+    });
+    sel.innerHTML = html;
+    if(empresas.has(current)) sel.value = current;
+}
+
 function renderizarListaLateral() {
     const listDiv = document.getElementById('vehicle-list');
     const term = (document.getElementById('fleet-search').value || '').toLowerCase();
+    const empFilter = (document.getElementById('fleet-empresa-select').value || '');
     
     let html = '';
     
     let filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
+        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
         let matchKpi = true;
         if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
         else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
         else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
         
-        return matchTerm && matchKpi;
+        return matchTerm && matchEmp && matchKpi;
     });
 
     if(filtrados.length === 0) {
@@ -341,13 +359,15 @@ function renderizarMatriz() {
     let filtrados = vehiculosFlota;
 
     const term = (document.getElementById('fleet-search').value || '').toLowerCase();
+    const empFilter = (document.getElementById('fleet-empresa-select').value || '');
     filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
+        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
         let matchKpi = true;
         if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
         else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
         else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
-        return matchTerm && matchKpi;
+        return matchTerm && matchEmp && matchKpi;
     });
 
     if(filtrados.length === 0){
@@ -518,7 +538,7 @@ function autocompletarDatosPlaca(placaSeleccionada) {
         document.getElementById('f_tipo').value = p.tipo || '';
 
         document.getElementById('f_propiedad').value = p.propiedad || 'PROPIA';
-        document.getElementById('f_empresa').value = p.empresa || 'MARSISA';
+        document.getElementById('f_empresa').value = p.cliente || p.empresa || 'MARSISA';
         document.getElementById('f_marca').value = p.marca || '';
         document.getElementById('f_modelo').value = p.modelo_uts || p.modelo || '';
         document.getElementById('f_anio').value = p.anio || '';
