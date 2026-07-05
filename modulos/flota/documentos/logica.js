@@ -211,17 +211,30 @@ function renderizarListaLateral() {
         let estadoBg = (v._meta.peorEstado.score === 3) ? '#f0fdf4' : (v._meta.peorEstado.score === 0 ? '#fef2f2' : '#fffbeb');
         
         html += `
-        <div class="vehicle-item ${selCls}" onclick="seleccionarVehiculo('${v.placa}')" id="vi-${v.placa}" style="display:flex; align-items:center; gap:1rem; padding:1rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; cursor:pointer; margin-bottom:0.75rem;">
-            <div class="v-icon-square" style="width:40px; height:40px; background:#f1f5f9; color:#475569; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
-                <i class="bi bi-bus-front"></i>
+        <div class="vehicle-item ${selCls}" onclick="seleccionarVehiculo('${v.placa}')" id="vi-${v.placa}">
+            <!-- Desktop Layout -->
+            <div class="v-icon-circle hide-on-mobile"><i class="bi bi-arrow-left-right"></i></div>
+            
+            <!-- Mobile Layout -->
+            <div class="v-icon-square hide-on-desktop" style="width:40px; height:40px; background:#f1f5f9; color:#475569; border-radius:8px; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;"><i class="bi bi-bus-front"></i></div>
+            
+            <div class="v-info hide-on-mobile">
+                <span class="v-plate">${v.placa}</span>
+                <span class="v-type">${v.tipo || '---'}</span>
             </div>
-            <div class="v-info" style="display:flex; flex-direction:column; flex:1;">
-                <span class="v-plate" style="font-weight:700; color:#0f172a; font-size:1rem;">${v.placa}</span>
-                <span class="v-type" style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">${v.tipo || '---'}</span>
+            
+            <div class="v-info hide-on-desktop" style="display:flex; flex-direction:column; justify-content:center; flex:1; gap:0.1rem;">
+                <span class="v-plate" style="font-size:1rem; font-weight:800; color:#0f172a; line-height:1;">${v.placa}</span>
+                <span class="v-type" style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">${v.tipo || '---'}</span>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span style="background:${estadoBg}; color:${estadoColor}; padding:0.25rem 0.5rem; border-radius:6px; font-size:0.7rem; font-weight:700;">${estadoTexto}</span>
-                <i class="bi bi-chevron-right" style="color:#94a3b8; font-size:1.1rem;"></i>
+            
+            <!-- Desktop Status -->
+            <div class="status-dot ${v._meta.peorEstado.bgClass} hide-on-mobile"></div>
+            
+            <!-- Mobile Status -->
+            <div class="v-mobile-status hide-on-desktop" style="align-items:center; gap:0.5rem;">
+                <span style="background:${estadoBg}; color:${estadoColor}; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.65rem; font-weight:800;">${estadoTexto}</span>
+                <i class="bi bi-chevron-right" style="color:#94a3b8; font-size:1rem;"></i>
             </div>
         </div>`;
     });
