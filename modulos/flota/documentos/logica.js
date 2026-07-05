@@ -220,7 +220,7 @@ function renderizarListaLateral() {
     listDiv.innerHTML = html;
 }
 
-function seleccionarVehiculo(placa) {
+function seleccionarVehiculo(placa, isInitialLoad = false) {
     document.querySelectorAll('.vehicle-item').forEach(el => el.classList.remove('selected'));
     if(placa) {
         const el = document.getElementById(`vi-${placa}`);
