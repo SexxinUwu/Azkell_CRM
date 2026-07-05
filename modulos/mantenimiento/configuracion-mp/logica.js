@@ -85,7 +85,7 @@ function _cfPopularDatalists() {
     _fill('cf-tipo', tipos);
 
     // Tipos de Preventivo: desde tabla maestra
-    fetch('/api/tipos-preventivo')
+    return fetch('/api/tipos-preventivo')
         .then(function(r) { return r.ok ? r.json() : { data: [] }; })
         .then(function(j) { _fill('cf-tipo-mp', (j.data || []).map(function(t) { return t.nombre; })); })
         .catch(function() {});
@@ -258,23 +258,27 @@ window.editarConfigFlota = function(id) {
         if (!r) return;
         var set    = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v != null ? v : ''; };
         var setStr = function(elId, v){ var el=document.getElementById(elId); if(el) el.value = v || ''; };
-        set('cf-id',             r.id);
-        setStr('cf-marca',       r.marca);
-        setStr('cf-tipo-mp',     r.tipo_mp);
-        setStr('cf-uts',         r.uts || 'LOCAL');
-        setStr('cf-combustible', r.combustible);
-        setStr('cf-modelo',      r.modelo);
-        set('cf-frec-km',        r.frecuencia_km);
-        set('cf-frec-horas',     r.frecuencia_horas);
-        set('cf-frec-dias',      r.frecuencia_dias);
-        setStr('cf-tipo',        r.tipo);
-        setStr('cf-sistema',     r.sistema);
-        setStr('cf-descripcion', r.descripcion);
-        var t = document.getElementById('modalConfigFlota-titulo');
-        if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar — ' + r.marca + ' ' + r.tipo_mp;
-        _cfPopularDatalists();
-        if (window._cfPopularModelos) window._cfPopularModelos(r.marca);
-        _bsModal(document.getElementById('modalConfigFlota')).show();
+        var p = _cfPopularDatalists() || Promise.resolve();
+        p.then(function() {
+            if (window._cfPopularModelos) window._cfPopularModelos(r.marca);
+            
+            set('cf-id',             r.id);
+            setStr('cf-marca',       r.marca);
+            setStr('cf-tipo-mp',     r.tipo_mp);
+            setStr('cf-uts',         r.uts || 'LOCAL');
+            setStr('cf-combustible', r.combustible);
+            setStr('cf-modelo',      r.modelo);
+            set('cf-frec-km',        r.frecuencia_km);
+            set('cf-frec-horas',     r.frecuencia_horas);
+            set('cf-frec-dias',      r.frecuencia_dias);
+            setStr('cf-tipo',        r.tipo);
+            setStr('cf-sistema',     r.sistema);
+            setStr('cf-descripcion', r.descripcion);
+            
+            var t = document.getElementById('modalConfigFlota-titulo');
+            if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar — ' + r.marca + ' ' + r.tipo_mp;
+            _bsModal(document.getElementById('modalConfigFlota')).show();
+        });
     };
     fetch('/api/tipos-mantenimiento')
         .then(function(r){ return r.ok ? r.json() : {data:[]}; })

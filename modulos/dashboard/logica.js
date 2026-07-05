@@ -112,8 +112,7 @@ window.procesarFleetrunParaDashboard = function() {
             }
             
             let km_desde = km_gps - km_cambio;
-            let km_restante = frecuencia - km_desde;
-            if (km_restante < 0) km_restante = km_prox - km_gps;
+            let km_restante = km_prox - km_gps;
             
             let utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || "-");
             let utsUmbral = 2000;
