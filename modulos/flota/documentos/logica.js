@@ -116,12 +116,12 @@ function cargarDatosVehiculos() {
         
         if(currentPlaca) {
             const existe = vehiculosFlota.find(x => x.placa === currentPlaca);
-            if(existe) seleccionarVehiculo(currentPlaca);
-            else seleccionarVehiculo(vehiculosFlota.length > 0 ? vehiculosFlota[0].placa : null);
+            if(existe) seleccionarVehiculo(currentPlaca, true);
+            else seleccionarVehiculo(vehiculosFlota.length > 0 ? vehiculosFlota[0].placa : null, true);
         } else if(vehiculosFlota.length > 0) {
-            seleccionarVehiculo(vehiculosFlota[0].placa);
+            seleccionarVehiculo(vehiculosFlota[0].placa, true);
         } else {
-            seleccionarVehiculo(null);
+            seleccionarVehiculo(null, true);
         }
     }).catch(e => {
         console.error(e);
@@ -238,8 +238,10 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     document.getElementById('right-content-wrapper').style.display = 'flex';
     document.getElementById('empty-state-panel').style.display = 'none';
     const splitContainer = document.querySelector('.fleet-main-split');
-    if(splitContainer) splitContainer.classList.add('show-detail');
-    
+    if(splitContainer) {
+        if (isInitialLoad && window.innerWidth <= 768) { /* Do not auto-open on mobile load */ }
+        else { splitContainer.classList.add('show-detail'); }
+    }
     const v = vehiculosFlota.find(x => x.placa === placa);
     if(!v) return;
 
