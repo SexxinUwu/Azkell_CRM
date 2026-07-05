@@ -11,7 +11,7 @@ const multer = require('multer');
 const fs = require('fs');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('./utils/s3');
+const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUploadUrl } = require('./utils/s3');
 
 const app = express();
 
@@ -1764,6 +1764,55 @@ app.get('/api/placas-lista', (req, res) => {
     });
 });
 
+// ==========================================
+// FLOTA - DOCUMENTOS (S3 UPLOAD URL)
+// ==========================================
+app.get('/api/documentos-flota/upload-url', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+
+        const { filename, contentType } = req.query;
+        if (!filename) return res.status(400).json({ error: 'Falta filename' });
+
+        const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const key = `flota/documentos/${Date.now()}_${safeName}`;
+
+        const uploadUrl = await getPresignedUploadUrl(key, contentType || 'application/pdf');
+        
+        const region = (process.env.AWS_REGION || 'us-east-2').trim();
+        const bucket = (process.env.AWS_BUCKET_NAME || '').trim();
+        const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+        res.json({ uploadUrl, fileUrl });
+    } catch (e) {
+        console.error('Error generando upload URL:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/documentos-flota/delete', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_seguro');
+
+        const { url } = req.query;
+        if (!url) return res.status(400).json({ error: 'Falta url' });
+
+        const key = s3KeyFromUrl(url);
+        if (key) {
+            await deleteFromS3(key);
+        }
+
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Error eliminando S3:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ── GET /api/vehiculos-flota — Lista de vehículos con documentos ──────────────
 app.get('/api/vehiculos-flota', (req, res) => {
     db.query('SELECT * FROM vehiculos_flota ORDER BY placa ASC', (err, rows) => {
@@ -1793,8 +1842,9 @@ app.post('/api/vehiculos-flota', (req, res) => {
          rt_emision, rt_vencimiento, boni_emision, boni_vencimiento,
          sv_entidad, sv_asesor, sv_vencimiento,
          sc_entidad, sc_asesor, sc_vencimiento,
-         fum_emision, fum_vencimiento, ext_emision, ext_vencimiento, ext_cantidad)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         fum_emision, fum_vencimiento, ext_emision, ext_vencimiento, ext_cantidad,
+         tc_url, soat_url, matpel_url, rt_url, boni_url, sv_url, sc_url, fum_url, ext_url)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
         tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa),
         fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), marca=VALUES(marca),
@@ -1809,7 +1859,9 @@ app.post('/api/vehiculos-flota', (req, res) => {
         sc_entidad=VALUES(sc_entidad), sc_asesor=VALUES(sc_asesor),
         sc_vencimiento=VALUES(sc_vencimiento),
         fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
-        ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad)`;
+        ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad),
+        tc_url=VALUES(tc_url), soat_url=VALUES(soat_url), matpel_url=VALUES(matpel_url), rt_url=VALUES(rt_url),
+        boni_url=VALUES(boni_url), sv_url=VALUES(sv_url), sc_url=VALUES(sc_url), fum_url=VALUES(fum_url), ext_url=VALUES(ext_url)`;
 
     const values = [
         d.placa.toUpperCase(), d.tipo||null, d.propiedad||'PROPIA', d.empresa||'MARSISA',
@@ -1819,7 +1871,9 @@ app.post('/api/vehiculos-flota', (req, res) => {
         fmt(d.rt_emision), fmt(d.rt_vencimiento), fmt(d.boni_emision), fmt(d.boni_vencimiento),
         d.sv_entidad||null, d.sv_asesor||null, fmt(d.sv_vencimiento),
         d.sc_entidad||null, d.sc_asesor||null, fmt(d.sc_vencimiento),
-        fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_emision), fmt(d.ext_vencimiento), d.ext_cantidad||1
+        fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_emision), fmt(d.ext_vencimiento), d.ext_cantidad||1,
+        d.tc_url||null, d.soat_url||null, d.matpel_url||null, d.rt_url||null, d.boni_url||null,
+        d.sv_url||null, d.sc_url||null, d.fum_url||null, d.ext_url||null
     ];
 
     db.query(query, values, (err) => {

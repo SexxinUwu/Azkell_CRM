@@ -1026,7 +1026,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="fm-content-title">1. Tarjeta de Circulación</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_tc_constancia" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_tc_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_tc_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_tc" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_tc_url', 'link_tc', 'tc')">
+                                    <input type="hidden" id="f_tc_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_tc').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_tc" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_tc" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_tc_url', 'link_tc', 'del_tc', 'tc')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_tc" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1035,7 +1046,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Entidad Emisora</label><input type="text" id="f_soat_entidad" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Pago (Monto)</label><input type="number" step="0.01" id="f_soat_pago" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_soat_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_soat_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_soat" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_soat_url', 'link_soat', 'soat')">
+                                    <input type="hidden" id="f_soat_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_soat').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_soat" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_soat" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_soat_url', 'link_soat', 'del_soat', 'soat')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_soat" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1043,7 +1065,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="fm-content-title">3. Certificado MATPEL</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>N° Constancia MTC</label><input type="text" id="f_matpel_constancia" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_matpel_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_matpel_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_matpel" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_matpel_url', 'link_matpel', 'matpel')">
+                                    <input type="hidden" id="f_matpel_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_matpel').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_matpel" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_matpel" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_matpel_url', 'link_matpel', 'del_matpel', 'matpel')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_matpel" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1051,7 +1084,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="fm-content-title">4. Revisión Técnica (CITV)</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_rt_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_rt_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_rt_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_rt" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_rt_url', 'link_rt', 'rt')">
+                                    <input type="hidden" id="f_rt_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_rt').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_rt" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_rt" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_rt_url', 'link_rt', 'del_rt', 'rt')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_rt" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1059,7 +1103,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="fm-content-title">5. Bonificación</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_boni_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_boni_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_boni_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_boni" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_boni_url', 'link_boni', 'boni')">
+                                    <input type="hidden" id="f_boni_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_boni').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_boni" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_boni" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_boni_url', 'link_boni', 'del_boni', 'boni')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_boni" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1068,7 +1123,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Entidad Aseguradora</label><input type="text" id="f_sv_entidad" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Asesor Comercial</label><input type="text" id="f_sv_asesor" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sv_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sv_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_sv" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_sv_url', 'link_sv', 'sv')">
+                                    <input type="hidden" id="f_sv_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_sv').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_sv" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_sv" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_sv_url', 'link_sv', 'del_sv', 'sv')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_sv" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1077,7 +1143,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Entidad Aseguradora</label><input type="text" id="f_sc_entidad" class="form-control-clean"></div>
                             <div class="form-group-clean"><label>Asesor Comercial</label><input type="text" id="f_sc_asesor" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sc_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_sc_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_sc" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_sc_url', 'link_sc', 'sc')">
+                                    <input type="hidden" id="f_sc_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_sc').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_sc" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_sc" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_sc_url', 'link_sc', 'del_sc', 'sc')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_sc" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1085,7 +1162,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="fm-content-title">8. Certificado de Fumigación</div>
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_fum_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_fum_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_fum_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_fum" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_fum_url', 'link_fum', 'fum')">
+                                    <input type="hidden" id="f_fum_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_fum').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_fum" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_fum" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_fum_url', 'link_fum', 'del_fum', 'fum')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_fum" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
 
@@ -1094,7 +1182,18 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                         <div class="grouped-box" style="grid-template-columns: 1fr 1fr;">
                             <div class="form-group-clean"><label>Cantidad</label><input type="number" id="f_ext_cantidad" class="form-control-clean" value="1"></div>
                             <div class="form-group-clean"><label>Fecha de Emisión</label><input type="date" id="f_ext_emision" class="form-control-clean"></div>
-                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_ext_vencimiento" class="form-control-clean"></div>
+                            <div class="form-group-clean"><label>Fecha de Vencimiento</label><input type="date" id="f_ext_vencimiento" class="form-control-clean">
+                            <div class="form-group-clean">
+                                <label>Doc. Adjunto (PDF/Img)</label>
+                                <div style="display:flex; gap:0.5rem; align-items:center;">
+                                    <input type="file" id="file_ext" accept=".pdf,image/*" style="display:none;" onchange="subirDocumentoS3(this, 'f_ext_url', 'link_ext', 'ext')">
+                                    <input type="hidden" id="f_ext_url">
+                                    <button type="button" class="btn-outline-modal" onclick="document.getElementById('file_ext').click()" style="padding:0.4rem 0.8rem; font-size:0.8rem;"><i class="bi bi-upload"></i> Subir</button>
+                                    <a id="link_ext" href="#" target="_blank" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#2563eb; border-color:#2563eb;"><i class="bi bi-eye"></i> Ver</a>
+                                    <button type="button" id="del_ext" class="btn-outline-modal" style="display:none; padding:0.4rem 0.8rem; font-size:0.8rem; color:#dc2626; border-color:#dc2626;" onclick="eliminarDocumentoS3('f_ext_url', 'link_ext', 'del_ext', 'ext')"><i class="bi bi-trash"></i></button>
+                                    <span id="spin_ext" style="display:none;" class="spinner-border spinner-border-sm text-primary"></span>
+                                </div>
+                            </div></div>
                         </div>
                     </div>
                 </form>
