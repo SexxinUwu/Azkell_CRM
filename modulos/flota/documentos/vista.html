@@ -496,7 +496,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 .bdg-green { background: #d1fae5; color: #047857; }
 .bdg-gray { background: #f1f5f9; color: #94a3b8; }
 .bdg-red { background: #fee2e2; color: #b91c1c; }
-
 /* Empty state */
 .empty-state {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -682,7 +681,89 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 .form-control-clean:focus { border-bottom-color: #3b82f6; }
 
 .tab-pane { display: none; }
-.tab-pane.active { display: block; }
+.tab-pane.active { display: block; }/* ================= RESPONSIVE MÓVIL ================= */
+@media (max-width: 768px) {
+    .kpi-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+    .kpi-card {
+        flex: 0 0 auto;
+        min-width: 140px;
+    }
+    .fleet-main-split {
+        display: block;
+    }
+    .fleet-sidebar {
+        width: 100%;
+        border-right: none;
+    }
+    .fleet-content {
+        display: none;
+        width: 100%;
+    }
+    
+    .fleet-main-split.show-detail .fleet-sidebar { display: none; }
+    .fleet-main-split.show-detail .fleet-content { display: block; }
+
+    .fh-title-row { flex-wrap: wrap; gap: 0.5rem; }
+    .fh-actions { justify-content: flex-start; margin-top: 0.5rem; }
+    .health-container { margin-top: 0.5rem; }
+    
+    .docs-grid { grid-template-columns: 1fr 1fr; }
+    
+    .matriz-container { display: none; }
+    .btn-volver-movil { display: flex !important; }
+}
+
+.btn-volver-movil {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #f1f5f9; border: none; color: #475569;
+    cursor: pointer; margin-right: 0.5rem; flex-shrink: 0;
+}
+.btn-volver-movil:hover { background: #e2e8f0; }
+
+/* Modal Bottom Sheet */
+.doc-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15,23,42,0.6); z-index: 10000;
+    display: none; justify-content: center; align-items: flex-end;
+}
+.doc-modal-overlay.active { display: flex; }
+.doc-modal-content {
+    background: #fff; width: 100%; max-width: 500px;
+    border-radius: 20px 20px 0 0; padding: 1.5rem;
+    animation: slideUp 0.3s ease;
+}
+@media (min-width: 768px) {
+    .doc-modal-overlay { align-items: center; }
+    .doc-modal-content { border-radius: 20px; }
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.doc-modal-handle {
+    width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 1rem auto;
+}
+.doc-modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+.doc-modal-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.2rem; }
+.doc-modal-subtitle { font-size: 0.8rem; color: #64748b; }
+.doc-modal-close {
+    width: 28px; height: 28px; background: #f1f5f9; color: #475569;
+    border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.doc-modal-data {
+    border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;
+}
+.doc-modal-row { display: flex; justify-content: space-between; font-size: 0.85rem; }
+.doc-modal-label { color: #64748b; font-weight: 500; }
+.doc-modal-val { color: #0f172a; font-weight: 600; text-align: right; }
+.doc-modal-btn {
+    width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; text-align: center; border: none; margin-bottom: 0.5rem; display: block;
+}
+.doc-modal-btn.primary { background: #2563eb; color: #fff; }
+.doc-modal-btn.secondary { background: #f1f5f9; color: #0f172a; }
 </style>
 
 <div id="fleet-module-container">
@@ -748,6 +829,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 <div class="ficha-tecnica">
                     <div class="ficha-header">
                         <div class="fh-left">
+                            <button class="btn-volver-movil" onclick="volverListaMovil()"><i class="bi bi-chevron-left"></i></button>
                             <div class="fh-main-icon"><i class="bi bi-arrow-left-right"></i></div>
                             <div>
                                 <div class="fh-title-row">
@@ -853,6 +935,30 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
             </div>
 
         </div>
+    </div>
+</div>
+
+<!-- Modal Detalle Documento (Bottom Sheet en Móvil) -->
+<div class="doc-modal-overlay" id="docModalOverlay" onclick="cerrarDocModal(event)">
+    <div class="doc-modal-content" onclick="event.stopPropagation()">
+        <div class="doc-modal-handle"></div>
+        <div class="doc-modal-header">
+            <div>
+                <div class="doc-modal-title" id="dm-title">---</div>
+                <div class="doc-modal-subtitle" id="dm-subtitle">Módulo de control administrativo</div>
+            </div>
+            <button class="doc-modal-close" onclick="cerrarDocModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="doc-modal-data" id="dm-data">
+            <!-- Rellenado por JS -->
+        </div>
+        <button class="doc-modal-btn primary" onclick="abrirModalEdicion(currentPlaca); cerrarDocModal();">
+            <i class="bi bi-pencil-square" style="margin-right:0.5rem;"></i> Editar Información
+        </button>
+        <!-- Boton Descargar oculto por el momento, según el plan -->
+        <button class="doc-modal-btn secondary" style="display:none;" onclick="alert('Función de descarga no disponible temporalmente')">
+            <i class="bi bi-cloud-download" style="margin-right:0.5rem;"></i> Descargar Documento
+        </button>
     </div>
 </div>
 
