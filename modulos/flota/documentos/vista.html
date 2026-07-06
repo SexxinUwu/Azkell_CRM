@@ -727,18 +727,6 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     }
     .mobile-fab-plus { display: flex !important; }
 
-    #fleet-module-container {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        padding-bottom: 75px !important; /* Make room for bottom nav */
-        margin: 0 !important;
-        border-radius: 0 !important;
-        z-index: 100 !important; /* Keep under bottom nav if it has higher z-index */
-        box-sizing: border-box !important;
-    }
 
     .kpi-container {
         flex-wrap: nowrap;
@@ -829,13 +817,53 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     <!-- Mobile Top Header -->
     
 
+    
+    <!-- Mobile Title -->
+    <div class="mobile-top-title-wrapper d-md-none" style="padding: 1rem 1rem 0; width: 100%; display: flex; align-items:center; gap: 0.5rem;">
+        <h2 style="margin:0; font-size: 1.25rem; font-weight: 800; color: #0f172a;">Documentos</h2>
+        <div style="background: #eef2ff; color: #4338ca; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display:flex; align-items:center; gap:0.25rem;">
+            <i class="bi bi-geo-alt"></i> GPS Activo
+        </div>
+    </div>
+
+<div class="kpi-container">
+        <div class="kpi-card kpi-total active" onclick="filtrarKPI('total', this)">
+            <div class="kpi-info">
+                <span class="kpi-title">Flota Total</span>
+                <span class="kpi-value" id="kpi-total">0</span>
+            </div>
+            <div class="kpi-icon-wrapper"><i class="bi bi-box"></i></div>
+        </div>
+        <div class="kpi-card kpi-vigente" onclick="filtrarKPI('vigente', this)">
+            <div class="kpi-info">
+                <span class="kpi-title">Vigentes</span>
+                <span class="kpi-value" id="kpi-vigente">0</span>
+            </div>
+            <div class="kpi-icon-wrapper"><i class="bi bi-check-lg"></i></div>
+        </div>
+        <div class="kpi-card kpi-alerta" onclick="filtrarKPI('alerta', this)">
+            <div class="kpi-info">
+                <span class="kpi-title">En Alerta</span>
+                <span class="kpi-value" id="kpi-alerta">0</span>
+            </div>
+            <div class="kpi-icon-wrapper"><i class="bi bi-clock"></i></div>
+        </div>
+        <div class="kpi-card kpi-vencido" onclick="filtrarKPI('vencido', this)">
+            <div class="kpi-info">
+                <span class="kpi-title">Vencidos</span>
+                <span class="kpi-value" id="kpi-vencido">0</span>
+            </div>
+            <div class="kpi-icon-wrapper"><i class="bi bi-exclamation-triangle"></i></div>
+        </div>
+    </div>
+
     <div class="fleet-main-split">
         <!-- Sidebar Izquierda -->
         <div class="fleet-sidebar">
             
             <div class="search-container" style="display:flex; gap:0.5rem; align-items:center; width: 100%;">
                 <div style="position:relative; flex:1; min-width:0;">
-                    <i class="bi bi-search" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:#94a3b8;"></i>
+                    
                     <input type="text" id="fleet-search" class="search-input" placeholder="Buscar placa..." oninput="filtrarListaLocal()" style="width:100%; padding:0.75rem 1rem 0.75rem 2.5rem; border-radius:12px; border:1px solid #e2e8f0; outline:none; min-width:0;">
                 </div>
                 
