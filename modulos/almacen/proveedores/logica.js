@@ -136,7 +136,12 @@ window._provRender = function() {
             ? '<span style="font-size:.62rem;font-weight:700;color:#16a34a;text-transform:uppercase">● Activo</span>'
             : '<span style="font-size:.62rem;font-weight:700;color:#94a3b8;text-transform:uppercase">● Inactivo</span>';
 
-        return '<div class="prov-card">' +
+        return '<div class="prov-card d-flex align-items-center">' +
+            '<div class="me-3 mb-0">' +
+                '<input type="checkbox" class="form-check-input" style="transform: scale(1.3); cursor: pointer;" ' + 
+                ((window._provSeleccionados || []).includes(String(d.id)) ? 'checked' : '') +
+                ' onchange="window._provToggleSel(\'' + _provEsc(d.id) + '\', this.checked)">' +
+            '</div>' +
             '<div class="prov-avatar">' + _provEsc(initials) + '</div>' +
             '<div style="flex:1;min-width:0">' +
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">' +

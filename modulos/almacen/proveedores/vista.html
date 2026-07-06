@@ -40,6 +40,10 @@
       <option value="Activo">Activos</option>
       <option value="Inactivo">Inactivos</option>
     </select>
+    <div class="form-check ms-2 mb-0 d-flex align-items-center me-2">
+      <input class="form-check-input me-2" type="checkbox" id="prov-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._provToggleSelAll(this.checked)">
+      <label class="form-check-label small fw-bold text-muted" for="prov-select-all">Todos</label>
+    </div>
     <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none"
             onclick="window.eliminarMasivoProveedores()">
       <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionados
