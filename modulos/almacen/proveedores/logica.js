@@ -57,7 +57,9 @@ window.filtrarProveedores = function() {
     window._provFiltrados = (window._provData||[]).filter(function(d) {
         var matchB = !buscar ||
             (d.nombre||'').toLowerCase().includes(buscar)||
+            (d.razon_social||'').toLowerCase().includes(buscar)||
             (d.numero_documento||'').toLowerCase().includes(buscar)||
+            (d.telefono||'').toLowerCase().includes(buscar)||
             (d.marcas||'').toLowerCase().includes(buscar)||
             (d.email||'').toLowerCase().includes(buscar);
         var matchE = !filEst || d.estado === filEst;
