@@ -710,6 +710,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         background: #f4f7fb !important;
         overflow-y: auto !important;
         display: block !important;
+        padding-bottom: 120px !important;
     }
     #fleet-module-container.show-detail-mobile .mobile-fab-plus {
         display: none !important;
@@ -1420,12 +1421,72 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     .doc-modal-btn.primary { background: #2563eb !important; border: none !important; color: #fff !important; }
     .doc-modal-btn.secondary { background: #f1f5f9 !important; border: none !important; color: #0f172a !important; }
     
-    /* Config Modal */
-    .fleet-modal { border-radius: 24px 24px 0 0 !important; background: #f8fafc !important; }
-    .fm-sidebar { background: #fff !important; padding: 1rem !important; }
-    .fm-content { background: #f8fafc !important; padding: 1.5rem 1rem !important; }
     
-    .grouped-box { border: 1px solid #e2e8f0; background: #fff; border-radius: 16px; padding: 1rem; margin-bottom: 1rem; }
+    /* Config Modal Mobile Overrides */
+    #modalEdicionVehiculo { align-items: flex-end !important; }
+    #modalEdicionVehiculo .fleet-modal { 
+        height: 92vh !important;
+        max-height: 92vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: #f8fafc !important;
+    }
+    #modalEdicionVehiculo .fm-header {
+        background: #0f172a !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    #modalEdicionVehiculo .fm-header span {
+        color: #fff !important;
+    }
+    #modalEdicionVehiculo .fm-header .fm-close {
+        background: rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+    }
+    #modalEdicionVehiculo .fm-body {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+    }
+    #modalEdicionVehiculo .fm-sidebar {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        padding: 0.5rem 1rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        gap: 0.5rem !important;
+        background: #fff !important;
+        min-height: 60px !important;
+    }
+    #modalEdicionVehiculo .fm-sidebar::-webkit-scrollbar { display: none; }
+    #modalEdicionVehiculo .fm-sidebar .fm-section-title { display: none !important; }
+    #modalEdicionVehiculo .fm-sidebar .fm-tab {
+        flex: 0 0 auto !important;
+        margin-bottom: 0 !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 20px !important;
+        border: 1px solid #e2e8f0;
+    }
+    #modalEdicionVehiculo .fm-sidebar .fm-tab.active {
+        background: #0f172a !important;
+        color: #fff !important;
+        border-color: #0f172a !important;
+    }
+    #modalEdicionVehiculo .fm-content {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding: 1rem !important;
+        background: #f8fafc !important;
+    }
+    #modalEdicionVehiculo .fm-footer {
+        padding-bottom: calc(1.5rem + 80px) !important; /* Push buttons above bottom nav */
+        border-top: 1px solid #e2e8f0 !important;
+        background: #fff !important;
+    }
+.grouped-box { border: 1px solid #e2e8f0; background: #fff; border-radius: 16px; padding: 1rem; margin-bottom: 1rem; }
     .form-group-clean { border: none !important; margin-bottom: 0.75rem; }
     .fm-content .form-control-clean, .fm-content .form-control-large {
         background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 0.75rem 1rem !important; font-size: 0.9rem !important;
