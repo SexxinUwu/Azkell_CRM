@@ -54,12 +54,25 @@
   <!-- KPI Row Bento -->
   <div id="prov-kpi-row" class="bento-kpi-row"></div>
 
-  <!-- Grid de Cards (scrollable) -->
-  <div class="flex-grow-1" style="overflow-y:auto; overflow-x:hidden; min-height:0;">
-    <div id="prov-grid" class="prov-grid pb-3">
-      <div style="text-align:center;padding:3rem;color:#94a3b8;">
-        <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
-      </div>
+  <!-- TABLA DE PROVEEDORES -->
+  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+    <div class="ent-table-wrap" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
+      <table id="tabla-proveedores" style="width: 100%; min-width: 950px; border-collapse: collapse; font-size: 0.82rem;">
+        <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
+          <tr>
+            <th style="width: 40px; text-align: center; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;"></th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Razón Social / Nombre</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Documento</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;" class="d-none d-md-table-cell">Contacto</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Marcas</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Estado</th>
+            <th style="width: 160px; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="prov-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 

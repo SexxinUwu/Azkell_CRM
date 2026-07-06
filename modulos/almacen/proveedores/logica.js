@@ -100,11 +100,11 @@ window._provRender = function() {
     var cont = document.getElementById('prov-contador');
     if (cont) cont.textContent = total + ' proveedor' + (total !== 1 ? 'es' : '');
 
-    var grid = document.getElementById('prov-grid');
+    var grid = document.getElementById('prov-tbody');
     if (!grid) return;
 
     if (!datos.length) {
-        grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;grid-column:1/-1"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</div>';
+        grid.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</td></tr>';
         window._provRenderPaginador(0, 1, 0);
         return;
     }
@@ -113,51 +113,63 @@ window._provRender = function() {
     var canDel  = window.checkPerm('prov_inv', 'd');
 
     grid.innerHTML = datos.map(function(d) {
-        // Avatar con iniciales (primeras 2 palabras)
+        // Initials (no longer used in table, but keeping logic just in case)
         var initials = (d.nombre || '?').split(' ').slice(0, 2).map(function(w) { return (w[0] || ''); }).join('').toUpperCase();
 
-        // Tags de marcas
+        // Marcas
         var marcasHtml = '';
         if (d.marcas) {
             marcasHtml = d.marcas.split(',').filter(Boolean).map(function(m) {
-                return '<span class="prov-marca-tag">' + _provEsc(m.trim()) + '</span>';
+                return '<span class="prov-marca-tag" style="font-size:0.7rem; padding:0.15rem 0.4rem; margin-right:0.2rem; margin-bottom:0.2rem; display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text);">' + _provEsc(m.trim()) + '</span>';
             }).join('');
         }
+        if (!marcasHtml) marcasHtml = '<span style="font-size:0.75rem;color:#94a3b8;">Sin marcas</span>';
 
-        // Badge documento
-        var badgeDoc = d.tipo_documento === 'RUC'
-            ? '<span class="bento-badge ok">RUC Activo</span>'
-            : d.tipo_documento === 'DNI'
-                ? '<span class="bento-badge warning">DNI</span>'
-                : '<span class="bento-badge warning">' + _provEsc(d.tipo_documento || '—') + '</span>';
+        // Documento badge
+        var docHtml = '<div style="font-weight:600;font-size:0.85rem;color:var(--text);">' + _provEsc(d.numero_documento || '—') + '</div>' + 
+                      '<div style="font-size:0.7rem;color:var(--subtext);">' + _provEsc(d.tipo_documento || '—') + '</div>';
+
+        // Nombre y Razón
+        var razon = d.razon_social ? _provEsc(d.razon_social) : _provEsc(d.nombre);
+        var nombreHtml = '<div style="font-weight:700;font-size:0.85rem;color:var(--text);">' + razon + '</div>' +
+                         (d.razon_social && d.razon_social !== d.nombre ? '<div style="font-size:0.75rem;color:var(--subtext);">' + _provEsc(d.nombre) + '</div>' : '');
+
+        // Contacto
+        var contactoHtml = '<div style="font-size:0.8rem;color:var(--text);"><i class="bi bi-telephone text-muted me-1"></i>' + _provEsc(d.telefono || 'Sin tel.') + '</div>' +
+                           '<div style="font-size:0.75rem;color:var(--subtext);"><i class="bi bi-envelope text-muted me-1"></i>' + _provEsc(d.email || 'Sin email') + '</div>';
 
         // Estado
         var estadoHtml = d.estado === 'Activo'
-            ? '<span style="font-size:.62rem;font-weight:700;color:#16a34a;text-transform:uppercase">● Activo</span>'
-            : '<span style="font-size:.62rem;font-weight:700;color:#94a3b8;text-transform:uppercase">● Inactivo</span>';
+            ? '<span style="font-size:0.7rem;font-weight:700;color:#16a34a;background:#dcfce7;padding:0.2rem 0.5rem;border-radius:12px;">Activo</span>'
+            : '<span style="font-size:0.7rem;font-weight:700;color:#475569;background:#e2e8f0;padding:0.2rem 0.5rem;border-radius:12px;">Inactivo</span>';
 
-        return '<div class="prov-card d-flex align-items-center">' +
-            '<div class="me-3 mb-0">' +
-                '<input type="checkbox" class="form-check-input" style="transform: scale(1.3); cursor: pointer;" ' + 
+        // Acciones
+        var cleanTel = (d.telefono || '').replace(/[^0-9+]/g, '');
+        var btnLlamar = cleanTel ? '<a href="tel:' + cleanTel + '" class="btn btn-sm btn-light" title="Llamar" style="color:#0ea5e9; border:1px solid #e0f2fe; background:#f0f9ff;"><i class="bi bi-telephone-fill"></i></a>' 
+                                 : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-telephone-fill"></i></button>';
+        var btnWsp = cleanTel ? '<a href="https://wa.me/' + cleanTel.replace('+', '') + '" target="_blank" class="btn btn-sm btn-light" title="WhatsApp" style="color:#16a34a; border:1px solid #dcfce7; background:#f0fdf4;"><i class="bi bi-whatsapp"></i></a>' 
+                              : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-whatsapp"></i></button>';
+                              
+        var btnEdit = canEdit ? '<button class="btn btn-sm btn-light" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')" title="Editar" style="color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-pencil-fill"></i></button>' : '';
+        var btnDel  = canDel  ? '<button class="btn btn-sm btn-light" onclick="window.eliminarProveedor(\'' + _provEsc(d.id) + '\')" title="Eliminar" style="color:#ef4444; border:1px solid #fee2e2; background:#fef2f2;"><i class="bi bi-trash-fill"></i></button>' : '';
+
+        return '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'">' +
+            '<td style="text-align:center; padding:0.75rem 0.5rem;">' +
+                '<input type="checkbox" class="form-check-input m-0" style="cursor: pointer;" ' + 
                 ((window._provSeleccionados || []).includes(String(d.id)) ? 'checked' : '') +
                 ' onchange="window._provToggleSel(\'' + _provEsc(d.id) + '\', this.checked)">' +
-            '</div>' +
-            '<div class="prov-avatar">' + _provEsc(initials) + '</div>' +
-            '<div style="flex:1;min-width:0">' +
-                '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">' +
-                    badgeDoc +
-                    '<div style="display:flex;gap:.2rem">' +
-                        (canEdit ? '<button class="btn btn-sm p-1" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil" style="color:#94a3b8;font-size:.85rem"></i></button>' : '') +
-                        (canDel  ? '<button class="btn btn-sm p-1" onclick="window.eliminarProveedor(\'' + _provEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash" style="color:#ef4444;font-size:.85rem"></i></button>' : '') +
-                    '</div>' +
+            '</td>' +
+            '<td style="padding:0.75rem 0.5rem;">' + nombreHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem;">' + docHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem;" class="d-none d-md-table-cell">' + contactoHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem;">' + marcasHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem; text-align:center;">' + estadoHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem; text-align:right;">' +
+                '<div style="display:flex; gap:0.3rem; justify-content:flex-end;">' +
+                    btnLlamar + btnWsp + btnEdit + btnDel +
                 '</div>' +
-                '<div style="font-weight:800;font-size:.95rem;line-height:1.2;margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + _provEsc(d.nombre) + '">' + _provEsc(d.nombre) + '</div>' +
-                '<div style="font-size:.7rem;color:#94a3b8;font-weight:600;margin-bottom:.55rem">' +
-                    _provEsc(d.numero_documento || '—') + ' · ' + _provEsc(d.telefono || 'Sin tel.') + ' · ' + estadoHtml +
-                '</div>' +
-                '<div style="display:flex;flex-wrap:wrap;gap:.25rem">' + (marcasHtml || '<span style="font-size:.65rem;color:#cbd5e1">Sin marcas registradas</span>') + '</div>' +
-            '</div>' +
-        '</div>';
+            '</td>' +
+        '</tr>';
     }).join('');
 
     window._provRenderPaginador(total, paginas, inicio + datos.length);

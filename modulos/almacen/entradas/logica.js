@@ -121,7 +121,8 @@ window._entCargarProveedores = function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._entProvItems = data.map(function(p) {
-                return { value: p.id, label: p.nombre + (p.numero_documento ? ' (' + p.numero_documento + ')' : '') };
+                var displayName = p.razon_social ? p.razon_social : p.nombre;
+                return { value: p.id, label: displayName + (p.numero_documento ? ' (' + p.numero_documento + ')' : '') };
             });
             window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
         }).catch(function() {});
