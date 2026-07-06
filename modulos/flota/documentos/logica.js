@@ -986,3 +986,40 @@ window.cerrarDocModal = function(e) {
     document.getElementById('docModalOverlay').classList.remove('active');
 };
 
+
+window.procesarDocumento = function(docUrl, accion) {
+    if (!docUrl) return;
+    
+    // Obtener presigned URL del nuevo endpoint
+    fetch('/api/documentos-flota/presign-read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+        },
+        body: JSON.stringify({ urls: [docUrl] })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const presigned = data[docUrl];
+        if (!presigned || presigned.error) {
+            alert('No se pudo obtener acceso al documento.');
+            return;
+        }
+        
+        if (accion === 'ver') {
+            window.open(presigned, '_blank');
+        } else if (accion === 'descargar') {
+            const a = document.createElement('a');
+            a.href = presigned;
+            a.download = docUrl.split('/').pop() || 'documento.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    })
+    .catch(e => {
+        console.error('Error presigning document:', e);
+        alert('Ocurrió un error al intentar acceder al documento.');
+    });
+};
