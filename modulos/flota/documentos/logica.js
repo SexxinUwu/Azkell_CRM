@@ -241,7 +241,9 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     if(splitContainer) {
         if (isInitialLoad && window.innerWidth <= 768) { /* Do not auto-open on mobile load */ }
         else { splitContainer.classList.add('show-detail');
-        document.getElementById('fleet-module-container').classList.add('show-detail-mobile'); }
+        document.getElementById('fleet-module-container').classList.add('show-detail-mobile');
+        const fab = document.querySelector('.mobile-fab-plus');
+        if(fab) fab.style.display = 'none'; }
     }
     const v = vehiculosFlota.find(x => x.placa === placa);
     if(!v) return;
@@ -938,6 +940,8 @@ function volverListaMovil() {
     if(splitContainer) splitContainer.classList.remove('show-detail');
     const moduleContainer = document.getElementById('fleet-module-container');
     if(moduleContainer) moduleContainer.classList.remove('show-detail-mobile');
+    const fab = document.querySelector('.mobile-fab-plus');
+    if(fab) fab.style.display = 'flex';
 }
 
 window.abrirDocModal = function(title, contentRows, est, docUrl) {
