@@ -1423,6 +1423,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     
     
     
+    
     /* Config Modal Mobile Overrides */
     #modalEdicionVehiculo { align-items: flex-end !important; }
     #modalEdicionVehiculo .fleet-modal { 
@@ -1465,8 +1466,14 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         min-height: 60px !important;
         width: 100vw !important;
         max-width: 100vw !important;
+        scrollbar-width: none !important; /* Firefox */
+        -ms-overflow-style: none !important; /* IE 10+ */
     }
-    #modalEdicionVehiculo .fm-sidebar::-webkit-scrollbar { display: none; }
+    #modalEdicionVehiculo .fm-sidebar::-webkit-scrollbar { 
+        display: none !important; /* Chrome/Safari */
+        width: 0 !important;
+        height: 0 !important;
+    }
     #modalEdicionVehiculo .fm-sidebar .fm-section-title { display: none !important; }
     #modalEdicionVehiculo .fm-sidebar .fm-tab {
         flex: 0 0 auto !important;
@@ -1483,10 +1490,31 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     #modalEdicionVehiculo .fm-content {
         flex: 1 !important;
         overflow-y: auto !important;
-        padding: 1rem !important;
+        padding: 0.75rem !important;
         background: #f8fafc !important;
     }
     #modalEdicionVehiculo .grouped-box {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 1rem 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        gap: 0.25rem !important;
+    }
+    #modalEdicionVehiculo .grouped-box .form-group-clean {
+        margin-bottom: 0.25rem !important;
+    }
+    #modalEdicionVehiculo .grouped-box .form-control-clean, 
+    #modalEdicionVehiculo .grouped-box .form-control-large {
+        padding: 0.6rem 0.75rem !important;
+        margin-top: 0.2rem !important;
+    }
+    #modalEdicionVehiculo .fm-footer {
+        padding: 1rem !important;
+        padding-bottom: 1.5rem !important; /* Removed the extra 80px */
+        border-top: 1px solid #e2e8f0 !important;
+        background: #fff !important;
+    }
+.grouped-box {
         display: flex !important;
         flex-direction: column !important;
     }
