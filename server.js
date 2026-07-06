@@ -11,7 +11,7 @@ const multer = require('multer');
 const fs = require('fs');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUploadUrl } = require('./utils/s3');
+const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
 
 const app = express();
 
@@ -1788,6 +1788,32 @@ app.get('/api/documentos-flota/upload-url', async (req, res) => {
         res.json({ uploadUrl, fileUrl });
     } catch (e) {
         console.error('Error generando upload URL:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+app.post('/api/documentos-flota/presign-read', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'No autorizado' });
+        
+        const { urls } = req.body;
+        if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: 'Formato de urls inválido' });
+
+        let signed = {};
+        for (let url of urls) {
+            if (!url) continue;
+            let key = s3KeyFromUrl(url);
+            if (key) {
+                try { signed[url] = await getPresignedUrl(key, 3600); } catch(e) { signed[url] = url; }
+            } else {
+                signed[url] = url;
+            }
+        }
+        res.json(signed);
+    } catch (e) {
+        console.error('Error in /api/documentos-flota/presign-read:', e);
         res.status(500).json({ error: e.message });
     }
 });
