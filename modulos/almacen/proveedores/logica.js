@@ -131,9 +131,9 @@ window._provRender = function() {
 
         // Razón Social y Asesor
         var razon = d.razon_social ? _provEsc(d.razon_social) : '<span class="text-muted" style="font-weight:400;font-size:0.75rem;">Sin Razón Social</span>';
-        var razonHtml = '<div style="font-weight:700;font-size:0.85rem;color:var(--text);">' + razon + '</div>';
+        var razonHtml = '<div style="font-weight:600;font-size:0.85rem;color:var(--text);">' + razon + '</div>';
         
-        var nombreHtml = '<div style="font-weight:600;font-size:0.8rem;color:var(--subtext);">' + _provEsc(d.nombre || '—') + '</div>';
+        var nombreHtml = '<div style="font-weight:700;font-size:0.85rem;color:var(--text);">' + _provEsc(d.nombre || '—') + '</div>';
 
         // Contacto
         var contactoHtml = '<div style="font-size:0.8rem;color:var(--text);"><i class="bi bi-telephone text-muted me-1"></i>' + _provEsc(d.telefono || 'Sin tel.') + '</div>' +
@@ -160,8 +160,8 @@ window._provRender = function() {
                 ((window._provSeleccionados || []).includes(String(d.id)) ? 'checked' : '') +
                 ' onchange="window._provToggleSel(\'' + _provEsc(d.id) + '\', this.checked)">' +
             '</td>' +
-            '<td style="padding:0.75rem 0.5rem;">' + razonHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem;">' + nombreHtml + '</td>' +
+            '<td style="padding:0.75rem 0.5rem;">' + razonHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem;">' + docHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem;" class="d-none d-md-table-cell">' + contactoHtml + '</td>' +
             '<td style="padding:0.75rem 0.5rem;">' + marcasHtml + '</td>' +
