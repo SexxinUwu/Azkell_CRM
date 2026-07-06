@@ -839,6 +839,22 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 }
 .doc-modal-btn.primary { background: #2563eb; color: #fff; }
 .doc-modal-btn.secondary { background: #f1f5f9; color: #0f172a; }
+
+    /* Input Contrast Styles */
+    #modalEdicionVehiculo input[type="text"],
+    #modalEdicionVehiculo input[type="date"],
+    #modalEdicionVehiculo input[type="number"],
+    #modalEdicionVehiculo select,
+    #modalEdicionVehiculo .form-control-large {
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    #modalEdicionVehiculo input:focus,
+    #modalEdicionVehiculo select:focus,
+    #modalEdicionVehiculo .form-control-large:focus {
+        background-color: #ffffff !important;
+        border-color: #3b82f6 !important;
+    }
 </style>
 
 <div id="fleet-module-container">
@@ -1364,7 +1380,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 .hide-on-mobile { display: block !important; }
 
 
-    .fleet-module-container.show-detail-mobile .mobile-fab-plus { display: none !important; }
+    #fleet-module-container.show-detail-mobile .mobile-fab-plus { display: none !important; }
 
 /* Global modal buttons */
 .btn-cancel-modal { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; color: #475569; font-weight: 700; padding: 1rem; width: 100%; cursor: pointer; transition: 0.2s; }
@@ -1462,11 +1478,11 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         flex-direction: row !important;
         overflow-x: auto !important;
         white-space: nowrap !important;
-        padding: 0.5rem 1rem !important;
+        padding: 0.5rem !important;
         border-bottom: 1px solid #e2e8f0 !important;
         gap: 0.5rem !important;
         background: #fff !important;
-        min-height: 60px !important;
+        align-items: center !important;
         width: 100vw !important;
         max-width: 100vw !important;
         scrollbar-width: none !important; /* Firefox */
@@ -1481,8 +1497,13 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     #modalEdicionVehiculo .fm-sidebar .fm-tab {
         flex: 0 0 auto !important;
         margin-bottom: 0 !important;
-        padding: 0.5rem 1rem !important;
-        border-radius: 20px !important;
+        padding: 0 0.75rem !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.85rem !important;
+        border-radius: 16px !important;
         border: 1px solid #e2e8f0;
     }
     #modalEdicionVehiculo .fm-sidebar .fm-tab.active {
