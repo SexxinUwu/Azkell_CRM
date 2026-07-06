@@ -240,57 +240,11 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     const splitContainer = document.querySelector('.fleet-main-split');
     if(splitContainer) {
         if (isInitialLoad && window.innerWidth <= 768) { /* Do not auto-open on mobile load */ }
-        else { splitContainer.classList.add('show-detail'); }
+        else { splitContainer.classList.add('show-detail');
+        document.getElementById('fleet-module-container').classList.add('show-detail-mobile'); }
     }
     const v = vehiculosFlota.find(x => x.placa === placa);
     if(!v) return;
-
-function volverListaMovil() {
-    const splitContainer = document.querySelector('.fleet-main-split');
-    if(splitContainer) splitContainer.classList.remove('show-detail');
-}
-
-window.abrirDocModal = function(title, contentRows, est, docUrl) {
-    document.getElementById('dm-title').innerText = title;
-    
-    let html = '';
-    contentRows.forEach(row => {
-        html += `<div class="doc-modal-row"><span class="doc-modal-label">${row.label}</span><span class="doc-modal-val">${row.val}</span></div>`;
-    });
-    
-    if(est.diff !== null) {
-        let labelText = '';
-        if (est.diff < 0) labelText = `Vencido hace ${Math.abs(est.diff)} días (Crítico)`;
-        else if (est.diff === 0) labelText = `Vence hoy (Alerta)`;
-        else labelText = `Faltan ${est.diff} días (${est.text})`;
-        
-        let color = '#475569';
-        if(est.class === 's-green') color = '#10b981';
-        else if(est.class === 's-yellow' || est.class === 's-orange') color = '#f59e0b';
-        else if(est.class === 's-red') color = '#ef4444';
-
-        html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:${color};">${labelText}</span></div>`;
-    }
-    
-    document.getElementById('dm-data').innerHTML = html;
-    
-    const dlBtn = document.querySelector('.doc-modal-btn.secondary');
-    if(dlBtn) {
-        if(docUrl) {
-            dlBtn.style.display = 'block';
-            dlBtn.onclick = () => window.open(docUrl, '_blank');
-        } else {
-            dlBtn.style.display = 'none';
-        }
-    }
-
-    document.getElementById('docModalOverlay').classList.add('active');
-};
-
-window.cerrarDocModal = function(e) {
-    if(e && e.target !== document.getElementById('docModalOverlay')) return;
-    document.getElementById('docModalOverlay').classList.remove('active');
-};
 
     // Ficha Header
     document.getElementById('ft-placa').innerText = v.placa;
@@ -977,3 +931,54 @@ window.eliminarDocumentoS3 = async function(hiddenId, linkId, btnId, docId) {
         if(spin) spin.style.display = 'none';
     }
 };
+
+
+function volverListaMovil() {
+    const splitContainer = document.querySelector('.fleet-main-split');
+    if(splitContainer) splitContainer.classList.remove('show-detail');
+    const moduleContainer = document.getElementById('fleet-module-container');
+    if(moduleContainer) moduleContainer.classList.remove('show-detail-mobile');
+}
+
+window.abrirDocModal = function(title, contentRows, est, docUrl) {
+    document.getElementById('dm-title').innerText = title;
+    
+    let html = '';
+    contentRows.forEach(row => {
+        html += `<div class="doc-modal-row"><span class="doc-modal-label">${row.label}</span><span class="doc-modal-val">${row.val}</span></div>`;
+    });
+    
+    if(est.diff !== null) {
+        let labelText = '';
+        if (est.diff < 0) labelText = `Vencido hace ${Math.abs(est.diff)} días (Crítico)`;
+        else if (est.diff === 0) labelText = `Vence hoy (Alerta)`;
+        else labelText = `Faltan ${est.diff} días (${est.text})`;
+        
+        let color = '#475569';
+        if(est.class === 's-green') color = '#10b981';
+        else if(est.class === 's-yellow' || est.class === 's-orange') color = '#f59e0b';
+        else if(est.class === 's-red') color = '#ef4444';
+
+        html += `<div class="doc-modal-row" style="margin-top:0.5rem;"><span class="doc-modal-label">Estado Actual:</span><span class="doc-modal-val" style="color:${color};">${labelText}</span></div>`;
+    }
+    
+    document.getElementById('dm-data').innerHTML = html;
+    
+    const dlBtn = document.querySelector('.doc-modal-btn.secondary');
+    if(dlBtn) {
+        if(docUrl) {
+            dlBtn.style.display = 'block';
+            dlBtn.onclick = () => window.open(docUrl, '_blank');
+        } else {
+            dlBtn.style.display = 'none';
+        }
+    }
+
+    document.getElementById('docModalOverlay').classList.add('active');
+};
+
+window.cerrarDocModal = function(e) {
+    if(e && e.target !== document.getElementById('docModalOverlay')) return;
+    document.getElementById('docModalOverlay').classList.remove('active');
+};
+
