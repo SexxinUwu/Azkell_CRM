@@ -1,5 +1,5 @@
 <!-- Módulo Mantenimiento / Placas — SPA Aislado -->
-<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100">
+<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100" style="overflow-x: hidden;">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
@@ -36,6 +36,11 @@
 
   <!-- KPI Row Bento -->
   <div class="bento-kpi-row mb-3" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: none;">
+    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('total')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-ui-radios-grid fs-5"></i></div>
+        <h2 id="kpi-total" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
+        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Flota Total</p>
+    </div>
     <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('camion')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
         <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck fs-5"></i></div>
         <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
