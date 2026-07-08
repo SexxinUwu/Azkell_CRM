@@ -1,499 +1,105 @@
-<!-- ================================================================ -->
-<!-- MÓDULO: PLACAS (vista aislada — sin <html>, <head> ni <body>)   -->
-<!-- ================================================================ -->
-<style>
-/* Móvil y Desktop: Rediseño Placas */
-#moduloPlacas {
-    background-color: #F4F7F6;
-    height: calc(100dvh - 68px) !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
+<!-- Módulo Mantenimiento / Placas — SPA Aislado -->
+<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100">
 
-/* Ocultar barra superior en desktop para hacer full screen el rediseño */
-#moduloPlacas .btn-volver-desktop { display: none !important; }
-
-@media (max-width: 768px) {
-    .topbar { display: none !important; }
-    #root-dinamico, .main-area { 
-        padding: 0 !important; 
-        overflow: hidden !important; 
-        display: flex !important;
-        flex-direction: column !important;
-    }
-    #moduloPlacas { height: 100% !important; flex: 1 1 0; }
-}
-
-.placas-header {
-    background-color: #00875A;
-    padding: 2.5rem 1.25rem 1.5rem;
-    border-bottom-left-radius: 2.5rem;
-    border-bottom-right-radius: 2.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 20;
-}
-
-.placas-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.placas-header-title {
-    font-weight: 700;
-    font-size: 15px;
-    color: white;
-}
-
-.placas-avatar {
-    width: 2rem;
-    height: 2rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 11px;
-    font-weight: bold;
-    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
-}
-
-.placas-main-title {
-    font-size: 1.875rem;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    color: white;
-    margin-bottom: 1.5rem;
-}
-
-.placas-kpi-container {
-    display: flex;
-    gap: 0.75rem;
-    overflow-x: auto;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    margin-left: -1.25rem;
-    margin-right: -1.25rem;
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
-    scrollbar-width: none; /* Firefox */
-}
-.placas-kpi-container::-webkit-scrollbar { display: none; }
-
-.placas-kpi-card {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 1rem;
-    padding: 0.75rem;
-    min-width: 120px;
-    flex-shrink: 0;
-    color: white;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.placas-search-container {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.placas-search-input-wrap {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.15);
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-}
-
-.placas-search-input-wrap input {
-    width: 100%;
-    background: transparent !important;
-    border: none;
-    outline: none;
-    font-size: 16px;
-    color: white;
-    font-weight: 500;
-}
-.placas-search-input-wrap input::placeholder { color: rgba(255, 255, 255, 0.7) !important; }
-
-.placas-icon-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background-color 0.2s;
-}
-.placas-icon-btn:active { background: rgba(255, 255, 255, 0.3); }
-
-/* List styles */
-.placas-scroll-wrapper {
-    flex-grow: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    background: transparent;
-}
-.placas-list-container {
-    display: flex;
-    flex-direction: column;
-    background: transparent;
-}
-
-/* Card styles for Desktop (matching Directorio cond-card) */
-.placas-modern-card {
-    display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem;
-    background: var(--surface, #ffffff); border: 1.5px solid var(--border, #e5e7eb);
-    border-radius: 16px; cursor: pointer;
-    transition: box-shadow .15s, border-color .15s, transform .15s;
-    position: relative; overflow: hidden; min-height: 72px;
-}
-.placas-modern-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.08); border-color: #2563eb55; transform: translateY(-1px); }
-.placas-modern-card:active { transform: scale(.984); }
-
-
-/* Mobile list view overrides */
-@media (max-width: 768px) {
-    .placas-grid-view {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0.75rem !important; /* Espacio entre tarjetas */
-        padding: 0.75rem !important; /* Padding normal */
-        background: transparent !important;
-    }
-    
-    /* Estilos para el encabezado de grupo (Apartado) en móvil como antes */
-    .group-header-left {
-        padding: 0 0.25rem 0.5rem 0.25rem !important;
-        background: transparent !important;
-        border-bottom: 2px solid #e2e8f0 !important;
-        font-weight: 700 !important;
-        color: #0f172a !important;
-        margin: 1rem 0 0.25rem 0 !important;
-    }
-}
-
-/* Desktop grid overrides (Matching Directorio cond-grid) */
-@media (min-width: 769px) {
-    .placas-grid-view {
-        display: grid !important;
-        gap: .65rem !important;
-        padding: .25rem .25rem .75rem !important;
-        align-content: start !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-}
-@media (min-width: 1100px) {
-    .placas-grid-view {
-        grid-template-columns: repeat(3, 1fr) !important;
-    }
-}
-
-.placas-modern-icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 14px;
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    color: #334155;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.placas-modern-badge {
-    display: inline-block;
-    background: #F8F9FA;
-    border: 1px solid #E5E7EB;
-    color: #111827;
-    font-family: monospace;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.1em;
-    padding: 2px 10px;
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    margin-bottom: 4px;
-}
-
-.placas-modern-fab {
-    position: fixed;
-    bottom: 104px;
-    right: 1rem;
-    width: 60px;
-    height: 60px;
-    background: #10b981;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    border: none;
-    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
-    z-index: 1041;
-    cursor: pointer;
-    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
-    font-size: 1.5rem;
-}
-.placas-modern-fab:active { transform: scale(0.91); }
-
-/* Dropdown override */
-.placas-header .dropdown-menu {
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e5e7eb;
-}
-
-/* Modales Modernos */
-.placas-modal-content {
-    border: none;
-    border-radius: 24px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-.placas-modal-header {
-    border-bottom: 1px solid #f3f4f6;
-    padding: 1.5rem 1.5rem 1rem;
-    border-radius: 24px 24px 0 0;
-    background: #ffffff;
-}
-.placas-modal-body {
-    background: #f8fafc;
-    padding: 1.5rem;
-}
-.placas-form-section {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    border: 1px solid #f1f5f9;
-}
-.placas-form-section-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
-}
-.placas-form-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.4rem;
-}
-.placas-form-control {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    background: #f8fafc;
-    color: #0f172a;
-    font-weight: 600;
-}
-.placas-form-control:focus {
-    background: #ffffff;
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    outline: none;
-}
-
-/* Desktop Header Overrides */
-@media (min-width: 768px) {
-    .placas-header {
-        background: transparent !important;
-        padding: 1rem 1rem 0 1rem !important;
-        margin: 0 !important;
-    }
-    .placas-header-top, .placas-main-title, .placas-search-container {
-        display: none !important;
-    }
-    .placas-kpi-container {
-        margin: 0 !important;
-        padding: 0 !important;
-        gap: 1rem !important;
-    }
-    .placas-kpi-card {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        color: #0f172a !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }
-    .placas-kpi-card i { color: #10b981 !important; }
-    .placas-kpi-card p { color: #64748b !important; }
-}
-</style>
-
-<div id="moduloPlacas" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1" style="display: flex; background: #f8fafc !important;">
-    
-    <!-- Header Verde -->
-    <div class="placas-header">
-        <div class="placas-header-top">
-            <span class="placas-header-title">Flota Vehicular</span>
-            <div class="placas-avatar">SA</div>
-        </div>
-
-        <h1 class="placas-main-title">Gestión de Placas</h1>
-
-        <!-- Widgets de Estadísticas -->
-        <div class="placas-kpi-container">
-            <div class="placas-kpi-card">
-                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck fs-5"></i></div>
-                <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
-                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Camiones</p>
-            </div>
-            <div class="placas-kpi-card">
-                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-flatbed fs-5"></i></div>
-                <h2 id="kpi-carreta" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
-                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Carretas</p>
-            </div>
-            <div class="placas-kpi-card">
-                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-front fs-5"></i></div>
-                <h2 id="kpi-tracto" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
-                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Tractos</p>
-            </div>
-            <div class="placas-kpi-card">
-                <div style="margin-bottom: 0.5rem; opacity: 0.9;"><i class="bi bi-truck-flatbed fs-5"></i></div>
-                <h2 id="kpi-semi" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem;">0</h2>
-                <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8;">Semirrem.</p>
-            </div>
-        </div>
-
-        <!-- Buscador Integrado y Acciones (Mobile) -->
-        <div class="placas-search-container">
-            <div class="placas-search-input-wrap">
-                <i class="bi bi-search text-white-50 me-2 fs-6"></i>
-                <input type="text" id="buscadorPlacas" oninput="filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo..." style="background: transparent !important; background-color: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; color: white !important;">
-            </div>
-            
-            <button class="placas-icon-btn" onclick="recargarModulo('placas')" title="Actualizar">
-                <i class="bi bi-arrow-clockwise fs-5"></i>
-            </button>
-            
-            <!-- Dropdown de Filtros -->
-            <div class="dropdown">
-                <button class="placas-icon-btn" id="btnFiltrosPlacas" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Filtros">
-                    <i class="bi bi-funnel-fill fs-5"></i>
-                </button>
-                <div class="dropdown-menu dropdown-menu-end shadow p-0" style="min-width:280px; max-height:calc(100dvh - 120px); overflow:hidden;">
-                    <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
-                        <span class="fw-bold" style="font-size:0.9rem; color:#111827;">Filtros</span>
-                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold" onclick="limpiarFiltrosPlacas()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
-                    </div>
-                    <div style="max-height:calc(100dvh - 170px); overflow-y:auto;">
-                        <!-- Acordeón: Cliente -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Cliente</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroCliente" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Tipo -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Tipo</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar tipo..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroTipo li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroTipo" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Marca -->
-                        <div class="border-bottom">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Marca</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar marca..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroMarca li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroMarca" style="max-height:150px;overflow-y:auto;"></ul>
-                            </div>
-                        </div>
-                        <!-- Acordeón: Estado -->
-                        <div>
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-3 d-flex justify-content-between align-items-center text-dark" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.8rem;text-transform:uppercase;color:#4B5563;">Estado</span>
-                                <i class="bi bi-chevron-down chev" style="color:#6B7280;"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 12px;">
-                                <ul class="list-unstyled mb-0 custom-scrollbar" id="filtroEstado"></ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h2 class="h5 fw-bold mb-0" style="color:var(--text);">
+        <i class="bi bi-truck text-primary me-1"></i>Flota Vehicular
+      </h2>
+      <p class="text-muted small mb-0">Gestión de Placas</p>
     </div>
-
-    <!-- Barra de controles Desktop -->
-    <div class="controls-row d-none d-md-flex justify-content-between flex-wrap gap-2 mb-3 mt-3 px-3">
-        <div class="input-group input-group-sm" style="max-width:300px;">
-            <span class="input-group-text border-end-0 bg-transparent"><i class="bi bi-search text-secondary"></i></span>
-            <input type="text" class="form-control border-start-0 ps-0" id="buscadorPlacasDesktop"
-                   oninput="document.getElementById('buscadorPlacas').value = this.value; window.filtrarPlacasAvanzado()" placeholder="Buscar placa, tipo...">
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn-reload-cache btn btn-light btn-sm border" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-            <button class="btn btn-primary fw-bold text-white btn-sm" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota">
-                <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Nuevo</span>
-            </button>
-        </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+      <button class="btn btn-sm btn-primary" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota">
+        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nueva Placa</span>
+      </button>
     </div>
+  </div>
 
-    <!-- Contenedor Scrollable -->
-    <div class="placas-scroll-wrapper custom-scrollbar">
-        <!-- Contenedor Principal de la Lista -->
-        <div id="contenedorPlacasDinamico" class="placas-list-container">
-            <div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando datos...</div>
-        </div>
-        <!-- Paginación Visible -->
-        <div id="controles-paginacion-placas" class="d-flex justify-content-center align-items-center gap-3 py-1 mb-0 w-100"></div>
+  <!-- Filtros -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
+    <input type="text" id="buscadorPlacas" class="form-control form-control-sm" style="max-width:280px;" placeholder="Buscar placa, tipo..." oninput="window.filtrarPlacasAvanzado()">
+    <select id="filtro-estado-placas" class="form-select form-select-sm" style="max-width:130px;" onchange="window.filtrarPlacasAvanzado()">
+      <option value="">Todos</option>
+      <option value="Activa">Activa</option>
+      <option value="Inactiva">Inactiva</option>
+    </select>
+    <div class="form-check ms-2 mb-0 d-flex align-items-center me-2">
+      <input class="form-check-input me-2" type="checkbox" id="placas-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._placasToggleSelAll(this.checked)">
+      <label class="form-check-label small fw-bold text-muted" for="placas-select-all">Todas</label>
     </div>
-
-    <table id="tablaPlacasHidden" style="display:none;"></table>
-
-    <!-- Botón Flotante (FAB) para Nueva Placa -->
-    <button id="btnNuevaPlaca" class="placas-modern-fab d-block d-md-none" data-bs-toggle="modal" data-bs-target="#modalPlaca" onclick="document.getElementById('formPlaca').reset()">
-        <i class="bi bi-plus-lg"></i>
+    <button id="placas-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none" onclick="window.eliminarMasivoPlacas()">
+      <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionadas
     </button>
-</div>
+    <span id="placas-contador" class="text-muted small ms-auto"></span>
+  </div>
 
-<!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
-<div id="placas-fab-wrap" class="d-md-none" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
-  <button onclick="document.getElementById('formPlaca').reset();bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();"
-          style="width:60px;height:60px;border-radius:18px;background:#10b981;border:none;color:#fff;
-                 font-size:1.5rem;box-shadow:0 6px 24px rgba(16,185,129,.5);
-                 display:flex;align-items:center;justify-content:center;
-                 transition:transform .25s cubic-bezier(.4,0,.2,1);">
-    <i class="bi bi-plus-lg"></i>
-  </button>
+  <!-- KPI Row Bento -->
+  <div class="bento-kpi-row mb-3" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: none;">
+    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck fs-5"></i></div>
+        <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
+        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Camiones</p>
+    </div>
+    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
+        <h2 id="kpi-carreta" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
+        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Carretas</p>
+    </div>
+    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-front fs-5"></i></div>
+        <h2 id="kpi-tracto" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
+        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Tractos</p>
+    </div>
+    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+        <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
+        <h2 id="kpi-semi" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
+        <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Semirrem.</p>
+    </div>
+  </div>
+
+  <!-- TABLA DE PLACAS -->
+  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+    <div class="ent-table-wrap custom-scrollbar" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
+      <table id="tabla-placas" style="width: 100%; min-width: 1800px; border-collapse: collapse; font-size: 0.82rem;">
+        <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
+          <tr>
+            <th style="width: 40px; text-align: center; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;"></th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Placa</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Cliente</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">RUC/DNI</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Marca</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Modelo</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Tipo</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Sub Tipo</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Color</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro Motor</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro Caja</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro Corona</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Nro VIN</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Configuración</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Año</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Combustible</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Carga Útil</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Peso Neto</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Peso Bruto</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">UTS</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Motora</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">Llantas</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;">En Uso</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; text-align: center;">Estado</th>
+            <th style="width: 120px; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; text-align: right; position: sticky; right: 0; background: var(--surface); z-index: 11;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="contenedorPlacasDinamico">
+          <tr><td colspan="25" style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Paginador -->
+  <div id="controles-paginacion-placas" class="d-flex align-items-center gap-1 flex-wrap px-1 py-2 flex-shrink-0"></div>
 </div>
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA ─────────────────────────────────── -->
