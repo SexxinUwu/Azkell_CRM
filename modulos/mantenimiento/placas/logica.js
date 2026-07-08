@@ -338,21 +338,15 @@ window.mostrarKPIsCliente = function(cli) {
 // ── Paginación y renderizado ─────────────────────────────────────
 function renderizarPaginaPlacas() {
     const contenedor = document.getElementById('contenedorPlacasDinamico');
-    const infoPag = document.getElementById('info-paginacion-placas');
+    const infoPag = document.getElementById('placas-contador');
     const ctrlPag = document.getElementById('controles-paginacion-placas');
-    const tablaExport = document.getElementById('tablaPlacasHidden');
+    
     if (!contenedor) return;
 
-    // Tabla oculta para exportar (todos los filtrados)
-    let htmlExport = '<tr><th>PLACA</th><th>CLIENTE</th><th>RUC_DNI</th><th>MARCA</th><th>MODELO</th><th>TIPO</th><th>SUB TIPO</th><th>COLOR</th><th>NRO MOTOR</th><th>NRO CAJA</th><th>NRO CORONA</th><th>NRO VIN</th><th>CONFIGURACION</th><th>ANIO</th><th>COMBUSTIBLE</th><th>CARGA UTIL</th><th>PESO NETO</th><th>PESO BRUTO</th><th>ESTADO</th><th>UTS</th><th>MOTORA</th><th>LLANTAS</th><th>EN_USO</th></tr>';
-    datosFiltradosPlacas.forEach(f => { htmlExport += `<tr>${f.map(celda => `<td>${celda || ''}</td>`).join('')}</tr>`; });
-    if(tablaExport) tablaExport.innerHTML = htmlExport;
-
-    // KPIs actualizados con los datos filtrados actuales
     actualizarIndicadoresPlacas(datosFiltradosPlacas);
 
     if (datosFiltradosPlacas.length === 0) {
-        contenedor.innerHTML = '<div class="w-100 text-center py-5 text-muted" style="grid-column: 1 / -1;"><i class="bi bi-search fs-1"></i><br>No hay vehículos que coincidan.</div>';
+        contenedor.innerHTML = '<tr><td colspan="25" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay vehículos que coincidan.</td></tr>';
         if(infoPag) infoPag.innerText = '0 resultados'; if(ctrlPag) ctrlPag.innerHTML = ''; return;
     }
 
@@ -364,116 +358,137 @@ function renderizarPaginaPlacas() {
     const inicio = (paginaActualPlacas - 1) * ITEMS_POR_PAGINA;
     const datosPagina = datosFiltradosPlacas.slice(inicio, inicio + ITEMS_POR_PAGINA);
 
+    if(infoPag) infoPag.innerText = datosFiltradosPlacas.length + ' placa(s)';
+
     let html = '';
-    let clienteActual = null;
+    
     datosPagina.forEach((fila) => {
         const plc = (fila[0]||'').trim();
-        const cli = fila[1] ? fila[1].trim() : 'Sin Asignar';
-        const mar = fila[3] ? fila[3].trim() : '-';
-        const tip = fila[5] ? fila[5].trim() : '-';
         const est = fila[18] ? fila[18].trim() : '';
-        const badgeCls = est === 'Activa' ? 'badge-green' : (est === 'Inactiva' ? 'badge-red' : '');
         const indexGlobal = dataGlobalPlacas.findIndex(x => x[0] === plc);
-
-        if (cli !== clienteActual) {
-            clienteActual = cli;
-            var alertas = _contarAlertasCliente(cli);
-            var badgesHtml = '';
-            if (alertas.venc > 0) badgesHtml += `<span class="badge bg-danger ms-2" style="font-size:0.65rem;">${alertas.venc} venc.</span>`;
-            if (alertas.pv > 0) badgesHtml += `<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">${alertas.pv} x/venc</span>`;
-            html += `<div class="group-header-left d-flex align-items-center" style="cursor:pointer;" onclick="mostrarKPIsCliente('${cli.replace(/'/g, "\\'")}')"><i class="bi bi-building me-2 text-primary"></i> ${cli}${badgesHtml}<i class="bi bi-bar-chart-fill ms-auto text-primary opacity-50" style="font-size:0.75rem;"></i></div>`;
-        }
 
         let menuAcciones = '';
         if (canEditP || canDeleteP) {
-            let items = '';
-            if (canEditP) items += `<li><a class="dropdown-item fw-bold" href="#" onclick="abrirModalEditarPlaca(${indexGlobal})"><i class="bi bi-pencil text-primary"></i> Editar</a></li>`;
-            if (canEditP && canDeleteP) items += `<li><hr class="dropdown-divider"></li>`;
-            if (canDeleteP) items += `<li><a class="dropdown-item text-danger fw-bold" href="#" onclick="event.stopPropagation(); eliminarPlacaDesdeTarjeta('${plc}')"><i class="bi bi-trash"></i> Eliminar</a></li>`;
-            menuAcciones = `<div class="dropdown ms-1" onclick="event.stopPropagation()"><button class="btn btn-sm btn-light border-0 px-2" style="background:transparent; color:#94a3b8;" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu shadow-sm" style="border-radius:12px; font-size:0.85rem;">${items}</ul></div>`;
+            let btnEdit = canEditP ? '<button class="btn btn-sm btn-light" onclick="abrirModalEditarPlaca(' + indexGlobal + ')" title="Editar" style="color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-pencil-fill"></i></button>' : '';
+            let btnDel  = canDeleteP ? '<button class="btn btn-sm btn-light" onclick="event.stopPropagation(); eliminarPlacaDesdeTarjeta(\'' + plc + '\')" title="Eliminar" style="color:#ef4444; border:1px solid #fee2e2; background:#fef2f2;"><i class="bi bi-trash-fill"></i></button>' : '';
+            menuAcciones = '<div style="display:flex; gap:0.3rem; justify-content:flex-end;">' + btnEdit + btnDel + '</div>';
         }
 
-        let checkHtml = window.modoSeleccion && window.modoSeleccion['placas'] ? `<input type="checkbox" class="form-check-input chk-bulk-placas me-2" value="${plc}" style="pointer-events: none; width:1.2rem; height:1.2rem;">` : '';
+        let checkHtml = '<input type="checkbox" class="form-check-input chk-bulk-placas m-0" value="'+plc+'" style="cursor: pointer;" onchange="window._placasToggleSel(\''+plc+'\', this.checked)">';
 
-        var tl = _timelinePlaca(plc);
-        var tlHtml = `<div class="d-flex align-items-center gap-1 mt-1" title="Historial inspecciones">${tl.map((cls,i) => `<span class="${cls}" style="width:6px;height:6px;border-radius:50%;display:inline-block;background-color:${cls==='tl-venc'?'#ef4444':cls==='tl-pv'?'#eab308':cls==='tl-ok'?'#22c55e':'#e2e8f0'}"></span>`).join('')}</div>`;
+        var estadoHtml = est === 'Activa'
+            ? '<span style="font-size:0.7rem;font-weight:700;color:#16a34a;background:#dcfce7;padding:0.2rem 0.5rem;border-radius:12px;">Activa</span>'
+            : (est === 'Inactiva' ? '<span style="font-size:0.7rem;font-weight:700;color:#475569;background:#e2e8f0;padding:0.2rem 0.5rem;border-radius:12px;">Inactiva</span>' : est);
 
-        // Icon based on type
-        let icono = 'bi-truck';
-        const tipLower = tip.toLowerCase();
-        if (tipLower.includes('carreta') || tipLower.includes('semi')) icono = 'bi-truck-flatbed';
-        else if (tipLower.includes('tracto')) icono = 'bi-truck-front';
-
-        html += `
-        <div class="placas-modern-card" data-placa="${plc}" onclick="abrirDetallePlaca(event, ${indexGlobal})">
-            ${checkHtml}
-            <div class="placas-modern-icon">
-                <i class="bi ${icono} fs-5"></i>
-            </div>
+        html += '<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'" onclick="abrirDetallePlaca(event, '+indexGlobal+')">';
+        
+        // Columna 0: Checkbox
+        html += '<td style="text-align:center; padding:0.75rem 0.5rem;" onclick="event.stopPropagation()">' + checkHtml + '</td>';
+        
+        // Mapear todas las 23 columnas (excepto la '')
+        for (let i = 0; i < 23; i++) {
+            let val = fila[i] ? fila[i].trim() : '—';
+            let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
             
-            <div style="flex: 1; min-width: 0;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                    <span class="placas-modern-badge">${plc}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.375rem; color: #64748b; font-size: 13px; font-weight: 500;">
-                    <span>${tip}</span>
-                    <span style="width: 3px; height: 3px; border-radius: 50%; background: #cbd5e1;"></span>
-                    <span>${mar}</span>
-                </div>
-                ${tlHtml}
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 0.25rem;">
-                ${menuAcciones}
-                <button style="width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #94a3b8; border: none; background: transparent;">
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-        </div>`;
+            // Especial styling for Placa
+            if (i === 0) {
+                html += '<td style="' + tdStyle + ' font-weight:700;">' + val + '</td>';
+            } 
+            // Especial styling for Estado (index 18)
+            else if (i === 18) {
+                html += '<td style="' + tdStyle + ' text-align:center;">' + estadoHtml + '</td>';
+            }
+            else {
+                html += '<td style="' + tdStyle + ' font-size:0.85rem;">' + val + '</td>';
+            }
+        }
+
+        // Columna Acciones
+        html += '<td style="padding:0.75rem 0.5rem; text-align:right; position: sticky; right: 0; background: inherit;" onclick="event.stopPropagation()">' + menuAcciones + '</td>';
+        
+        html += '</tr>';
     });
 
     contenedor.innerHTML = html;
-    // Feature 2 — Long-press en móvil → bottom sheet acciones
-    if (window.innerWidth < 768) {
-        contenedor.querySelectorAll('.card-premium').forEach(function(card) {
-            var timer = null;
-            card.addEventListener('touchstart', function(e) {
-                timer = setTimeout(function() {
-                    timer = null;
-                    var plc = card.dataset.placa;
-                    if (!plc) return;
-                    var bsEl = document.getElementById('bottomSheetPlacas');
-                    var bsPlaca = document.getElementById('bs-placa-nombre');
-                    var bsIdx = document.getElementById('bs-placa-index');
-                    if (!bsEl) return;
-                    if (bsPlaca) bsPlaca.textContent = plc;
-                    if (bsIdx) bsIdx.value = (window.dataGlobalPlacas || []).findIndex(function(x) { return x[0] === plc; });
-                    bootstrap.Offcanvas.getOrCreateInstance(bsEl).show();
-                }, 600);
-            }, { passive: true });
-            card.addEventListener('touchend', function() { clearTimeout(timer); timer = null; }, { passive: true });
-            card.addEventListener('touchmove', function() { clearTimeout(timer); timer = null; }, { passive: true });
-        });
-    }
-    if (typeof window.initSwipeCards === 'function') window.initSwipeCards('contenedorPlacasDinamico');
-    const fin = Math.min(inicio + ITEMS_POR_PAGINA, datosFiltradosPlacas.length);
-    if(infoPag) infoPag.innerText = `Mostrando ${inicio + 1}–${fin} de ${datosFiltradosPlacas.length} placas`;
-    let btnHtml = `<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid #e2e8f0;background:#ffffff;color:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:${paginaActualPlacas === 1 ? '0.35' : '1'};" ${paginaActualPlacas === 1 ? 'disabled' : ''} onclick="cambiarPaginaPlacas(-1)"><i class="bi bi-chevron-left"></i></button>`;
-    btnHtml += `<span style="font-size:.8rem;font-weight:700;color:#64748b;padding:0 0.5rem;">Pág. <b style="color:#0f172a">${paginaActualPlacas}</b> / ${totalPaginas}</span>`;
-    btnHtml += `<button style="width:38px;height:38px;border-radius:12px;border:1.5px solid #e2e8f0;background:#ffffff;color:#0f172a;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:${paginaActualPlacas >= totalPaginas ? '0.35' : '1'};" ${paginaActualPlacas >= totalPaginas ? 'disabled' : ''} onclick="cambiarPaginaPlacas(1)"><i class="bi bi-chevron-right"></i></button>`;
-    if(ctrlPag) ctrlPag.innerHTML = `<div style="display:flex;align-items:center;gap:.6rem;padding:0;">${btnHtml}</div>`;
 
-    // Sincronizar estado de checkboxes con la selección global (para páginas distintas)
-    if (window.modoSeleccion && window.modoSeleccion['placas'] && window.placasSeleccionadasGlobalmente) {
+    // Actualizar controles paginación
+    let pagHtml = '';
+    if (totalPaginas > 1) {
+        pagHtml += '<button class="btn btn-xs btn-outline-secondary" onclick="cambiarPaginaPlacas(-1)" '+(paginaActualPlacas<=1?'disabled':'')+'>‹ Ant</button>';
+        
+        var start = Math.max(1, paginaActualPlacas - 2), end = Math.min(totalPaginas, start + 4);
+        if (end - start < 4) start = Math.max(1, end - 4);
+        
+        for (var i = start; i <= end; i++) {
+            pagHtml += '<button class="btn btn-xs '+(i===paginaActualPlacas?'btn-primary':'btn-outline-secondary')+'" onclick="window._placasIrPagina('+i+')">'+i+'</button>';
+        }
+        
+        pagHtml += '<button class="btn btn-xs btn-outline-secondary" onclick="cambiarPaginaPlacas(1)" '+(paginaActualPlacas>=totalPaginas?'disabled':'')+'>Sig ›</button>';
+        pagHtml += '<span class="text-muted small ms-2">Pág '+paginaActualPlacas+' de '+totalPaginas+'</span>';
+    }
+    if(ctrlPag) ctrlPag.innerHTML = pagHtml;
+
+    if (window.placasSeleccionadasGlobalmente) {
         const selSet = new Set(window.placasSeleccionadasGlobalmente);
         document.querySelectorAll('.chk-bulk-placas').forEach(function(chk) {
-            const marcada = selSet.has(chk.value);
-            chk.checked = marcada;
-            const tarjeta = chk.closest('.card-premium');
-            if (tarjeta) tarjeta.classList.toggle('card-selected', marcada);
+            chk.checked = selSet.has(chk.value);
         });
     }
 }
+
+window._placasIrPagina = function(pag) {
+    const totalPaginas = Math.ceil(datosFiltradosPlacas.length / ITEMS_POR_PAGINA);
+    paginaActualPlacas = Math.max(1, Math.min(totalPaginas, pag));
+    renderizarPaginaPlacas();
+};
+
+window._placasToggleSel = function(id, checked) {
+    window.placasSeleccionadasGlobalmente = window.placasSeleccionadasGlobalmente || [];
+    if (checked) {
+        if (!window.placasSeleccionadasGlobalmente.includes(id)) window.placasSeleccionadasGlobalmente.push(id);
+    } else {
+        window.placasSeleccionadasGlobalmente = window.placasSeleccionadasGlobalmente.filter(x => x !== id);
+    }
+    _placasActualizarBtnMasivo();
+};
+
+window._placasToggleSelAll = function(checked) {
+    window.placasSeleccionadasGlobalmente = window.placasSeleccionadasGlobalmente || [];
+    document.querySelectorAll('.chk-bulk-placas').forEach(chk => {
+        chk.checked = checked;
+        window._placasToggleSel(chk.value, checked);
+    });
+};
+
+function _placasActualizarBtnMasivo() {
+    var arr = window.placasSeleccionadasGlobalmente || [];
+    var btn = document.getElementById('placas-btn-eliminar-masivo');
+    if (btn) {
+        if (arr.length > 0 && window.checkPerm('placas','d')) {
+            btn.style.display = 'inline-block';
+            btn.innerHTML = '<i class="bi bi-trash me-1"></i>Eliminar ' + arr.length + ' seleccionadas';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+}
+
+window.eliminarMasivoPlacas = function() {
+    var arr = window.placasSeleccionadasGlobalmente || [];
+    if (!arr.length) return;
+    if (!confirm('¿Seguro que deseas eliminar ' + arr.length + ' placas seleccionadas? Esta acción no se puede deshacer.')) return;
+    
+    Promise.all(arr.map(id => fetch('/api/script/eliminarDatosPlacas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: [id] })
+    })))
+    .then(() => {
+        window.placasSeleccionadasGlobalmente = [];
+        cargarTablaPlacas(true);
+    })
+    .catch(() => alert('Ocurrió un error al intentar eliminar las placas seleccionadas.'));
+};
 
 window.cambiarPaginaPlacas = function(direccion) {
     paginaActualPlacas += direccion;
