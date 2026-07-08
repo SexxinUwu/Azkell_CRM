@@ -191,6 +191,10 @@ window.filtrarPlacasAvanzado = function() {
     const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
     const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value);
     const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
+    
+    // Filtro por KPI de tipo
+    const kpiFiltroActivo = window._kpiFiltroActivo || null;
+
     let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
     let datosUtiles = dataGlobalPlacas.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
     datosFiltradosPlacas = datosUtiles.filter(row => {
@@ -200,7 +204,10 @@ window.filtrarPlacasAvanzado = function() {
         const mar = row[3] ? row[3].trim() : '';
         const est = row[18] ? row[18].trim() : '';
         const textoFila = plc + ' ' + mar.toLowerCase();
-        const ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est)));
+        
+        let ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est)));
+        
+        // Count for KPI updates using base filter (ignore KPI filter for counts)
         if (ok) {
             const t = tip.toLowerCase();
             if (t.includes('cami') || t.includes('camion')) kpiCamion++;
@@ -208,16 +215,53 @@ window.filtrarPlacasAvanzado = function() {
             else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
             else if (t.includes('tracto')) kpiTracto++;
         }
+
+        // Apply KPI filter to actual shown results
+        if (ok && kpiFiltroActivo) {
+            const t = tip.toLowerCase();
+            if (kpiFiltroActivo === 'camion') { ok = t.includes('cami') || t.includes('camion'); }
+            else if (kpiFiltroActivo === 'carreta') { ok = t.includes('carreta'); }
+            else if (kpiFiltroActivo === 'semi') { ok = t.includes('semirremolque') || t.includes('semi'); }
+            else if (kpiFiltroActivo === 'tracto') { ok = t.includes('tracto'); }
+        }
+
         return ok;
     });
+
     const safe = v => document.getElementById(v);
     if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
     if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
     if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
     if (safe('kpi-tracto')) safe('kpi-tracto').innerText = kpiTracto;
+    
     paginaActualPlacas = 1;
     renderizarPaginaPlacas();
-    _guardarFiltrosPlacas();
+    if(typeof _guardarFiltrosPlacas === 'function') _guardarFiltrosPlacas();
+};
+
+window.filtrarPorTipoKPI = function(tipo) {
+    if (window._kpiFiltroActivo === tipo) {
+        window._kpiFiltroActivo = null; // deselect
+    } else {
+        window._kpiFiltroActivo = tipo; // select
+    }
+
+    // Actualizar estilos visuales
+    document.querySelectorAll('.bento-kpi-card').forEach(c => {
+        c.style.border = '1px solid var(--border)';
+        c.style.backgroundColor = 'var(--surface)';
+    });
+    
+    if (window._kpiFiltroActivo) {
+        const idMap = {'camion': 'kpi-camion', 'carreta': 'kpi-carreta', 'semi': 'kpi-semi', 'tracto': 'kpi-tracto'};
+        const card = document.getElementById(idMap[tipo])?.closest('.bento-kpi-card');
+        if (card) {
+            card.style.border = '2px solid var(--primary, #3b82f6)';
+            card.style.backgroundColor = 'var(--bg)';
+        }
+    }
+
+    window.filtrarPlacasAvanzado();
 };
 
 function actualizarIndicadoresPlacas(datos) {

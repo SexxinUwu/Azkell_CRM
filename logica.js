@@ -538,7 +538,7 @@ window.initSSE = function() {
         conductores: 'conductores', status: 'statusFlota', usuarios: 'usuarios'
     };
     var MODULO_RUTA = {
-        fleetrun: 'mantenimiento/fleetrun', placas: 'mantenimiento/placas',
+        fleetrun: 'mantenimiento/fleetrun', placas: 'flota/placas',
         inspecciones: 'mantenimiento/inspecciones', conductores: 'directorio/conductores',
         status: 'flota/status', usuarios: 'sistema/usuarios',
         planificacion: 'mantenimiento/planificacion'
@@ -2497,7 +2497,7 @@ function actualizarBottomNavActivo(ruta) {
 var NOMBRES_MODULOS_RECIENTES = {
     'dashboard':                  'Dashboard',
     'mantenimiento/inspecciones': 'Inspecciones',
-    'mantenimiento/placas':       'Placas',
+    'flota/placas':       'Placas',
     'mantenimiento/fleetrun':     'Fleetrun',
     'mantenimiento/otros':        'Otros Mant.',
     'mantenimiento/planificacion':'Planificación',
@@ -2529,7 +2529,7 @@ var NOMBRES_MODULOS_RECIENTES = {
 var ICONOS_MODULOS_RECIENTES = {
     'dashboard':                  'bi-grid-1x2-fill',
     'mantenimiento/inspecciones': 'bi-clipboard2-pulse-fill',
-    'mantenimiento/placas':       'bi-truck',
+    'flota/placas':       'bi-truck',
     'mantenimiento/fleetrun':     'bi-speedometer2',
     'mantenimiento/otros':        'bi-grid-fill',
     'mantenimiento/planificacion':'bi-calendar2-check',
@@ -2631,7 +2631,7 @@ document.addEventListener('click', function(e) {
 const TITULOS_MODULOS = {
     'dashboard':                   'Centro de Comando',
     'mantenimiento/inspecciones':  'Análisis de Inspecciones',
-    'mantenimiento/placas':        'Gestión de Placas',
+    'flota/placas':        'Gestión de Placas',
     'mantenimiento/fleetrun':      'Sistema Fleetrun',
     'mantenimiento/otros':         'Otros — Mantenimiento',
     'mantenimiento/planificacion': 'Planificación de Mantenimientos',
@@ -2659,7 +2659,7 @@ const TITULOS_MODULOS = {
 const MENU_IDS = {
     'dashboard':                   'nav-dashboard',
     'mantenimiento/inspecciones':  'nav-inspecciones',
-    'mantenimiento/placas':        'nav-placas',
+    'flota/placas':       'nav-placas',
     'mantenimiento/fleetrun':      'nav-fleetrun',
     'mantenimiento/otros':         'nav-otros-mant',
     'mantenimiento/planificacion': 'nav-otros-mant',
@@ -2700,7 +2700,7 @@ const MENU_IDS = {
 
 const MENU_SECTION = {
     'mantenimiento/inspecciones': 'mantenimiento',
-    'mantenimiento/placas':       'administracion',
+    'flota/placas':       'flota',
     'mantenimiento/fleetrun':     'mantenimiento',
     'almacen/inventario':         'almacen',
     'almacen/entradas':           'almacen',
@@ -2739,7 +2739,7 @@ const MENU_SECTION = {
 const BREADCRUMB_MAP = {
     'dashboard':                  [],
     'mantenimiento/inspecciones': ['Mantenimiento','Inspecciones'],
-    'mantenimiento/placas':       ['Administración','Placas'],
+    'flota/placas':       ['Flota','Placas'],
     'mantenimiento/fleetrun':     ['Mantenimiento','Fleetrun'],
     'mantenimiento/otros':        ['Mantenimiento','Otros'],
     'almacen/inventario':         ['Almacén','Inventario'],
@@ -3859,7 +3859,7 @@ var FAB_ACCIONES_POR_RUTA = {
         { icon: 'bi-clock-history', cls: 'info',   texto: 'Ver Historial',        fn: function() { if(typeof toggleVistaStatus==='function') toggleVistaStatus(); } },
         { icon: 'bi-arrows-expand', cls: 'warning', texto: 'Expandir Todo',       fn: function() { if(typeof toggleAllStatusGroups==='function') toggleAllStatusGroups(); } }
     ],
-    'mantenimiento/placas': [
+    'flota/placas': [
         { icon: 'bi-plus-lg', cls: 'primary', texto: 'Registrar Placa', fn: function() { var b = document.getElementById('btnNuevaPlaca'); if(b) b.click(); } }
     ],
     'directorio/conductores': [

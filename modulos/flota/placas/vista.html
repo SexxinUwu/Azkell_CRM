@@ -36,22 +36,22 @@
 
   <!-- KPI Row Bento -->
   <div class="bento-kpi-row mb-3" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: none;">
-    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('camion')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
         <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck fs-5"></i></div>
         <h2 id="kpi-camion" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
         <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Camiones</p>
     </div>
-    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('carreta')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
         <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
         <h2 id="kpi-carreta" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
         <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Carretas</p>
     </div>
-    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('tracto')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
         <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-front fs-5"></i></div>
         <h2 id="kpi-tracto" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
         <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Tractos</p>
     </div>
-    <div class="bento-kpi-card" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
+    <div class="bento-kpi-card" onclick="window.filtrarPorTipoKPI('semi')" style="flex: 0 0 auto; min-width: 140px; background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
         <div style="margin-bottom: 0.5rem; opacity: 0.9; color: var(--text);"><i class="bi bi-truck-flatbed fs-5"></i></div>
         <h2 id="kpi-semi" style="font-size: 1.5rem; font-weight: 900; line-height: 1; margin-bottom: 0.25rem; color: var(--text);">0</h2>
         <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; color: var(--subtext); margin: 0;">Semirrem.</p>
@@ -61,7 +61,10 @@
   <!-- TABLA DE PLACAS -->
   <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
     <div class="ent-table-wrap custom-scrollbar" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
-      <table id="tabla-placas" style="width: 100%; min-width: 1800px; border-collapse: collapse; font-size: 0.82rem;">
+      <style>
+        #tabla-placas th, #tabla-placas td { white-space: nowrap; }
+      </style>
+      <table id="tabla-placas" style="width: 100%; min-width: max-content; border-collapse: collapse; font-size: 0.82rem;">
         <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
           <tr>
             <th style="width: 40px; text-align: center; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;"></th>

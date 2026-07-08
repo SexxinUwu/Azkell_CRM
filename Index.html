@@ -69,7 +69,7 @@
                 <div id="wrap-flota">
                     <button class="nav-section-toggle" data-section="flota" aria-expanded="false" onclick="window.toggleNavSection('flota')">
                         <span class="link-text" data-i18n="nav.flota">Flota</span>
-                        <span class="section-badge">3</span>
+                        <span class="section-badge">4</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-flota">
@@ -84,6 +84,11 @@
                         <a id="nav-documentos-flota" class="nav-item" onclick="cargarModuloAislado('flota/documentos')">
                             <div class="nav-icon"><i class="bi bi-folder2-open"></i></div>
                             <span class="link-text">Documentos</span>
+                        </a>
+
+                        <a id="nav-placas" class="nav-item" onclick="cargarModuloAislado('flota/placas')">
+                            <div class="nav-icon"><i class="bi bi-card-heading"></i></div>
+                            <span class="link-text">Placas</span>
                         </a>
                     </div>
                 </div>
@@ -127,8 +132,7 @@
                         <a id="nav-kpis-taller"     class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/kpis-taller')"></a>
                         <a id="nav-productividad"   class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/productividad')"></a>
                         <a id="nav-finanzas-taller" class="nav-item" style="display:none!important" onclick="cargarModuloAislado('mantenimiento/finanzas-taller')"></a>
-                        <!-- Placas: accesible vía hub Administración (oculto del sidebar) -->
-                        <a id="nav-placas" class="nav-item" style="display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;width:0!important;padding:0!important;margin:0!important;overflow:hidden!important;" onclick="cargarModuloAislado('mantenimiento/placas')"></a>
+                        
                     </div>
                 </div>
 
@@ -628,7 +632,12 @@
             <div id="mbnav-documentos-flota" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/documentos'); setBottomNavActive('bnav-flota');">
                 <div class="bnav-card-icon text-warning" style="background: rgba(245,158,11,.1);"><i class="bi bi-folder2-open"></i></div>
                 <div><p class="bnav-card-title">Documentos</p><p class="bnav-card-desc">SOAT, MATPEL, Rev. Técnica</p></div>
+    
+            <div id="mbnav-placas" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetFlota')).hide(); cargarModuloAislado('flota/placas'); setBottomNavActive('bnav-flota');">
+                <div class="bnav-card-icon" style="background: rgba(16, 185, 129, .1); color: #10b981;"><i class="bi bi-card-heading"></i></div>
+                <div><p class="bnav-card-title">Placas</p><p class="bnav-card-desc">Directorio de placas</p></div>
             </div>
+        </div>
         </div>
     </div>
 
