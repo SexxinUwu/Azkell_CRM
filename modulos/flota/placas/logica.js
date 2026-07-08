@@ -8,7 +8,7 @@ var dataGlobalPlacas    = window.dataGlobalPlacas || [];
 var datosFiltradosPlacas = window.datosFiltradosPlacas || [];
 var paginaActualPlacas  = window.paginaActualPlacas || 1;
 var colActualesPlacas   = window.colActualesPlacas || 4;
-window.filasPlacasConfig = window.filasPlacasConfig || parseInt(localStorage.getItem('fleet_placas_filas') || '4');
+
 var ITEMS_POR_PAGINA    = colActualesPlacas * window.filasPlacasConfig;
 
 // ── Poblar selects dinámicos desde dataGlobalPlacas ──────────────
@@ -63,35 +63,14 @@ window.poblarSelectsFormularios = function(datos) {
 // ── Carga principal ──────────────────────────────────────────────
 function cargarTablaPlacas(forzarRefresh = false) {
     if (!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; }
-    if (typeof window.mostrarSkeleton === 'function') {
-        window.mostrarSkeleton('contenedorPlacasDinamico', 'cards', 8);
-    } else {
-        const c = document.getElementById('contenedorPlacasDinamico');
-        if (c) c.innerHTML = '<div class="w-100 text-center py-5"><span class="spinner-border text-warning spinner-border-sm"></span> Cargando...</div>';
-    }
+    const c = document.getElementById('contenedorPlacasDinamico');
+    if (c) c.innerHTML = '<tr><td colspan="25" class="text-center py-5" style="color:#94a3b8;"><span class="spinner-border text-warning spinner-border-sm me-2"></span> Cargando...</td></tr>';
+    
     fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
         .then(function(r) { return r.json(); })
         .then(function(r) { mostrarPlacas(r.data || []); })
         .catch(function() { mostrarPlacas([]); });
 }
-
-window.cambiarColumnasPlacas = function(cols) {
-    colActualesPlacas = parseInt(cols);
-    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
-    localStorage.setItem('fleet_pref_placas_cols', colActualesPlacas);
-    paginaActualPlacas = 1;
-    const contenedor = document.getElementById('contenedorPlacasDinamico');
-    if (contenedor) contenedor.className = `flex-grow-1 overflow-auto p-3 placas-grid-view grid-cols-${colActualesPlacas}`;
-    renderizarPaginaPlacas();
-};
-
-window.cambiarFilasPlacas = function(filas) {
-    window.filasPlacasConfig = parseInt(filas) || 4;
-    localStorage.setItem('fleet_placas_filas', window.filasPlacasConfig);
-    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
-    paginaActualPlacas = 1;
-    renderizarPaginaPlacas();
-};
 
 // ── Autocompleta RUC al seleccionar cliente ──────────────────────────────────
 window.autocompletarRucSelect = function(clienteNombre, rucFieldId) {
@@ -195,7 +174,7 @@ window.filtrarPlacasAvanzado = function() {
     // Filtro por KPI de tipo
     const kpiFiltroActivo = window._kpiFiltroActivo || null;
 
-    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0;
+    let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0, kpiTotal=0;
     let datosUtiles = dataGlobalPlacas.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
     datosFiltradosPlacas = datosUtiles.filter(row => {
         const plc = (row[0]||'').toLowerCase();
@@ -209,6 +188,7 @@ window.filtrarPlacasAvanzado = function() {
         
         // Count for KPI updates using base filter (ignore KPI filter for counts)
         if (ok) {
+            kpiTotal++;
             const t = tip.toLowerCase();
             if (t.includes('cami') || t.includes('camion')) kpiCamion++;
             else if (t.includes('carreta')) kpiCarreta++;
@@ -229,6 +209,7 @@ window.filtrarPlacasAvanzado = function() {
     });
 
     const safe = v => document.getElementById(v);
+    if (safe('kpi-total')) safe('kpi-total').innerText = kpiTotal;
     if (safe('kpi-camion')) safe('kpi-camion').innerText = kpiCamion;
     if (safe('kpi-carreta')) safe('kpi-carreta').innerText = kpiCarreta;
     if (safe('kpi-semi')) safe('kpi-semi').innerText = kpiSemi;
@@ -240,7 +221,7 @@ window.filtrarPlacasAvanzado = function() {
 };
 
 window.filtrarPorTipoKPI = function(tipo) {
-    if (window._kpiFiltroActivo === tipo) {
+    if (window._kpiFiltroActivo === tipo || tipo === 'total') {
         window._kpiFiltroActivo = null; // deselect
     } else {
         window._kpiFiltroActivo = tipo; // select
@@ -259,16 +240,23 @@ window.filtrarPorTipoKPI = function(tipo) {
             card.style.border = '2px solid var(--primary, #3b82f6)';
             card.style.backgroundColor = 'var(--bg)';
         }
+    } else {
+        const card = document.getElementById('kpi-total')?.closest('.bento-kpi-card');
+        if (card) {
+            card.style.border = '2px solid var(--primary, #3b82f6)';
+            card.style.backgroundColor = 'var(--bg)';
+        }
     }
 
     window.filtrarPlacasAvanzado();
 };
 
 function actualizarIndicadoresPlacas(datos) {
-    let camiones = 0, carretas = 0, semirremolques = 0, tractos = 0;
+    let camiones = 0, carretas = 0, semirremolques = 0, tractos = 0, total = 0;
 
     datos.forEach(fila => {
         if ((fila[0] || '').toUpperCase() === 'PLACA') return;
+        total++;
         const tipo = (fila[5] || '').toString().trim().toUpperCase();
         if (tipo.includes('CAMI')) camiones++;
         else if (tipo.includes('CARRETA')) carretas++;
@@ -276,11 +264,13 @@ function actualizarIndicadoresPlacas(datos) {
         else if (tipo.includes('TRACTO')) tractos++;
     });
 
+    const elTotal = document.getElementById('kpi-total');
     const elCamiones = document.getElementById('kpi-camion');
     const elCarretas = document.getElementById('kpi-carreta');
     const elSemis = document.getElementById('kpi-semi');
     const elTractos = document.getElementById('kpi-tracto');
 
+    if (elTotal) elTotal.innerText = total;
     if (elCamiones) elCamiones.innerText = camiones;
     if (elCarretas) elCarretas.innerText = carretas;
     if (elSemis) elSemis.innerText = semirremolques;
