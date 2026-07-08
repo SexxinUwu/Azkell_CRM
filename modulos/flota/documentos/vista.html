@@ -524,11 +524,11 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     width: 100%;
     max-width: 900px;
     height: 85vh;
-    border-radius: 12px;
+    border-radius: 24px; /* Fixed: Matching header radius to avoid white corners */
     display: flex;
     flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
+    overflow: hidden; /* Fixed: Ensure content doesn't bleed out of rounded corners */
 }
 .fm-header {
     padding: 1.25rem 1.5rem;
@@ -537,6 +537,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     align-items: center;
     background: #1e293b !important;
     color: #ffffff !important;
+    border-radius: 24px 24px 0 0 !important; /* Ensure it stays rounded */
 }
 .fm-header h3 {
     margin: 0;
@@ -649,7 +650,7 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid #cbd5e1;
-    border-radius: 8px;
+    border-radius: 12px; /* Fixed: Made corners more rounded (was 8px) */
     font-size: 1rem;
     font-weight: 600;
     color: #0f172a;
@@ -674,9 +675,9 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 }
 .form-control-clean {
     width: 100%;
-    border: none;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.25rem 0;
+    border: 1px solid #e2e8f0; /* Change from just bottom border to full border */
+    border-radius: 8px; /* Added rounded corners */
+    padding: 0.5rem 0.75rem; /* Adjusted padding for full border */
     font-size: 0.9rem;
     color: #0f172a;
     outline: none;
@@ -848,13 +849,16 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     #modalEdicionVehiculo input[type="date"],
     #modalEdicionVehiculo input[type="number"],
     #modalEdicionVehiculo select,
-    #modalEdicionVehiculo .form-control-large {
+    #modalEdicionVehiculo .form-control-large,
+    #modalEdicionVehiculo .form-control-clean {
         background-color: #f8fafc !important;
         border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important; /* Fixed: Added rounded corners */
     }
     #modalEdicionVehiculo input:focus,
     #modalEdicionVehiculo select:focus,
-    #modalEdicionVehiculo .form-control-large:focus {
+    #modalEdicionVehiculo .form-control-large:focus,
+    #modalEdicionVehiculo .form-control-clean:focus {
         background-color: #ffffff !important;
         border-color: #3b82f6 !important;
     }
@@ -1115,17 +1119,17 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
 <!-- Modal -->
 <div class="fleet-modal-overlay" id="modalEdicionVehiculo">
     <div class="fleet-modal">
-        <div class="fm-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: #fff; border-bottom: 1px solid #e2e8f0; border-radius: 24px 24px 0 0;">
+        <div class="fm-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: #1e293b; border-bottom: 1px solid #334155; border-radius: 24px 24px 0 0;">
             <div style="display:flex; align-items:center; gap:0.75rem;">
                 <div style="width:40px; height:40px; background:#dcfce7; color:#16a34a; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
                     <i class="bi bi-arrow-down-circle"></i>
                 </div>
                 <div style="display:flex; flex-direction:column; line-height:1.2;">
-                    <span style="font-weight:800; color:#0f172a; font-size:1.1rem;">Configuración de Unidad</span>
-                    <span style="font-weight:800; color:#64748b; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px;">Documentos de Flota</span>
+                    <span style="font-weight:800; color:#ffffff; font-size:1.1rem;">Configuración de Unidad</span>
+                    <span style="font-weight:800; color:#cbd5e1; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px;">Documentos de Flota</span>
                 </div>
             </div>
-            <button class="fm-close" onclick="cerrarModalEdicion()" style="width:36px; height:36px; background:#f1f5f9; color:#475569; border-radius:12px; border:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+            <button class="fm-close" onclick="cerrarModalEdicion()" style="width:36px; height:36px; background:#f1f5f9; color:#000000; border-radius:12px; border:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
         </div>
         <div class="fm-body">
             <div class="fm-sidebar">
