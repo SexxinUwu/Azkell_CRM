@@ -968,13 +968,18 @@ window.abrirDocModal = function(title, contentRows, est, docUrl) {
     
     document.getElementById('dm-data').innerHTML = html;
     
-    const dlBtn = document.querySelector('.doc-modal-btn.secondary');
-    if(dlBtn) {
-        if(docUrl) {
-            dlBtn.style.display = 'block';
-            dlBtn.onclick = () => window.open(docUrl, '_blank');
+    const btnVer = document.getElementById('dm-btn-ver');
+    const btnDescargar = document.getElementById('dm-btn-descargar');
+    
+    if (btnVer && btnDescargar) {
+        if (docUrl) {
+            btnVer.style.display = 'flex';
+            btnDescargar.style.display = 'flex';
+            btnVer.onclick = () => window.procesarDocumento(docUrl, 'ver');
+            btnDescargar.onclick = () => window.procesarDocumento(docUrl, 'descargar');
         } else {
-            dlBtn.style.display = 'none';
+            btnVer.style.display = 'none';
+            btnDescargar.style.display = 'none';
         }
     }
 

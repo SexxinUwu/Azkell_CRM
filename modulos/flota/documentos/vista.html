@@ -1099,6 +1099,14 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
         <div class="doc-modal-data" id="dm-data">
             <!-- Rellenado por JS -->
         </div>
+        <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+            <button class="doc-modal-btn secondary" id="dm-btn-ver" style="display:none; flex:1;" onclick="">
+                <i class="bi bi-eye" style="margin-right:0.5rem;"></i> Ver
+            </button>
+            <button class="doc-modal-btn secondary" id="dm-btn-descargar" style="display:none; flex:1;" onclick="">
+                <i class="bi bi-cloud-download" style="margin-right:0.5rem;"></i> Descargar
+            </button>
+        </div>
         <button class="doc-modal-btn primary" onclick="abrirModalEdicion(currentPlaca); cerrarDocModal();">
             <i class="bi bi-pencil-square" style="margin-right:0.5rem;"></i> Editar Información
         </button>
