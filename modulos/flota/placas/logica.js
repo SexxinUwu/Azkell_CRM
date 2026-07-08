@@ -158,7 +158,7 @@ function mostrarPlacas(datos) {
     rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado');
     rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('i_placa', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
     paginaActualPlacas = 1;
-    cambiarColumnasPlacas(colActualesPlacas);
+    renderizarPaginaPlacas();
     if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
     _restaurarFiltrosPlacas();
 }
