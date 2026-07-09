@@ -422,7 +422,7 @@ function renderizarPaginaPlacas() {
         const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 18];
         for (let i of ordenVisual) {
             let val = fila[i] ? fila[i].trim() : '—';
-            let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text); border-right: 1px solid var(--border);';
+            let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
             
             // Especial styling for Placa
             if (i === 0) {
