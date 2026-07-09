@@ -2900,7 +2900,7 @@ window.cargarModuloAislado = async function(rutaModulo) {
 
         // ← Botón "Atrás a Administración" para sub-módulos admin
         const ADMIN_SUBRUTAS = [
-            'almacen/proveedores','almacen/familias','almacen/unidades',
+            'almacen/familias','almacen/unidades',
             'almacen/sistemas','almacen/marcas',
             'mantenimiento/configuracion-mp','mantenimiento/kits-mp',
             'mantenimiento/tipos-mp','mantenimiento/config-metrica',
