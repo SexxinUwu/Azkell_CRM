@@ -625,10 +625,10 @@ _encFixes.forEach(([bad, good]) => {
     );
 });
 // ── Migración: columna metrica en placas (km vs horas motor) ──────────────
-db.query(
-    `ALTER TABLE placas ADD COLUMN metrica ENUM('km','horas') NOT NULL DEFAULT 'km'`,
-    (e) => { if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ placas.metrica verificada'); }
-);
+db.query(`ALTER TABLE placas ADD COLUMN metrica ENUM('km','horas') NOT NULL DEFAULT 'km'`, (e) => { 
+    if (!e || e.code === 'ER_DUP_FIELDNAME') console.log('✅ placas.metrica verificada'); 
+});
+db.query(`ALTER TABLE placas ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL`, (e) => {});
 // ── Nueva tabla: almacen_familias (fire-and-forget) ──────────────────────────
 db.query(
     `CREATE TABLE IF NOT EXISTS almacen_familias (
@@ -1869,8 +1869,8 @@ app.post('/api/vehiculos-flota', (req, res) => {
          sv_entidad, sv_asesor, sv_vencimiento,
          sc_entidad, sc_asesor, sc_vencimiento,
          fum_emision, fum_vencimiento, ext_emision, ext_vencimiento, ext_cantidad,
-         tc_url, soat_url, matpel_url, rt_url, boni_url, sv_url, sc_url, fum_url, ext_url)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         tc_url, soat_url, matpel_url, rt_url, boni_url, sv_url, sc_url, fum_url, ext_url, wialon_name)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
         tipo=VALUES(tipo), propiedad=VALUES(propiedad), empresa=VALUES(empresa),
         fecha_entrega=VALUES(fecha_entrega), anio=VALUES(anio), marca=VALUES(marca),
@@ -1887,7 +1887,8 @@ app.post('/api/vehiculos-flota', (req, res) => {
         fum_emision=VALUES(fum_emision), fum_vencimiento=VALUES(fum_vencimiento),
         ext_emision=VALUES(ext_emision), ext_vencimiento=VALUES(ext_vencimiento), ext_cantidad=VALUES(ext_cantidad),
         tc_url=VALUES(tc_url), soat_url=VALUES(soat_url), matpel_url=VALUES(matpel_url), rt_url=VALUES(rt_url),
-        boni_url=VALUES(boni_url), sv_url=VALUES(sv_url), sc_url=VALUES(sc_url), fum_url=VALUES(fum_url), ext_url=VALUES(ext_url)`;
+        boni_url=VALUES(boni_url), sv_url=VALUES(sv_url), sc_url=VALUES(sc_url), fum_url=VALUES(fum_url), ext_url=VALUES(ext_url),
+        wialon_name=VALUES(wialon_name)`;
 
     const values = [
         d.placa.toUpperCase(), d.tipo||null, d.propiedad||'PROPIA', d.empresa||'MARSISA',
@@ -1899,7 +1900,7 @@ app.post('/api/vehiculos-flota', (req, res) => {
         d.sc_entidad||null, d.sc_asesor||null, fmt(d.sc_vencimiento),
         fmt(d.fum_emision), fmt(d.fum_vencimiento), fmt(d.ext_emision), fmt(d.ext_vencimiento), d.ext_cantidad||1,
         d.tc_url||null, d.soat_url||null, d.matpel_url||null, d.rt_url||null, d.boni_url||null,
-        d.sv_url||null, d.sc_url||null, d.fum_url||null, d.ext_url||null
+        d.sv_url||null, d.sc_url||null, d.fum_url||null, d.ext_url||null, d.wialon_name||null
     ];
 
     db.query(query, values, (err) => {
@@ -2044,7 +2045,7 @@ app.put('/api/placas/:placa', (req, res) => {
     const ip      = (req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '').substring(0, 80);
     const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
                      'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
-                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica'];
+                     'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
 
     db.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
         if (err)  return res.status(500).json({ error: err.message });
@@ -2444,9 +2445,21 @@ app.listen(process.env.PORT || 3000, () => {
 
             -- Auditoría
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            
+            -- Wialon (GPS)
+            wialon_name VARCHAR(100) DEFAULT NULL
         )
     `, (e) => {
         if (e) console.error("Error creando tabla vehiculos_flota:", e.message);
     });
+    // Migración: añadir wialon_name a vehiculos_flota
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='vehiculos_flota' AND COLUMN_NAME='wialon_name'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE vehiculos_flota ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL", () => {});
+            }
+        }
+    );
 });

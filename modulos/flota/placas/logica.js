@@ -58,6 +58,24 @@ window.poblarSelectsFormularios = function(datos) {
     poblar('e_sub_tipo', subTipos);
     poblar('e_color',    colores);
     poblar('e_conf',     confs);
+
+    // Poblar dropdowns de Wialon
+    function poblarWialon(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '<option value="">-- Búsqueda Automática (Recomendado) --</option>';
+        if (CACHE && CACHE.wialon && Array.isArray(CACHE.wialon)) {
+            const sortedWialon = CACHE.wialon.map(w => w.nombre_wialon).filter(Boolean).sort((a, b) => a.localeCompare(b, 'es'));
+            sortedWialon.forEach(nombre => {
+                const opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                el.appendChild(opt);
+            });
+        }
+    }
+    poblarWialon('p_wialon_name');
+    poblarWialon('e_wialon_name');
 };
 
 // ── Carga principal ──────────────────────────────────────────────
@@ -835,7 +853,7 @@ window.abrirModalEditarPlaca = function(index) {
         'e_placa', 'e_cliente', 'e_ruc', 'e_marca', 'e_modelo', 'e_tipo', 'e_sub_tipo',
         'e_color', 'e_nro_motor', 'e_nro_caja', 'e_nro_corona', 'e_nro_vin', 'e_conf',
         'e_anio', 'e_comb', 'e_carga_util', 'e_peso_neto', 'e_peso_bruto', 'e_estado',
-        'e_uts', 'e_motora', 'e_llantas', 'e_enuso'
+        'e_uts', 'e_motora', 'e_llantas', 'e_enuso', 'e_wialon_name'
     ];
 
     var _editTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
