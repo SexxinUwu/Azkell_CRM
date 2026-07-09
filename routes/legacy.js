@@ -387,7 +387,7 @@ router.post('/:metodo', async (req, res) => {
             SELECT
                 placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
                 nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
-                combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso
+                combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name
             FROM placas
         `;
         db.query(sql, (err, results) => {
@@ -417,7 +417,8 @@ router.post('/:metodo', async (req, res) => {
                 r.uts || '',             // 19: Uts
                 r.motora || '',          // 20: Motora O No Motora
                 r.llantas || '',         // 21: Llantas
-                r.en_uso || ''           // 22: En Uso?
+                r.en_uso || '',          // 22: En Uso?
+                r.wialon_name || ''      // 23: Wialon Name
             ]);
             return res.json({ data });
         });
@@ -826,16 +827,17 @@ router.post('/:metodo', async (req, res) => {
         const motora = isEdit ? form.editP_motora : form.p_motora;
         const llantas = isEdit ? form.editP_llantas : form.p_llantas;
         const enuso = isEdit ? form.editP_enuso : form.p_enuso;
+        const wialon_name = isEdit ? form.editP_wialon_name : form.p_wialon_name;
 
         const query = `
-            INSERT INTO placas (placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio, combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO placas (placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio, combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?, nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?, anio=?, combustible=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?
+            cliente=?, ruc_dni=?, marca=?, modelo_uts=?, tipo=?, sub_tipo=?, color=?, nro_motor=?, nro_caja=?, nro_corona=?, nro_vin=?, configuracion=?, anio=?, combustible=?, carga_util=?, peso_neto=?, peso_bruto=?, estado=?, uts=?, motora=?, llantas=?, en_uso=?, wialon_name=?
         `;
 
-        // 23 valores para INSERT, luego 22 (sin placa) para ON DUPLICATE KEY UPDATE
-        const valores = [placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, conf, anio, comb, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso];
+        // 24 valores para INSERT, luego 23 (sin placa) para ON DUPLICATE KEY UPDATE
+        const valores = [placa, cliente, ruc, marca, modelo, tipo, sub_tipo, color, nro_motor, nro_caja, nro_corona, nro_vin, conf, anio, comb, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, enuso, wialon_name];
         const valoresUpdate = valores.slice(1);
 
         db.query(query, [...valores, ...valoresUpdate], (err) => {

@@ -1883,8 +1883,19 @@ function recargarWialon(forzarVista = false) {
 
 function buscarWialonPorPlaca(placa) {
     if(!CACHE.wialon || !Array.isArray(CACHE.wialon)) return null;
-    // Quitamos guiones y espacios para que la comparación sea perfecta
-    let pLimpia = placa.toString().replace(/[^A-Z0-9]/ig, '').toUpperCase();
+    let placaStr = placa ? placa.toString() : '';
+
+    // 1. Intentar coincidencia exacta vinculada (wialon_name en CACHE.placas)
+    if (CACHE.placas) {
+        let vehiculo = CACHE.placas.find(v => v.placa === placaStr);
+        if (vehiculo && vehiculo.wialon_name) {
+            let exactMatch = CACHE.wialon.find(w => w.nombre_wialon === vehiculo.wialon_name);
+            if (exactMatch) return exactMatch;
+        }
+    }
+
+    // 2. Respaldo: Búsqueda difusa (fuzzy search) clásica
+    let pLimpia = placaStr.replace(/[^A-Z0-9]/ig, '').toUpperCase();
     return CACHE.wialon.find(w => {
         let wPlaca = w.placa ? w.placa.replace(/[^A-Z0-9]/ig, '').toUpperCase() : "";
         let wNom = w.nombre_wialon ? w.nombre_wialon.replace(/[^A-Z0-9]/ig, '').toUpperCase() : "";
