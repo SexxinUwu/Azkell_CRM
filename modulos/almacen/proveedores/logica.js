@@ -33,6 +33,9 @@ window.init_proveedores = function() {
 };
 
 window.cargarProveedores = function() {
+    var b = document.getElementById('prov-buscar');
+    if (b) b.value = '';
+    window._provFiltroB = '';
     window._provSeleccionados = [];
     window._provActualizarBtnMasivo();
     var grid = document.getElementById('prov-grid');
@@ -72,21 +75,12 @@ window.filtrarProveedores = function() {
 // ── KPI Row Bento ─────────────────────────────────────────────────
 window._provRenderKPIs = function(data) {
     var total   = data.length;
-    var activos = data.filter(function(d) { return d.estado === 'Activo'; }).length;
     var el = document.getElementById('prov-kpi-row');
     if (!el) return;
     el.innerHTML =
         '<div class="bento-kpi">' +
           '<div><div class="bento-kpi-label">Total Proveedores</div><div class="bento-kpi-num">' + total + '</div></div>' +
           '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-truck fs-4"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi">' +
-          '<div><div class="bento-kpi-label">Activos</div><div class="bento-kpi-num" style="color:#16a34a">' + activos + '</div></div>' +
-          '<div class="bento-kpi-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-check-circle-fill fs-4"></i></div>' +
-        '</div>' +
-        '<div class="bento-kpi accent-dark">' +
-          '<div><div class="bento-kpi-label">Inactivos</div><div class="bento-kpi-num">' + (total - activos) + '</div></div>' +
-          '<div class="bento-kpi-icon"><i class="bi bi-pause-circle fs-4" style="color:#94a3b8"></i></div>' +
         '</div>';
 };
 
@@ -103,10 +97,12 @@ window._provRender = function() {
     if (cont) cont.textContent = total + ' proveedor' + (total !== 1 ? 'es' : '');
 
     var grid = document.getElementById('prov-tbody');
+    var gridMobile = document.getElementById('prov-grid-mobile');
     if (!grid) return;
 
     if (!datos.length) {
         grid.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</td></tr>';
+        if (gridMobile) gridMobile.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Sin proveedores encontrados</div>';
         window._provRenderPaginador(0, 1, 0);
         return;
     }
@@ -179,6 +175,34 @@ window._provRender = function() {
         '</tr>';
     }).join('');
 
+    if (gridMobile) {
+        gridMobile.innerHTML = datos.map(function(d) {
+            var initials = (d.nombre || '?').split(' ').slice(0, 2).map(function(w) { return (w[0] || ''); }).join('').toUpperCase();
+            var docSub = (d.razon_social ? _provEsc(d.razon_social) + ' - ' : '') + _provEsc(d.tipo_documento || '') + ' ' + _provEsc(d.numero_documento || '');
+            
+            var cleanTel = (d.telefono || '').replace(/[^0-9+]/g, '');
+            var wspTel = cleanTel.replace('+', '');
+            if (wspTel.length === 9 && wspTel.startsWith('9')) wspTel = '51' + wspTel;
+
+            var btnLlamar = cleanTel ? '<a href="tel:' + cleanTel + '" class="prov-btn" style="background:#eff6ff; color:#2563eb;"><i class="bi bi-telephone-fill"></i></a>' 
+                                     : '<button class="prov-btn" disabled style="background:#f1f5f9; color:#94a3b8;"><i class="bi bi-telephone-fill"></i></button>';
+            var btnWsp = wspTel ? '<a href="https://api.whatsapp.com/send?phone=' + wspTel + '" target="_blank" class="prov-btn" style="background:#f0fdf4; color:#16a34a;"><i class="bi bi-whatsapp"></i></a>' 
+                                  : '<button class="prov-btn" disabled style="background:#f1f5f9; color:#94a3b8;"><i class="bi bi-whatsapp"></i></button>';
+            
+            return '<div class="prov-card" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')">' +
+                '<div class="prov-avatar">' + initials + '</div>' +
+                '<div class="prov-info">' +
+                    '<div class="prov-name">' + _provEsc(d.nombre || 'Sin Nombre') + '</div>' +
+                    '<div class="prov-sub">' + docSub + '</div>' +
+                    (d.estado === 'Activo' ? '<div class="prov-lic">Activo</div>' : '<div class="prov-lic" style="background:#f1f5f9; color:#64748b;">Inactivo</div>') +
+                '</div>' +
+                '<div class="prov-actions" onclick="event.stopPropagation()">' +
+                    btnLlamar + btnWsp +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
     window._provRenderPaginador(total, paginas, inicio + datos.length);
     window._provActualizarBtnMasivo();
 };
@@ -186,7 +210,6 @@ window._provRender = function() {
 window._provRenderPaginador = function(total, paginas, hasta) {
     var cont = document.getElementById('prov-paginador');
     if (!cont) return;
-    if (paginas <= 1) { cont.innerHTML = ''; return; }
     var pag = window._provPagina;
     var btns = '';
     btns += '<button class="btn btn-xs btn-outline-secondary" onclick="window._provIrPagina('+pag+'- 1)" '+(pag<=1?'disabled':'')+'>‹ Ant</button>';

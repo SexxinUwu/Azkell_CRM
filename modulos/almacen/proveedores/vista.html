@@ -1,4 +1,14 @@
 <!-- Módulo Almacén / Proveedores — SPA Aislado -->
+<style>
+.prov-card { display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; position: relative; overflow: hidden; min-height: 72px; }
+.prov-avatar { width: 48px; height: 48px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.05rem; flex-shrink: 0; }
+.prov-info { flex: 1; min-width: 0; }
+.prov-name { font-weight: 800; font-size: .88rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.prov-sub { font-size: .69rem; color: var(--subtext); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.prov-lic { display: inline-block; font-size: .6rem; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: #eff6ff; color: #2563eb; text-transform: uppercase; }
+.prov-actions { display: flex; flex-direction: row; gap: 6px; flex-shrink: 0; }
+.prov-btn { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; border: none; flex-shrink: 0; cursor: pointer; text-decoration: none; }
+</style>
 <div id="mod-proveedores" class="modulo-wrapper d-flex flex-column h-100">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -10,26 +20,23 @@
     </div>
     <div class="d-flex gap-2">
       <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarProveedores()" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-      <!-- Importar -->
-      <div class="dropdown">
-        <button class="btn btn-sm btn-outline-info fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-upload"></i> <span class="d-none d-md-inline">Importar</span>
-        </button>
-        <ul class="dropdown-menu shadow">
-          <li><a class="dropdown-item fw-bold text-success" href="#" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>1. Descargar Plantilla</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-1"></i>2. Subir Excel Lleno</a></li>
-        </ul>
-      </div>
       <input type="file" id="inputFileProveedores" accept=".xlsx,.xls" style="display:none;" onchange="window.importarExcelProveedores(event)">
-      <!-- Exportar -->
-      <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.exportarExcelProveedores()">
-        <i class="bi bi-download"></i> <span class="d-none d-md-inline">Exportar</span>
-      </button>
-      <button class="btn btn-sm btn-primary" onclick="window.abrirModalProveedor()">
-        <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nuevo Proveedor</span>
-      </button>
     </div>
+  </div>
+
+  <!-- Botón Flotante (FAB) -->
+  <div class="dropup" style="position:fixed; bottom:80px; right:20px; z-index:1000;">
+    <button class="btn btn-success shadow-lg" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background:#10b981; border:none;">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-lg mb-2" style="border-radius:12px; border:none;">
+      <li><a class="dropdown-item fw-bold text-primary py-2" href="#" onclick="window.abrirModalProveedor()"><i class="bi bi-building-add me-2"></i>Registrar Proveedor</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item fw-bold text-success py-2" href="#" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Descargar Plantilla</a></li>
+      <li><a class="dropdown-item fw-bold text-info py-2" href="#" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-2"></i>Importar Excel Lleno</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item fw-bold text-secondary py-2" href="#" onclick="window.exportarExcelProveedores()"><i class="bi bi-download me-2"></i>Exportar Proveedores</a></li>
+    </ul>
   </div>
 
   <!-- Filtros -->
@@ -54,14 +61,14 @@
   <!-- KPI Row Bento -->
   <div id="prov-kpi-row" class="bento-kpi-row"></div>
 
-  <!-- TABLA DE PROVEEDORES -->
-  <div style="display:flex;flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+  <!-- TABLA DE PROVEEDORES (Desktop) -->
+  <div class="d-none d-md-flex" style="flex:1 1 0;min-height:0;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
     <div class="ent-table-wrap" style="flex:1 1 0; overflow: auto; -webkit-overflow-scrolling: touch;">
       <table id="tabla-proveedores" style="width: 100%; min-width: 950px; border-collapse: collapse; font-size: 0.82rem;">
         <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
           <tr>
             <th style="width: 40px; text-align: center; padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase;"></th>
-            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Asesor/a</th>
+            <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Proveedor / Asesor</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Razón Social</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Documento</th>
             <th style="padding: 0.75rem 0.5rem; color: var(--subtext); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;" class="d-none d-md-table-cell">Contacto</th>
@@ -75,6 +82,11 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <!-- GRID MÓVIL DE PROVEEDORES (Mobile) -->
+  <div id="prov-grid-mobile" class="d-flex d-md-none flex-column gap-2" style="flex:1 1 0; overflow-y:auto; padding-bottom:5rem;">
+      <div style="text-align:center;padding:3rem;color:#94a3b8;"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</div>
   </div>
 
   <!-- Paginador -->
