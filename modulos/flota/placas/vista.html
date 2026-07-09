@@ -19,11 +19,10 @@
   <!-- Filtros -->
   <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
     <input type="text" id="buscadorPlacas" class="form-control form-control-sm" style="max-width:280px;" placeholder="Buscar placa, tipo..." oninput="window.filtrarPlacasAvanzado()">
-    <select id="filtro-estado-placas" class="form-select form-select-sm" style="max-width:130px;" onchange="window.filtrarPlacasAvanzado()">
-      <option value="">Todos</option>
-      <option value="Activa">Activa</option>
-      <option value="Inactiva">Inactiva</option>
-    </select>
+    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 fw-bold" onclick="window.abrirFiltrosPlacas()" style="color: var(--text); border-color: var(--border);">
+      <i class="bi bi-funnel"></i> <span class="d-none d-md-inline">Filtros</span>
+      <span id="badge-filtros-placas" class="badge bg-primary rounded-pill d-none">0</span>
+    </button>
     <div class="form-check ms-2 mb-0 d-flex align-items-center me-2">
       <input class="form-check-input me-2" type="checkbox" id="placas-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._placasToggleSelAll(this.checked)">
       <label class="form-check-label small fw-bold text-muted" for="placas-select-all">Todas</label>
@@ -586,5 +585,68 @@
                 <i class="bi bi-clipboard2-check-fill"></i> Ver inspecciones
             </button>
         </div>
+    </div>
+</div>
+
+
+<!-- OFFCANVAS: FILTROS AVANZADOS (Estilo AppSheet) -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFiltrosPlacas" style="width: 380px; border-left: 1px solid var(--border); background: var(--surface);">
+    
+    <!-- HEADER GENERAL -->
+    <div class="offcanvas-header border-bottom py-3" style="background: var(--surface);" id="header-filtros-main">
+        <div class="d-flex align-items-center gap-2 w-100">
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);">Filtros</h5>
+            <button type="button" class="btn-close ms-auto shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <!-- HEADER DETALLE (Oculto por defecto) -->
+    <div class="offcanvas-header border-bottom py-3 d-none" style="background: var(--surface);" id="header-filtros-detalle">
+        <div class="d-flex align-items-center gap-3 w-100">
+            <button type="button" class="btn btn-sm btn-light p-1" onclick="window.filtrosPlacasNavAtras()" style="border-radius: 50%; color: var(--text); background: transparent; border: none;">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </button>
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);" id="titulo-columna-filtro">Columna</h5>
+        </div>
+    </div>
+
+    <div class="offcanvas-body p-0 position-relative" style="overflow-x: hidden; background: var(--surface);">
+        <!-- CONTENEDOR ANIMADO -->
+        <div id="filtros-slider" class="d-flex w-100 h-100" style="transition: transform 0.3s ease;">
+            
+            <!-- VISTA 1: LISTA DE COLUMNAS -->
+            <div id="filtros-main-view" class="w-100 h-100 flex-shrink-0" style="overflow-y: auto;">
+                <div class="list-group list-group-flush" id="lista-columnas-filtro">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <!-- VISTA 2: OPCIONES DE COLUMNA -->
+            <div id="filtros-detail-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column" style="background: var(--surface);">
+                <div class="p-3 border-bottom">
+                    <div class="input-group input-group-sm" style="border-radius: 8px; border: 1px solid var(--primary); overflow: hidden;">
+                        <span class="input-group-text bg-transparent border-0 text-primary"><i class="bi bi-search"></i></span>
+                        <input type="text" id="buscador-opciones-filtro" class="form-control border-0 shadow-none" placeholder="Buscar..." oninput="window.buscarEnFiltroOpciones(this.value)">
+                    </div>
+                </div>
+                
+                <div class="flex-grow-1 p-3 pt-2" style="overflow-y: auto;" id="lista-opciones-filtro">
+                    <!-- Dinámico -->
+                </div>
+                
+                <!-- FOOTER DETALLE -->
+                <div class="p-3 border-top d-flex justify-content-between align-items-center" style="background: var(--surface);">
+                    <button class="btn btn-link text-muted fw-bold text-decoration-none px-0" onclick="window.limpiarFiltroColumnaActual()">Limpiar</button>
+                    <button class="btn btn-link text-success fw-bold text-decoration-none px-0" onclick="window.filtrosPlacasNavAtras()">Hecho</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- FOOTER GENERAL (Visible en main view) -->
+    <div class="p-3 border-top d-flex justify-content-between align-items-center" id="footer-filtros-main" style="background: var(--surface);">
+        <button class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.limpiarTodosFiltrosPlacas()">Limpiar todo</button>
+        <button class="btn btn-primary fw-bold px-4 rounded-pill" data-bs-dismiss="offcanvas" onclick="window.filtrarPlacasAvanzado()">Aplicar</button>
     </div>
 </div>
