@@ -1885,11 +1885,14 @@ function buscarWialonPorPlaca(placa) {
     if(!CACHE.wialon || !Array.isArray(CACHE.wialon)) return null;
     let placaStr = placa ? placa.toString() : '';
 
-    // 1. Intentar coincidencia exacta vinculada (wialon_name en CACHE.placas)
-    if (CACHE.placas) {
-        let vehiculo = CACHE.placas.find(v => v.placa === placaStr);
-        if (vehiculo && vehiculo.wialon_name) {
-            let exactMatch = CACHE.wialon.find(w => w.nombre_wialon === vehiculo.wialon_name);
+    // 1. Intentar coincidencia exacta vinculada (wialon_name)
+    let placasArr = window.dataGlobalPlacas || (CACHE && CACHE.placas) || [];
+    if (placasArr && placasArr.length > 0) {
+        // Puede ser array de arrays o array de objetos
+        let vehiculo = placasArr.find(v => (v.placa || v[0]) === placaStr);
+        let wName = vehiculo ? (vehiculo.wialon_name || vehiculo[23]) : null;
+        if (wName) {
+            let exactMatch = CACHE.wialon.find(w => w.nombre_wialon === wName);
             if (exactMatch) return exactMatch;
         }
     }

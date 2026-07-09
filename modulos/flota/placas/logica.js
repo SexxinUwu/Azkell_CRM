@@ -944,7 +944,7 @@ function enviarEdicionPlaca(event, formObj) {
     var camposRequeridos = [
         'cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
         'nro_motor','nro_caja','nro_corona','nro_vin','configuracion','anio',
-        'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica'
+        'combustible','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica', 'wialon_name'
     ];
         // Obtener valor de metrica (puedes ajustar el id según tu formulario)
         var getMetrica = function() {
@@ -979,6 +979,7 @@ function enviarEdicionPlaca(event, formObj) {
             case 'llantas': payload[c] = get('e_llantas'); break;
             case 'en_uso': payload[c] = get('e_enuso'); break;
             case 'metrica': payload[c] = getMetrica(); break;
+            case 'wialon_name': payload[c] = get('e_wialon_name'); break;
             default: payload[c] = '';
         }
         if (payload[c] === undefined || payload[c] === null) payload[c] = '';
