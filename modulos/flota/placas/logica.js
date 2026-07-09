@@ -740,7 +740,7 @@ window.abrirDetallePlaca = function(event, index) {
     // Guardar placa activa para historial
     window._placaDetalleActual = placaActual;
 
-    new bootstrap.Offcanvas(document.getElementById('offcanvasDetallePlaca')).show();
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('offcanvasDetallePlaca')).show();
 }
 
 // ── Historial de cambios por placa ──────────────────────────────
@@ -1428,8 +1428,7 @@ window.abrirFiltrosPlacas = function() {
     document.getElementById('header-filtros-main').classList.remove('d-none');
     document.getElementById('footer-filtros-main').classList.remove('d-none');
     document.getElementById('header-filtros-detalle').classList.add('d-none');
-    
-    const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasFiltrosPlacas'));
+    const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('offcanvasFiltrosPlacas'));
     bsOffcanvas.show();
 };
 
