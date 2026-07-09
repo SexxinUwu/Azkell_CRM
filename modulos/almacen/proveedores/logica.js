@@ -287,7 +287,16 @@ window.abrirModalProveedor = function(id) {
         if (titulo) titulo.innerHTML = '<i class="bi bi-building-fill me-1"></i>Nuevo Proveedor';
     }
     window._provRenderTags();
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-proveedor')).show();
+    document.getElementById('modal-proveedor').classList.add('open');
+    var b = document.getElementById('prov-backdrop');
+    if (b) b.style.display = 'block';
+};
+
+window._provCerrarModal = function() {
+    var modal = document.getElementById('modal-proveedor');
+    var backdrop = document.getElementById('prov-backdrop');
+    if (modal) modal.classList.remove('open');
+    if (backdrop) backdrop.style.display = 'none';
 };
 
 function _pSet(id, val) { var el = document.getElementById(id); if(el) el.value = val != null ? val : ''; }
@@ -319,7 +328,7 @@ window.guardarProveedor = function(event) {
             return r.json();
         })
         .then(function() {
-            bootstrap.Modal.getInstance(document.getElementById('modal-proveedor'))?.hide();
+            window._provCerrarModal();
             window.cargarProveedores();
         })
         .catch(function(err) { alert('Error: '+err.message); });

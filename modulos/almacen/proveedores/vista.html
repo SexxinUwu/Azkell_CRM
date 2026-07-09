@@ -8,6 +8,12 @@
 .prov-lic { display: inline-block; font-size: .6rem; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: #eff6ff; color: #2563eb; text-transform: uppercase; }
 .prov-actions { display: flex; flex-direction: row; gap: 6px; flex-shrink: 0; }
 .prov-btn { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; border: none; flex-shrink: 0; cursor: pointer; text-decoration: none; }
+.prov-panel-full { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 700px; height: 92vh; background: #fff; border-radius: 28px 28px 0 0; z-index: 1059; display: flex; flex-direction: column; overflow: hidden; transition: transform .28s ease; box-shadow: 0 -12px 48px rgba(0,0,0,.18); }
+.prov-panel-full.open { transform: translateX(-50%) translateY(0); }
+@media (max-width: 767.98px) {
+    .prov-panel-full { max-width: 100%; left: 0; transform: translateY(100%); border-radius: 28px 28px 0 0; }
+    .prov-panel-full.open { transform: translateY(0); }
+}
 </style>
 <div id="mod-proveedores" class="modulo-wrapper d-flex flex-column h-100">
 
@@ -25,7 +31,7 @@
   </div>
 
   <!-- Botón Flotante (FAB) -->
-  <div class="dropup" style="position:fixed; bottom:80px; right:20px; z-index:1000;">
+  <div class="dropup" style="position:fixed; bottom:104px; right:1rem; z-index:1000;">
     <button class="btn btn-success shadow-lg" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background:#10b981; border:none;">
       <i class="bi bi-plus-lg"></i>
     </button>
@@ -94,82 +100,89 @@
 </div>
 
 <!-- ═══ MODAL ADD/EDIT PROVEEDOR ══════════════════════════════════ -->
-<div class="modal fade" id="modal-proveedor" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold" id="modal-prov-titulo"><i class="bi bi-building-fill me-1"></i>Nuevo Proveedor</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="prov-backdrop" onclick="window._provCerrarModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1049;"></div>
+<div id="modal-proveedor" class="prov-panel-full">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem .75rem;flex-shrink:0;border-bottom:1.5px solid #e2e8f0;background:#fff;">
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <div style="width:38px;height:38px;border-radius:14px;background:#dcfce7;display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-building-fill" style="color:#16a34a;font-size:1.1rem;"></i>
       </div>
-      <form id="form-proveedor" onsubmit="window.guardarProveedor(event)">
-        <input type="hidden" id="prov-edit-id">
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-8">
-              <label class="fw-semibold small">Nombre <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="prov-f-nombre" required placeholder="Nombre o razón comercial">
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Estado</label>
-              <select class="form-select" id="prov-f-estado">
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
-              </select>
-            </div>
-            <div class="col-md-7">
-              <label class="fw-semibold small">Razón Social</label>
-              <input type="text" class="form-control" id="prov-f-razon" placeholder="Razón Social completa">
-            </div>
-            <div class="col-md-2">
-              <label class="fw-semibold small">Tipo Doc.</label>
-              <select class="form-select" id="prov-f-tipo-doc">
-                <option value="RUC">RUC</option>
-                <option value="DNI">DNI</option>
-                <option value="CE">C.E.</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="fw-semibold small">N° Documento</label>
-              <div class="input-group">
-                <input type="text" class="form-control" id="prov-f-num-doc" placeholder="20123456789" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocProveedor();}">
-                <button class="btn btn-primary" type="button" onclick="window.consultarDocProveedor()" title="Consultar SUNAT/RENIEC">
-                  <i class="bi bi-search"></i>
-                </button>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Teléfono</label>
-              <input type="text" class="form-control" id="prov-f-telefono" placeholder="+51 999 999 999">
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Email</label>
-              <input type="email" class="form-control" id="prov-f-email" placeholder="proveedor@email.com">
-            </div>
-            <div class="col-md-4">
-              <label class="fw-semibold small">Dirección</label>
-              <input type="text" class="form-control" id="prov-f-dir" placeholder="Dirección física…">
-            </div>
-            <div class="col-md-12">
-              <label class="fw-semibold small">Marcas que provee</label>
-              <div class="d-flex gap-2 mb-1">
-                <input type="text" class="form-control form-control-sm" id="prov-f-marca-input" placeholder="Ej: WIX" style="max-width:180px;"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();window._provAgregarMarca();}">
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="window._provAgregarMarca()"><i class="bi bi-plus"></i> Agregar</button>
-              </div>
-              <div id="prov-marcas-tags" class="d-flex flex-wrap gap-1 mt-1"></div>
-            </div>
-            <div class="col-md-12">
-              <label class="fw-semibold small">Observaciones</label>
-              <textarea class="form-control" id="prov-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
-            </div>
+      <div>
+        <div id="modal-prov-titulo" style="font-size:.95rem;font-weight:900;color:#0f172a;line-height:1.1;">Nuevo Proveedor</div>
+        <div style="font-size:.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Directorio de Proveedores</div>
+      </div>
+    </div>
+    <button type="button" onclick="window._provCerrarModal()" style="width:34px;height:34px;border-radius:10px;background:#f1f5f9;border:none;color:#64748b;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1rem;">
+    <form id="form-proveedor" onsubmit="window.guardarProveedor(event)">
+      <input type="hidden" id="prov-edit-id">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="fw-semibold small">Nombre <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="prov-f-nombre" required placeholder="Nombre o razón comercial">
+        </div>
+        <div class="col-md-4">
+          <label class="fw-semibold small">Estado</label>
+          <select class="form-select" id="prov-f-estado">
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div class="col-md-7">
+          <label class="fw-semibold small">Razón Social</label>
+          <input type="text" class="form-control" id="prov-f-razon" placeholder="Razón Social completa">
+        </div>
+        <div class="col-md-2">
+          <label class="fw-semibold small">Tipo Doc.</label>
+          <select class="form-select" id="prov-f-tipo-doc">
+            <option value="RUC">RUC</option>
+            <option value="DNI">DNI</option>
+            <option value="CE">C.E.</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="fw-semibold small">N° Documento</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="prov-f-num-doc" placeholder="20123456789" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocProveedor();}">
+            <button class="btn btn-primary" type="button" onclick="window.consultarDocProveedor()" title="Consultar SUNAT/RENIEC">
+              <i class="bi bi-search"></i>
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
+        <div class="col-md-4">
+          <label class="fw-semibold small">Teléfono</label>
+          <input type="text" class="form-control" id="prov-f-telefono" placeholder="+51 999 999 999">
         </div>
-      </form>
-    </div>
+        <div class="col-md-4">
+          <label class="fw-semibold small">Email</label>
+          <input type="email" class="form-control" id="prov-f-email" placeholder="proveedor@email.com">
+        </div>
+        <div class="col-md-4">
+          <label class="fw-semibold small">Dirección</label>
+          <input type="text" class="form-control" id="prov-f-dir" placeholder="Dirección física…">
+        </div>
+        <div class="col-md-12">
+          <label class="fw-semibold small">Marcas que provee</label>
+          <div class="d-flex gap-2 mb-1">
+            <input type="text" class="form-control form-control-sm" id="prov-f-marca-input" placeholder="Ej: WIX" style="max-width:180px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();window._provAgregarMarca();}">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window._provAgregarMarca()"><i class="bi bi-plus"></i> Agregar</button>
+          </div>
+          <div id="prov-marcas-tags" class="d-flex flex-wrap gap-1 mt-1"></div>
+        </div>
+        <div class="col-md-12">
+          <label class="fw-semibold small">Observaciones</label>
+          <textarea class="form-control" id="prov-f-obs" rows="2" placeholder="Notas adicionales…"></textarea>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-save me-1"></i>Guardar</button>
+      </div>
+    </form>
   </div>
 </div>
