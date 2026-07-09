@@ -1212,7 +1212,6 @@ window.eliminarPlacaDesdeTarjeta = function(plc) {
 function _guardarFiltrosPlacas() {
     try {
         var state = {
-            txt: document.getElementById('buscadorPlacas')?.value || '',
             clientes: Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(function(e){ return e.value; }),
             tipos:    Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(function(e){ return e.value; }),
             marcas:   Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(function(e){ return e.value; }),
@@ -1220,7 +1219,7 @@ function _guardarFiltrosPlacas() {
         };
         localStorage.setItem('fleet_filtros_placas', JSON.stringify(state));
         var btn = document.getElementById('btn-limpiar-filtros-placas');
-        var activo = state.txt || state.clientes.length || state.tipos.length || state.marcas.length || state.estados.length;
+        var activo = state.clientes.length || state.tipos.length || state.marcas.length || state.estados.length;
         if (btn) btn.classList.toggle('d-none', !activo);
     } catch(e) { /* ignore */ }
 }
@@ -1229,8 +1228,6 @@ function _restaurarFiltrosPlacas() {
     try {
         var saved = JSON.parse(localStorage.getItem('fleet_filtros_placas') || 'null');
         if (!saved) return;
-        var txtEl = document.getElementById('buscadorPlacas');
-        if (txtEl && saved.txt) txtEl.value = saved.txt;
         function restoreGroup(gid, vals) {
             if (!vals || !vals.length) return;
             vals.forEach(function(v) {
@@ -1242,7 +1239,7 @@ function _restaurarFiltrosPlacas() {
         restoreGroup('filtroTipo',    saved.tipos);
         restoreGroup('filtroMarca',   saved.marcas);
         restoreGroup('filtroEstado',  saved.estados);
-        var activo = saved.txt || saved.clientes.length || saved.tipos.length || saved.marcas.length || saved.estados.length;
+        var activo = saved.clientes.length || saved.tipos.length || saved.marcas.length || saved.estados.length;
         if (activo) filtrarPlacasAvanzado();
         var btn = document.getElementById('btn-limpiar-filtros-placas');
         if (btn) btn.classList.toggle('d-none', !activo);
