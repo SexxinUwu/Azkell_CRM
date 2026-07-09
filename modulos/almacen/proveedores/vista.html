@@ -36,32 +36,40 @@
       <i class="bi bi-plus-lg"></i>
     </button>
     <ul class="dropdown-menu dropdown-menu-end shadow-lg mb-2" style="border-radius:12px; border:none;">
-      <li><a class="dropdown-item fw-bold text-primary py-2" href="#" onclick="window.abrirModalProveedor()"><i class="bi bi-building-add me-2"></i>Registrar Proveedor</a></li>
+      <li><button class="dropdown-item fw-bold text-primary py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.abrirModalProveedor()"><i class="bi bi-building-add me-2"></i>Registrar Proveedor</button></li>
       <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item fw-bold text-success py-2" href="#" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Descargar Plantilla</a></li>
-      <li><a class="dropdown-item fw-bold text-info py-2" href="#" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-2"></i>Importar Excel Lleno</a></li>
+      <li><button class="dropdown-item fw-bold text-success py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.descargarPlantillaProveedores()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Descargar Plantilla</button></li>
+      <li><button class="dropdown-item fw-bold text-info py-2 btn btn-link text-decoration-none text-start" type="button" onclick="document.getElementById('inputFileProveedores').click()"><i class="bi bi-cloud-upload me-2"></i>Importar Excel Lleno</button></li>
       <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item fw-bold text-secondary py-2" href="#" onclick="window.exportarExcelProveedores()"><i class="bi bi-download me-2"></i>Exportar Proveedores</a></li>
+      <li><button class="dropdown-item fw-bold text-secondary py-2 btn btn-link text-decoration-none text-start" type="button" onclick="window.exportarExcelProveedores()"><i class="bi bi-download me-2"></i>Exportar Proveedores</button></li>
     </ul>
   </div>
 
-  <!-- Filtros -->
-  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded border" style="background:var(--surface);">
-    <input type="text" id="prov-buscar" class="form-control form-control-sm" style="max-width:280px;" placeholder="Nombre, RUC, marca…" oninput="window.filtrarProveedores()">
-    <select id="prov-fil-estado" class="form-select form-select-sm" style="max-width:130px;" onchange="window.filtrarProveedores()">
-      <option value="">Todos</option>
-      <option value="Activo">Activos</option>
-      <option value="Inactivo">Inactivos</option>
-    </select>
-    <div class="form-check ms-2 mb-0 d-flex align-items-center me-2">
-      <input class="form-check-input me-2" type="checkbox" id="prov-select-all" style="cursor: pointer; transform: scale(1.1);" onchange="window._provToggleSelAll(this.checked)">
-      <label class="form-check-label small fw-bold text-muted" for="prov-select-all">Todos</label>
+  <!-- Filtros Modernos -->
+  <div class="mb-3" style="background:var(--surface); border:1.5px solid var(--border); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:12px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div class="position-relative" style="flex:1; min-width:200px;">
+        <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%); font-size:0.9rem;"></i>
+        <input type="text" id="prov-buscar" class="form-control" style="padding-left:36px; border-radius:12px; background:var(--bg); border:1.5px solid var(--border); box-shadow:none; font-weight:600; font-size:0.85rem;" placeholder="Nombre, RUC, marca…" oninput="window.filtrarProveedores()">
+      </div>
+      <div style="width:120px; flex-shrink:0;">
+        <select id="prov-fil-estado" class="form-select" style="border-radius:12px; background:var(--bg); border:1.5px solid var(--border); box-shadow:none; font-weight:600; font-size:0.85rem;" onchange="window.filtrarProveedores()">
+          <option value="">Todos</option>
+          <option value="Activo">Activos</option>
+          <option value="Inactivo">Inactivos</option>
+        </select>
+      </div>
     </div>
-    <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold" style="display:none"
-            onclick="window.eliminarMasivoProveedores()">
-      <i class="bi bi-trash me-1"></i>Eliminar 0 seleccionados
-    </button>
-    <span id="prov-contador" class="text-muted small ms-auto"></span>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1.5px dashed var(--border); padding-top:10px;">
+      <div class="form-check m-0 d-flex align-items-center">
+        <input class="form-check-input me-2" type="checkbox" id="prov-select-all" style="cursor:pointer; transform:scale(1.1); width:1.2em; height:1.2em; border-radius:6px; border:2px solid #cbd5e1;" onchange="window._provToggleSelAll(this.checked)">
+        <label class="form-check-label text-muted" for="prov-select-all" style="font-weight:700; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;">Seleccionar Todos</label>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button id="prov-btn-eliminar-masivo" class="btn btn-sm btn-danger fw-bold rounded-3" style="display:none; padding:4px 10px;" onclick="window.eliminarMasivoProveedores()"><i class="bi bi-trash-fill me-1"></i><span id="prov-btn-eliminar-txt">Eliminar</span></button>
+        <span id="prov-contador" class="text-muted" style="font-weight:700; font-size:0.75rem; background:var(--bg); padding:4px 10px; border-radius:12px; border:1px solid var(--border);">Cargando...</span>
+      </div>
+    </div>
   </div>
 
   <!-- KPI Row Bento -->
