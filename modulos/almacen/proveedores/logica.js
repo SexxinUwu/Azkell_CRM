@@ -148,9 +148,12 @@ window._provRender = function() {
 
         // Acciones
         var cleanTel = (d.telefono || '').replace(/[^0-9+]/g, '');
+        var wspTel = cleanTel.replace('+', '');
+        if (wspTel.length === 9 && wspTel.startsWith('9')) wspTel = '51' + wspTel;
+
         var btnLlamar = cleanTel ? '<a href="tel:' + cleanTel + '" class="btn btn-sm btn-light" title="Llamar" style="color:#0ea5e9; border:1px solid #e0f2fe; background:#f0f9ff;"><i class="bi bi-telephone-fill"></i></a>' 
                                  : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-telephone-fill"></i></button>';
-        var btnWsp = cleanTel ? '<a href="https://wa.me/' + cleanTel.replace('+', '') + '" target="_blank" class="btn btn-sm btn-light" title="WhatsApp" style="color:#16a34a; border:1px solid #dcfce7; background:#f0fdf4;"><i class="bi bi-whatsapp"></i></a>' 
+        var btnWsp = wspTel ? '<a href="https://api.whatsapp.com/send?phone=' + wspTel + '" target="_blank" class="btn btn-sm btn-light" title="WhatsApp" style="color:#16a34a; border:1px solid #dcfce7; background:#f0fdf4;"><i class="bi bi-whatsapp"></i></a>' 
                               : '<button class="btn btn-sm btn-light" disabled style="opacity:0.5;"><i class="bi bi-whatsapp"></i></button>';
                               
         var btnEdit = canEdit ? '<button class="btn btn-sm btn-light" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')" title="Editar" style="color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-pencil-fill"></i></button>' : '';

@@ -2679,7 +2679,7 @@ const MENU_IDS = {
     'almacen/inventario':          'nav-inventario',
     'almacen/entradas':            'nav-entradas-inv',
     'almacen/salidas':             'nav-salidas-inv',
-    'almacen/proveedores':         'nav-administracion',
+    'almacen/proveedores':         'nav-proveedores-inv',
     'almacen/kardex':              'nav-kardex',
     'almacen/costos':              'nav-costos-inv',
     'almacen/unidades':            'nav-administracion',

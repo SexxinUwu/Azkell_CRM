@@ -140,7 +140,7 @@
                 <div id="wrap-almacen">
                     <button class="nav-section-toggle" data-section="almacen" aria-expanded="false" onclick="window.toggleNavSection('almacen')">
                         <span class="link-text" data-i18n="nav.almacen">Almacén</span>
-                        <span class="section-badge">4</span>
+                        <span class="section-badge">5</span>
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-almacen">
@@ -161,6 +161,10 @@
                         <a id="nav-kardex" class="nav-item" onclick="cargarModuloAislado('almacen/kardex')">
                             <i class="bi bi-journal-text nav-icon"></i>
                             <span class="link-text" data-i18n="nav.kardex">Kardex</span>
+                        </a>
+                        <a id="nav-proveedores-inv" class="nav-item" onclick="cargarModuloAislado('almacen/proveedores')">
+                            <i class="bi bi-building-fill nav-icon"></i>
+                            <span class="link-text">Proveedores</span>
                         </a>
                     </div>
                 </div>
@@ -697,6 +701,10 @@
             <div id="mbnav-kardex" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/kardex'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(20,184,166,.1); color: #14b8a6;"><i class="bi bi-journal-text"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.kardex">Kardex</p><p class="bnav-card-desc">Movimientos de artículos</p></div>
+            </div>
+            <div id="mbnav-proveedores" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/proveedores'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(59,130,246,.1); color: #3b82f6;"><i class="bi bi-building-fill"></i></div>
+                <div><p class="bnav-card-title">Proveedores</p><p class="bnav-card-desc">Directorio de proveedores</p></div>
             </div>
         </div>
     </div>
