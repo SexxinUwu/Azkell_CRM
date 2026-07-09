@@ -9,7 +9,7 @@ var datosFiltradosPlacas = window.datosFiltradosPlacas || [];
 var paginaActualPlacas  = window.paginaActualPlacas || 1;
 var colActualesPlacas   = window.colActualesPlacas || 4;
 
-var ITEMS_POR_PAGINA    = colActualesPlacas * window.filasPlacasConfig;
+var ITEMS_POR_PAGINA = 50;
 
 // ── Poblar selects dinámicos desde dataGlobalPlacas ──────────────
 window.poblarSelectsFormularios = function(datos) {
@@ -1263,7 +1263,7 @@ window.init_placas = function() {
     // Restaurar preferencia de filas/página guardada
     const selFilas = document.getElementById('sel-filas-placas');
     if (selFilas) selFilas.value = String(window.filasPlacasConfig);
-    ITEMS_POR_PAGINA = colActualesPlacas * window.filasPlacasConfig;
+    ITEMS_POR_PAGINA = 50;
 
     // Precargar inspecciones si aún no están disponibles (para KPIs de cliente)
     var _arrancarPlacas = function() { cargarTablaPlacas(); };
