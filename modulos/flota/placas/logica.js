@@ -418,10 +418,11 @@ function renderizarPaginaPlacas() {
         // Columna 0: Checkbox
         html += '<td style="text-align:center; padding:0.75rem 0.5rem;" onclick="event.stopPropagation()">' + checkHtml + '</td>';
         
-        // Mapear todas las 23 columnas (excepto la '')
-        for (let i = 0; i < 23; i++) {
+        // Mapear las 23 columnas en el orden visual correcto (Estado al final)
+        const ordenVisual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 18];
+        for (let i of ordenVisual) {
             let val = fila[i] ? fila[i].trim() : '—';
-            let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text);';
+            let tdStyle = 'padding:0.75rem 0.5rem; color:var(--text); border-right: 1px solid var(--border);';
             
             // Especial styling for Placa
             if (i === 0) {
