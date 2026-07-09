@@ -166,46 +166,45 @@ function mostrarPlacas(datos) {
 // ── Filtro avanzado ──────────────────────────────────────────────
 window.filtrarPlacasAvanzado = function() {
     const txt = document.getElementById('buscadorPlacas')?.value.toLowerCase() || '';
-    const chkCli = Array.from(document.querySelectorAll('#filtroCliente input:checked')).map(e=>e.value);
-    const chkTip = Array.from(document.querySelectorAll('#filtroTipo input:checked')).map(e=>e.value);
-    const chkMar = Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(e=>e.value);
-    const chkEst = Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(e=>e.value);
-    
-    // Filtro por KPI de tipo
     const kpiFiltroActivo = window._kpiFiltroActivo || null;
 
     let kpiCamion=0, kpiCarreta=0, kpiSemi=0, kpiTracto=0, kpiTotal=0;
     let datosUtiles = dataGlobalPlacas.filter(f => (f[0]||'').toUpperCase() !== 'PLACA');
+    
     datosFiltradosPlacas = datosUtiles.filter(row => {
-        const plc = (row[0]||'').toLowerCase();
-        const cli = row[1] ? row[1].trim() : '';
+        // 1. Buscador de texto general (busca en TODAS las columnas)
+        const rowTexto = row.map(v => (v||'').toLowerCase().trim()).join(' ');
+        if (txt && !rowTexto.includes(txt)) return false;
+
+        // 2. Filtros Avanzados por Columna
+        for (let colIndex in window.placasFiltros) {
+            if (window.placasFiltros[colIndex].size > 0) {
+                let val = row[colIndex] ? row[colIndex].trim() : '';
+                if (val === '') val = '(Vacío)';
+                if (!window.placasFiltros[colIndex].has(val)) {
+                    return false; // No cumple un filtro activo
+                }
+            }
+        }
+        
+        // 3. KPI Counting (ignorando el filtro KPI actual)
+        kpiTotal++;
         const tip = row[5] ? row[5].trim() : '';
-        const mar = row[3] ? row[3].trim() : '';
-        const est = row[18] ? row[18].trim() : '';
-        const textoFila = plc + ' ' + mar.toLowerCase();
-        
-        let ok = ((!txt || textoFila.includes(txt)) && (!chkCli.length || chkCli.includes(cli)) && (!chkTip.length || chkTip.includes(tip)) && (!chkMar.length || chkMar.includes(mar)) && (!chkEst.length || chkEst.includes(est)));
-        
-        // Count for KPI updates using base filter (ignore KPI filter for counts)
-        if (ok) {
-            kpiTotal++;
-            const t = tip.toLowerCase();
-            if (t.includes('cami') || t.includes('camion')) kpiCamion++;
-            else if (t.includes('carreta')) kpiCarreta++;
-            else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
-            else if (t.includes('tracto')) kpiTracto++;
+        const t = tip.toLowerCase();
+        if (t.includes('cami') || t.includes('camion')) kpiCamion++;
+        else if (t.includes('carreta')) kpiCarreta++;
+        else if (t.includes('semirremolque')||t.includes('semi')) kpiSemi++;
+        else if (t.includes('tracto')) kpiTracto++;
+
+        // 4. Aplicar Filtro KPI si está activo
+        if (kpiFiltroActivo) {
+            if (kpiFiltroActivo === 'camion' && !(t.includes('cami') || t.includes('camion'))) return false;
+            if (kpiFiltroActivo === 'carreta' && !t.includes('carreta')) return false;
+            if (kpiFiltroActivo === 'semi' && !(t.includes('semirremolque') || t.includes('semi'))) return false;
+            if (kpiFiltroActivo === 'tracto' && !t.includes('tracto')) return false;
         }
 
-        // Apply KPI filter to actual shown results
-        if (ok && kpiFiltroActivo) {
-            const t = tip.toLowerCase();
-            if (kpiFiltroActivo === 'camion') { ok = t.includes('cami') || t.includes('camion'); }
-            else if (kpiFiltroActivo === 'carreta') { ok = t.includes('carreta'); }
-            else if (kpiFiltroActivo === 'semi') { ok = t.includes('semirremolque') || t.includes('semi'); }
-            else if (kpiFiltroActivo === 'tracto') { ok = t.includes('tracto'); }
-        }
-
-        return ok;
+        return true;
     });
 
     const safe = v => document.getElementById(v);
@@ -217,8 +216,8 @@ window.filtrarPlacasAvanzado = function() {
     
     paginaActualPlacas = 1;
     renderizarPaginaPlacas();
-    if(typeof _guardarFiltrosPlacas === 'function') _guardarFiltrosPlacas();
-};
+};;
+
 
 window.filtrarPorTipoKPI = function(tipo) {
     if (window._kpiFiltroActivo === tipo || tipo === 'total') {
@@ -1379,4 +1378,162 @@ window.descargarQRPlaca = function() {
     link.href = canvas.toDataURL('image/png');
     link.click();
     window.mostrarToast('QR descargado', 'success');
+};
+
+// =========================================================================
+// FILTROS AVANZADOS (ESTILO APPSHEET)
+// =========================================================================
+
+window.placasFiltros = {}; // { colIndex: Set(val1, val2...) }
+window._columnaActivaFiltro = -1;
+
+const PLACAS_COLUMNAS = [
+    "Placa", "Cliente", "RUC/DNI", "Marca", "Modelo", "Tipo", "Sub Tipo", "Color",
+    "Nro Motor", "Nro Caja", "Nro Corona", "Nro VIN", "Configuración", "Año",
+    "Combustible", "Carga Útil", "Peso Neto", "Peso Bruto", "Estado", "UTS",
+    "Motora", "Llantas", "En Uso"
+];
+
+// Ocultar las columnas que no tengan sentido filtrar o que sean IDs
+const COLUMNAS_IGNORADAS = [2]; // Ignoramos RUC/DNI para filtros
+
+window.abrirFiltrosPlacas = function() {
+    // Generar la lista principal
+    const contenedor = document.getElementById('lista-columnas-filtro');
+    let html = '';
+    
+    for (let i = 0; i < PLACAS_COLUMNAS.length; i++) {
+        if (COLUMNAS_IGNORADAS.includes(i)) continue;
+        
+        let seleccionados = window.placasFiltros[i] ? window.placasFiltros[i].size : 0;
+        let badge = seleccionados > 0 ? `<span class="badge bg-primary rounded-pill">${seleccionados}</span>` : '';
+        
+        html += `
+            <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" 
+                    style="background: transparent; color: var(--text); border-color: var(--border); cursor: pointer;"
+                    onclick="window.entrarFiltroDetalle(${i}, '${PLACAS_COLUMNAS[i]}')">
+                <span class="fw-bold" style="font-size: 0.95rem;">${PLACAS_COLUMNAS[i]}</span>
+                <div class="d-flex align-items-center gap-2">
+                    ${badge}
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </div>
+            </button>
+        `;
+    }
+    
+    contenedor.innerHTML = html;
+    
+    // Reset view
+    document.getElementById('filtros-slider').style.transform = 'translateX(0)';
+    document.getElementById('header-filtros-main').classList.remove('d-none');
+    document.getElementById('footer-filtros-main').classList.remove('d-none');
+    document.getElementById('header-filtros-detalle').classList.add('d-none');
+    
+    const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvasFiltrosPlacas'));
+    bsOffcanvas.show();
+};
+
+window.entrarFiltroDetalle = function(colIndex, colName) {
+    window._columnaActivaFiltro = colIndex;
+    document.getElementById('titulo-columna-filtro').innerText = colName;
+    document.getElementById('buscador-opciones-filtro').value = '';
+    
+    // Obtener valores únicos
+    let valoresSet = new Set();
+    window.dataGlobalPlacas.forEach(row => {
+        if ((row[0]||'').toUpperCase() === 'PLACA') return;
+        let val = row[colIndex] ? row[colIndex].trim() : '';
+        if (val === '') val = '(Vacío)';
+        valoresSet.add(val);
+    });
+    
+    let valores = Array.from(valoresSet).sort();
+    
+    const contenedor = document.getElementById('lista-opciones-filtro');
+    let html = '';
+    
+    let seleccionados = window.placasFiltros[colIndex] || new Set();
+    
+    valores.forEach(val => {
+        let isChecked = seleccionados.has(val) ? 'checked' : '';
+        html += `
+            <div class="form-check py-2 border-bottom opt-filtro-item" style="border-color: var(--border) !important;">
+                <input class="form-check-input" type="checkbox" value="${val}" id="chk-flt-${colIndex}-${val.replace(/[^a-zA-Z0-9]/g,'')}" ${isChecked} onchange="window._toggleFiltroValor(${colIndex}, this.value, this.checked)" style="transform: scale(1.2); cursor: pointer;">
+                <label class="form-check-label w-100 ms-2" for="chk-flt-${colIndex}-${val.replace(/[^a-zA-Z0-9]/g,'')}" style="cursor: pointer; color: var(--text); font-size: 0.95rem;">
+                    ${val}
+                </label>
+            </div>
+        `;
+    });
+    
+    contenedor.innerHTML = html;
+    
+    // Slide left
+    document.getElementById('header-filtros-main').classList.add('d-none');
+    document.getElementById('footer-filtros-main').classList.add('d-none');
+    document.getElementById('header-filtros-detalle').classList.remove('d-none');
+    document.getElementById('filtros-slider').style.transform = 'translateX(-100%)';
+};
+
+window.filtrosPlacasNavAtras = function() {
+    window.abrirFiltrosPlacas(); // Re-render main list to update badges
+};
+
+window._toggleFiltroValor = function(colIndex, val, isChecked) {
+    if (!window.placasFiltros[colIndex]) {
+        window.placasFiltros[colIndex] = new Set();
+    }
+    if (isChecked) {
+        window.placasFiltros[colIndex].add(val);
+    } else {
+        window.placasFiltros[colIndex].delete(val);
+    }
+    window.actualizarBadgeGlobalFiltros();
+};
+
+window.buscarEnFiltroOpciones = function(txt) {
+    txt = txt.toLowerCase();
+    const items = document.querySelectorAll('.opt-filtro-item');
+    items.forEach(item => {
+        const lbl = item.querySelector('label').innerText.toLowerCase();
+        if (lbl.includes(txt)) {
+            item.classList.remove('d-none');
+        } else {
+            item.classList.add('d-none');
+        }
+    });
+};
+
+window.limpiarFiltroColumnaActual = function() {
+    let col = window._columnaActivaFiltro;
+    if (window.placasFiltros[col]) {
+        window.placasFiltros[col].clear();
+    }
+    document.querySelectorAll('.opt-filtro-item input[type="checkbox"]').forEach(chk => {
+        chk.checked = false;
+    });
+    window.actualizarBadgeGlobalFiltros();
+};
+
+window.limpiarTodosFiltrosPlacas = function() {
+    window.placasFiltros = {};
+    window.actualizarBadgeGlobalFiltros();
+    window.filtrarPlacasAvanzado();
+    bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasFiltrosPlacas')).hide();
+};
+
+window.actualizarBadgeGlobalFiltros = function() {
+    let totalActivos = 0;
+    for (let col in window.placasFiltros) {
+        if (window.placasFiltros[col].size > 0) totalActivos++;
+    }
+    const badge = document.getElementById('badge-filtros-placas');
+    if (badge) {
+        if (totalActivos > 0) {
+            badge.innerText = totalActivos;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
 };
