@@ -231,6 +231,14 @@ window._provIrPagina = function(pag) {
 };
 
 // ── Tags de marca ─────────────────────────────────────────────────
+window._provRenderTags = function() {
+    var cont = document.getElementById('prov-marcas-tags');
+    if (!cont) return;
+    cont.innerHTML = (window._provMarcas||[]).map(function(m) {
+        return '<span class="badge bg-secondary d-flex align-items-center gap-1">' + _provEsc(m) +
+               '<i class="bi bi-x-circle" style="cursor:pointer;" onclick="window._provQuitarMarca(\''+m.replace(/'/g,"\\'")+'\')"></i></span>';
+    }).join('');
+};
 window._provAgregarMarca = function() {
     var input = document.getElementById('prov-f-marca-input');
     if (!input) return;
