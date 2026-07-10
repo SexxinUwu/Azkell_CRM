@@ -718,7 +718,7 @@ window.srLiberarRampa = function(id) {
         .catch(function() {
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al liberar rampa', 'danger');
         });
-    });
+    }, 'Sí, archivar', 'btn-primary');
 };
 
 // ── Exportar Excel ────────────────────────────────────────────────
