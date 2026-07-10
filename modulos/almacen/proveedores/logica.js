@@ -189,7 +189,7 @@ window._provRender = function() {
             var btnWsp = wspTel ? '<a href="https://api.whatsapp.com/send?phone=' + wspTel + '" target="_blank" class="prov-btn" style="background:#f0fdf4; color:#16a34a;"><i class="bi bi-whatsapp"></i></a>' 
                                   : '<button class="prov-btn" disabled style="background:#f1f5f9; color:#94a3b8;"><i class="bi bi-whatsapp"></i></button>';
             
-            return '<div class="prov-card" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\')">' +
+            return '<div class="prov-card" onclick="window.abrirModalProveedor(\'' + _provEsc(d.id) + '\', true)">' +
                 '<div class="prov-avatar">' + initials + '</div>' +
                 '<div class="prov-info">' +
                     '<div class="prov-name">' + _provEsc(d.nombre || 'Sin Nombre') + '</div>' +
@@ -249,29 +249,24 @@ window._provQuitarMarca = function(marca) {
     window._provRenderTags();
 };
 
-window._provRenderTags = function() {
-    var cont = document.getElementById('prov-marcas-tags');
-    if (!cont) return;
-    cont.innerHTML = (window._provMarcas||[]).map(function(m) {
-        return '<span class="badge bg-primary d-inline-flex align-items-center gap-1">'+_provEsc(m)+
-            '<button type="button" class="btn-close btn-close-white btn-sm" onclick="window._provQuitarMarca(\''+_provEsc(m)+'\')" style="font-size:0.55rem;"></button></span>';
-    }).join('');
-};
-
 // ── Modal ─────────────────────────────────────────────────────────
-window.abrirModalProveedor = function(id) {
+window.abrirModalProveedor = function(id, soloDetalle) {
     var titulo = document.getElementById('modal-prov-titulo');
     var editId = document.getElementById('prov-edit-id');
     var form   = document.getElementById('form-proveedor');
+    var footer = document.getElementById('prov-modal-footer');
     if (!form) return;
     form.reset();
     if (editId) editId.value = '';
     window._provMarcas = [];
 
+    var inputs = form.querySelectorAll('input, select, textarea, button:not(#prov-modal-footer button)');
+    inputs.forEach(function(el) { el.disabled = false; });
+
     if (id) {
         var item = (window._provData||[]).find(function(d) { return d.id === id; });
         if (!item) return;
-        if (titulo) titulo.innerHTML = '<i class="bi bi-pencil-fill me-1"></i>Editar Proveedor — '+id;
+        if (titulo) titulo.innerHTML = soloDetalle ? '<i class="bi bi-eye-fill me-1"></i>Detalle de Proveedor — '+id : '<i class="bi bi-pencil-fill me-1"></i>Editar Proveedor — '+id;
         if (editId) editId.value = id;
         _pSet('prov-f-nombre',   item.nombre);
         _pSet('prov-f-razon',    item.razon_social);
@@ -283,8 +278,25 @@ window.abrirModalProveedor = function(id) {
         _pSet('prov-f-estado',   item.estado || 'Activo');
         _pSet('prov-f-obs',      item.observaciones);
         window._provMarcas = item.marcas ? item.marcas.split(', ').filter(Boolean) : [];
+        
+        if (soloDetalle) {
+            inputs.forEach(function(el) { el.disabled = true; });
+            if (footer) {
+                footer.innerHTML = '<button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cerrar</button>' +
+                                   '<button type="button" class="btn btn-primary rounded-3" onclick="window.abrirModalProveedor(\''+id+'\', false)"><i class="bi bi-pencil-fill me-1"></i>Editar</button>';
+            }
+        } else {
+            if (footer) {
+                footer.innerHTML = '<button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cancelar</button>' +
+                                   '<button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-save me-1"></i>Guardar</button>';
+            }
+        }
     } else {
         if (titulo) titulo.innerHTML = '<i class="bi bi-building-fill me-1"></i>Nuevo Proveedor';
+        if (footer) {
+            footer.innerHTML = '<button type="button" class="btn btn-secondary rounded-3" onclick="window._provCerrarModal()">Cancelar</button>' +
+                               '<button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-save me-1"></i>Guardar</button>';
+        }
     }
     window._provRenderTags();
     document.getElementById('modal-proveedor').classList.add('open');
