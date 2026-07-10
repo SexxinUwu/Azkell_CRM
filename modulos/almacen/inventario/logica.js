@@ -720,7 +720,7 @@ window.abrirDetalleInv = function(id) {
         var costoRef  = parseFloat(item.costo_referencial || 0);
         var costoSoles = parseFloat(item.costo_soles != null ? item.costo_soles : costoRef);
         var tc = parseFloat(item.tipo_cambio || 0);
-        if (moneda === 'USD') {
+        if (moneda === 'USD' || tc > 0) {
             return '$ ' + costoRef.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:4}) +
                    (tc ? ' &nbsp;<span style="color:var(--subtext);font-size:.78rem">(T/C: ' + tc.toFixed(4) + ')</span>' : '') +
                    '<br><span style="font-size:.82rem;color:#16a34a;font-weight:800">= S/ ' +
