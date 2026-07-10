@@ -430,7 +430,7 @@ function srRenderTabla() {
             html += '</td></tr>';
 
             // Mobile Card
-            var badgeSit = srBadgeSituacion(e.situacion, true).replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill').replace(/padding:[^;]*;/g, '').replace(/font-size:[^;]*;/g, 'font-size:0.7rem; padding: 4px 8px;');
+            var badgeSit = srBadgeSituacion(e.situacion, true);
             var kmStr = e.km ? 'KM: ' + Number(e.km).toLocaleString('en-US') : 'KM: -';
             var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
             var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
@@ -1783,11 +1783,16 @@ window.srSeleccionarDrop = function(dropId, valor) {
 
 // ── Helpers UI ───────────────────────────────────────────────────
 function srBadgeSituacion(sit, ocupada) {
-    if (!ocupada || !sit) return '<span class="sr-semaforo sr-sem-vacio"><span class="sr-sem-dot"></span>Libre</span>';
-    if (sit === 'En espera')  return '<span class="sr-sit sr-sit-espera">'  + sit + '</span>';
-    if (sit === 'En proceso') return '<span class="sr-sit sr-sit-proceso">' + sit + '</span>';
-    if (sit === 'Listo')      return '<span class="sr-sit sr-sit-listo">'   + sit + '</span>';
-    return '<span class="sr-sit sr-sit-proceso">' + sit + '</span>';
+    if (!ocupada || !sit) return '<span class="sr-semaforo sr-sem-vacio" style="color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</span>';
+    var bg, c, b;
+    var s = sit.toLowerCase();
+    if (s === 'finalizado') { bg = '#fee2e2'; c = '#dc2626'; b = '#fca5a5'; } // Rojo
+    else if (s === 'en atención') { bg = '#dcfce7'; c = '#16a34a'; b = '#86efac'; } // Verde
+    else if (s.indexOf('espera') !== -1) { bg = '#fef9c3'; c = '#ca8a04'; b = '#fde047'; } // Amarillo
+    else if (s === 'taller tercero') { bg = '#fdf4ff'; c = '#d946ef'; b = '#f5d0fe'; } // Magenta
+    else { bg = '#f1f5f9'; c = '#0f172a'; b = '#cbd5e1'; } // Negro/Default
+
+    return '<span style="background:'+bg+'; color:'+c+'; border:1px solid '+b+'; font-weight:700; font-size:0.75rem; padding:3px 10px; border-radius:2rem; display:inline-block; white-space:nowrap;">' + _srEsc(sit) + '</span>';
 }
 
 function srSemaforo(sit, ocupada) {
