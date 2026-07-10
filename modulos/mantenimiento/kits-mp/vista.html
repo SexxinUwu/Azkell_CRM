@@ -144,30 +144,14 @@
               <i class="bi bi-plus-lg me-1"></i>Añadir Ítem
             </button>
           </div>
-          <div class="table-responsive" style="padding-bottom: 150px; min-height: 250px; border-radius:12px; border:1px solid var(--border); overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <table class="table table-sm align-middle mb-0" style="font-size:0.8rem; min-width:480px;">
-              <thead style="background:var(--bg);">
-                <tr>
-                  <th style="min-width:200px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
-                  <th style="width:70px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cant.</th>
-                  <th style="width:70px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Unid.</th>
-                  <th style="width:90px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">C. Unit.</th>
-                  <th style="width:90px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Total</th>
-                  <th style="width:38px;"></th>
-                </tr>
-              </thead>
-              <tbody id="kits-form-tbody">
-                <!-- Filas dinámicas -->
-              </tbody>
-              <tfoot style="background:var(--bg);">
-                <tr>
-                  <td colspan="4" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">COSTO TOTAL:</td>
-                  <td colspan="2" style="font-weight:800;color:#16a34a;padding:10px 12px;font-size:.95rem;">
-                    S/ <span id="kits-form-grand-total">0.00</span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+          <div id="kits-form-container" style="padding-bottom:150px; min-height:250px;">
+            <!-- Filas dinámicas (Cards) -->
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3 p-3" style="background:var(--bg); border-radius:12px; border:1px solid var(--border);">
+            <span class="fw-bold text-uppercase" style="font-size:0.85rem; color:var(--subtext); letter-spacing:0.05em;">Costo Total del Kit:</span>
+            <span class="fw-bold text-primary" style="font-size:1.2rem;">
+              S/ <span id="kits-form-grand-total">0.00</span>
+            </span>
           </div>
         </div>
       </div>

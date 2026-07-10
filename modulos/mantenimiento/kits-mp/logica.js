@@ -208,7 +208,7 @@ window.kitsAbrirModal = function() {
     if (mEl) mEl.value = '';
     if (typeof window._cbReset === 'function') window._cbReset('kits-tipomp');
     
-    var tb = document.getElementById('kits-form-tbody');
+    var tb = document.getElementById('kits-form-container');
     if (tb) tb.innerHTML = '';
     var gt = document.getElementById('kits-form-grand-total');
     if (gt) gt.textContent = '0.00';
@@ -236,7 +236,7 @@ window.kitsEditarKit = function(marca, tipo) {
     _kitsPopularDatalists();
     _kitsCargarTiposMP(tipo);
     
-    var tbody = document.getElementById('kits-form-tbody');
+    var tbody = document.getElementById('kits-form-container');
     if (tbody) tbody.innerHTML = '';
     window.kitsDeleted = [];
     
@@ -255,26 +255,33 @@ window.kitsEditarKit = function(marca, tipo) {
 window.kitsAgregarFila = function(data) {
     data = data || {};
     var rid = 'kr_' + (++window.kitsRowCounter);
-    var tr = document.createElement('tr');
+    
+    var tr = document.createElement('div');
     tr.id = rid;
+    tr.className = 'kit-card';
+    tr.style.cssText = 'background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);';
     if (data.id) tr.dataset.id = data.id;
     
     var cbId = 'cb_' + rid;
     var html = '';
-    html += '<td>';
-    html += '<div class="position-relative">';
-    html += '<input type="text" id="'+cbId+'-txt" class="form-control form-control-sm kit-item-input" placeholder="Buscar ítem..." autocomplete="off" oninput="window._cbFiltrar(\''+cbId+'\')" onfocus="window._cbFiltrar(\''+cbId+'\')" onblur="window._kitsHideCombo(\''+cbId+'\')">';
-    html += '<input type="hidden" id="'+cbId+'">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+    html += '<div style="flex:1;position:relative;">';
+    html += '<input type="text" id="'+cbId+'-txt" class="form-control form-control-sm kit-item-input" placeholder="Buscar artículo..." autocomplete="off" oninput="window._cbFiltrar(\''+cbId+'\')" onfocus="window._cbFiltrar(\''+cbId+'\')" onblur="window._kitsHideCombo(\''+cbId+'\')">';
+    html += '<input type="hidden" id="'+cbId+'" class="kit-desc">';
     html += '<div id="'+cbId+'-dd" class="cb-dropdown"></div>';
-    html += '</div></td>';
-    html += '<td><input type="number" class="form-control form-control-sm kit-cant" value="'+(data.cantidad||1)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></td>';
-    html += '<td><input type="text" class="form-control form-control-sm kit-unid" value="'+(data.unidad_medida||'')+'" readonly style="background:rgba(0,0,0,.03); color:var(--subtext)"></td>';
-    html += '<td><input type="number" class="form-control form-control-sm kit-costo" value="'+(data.costo_unitario||0)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></td>';
-    html += '<td><input type="number" class="form-control form-control-sm kit-total" value="'+(data.costo_total||0)+'" step="0.01" readonly style="background:rgba(0,0,0,.03); font-weight:bold; color:var(--text)"></td>';
-    html += '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" style="padding: 2px 8px;" onclick="window.kitsEliminarFila(this)"><i class="bi bi-trash"></i></button></td>';
+    html += '</div>';
+    html += '<button type="button" class="btn btn-sm btn-outline-danger" style="width:32px;height:32px;border-radius:10px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="window.kitsEliminarFila(this)"><i class="bi bi-trash"></i></button>';
+    html += '</div>';
+    
+    html += '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;">';
+    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Cant.</div><input type="number" class="form-control form-control-sm kit-cant" value="'+(data.cantidad||1)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
+    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Unid.</div><input type="text" class="form-control form-control-sm kit-unid" value="'+(data.unidad_medida||'')+'" readonly style="background:rgba(0,0,0,.03); color:var(--subtext)"></div>';
+    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">C. Unit.</div><input type="number" class="form-control form-control-sm kit-costo" value="'+(data.costo_unitario||0)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
+    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Total</div><input type="number" class="form-control form-control-sm kit-total" value="'+(data.costo_total||0)+'" step="0.01" readonly style="background:rgba(0,0,0,.03); font-weight:bold; color:var(--text)"></div>';
+    html += '</div>';
     
     tr.innerHTML = html;
-    var tb = document.getElementById('kits-form-tbody');
+    var tb = document.getElementById('kits-form-container');
     if (tb) tb.appendChild(tr);
     
     var opciones = _kitsGenerarOpcionesItems();
@@ -296,14 +303,14 @@ window.kitsAgregarFila = function(data) {
 };
 
 window.kitsEliminarFila = function(btn) {
-    var tr = btn.closest('tr');
+    var tr = btn.closest('.kit-card');
     if (tr.dataset.id) window.kitsDeleted.push(tr.dataset.id);
     tr.remove();
     window.kitsRecalcularFormulario();
 };
 
 window.kitsRecalcularFormulario = function() {
-    var trs = document.querySelectorAll('#kits-form-tbody tr');
+    var trs = document.querySelectorAll('#kits-form-container .kit-card');
     var grandTotal = 0;
     trs.forEach(function(tr) {
         var cant = parseFloat(tr.querySelector('.kit-cant').value) || 0;
@@ -332,7 +339,7 @@ window.kitsGuardar = function() {
     if (!marca || !tipo) return window.mostrarToast('Marca y Tipo de Mantenimiento son requeridos', 'warning');
     
     var items = [];
-    var trs = document.querySelectorAll('#kits-form-tbody tr');
+    var trs = document.querySelectorAll('#kits-form-container .kit-card');
     for (var i = 0; i < trs.length; i++) {
         var tr = trs[i];
         var cbId = tr.id.replace('kr_', 'cb_kr_');
