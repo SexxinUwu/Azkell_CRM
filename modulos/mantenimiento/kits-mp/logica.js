@@ -3,10 +3,21 @@
 // Ítems por Kit: marca, tipo MP, nombre kit, repuestos, costos
 // ================================================================
 
-function _kitsBsModal(el) {
-    if (!el) return { show: function(){}, hide: function(){} };
-    return bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
-}
+window._kitsAbrirPanel = function() {
+    document.getElementById('kits-backdrop').style.display = 'block';
+    setTimeout(function() {
+        var p = document.getElementById('kits-panel-detalle');
+        if (p) p.classList.add('open');
+    }, 10);
+};
+window._kitsCerrarModal = function() {
+    var p = document.getElementById('kits-panel-detalle');
+    if (p) p.classList.remove('open');
+    setTimeout(function() {
+        var b = document.getElementById('kits-backdrop');
+        if (b) b.style.display = 'none';
+    }, 280);
+};
 
 window.kitsData    = window.kitsData    || [];
 window.kitsDataFil = window.kitsDataFil || [];
