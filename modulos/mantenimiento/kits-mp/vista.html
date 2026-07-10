@@ -1,3 +1,35 @@
+<style>
+  /* Mobile Bottom Sheet for Kits Modal */
+  @media (max-width: 767.98px) {
+    #kitsModal .modal-dialog {
+      margin: 0;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-width: 100%;
+      /* Disable bootstrap default fade transform */
+      transform: translateY(100%) !important;
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    #kitsModal.show .modal-dialog {
+      transform: translateY(0) !important;
+    }
+    #kitsModal .modal-content {
+      border-radius: 28px 28px 0 0;
+      border: none;
+      height: 90vh; /* Takes most of the screen */
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #kitsModal .modal-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+    }
+  }
+</style>
+
 <div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
 
   <!-- ── HEADER ────────────────────────────────────────────────── -->
@@ -112,7 +144,7 @@
               <i class="bi bi-plus-lg me-1"></i>Añadir Ítem
             </button>
           </div>
-          <div class="table-responsive">
+          <div class="table-responsive" style="padding-bottom: 180px; min-height: 300px;">
             <table class="table table-sm align-middle mb-0" style="font-size:0.82rem; min-width:800px;">
               <thead style="background:rgba(0,0,0,.03);">
                 <tr>
