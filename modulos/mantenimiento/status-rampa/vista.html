@@ -532,17 +532,17 @@
                     oninput="window.srBuscar()">
             </div>
             <div style="flex:1"></div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="window.init_status_rampa()" title="Actualizar">
+            <button class="btn btn-sm btn-outline-secondary d-none d-md-block" onclick="window.init_status_rampa()" title="Actualizar">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas" data-perm-e="status_rampa">
+            <button class="btn btn-sm btn-outline-secondary d-none d-md-block" onclick="window.srAbrirConfigRampas()" title="Configurar Rampas" data-perm-e="status_rampa">
                 <i class="bi bi-gear me-1"></i><span class="sr-excel-txt">Configurar</span>
             </button>
-            <div id="col-picker-sr"></div>
-            <button class="btn btn-sm btn-outline-success" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
+            <div id="col-picker-sr" class="d-none d-md-flex"></div>
+            <button class="btn btn-sm btn-outline-success d-none d-md-block" id="sr-btn-excel" onclick="window.srExportarExcel()" title="Exportar Excel">
                 <i class="bi bi-file-earmark-excel"></i><span class="sr-excel-txt ms-1">Excel</span>
             </button>
-            <button class="btn btn-sm btn-primary" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa">
+            <button class="btn btn-sm btn-primary d-none d-md-block" id="sr-btn-registrar" onclick="window.srRegistrar()" data-perm-c="status_rampa">
                 <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
             </button>
         </div>
@@ -550,19 +550,38 @@
     <!-- PESTAÑAS -->
     <div class="sr-tabs">
         <div class="sr-tab active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
-            Rampas <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
+            RAMPAS <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
         </div>
         <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
-            Historial <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
+            HISTORIAL <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
         </div>
+    </div>
+    
+    <!-- CONTROLES MÓVILES SCROLL HORIZONTAL -->
+    <div class="d-flex d-md-none align-items-center bg-white" style="overflow-x:auto; gap:0.5rem; padding:0.6rem 0.75rem; border-bottom:1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 0.5rem; scrollbar-width: none;">
+        <button class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; border-color:#cbd5e1; color:#475569;" onclick="window.init_status_rampa()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-outline-secondary rounded-pill d-flex align-items-center flex-shrink-0" style="height:34px; border-color:#cbd5e1; color:#1e293b; font-weight:700; font-size:0.75rem;" onclick="window.srAbrirConfigRampas()" data-perm-e="status_rampa">
+            <i class="bi bi-gear me-1" style="color:#64748b;"></i> Configurar
+        </button>
+        <button class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; border-color:#cbd5e1; color:#64748b;">
+            <i class="bi bi-layout-three-columns"></i>
+        </button>
+        <button class="btn btn-outline-success rounded-pill d-flex align-items-center flex-shrink-0" style="height:34px; font-weight:700; font-size:0.75rem;" onclick="window.srExportarExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+        </button>
     </div>
     </div>
 
     <!-- PANE: RAMPAS -->
     <div id="sr-pane-rampas" style="display:flex; flex:1 1 0; min-height:0; overflow:hidden;">
 
-        <!-- TABLA -->
-        <div class="sr-table-wrap" id="sr-tabla-wrap">
+        <!-- MOBILE GRID -->
+        <div class="d-flex d-md-none flex-column gap-3 w-100 pb-5" id="sr-grid-mobile" style="overflow-y:auto; padding: 0 0.75rem;"></div>
+
+        <!-- TABLA ESCRITORIO -->
+        <div class="d-none d-md-block sr-table-wrap" id="sr-tabla-wrap">
             <table id="sr-tabla">
                 <thead>
                     <tr>
@@ -582,6 +601,11 @@
                 <tbody id="sr-tbody"></tbody>
             </table>
         </div>
+        
+        <!-- FAB REGISTRAR MÓVIL -->
+        <button class="btn btn-primary shadow-lg d-md-none rounded-circle d-flex justify-content-center align-items-center" onclick="window.srRegistrar()" data-perm-c="status_rampa" style="position:fixed; bottom:80px; right:1.5rem; width:56px; height:56px; z-index:1000; font-size:1.5rem;">
+            <i class="bi bi-plus"></i>
+        </button>
 
         <!-- PANEL DETALLE LATERAL -->
         <div class="sr-drawer-global" id="sr-panel-detalle">
