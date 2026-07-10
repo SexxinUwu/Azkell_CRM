@@ -435,7 +435,7 @@ function srRenderTabla() {
             var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
             var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
             
-            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
                 '<div class="d-flex align-items-center justify-content-between mb-2">' +
                     '<div class="d-flex align-items-center gap-2">' +
                         '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
@@ -555,7 +555,7 @@ window.srAbrirDetalle = function(id) {
     var horas = e.fechaIngreso ? srCalcHorasTaller(e).replace('h', '') : '0.0';
 
     html += '<div class="mb-4">';
-    html += '  <h6 class="fw-bold mb-3" style="font-size:0.75rem; color:#64748b; letter-spacing:0.5px; text-transform:uppercase;">Cronología de Servicio</h6>';
+    html += '  <h6 class="fw-bold mb-3" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Cronología de Servicio</h6>';
     html += '  <div class="sr-modal-card border-0" style="background:#f8fafc; border-radius:1rem; display:flex; flex-direction:column;">';
     html += '    <div class="card-body p-3 position-relative">';
     html += '      <div style="position:absolute; left:31px; top:32px; bottom:32px; width:2px; background:#e2e8f0; z-index:1;"></div>';
@@ -578,19 +578,19 @@ window.srAbrirDetalle = function(id) {
     // Detalles adicionales
     html += '<div class="sr-modal-card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem; display:flex; flex-direction:column;">';
     html += '  <div class="card-body p-3 d-flex justify-content-between align-items-center border-bottom">';
-    html += '    <div style="font-size:0.75rem; color:#64748b;">Kilometraje de Ingreso</div>';
+    html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b;">Kilometraje de Ingreso</div>';
     html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
     html += '  </div>';
     html += '  <div class="card-body p-3">';
-    html += '    <div style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
-    html += '    <div class="rounded-3 p-3" style="background:#f8fafc; border:1px solid #f1f5f9; font-size:0.8rem; color:#334155; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
+    html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
+    html += '    <div class="rounded-3 p-3" style="background:#f8fafc; border:1px solid #f1f5f9; font-size:0.8rem; color:#0f172a; font-weight:500; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
     html += '  </div>';
     html += '</div>';
 
     // OTs
     html += '<div class="mb-4">';
     html += '  <div class="d-flex justify-content-between align-items-center mb-3">';
-    html += '    <h6 class="fw-bold mb-0" style="font-size:0.75rem; color:#64748b; letter-spacing:0.5px; text-transform:uppercase;">Órdenes de Trabajo vinculadas</h6>';
+    html += '    <h6 class="fw-bold mb-0" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Órdenes de Trabajo vinculadas</h6>';
     html += '    <button class="btn btn-link p-0 text-decoration-none fw-bold" style="font-size:0.75rem; color:#2563eb;" onclick="window.srGenerarOT(' + id + ')">+ Generar OT</button>';
     html += '  </div>';
     if (!otsPlaca.length) {
@@ -2241,7 +2241,9 @@ window.srEliminarRegistroGeneral = function(idRampa) {
     );
 };
 
-function srConfirmModerno(titulo, mensaje, onConfirm) {
+window.srConfirmModerno = function(titulo, mensaje, onConfirm, btnText, btnClass) {
+    btnText = btnText || 'Sí, eliminar';
+    btnClass = btnClass || 'btn-danger';
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
 
@@ -2257,7 +2259,7 @@ function srConfirmModerno(titulo, mensaje, onConfirm) {
         '<p style="margin:0 0 20px 0;font-size:0.9rem;color:#475569;line-height:1.4;">' + mensaje + '</p>' +
         '<div style="display:flex;justify-content:flex-end;gap:8px;">' +
         '<button class="btn btn-sm btn-light" id="btn-cancel" style="border:1px solid #cbd5e1;color:#475569;font-weight:600;padding:6px 12px;border-radius:6px;">Cancelar</button>' +
-        '<button class="btn btn-sm btn-danger" id="btn-ok" style="font-weight:600;padding:6px 12px;border-radius:6px;">Sí, eliminar</button>' +
+        '<button class="btn btn-sm ' + btnClass + '" id="btn-ok" style="font-weight:600;padding:6px 12px;border-radius:6px;">' + btnText + '</button>' +
         '</div>';
 
     overlay.appendChild(box);
