@@ -74,74 +74,75 @@
 
 <!-- ======= MODAL KIT MP ======= -->
 <div class="modal fade" id="kitsModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content" style="background:var(--surface); color:var(--text)">
       <div class="modal-header" style="border-bottom:1px solid var(--border)">
         <h5 class="modal-title fw-bold" id="kitsModal-titulo">
-          <i class="bi bi-tools me-1 text-primary"></i>Ítem de Kit MP
+          <i class="bi bi-tools me-1 text-primary"></i>Configurar Kit de Mantenimiento
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <input type="hidden" id="kits-id">
+      <div class="modal-body p-0">
         <datalist id="kits-dl-marcas"></datalist>
-        <div class="row g-3">
-          <div class="col-sm-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Marca *</label>
-            <input type="text" class="form-control form-control-sm text-uppercase" id="kits-marca"
-                   placeholder="VOLVO" list="kits-dl-marcas" autocomplete="off">
-          </div>
-          <div class="col-sm-8">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Tipo de Preventivo *</label>
-            <div class="position-relative">
-              <input type="text" id="kits-tipomp-txt" class="form-control form-control-sm text-uppercase"
-                     placeholder="MP1, FILTRO DE AIRE..." autocomplete="off"
-                     oninput="window._cbFiltrar('kits-tipomp')"
-                     onfocus="window._cbFiltrar('kits-tipomp')"
-                     onblur="window._kitsHideCombo('kits-tipomp')">
-              <input type="hidden" id="kits-tipomp">
-              <div id="kits-tipomp-dd" class="cb-dropdown"></div>
+        <div class="p-3" style="background:var(--bg); border-bottom:1px solid var(--border);">
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <label class="form-label fw-bold" style="font-size:0.8rem">Marca Vehículo *</label>
+              <input type="text" class="form-control fw-bold text-uppercase" id="kits-marca"
+                     placeholder="Ej: VOLVO" list="kits-dl-marcas" autocomplete="off">
+            </div>
+            <div class="col-sm-8">
+              <label class="form-label fw-bold" style="font-size:0.8rem">Tipo de Mantenimiento *</label>
+              <div class="position-relative">
+                <input type="text" id="kits-tipomp-txt" class="form-control fw-bold text-uppercase"
+                       placeholder="Ej: MP1" autocomplete="off"
+                       oninput="window._cbFiltrar('kits-tipomp')"
+                       onfocus="window._cbFiltrar('kits-tipomp')"
+                       onblur="window._kitsHideCombo('kits-tipomp')">
+                <input type="hidden" id="kits-tipomp">
+                <div id="kits-tipomp-dd" class="cb-dropdown"></div>
+              </div>
             </div>
           </div>
-          <div class="col-12">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Nombre del Ítem *</label>
-            <div class="position-relative">
-              <input type="text" id="kits-item-nombre-txt" class="form-control form-control-sm"
-                     placeholder="Buscar ítem en almacén..." autocomplete="off"
-                     oninput="window._cbFiltrar('kits-item-nombre')"
-                     onfocus="window._cbFiltrar('kits-item-nombre')"
-                     onblur="window._kitsHideCombo('kits-item-nombre')">
-              <input type="hidden" id="kits-item-nombre">
-              <div id="kits-item-nombre-dd" class="cb-dropdown"></div>
-            </div>
+        </div>
+        <div class="p-3">
+          <div class="d-flex justify-content-between align-items-end mb-2">
+            <label class="form-label fw-bold mb-0" style="font-size:0.85rem">Artículos del Kit</label>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="window.kitsAgregarFila()">
+              <i class="bi bi-plus-lg me-1"></i>Añadir Ítem
+            </button>
           </div>
-          <div class="col-sm-3">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Cantidad</label>
-            <input type="number" class="form-control form-control-sm" id="kits-cantidad"
-                   placeholder="1" step="0.01" oninput="window.kitsCalcularTotal()">
-          </div>
-          <div class="col-sm-3">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Unidad</label>
-            <input type="text" class="form-control form-control-sm" id="kits-unidad" placeholder="—"
-                   readonly style="background:rgba(88,101,242,0.06); cursor:default; color:var(--subtext)">
-          </div>
-          <div class="col-sm-3">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Costo Unit. (S/.)</label>
-            <input type="number" class="form-control form-control-sm" id="kits-costo-unit"
-                   placeholder="0.00" step="0.01" oninput="window.kitsCalcularTotal()">
-          </div>
-          <div class="col-sm-3">
-            <label class="form-label fw-bold" style="font-size:0.8rem">Costo Total (S/.)</label>
-            <input type="number" class="form-control form-control-sm" id="kits-costo-total"
-                   placeholder="0.00" step="0.01" readonly
-                   style="background:rgba(88,101,242,0.06); cursor:default; color:var(--subtext)">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0" style="font-size:0.82rem; min-width:800px;">
+              <thead style="background:rgba(0,0,0,.03);">
+                <tr>
+                  <th style="width:40%;">Nombre del Ítem</th>
+                  <th style="width:12%;">Cantidad</th>
+                  <th style="width:12%;">Unidad</th>
+                  <th style="width:15%;">C. Unit. (S/)</th>
+                  <th style="width:15%;">C. Total (S/)</th>
+                  <th style="width:6%; text-align:center;"></th>
+                </tr>
+              </thead>
+              <tbody id="kits-form-tbody">
+                <!-- Filas dinámicas -->
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" class="text-end fw-bold py-3">COSTO TOTAL DEL KIT:</td>
+                  <td colspan="2" class="fw-bold py-3 text-primary" style="font-size:1.1rem;">
+                    S/ <span id="kits-form-grand-total">0.00</span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </div>
       <div class="modal-footer" style="border-top:1px solid var(--border)">
         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="window.kitsGuardar()">
-          <i class="bi bi-check2 me-1"></i>Guardar
+        <button type="button" class="btn btn-sm btn-primary fw-bold px-4" onclick="window.kitsGuardar()">
+          <i class="bi bi-save me-1"></i>Guardar Kit
         </button>
       </div>
     </div>
