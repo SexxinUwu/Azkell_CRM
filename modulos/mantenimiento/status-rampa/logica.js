@@ -694,8 +694,8 @@ window.srLiberarRampa = function(id) {
     if (!window.guardAction('ot', 'e')) return;
     var e = window.srEntradas.find(function(x) { return x._id === id; });
     if (!e) return;
-    if (!confirm('¿Confirmar salida de ' + e.placa + ' de la Rampa ' + e.rampa + '?\n\nEl registro quedará en el historial.')) return;
-    var ahora = new Date();
+    window.srConfirmModerno('Confirmar Salida', '¿Confirmar salida de ' + e.placa + ' de la Rampa ' + e.rampa + '?\n\nEl registro quedará en el historial.', function() {
+        var ahora = new Date();
     var fechaHoy = ahora.toISOString().split('T')[0];
     var horaAhora = ahora.toTimeString().slice(0, 5);
     fetch('/api/taller-rampas/' + id, {
@@ -718,6 +718,7 @@ window.srLiberarRampa = function(id) {
         .catch(function() {
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al liberar rampa', 'danger');
         });
+    });
 };
 
 // ── Exportar Excel ────────────────────────────────────────────────

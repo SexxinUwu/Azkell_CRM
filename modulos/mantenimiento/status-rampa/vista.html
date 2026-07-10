@@ -446,9 +446,10 @@
     /* Scroll horizontal en tabla */
     #moduloStatusRampa .sr-table-wrap { overflow-x: auto; }
 
-    /* Force visibility */
+    /* Force visibility and hide scrollbar */
     #sr-tabla-wrap { display: none !important; }
-    #sr-grid-mobile { display: flex !important; }
+    #sr-grid-mobile { display: flex !important; -ms-overflow-style: none; scrollbar-width: none; }
+    #sr-grid-mobile::-webkit-scrollbar { display: none; }
 
     /* Tabs compactas en movil */
     #moduloStatusRampa .sr-tabs { padding: 0.5rem 0.75rem !important; border-bottom: none !important; background: transparent !important; }
@@ -575,18 +576,15 @@
     </div>
     
     <!-- CONTROLES MÓVILES SCROLL HORIZONTAL -->
-    <div class="d-flex d-md-none align-items-center bg-white" style="overflow-x:auto; gap:0.5rem; padding:0.2rem 0.75rem 0.8rem; margin-bottom: 0.5rem; scrollbar-width: none;">
-        <button class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; border-color:#cbd5e1; color:#475569;" onclick="window.init_status_rampa()" title="Actualizar">
-            <i class="bi bi-arrow-clockwise"></i>
+    <div class="d-flex d-md-none align-items-center justify-content-center bg-white" style="gap:0.75rem; padding:0.2rem 0.75rem 0.8rem; margin-bottom: 0.5rem;">
+        <button class="btn rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px; height:42px; color:#475569; background:#f1f5f9; border:none;" onclick="window.init_status_rampa()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise" style="font-size:1.1rem;"></i>
         </button>
-        <button class="btn btn-outline-secondary rounded-pill d-flex align-items-center flex-shrink-0" style="height:34px; border-color:#cbd5e1; color:#1e293b; font-weight:700; font-size:0.75rem;" onclick="window.srAbrirConfigRampas()" data-perm-e="status_rampa">
-            <i class="bi bi-gear me-1" style="color:#64748b;"></i> Configurar
+        <button class="btn rounded-pill d-flex align-items-center justify-content-center flex-shrink-0" style="height:42px; padding:0 1.25rem; color:#1e293b; font-weight:700; font-size:0.85rem; background:#f1f5f9; border:none;" onclick="window.srAbrirConfigRampas()" data-perm-e="status_rampa">
+            <i class="bi bi-gear me-2" style="color:#64748b; font-size:1.1rem;"></i> Configurar
         </button>
-        <button class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; border-color:#cbd5e1; color:#64748b;">
-            <i class="bi bi-layout-three-columns"></i>
-        </button>
-        <button class="btn btn-outline-success rounded-pill d-flex align-items-center flex-shrink-0" style="height:34px; font-weight:700; font-size:0.75rem;" onclick="window.srExportarExcel()">
-            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+        <button class="btn rounded-pill d-flex align-items-center justify-content-center flex-shrink-0" style="height:42px; padding:0 1.25rem; font-weight:700; font-size:0.85rem; color:#16a34a; background:#f0fdf4; border:none;" onclick="window.srExportarExcel()">
+            <i class="bi bi-file-earmark-excel me-2" style="font-size:1.1rem;"></i> Excel
         </button>
     </div>
     </div>
