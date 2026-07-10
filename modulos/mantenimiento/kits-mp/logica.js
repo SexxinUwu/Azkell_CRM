@@ -180,10 +180,11 @@ window.kitsFiltrar = function() {
             var mpColor = k.tipo_mp === 'MP1' ? 'bg-primary' : k.tipo_mp === 'MP2' ? 'bg-success' : k.tipo_mp === 'MP3' ? 'bg-warning text-dark' : 'bg-info text-dark';
             html += '<tr style="background:var(--bg)">' +
                 '<td></td>' +
-                '<td colspan="7" class="py-1 px-2 d-flex justify-content-between align-items-center" style="font-size:0.75rem; border-bottom:1px dashed var(--border)">' +
+                '<td colspan="7" class="py-1 px-2" style="font-size:0.75rem; border-bottom:1px dashed var(--border)">' +
+                '<div class="d-flex justify-content-between align-items-center">' +
                 '<span><span class="badge ' + mpColor + ' me-1">' + k.tipo_mp + '</span>' + (k.nombre_kit ? ' <span class="text-muted fw-bold ms-2">' + k.nombre_kit + '</span>' : '') + '</span>' +
                 (window.checkPerm('cfg_mant','e') ? '<button class="btn btn-xs btn-outline-primary" onclick="window.kitsEditarKit(\''+k.marca_vehiculo+'\',\''+k.tipo_mp+'\')" style="font-size:0.7rem;padding:2px 8px"><i class="bi bi-pencil me-1"></i>Editar Kit</button>' : '') +
-                '</td></tr>';
+                '</div></td></tr>';
             lastTipo = k.tipo_mp;
         }
         html += '<tr>' +
@@ -222,7 +223,7 @@ window.kitsAbrirModal = function() {
     _kitsCargarTiposMP();
     
     window.kitsAgregarFila();
-    _kitsBsModal(document.getElementById('kitsModal')).show();
+    window._kitsAbrirPanel();
 };
 
 // ── Editar Kit (Grupo) ────────────────────────────────────────────
@@ -249,7 +250,7 @@ window.kitsEditarKit = function(marca, tipo) {
     if (items.length === 0) window.kitsAgregarFila();
     
     window.kitsRecalcularFormulario();
-    _kitsBsModal(document.getElementById('kitsModal')).show();
+    window._kitsAbrirPanel();
 };
 
 window.kitsAgregarFila = function(data) {
@@ -258,26 +259,25 @@ window.kitsAgregarFila = function(data) {
     
     var tr = document.createElement('div');
     tr.id = rid;
-    tr.className = 'kit-card';
-    tr.style.cssText = 'background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);';
+    tr.className = 'kits-item-card kit-card';
     if (data.id) tr.dataset.id = data.id;
     
     var cbId = 'cb_' + rid;
     var html = '';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
     html += '<div style="flex:1;position:relative;">';
-    html += '<input type="text" id="'+cbId+'-txt" class="form-control form-control-sm kit-item-input" placeholder="Buscar artículo..." autocomplete="off" oninput="window._cbFiltrar(\''+cbId+'\')" onfocus="window._cbFiltrar(\''+cbId+'\')" onblur="window._kitsHideCombo(\''+cbId+'\')">';
+    html += '<input type="text" id="'+cbId+'-txt" class="kits-input-sm kit-item-input" placeholder="Buscar artículo..." autocomplete="off" oninput="window._cbFiltrar(\''+cbId+'\')" onfocus="window._cbFiltrar(\''+cbId+'\')" onblur="window._kitsHideCombo(\''+cbId+'\')">';
     html += '<input type="hidden" id="'+cbId+'" class="kit-desc">';
     html += '<div id="'+cbId+'-dd" class="cb-dropdown"></div>';
     html += '</div>';
-    html += '<button type="button" class="btn btn-sm btn-outline-danger" style="width:32px;height:32px;border-radius:10px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="window.kitsEliminarFila(this)"><i class="bi bi-trash"></i></button>';
+    html += '<button type="button" onclick="window.kitsEliminarFila(this)" style="width:38px;height:38px;border-radius:12px;background:#fef2f2;border:1.5px solid #fecaca;color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;"><i class="bi bi-x-lg"></i></button>';
     html += '</div>';
     
-    html += '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;">';
-    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Cant.</div><input type="number" class="form-control form-control-sm kit-cant" value="'+(data.cantidad||1)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
-    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Unid.</div><input type="text" class="form-control form-control-sm kit-unid" value="'+(data.unidad_medida||'')+'" readonly style="background:rgba(0,0,0,.03); color:var(--subtext)"></div>';
-    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">C. Unit.</div><input type="number" class="form-control form-control-sm kit-costo" value="'+(data.costo_unitario||0)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
-    html += '<div><div style="font-size:0.65rem;font-weight:700;color:var(--subtext);margin-bottom:2px;text-transform:uppercase;">Total</div><input type="number" class="form-control form-control-sm kit-total" value="'+(data.costo_total||0)+'" step="0.01" readonly style="background:rgba(0,0,0,.03); font-weight:bold; color:var(--text)"></div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">';
+    html += '<div><div class="kits-field-label">CANT.</div><input type="number" class="kits-input-sm kit-cant" value="'+(data.cantidad||1)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
+    html += '<div><div class="kits-field-label">UNID.</div><input type="text" class="kits-input-sm kit-unid" value="'+(data.unidad_medida||'')+'" readonly style="background:rgba(0,0,0,.03); color:var(--subtext)"></div>';
+    html += '<div><div class="kits-field-label">C. UNIT.</div><input type="number" class="kits-input-sm kit-costo" value="'+(data.costo_unitario||0)+'" step="0.01" oninput="window.kitsRecalcularFormulario()"></div>';
+    html += '<div><div class="kits-field-label">IMPORTE</div><input type="number" class="kits-input-sm kit-total" value="'+(data.costo_total||0)+'" step="0.01" readonly style="background:rgba(0,0,0,.03); font-weight:bold; color:var(--text)"></div>';
     html += '</div>';
     
     tr.innerHTML = html;
@@ -373,12 +373,12 @@ window.kitsGuardar = function() {
         promises.push(fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(it) }));
     });
     
-    var btn = document.querySelector('#kitsModal .btn-primary');
+    var btn = document.getElementById('kits-btn-guardar');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...'; }
     
     Promise.all(promises).then(function() {
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar Kit'; }
-        _kitsBsModal(document.getElementById('kitsModal')).hide();
+        window._kitsCerrarModal();
         window.mostrarToast('Kit guardado', 'success');
         window.kitsCargarTabla();
     }).catch(function(e) {
