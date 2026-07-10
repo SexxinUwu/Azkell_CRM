@@ -435,7 +435,7 @@ function srRenderTabla() {
             var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
             var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
             
-            htmlMobile += '<div class="card p-3 border-0 shadow-sm" style="border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
                 '<div class="d-flex align-items-center justify-content-between mb-2">' +
                     '<div class="d-flex align-items-center gap-2">' +
                         '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
@@ -534,15 +534,15 @@ window.srAbrirDetalle = function(id) {
     
     // Header (Hero)
     var badgeSit = srBadgeSituacion(e.situacion, true).replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill').replace(/padding:[^;]*;/g, '').replace(/font-size:[^;]*;/g, 'font-size:0.65rem; padding: 2px 8px; font-weight:700;');
-    html += '<div class="card border-0 mb-3" style="background:#1e293b; border-radius:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);">';
+    html += '<div class="sr-modal-card border-0 mb-3" style="background:var(--surface); border-radius:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); display:flex; flex-direction:column;">';
     html += '  <div class="card-body d-flex align-items-center gap-3 p-3">';
     html += '    <div class="rounded-3 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" style="width:48px; height:48px; background:' + color + '; font-size:1.4rem;">' + (rampaIdx + 1) + '</div>';
     html += '    <div>';
     html += '      <div class="d-flex align-items-center gap-2 mb-1">';
-    html += '        <h4 class="mb-0 fw-bold text-white" style="letter-spacing:0.5px;">' + _srEsc(e.placa || '') + '</h4>';
+    html += '        <h4 class="mb-0 fw-bold text-dark" style="letter-spacing:0.5px;">' + _srEsc(e.placa || '') + '</h4>';
     html += '        ' + badgeSit;
     html += '      </div>';
-    html += '      <div style="font-size:0.8rem; color:#94a3b8; font-weight:500;">' + _srEsc(rampaNomDet) + '</div>';
+    html += '      <div style="font-size:0.8rem; color:#64748b; font-weight:500;">' + _srEsc(rampaNomDet) + '</div>';
     html += '    </div>';
     html += '  </div>';
     html += '</div>';
@@ -556,7 +556,7 @@ window.srAbrirDetalle = function(id) {
 
     html += '<div class="mb-4">';
     html += '  <h6 class="fw-bold mb-3" style="font-size:0.75rem; color:#64748b; letter-spacing:0.5px; text-transform:uppercase;">Cronología de Servicio</h6>';
-    html += '  <div class="card border-0" style="background:#f8fafc; border-radius:1rem;">';
+    html += '  <div class="sr-modal-card border-0" style="background:#f8fafc; border-radius:1rem; display:flex; flex-direction:column;">';
     html += '    <div class="card-body p-3 position-relative">';
     html += '      <div style="position:absolute; left:31px; top:32px; bottom:32px; width:2px; background:#e2e8f0; z-index:1;"></div>';
     html += '      <div class="d-flex align-items-start gap-3 position-relative z-2 mb-4">';
@@ -576,7 +576,7 @@ window.srAbrirDetalle = function(id) {
     html += '</div>';
 
     // Detalles adicionales
-    html += '<div class="card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem;">';
+    html += '<div class="sr-modal-card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem; display:flex; flex-direction:column;">';
     html += '  <div class="card-body p-3 d-flex justify-content-between align-items-center border-bottom">';
     html += '    <div style="font-size:0.75rem; color:#64748b;">Kilometraje de Ingreso</div>';
     html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
@@ -598,7 +598,7 @@ window.srAbrirDetalle = function(id) {
     } else {
         otsPlaca.forEach(function(ot) {
             var idOt = ot.id_ot || ot.ticket_entrada || '—';
-            html += '  <div class="card border-0 mb-2" style="background:#f8fafc; border:1px solid #f1f5f9!important; border-radius:0.75rem; cursor:pointer;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
+            html += '  <div class="sr-modal-card border-0 mb-2" style="background:#f8fafc; border:1px solid #f1f5f9!important; border-radius:0.75rem; cursor:pointer; display:flex; flex-direction:column;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
             html += '    <div class="card-body p-3 d-flex justify-content-between align-items-center">';
             html += '      <div>';
             html += '        <div class="fw-bold mb-1" style="color:#2563eb; font-size:0.85rem;">' + window.srFormatID(idOt) + '</div>';

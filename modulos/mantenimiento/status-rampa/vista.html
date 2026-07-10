@@ -446,9 +446,24 @@
     /* Scroll horizontal en tabla */
     #moduloStatusRampa .sr-table-wrap { overflow-x: auto; }
 
-    /* Tabs compactas */
-    #moduloStatusRampa .sr-tabs { padding: 0 0.75rem; }
-    #moduloStatusRampa .sr-tab  { margin-right: 1rem; padding: 9px 0; font-size: 0.79rem; }
+    /* Force visibility */
+    #sr-tabla-wrap { display: none !important; }
+    #sr-grid-mobile { display: flex !important; }
+
+    /* Tabs compactas en movil */
+    #moduloStatusRampa .sr-tabs { padding: 0.5rem 0.75rem !important; border-bottom: none !important; background: transparent !important; }
+    #moduloStatusRampa .sr-tabs-inner { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 1rem; padding: 4px; width: 100%; gap: 4px; display: flex; margin-bottom: 0.5rem; }
+    #moduloStatusRampa .sr-tab { flex: 1; margin: 0 !important; padding: 8px 0 !important; border-bottom: none !important; text-align: center; border-radius: 0.75rem; color: #64748b !important; justify-content: center; display: flex; align-items: center; }
+    #moduloStatusRampa .sr-tab.active { background: #fff !important; color: #2563eb !important; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    #moduloStatusRampa .sr-tab-badge { background: #e2e8f0 !important; border-color: transparent !important; color: #475569 !important; }
+    #moduloStatusRampa .sr-tab.active .sr-tab-badge { background: #eff6ff !important; color: #2563eb !important; }
+
+    /* Buscador movil */
+    #moduloStatusRampa .sr-controls { padding: 0.75rem 0.75rem 0.5rem !important; }
+    #moduloStatusRampa .sr-controls .input-group { max-width: none !important; width: 100% !important; background: #f8fafc !important; border-radius: 1rem !important; border: 1px solid #f1f5f9 !important; }
+    #moduloStatusRampa .sr-controls .input-group input { background: transparent !important; color: #475569 !important; font-weight: 500; font-size: 0.85rem !important; }
+    #moduloStatusRampa .sr-controls .input-group-text { background: transparent !important; border: none !important; padding-left: 1rem; }
+    #moduloStatusRampa .sr-controls .input-group input:focus { box-shadow: none !important; }
 
     /* Filtro historial ajustado */
     #sr-pane-historial > div:first-child { padding: 0.4rem 0.65rem; }
@@ -522,12 +537,12 @@
 
     <!-- CONTROLES SUPERIORES (BARRA + PESTAÑAS) -->
     <div class="sr-top-wrap">
-        <div class="sr-controls">
-            <div class="input-group input-group-sm" style="max-width:260px;">
-                <span class="input-group-text bg-transparent border-end-0">
+        <div class="sr-controls d-flex d-md-flex align-items-center justify-content-between p-3" style="border-bottom:none;">
+            <div class="input-group flex-fill" style="max-width:320px;">
+                <span class="input-group-text">
                     <i class="bi bi-search" style="color:var(--subtext)"></i>
                 </span>
-                <input type="text" class="form-control border-start-0 ps-0" id="sr-buscador"
+                <input type="text" class="form-control border-start-0 ps-0 shadow-none" id="sr-buscador"
                     placeholder="Buscar por placa, rampa, situación..."
                     oninput="window.srBuscar()">
             </div>
@@ -549,16 +564,18 @@
 
     <!-- PESTAÑAS -->
     <div class="sr-tabs">
-        <div class="sr-tab active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
-            RAMPAS <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
-        </div>
-        <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
-            HISTORIAL <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
+        <div class="sr-tabs-inner d-md-flex w-100" style="gap:0;">
+            <div class="sr-tab active" id="sr-tab-rampas" onclick="window.srCambiarTab('rampas')">
+                RAMPAS <span class="sr-tab-badge" id="sr-tab-badge-rampas">0</span>
+            </div>
+            <div class="sr-tab" id="sr-tab-historial" onclick="window.srCambiarTab('historial')">
+                HISTORIAL <span class="sr-tab-badge" id="sr-tab-badge-historial">0</span>
+            </div>
         </div>
     </div>
     
     <!-- CONTROLES MÓVILES SCROLL HORIZONTAL -->
-    <div class="d-flex d-md-none align-items-center bg-white" style="overflow-x:auto; gap:0.5rem; padding:0.6rem 0.75rem; border-bottom:1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 0.5rem; scrollbar-width: none;">
+    <div class="d-flex d-md-none align-items-center bg-white" style="overflow-x:auto; gap:0.5rem; padding:0.2rem 0.75rem 0.8rem; margin-bottom: 0.5rem; scrollbar-width: none;">
         <button class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:34px; height:34px; border-color:#cbd5e1; color:#475569;" onclick="window.init_status_rampa()" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
         </button>
@@ -602,10 +619,9 @@
             </table>
         </div>
         
-        <!-- FAB REGISTRAR MÓVIL -->
-        <button class="btn btn-primary shadow-lg d-md-none rounded-circle d-flex justify-content-center align-items-center" onclick="window.srRegistrar()" data-perm-c="status_rampa" style="position:fixed; bottom:80px; right:1.5rem; width:56px; height:56px; z-index:1000; font-size:1.5rem;">
-            <i class="bi bi-plus"></i>
-        </button>
+        
+        <!-- FAB REGISTRAR MÓVIL (Eliminado duplicado) -->
+
 
         <!-- PANEL DETALLE LATERAL -->
         <div class="sr-drawer-global" id="sr-panel-detalle">
