@@ -344,10 +344,12 @@ function srCalcHorasTaller(e) {
 // ── Render tabla ─────────────────────────────────────────────────
 function srRenderTabla() {
     var tbody = document.getElementById('sr-tbody');
-    if (!tbody) return;
+    var gridMobile = document.getElementById('sr-grid-mobile');
+    if (!tbody && !gridMobile) return;
 
     var busq = ((document.getElementById('sr-buscador') || {}).value || '').trim().toLowerCase();
     var html  = '';
+    var htmlMobile = '';
 
     var rampas = window.srCatRampas.length
         ? window.srCatRampas
@@ -372,6 +374,19 @@ function srRenderTabla() {
                     html += '<td></td>';
                 }
                 html += '</tr>';
+
+                var emptyBtn = window.checkPerm('status_rampa', 'c') ? '<button class="btn btn-sm fw-bold px-3 py-1" style="background:#eff6ff; color:#2563eb; border-radius:2rem; font-size:0.8rem;" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')">+ Ingresar</button>' : '';
+                htmlMobile += '<div class="card p-3 border-0 shadow-sm" style="border-radius:1rem; border:1px solid var(--border)!important;">' +
+                                  '<div class="d-flex align-items-center justify-content-between">' +
+                                      '<div class="d-flex align-items-center gap-3">' +
+                                          '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:#10b981;font-size:1.1rem;">' + (idx+1) + '</div>' +
+                                          '<div>' +
+                                              '<div class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</div>' +
+                                              '<div style="font-size:0.75rem; color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
+                                          '</div>' +
+                                      '</div>' + emptyBtn +
+                                  '</div>' +
+                              '</div>';
             }
             return;
         }
@@ -413,13 +428,52 @@ function srRenderTabla() {
                 html += '<button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;padding:2px 8px;" onclick="event.stopPropagation();window.srLiberarRampa(' + e._id + ')" title="Liberar"><i class="bi bi-box-arrow-right"></i></button>';
             }
             html += '</td></tr>';
+
+            // Mobile Card
+            var badgeSit = srBadgeSituacion(e.situacion, true).replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill').replace(/padding:[^;]*;/g, '').replace(/font-size:[^;]*;/g, 'font-size:0.7rem; padding: 4px 8px;');
+            var kmStr = e.km ? 'KM: ' + Number(e.km).toLocaleString('en-US') : 'KM: -';
+            var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
+            var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
+            
+            htmlMobile += '<div class="card p-3 border-0 shadow-sm" style="border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+                '<div class="d-flex align-items-center justify-content-between mb-2">' +
+                    '<div class="d-flex align-items-center gap-2">' +
+                        '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
+                        '<div class="d-flex align-items-baseline gap-2">' +
+                            '<span class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</span>' +
+                            '<span class="fw-bold" style="color:#2563eb; font-size:0.95rem;">' + _srEsc(e.placa || '') + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    badgeSit +
+                '</div>' +
+                '<div class="text-muted mb-3" style="font-size:0.8rem; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">' +
+                    _srEsc(e.obs || 'Sin observaciones') +
+                '</div>' +
+                '<div class="d-flex gap-2 mb-3">' +
+                    '<div class="flex-fill rounded-3 p-2" style="background:#f8fafc; border:1px solid #f1f5f9;">' +
+                        '<div class="text-success fw-bold d-flex align-items-center mb-1" style="font-size:0.65rem; letter-spacing:0.05em;"><i class="bi bi-box-arrow-in-right me-1"></i>ENTRADA</div>' +
+                        '<div class="text-dark fw-bold" style="font-size:0.75rem;">' + fechaInStr + '</div>' +
+                    '</div>' +
+                    '<div class="flex-fill rounded-3 p-2" style="background:#f8fafc; border:1px solid #f1f5f9;">' +
+                        '<div class="text-danger fw-bold d-flex align-items-center mb-1" style="font-size:0.65rem; letter-spacing:0.05em;"><i class="bi bi-box-arrow-right me-1"></i>SALIDA (EST.)</div>' +
+                        '<div class="text-dark fw-bold" style="font-size:0.75rem;">' + fechaOutStr + '</div>' +
+                    '</div>' +
+                    '<div class="d-flex align-items-center text-muted"><i class="bi bi-chevron-right"></i></div>' +
+                '</div>' +
+                '<div class="d-flex justify-content-between align-items-center border-top pt-2 mt-1">' +
+                    '<div class="text-muted" style="font-size:0.75rem;">' + kmStr + '</div>' +
+                    '<div class="fw-bold" style="color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:1rem; font-size:0.75rem;"><i class="bi bi-clock me-1"></i>' + srCalcHorasTaller(e) + '</div>' +
+                '</div>' +
+            '</div>';
         });
     });
 
     if (!html) {
         html = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</td></tr>';
+        htmlMobile = '<div style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</div>';
     }
-    tbody.innerHTML = html;
+    if (tbody) tbody.innerHTML = html;
+    if (gridMobile) gridMobile.innerHTML = htmlMobile;
 }
 
 // ── Buscador ─────────────────────────────────────────────────────
@@ -477,59 +531,100 @@ window.srAbrirDetalle = function(id) {
     });
 
     var html = '';
-    // Hero
-    html += '<div class="sr-hero">';
-    html += '<div class="sr-hero-badge" style="background:' + color + '">' + (rampaIdx + 1) + '</div>';
-    html += '<div style="flex:1"><div class="sr-hero-placa">' + e.placa + '</div>';
-    html += '<div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;">' + _srEsc(rampaNomDet) + '</div>';
-    html += '<div class="sr-hero-sub">' + srSemaforo(e.situacion, true) + '</div></div>';
-    html += '</div>';
-    if (horasTexto) html += '<div style="margin-bottom:0.75rem;">' + horasTexto + '</div>';
-
-    // I. Recepción
-    html += '<div class="sr-sec"><div class="sr-sec-hd">I. Recepción</div>';
-    html += srField('Rampa',         _srEsc(rampaNomDet));
-    html += srField('Ingreso a Taller', (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—') + (e.horaIngreso ? ' ' + e.horaIngreso : ''));
-    html += srField('Kilometraje',   e.km ? e.km + ' km' : '—');
-    html += srField('Situación',     e.situacion ? srSemaforo(e.situacion, true) : '—');
-    html += srField('Observaciones', e.obs || '—');
-    if (e.fechaSalida) html += srField('Salida Estimada', srFmtFecha(e.fechaSalida) + (e.horaSalida ? ' ' + e.horaSalida : ''));
+    
+    // Header (Hero)
+    var badgeSit = srBadgeSituacion(e.situacion, true).replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill').replace(/padding:[^;]*;/g, '').replace(/font-size:[^;]*;/g, 'font-size:0.65rem; padding: 2px 8px; font-weight:700;');
+    html += '<div class="card border-0 mb-3" style="background:#1e293b; border-radius:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);">';
+    html += '  <div class="card-body d-flex align-items-center gap-3 p-3">';
+    html += '    <div class="rounded-3 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" style="width:48px; height:48px; background:' + color + '; font-size:1.4rem;">' + (rampaIdx + 1) + '</div>';
+    html += '    <div>';
+    html += '      <div class="d-flex align-items-center gap-2 mb-1">';
+    html += '        <h4 class="mb-0 fw-bold text-white" style="letter-spacing:0.5px;">' + _srEsc(e.placa || '') + '</h4>';
+    html += '        ' + badgeSit;
+    html += '      </div>';
+    html += '      <div style="font-size:0.8rem; color:#94a3b8; font-weight:500;">' + _srEsc(rampaNomDet) + '</div>';
+    html += '    </div>';
+    html += '  </div>';
     html += '</div>';
 
-    // OTs generadas
-    html += '<div class="sr-sec" style="margin-top:1rem">';
-    html += '<div class="sr-sec-hd">OT Generadas <span style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:6px;">' + otsPlaca.length + '</span></div>';
+    // Cronología de Servicio
+    var fIn = e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '—';
+    var hIn = e.horaIngreso ? e.horaIngreso : '';
+    var fOut = e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '—';
+    var hOut = e.horaSalida ? e.horaSalida : '';
+    var horas = e.fechaIngreso ? srCalcHorasTaller(e).replace('h', '') : '0.0';
+
+    html += '<div class="mb-4">';
+    html += '  <h6 class="fw-bold mb-3" style="font-size:0.75rem; color:#64748b; letter-spacing:0.5px; text-transform:uppercase;">Cronología de Servicio</h6>';
+    html += '  <div class="card border-0" style="background:#f8fafc; border-radius:1rem;">';
+    html += '    <div class="card-body p-3 position-relative">';
+    html += '      <div style="position:absolute; left:31px; top:32px; bottom:32px; width:2px; background:#e2e8f0; z-index:1;"></div>';
+    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2 mb-4">';
+    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center text-white" style="width:32px; height:32px; background:#10b981; flex-shrink:0;"><i class="bi bi-box-arrow-in-right"></i></div>';
+    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Fecha y hora de entrada</div><div class="fw-bold text-dark" style="font-size:0.85rem;">' + fIn + (hIn ? ' — ' + hIn : '') + '</div></div>';
+    html += '      </div>';
+    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2 mb-4">';
+    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center" style="width:32px; height:32px; background:#eff6ff; color:#3b82f6; flex-shrink:0;"><i class="bi bi-hourglass-split"></i></div>';
+    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Permanencia estimada</div><div class="fw-bold" style="color:#2563eb; font-size:0.85rem;">' + horas + 'h Totales en Rampa</div></div>';
+    html += '      </div>';
+    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2">';
+    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center text-white" style="width:32px; height:32px; background:#ef4444; flex-shrink:0;"><i class="bi bi-box-arrow-right"></i></div>';
+    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Fecha y hora de salida (compromiso)</div><div class="fw-bold text-dark" style="font-size:0.85rem;">' + fOut + (hOut ? ' — ' + hOut : '') + '</div></div>';
+    html += '      </div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
+
+    // Detalles adicionales
+    html += '<div class="card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem;">';
+    html += '  <div class="card-body p-3 d-flex justify-content-between align-items-center border-bottom">';
+    html += '    <div style="font-size:0.75rem; color:#64748b;">Kilometraje de Ingreso</div>';
+    html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
+    html += '  </div>';
+    html += '  <div class="card-body p-3">';
+    html += '    <div style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
+    html += '    <div class="rounded-3 p-3" style="background:#f8fafc; border:1px solid #f1f5f9; font-size:0.8rem; color:#334155; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
+    html += '  </div>';
+    html += '</div>';
+
+    // OTs
+    html += '<div class="mb-4">';
+    html += '  <div class="d-flex justify-content-between align-items-center mb-3">';
+    html += '    <h6 class="fw-bold mb-0" style="font-size:0.75rem; color:#64748b; letter-spacing:0.5px; text-transform:uppercase;">Órdenes de Trabajo vinculadas</h6>';
+    html += '    <button class="btn btn-link p-0 text-decoration-none fw-bold" style="font-size:0.75rem; color:#2563eb;" onclick="window.srGenerarOT(' + id + ')">+ Generar OT</button>';
+    html += '  </div>';
     if (!otsPlaca.length) {
-        html += '<div class="sr-empty">No hay elementos</div>';
+        html += '  <div class="text-muted" style="font-size:0.8rem;">No hay OTs vinculadas.</div>';
     } else {
-        html += '<table class="sr-mini-table"><thead><tr><th>N° OT</th><th>Aprobación</th><th>Situación</th></tr></thead><tbody>';
         otsPlaca.forEach(function(ot) {
-            var det = {};
-            try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(ex) {}
             var idOt = ot.id_ot || ot.ticket_entrada || '—';
-            html += '<tr style="cursor:pointer;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
-            html += '<td style="font-weight:700;color:var(--primary,#5865F2);">' + window.srFormatID(idOt) + '</td>';
-            html += '<td>' + srBadgeEstado(ot.estado || 'Pendiente') + '</td>';
-            html += '<td>' + (det.situacion_inicial ? srSemaforo(det.situacion_inicial, true) : '—') + '</td>';
-            html += '</tr>';
+            html += '  <div class="card border-0 mb-2" style="background:#f8fafc; border:1px solid #f1f5f9!important; border-radius:0.75rem; cursor:pointer;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
+            html += '    <div class="card-body p-3 d-flex justify-content-between align-items-center">';
+            html += '      <div>';
+            html += '        <div class="fw-bold mb-1" style="color:#2563eb; font-size:0.85rem;">' + window.srFormatID(idOt) + '</div>';
+            html += '        <div style="font-size:0.7rem; color:#64748b;">Aprobación: <span class="text-dark">' + _srEsc(ot.estado || 'Pendiente') + '</span></div>';
+            html += '      </div>';
+            html += '      <span class="badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;">' + (ot.estado === 'Aprobada' ? 'En taller' : 'En atención') + '</span>';
+            html += '    </div>';
+            html += '  </div>';
         });
-        html += '</tbody></table>';
     }
-    html += '<div style="padding:8px 12px;border-top:1px solid var(--border);">';
-    html += '<button class="btn btn-sm btn-outline-primary w-100" onclick="window.srGenerarOT(' + id + ')">';
-    html += '<i class="bi bi-file-earmark-plus me-1"></i>Generar Orden de Trabajo</button></div>';
     html += '</div>';
 
     scroll.innerHTML = html;
     
     footer.innerHTML = '';
+    footer.style.padding = '0';
+    footer.style.borderTop = 'none';
     if (window.checkPerm('ot', 'e')) {
-        footer.innerHTML =
-            '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarRampa(' + id + ')"><i class="bi bi-pencil me-1"></i>Editar Ingreso</button>' +
-            '<button class="btn btn-sm btn-danger ms-2" onclick="window.srEliminarRegistroGeneral(' + id + ', \'' + (e.ticket_entrada || e.id_ot || '') + '\')"><i class="bi bi-trash me-1"></i>Eliminar</button>' +
-            '<button class="btn btn-sm btn-outline-danger ms-auto" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-box-arrow-right me-1"></i>Liberar</button>';
+        footer.innerHTML = 
+            '<div class="d-flex w-100 gap-2 bg-white" style="padding:1rem;">' +
+            '  <button class="btn btn-danger text-danger bg-danger bg-opacity-10 border-0 flex-shrink-0 d-flex justify-content-center align-items-center" style="width:48px; height:48px; border-radius:0.75rem;" onclick="window.srEliminarRegistroGeneral(' + id + ', \'' + (e.ticket_entrada || e.id_ot || '') + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
+            '  <button class="btn btn-primary bg-opacity-10 text-primary border-0 flex-shrink-0 d-flex justify-content-center align-items-center" style="width:48px; height:48px; border-radius:0.75rem;" onclick="window.srEditarRampa(' + id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+            '  <button class="btn flex-fill fw-bold border-0 d-flex justify-content-center align-items-center gap-2" style="background:#1e293b; color:#fff; border-radius:0.75rem; height:48px;" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-check-circle-fill text-success"></i> Liberar y Archivar</button>' +
+            '</div>';
     }
-    footer.style.display = 'flex';
+    footer.style.display = 'block';
 };
 
 window.srCerrarDetalle = function() {
