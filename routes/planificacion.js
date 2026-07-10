@@ -1198,7 +1198,7 @@ router.post('/mantenimiento-kits', (req, res) => {
           cantidad, unidad_medida, costo_unitario, costo_total, orden)
          VALUES (?,?,?,?,?,?,?,?,?,?)`,
         [marca_vehiculo.toUpperCase(), tipo_mp, nombre_kit || null,
-         item_codigo || null, item_nombre,
+         item_codigo || '-', item_nombre,
          cantidad || 1, unidad_medida || 'UND',
          costo_unitario || 0, costo_total || 0, orden || 1],
         (err) => {
@@ -1217,7 +1217,7 @@ router.put('/mantenimiento-kits/:id', (req, res) => {
          SET nombre_kit=?, item_codigo=?, item_nombre=?, cantidad=?,
              unidad_medida=?, costo_unitario=?, costo_total=?, orden=?, activo=?
          WHERE id=?`,
-        [nombre_kit || null, item_codigo || null, item_nombre,
+        [nombre_kit || null, item_codigo || '-', item_nombre,
          cantidad || 1, unidad_medida || 'UND',
          costo_unitario || 0, costo_total || 0, orden || 1,
          activo !== undefined ? (activo ? 1 : 0) : 1, id],
