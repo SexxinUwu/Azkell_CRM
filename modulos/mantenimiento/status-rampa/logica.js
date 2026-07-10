@@ -376,7 +376,7 @@ function srRenderTabla() {
                 html += '</tr>';
 
                 var emptyBtn = window.checkPerm('status_rampa', 'c') ? '<button class="btn btn-sm fw-bold px-3 py-1" style="background:#eff6ff; color:#2563eb; border-radius:2rem; font-size:0.8rem;" onclick="event.stopPropagation();window.srRegistrar(' + rampaId + ')">+ Ingresar</button>' : '';
-                htmlMobile += '<div class="card p-3 border-0 shadow-sm" style="border-radius:1rem; border:1px solid var(--border)!important;">' +
+                htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
                                   '<div class="d-flex align-items-center justify-content-between">' +
                                       '<div class="d-flex align-items-center gap-3">' +
                                           '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:#10b981;font-size:1.1rem;">' + (idx+1) + '</div>' +
