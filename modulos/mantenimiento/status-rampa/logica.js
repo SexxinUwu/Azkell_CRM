@@ -435,7 +435,7 @@ function srRenderTabla() {
             var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
             var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
             
-            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer; flex-shrink:0!important; min-height: fit-content!important;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
                 '<div class="d-flex align-items-center justify-content-between mb-2">' +
                     '<div class="d-flex align-items-center gap-2">' +
                         '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
