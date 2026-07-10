@@ -79,7 +79,7 @@ function _kitsCargarTiposMP(presetVal) {
 // ── Cargar combobox Ítems de Almacén (modal) ─────────────────────
 function _kitsGenerarOpcionesItems() {
     var items = (window._kitsAlmacenItems || []).map(function(x) {
-        return { value: x.nombre, label: x.nombre + (x.unidad ? ' [' + x.unidad + ']' : '') };
+        return { value: x.nombre, label: x.nombre };
     });
     return items;
 }
