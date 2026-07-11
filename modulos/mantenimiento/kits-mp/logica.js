@@ -539,14 +539,14 @@ window.kitsExportarExcel = function() {
     var datos = window.kitsData || [];
     if (!datos.length) { alert('No hay kits para exportar.'); return; }
     var wb = XLSX.utils.book_new();
-    var filas = [['ID','Marca Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.','Costo Total']];
+    var filas = [['ID','Marca Vehículo','Modelo Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.','Costo Total']];
     datos.forEach(function(k) {
-        filas.push([k.id||'', k.marca_vehiculo||'', k.tipo_mp||'', k.nombre_kit||'',
+        filas.push([k.id||'', k.marca_vehiculo||'', k.modelo_vehiculo||'TODOS LOS MODELOS', k.tipo_mp||'', k.nombre_kit||'',
             k.item_nombre||'', k.cantidad||0, k.unidad_medida||'',
             parseFloat(k.costo_unitario||0).toFixed(2), parseFloat(k.costo_total||0).toFixed(2)]);
     });
     var ws = XLSX.utils.aoa_to_sheet(filas);
-    ws['!cols'] = [6,16,8,20,28,8,10,10,10].map(function(w){ return {wch:w}; });
+    ws['!cols'] = [6,16,16,8,20,28,8,10,10,10].map(function(w){ return {wch:w}; });
     XLSX.utils.book_append_sheet(wb, ws, 'Kits MP');
     XLSX.writeFile(wb, 'KitsMP_'+new Date().toISOString().slice(0,10)+'.xlsx');
 };
@@ -555,12 +555,12 @@ window.kitsExportarExcel = function() {
 window.kitsDescargarPlantilla = function() {
     var wb = XLSX.utils.book_new();
     var filas = [
-        ['Marca Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.'],
-        ['VOLVO','MP1','Kit 15K','Filtro de Aceite',1,'UND',25.00],
-        ['VOLVO','MP1','Kit 15K','Aceite Motor 15W40',12,'LT',18.50]
+        ['Marca Vehículo','Modelo Vehículo','Tipo MP','Nombre Kit','Ítem (Artículo)','Cantidad','Unidad','Costo Unit.'],
+        ['VOLVO','TODOS LOS MODELOS','MP1','Kit 15K','Filtro de Aceite',1,'UND',25.00],
+        ['VOLVO','TODOS LOS MODELOS','MP1','Kit 15K','Aceite Motor 15W40',12,'LT',18.50]
     ];
     var ws = XLSX.utils.aoa_to_sheet(filas);
-    ws['!cols'] = [16,8,20,28,8,10,10].map(function(w){ return {wch:w}; });
+    ws['!cols'] = [16,16,8,20,28,8,10,10].map(function(w){ return {wch:w}; });
     XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
     XLSX.writeFile(wb, 'Plantilla_KitsMP.xlsx');
 };
@@ -579,6 +579,7 @@ window.kitsImportarExcel = function(event) {
             var payload = rows.map(function(r) {
                 return {
                     marca_vehiculo: String(r['Marca Vehículo'] || r.marca_vehiculo || '').trim().toUpperCase(),
+                    modelo_vehiculo: String(r['Modelo Vehículo'] || r.modelo_vehiculo || '').trim().toUpperCase() || 'TODOS LOS MODELOS',
                     tipo_mp:        String(r['Tipo MP']         || r.tipo_mp        || '').trim().toUpperCase(),
                     nombre_kit:     String(r['Nombre Kit']      || r.nombre_kit     || '').trim(),
                     item_nombre:    String(r['Ítem (Artículo)'] || r['Item (Articulo)'] || r.item_nombre || '').trim(),
