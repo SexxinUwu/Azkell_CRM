@@ -185,16 +185,17 @@ router.put('/configuracion-flota/:id', (req, res) => {
     );
 });
 
-// GET /api/mantenimiento-kits?marca=X&tipo_mp=Y
+// GET /api/mantenimiento-kits?marca=X&modelo=Z&tipo_mp=Y
 router.get('/mantenimiento-kits', (req, res) => {
-    const { marca, tipo_mp } = req.query;
-    let sql = `SELECT id, marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+    const { marca, modelo, tipo_mp } = req.query;
+    let sql = `SELECT id, marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
                       cantidad, unidad_medida, costo_unitario, costo_total, orden
                FROM mantenimiento_kits WHERE activo=1`;
     const params = [];
     if (marca)   { sql += ' AND UPPER(marca_vehiculo)=?'; params.push(marca.toUpperCase()); }
+    if (modelo)  { sql += ' AND UPPER(modelo_vehiculo)=?'; params.push(modelo.toUpperCase()); }
     if (tipo_mp) { sql += ' AND tipo_mp=?'; params.push(tipo_mp); }
-    sql += ' ORDER BY marca_vehiculo, tipo_mp, orden';
+    sql += ' ORDER BY marca_vehiculo, modelo_vehiculo, tipo_mp, orden';
     db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: rows });
@@ -1188,16 +1189,16 @@ router.delete('/configuracion-flota/:id', (req, res) => {
 // CRUD MANTENIMIENTO KITS (ya tiene GET, falta POST/PUT/DELETE)
 // ============================================================
 router.post('/mantenimiento-kits', (req, res) => {
-    const { marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+    const { marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
             cantidad, unidad_medida, costo_unitario, costo_total, orden } = req.body;
-    if (!marca_vehiculo || !tipo_mp || !item_nombre)
-        return res.status(400).json({ error: 'Marca, tipo_mp e item_nombre son requeridos' });
+    if (!marca_vehiculo || !modelo_vehiculo || !tipo_mp || !item_nombre)
+        return res.status(400).json({ error: 'Marca, modelo, tipo_mp e item_nombre son requeridos' });
     db.query(
         `INSERT INTO mantenimiento_kits
-         (marca_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
+         (marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_codigo, item_nombre,
           cantidad, unidad_medida, costo_unitario, costo_total, orden)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`,
-        [marca_vehiculo.toUpperCase(), tipo_mp, nombre_kit || null,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        [marca_vehiculo.toUpperCase(), (modelo_vehiculo||'TODOS LOS MODELOS').toUpperCase(), tipo_mp, nombre_kit || null,
          item_codigo || '-', item_nombre,
          cantidad || 1, unidad_medida || 'UND',
          costo_unitario || 0, costo_total || 0, orden || 1],
@@ -1244,9 +1245,9 @@ router.post('/mantenimiento-kits/importarMasivo', (req, res) => {
     items.forEach(function(k) {
         const costo_total = (parseFloat(k.cantidad)||0) * (parseFloat(k.costo_unitario)||0);
         db.query(
-            `INSERT INTO mantenimiento_kits (marca_vehiculo, tipo_mp, nombre_kit, item_nombre, cantidad, unidad_medida, costo_unitario, costo_total)
-             VALUES (?,?,?,?,?,?,?,?)`,
-            [k.marca_vehiculo||'', k.tipo_mp||'', k.nombre_kit||'', k.item_nombre||'',
+            `INSERT INTO mantenimiento_kits (marca_vehiculo, modelo_vehiculo, tipo_mp, nombre_kit, item_nombre, cantidad, unidad_medida, costo_unitario, costo_total)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [k.marca_vehiculo||'', k.modelo_vehiculo||'TODOS LOS MODELOS', k.tipo_mp||'', k.nombre_kit||'', k.item_nombre||'',
              parseFloat(k.cantidad)||0, k.unidad_medida||'', parseFloat(k.costo_unitario)||0, costo_total],
             (err) => { if (err) errores++; else insertados++; done(); }
         );
