@@ -64,11 +64,13 @@ function _kitsPopularDatalists() {
     });
     marcas.sort();
 
-    function _fill(id, vals) {
-        var dl = document.getElementById(id);
-        if (dl) dl.innerHTML = vals.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    var items = marcas.map(function(m) { return { value: m, label: m }; });
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('kits-marca', items, 'Buscar marca...');
+        window._cbInit('kits-modelo', [], 'Todos los modelos');
+        window._cbCallbacks = window._cbCallbacks || {};
+        window._cbCallbacks['kits-marca'] = function(val) { window.kitsMarcaCambiada(val); };
     }
-    _fill('kits-dl-marcas', marcas);
 }
 
 window.kitsMarcaCambiada = function(marcaStr) {
@@ -95,20 +97,24 @@ window.kitsMarcaCambiada = function(marcaStr) {
     });
     modelos.sort();
     
-    var dl = document.getElementById('kits-dl-modelos');
-    if (dl) {
-        dl.innerHTML = modelos.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    var itemsMod = modelos.map(function(m){ return { value: m, label: m }; });
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('kits-modelo', itemsMod, 'Todos los modelos');
     }
 
     var foundMod = false;
     for (var i=0; i<window.kitsData.length; i++) {
         if (window.kitsData[i].marca_vehiculo === marcaStr && window.kitsData[i].modelo_vehiculo && window.kitsData[i].modelo_vehiculo !== 'TODOS LOS MODELOS') {
-            document.getElementById('kits-modelo').value = window.kitsData[i].modelo_vehiculo;
+            if(window._cbSet) window._cbSet('kits-modelo', window.kitsData[i].modelo_vehiculo, window.kitsData[i].modelo_vehiculo);
+            else document.getElementById('kits-modelo').value = window.kitsData[i].modelo_vehiculo;
             foundMod = true;
             break;
         }
     }
-    if (!foundMod) document.getElementById('kits-modelo').value = 'TODOS LOS MODELOS';
+    if (!foundMod) {
+        if(window._cbSet) window._cbSet('kits-modelo', 'TODOS LOS MODELOS', 'TODOS LOS MODELOS');
+        else document.getElementById('kits-modelo').value = 'TODOS LOS MODELOS';
+    }
 };
 
 // ── Cargar combobox Tipos de Preventivo (modal) ───────────────────
