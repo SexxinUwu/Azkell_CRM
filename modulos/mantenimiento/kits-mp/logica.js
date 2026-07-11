@@ -71,6 +71,20 @@ function _kitsPopularDatalists() {
     _fill('kits-dl-marcas', marcas);
 }
 
+window.kitsMarcaCambiada = function(marcaStr) {
+    if(!marcaStr) return;
+    marcaStr = marcaStr.toUpperCase();
+    var foundMod = false;
+    for (var i=0; i<window.kitsData.length; i++) {
+        if (window.kitsData[i].marca_vehiculo === marcaStr && window.kitsData[i].modelo_vehiculo && window.kitsData[i].modelo_vehiculo !== 'TODOS LOS MODELOS') {
+            document.getElementById('kits-modelo').value = window.kitsData[i].modelo_vehiculo;
+            foundMod = true;
+            break;
+        }
+    }
+    if (!foundMod) document.getElementById('kits-modelo').value = 'TODOS LOS MODELOS';
+};
+
 // ── Cargar combobox Tipos de Preventivo (modal) ───────────────────
 function _kitsCargarTiposMP(presetVal) {
     fetch('/api/tipos-preventivo')
