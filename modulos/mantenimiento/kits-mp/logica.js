@@ -67,9 +67,10 @@ function _kitsPopularDatalists() {
     var items = marcas.map(function(m) { return { value: m, label: m }; });
     if (typeof window._cbInit === 'function') {
         window._cbInit('kits-marca', items, 'Buscar marca...');
-        window._cbInit('kits-modelo', [], 'Todos los modelos');
+        window._cbInit('kits-modelo', [], 'Buscar modelo...');
         window._cbCallbacks = window._cbCallbacks || {};
-        window._cbCallbacks['kits-marca'] = function(val) { window.kitsMarcaCambiada(val); };
+        window._cbCallbacks['kits-marca'] = function(val) { window.kitsMarcaCambiada(val); window.kitsActualizarTituloModal(); };
+        window._cbCallbacks['kits-modelo'] = function(val) { window.kitsActualizarTituloModal(); };
     }
 }
 
@@ -102,18 +103,12 @@ window.kitsMarcaCambiada = function(marcaStr) {
         window._cbInit('kits-modelo', itemsMod, 'Todos los modelos');
     }
 
-    var foundMod = false;
-    for (var i=0; i<window.kitsData.length; i++) {
-        if (window.kitsData[i].marca_vehiculo === marcaStr && window.kitsData[i].modelo_vehiculo && window.kitsData[i].modelo_vehiculo !== 'TODOS LOS MODELOS') {
-            if(window._cbSet) window._cbSet('kits-modelo', window.kitsData[i].modelo_vehiculo, window.kitsData[i].modelo_vehiculo);
-            else document.getElementById('kits-modelo').value = window.kitsData[i].modelo_vehiculo;
-            foundMod = true;
-            break;
-        }
-    }
-    if (!foundMod) {
-        if(window._cbSet) window._cbSet('kits-modelo', 'TODOS LOS MODELOS', 'TODOS LOS MODELOS');
-        else document.getElementById('kits-modelo').value = 'TODOS LOS MODELOS';
+    if (modelos.length === 1) {
+        if(window._cbSet) window._cbSet('kits-modelo', modelos[0], modelos[0]);
+        else document.getElementById('kits-modelo').value = modelos[0];
+    } else {
+        if(window._cbSet) window._cbSet('kits-modelo', '', '');
+        else document.getElementById('kits-modelo').value = '';
     }
 };
 
@@ -128,6 +123,8 @@ function _kitsCargarTiposMP(presetVal) {
                 if (presetVal && typeof window._cbSet === 'function') {
                     window._cbSet('kits-tipomp', presetVal, presetVal);
                 }
+                window._cbCallbacks = window._cbCallbacks || {};
+                window._cbCallbacks['kits-tipomp'] = function(val) { window.kitsActualizarTituloModal(); };
             }
         })
         .catch(function(e) { console.error(e); });
@@ -211,9 +208,11 @@ window.kitsCargarTabla = function() {
 // ── Filtrar tabla ─────────────────────────────────────────────────
 window.kitsFiltrar = function() {
     var filMarca = ((document.getElementById('kits-fil-marca')||{}).value||'');
+    var filModelo = ((document.getElementById('kits-fil-modelo')||{}).value||'');
     var filTipo  = ((document.getElementById('kits-fil-tipo') ||{}).value||'');
     window.kitsDataFil = window.kitsData.filter(function(k) {
         return (!filMarca || (k.marca_vehiculo||'').toUpperCase()===filMarca.toUpperCase()) &&
+               (!filModelo || (k.modelo_vehiculo||'TODOS LOS MODELOS').toUpperCase()===filModelo.toUpperCase()) &&
                (!filTipo  || k.tipo_mp===filTipo);
     });
     
@@ -230,15 +229,18 @@ window.kitsFiltrar = function() {
     var htmlMobile = '';
     
     var lastMarca = null;
+    var lastModelo = null;
     var lastTipo  = null;
     
     window.kitsDataFil.forEach(function(k, index) {
         // --- DESKTOP TABLE LOGIC ---
-        if (k.marca_vehiculo !== lastMarca) {
+        if (k.marca_vehiculo !== lastMarca || (k.modelo_vehiculo||'TODOS LOS MODELOS') !== lastModelo) {
+            var dispModelo = (k.modelo_vehiculo && k.modelo_vehiculo !== 'TODOS LOS MODELOS') ? (' - ' + k.modelo_vehiculo) : '';
             html += '<tr style="background:var(--surface)">' +
                 '<td colspan="8" class="fw-bold py-1 px-2" style="font-size:0.8rem; border-top:2px solid var(--border); color:var(--text)">' +
-                '<i class="bi bi-truck me-1" style="color:var(--primary,#5865F2)"></i>' + (k.marca_vehiculo||'—') + '</td></tr>';
+                '<i class="bi bi-truck me-1" style="color:var(--primary,#5865F2)"></i>' + (k.marca_vehiculo||'—') + dispModelo + '</td></tr>';
             lastMarca = k.marca_vehiculo;
+            lastModelo = k.modelo_vehiculo || 'TODOS LOS MODELOS';
             lastTipo  = null;
         }
         if (k.tipo_mp !== lastTipo) {
@@ -266,8 +268,8 @@ window.kitsFiltrar = function() {
         var nextK = window.kitsDataFil[index + 1];
         
         // Boundaries for MARCA
-        var isFirstOfMarca = index === 0 || k.marca_vehiculo !== window.kitsDataFil[index-1].marca_vehiculo;
-        var isLastOfMarca = !nextK || nextK.marca_vehiculo !== k.marca_vehiculo;
+        var isFirstOfMarca = index === 0 || k.marca_vehiculo !== window.kitsDataFil[index-1].marca_vehiculo || (k.modelo_vehiculo||'TODOS LOS MODELOS') !== (window.kitsDataFil[index-1].modelo_vehiculo||'TODOS LOS MODELOS');
+        var isLastOfMarca = !nextK || nextK.marca_vehiculo !== k.marca_vehiculo || (nextK.modelo_vehiculo||'TODOS LOS MODELOS') !== (k.modelo_vehiculo||'TODOS LOS MODELOS');
         
         // Boundaries for TIPO_MP (within Marca)
         var isFirstOfTipo = isFirstOfMarca || k.tipo_mp !== window.kitsDataFil[index-1].tipo_mp;
@@ -277,7 +279,8 @@ window.kitsFiltrar = function() {
             htmlMobile += '<div class="kits-list-card">';
             htmlMobile += '  <div style="padding: 1rem; border-bottom: 2px dashed #f1f5f9; display: flex; align-items: center; gap: 0.5rem; background:#f8fafc; border-radius: 16px 16px 0 0;">';
             htmlMobile += '    <i class="bi bi-truck" style="color:var(--primary,#5865F2);"></i>';
-            htmlMobile += '    <span style="font-weight:900; font-size:1rem; color:#0f172a;">' + (k.marca_vehiculo||'—') + '</span>';
+            var dMod = (k.modelo_vehiculo && k.modelo_vehiculo !== 'TODOS LOS MODELOS') ? (' <span style="font-weight:600;color:#64748b;font-size:0.85rem">- '+k.modelo_vehiculo+'</span>') : '';
+            htmlMobile += '    <span style="font-weight:900; font-size:1rem; color:#0f172a;">' + (k.marca_vehiculo||'—') + dMod + '</span>';
             htmlMobile += '  </div>';
             htmlMobile += '  <div style="padding: 0.5rem 1rem 1rem 1rem;">';
         }
@@ -339,8 +342,7 @@ window.kitsAbrirModal = function() {
     
     window.kitsDeleted = [];
     
-    var t = document.getElementById('kitsModal-titulo');
-    if(t) t.innerHTML='<i class="bi bi-plus-circle me-1 text-primary"></i>Configurar Kit de Mantenimiento';
+    window.kitsActualizarTituloModal();
     
     _kitsPopularDatalists();
     _kitsCargarTiposMP();
@@ -350,12 +352,9 @@ window.kitsAbrirModal = function() {
 };
 
 // ── Editar Kit (Grupo) ────────────────────────────────────────────
-window.kitsEditarKit = function(marca, tipo) {
-    var mEl = document.getElementById('kits-marca');
-    if (mEl) mEl.value = marca;
-    
-    var t = document.getElementById('kitsModal-titulo');
-    if(t) t.innerHTML='<i class="bi bi-pencil me-1 text-primary"></i>Editar Kit — ' + marca + ' ' + tipo;
+window.kitsEditarKit = function(marca, modelo, tipo) {
+    if(window._cbSet) { window._cbSet('kits-marca', marca, marca); window._cbSet('kits-modelo', modelo, modelo); }
+    window.kitsActualizarTituloModal();
     
     _kitsPopularDatalists();
     _kitsCargarTiposMP(tipo);
@@ -366,6 +365,7 @@ window.kitsEditarKit = function(marca, tipo) {
     
     var items = window.kitsData.filter(function(k) {
         return (k.marca_vehiculo||'').toUpperCase() === (marca||'').toUpperCase() && 
+               (k.modelo_vehiculo||'TODOS LOS MODELOS').toUpperCase() === (modelo||'TODOS LOS MODELOS').toUpperCase() &&
                (k.tipo_mp||'').toUpperCase() === (tipo||'').toUpperCase();
     });
     
@@ -590,4 +590,39 @@ window.kitsImportarExcel = function(event) {
     };
     reader.readAsArrayBuffer(file);
     event.target.value = '';
+};
+
+
+window.kitsActualizarTituloModal = function() {
+    setTimeout(function() {
+        var t = document.getElementById('kitsModal-titulo');
+        if (!t) return;
+        var mTxt = document.getElementById('kits-marca-txt');
+        var modTxt = document.getElementById('kits-modelo-txt');
+        var tTxt = document.getElementById('kits-tipomp-txt');
+        
+        var m = (mTxt ? mTxt.value.trim().toUpperCase() : '');
+        var mod = (modTxt ? modTxt.value.trim().toUpperCase() : '');
+        var tip = (tTxt ? tTxt.value.trim().toUpperCase() : '');
+
+        var arr = [];
+        if (m) arr.push(m);
+        if (mod && mod !== 'TODOS LOS MODELOS') arr.push(mod);
+        var middle = arr.length > 0 ? arr.join(' - ') : '';
+        
+        var str = '';
+        if (middle) str += middle;
+        if (tip) {
+            if (str) str += ' | ';
+            str += tip;
+        }
+
+        var mode = (document.getElementById('kits-form-container') && document.getElementById('kits-form-container').innerHTML !== '') ? 'Editar' : 'Configurar';
+
+        if (str) {
+            t.innerHTML = '<i class="bi bi-tools me-1 text-primary"></i>Kit: ' + str;
+        } else {
+            t.innerHTML = '<i class="bi bi-tools me-1 text-primary"></i>Configurar Kit de Mantenimiento';
+        }
+    }, 100);
 };
