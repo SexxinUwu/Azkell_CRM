@@ -353,7 +353,7 @@
           <div class="position-relative">
             <input type="text" id="kits-marca-txt" class="kits-input-sm fw-bold text-uppercase"
                    placeholder="Ej: VOLVO" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-marca')"
+                   oninput="window._cbFiltrar('kits-marca'); window.kitsActualizarTituloModal();"
                    onfocus="window._cbFiltrar('kits-marca')"
                    onblur="window._kitsHideCombo('kits-marca'); setTimeout(function(){window.kitsMarcaCambiada(document.getElementById('kits-marca').value)}, 200);">
             <input type="hidden" id="kits-marca">
@@ -365,7 +365,7 @@
           <div class="position-relative">
             <input type="text" id="kits-modelo-txt" class="kits-input-sm fw-bold text-uppercase"
                    placeholder="TODOS LOS MODELOS" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-modelo')"
+                   oninput="window._cbFiltrar('kits-modelo'); window.kitsActualizarTituloModal();"
                    onfocus="window._cbFiltrar('kits-modelo')"
                    onblur="window._kitsHideCombo('kits-modelo')">
             <input type="hidden" id="kits-modelo">
@@ -377,7 +377,7 @@
           <div class="position-relative">
             <input type="text" id="kits-tipomp-txt" class="kits-input-sm fw-bold text-uppercase"
                    placeholder="Ej: MP1" autocomplete="off"
-                   oninput="window._cbFiltrar('kits-tipomp')"
+                   oninput="window._cbFiltrar('kits-tipomp'); window.kitsActualizarTituloModal();"
                    onfocus="window._cbFiltrar('kits-tipomp')"
                    onblur="window._kitsHideCombo('kits-tipomp')">
             <input type="hidden" id="kits-tipomp">
