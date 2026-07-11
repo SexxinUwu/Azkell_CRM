@@ -608,9 +608,13 @@ window._invToggleCheck = function(id, checked) {
 };
 
 window._invCerrarDrawer = function() {
-    var drawer = document.getElementById('inv-form-drawer');
-    if (drawer) drawer.classList.remove('open');
+    var d = document.getElementById('inv-form-drawer');
     var bd = document.getElementById('inv-drawer-backdrop');
+    if (d) {
+        d.classList.remove('open');
+        // wait for transition
+        setTimeout(function(){ d.style.display = 'none'; }, 300);
+    }
     if (bd) bd.style.display = 'none';
 };
 
@@ -780,18 +784,9 @@ window.abrirModalInventario = function(id) {
     if (editId) editId.value = '';
 
     // Reset chips
-    window._invMarcasSeleccionadas = [];
-    window._invRenderChips();
+    window.invMsInit('');
 
-    // Resetear tab a Artículo
-    var firstTab = document.querySelector('#inv-modal-tabs .nav-link');
-    if (firstTab) {
-        document.querySelectorAll('#inv-modal-tabs .nav-link').forEach(function(t) { t.classList.remove('active'); });
-        firstTab.classList.add('active');
-        document.querySelectorAll('#inv-form-drawer .tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
-        var basico = document.getElementById('inv-tab-articulo');
-        if (basico) basico.classList.add('show', 'active');
-    }
+    // Tabs removidos
 
     // Reset preview
     window._invActualizarPreview();
@@ -833,12 +828,7 @@ window.abrirModalInventario = function(id) {
         _invSetField('inv-f-obs',               item.observaciones);
 
         // Chips marca_unidad
-        try {
-            window._invMarcasSeleccionadas = JSON.parse(item.marca_unidad || '[]');
-        } catch(e) {
-            window._invMarcasSeleccionadas = item.marca_unidad ? [item.marca_unidad] : [];
-        }
-        window._invRenderChips();
+        window.invMsInit(item.marca_unidad);
         window._invActualizarPreview();
 
         // Clasificación
