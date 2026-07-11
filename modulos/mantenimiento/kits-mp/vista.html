@@ -1,3 +1,16 @@
+</div>
+  
+  <!-- ── MOBILE GRID ─────────────────────────────────────────────── -->
+  <div class="d-md-none flex-1 overflow-auto" style="padding: .75rem .75rem 120px .75rem; background:transparent;">
+    <div id="kits-grid-mobile"></div>
+  </div>
+  
+  <!-- ═══ FAB — solo mobile ════════════════════════════════════════ -->
+  <div id="kits-fab-wrap" style="display:none;position:fixed;bottom:104px;right:1rem;z-index:1041;">
+    <button class="kits-fab-btn" onclick="window.kitsAbrirModal()">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
 
 
 <div class="d-flex flex-column flex-1 min-h-0" style="height:100%; overflow:hidden">
@@ -30,13 +43,18 @@
       <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.kitsExportarExcel()">
         <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Excel</span>
       </button>
-      <button class="btn btn-sm btn-primary fw-bold" onclick="window.kitsAbrirModal()">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Ítem de Kit
-      </button>
+      
     </div>
   </div>
 
-  <!-- ── FILTROS ───────────────────────────────────────────────── -->
+    <!-- ── MOBILE HEADER ─────────────────────────────────────────── -->
+  <div id="kits-m-header" style="display:none;align-items:center;padding:1rem 1.25rem .75rem;background:#fff;border-bottom:1.5px solid #e2e8f0;position:sticky;top:0;z-index:10;">
+    <div style="flex:1;">
+      <h6 style="margin:0;font-size:1.15rem;font-weight:900;color:#0f172a;">Kits de Mantenimiento</h6>
+      <div style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Administración</div>
+    </div>
+  </div>
+<!-- ── FILTROS ───────────────────────────────────────────────── -->
   <div class="d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0"
        style="border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap">
     <div class="position-relative" style="max-width:150px;">
@@ -56,7 +74,7 @@
   </div>
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
-  <div class="flex-1 overflow-auto px-2 py-2">
+  <div class="flex-1 overflow-auto px-2 py-2 kits-desktop-table">
     <table class="table table-sm table-hover align-middle w-100" style="font-size:0.82rem">
       <thead style="position:sticky; top:0; background:var(--surface); z-index:1">
         <tr style="border-bottom:2px solid var(--border)">
@@ -140,6 +158,34 @@
     color: #0f172a;
 }
 .kits-input-sm:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+/* ─── Mobile Kits View ─────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .topbar { display: none !important; }
+    .main-area { padding: 0 !important; overflow: auto !important; overscroll-behavior: contain; }
+    #kits-desktop-header { display: none !important; }
+    #kits-m-header { display: flex !important; }
+    #kits-fab-wrap { display: flex !important; flex-direction: column; align-items: flex-end; }
+    .kits-desktop-table { display: none !important; }
+}
+/* ─── Kits List Card Mobile ────────────────────────────────────── */
+.kits-list-card {
+    background: #fff; border: 1.5px solid #e2e8f0;
+    border-radius: 16px; padding: .85rem 1rem; margin-bottom: .65rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04); position: relative;
+}
+.kits-list-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed #e2e8f0; padding-bottom: .5rem; margin-bottom: .5rem;
+}
+.kits-fab-btn {
+    width: 56px; height: 56px; border-radius: 18px;
+    background: #2563eb; color: #fff; border: none;
+    box-shadow: 0 6px 16px rgba(37,99,235,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; cursor: pointer; transition: transform .2s, box-shadow .2s;
+}
+.kits-fab-btn:active { transform: scale(.92); }
 </style>
 
 <!-- ═══ PANEL KIT (fullscreen slide) ═══════════════════ -->
