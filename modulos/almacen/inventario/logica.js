@@ -673,7 +673,6 @@ window._invCerrarDrawer = function() {
     var bd = document.getElementById('inv-drawer-backdrop');
     if (d) {
         d.classList.remove('open');
-        // wait for transition
         setTimeout(function(){ d.style.display = 'none'; }, 300);
     }
     if (bd) bd.style.display = 'none';
@@ -919,10 +918,15 @@ window.abrirModalInventario = function(id) {
         if (tcRow0) tcRow0.style.display = 'none';
         // Default unidad = Unidades
         window._cbSet('inv-f-unidad', 'Unidades', 'Unidades');
+        window.invMsInit('');
     }
 
     var modal = document.getElementById('inv-form-drawer');
-    if (modal) { modal.classList.add('open'); }
+    if (modal) { 
+        modal.style.display = 'flex'; 
+        void modal.offsetWidth; 
+        modal.classList.add('open'); 
+    }
     var bd = document.getElementById('inv-drawer-backdrop');
     if (bd) bd.style.display = 'block';
 };
