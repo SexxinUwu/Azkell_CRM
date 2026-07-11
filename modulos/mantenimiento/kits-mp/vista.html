@@ -344,18 +344,33 @@
 
   <!-- Cuerpo scrollable -->
   <div style="flex:1;overflow-y:auto;padding:1rem 1rem 0;">
-    <datalist id="kits-dl-marcas"></datalist>
-    <datalist id="kits-dl-modelos"></datalist>
+    
     <!-- Doc card -->
     <div class="kits-doc-card">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div style="grid-column:1/-1;">
           <div class="kits-field-label">Marca Vehículo <span style="color:#ef4444;">*</span></div>
-          <input type="text" id="kits-marca" class="kits-input-sm fw-bold text-uppercase" placeholder="Ej: VOLVO" list="kits-dl-marcas" autocomplete="off" onchange="window.kitsMarcaCambiada(this.value)">
+          <div class="position-relative">
+            <input type="text" id="kits-marca-txt" class="kits-input-sm fw-bold text-uppercase"
+                   placeholder="Ej: VOLVO" autocomplete="off"
+                   oninput="window._cbFiltrar('kits-marca')"
+                   onfocus="window._cbFiltrar('kits-marca')"
+                   onblur="window._kitsHideCombo('kits-marca'); setTimeout(function(){window.kitsMarcaCambiada(document.getElementById('kits-marca').value)}, 200);">
+            <input type="hidden" id="kits-marca">
+            <div id="kits-marca-dd" class="cb-dropdown"></div>
+          </div>
         </div>
         <div style="grid-column:1/-1;">
           <div class="kits-field-label">Modelo Vehículo</div>
-          <input type="text" id="kits-modelo" class="kits-input-sm fw-bold text-uppercase" placeholder="TODOS LOS MODELOS" list="kits-dl-modelos" autocomplete="off">
+          <div class="position-relative">
+            <input type="text" id="kits-modelo-txt" class="kits-input-sm fw-bold text-uppercase"
+                   placeholder="TODOS LOS MODELOS" autocomplete="off"
+                   oninput="window._cbFiltrar('kits-modelo')"
+                   onfocus="window._cbFiltrar('kits-modelo')"
+                   onblur="window._kitsHideCombo('kits-modelo')">
+            <input type="hidden" id="kits-modelo">
+            <div id="kits-modelo-dd" class="cb-dropdown"></div>
+          </div>
         </div>
         <div style="grid-column:1/-1;">
           <div class="kits-field-label">Tipo de Mantenimiento <span style="color:#ef4444;">*</span></div>
