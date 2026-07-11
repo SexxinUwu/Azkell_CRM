@@ -127,6 +127,8 @@ function _kitsCargarTiposMP(presetVal) {
                 window._cbCallbacks['kits-tipomp'] = function(val) { window.kitsActualizarTituloModal(); };
                 window._cbCallbacks = window._cbCallbacks || {};
                 window._cbCallbacks['kits-tipomp'] = function(val) { window.kitsActualizarTituloModal(); };
+                window._cbCallbacks = window._cbCallbacks || {};
+                window._cbCallbacks['kits-tipomp'] = function(val) { window.kitsActualizarTituloModal(); };
             }
         })
         .catch(function(e) { console.error(e); });
@@ -189,6 +191,7 @@ window.kitsCargarTabla = function() {
         window.kitsDataFil = window.kitsData.slice();
 
         var prevMarca = typeof window._cbGet === 'function' ? window._cbGet('kits-fil-marca') : '';
+        var prevModelo = typeof window._cbGet === 'function' ? window._cbGet('kits-fil-modelo') : '';
         var prevTipo  = typeof window._cbGet === 'function' ? window._cbGet('kits-fil-tipo')  : '';
 
         var marcas = [];
@@ -196,6 +199,12 @@ window.kitsCargarTabla = function() {
         marcas.sort();
         var itemsMarca = marcas.map(function(m){ return { value: m, label: m }; });
         if (typeof window._cbInit === 'function') { window._cbInit('kits-fil-marca', itemsMarca, 'Todas las marcas'); if (prevMarca) window._cbSet('kits-fil-marca', prevMarca, prevMarca); }
+
+        var modelos = [];
+        window.kitsData.forEach(function(k){ var m=(k.modelo_vehiculo||'TODOS LOS MODELOS').toUpperCase(); if(m && !modelos.includes(m)) modelos.push(m); });
+        modelos.sort();
+        var itemsModelo = modelos.map(function(m){ return { value: m, label: m }; });
+        if (typeof window._cbInit === 'function') { window._cbInit('kits-fil-modelo', itemsModelo, 'Todos los modelos'); if (prevModelo) window._cbSet('kits-fil-modelo', prevModelo, prevModelo); }
 
         var tipos = [];
         window.kitsData.forEach(function(k){ if(k.tipo_mp && !tipos.includes(k.tipo_mp)) tipos.push(k.tipo_mp); });
@@ -476,6 +485,7 @@ window.kitsGuardar = function() {
         items.push({
             id: tr.dataset.id || null,
             marca_vehiculo: marca,
+            modelo_vehiculo: getCombo('kits-modelo') || 'TODOS LOS MODELOS',
             tipo_mp: tipo,
             item_nombre: itemName,
             cantidad: parseFloat(tr.querySelector('.kit-cant').value) || 1,
@@ -594,6 +604,41 @@ window.kitsImportarExcel = function(event) {
     };
     reader.readAsArrayBuffer(file);
     event.target.value = '';
+};
+
+
+window.kitsActualizarTituloModal = function() {
+    setTimeout(function() {
+        var t = document.getElementById('kitsModal-titulo');
+        if (!t) return;
+        var mTxt = document.getElementById('kits-marca-txt');
+        var modTxt = document.getElementById('kits-modelo-txt');
+        var tTxt = document.getElementById('kits-tipomp-txt');
+        
+        var m = (mTxt ? mTxt.value.trim().toUpperCase() : '');
+        var mod = (modTxt ? modTxt.value.trim().toUpperCase() : '');
+        var tip = (tTxt ? tTxt.value.trim().toUpperCase() : '');
+
+        var arr = [];
+        if (m) arr.push(m);
+        if (mod && mod !== 'TODOS LOS MODELOS') arr.push(mod);
+        var middle = arr.length > 0 ? arr.join(' - ') : '';
+        
+        var str = '';
+        if (middle) str += middle;
+        if (tip) {
+            if (str) str += ' | ';
+            str += tip;
+        }
+
+        var mode = (document.getElementById('kits-form-container') && document.getElementById('kits-form-container').innerHTML !== '') ? 'Editar' : 'Configurar';
+
+        if (str) {
+            t.innerHTML = '<i class="bi bi-tools me-1 text-primary"></i>Kit: ' + str;
+        } else {
+            t.innerHTML = '<i class="bi bi-tools me-1 text-primary"></i>Configurar Kit de Mantenimiento';
+        }
+    }, 100);
 };
 
 
