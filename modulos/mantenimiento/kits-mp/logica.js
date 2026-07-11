@@ -74,6 +74,32 @@ function _kitsPopularDatalists() {
 window.kitsMarcaCambiada = function(marcaStr) {
     if(!marcaStr) return;
     marcaStr = marcaStr.toUpperCase();
+    
+    // Poblar datalist con modelos de esta marca
+    var modelos = [];
+    if (window.dataGlobalPlacas) {
+        window.dataGlobalPlacas.forEach(function(p) {
+            var mMarca = (p[3] || '').trim().toUpperCase();
+            var mMod = (p[4] || '').trim().toUpperCase();
+            if (mMarca === marcaStr && mMod && mMod !== '-' && !modelos.includes(mMod)) {
+                modelos.push(mMod);
+            }
+        });
+    }
+    window.kitsData.forEach(function(k) {
+        var mMarca = (k.marca_vehiculo || '').trim().toUpperCase();
+        var mMod = (k.modelo_vehiculo || 'TODOS LOS MODELOS').trim().toUpperCase();
+        if (mMarca === marcaStr && mMod && mMod !== 'TODOS LOS MODELOS' && !modelos.includes(mMod)) {
+            modelos.push(mMod);
+        }
+    });
+    modelos.sort();
+    
+    var dl = document.getElementById('kits-dl-modelos');
+    if (dl) {
+        dl.innerHTML = modelos.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    }
+
     var foundMod = false;
     for (var i=0; i<window.kitsData.length; i++) {
         if (window.kitsData[i].marca_vehiculo === marcaStr && window.kitsData[i].modelo_vehiculo && window.kitsData[i].modelo_vehiculo !== 'TODOS LOS MODELOS') {
