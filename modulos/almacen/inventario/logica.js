@@ -273,7 +273,7 @@ window.invMsInit = function(valorActual) {
         .then(function(data) {
             var marcasSet = {};
             data.forEach(function(p) {
-                if (p.marca_vehiculo) marcasSet[p.marca_vehiculo.trim().toUpperCase()] = true;
+                if (p.marca) marcasSet[p.marca.trim().toUpperCase()] = true;
             });
             window._invMarcasLista = Object.keys(marcasSet).sort();
             doRender();
