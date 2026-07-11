@@ -172,7 +172,7 @@ window.kitsCargarTabla = function() {
         // Cache global inventory items with latest cost
         window._kitsAlmacenItems = (invData || []).map(function(x) {
             return {
-                nombre: x.articulo || x.nombre || x.descripcion || '',
+                nombre: x.descripcion || x.articulo || x.nombre || '',
                 unidad: x.unidad || '',
                 costo_referencial: parseFloat(x.costo_soles != null ? x.costo_soles : (x.costo_referencial||0))
             };
