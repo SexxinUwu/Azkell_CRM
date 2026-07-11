@@ -185,7 +185,6 @@ window.kitsFiltrar = function() {
     
     var lastMarca = null;
     var lastTipo  = null;
-    var currentCardContent = '';
     
     window.kitsDataFil.forEach(function(k, index) {
         // --- DESKTOP TABLE LOGIC ---
@@ -218,43 +217,59 @@ window.kitsFiltrar = function() {
             '</td></tr>';
             
         // --- MOBILE CARDS LOGIC ---
-        // We will group by marca + tipo_mp into a single card
         var nextK = window.kitsDataFil[index + 1];
-        var isLastOfGroup = !nextK || nextK.marca_vehiculo !== k.marca_vehiculo || nextK.tipo_mp !== k.tipo_mp;
-        var isFirstOfGroup = !currentCardContent;
         
-        if (isFirstOfGroup) {
-            var mpColorM = k.tipo_mp === 'MP1' ? 'bg-primary' : k.tipo_mp === 'MP2' ? 'bg-success' : k.tipo_mp === 'MP3' ? 'bg-warning text-dark' : 'bg-info text-dark';
+        // Boundaries for MARCA
+        var isFirstOfMarca = index === 0 || k.marca_vehiculo !== window.kitsDataFil[index-1].marca_vehiculo;
+        var isLastOfMarca = !nextK || nextK.marca_vehiculo !== k.marca_vehiculo;
+        
+        // Boundaries for TIPO_MP (within Marca)
+        var isFirstOfTipo = isFirstOfMarca || k.tipo_mp !== window.kitsDataFil[index-1].tipo_mp;
+        var isLastOfTipo = isLastOfMarca || nextK.tipo_mp !== k.tipo_mp;
+        
+        if (isFirstOfMarca) {
             htmlMobile += '<div class="kits-list-card">';
-            htmlMobile += '<div class="kits-list-card-header">';
-            htmlMobile += '  <div class="d-flex flex-column">';
-            htmlMobile += '    <span style="font-size:0.7rem; color:#64748b; font-weight:800; text-transform:uppercase;"><i class="bi bi-truck me-1"></i>' + (k.marca_vehiculo||'—') + '</span>';
-            htmlMobile += '    <div class="d-flex align-items-center mt-1"><span class="badge ' + mpColorM + ' me-1">' + k.tipo_mp + '</span><span class="fw-bold text-dark" style="font-size:0.85rem;">' + (k.nombre_kit || 'Kit') + '</span></div>';
+            htmlMobile += '  <div style="padding: 1rem; border-bottom: 2px dashed #f1f5f9; display: flex; align-items: center; gap: 0.5rem; background:#f8fafc; border-radius: 16px 16px 0 0;">';
+            htmlMobile += '    <i class="bi bi-truck" style="color:var(--primary,#5865F2);"></i>';
+            htmlMobile += '    <span style="font-weight:900; font-size:1rem; color:#0f172a;">' + (k.marca_vehiculo||'—') + '</span>';
             htmlMobile += '  </div>';
+            htmlMobile += '  <div style="padding: 0.5rem 1rem 1rem 1rem;">';
+        }
+        
+        if (isFirstOfTipo) {
+            var mpColorM = k.tipo_mp === 'MP1' ? 'bg-primary' : k.tipo_mp === 'MP2' ? 'bg-success' : k.tipo_mp === 'MP3' ? 'bg-warning text-dark' : 'bg-info text-dark';
+            htmlMobile += '    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; margin-bottom:0.5rem;">';
+            htmlMobile += '       <div>';
+            htmlMobile += '         <span class="badge ' + mpColorM + ' me-1">' + k.tipo_mp + '</span>';
+            htmlMobile += '         <span style="font-weight:700; font-size:0.85rem; color:#334155;">' + (k.nombre_kit || 'Kit') + '</span>';
+            htmlMobile += '       </div>';
             if (window.checkPerm('cfg_mant','e')) {
-                htmlMobile += '  <button class="btn btn-sm btn-outline-primary" style="padding: 2px 10px; border-radius:12px; font-weight:700;" onclick="window.kitsEditarKit(\''+k.marca_vehiculo+'\',\''+k.tipo_mp+'\')"><i class="bi bi-pencil"></i></button>';
+                htmlMobile += '       <button class="btn btn-sm btn-outline-primary" style="padding:2px 10px; border-radius:12px; font-weight:700;" onclick="window.kitsEditarKit(\''+k.marca_vehiculo+'\',\''+k.tipo_mp+'\')"><i class="bi bi-pencil"></i></button>';
             }
-            htmlMobile += '</div>';
-            htmlMobile += '<div class="d-flex flex-column gap-2">';
+            htmlMobile += '    </div>';
+            htmlMobile += '    <div style="display:flex; flex-direction:column; gap:0.5rem;">';
         }
         
-        currentCardContent += '<div class="d-flex justify-content-between align-items-center" style="background:#f8fafc; padding:0.5rem; border-radius:10px; border:1px solid #f1f5f9;">';
-        currentCardContent += '  <div style="flex:1; min-width:0; padding-right:0.5rem;">';
-        currentCardContent += '    <div style="font-size:0.85rem; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (k.item_nombre||'—') + '</div>';
-        currentCardContent += '    <div style="font-size:0.7rem; color:#64748b; font-weight:600; margin-top:2px;">' + (k.cantidad||0) + ' ' + (k.unidad_medida||'') + ' x S/.' + parseFloat(k.costo_unitario||0).toFixed(2) + '</div>';
-        currentCardContent += '  </div>';
-        currentCardContent += '  <div class="text-end" style="flex-shrink:0;">';
-        currentCardContent += '    <div style="font-weight:900; font-size:0.9rem; color:#0f172a;">S/.' + parseFloat(k.costo_total||0).toFixed(2) + '</div>';
+        htmlMobile += '      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #f1f5f9; padding-bottom:0.5rem;">';
+        htmlMobile += '        <div style="flex:1; min-width:0; padding-right:0.5rem;">';
+        htmlMobile += '           <div style="font-weight:700; font-size:0.85rem; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (k.item_nombre||'—') + '</div>';
+        htmlMobile += '           <div style="font-size:0.7rem; color:#64748b; margin-top:2px;">' + (k.cantidad||0) + ' ' + (k.unidad_medida||'') + ' x S/.' + parseFloat(k.costo_unitario||0).toFixed(2) + '</div>';
+        htmlMobile += '        </div>';
+        htmlMobile += '        <div class="text-end" style="flex-shrink:0;">';
+        htmlMobile += '           <div style="font-weight:900; font-size:0.85rem; color:#0f172a;">S/.' + parseFloat(k.costo_total||0).toFixed(2) + '</div>';
         if (window.checkPerm('cfg_mant','d')) {
-            currentCardContent += '    <button class="btn btn-link text-danger p-0 mt-1" style="font-size:0.8rem; text-decoration:none;" onclick="window.kitsEliminar('+k.id+',\''+((k.item_nombre||'').replace(/'/g,''))+'\')"><i class="bi bi-trash"></i> Eliminar</button>';
+            htmlMobile += '           <button class="btn btn-link text-danger p-0 mt-1" style="font-size:0.75rem; text-decoration:none;" onclick="window.kitsEliminar('+k.id+',\''+((k.item_nombre||'').replace(/'/g,''))+'\')"><i class="bi bi-trash"></i> Eliminar</button>';
         }
-        currentCardContent += '  </div>';
-        currentCardContent += '</div>';
+        htmlMobile += '        </div>';
+        htmlMobile += '      </div>';
         
-        if (isLastOfGroup) {
-            htmlMobile += currentCardContent;
-            htmlMobile += '</div></div>'; // Close flex-column gap-2 and kits-list-card
-            currentCardContent = '';
+        if (isLastOfTipo) {
+            htmlMobile += '    </div>'; // close the flex-column items container
+        }
+        
+        if (isLastOfMarca) {
+            htmlMobile += '  </div>'; // close the padding container
+            htmlMobile += '</div>'; // close kits-list-card
         }
     });
     
