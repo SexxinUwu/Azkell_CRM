@@ -857,7 +857,20 @@ window.abrirDetalleInv = function(id) {
             row('Costo', costoHtml) +
             row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) +
             row('Estado', '<span style="background:' + (item.estado_art === 'Inactivo' ? '#fee2e2' : '#dcfce7') + ';color:' + (item.estado_art === 'Inactivo' ? '#dc2626' : '#16a34a') + ';font-size:.7rem;font-weight:800;padding:.2rem .65rem;border-radius:99px;">' + _invEsc(item.estado_art || 'Activo') + '</span>') +
-            (item.observaciones ? row('Observaciones', _invEsc(item.observaciones), true) : '') +
+            (function() {
+                if (!item.observaciones) return '';
+                var escaped = _invEsc(item.observaciones);
+                var parts = escaped.split(/(?=\[REG \d{4}-\d{2}-\d{2}\])/);
+                var formatted = escaped;
+                if (parts.length > 1) {
+                    formatted = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">' +
+                        parts.map(function(p) { 
+                            return p.trim() ? '<div style="background:rgba(0,0,0,0.02); padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:0.8rem; line-height:1.4;">' + p.trim() + '</div>' : ''; 
+                        }).join('') +
+                        '</div>';
+                }
+                return row('Observaciones', formatted, true);
+            })() +
         '</div>';
 
     // Abrir

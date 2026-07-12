@@ -349,34 +349,51 @@ router.post('/inventario/bulk-delete', (req, res) => {
     });
 });
 
-// Upload imagen de artículo → Cloudinary
+// Upload imagen de artículo → AWS S3
 router.post('/inventario/:id/imagen', _multerInv.single('imagen'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
-    const publicId = 'inventario/' + req.params.id;
-    // Eliminar imagen anterior si existía (ignorar error)
-    cloudinary.uploader.destroy(publicId, { invalidate: true }, () => {});
-    // Subir desde buffer en memoria
-    const uploadStream = cloudinary.uploader.upload_stream(
-        { public_id: publicId, overwrite: true, invalidate: true },
-        (error, result) => {
-            if (error) return res.status(500).json({ error: error.message });
-            const url = result.secure_url;
+    try {
+        const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+        db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
+            if (!err && rows && rows.length > 0 && rows[0].imagen_url) {
+                const oldKey = s3KeyFromUrl(rows[0].imagen_url);
+                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+            }
+            
+            const ext = req.file.originalname.split('.').pop() || 'jpg';
+            const s3Key = `almacen/inventario/${req.params.id}/${Date.now()}.${ext}`;
+            const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+            
             db.query('UPDATE inventario SET imagen_url=? WHERE id=?', [url, req.params.id], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, imagen_url: url });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
+                res.json({ ok: true, imagen_url: url });
             });
-        }
-    );
-    uploadStream.end(req.file.buffer);
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// Eliminar imagen de artículo → Cloudinary
+// Eliminar imagen de artículo → AWS S3
 router.delete('/inventario/:id/imagen', (req, res) => {
-    const publicId = 'inventario/' + req.params.id;
-    cloudinary.uploader.destroy(publicId, { invalidate: true }, (error) => {
-        if (error) console.error('Cloudinary destroy error:', error.message);
-        db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+    try {
+        const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+        db.query('SELECT imagen_url FROM inventario WHERE id=?', [req.params.id], async (err, rows) => {
+            if (!err && rows && rows.length > 0 && rows[0].imagen_url) {
+                const oldKey = s3KeyFromUrl(rows[0].imagen_url);
+                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+            }
+            db.query('UPDATE inventario SET imagen_url=NULL WHERE id=?', [req.params.id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'ELIMINÓ', req.path); }
+                res.json({ ok: true });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         });
     });
