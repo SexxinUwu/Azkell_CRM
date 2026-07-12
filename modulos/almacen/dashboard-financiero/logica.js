@@ -252,10 +252,29 @@ window._initDashFinanciero = function() {
                             onHover: function(e, activeEls) {
                                 e.native.target.style.cursor = activeEls.length ? 'pointer' : 'default';
                             },
+                            layout: { padding: { top: 25 } },
                             plugins: { 
                                 legend: { display: false },
                                 tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
-                                datalabels: { display: false }
+                                datalabels: {
+                                    anchor: 'end',
+                                    align: function(context) {
+                                        var val = context.dataset.data[context.dataIndex];
+                                        var max = Math.max.apply(null, context.dataset.data);
+                                        return (val > max * 0.12) ? 'start' : 'end';
+                                    },
+                                    color: function(context) {
+                                        var val = context.dataset.data[context.dataIndex];
+                                        var max = Math.max.apply(null, context.dataset.data);
+                                        return (val > max * 0.12) ? '#ffffff' : '#6366f1';
+                                    },
+                                    font: { size: 10, weight: 'bold' },
+                                    formatter: function(value) {
+                                        if (value === 0) return '';
+                                        if (value >= 1000) return 'S/ ' + (value / 1000).toFixed(1) + 'k';
+                                        return 'S/ ' + Math.round(value);
+                                    }
+                                }
                             },
                             scales: {
                                 y: { beginAtZero: true, grid: { borderDash: [2,4] }, suggestedMax: Math.max(...consData) * 1.2 },
