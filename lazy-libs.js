@@ -50,7 +50,8 @@
 
     window.loadCharts = function() {
         return loadScript('/libs/chart.min.js')
-            .then(function() { return loadScript('/libs/chartjs-plugin-datalabels.min.js'); });
+            .then(function() { return loadScript('/libs/chartjs-plugin-datalabels.min.js'); })
+            .then(function() { if(typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels); });
     };
 
     window.loadLeaflet = function() {
@@ -63,7 +64,6 @@
     // so they're cached and ready when the user actually needs them.
     // This does NOT block the initial render at all.
     function preloadInBackground() {
-        // Use requestIdleCallback if available, otherwise setTimeout
         var queue = [
             '/libs/chart.min.js',
             '/libs/chartjs-plugin-datalabels.min.js',
@@ -79,11 +79,16 @@
         function loadNext() {
             if (queue.length === 0) return;
             var src = queue.shift();
-            loadScript(src).then(loadNext).catch(loadNext);
+            loadScript(src).then(function() {
+                // If it was chartjs plugin, register it
+                if(src === '/libs/chartjs-plugin-datalabels.min.js' && typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+                    Chart.register(ChartDataLabels);
+                }
+                loadNext();
+            }).catch(loadNext);
         }
 
-        // Start loading 2 at a time to speed up pre-loading
-        loadNext();
+        // Cargar secuencialmente para respetar dependencias
         loadNext();
     }
 
