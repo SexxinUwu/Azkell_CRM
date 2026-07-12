@@ -688,6 +688,16 @@ window.recargarDashboard = function() {
 // ============================================================
 
 window.init_dashboard = function(retries) {
+    retries = retries || 0;
+    // Lazy-load Chart.js + Leaflet antes de inicializar
+    var chartsReady = (typeof Chart !== 'undefined') ? Promise.resolve() : window.loadCharts();
+    var leafletReady = (typeof L !== 'undefined') ? Promise.resolve() : window.loadLeaflet();
+    Promise.all([chartsReady, leafletReady]).then(function() {
+        window._initDashboardReal(retries);
+    });
+};
+
+window._initDashboardReal = function(retries) {
     console.log('🎯 Inicializando módulo Dashboard...');
     retries = retries || 0;
 
