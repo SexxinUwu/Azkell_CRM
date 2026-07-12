@@ -198,6 +198,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="fin-pag-muerto" class="mt-3 d-flex justify-content-end gap-3 align-items-center"></div>
             </div>
             
             <div class="fin-panel">
@@ -218,6 +219,63 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    
+    <!-- Modal Salidas por Familia -->
+    <div class="modal fade" id="finModalSalidasFam" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header" style="border-bottom:1px solid var(--border); background:var(--surface);">
+            <h5 class="modal-title fw-bold" style="color:var(--text);"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Historial de Consumo: <span id="fin-mod-fam-titulo" style="color:var(--primary);"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0" style="background:var(--bg); max-height: 65vh; overflow-y:auto;">
+            <table class="fin-table" style="margin:0;">
+                <thead style="background:var(--surface); position:sticky; top:0; z-index:10;">
+                    <tr>
+                        <th style="white-space:nowrap;">Fecha</th>
+                        <th style="white-space:nowrap;">Placa / OT</th>
+                        <th style="width:100%;">Item (Artículo)</th>
+                        <th style="white-space:nowrap; text-align:right;">Cantidad</th>
+                        <th style="white-space:nowrap; text-align:right;">Costo Unit.</th>
+                        <th style="white-space:nowrap; text-align:right;">Total (S/)</th>
+                    </tr>
+                </thead>
+                <tbody id="fin-tb-modal-fam">
+                    <!-- JS Injected -->
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Modal Inventario por Familia -->
+    <div class="modal fade" id="finModalInvFam" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header" style="border-bottom:1px solid var(--border); background:var(--surface);">
+            <h5 class="modal-title fw-bold" style="color:var(--text);"><i class="bi bi-pie-chart-fill text-info me-2"></i>Artículos Valorizados: <span id="fin-mod-inv-fam-titulo" style="color:var(--primary);"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0" style="background:var(--bg); max-height: 60vh; overflow-y:auto;">
+            <table class="fin-table" style="margin:0;">
+                <thead style="background:var(--surface); position:sticky; top:0; z-index:10;">
+                    <tr>
+                        <th style="width:100%;">Artículo</th>
+                        <th style="white-space:nowrap;">Stock Actual</th>
+                        <th style="white-space:nowrap; text-align:right;">Valor (S/)</th>
+                    </tr>
+                </thead>
+                <tbody id="fin-tb-modal-inv-fam">
+                    <!-- JS Injected -->
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Stock Crítico -->
