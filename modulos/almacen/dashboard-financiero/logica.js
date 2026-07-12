@@ -78,8 +78,12 @@ window.init_almacen_dashboard = function() {
             // Gráfico de Familias
             if (window.finChartFamilia) window.finChartFamilia.destroy();
             var famKeys = Object.keys(familiaValor).sort(function(a,b){ return familiaValor[b] - familiaValor[a]; });
-            var famLabels = famKeys.slice(0,12);
+            var topFamKeys = famKeys.slice(0, 7);
+            var otrosFamVal = 0;
+            famKeys.slice(7).forEach(function(k) { otrosFamVal += familiaValor[k]; });
+            var famLabels = topFamKeys.slice();
             var famData = famLabels.map(function(k){ return familiaValor[k]; });
+            if (otrosFamVal > 0) { famLabels.push('OTROS'); famData.push(otrosFamVal); }
             var famLabelsFull = famLabels.map(function(k, i){ return k + ' (' + fmtM(famData[i]) + ')'; });
             
             var ctxFam = document.getElementById('fin-chart-familia');
@@ -101,7 +105,7 @@ window.init_almacen_dashboard = function() {
                             if (activeEls && activeEls.length > 0) {
                                 var idx = activeEls[0].index;
                                 var familyClicked = famLabels[idx]; // el nombre original de la familia sin el monto
-                                window.finAbrirInvFam(familyClicked);
+                                if (familyClicked !== 'OTROS') window.finAbrirInvFam(familyClicked);
                             }
                         },
                         onHover: function(e, activeEls) {
@@ -209,8 +213,12 @@ window.init_almacen_dashboard = function() {
                 // Gráfico de Consumo
                 if (window.finChartConsumo) window.finChartConsumo.destroy();
                 var consKeys = Object.keys(consumoFamilia).sort(function(a,b){ return consumoFamilia[b] - consumoFamilia[a]; });
-                var consLabels = consKeys.slice(0,10);
+                var topConsKeys = consKeys.slice(0, 8);
+                var otrosConsVal = 0;
+                consKeys.slice(8).forEach(function(k) { otrosConsVal += consumoFamilia[k]; });
+                var consLabels = topConsKeys.slice();
                 var consData = consLabels.map(function(k){ return consumoFamilia[k]; });
+                if (otrosConsVal > 0) { consLabels.push('OTROS'); consData.push(otrosConsVal); }
 
                 var ctxCons = document.getElementById('fin-chart-consumo');
                 if (ctxCons) {
@@ -231,8 +239,7 @@ window.init_almacen_dashboard = function() {
                                 if (activeEls && activeEls.length > 0) {
                                     var idx = activeEls[0].index;
                                     var familyClicked = consLabels[idx]; // el nombre real de la familia
-                                    
-window.finAbrirSalidasFam(familyClicked);
+                                    if (familyClicked !== 'OTROS') window.finAbrirSalidasFam(familyClicked);
                                 }
                             },
                             onHover: function(e, activeEls) {
