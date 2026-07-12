@@ -3,20 +3,17 @@
 // Convención: window.var = window.var || default (no let/const globales)
 // ================================================================
 
-// ── _invCbFiltrar: wrapper de _cbFiltrar con posición fixed
-//    (el drawer tiene overflow:hidden que corta los dropdowns)
+// ── _invCbFiltrar: wrapper de _cbFiltrar
 window._invCbFiltrar = function(id) {
     window._cbFiltrar(id);
     var dd  = document.getElementById(id + '-dd');
-    var txt = document.getElementById(id + '-txt');
-    if (!dd || !txt || dd.style.display === 'none') return;
-    var r = txt.getBoundingClientRect();
-    dd.style.position  = 'fixed';
-    dd.style.top       = (r.bottom + 2) + 'px';
-    dd.style.left      = r.left + 'px';
-    dd.style.width     = r.width + 'px';
-    dd.style.maxWidth  = r.width + 'px';
-    dd.style.zIndex    = '99999';
+    if (dd) {
+        dd.style.position = 'absolute';
+        dd.style.top = '100%';
+        dd.style.left = '0';
+        dd.style.width = '100%';
+        dd.style.zIndex = '99999';
+    }
 };
 
 window._invData              = window._invData              || [];
