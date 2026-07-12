@@ -115,7 +115,7 @@ let dataTiposMant     = []; let isHistorialFleetrun = false; let expandAllState 
 
 let isHistorialStatus = false; let expandStatusMap = {}; let expandAllStatusState = {};
 let chartTotalInst = null, chartMotorasInst = null, chartNoMotorasInst = null;
-Chart.register(ChartDataLabels); 
+
 
 let currentTab = 0; let canvasFirma; let ctxFirma; let dibujando = false;
 
