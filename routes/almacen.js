@@ -411,10 +411,6 @@ router.delete('/inventario/:id/imagen', (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
-        });
-    });
-});
 
 // Regularizar stock físico (autocontrol)
 router.post('/inventario/:id/regularizar', (req, res) => {
