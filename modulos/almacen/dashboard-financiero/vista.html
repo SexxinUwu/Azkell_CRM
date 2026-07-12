@@ -179,7 +179,14 @@
             </div>
             
             <div class="fin-panel">
-                <div class="fin-panel-title"><i class="bi bi-bar-chart-line-fill"></i> Familias de Mayor Consumo Histórico</div>
+                <div class="fin-panel-title" style="justify-content: space-between;">
+                    <div><i class="bi bi-bar-chart-line-fill"></i> Familias de Mayor Consumo</div>
+                    <select id="fin-filtro-mes" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem; font-weight: normal;" onchange="if(window.finRenderChartConsumo) window.finRenderChartConsumo(this.value)">
+                        <option value="all">Histórico (Todo)</option>
+                        <option value="current">Mes Actual</option>
+                        <option value="last">Mes Anterior</option>
+                    </select>
+                </div>
                 <div class="fin-chart-container">
                     <canvas id="fin-chart-consumo"></canvas>
                 </div>

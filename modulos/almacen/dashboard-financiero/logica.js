@@ -143,9 +143,10 @@ window._initDashFinanciero = function() {
 
             // 2. CARGAR SALIDAS EN SEGUNDO PLANO (Pesado)
             return fetch('/api/almacen/salidas').then(function(r){ return r.ok ? r.json() : []; }).then(function(salData) {
+                window.finSalData = salData;
+                window.finInvData = invData;
+
                 var ultimaSalida = {};
-                var consumoFamilia = {};
-                window.finSalidasPorFamilia = {};
 
                 salData.forEach(function(salida) {
                     if (salida.estado && salida.estado !== 'Despachado') return;
@@ -162,28 +163,6 @@ window._initDashFinanciero = function() {
                         if (!ultimaSalida[artId] || ts > ultimaSalida[artId].ts) {
                             ultimaSalida[artId] = { ts: ts, str: f.toISOString().split('T')[0] };
                         }
-
-                        var cant = parseFloat(det.cantidad || 0);
-                        var costo = parseFloat(det.costo_unitario || 0);
-                        var val = cant * costo;
-                        
-                        var refInv = invData.find(function(x){ return x.id === artId; });
-                        var fam = refInv ? (refInv.familia || 'SIN FAMILIA').toUpperCase() : 'SIN FAMILIA';
-                        
-                        if (!consumoFamilia[fam]) consumoFamilia[fam] = 0;
-                        consumoFamilia[fam] += val;
-
-                        if (!window.finSalidasPorFamilia[fam]) window.finSalidasPorFamilia[fam] = [];
-                        window.finSalidasPorFamilia[fam].push({
-                            fecha: f.toISOString().split('T')[0],
-                            placa: salida.placa || '—',
-                            ot: salida.ticket_ot || '—',
-                            articulo: refInv ? (refInv.descripcion || refInv.articulo) : (det.descripcion || 'Desconocido'),
-                            cant: cant,
-                            costo: costo,
-                            total: val,
-                            ts: ts
-                        });
                     });
                 });
 
@@ -218,71 +197,7 @@ window._initDashFinanciero = function() {
                 window.finRenderMuerto();
 
                 // Gráfico de Consumo
-                if (window.finChartConsumo) window.finChartConsumo.destroy();
-                var consKeys = Object.keys(consumoFamilia).sort(function(a,b){ return consumoFamilia[b] - consumoFamilia[a]; });
-                var topConsKeys = consKeys.slice(0, 8);
-                var otrosConsVal = 0;
-                consKeys.slice(8).forEach(function(k) { otrosConsVal += consumoFamilia[k]; });
-                var consLabels = topConsKeys.slice();
-                var consData = consLabels.map(function(k){ return consumoFamilia[k]; });
-                if (otrosConsVal > 0) { consLabels.push('OTROS'); consData.push(otrosConsVal); }
-
-                var ctxCons = document.getElementById('fin-chart-consumo');
-                if (ctxCons) {
-                    window.finChartConsumo = new Chart(ctxCons, {
-                        type: 'bar',
-                        data: {
-                            labels: consLabels.map(function(l){ return l.length > 15 ? l.substring(0,15)+'...' : l; }),
-                            datasets: [{
-                                label: 'Gasto Consumo (S/)',
-                                data: consData,
-                                backgroundColor: '#6366f1',
-                                borderRadius: 6
-                            }]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            onClick: function(e, activeEls) {
-                                if (activeEls && activeEls.length > 0) {
-                                    var idx = activeEls[0].index;
-                                    var familyClicked = consLabels[idx]; // el nombre real de la familia
-                                    if (familyClicked !== 'OTROS') window.finAbrirSalidasFam(familyClicked);
-                                }
-                            },
-                            onHover: function(e, activeEls) {
-                                e.native.target.style.cursor = activeEls.length ? 'pointer' : 'default';
-                            },
-                            layout: { padding: { top: 25 } },
-                            plugins: { 
-                                legend: { display: false },
-                                tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
-                                datalabels: {
-                                    anchor: 'end',
-                                    align: function(context) {
-                                        var val = context.dataset.data[context.dataIndex];
-                                        var max = Math.max.apply(null, context.dataset.data);
-                                        return (val > max * 0.12) ? 'start' : 'end';
-                                    },
-                                    color: function(context) {
-                                        var val = context.dataset.data[context.dataIndex];
-                                        var max = Math.max.apply(null, context.dataset.data);
-                                        return (val > max * 0.12) ? '#ffffff' : '#6366f1';
-                                    },
-                                    font: { size: 10, weight: 'bold' },
-                                    formatter: function(value) {
-                                        if (value === 0) return '';
-                                        if (value >= 1000) return 'S/ ' + (value / 1000).toFixed(1) + 'k';
-                                        return 'S/ ' + Math.round(value);
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: { beginAtZero: true, grid: { borderDash: [2,4] }, suggestedMax: Math.max(...consData) * 1.2 },
-                                x: { grid: { display: false } }
-                            }
-                        }
-                    });
-                }
+                window.finRenderChartConsumo('all');
             });
 
         })
@@ -434,3 +349,130 @@ window.finAbrirInvFam = function(familia) {
     }
 };
 
+
+window.finRenderChartConsumo = function(filtroMes) {
+    if (!window.finSalData || !window.finInvData) return;
+    
+    var consumoFamilia = {};
+    window.finSalidasPorFamilia = {};
+    
+    var ahora = new Date();
+    var mesActual = ahora.getMonth();
+    var anioActual = ahora.getFullYear();
+    
+    window.finSalData.forEach(function(salida) {
+        if (salida.estado && salida.estado !== 'Despachado') return;
+
+        var f = new Date(salida.fecha_salida || salida.fecha || salida.created_at);
+        
+        if (filtroMes === 'current') {
+            if (f.getMonth() !== mesActual || f.getFullYear() !== anioActual) return;
+        } else if (filtroMes === 'last') {
+            var mAnt = mesActual === 0 ? 11 : mesActual - 1;
+            var aAnt = mesActual === 0 ? anioActual - 1 : anioActual;
+            if (f.getMonth() !== mAnt || f.getFullYear() !== aAnt) return;
+        }
+
+        var ts = f.getTime();
+        var dets = Array.isArray(salida.items) ? salida.items : (Array.isArray(salida.detalles) ? salida.detalles : []);
+        
+        dets.forEach(function(det) {
+            var artId = det.articulo_id || det.inventario_id || det.id_articulo;
+            if (!artId) return;
+
+            var cant = parseFloat(det.cantidad || 0);
+            var costo = parseFloat(det.costo_unitario || 0);
+            var val = cant * costo;
+            
+            var refInv = window.finInvData.find(function(x){ return x.id === artId; });
+            var fam = refInv ? (refInv.familia || 'SIN FAMILIA').toUpperCase() : 'SIN FAMILIA';
+            
+            if (!consumoFamilia[fam]) consumoFamilia[fam] = 0;
+            consumoFamilia[fam] += val;
+
+            if (!window.finSalidasPorFamilia[fam]) window.finSalidasPorFamilia[fam] = [];
+            window.finSalidasPorFamilia[fam].push({
+                fecha: f.toISOString().split('T')[0],
+                placa: salida.placa || '—',
+                ot: salida.ticket_ot || '—',
+                articulo: refInv ? (refInv.descripcion || refInv.articulo) : (det.descripcion || 'Desconocido'),
+                cant: cant,
+                costo: costo,
+                total: val,
+                ts: ts
+            });
+        });
+    });
+
+    if (window.finChartConsumo) {
+        window.finChartConsumo.destroy();
+        window.finChartConsumo = null;
+    }
+    
+    var consKeys = Object.keys(consumoFamilia).sort(function(a,b){ return consumoFamilia[b] - consumoFamilia[a]; });
+    var topConsKeys = consKeys.slice(0, 8);
+    var otrosConsVal = 0;
+    consKeys.slice(8).forEach(function(k) { otrosConsVal += consumoFamilia[k]; });
+    var consLabels = topConsKeys.slice();
+    var consData = consLabels.map(function(k){ return consumoFamilia[k]; });
+    if (otrosConsVal > 0) { consLabels.push('OTROS'); consData.push(otrosConsVal); }
+
+    var ctxCons = document.getElementById('fin-chart-consumo');
+    if (!ctxCons) return;
+    
+    function fmtM(v) { return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    window.finChartConsumo = new Chart(ctxCons, {
+        type: 'bar',
+        data: {
+            labels: consLabels.map(function(l){ return l.length > 15 ? l.substring(0,15)+'...' : l; }),
+            datasets: [{
+                label: 'Gasto Consumo (S/)',
+                data: consData,
+                backgroundColor: '#6366f1',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            onClick: function(e, activeEls) {
+                if (activeEls && activeEls.length > 0) {
+                    var idx = activeEls[0].index;
+                    var familyClicked = consLabels[idx]; 
+                    if (familyClicked !== 'OTROS') window.finAbrirSalidasFam(familyClicked);
+                }
+            },
+            onHover: function(e, activeEls) {
+                e.native.target.style.cursor = activeEls.length ? 'pointer' : 'default';
+            },
+            layout: { padding: { top: 25 } },
+            plugins: { 
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
+                datalabels: {
+                    anchor: 'end',
+                    align: function(context) {
+                        var val = context.dataset.data[context.dataIndex];
+                        var max = Math.max.apply(null, context.dataset.data);
+                        return (val > max * 0.12) ? 'start' : 'end';
+                    },
+                    color: function(context) {
+                        var val = context.dataset.data[context.dataIndex];
+                        var max = Math.max.apply(null, context.dataset.data);
+                        return (val > max * 0.12) ? '#ffffff' : '#6366f1';
+                    },
+                    font: { size: 10, weight: 'bold' },
+                    formatter: function(value) {
+                        if (value === 0) return '';
+                        if (value >= 1000) return 'S/ ' + (value / 1000).toFixed(1) + 'k';
+                        return 'S/ ' + Math.round(value);
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2,4] }, suggestedMax: consData.length ? Math.max.apply(null, consData) * 1.2 : 100 },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+};
