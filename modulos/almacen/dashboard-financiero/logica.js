@@ -232,40 +232,6 @@ window.init_almacen_dashboard = function() {
                                     var idx = activeEls[0].index;
                                     var familyClicked = consLabels[idx]; // el nombre real de la familia
                                     
-window.finAbrirInvFam = function(familia) {
-    var tb = document.getElementById('fin-tb-modal-inv-fam');
-    if (!tb) return;
-    
-    document.getElementById('fin-mod-inv-fam-titulo').textContent = familia;
-    
-    var list = window.finInvPorFamilia[familia] || [];
-    list.sort(function(a,b){ return b.valor - a.valor; }); // de mayor a menor valor
-    
-    var html = '';
-    var totalVal = 0;
-    list.forEach(function(item) {
-        totalVal += item.valor;
-        html += '<tr>' +
-            '<td><span class="fin-td-nombre" style="width:100%; white-space:normal;">' + item.articulo + '</span></td>' +
-            '<td><span class="fin-badge">' + item.stock + ' ' + item.unidad + '</span></td>' +
-            '<td class="fin-td-val fw-bold" style="color:var(--text);">S/ ' + item.valor.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
-            '</tr>';
-    });
-    
-    if (list.length > 0) {
-        html += '<tr style="background:rgba(0,0,0,0.02);"><td colspan="2" class="text-end fw-bold">TOTAL:</td><td class="fin-td-val fw-bold" style="color:var(--primary);">S/ ' + totalVal.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td></tr>';
-    }
-    
-    if (!list.length) html = '<tr><td colspan="3" class="text-center py-4 text-muted">No hay artículos.</td></tr>';
-    tb.innerHTML = html;
-    
-    var modalEl = document.getElementById('finModalInvFam');
-    if (modalEl) {
-        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.show();
-    }
-};
-
 window.finAbrirSalidasFam(familyClicked);
                                 }
                             },
@@ -406,3 +372,40 @@ window.finAbrirCritico = function() {
 if (document.getElementById('dash-fin-container')) {
     init_almacen_dashboard();
 }
+
+
+// Funciones globales de modales extraídas del onClick
+window.finAbrirInvFam = function(familia) {
+    var tb = document.getElementById('fin-tb-modal-inv-fam');
+    if (!tb) return;
+    
+    document.getElementById('fin-mod-inv-fam-titulo').textContent = familia;
+    
+    var list = window.finInvPorFamilia[familia] || [];
+    list.sort(function(a,b){ return b.valor - a.valor; }); // de mayor a menor valor
+    
+    var html = '';
+    var totalVal = 0;
+    list.forEach(function(item) {
+        totalVal += item.valor;
+        html += '<tr>' +
+            '<td><span class="fin-td-nombre" style="width:100%; white-space:normal;">' + item.articulo + '</span></td>' +
+            '<td><span class="fin-badge">' + item.stock + ' ' + item.unidad + '</span></td>' +
+            '<td class="fin-td-val fw-bold" style="color:var(--text);">S/ ' + item.valor.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+            '</tr>';
+    });
+    
+    if (list.length > 0) {
+        html += '<tr style="background:rgba(0,0,0,0.02);"><td colspan="2" class="text-end fw-bold">TOTAL:</td><td class="fin-td-val fw-bold" style="color:var(--primary);">S/ ' + totalVal.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td></tr>';
+    }
+    
+    if (!list.length) html = '<tr><td colspan="3" class="text-center py-4 text-muted">No hay artículos.</td></tr>';
+    tb.innerHTML = html;
+    
+    var modalEl = document.getElementById('finModalInvFam');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
