@@ -693,6 +693,10 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body px-4 pb-4">
+            <div id="mbnav-finanzas-inv" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/dashboard-financiero'); setBottomNavActive('bnav-almacen');">
+                <div class="bnav-card-icon" style="background: rgba(139,92,246,.1); color: #8b5cf6;"><i class="bi bi-pie-chart-fill"></i></div>
+                <div><p class="bnav-card-title">Dashboard Financiero</p><p class="bnav-card-desc">Análisis y valorización</p></div>
+            </div>
             <div id="mbnav-inventario" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetAlmacen')).hide(); cargarModuloAislado('almacen/inventario'); setBottomNavActive('bnav-almacen');">
                 <div class="bnav-card-icon" style="background: rgba(22,163,74,.1); color: #16a34a;"><i class="bi bi-box-fill"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.inventario">Inventario</p><p class="bnav-card-desc">Stock actual</p></div>
