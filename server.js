@@ -68,6 +68,12 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
+// Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
+app.use('/libs', express.static(path.join(__dirname, 'libs'), {
+    maxAge: '30d',
+    immutable: true
+}));
+// El resto de archivos (logica.js, estilos.css, vistas) → no cachear para reflejar cambios
 app.use(express.static(__dirname, {
     setHeaders: function(res, filePath) {
         if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {

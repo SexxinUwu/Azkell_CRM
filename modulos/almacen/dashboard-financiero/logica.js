@@ -5,6 +5,13 @@ window.finCriticoList = [];
 window.init_almacen_dashboard = function() {
     document.getElementById('fin-loader').style.display = 'flex';
     document.getElementById('fin-content').style.display = 'none';
+
+    // Lazy-load Chart.js solo cuando se abre este módulo
+    var chartsReady = (typeof Chart !== 'undefined') ? Promise.resolve() : window.loadCharts();
+    chartsReady.then(function() { window._initDashFinanciero(); });
+};
+
+window._initDashFinanciero = function() {
     
     // Indicadores de carga para las secciones dependientes de salidas
     document.getElementById('fin-val-muerto').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
