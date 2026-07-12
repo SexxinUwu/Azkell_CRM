@@ -592,14 +592,22 @@ function _invRenderCard(d) {
     // Semáforo de stock
     var stockActual = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
     var stockMin    = parseFloat(d.stock_min || 0);
-    var estadoType = stockActual <= stockMin ? 'critical'
-                   : stockMin > 0 && stockActual <= stockMin * 1.5 ? 'warning'
-                   : 'ok';
-    var badgeTxt = estadoType === 'critical' ? '¡REPONER!' : estadoType === 'warning' ? 'STOCK BAJO' : 'STOCK OK';
+        var estadoType = 'ok';
+    if (stockMin > 0) {
+        if (stockActual < stockMin) estadoType = 'critical';
+        else if (stockActual >= stockMin && stockActual < stockMin * 1.5) estadoType = 'warning';
+    } else {
+        if (stockActual === 0) estadoType = 'empty';
+    }
+
+    var badgeTxt = estadoType === 'critical' ? '¡REPONER!' : 
+                   estadoType === 'warning' ? 'STOCK BAJO' : 
+                   estadoType === 'empty' ? 'SIN STOCK' : 'STOCK OK';
 
     // Badge Classes
     var badgeClass = estadoType === 'ok' ? 'background-color:#dcfce7; color:#15803d;' :
                      estadoType === 'warning' ? 'background-color:#fef3c7; color:#b45309;' :
+                     estadoType === 'empty' ? 'background-color:#f1f5f9; color:#64748b;' :
                      'background-color:#fee2e2; color:#b91c1c;';
 
     // Icon Classes
@@ -612,8 +620,9 @@ function _invRenderCard(d) {
         'MOTOR':'bi-gear-fill','Motor':'bi-gear-fill'
     };
     var iconClass = iconMap[d.familia] || 'bi-box-seam';
-    var iconBoxClass = estadoType === 'ok' ? 'background-color:#eff6ff; color:#3b82f6;' :
+        var iconBoxClass = estadoType === 'ok' ? 'background-color:#eff6ff; color:#3b82f6;' :
                        estadoType === 'warning' ? 'background-color:#fef9c3; color:#d97706;' :
+                       estadoType === 'empty' ? 'background-color:#f8fafc; color:#94a3b8;' :
                        'background-color:#fef2f2; color:#ef4444;';
 
     // Checkbox modo selección

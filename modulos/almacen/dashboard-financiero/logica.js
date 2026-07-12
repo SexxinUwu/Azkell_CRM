@@ -22,6 +22,7 @@ window.init_almacen_dashboard = function() {
             window.finCriticoList = [];
             var stockValuado = []; 
             var familiaValor = {};
+            window.finInvPorFamilia = {};
 
             invData.forEach(function(item) {
                 var stock = parseFloat(item.stock_actual || 0);
@@ -41,6 +42,13 @@ window.init_almacen_dashboard = function() {
 
                 if (!familiaValor[fam]) familiaValor[fam] = 0;
                 familiaValor[fam] += valor;
+                if (!window.finInvPorFamilia[fam]) window.finInvPorFamilia[fam] = [];
+                window.finInvPorFamilia[fam].push({
+                    articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
+                    stock: stock,
+                    unidad: item.unidad || 'UND',
+                    valor: valor
+                });
 
                 stockValuado.push({
                     id: item.id,
@@ -89,6 +97,16 @@ window.init_almacen_dashboard = function() {
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
+                        onClick: function(e, activeEls) {
+                            if (activeEls && activeEls.length > 0) {
+                                var idx = activeEls[0].index;
+                                var familyClicked = famLabels[idx]; // el nombre original de la familia sin el monto
+                                window.finAbrirInvFam(familyClicked);
+                            }
+                        },
+                        onHover: function(e, activeEls) {
+                            e.native.target.style.cursor = activeEls.length ? 'pointer' : 'default';
+                        },
                         plugins: { 
                             legend: { position: 'right', labels: { font: { family: 'Inter', size: 11 } } },
                             tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
@@ -116,15 +134,15 @@ window.init_almacen_dashboard = function() {
             return fetch('/api/almacen/salidas').then(function(r){ return r.ok ? r.json() : []; }).then(function(salData) {
                 var ultimaSalida = {};
                 var consumoFamilia = {};
+                window.finSalidasPorFamilia = {};
 
                 salData.forEach(function(salida) {
+                    if (salida.estado && salida.estado !== 'Despachado') return;
+
                     var f = new Date(salida.fecha_salida || salida.fecha || salida.created_at);
                     var ts = f.getTime();
                     
-                    // Solo considerar salidas despachadas
-                if (salida.estado && salida.estado !== 'Despachado') return;
-                
-                var dets = Array.isArray(salida.items) ? salida.items : (Array.isArray(salida.detalles) ? salida.detalles : []);
+                    var dets = Array.isArray(salida.items) ? salida.items : (Array.isArray(salida.detalles) ? salida.detalles : []);
                     
                     dets.forEach(function(det) {
                         var artId = det.articulo_id || det.inventario_id || det.id_articulo;
@@ -143,6 +161,18 @@ window.init_almacen_dashboard = function() {
                         
                         if (!consumoFamilia[fam]) consumoFamilia[fam] = 0;
                         consumoFamilia[fam] += val;
+
+                        if (!window.finSalidasPorFamilia[fam]) window.finSalidasPorFamilia[fam] = [];
+                        window.finSalidasPorFamilia[fam].push({
+                            fecha: f.toISOString().split('T')[0],
+                            placa: salida.placa || '—',
+                            ot: salida.ticket_ot || '—',
+                            articulo: refInv ? (refInv.descripcion || refInv.articulo) : (det.descripcion || 'Desconocido'),
+                            cant: cant,
+                            costo: costo,
+                            total: val,
+                            ts: ts
+                        });
                     });
                 });
 
@@ -169,15 +199,12 @@ window.init_almacen_dashboard = function() {
                 document.getElementById('fin-val-muerto').textContent = fmtM(totalMuerto);
 
                 inventarioMuerto.sort(function(a,b){ return b.valor - a.valor; });
-                var htmlMuerto = '';
-                inventarioMuerto.slice(0, 10).forEach(function(item) {
-                    htmlMuerto += '<tr>' +
-                        '<td><span class="fin-td-nombre" title="' + item.articulo + '">' + item.articulo + '</span></td>' +
-                        '<td><span class="fin-badge" style="background:#fee2e2;color:#dc2626;">' + item.fecha_ult + '</span></td>' +
-                        '<td class="fin-td-val" style="color:#dc2626;">' + fmtM(item.valor) + '</td>' +
-                        '</tr>';
-                });
-                document.getElementById('fin-tb-muerto').innerHTML = htmlMuerto || '<tr><td colspan="3" class="text-center text-muted py-3">No hay inventario muerto.</td></tr>';
+                
+                window.finInvMuertoList = inventarioMuerto;
+                window.finInvMuertoPag = 1;
+                window.finInvMuertoPorPag = 10;
+                
+                window.finRenderMuerto();
 
                 // Gráfico de Consumo
                 if (window.finChartConsumo) window.finChartConsumo.destroy();
@@ -200,6 +227,51 @@ window.init_almacen_dashboard = function() {
                         },
                         options: {
                             responsive: true, maintainAspectRatio: false,
+                            onClick: function(e, activeEls) {
+                                if (activeEls && activeEls.length > 0) {
+                                    var idx = activeEls[0].index;
+                                    var familyClicked = consLabels[idx]; // el nombre real de la familia
+                                    
+window.finAbrirInvFam = function(familia) {
+    var tb = document.getElementById('fin-tb-modal-inv-fam');
+    if (!tb) return;
+    
+    document.getElementById('fin-mod-inv-fam-titulo').textContent = familia;
+    
+    var list = window.finInvPorFamilia[familia] || [];
+    list.sort(function(a,b){ return b.valor - a.valor; }); // de mayor a menor valor
+    
+    var html = '';
+    var totalVal = 0;
+    list.forEach(function(item) {
+        totalVal += item.valor;
+        html += '<tr>' +
+            '<td><span class="fin-td-nombre" style="width:100%; white-space:normal;">' + item.articulo + '</span></td>' +
+            '<td><span class="fin-badge">' + item.stock + ' ' + item.unidad + '</span></td>' +
+            '<td class="fin-td-val fw-bold" style="color:var(--text);">S/ ' + item.valor.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+            '</tr>';
+    });
+    
+    if (list.length > 0) {
+        html += '<tr style="background:rgba(0,0,0,0.02);"><td colspan="2" class="text-end fw-bold">TOTAL:</td><td class="fin-td-val fw-bold" style="color:var(--primary);">S/ ' + totalVal.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td></tr>';
+    }
+    
+    if (!list.length) html = '<tr><td colspan="3" class="text-center py-4 text-muted">No hay artículos.</td></tr>';
+    tb.innerHTML = html;
+    
+    var modalEl = document.getElementById('finModalInvFam');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.finAbrirSalidasFam(familyClicked);
+                                }
+                            },
+                            onHover: function(e, activeEls) {
+                                e.native.target.style.cursor = activeEls.length ? 'pointer' : 'default';
+                            },
                             plugins: { 
                                 legend: { display: false },
                                 tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
@@ -229,6 +301,81 @@ window.init_almacen_dashboard = function() {
         });
 };
 
+
+
+window.finRenderMuerto = function() {
+    var tb = document.getElementById('fin-tb-muerto');
+    var pagEl = document.getElementById('fin-pag-muerto');
+    if (!tb) return;
+
+    var inicio = (window.finInvMuertoPag - 1) * window.finInvMuertoPorPag;
+    var fin = inicio + window.finInvMuertoPorPag;
+    var slice = window.finInvMuertoList.slice(inicio, fin);
+    
+    function fmtM(v) { return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    var htmlMuerto = '';
+    slice.forEach(function(item) {
+        htmlMuerto += '<tr>' +
+            '<td><span class="fin-td-nombre" style="width:100%;">' + item.articulo + '</span></td>' +
+            '<td><span class="fin-badge" style="background:#fee2e2;color:#dc2626;">' + item.fecha_ult + '</span></td>' +
+            '<td class="fin-td-val" style="color:#dc2626; white-space:nowrap;">' + fmtM(item.valor) + '</td>' +
+            '</tr>';
+    });
+    tb.innerHTML = htmlMuerto || '<tr><td colspan="3" class="text-center text-muted py-3">No hay inventario muerto.</td></tr>';
+
+    if (pagEl) {
+        var totalPag = Math.ceil(window.finInvMuertoList.length / window.finInvMuertoPorPag) || 1;
+        if (totalPag > 1) {
+            var btnPrev = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finMuertoIrPag('+(window.finInvMuertoPag-1)+')" '+(window.finInvMuertoPag<=1?'disabled':'')+'><i class="bi bi-chevron-left"></i> Anterior</button>';
+            var btnNext = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finMuertoIrPag('+(window.finInvMuertoPag+1)+')" '+(window.finInvMuertoPag>=totalPag?'disabled':'')+'>Siguiente <i class="bi bi-chevron-right"></i></button>';
+            var lbl = '<span style="font-size:0.8rem; font-weight:700; color:var(--subtext);">Pág. '+window.finInvMuertoPag+' / '+totalPag+'</span>';
+            pagEl.innerHTML = btnPrev + lbl + btnNext;
+        } else {
+            pagEl.innerHTML = '';
+        }
+    }
+};
+
+window.finMuertoIrPag = function(pag) {
+    var totalPag = Math.ceil(window.finInvMuertoList.length / window.finInvMuertoPorPag) || 1;
+    if (pag < 1) pag = 1;
+    if (pag > totalPag) pag = totalPag;
+    window.finInvMuertoPag = pag;
+    window.finRenderMuerto();
+};
+
+window.finAbrirSalidasFam = function(familia) {
+    var tb = document.getElementById('fin-tb-modal-fam');
+    if (!tb) return;
+    
+    document.getElementById('fin-mod-fam-titulo').textContent = familia;
+    
+    var list = window.finSalidasPorFamilia[familia] || [];
+    list.sort(function(a,b){ return b.ts - a.ts; }); // más recientes primero
+    
+    var html = '';
+    list.forEach(function(item) {
+        var fmt = function(v) { return 'S/ ' + v.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+        html += '<tr class="sal-item-sub">' +
+            '<td style="white-space:nowrap;">' + item.fecha + '</td>' +
+            '<td style="white-space:nowrap;"><strong>' + item.placa + '</strong> <span style="font-size:0.75rem;color:var(--subtext);">(' + item.ot + ')</span></td>' +
+            '<td><span class="fin-td-nombre" style="width:100%; white-space:normal; overflow:visible; display:inline-block; font-size:0.85rem;">' + item.articulo + '</span></td>' +
+            '<td class="text-end fw-bold">' + item.cant + '</td>' +
+            '<td class="fin-td-val" style="color:var(--subtext);">' + fmt(item.costo) + '</td>' +
+            '<td class="fin-td-val text-success">' + fmt(item.total) + '</td>' +
+            '</tr>';
+    });
+    
+    if (!list.length) html = '<tr><td colspan="6" class="text-center py-4 text-muted">No hay registros de salidas.</td></tr>';
+    tb.innerHTML = html;
+    
+    var modalEl = document.getElementById('finModalSalidasFam');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
 
 window.finAbrirCritico = function() {
     var tb = document.getElementById('fin-tb-modal-critico');
