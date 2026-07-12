@@ -8,6 +8,11 @@
         font-family: 'Inter', system-ui, sans-serif;
         padding-bottom: 90px;
     }
+    @media (max-width: 768px) {
+        #dash-fin-container {
+            padding-bottom: 150px;
+        }
+    }
     
     .fin-header {
         display: flex;
@@ -190,8 +195,8 @@
                         <thead>
                             <tr>
                                 <th>Artículo</th>
-                                <th>Stock</th>
-                                <th style="text-align:right;">Total (S/)</th>
+                                <th style="white-space:nowrap;">Stock</th>
+                                <th style="white-space:nowrap; text-align:right;">Total (S/)</th>
                             </tr>
                         </thead>
                         <tbody id="fin-tb-top10">

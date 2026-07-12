@@ -76,8 +76,8 @@ window._initDashFinanciero = function() {
             stockValuado.slice(0, 10).forEach(function(item) {
                 htmlTop10 += '<tr>' +
                     '<td><span class="fin-td-nombre" title="' + item.articulo + '">' + item.articulo + '</span></td>' +
-                    '<td><span class="fin-badge">' + item.stock + ' ' + item.unidad + '</span></td>' +
-                    '<td class="fin-td-val">' + fmtM(item.valor) + '</td>' +
+                    '<td style="white-space:nowrap;"><span class="fin-badge">' + item.stock + ' ' + item.unidad + '</span></td>' +
+                    '<td class="fin-td-val" style="white-space:nowrap;">' + fmtM(item.valor) + '</td>' +
                     '</tr>';
             });
             document.getElementById('fin-tb-top10').innerHTML = htmlTop10;
@@ -255,15 +255,7 @@ window._initDashFinanciero = function() {
                             plugins: { 
                                 legend: { display: false },
                                 tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
-                                datalabels: {
-                                    align: 'end',
-                                    anchor: 'end',
-                                    color: '#6366f1',
-                                    font: { size: 10, weight: 'bold' },
-                                    formatter: function(value) {
-                                        return fmtM(value);
-                                    }
-                                }
+                                datalabels: { display: false }
                             },
                             scales: {
                                 y: { beginAtZero: true, grid: { borderDash: [2,4] }, suggestedMax: Math.max(...consData) * 1.2 },
