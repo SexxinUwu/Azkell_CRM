@@ -1,0 +1,223 @@
+<!-- modulos/almacen/dashboard-financiero/vista.html -->
+<style>
+    /* Estilos Premium para Dashboard Financiero */
+    #dash-fin-container {
+        padding: 1.5rem;
+        background: var(--bg);
+        min-height: 100vh;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    .fin-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+    .fin-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.025em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .fin-title i { color: #10b981; }
+
+    /* Bento Cards */
+    .fin-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .fin-kpi-card {
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.03);
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .fin-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    }
+    .fin-kpi-info { display: flex; flex-direction: column; gap: 0.25rem; }
+    .fin-kpi-label { font-size: 0.85rem; font-weight: 700; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
+    .fin-kpi-val { font-size: 2rem; font-weight: 800; color: var(--text); letter-spacing: -0.025em; line-height: 1.1; }
+    .fin-kpi-sub { font-size: 0.8rem; color: var(--subtext); margin-top: 0.25rem; }
+    
+    .fin-icon-box {
+        width: 54px; height: 54px; border-radius: 16px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; flex-shrink: 0;
+    }
+    
+    .fin-box-green { background: #d1fae5; color: #059669; }
+    .fin-box-red { background: #fee2e2; color: #dc2626; }
+    .fin-box-orange { background: #ffedd5; color: #ea580c; }
+    
+    /* Charts Grid */
+    .fin-chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .fin-panel {
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.03);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+    }
+    .fin-panel-title {
+        font-size: 1.1rem; font-weight: 700; color: var(--text);
+        margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .fin-panel-title i { color: #64748b; font-size: 1.2rem; }
+    .fin-chart-container {
+        position: relative; height: 280px; width: 100%;
+        display: flex; align-items: center; justify-content: center;
+    }
+    
+    /* Tables */
+    .fin-table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 1.25rem;
+    }
+    .fin-table { width: 100%; border-collapse: collapse; }
+    .fin-table th { 
+        text-align: left; padding: 0.75rem 1rem;
+        font-size: 0.75rem; font-weight: 700; color: var(--subtext);
+        text-transform: uppercase; letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--border);
+    }
+    .fin-table td {
+        padding: 0.85rem 1rem; font-size: 0.9rem;
+        color: var(--text); border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+    .fin-table tr:last-child td { border-bottom: none; }
+    
+    .fin-td-nombre { font-weight: 600; color: #2563eb; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .fin-td-val { font-weight: 700; font-family: 'SF Pro Display', system-ui, sans-serif; text-align: right; }
+    .fin-td-stock { color: var(--subtext); font-size: 0.8rem; }
+    .fin-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; background: #f1f5f9; color: #475569; }
+    
+    /* Loader */
+    #fin-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; color: var(--subtext); }
+</style>
+
+<div id="dash-fin-container">
+    <div class="fin-header">
+        <div class="fin-title"><i class="bi bi-wallet2"></i> Dashboard Financiero</div>
+        <button class="btn btn-sm" style="background:#eff6ff;color:#2563eb;border-radius:10px;font-weight:700;" onclick="init_almacen_dashboard()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+        </button>
+    </div>
+
+    <!-- Loader -->
+    <div id="fin-loader">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <div style="font-weight:600;letter-spacing:0.05em;">Analizando inventario y salidas...</div>
+    </div>
+
+    <!-- Content -->
+    <div id="fin-content" style="display: none;">
+        <!-- KPIs -->
+        <div class="fin-kpi-grid">
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-info">
+                    <div class="fin-kpi-label">Capital Inmovilizado</div>
+                    <div class="fin-kpi-val" id="fin-val-total">S/ 0.00</div>
+                    <div class="fin-kpi-sub">Total en almacén activo</div>
+                </div>
+                <div class="fin-icon-box fin-box-green"><i class="bi bi-cash-stack"></i></div>
+            </div>
+            
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-info">
+                    <div class="fin-kpi-label">Stock Crítico</div>
+                    <div class="fin-kpi-val" id="fin-val-critico" style="color: #dc2626;">S/ 0.00</div>
+                    <div class="fin-kpi-sub">Valor de repuestos bajo el mínimo</div>
+                </div>
+                <div class="fin-icon-box fin-box-red"><i class="bi bi-exclamation-triangle"></i></div>
+            </div>
+            
+            <div class="fin-kpi-card">
+                <div class="fin-kpi-info">
+                    <div class="fin-kpi-label">Inventario Muerto</div>
+                    <div class="fin-kpi-val" id="fin-val-muerto" style="color: #ea580c;">S/ 0.00</div>
+                    <div class="fin-kpi-sub">> 6 meses sin salidas</div>
+                </div>
+                <div class="fin-icon-box fin-box-orange"><i class="bi bi-archive"></i></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="fin-chart-grid">
+            <div class="fin-panel">
+                <div class="fin-panel-title"><i class="bi bi-pie-chart-fill"></i> Valorización por Familia</div>
+                <div class="fin-chart-container">
+                    <canvas id="fin-chart-familia"></canvas>
+                </div>
+            </div>
+            
+            <div class="fin-panel">
+                <div class="fin-panel-title"><i class="bi bi-bar-chart-line-fill"></i> Familias de Mayor Consumo Histórico</div>
+                <div class="fin-chart-container">
+                    <canvas id="fin-chart-consumo"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables -->
+        <div class="fin-table-grid">
+            <div class="fin-panel">
+                <div class="fin-panel-title"><i class="bi bi-sort-numeric-down"></i> Top 10 Capital Inmovilizado</div>
+                <div style="overflow-x:auto;">
+                    <table class="fin-table">
+                        <thead>
+                            <tr>
+                                <th>Artículo</th>
+                                <th>Stock</th>
+                                <th style="text-align:right;">Total (S/)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fin-tb-top10">
+                            <!-- JS Injected -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="fin-panel">
+                <div class="fin-panel-title"><i class="bi bi-hourglass-bottom"></i> Inventario Muerto (> 6 Meses)</div>
+                <div style="overflow-x:auto;">
+                    <table class="fin-table">
+                        <thead>
+                            <tr>
+                                <th>Artículo</th>
+                                <th>Última Salida</th>
+                                <th style="text-align:right;">Valor Perdido (S/)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fin-tb-muerto">
+                            <!-- JS Injected -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="modulos/almacen/dashboard-financiero/logica.js"></script>
