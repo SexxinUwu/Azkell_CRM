@@ -394,6 +394,16 @@ window._invPoblarFiltros = function(data) {
 };
 
 // ── KPI Row Bento ─────────────────────────────────────────────────
+window._invSetKpiFiltro = function(tipo) {
+    if (window._invKpiFiltro === tipo) {
+        window._invKpiFiltro = 'todos'; // toggle off
+    } else {
+        window._invKpiFiltro = tipo;
+    }
+    window.filtrarInventario();
+    window._invRenderKPIs(window._invData || []);
+};
+
 window._invRenderKPIs = function(data) {
     var total = data.filter(function(d) {
         return parseFloat(d.stock_actual || 0) > 0.1;
@@ -421,10 +431,16 @@ window._invRenderKPIs = function(data) {
     var elMobile = document.getElementById('inv-kpi-row');
     var elDesktop = document.getElementById('inv-kpi-row-desktop');
 
+    var f = window._invKpiFiltro || 'todos';
+    var opT = (f === 'todos' || f === 'total') ? '1' : '0.5';
+    var opB = (f === 'bajo') ? '1' : (f === 'todos' ? '1' : '0.5');
+    var opC = (f === 'critico') ? '1' : (f === 'todos' ? '1' : '0.5');
+    var baseTrans = 'cursor:pointer; transition: opacity 0.2s, transform 0.1s;';
+
     // 1) Render para Mobile (iOS Style)
     if (elMobile) {
         elMobile.innerHTML =
-            '<div style="background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
+            '<div onclick="window._invSetKpiFiltro(\'total\')" style="' + baseTrans + ' opacity:' + opT + '; background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
               '<div class="d-flex justify-content-between align-items-start mb-2">' +
                 '<span style="font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Total<br/>Artículos</span>' +
                 '<div style="background-color:#eff6ff; color:#3b82f6; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
@@ -434,7 +450,7 @@ window._invRenderKPIs = function(data) {
               '<span style="font-size:1.5rem; font-weight:700; color:#111827; letter-spacing:-0.025em;">' + total.toLocaleString() + '</span>' +
             '</div>' +
 
-            '<div style="background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
+            '<div onclick="window._invSetKpiFiltro(\'bajo\')" style="' + baseTrans + ' opacity:' + opB + '; background-color:white; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">' +
               '<div class="d-flex justify-content-between align-items-start mb-2">' +
                 '<span style="font-size:10px; font-weight:700; color:#f59e0b; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Stock<br/>Bajo</span>' +
                 '<div style="background-color:#fffbeb; color:#f59e0b; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
@@ -444,7 +460,7 @@ window._invRenderKPIs = function(data) {
               '<span style="font-size:1.5rem; font-weight:700; color:#f59e0b; letter-spacing:-0.025em;">' + advertencia + '</span>' +
             '</div>' +
 
-            '<div style="background-color:#ef4444; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between; color:white;">' +
+            '<div onclick="window._invSetKpiFiltro(\'critico\')" style="' + baseTrans + ' opacity:' + opC + '; background-color:#ef4444; border-radius:1rem; padding:0.75rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between; color:white;">' +
               '<div class="d-flex justify-content-between align-items-start mb-2">' +
                 '<span style="font-size:10px; font-weight:700; color:#fee2e2; text-transform:uppercase; letter-spacing:0.05em; line-height:1.1;">Stock<br/>Crítico</span>' +
                 '<div style="background-color:rgba(248,113,113,0.5); color:white; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">' +
@@ -458,15 +474,15 @@ window._invRenderKPIs = function(data) {
     // 2) Render para Escritorio (Bento Old Style)
     if (elDesktop) {
         elDesktop.innerHTML =
-            '<div class="bento-kpi">' +
+            '<div onclick="window._invSetKpiFiltro(\'total\')" class="bento-kpi" style="' + baseTrans + ' opacity:' + opT + ';">' +
               '<div><div class="bento-kpi-label">Total Artículos</div><div class="bento-kpi-num">' + total.toLocaleString() + '</div></div>' +
               '<div class="bento-kpi-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-boxes fs-4"></i></div>' +
             '</div>' +
-            '<div class="bento-kpi" style="background:#fffbeb;border-color:#fde68a">' +
+            '<div onclick="window._invSetKpiFiltro(\'bajo\')" class="bento-kpi" style="' + baseTrans + ' opacity:' + opB + '; background:#fffbeb;border-color:#fde68a">' +
               '<div><div class="bento-kpi-label" style="color:#92400e">Stock Bajo</div><div class="bento-kpi-num" style="color:#d97706">' + advertencia + '</div></div>' +
               '<div class="bento-kpi-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-exclamation-triangle-fill fs-4"></i></div>' +
             '</div>' +
-            '<div class="bento-kpi accent-red">' +
+            '<div onclick="window._invSetKpiFiltro(\'critico\')" class="bento-kpi accent-red" style="' + baseTrans + ' opacity:' + opC + ';">' +
               '<div><div class="bento-kpi-label">Stock Crítico</div><div class="bento-kpi-num">' + criticos + '</div></div>' +
               '<div class="bento-kpi-icon"><i class="bi bi-exclamation-circle-fill fs-4"></i></div>' +
             '</div>' +
@@ -482,17 +498,18 @@ window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
     var filFam  = ((document.getElementById('inv-fil-familia')  || {}).value || '');
     var filSis  = ((document.getElementById('inv-fil-sistema')  || {}).value || '');
-    window._invFiltrados = (window._invData || []).filter(function(d) {
-        var matchB = !buscar ||
-            (d.id           || '').toLowerCase().includes(buscar) ||
-            (d.descripcion  || '').toLowerCase().includes(buscar) ||
-            (d.marca        || '').toLowerCase().includes(buscar) ||
-            (d.familia      || '').toLowerCase().includes(buscar) ||
-            (d.codigo_item  || '').toLowerCase().includes(buscar) ||
-            (d.codigo_barras|| '').toLowerCase().includes(buscar);
-        var matchF = !filFam || d.familia === filFam;
-        var matchS = !filSis || d.sistema === filSis;
-        return matchB && matchF && matchS;
+    window._invFiltrados = (window._invData || []).filter(function(d) {$1
+        var f = window._invKpiFiltro || 'todos';
+        if (f === 'bajo') {
+            var sa = parseFloat(d.stock_actual || 0);
+            var sm = parseFloat(d.stock_min || 0);
+            var sx = parseFloat(d.stock_max || 0);
+            if (!(sm > 0 && sx > 0 && sa >= sm && sa < sx)) return false;
+        } else if (f === 'critico') {
+            var sa = parseFloat(d.stock_actual || 0);
+            var sm = parseFloat(d.stock_min || 0);
+            if (!(sm > 0 && sa < sm)) return false;
+        }
     });
     window._invPagActual = 1;
     window._invRender();
