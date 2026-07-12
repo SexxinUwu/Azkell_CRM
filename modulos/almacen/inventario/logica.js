@@ -498,7 +498,17 @@ window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
     var filFam  = ((document.getElementById('inv-fil-familia')  || {}).value || '');
     var filSis  = ((document.getElementById('inv-fil-sistema')  || {}).value || '');
-    window._invFiltrados = (window._invData || []).filter(function(d) {$1
+    window._invFiltrados = (window._invData || []).filter(function(d) {
+        var matchB = !buscar ||
+            (d.id           || '').toLowerCase().includes(buscar) ||
+            (d.descripcion  || '').toLowerCase().includes(buscar) ||
+            (d.marca        || '').toLowerCase().includes(buscar) ||
+            (d.familia      || '').toLowerCase().includes(buscar) ||
+            (d.codigo_item  || '').toLowerCase().includes(buscar) ||
+            (d.codigo_barras|| '').toLowerCase().includes(buscar);
+        var matchF = !filFam || d.familia === filFam;
+        var matchS = !filSis || d.sistema === filSis;
+        
         var f = window._invKpiFiltro || 'todos';
         if (f === 'bajo') {
             var sa = parseFloat(d.stock_actual || 0);
@@ -510,6 +520,8 @@ window.filtrarInventario = function() {
             var sm = parseFloat(d.stock_min || 0);
             if (!(sm > 0 && sa < sm)) return false;
         }
+
+        return matchB && matchF && matchS;
     });
     window._invPagActual = 1;
     window._invRender();
