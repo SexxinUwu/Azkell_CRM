@@ -78,7 +78,7 @@ window.init_almacen_dashboard = function() {
             // Gráfico de Familias
             if (window.finChartFamilia) window.finChartFamilia.destroy();
             var famKeys = Object.keys(familiaValor).sort(function(a,b){ return familiaValor[b] - familiaValor[a]; });
-            var famLabels = famKeys.slice(0,6);
+            var famLabels = famKeys.slice(0,12);
             var famData = famLabels.map(function(k){ return familiaValor[k]; });
             var famLabelsFull = famLabels.map(function(k, i){ return k + ' (' + fmtM(famData[i]) + ')'; });
             
@@ -90,7 +90,7 @@ window.init_almacen_dashboard = function() {
                         labels: famLabelsFull,
                         datasets: [{
                             data: famData,
-                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#94a3b8'],
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#94a3b8', '#06b6d4', '#8b5cf6', '#14b8a6', '#f43f5e', '#a855f7', '#64748b'],
                             borderWidth: 0,
                             hoverOffset: 4
                         }]
@@ -209,7 +209,7 @@ window.init_almacen_dashboard = function() {
                 // Gráfico de Consumo
                 if (window.finChartConsumo) window.finChartConsumo.destroy();
                 var consKeys = Object.keys(consumoFamilia).sort(function(a,b){ return consumoFamilia[b] - consumoFamilia[a]; });
-                var consLabels = consKeys.slice(0,5);
+                var consLabels = consKeys.slice(0,10);
                 var consData = consLabels.map(function(k){ return consumoFamilia[k]; });
 
                 var ctxCons = document.getElementById('fin-chart-consumo');
