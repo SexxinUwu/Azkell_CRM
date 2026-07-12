@@ -108,7 +108,7 @@
     }
     .fin-table tr:last-child td { border-bottom: none; }
     
-    .fin-td-nombre { font-weight: 600; color: #2563eb; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .fin-td-nombre { font-weight: 600; color: #2563eb; }
     .fin-td-val { font-weight: 700; font-family: 'SF Pro Display', system-ui, sans-serif; text-align: right; }
     .fin-td-stock { color: var(--subtext); font-size: 0.8rem; }
     .fin-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; background: #f1f5f9; color: #475569; }
@@ -144,7 +144,7 @@
                 <div class="fin-icon-box fin-box-green"><i class="bi bi-cash-stack"></i></div>
             </div>
             
-            <div class="fin-kpi-card">
+            <div class="fin-kpi-card" style="cursor:pointer; transition:transform 0.15s; box-shadow:0 4px 12px rgba(220,38,38,0.15);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='none'" onclick="window.finAbrirCritico()">
                 <div class="fin-kpi-info">
                     <div class="fin-kpi-label">Stock Crítico</div>
                     <div class="fin-kpi-val" id="fin-val-critico" style="color: #dc2626;">S/ 0.00</div>
@@ -218,6 +218,32 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal Stock Crítico -->
+    <div class="modal fade" id="finModalCritico" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header" style="border-bottom:1px solid var(--border); background:var(--surface);">
+            <h5 class="modal-title fw-bold" style="color:var(--text);"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Detalle de Stock Crítico</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0" style="background:var(--bg); max-height: 60vh; overflow-y:auto;">
+            <table class="fin-table" style="margin:0;">
+                <thead style="background:var(--surface); position:sticky; top:0; z-index:10;">
+                    <tr>
+                        <th style="width:100%;">Artículo</th>
+                        <th style="white-space:nowrap;">Stock / Mínimo</th>
+                        <th style="white-space:nowrap; text-align:right;">Valor (S/)</th>
+                    </tr>
+                </thead>
+                <tbody id="fin-tb-modal-critico">
+                    <!-- JS Injected -->
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 </div>
 <script src="modulos/almacen/dashboard-financiero/logica.js"></script>
