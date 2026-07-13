@@ -152,9 +152,16 @@ window._initDashFinanciero = function() {
             document.getElementById('fin-loader').style.display = 'none';
             document.getElementById('fin-content').style.display = 'block';
 
-            // 2. CARGAR SALIDAS EN SEGUNDO PLANO (Pesado)
-            return fetch('/api/almacen/salidas').then(function(r){ return r.ok ? r.json() : []; }).then(function(salData) {
+            // 2. CARGAR SALIDAS Y ENTRADAS EN SEGUNDO PLANO
+            var fetchSal = fetch('/api/almacen/salidas').then(function(r){ return r.ok ? r.json() : []; });
+            var fetchEnt = fetch('/api/almacen/entradas').then(function(r){ return r.ok ? r.json() : []; });
+            
+            return Promise.all([fetchSal, fetchEnt]).then(function(res) {
+                var salData = res[0];
+                var entData = res[1];
+                
                 window.finSalData = salData;
+                window.finEntData = entData;
                 window.finInvData = invData;
 
                 var ultimaSalida = {};
@@ -210,6 +217,9 @@ window._initDashFinanciero = function() {
                 // Gráfico de Consumo
                 if (window.finInitFiltros) window.finInitFiltros();
                 else window.finRenderChartConsumo();
+                
+                // Tabla Proveedores
+                if (window.finInitFiltrosProv) window.finInitFiltrosProv();
             });
 
         })
@@ -593,4 +603,131 @@ window.finRenderChartConsumo = function() {
             }
         }
     });
+};
+
+// ==========================================
+// SECCIÓN GASTOS POR PROVEEDOR
+// ==========================================
+window.finInitFiltrosProv = function() {
+    var selA = document.getElementById('fin-filtro-prov-anio');
+    if (!selA || !window.finEntData) return;
+    
+    var anios = new Set();
+    window.finEntData.forEach(function(ent) {
+        if (ent.estado && ent.estado === 'Anulado') return;
+        var f = new Date(ent.fecha || ent.created_at);
+        if (!isNaN(f.getTime())) anios.add(f.getFullYear());
+    });
+    
+    var aniosArr = Array.from(anios).sort(function(a,b){ return b-a; });
+    var html = '<option value="all">Todos los años</option>';
+    aniosArr.forEach(function(a) { html += '<option value="'+a+'">'+a+'</option>'; });
+    selA.innerHTML = html;
+    
+    window.finUpdateFiltroProvMes();
+};
+
+window.finUpdateFiltroProvMes = function() {
+    var selA = document.getElementById('fin-filtro-prov-anio');
+    var selM = document.getElementById('fin-filtro-prov-mes');
+    if (!selA || !selM || !window.finEntData) return;
+    
+    var filtroAnio = selA.value;
+    var mesesDisponibles = new Set();
+    
+    window.finEntData.forEach(function(ent) {
+        if (ent.estado && ent.estado === 'Anulado') return;
+        var f = new Date(ent.fecha || ent.created_at);
+        if (isNaN(f.getTime())) return;
+        if (filtroAnio === 'all' || f.getFullYear() == filtroAnio) {
+            mesesDisponibles.add(f.getMonth());
+        }
+    });
+    
+    var mesArr = Array.from(mesesDisponibles).sort(function(a,b){ return a-b; });
+    var nombresMeses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    
+    var currM = selM.value;
+    var html = '<option value="all">Todos los meses</option>';
+    mesArr.forEach(function(m) {
+        html += '<option value="'+m+'">'+nombresMeses[m]+'</option>';
+    });
+    selM.innerHTML = html;
+    
+    if (currM !== 'all' && mesesDisponibles.has(parseInt(currM))) {
+        selM.value = currM;
+    }
+    
+    window.finRenderTablaProv();
+};
+
+window.finRenderTablaProv = function() {
+    var selA = document.getElementById('fin-filtro-prov-anio');
+    var selM = document.getElementById('fin-filtro-prov-mes');
+    var tb = document.getElementById('fin-tb-prov');
+    var pagEl = document.getElementById('fin-pag-prov');
+    if (!tb || !window.finEntData) return;
+    
+    var filtroAnio = selA ? selA.value : 'all';
+    var filtroMes = selM ? selM.value : 'all';
+    
+    var gastoPorProv = {};
+    
+    window.finEntData.forEach(function(ent) {
+        if (ent.estado && ent.estado === 'Anulado') return;
+        var f = new Date(ent.fecha || ent.created_at);
+        if (isNaN(f.getTime())) return;
+        
+        if (filtroAnio !== 'all' && f.getFullYear() != filtroAnio) return;
+        if (filtroMes !== 'all' && f.getMonth() != filtroMes) return;
+        
+        var prov = ent.proveedor_nombre || ent.proveedor || 'Sin Proveedor';
+        var total = parseFloat(ent.total_pen || 0);
+        
+        if (!gastoPorProv[prov]) gastoPorProv[prov] = 0;
+        gastoPorProv[prov] += total;
+    });
+    
+    var lista = Object.keys(gastoPorProv).map(function(k) {
+        return { proveedor: k, total: gastoPorProv[k] };
+    }).sort(function(a, b) { return b.total - a.total; });
+    
+    window.finProvList = lista;
+    window.finProvPag = window.finProvPag || 1;
+    window.finProvPorPag = 10;
+    
+    var totalPag = Math.ceil(lista.length / window.finProvPorPag) || 1;
+    if (window.finProvPag > totalPag) window.finProvPag = totalPag;
+    if (window.finProvPag < 1) window.finProvPag = 1;
+    
+    var inicio = (window.finProvPag - 1) * window.finProvPorPag;
+    var slice = lista.slice(inicio, inicio + window.finProvPorPag);
+    
+    function fmtM(v) { return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    
+    var html = '';
+    slice.forEach(function(item) {
+        html += '<tr>' +
+            '<td><span class="fin-td-nombre" style="width:100%; color:#0f172a;">' + item.proveedor + '</span></td>' +
+            '<td class="fin-td-val" style="color:#16a34a;">' + fmtM(item.total) + '</td>' +
+            '</tr>';
+    });
+    
+    tb.innerHTML = html || '<tr><td colspan="2" class="text-center text-muted py-3">No hay gastos para este período.</td></tr>';
+    
+    if (pagEl) {
+        if (totalPag > 1) {
+            var btnPrev = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finProvIrPag('+(window.finProvPag-1)+')" '+(window.finProvPag<=1?'disabled':'')+'><i class="bi bi-chevron-left"></i> Anterior</button>';
+            var btnNext = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finProvIrPag('+(window.finProvPag+1)+')" '+(window.finProvPag>=totalPag?'disabled':'')+'>Siguiente <i class="bi bi-chevron-right"></i></button>';
+            var lbl = '<span style="font-size:0.8rem; font-weight:700; color:var(--subtext);">Pág. '+window.finProvPag+' / '+totalPag+'</span>';
+            pagEl.innerHTML = btnPrev + lbl + btnNext;
+        } else {
+            pagEl.innerHTML = '';
+        }
+    }
+};
+
+window.finProvIrPag = function(p) {
+    window.finProvPag = p;
+    window.finRenderTablaProv();
 };
