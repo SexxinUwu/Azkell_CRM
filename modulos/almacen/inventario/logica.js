@@ -639,11 +639,15 @@ function _invRenderCard(d) {
     var costo  = parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     var stockFmt = stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     
+    var imageOrIcon = (d.imagen_url && d.imagen_url.length > 0)
+        ? '<img src="' + _invEsc(d.imagen_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:0.75rem;">'
+        : '<i class="bi ' + iconClass + '" style="font-size:1.5rem;"></i>';
+
     // React/Tailwind to Inline CSS Translation
     return '<div data-id="' + id + '" ' + clickAttr + ' style="position:relative; background-color:white; border-radius:1rem; padding:1rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); border:1px solid rgba(243,244,246,0.5); display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; cursor:pointer;">' +
         chkHtml +
-        '<div style="width:3rem; height:3rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; ' + iconBoxClass + '">' +
-            '<i class="bi ' + iconClass + '" style="font-size:1.5rem;"></i>' +
+        '<div style="width:3rem; height:3rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; ' + ((d.imagen_url && d.imagen_url.length > 0) ? 'background-color:transparent;' : iconBoxClass) + '">' +
+            imageOrIcon +
         '</div>' +
 
         '<div style="flex:1; min-width:0;">' +
