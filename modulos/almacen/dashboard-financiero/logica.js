@@ -672,6 +672,7 @@ window.finRenderTablaProv = function() {
     var filtroMes = selM ? selM.value : 'all';
     
     var gastoPorProv = {};
+    var totalGastoGeneral = 0;
     
     window.finEntData.forEach(function(ent) {
         if (ent.estado && ent.estado === 'Anulado') return;
@@ -686,11 +687,15 @@ window.finRenderTablaProv = function() {
         
         if (!gastoPorProv[prov]) gastoPorProv[prov] = 0;
         gastoPorProv[prov] += total;
+        totalGastoGeneral += total;
     });
     
     var lista = Object.keys(gastoPorProv).map(function(k) {
         return { proveedor: k, total: gastoPorProv[k] };
     }).sort(function(a, b) { return b.total - a.total; });
+    
+    var elTotal = document.getElementById('fin-total-prov');
+    if (elTotal) elTotal.textContent = '- S/ ' + totalGastoGeneral.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
     window.finProvList = lista;
     window.finProvPag = window.finProvPag || 1;
@@ -707,7 +712,8 @@ window.finRenderTablaProv = function() {
     
     var html = '';
     slice.forEach(function(item) {
-        html += '<tr>' +
+        var provEsc = item.proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        html += '<tr style="cursor:pointer;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'transparent\'" onclick="window.finAbrirProvDetalle(\''+provEsc+'\')">' +
             '<td><span class="fin-td-nombre" style="width:100%; color:#0f172a;">' + item.proveedor + '</span></td>' +
             '<td class="fin-td-val" style="color:#16a34a;">' + fmtM(item.total) + '</td>' +
             '</tr>';
@@ -730,4 +736,98 @@ window.finRenderTablaProv = function() {
 window.finProvIrPag = function(p) {
     window.finProvPag = p;
     window.finRenderTablaProv();
+};
+
+window.finAbrirProvDetalle = function(provNombre) {
+    var selA = document.getElementById('fin-filtro-prov-anio');
+    var selM = document.getElementById('fin-filtro-prov-mes');
+    var filtroAnio = selA ? selA.value : 'all';
+    var filtroMes = selM ? selM.value : 'all';
+    
+    var nameEl = document.getElementById('fin-modal-prov-name');
+    if (nameEl) nameEl.textContent = provNombre;
+    
+    var itemsProv = [];
+    
+    window.finEntData.forEach(function(ent) {
+        if (ent.estado && ent.estado === 'Anulado') return;
+        var f = new Date(ent.fecha || ent.created_at);
+        if (isNaN(f.getTime())) return;
+        
+        if (filtroAnio !== 'all' && f.getFullYear() != filtroAnio) return;
+        if (filtroMes !== 'all' && f.getMonth() != filtroMes) return;
+        
+        var p = ent.proveedor_nombre || ent.proveedor || 'Sin Proveedor';
+        if (p === provNombre) {
+            var items = Array.isArray(ent.items) ? ent.items : (Array.isArray(ent.detalles) ? ent.detalles : []);
+            items.forEach(function(it) {
+                var c = parseFloat(it.cantidad || 0);
+                var cu = parseFloat(it.costo_unitario || 0);
+                if (c > 0) {
+                    itemsProv.push({
+                        fecha: f.toISOString().split('T')[0],
+                        articulo: it.articulo || it.descripcion || 'Desconocido',
+                        cantidad: c,
+                        costo_unitario: cu,
+                        total: c * cu
+                    });
+                }
+            });
+        }
+    });
+    
+    itemsProv.sort(function(a,b) { return new Date(b.fecha) - new Date(a.fecha); });
+    
+    window.finProvDetItems = itemsProv;
+    window.finProvDetPag = 1;
+    window.finProvDetPorPag = 10;
+    
+    window.finRenderProvDetalle();
+    
+    var mdl = new bootstrap.Modal(document.getElementById('finModalProv'));
+    mdl.show();
+};
+
+window.finRenderProvDetalle = function() {
+    var tb = document.getElementById('fin-tb-modal-prov');
+    var pagEl = document.getElementById('fin-pag-modal-prov');
+    if (!tb) return;
+    
+    var lista = window.finProvDetItems || [];
+    var totalPag = Math.ceil(lista.length / window.finProvDetPorPag) || 1;
+    if (window.finProvDetPag > totalPag) window.finProvDetPag = totalPag;
+    
+    var inicio = (window.finProvDetPag - 1) * window.finProvDetPorPag;
+    var slice = lista.slice(inicio, inicio + window.finProvDetPorPag);
+    
+    function fmtM(v) { return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    
+    var html = '';
+    slice.forEach(function(item) {
+        html += '<tr>' +
+            '<td style="white-space:nowrap; font-size:0.8rem; color:#64748b;">' + item.fecha + '</td>' +
+            '<td><span class="fin-td-nombre" style="width:100%;">' + item.articulo + '</span></td>' +
+            '<td style="white-space:nowrap; text-align:center;"><span class="fin-badge">' + item.cantidad + '</span></td>' +
+            '<td class="fin-td-val" style="color:#64748b;">' + fmtM(item.costo_unitario) + '</td>' +
+            '<td class="fin-td-val">' + fmtM(item.total) + '</td>' +
+            '</tr>';
+    });
+    
+    tb.innerHTML = html || '<tr><td colspan="5" class="text-center text-muted py-3">No hay detalles de compra.</td></tr>';
+    
+    if (pagEl) {
+        if (totalPag > 1) {
+            var btnPrev = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finProvDetIrPag('+(window.finProvDetPag-1)+')" '+(window.finProvDetPag<=1?'disabled':'')+'><i class="bi bi-chevron-left"></i> Anterior</button>';
+            var btnNext = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finProvDetIrPag('+(window.finProvDetPag+1)+')" '+(window.finProvDetPag>=totalPag?'disabled':'')+'>Siguiente <i class="bi bi-chevron-right"></i></button>';
+            var lbl = '<span style="font-size:0.8rem; font-weight:700; color:var(--subtext);">Pág. '+window.finProvDetPag+' / '+totalPag+'</span>';
+            pagEl.innerHTML = btnPrev + lbl + btnNext;
+        } else {
+            pagEl.innerHTML = '';
+        }
+    }
+};
+
+window.finProvDetIrPag = function(p) {
+    window.finProvDetPag = p;
+    window.finRenderProvDetalle();
 };
