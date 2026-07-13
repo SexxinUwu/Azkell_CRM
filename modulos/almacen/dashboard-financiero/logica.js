@@ -536,7 +536,36 @@ window.finRenderChartConsumo = function() {
             },
             layout: { padding: { top: 25 } },
             plugins: { 
-                legend: { display: false },
+                legend: { 
+                    display: true, 
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        font: { size: 10, family: 'Inter' },
+                        generateLabels: function(chart) {
+                            var data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map(function(label, i) {
+                                    return {
+                                        text: label,
+                                        fillStyle: '#6366f1',
+                                        strokeStyle: '#6366f1',
+                                        lineWidth: 0,
+                                        hidden: false,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    },
+                    onHover: function(e) { e.native.target.style.cursor = 'pointer'; },
+                    onLeave: function(e) { e.native.target.style.cursor = 'default'; },
+                    onClick: function(e, legendItem, legend) {
+                        var familyClicked = consLabels[legendItem.index];
+                        if (familyClicked !== 'OTROS') window.finAbrirSalidasFam(familyClicked);
+                    }
+                },
                 tooltip: { callbacks: { label: function(c) { return ' ' + fmtM(c.raw); } } },
                 datalabels: {
                     anchor: 'end',
