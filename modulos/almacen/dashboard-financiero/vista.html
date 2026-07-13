@@ -104,6 +104,11 @@
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
         gap: 1.25rem;
     }
+    @media (min-width: 992px) {
+        .fin-table-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
     .fin-table { width: 100%; border-collapse: collapse; }
     .fin-table th { 
         text-align: left; padding: 0.75rem 1rem;
@@ -278,7 +283,7 @@
             
             <div class="fin-panel" style="grid-column: 1 / -1;">
                 <div class="fin-panel-title" style="justify-content: space-between;">
-                    <div><i class="bi bi-truck"></i> Gastos por Proveedor</div>
+                    <div><i class="bi bi-truck"></i> Gastos por Proveedor <span id="fin-total-prov" style="font-size: 0.9rem; font-weight: 800; margin-left: 10px; color: #16a34a; background: #f0fdf4; padding: 2px 8px; border-radius: 6px;"></span></div>
                     <div class="d-flex gap-2">
                         <select id="fin-filtro-prov-anio" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem; font-weight: normal;" onchange="if(window.finUpdateFiltroProvMes) window.finUpdateFiltroProvMes()">
                             <option value="all">Todos los años</option>
@@ -389,6 +394,34 @@
             </table>
           </div>
           <div id="fin-pag-modal-critico" class="p-2 d-flex justify-content-end gap-3 align-items-center" style="background:var(--surface); border-top:1px solid var(--border); border-bottom-left-radius:16px; border-bottom-right-radius:16px;"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal Detalle Proveedor -->
+    <div class="modal fade" id="finModalProv" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="border-radius:16px; border:none; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header" style="border-bottom:1px solid var(--border); background:var(--surface);">
+            <h5 class="modal-title fw-bold" style="color:var(--text);"><i class="bi bi-truck text-primary me-2"></i>Detalles de Compra: <span id="fin-modal-prov-name"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0" style="background:var(--bg); max-height: 60vh; overflow-y:auto;">
+            <table class="fin-table" style="margin:0;">
+                <thead style="background:var(--surface); position:sticky; top:0; z-index:10;">
+                    <tr>
+                        <th style="white-space:nowrap;">Fecha</th>
+                        <th style="width:100%;">Artículo</th>
+                        <th style="white-space:nowrap; text-align:center;">Cantidad</th>
+                        <th style="white-space:nowrap; text-align:right;">C. Unitario (S/)</th>
+                        <th style="white-space:nowrap; text-align:right;">Total (S/)</th>
+                    </tr>
+                </thead>
+                <tbody id="fin-tb-modal-prov">
+                    <!-- JS Injected -->
+                </tbody>
+            </table>
+          </div>
+          <div id="fin-pag-modal-prov" class="p-2 d-flex justify-content-end gap-3 align-items-center" style="background:var(--surface); border-top:1px solid var(--border); border-bottom-left-radius:16px; border-bottom-right-radius:16px;"></div>
         </div>
       </div>
     </div>
