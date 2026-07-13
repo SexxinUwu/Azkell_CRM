@@ -54,6 +54,8 @@ window._initDashFinanciero = function() {
                     stockValuado.push({
                         id: item.id,
                         articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
+                        stock: stock,
+                        unidad: item.unidad || 'UND',
                         valor: valorActual
                     });
                 }
@@ -760,16 +762,28 @@ window.finAbrirProvDetalle = function(provNombre) {
         var p = ent.proveedor_nombre || ent.proveedor || 'Sin Proveedor';
         if (p === provNombre) {
             var items = Array.isArray(ent.items) ? ent.items : (Array.isArray(ent.detalles) ? ent.detalles : []);
+            var totalOrigen = items.reduce(function(acc, i) { return acc + (parseFloat(i.cantidad||0) * parseFloat(i.costo_unitario||0)); }, 0);
+            var entTotalPen = parseFloat(ent.total_pen || 0);
+            
+            var multiplier = 1;
+            if (totalOrigen > 0 && entTotalPen > 0) {
+                if (Math.abs(totalOrigen - entTotalPen) > 0.05) {
+                    multiplier = entTotalPen / totalOrigen;
+                }
+            }
+            
             items.forEach(function(it) {
                 var c = parseFloat(it.cantidad || 0);
-                var cu = parseFloat(it.costo_unitario || 0);
+                var cuOrigen = parseFloat(it.costo_unitario || 0);
+                var cuReal = cuOrigen * multiplier;
+                
                 if (c > 0) {
                     itemsProv.push({
                         fecha: f.toISOString().split('T')[0],
                         articulo: it.articulo || it.descripcion || 'Desconocido',
                         cantidad: c,
-                        costo_unitario: cu,
-                        total: c * cu
+                        costo_unitario: cuReal,
+                        total: c * cuReal
                     });
                 }
             });
