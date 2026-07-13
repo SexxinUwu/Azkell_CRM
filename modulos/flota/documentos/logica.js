@@ -865,7 +865,7 @@ window.importarExcelVehiculos = function(event) {
 window.subirDocumentoS3 = async function(input, hiddenId, linkId, docId) {
     if(!input.files || input.files.length === 0) return;
     const file = input.files[0];
-    if(file.size > 5 * 1024 * 1024) return alert('El archivo es muy pesado (Máx 5MB)');
+    if(file.size > 25 * 1024 * 1024) return alert('El archivo es muy pesado (Máx 25MB)');
     
     const spin = document.getElementById('spin_' + docId);
     if(spin) spin.style.display = 'inline-block';
