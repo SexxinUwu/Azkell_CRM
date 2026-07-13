@@ -33,37 +33,48 @@ window._initDashFinanciero = function() {
 
             invData.forEach(function(item) {
                 var stock = parseFloat(item.stock_actual || 0);
-                if (stock <= 0) return;
-                
                 var costo = parseFloat(item.costo_soles != null ? item.costo_soles : (item.costo_referencial || 0));
-                var valor = stock * costo;
+                var valorActual = stock * costo;
                 var fam = (item.familia || 'SIN FAMILIA').toUpperCase();
 
-                totalInmovilizado += valor;
+                if (stock > 0) {
+                    totalInmovilizado += valorActual;
+                    
+                    if (!familiaValor[fam]) familiaValor[fam] = 0;
+                    familiaValor[fam] += valorActual;
+
+                    if (!window.finInvPorFamilia[fam]) window.finInvPorFamilia[fam] = [];
+                    window.finInvPorFamilia[fam].push({
+                        articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
+                        stock: stock,
+                        unidad: item.unidad || 'UND',
+                        valor: valorActual
+                    });
+
+                    stockValuado.push({
+                        id: item.id,
+                        articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
+                        valor: valorActual
+                    });
+                }
 
                 var stockMin = parseFloat(item.stock_min || 0);
                 if (stockMin > 0 && stock < stockMin) {
-                    totalCritico += valor;
-                    window.finCriticoList.push({ articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido', stock: stock, min: stockMin, unidad: item.unidad || 'UND', valor: valor });
+                    var stockMax = parseFloat(item.stock_max || 0);
+                    if (stockMax < stockMin) stockMax = stockMin; // Fallback al mínimo si el máximo no está bien configurado
+                    
+                    var faltante = stockMax - stock;
+                    var costoReposicion = faltante * costo;
+                    totalCritico += costoReposicion;
+                    window.finCriticoList.push({ 
+                        articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido', 
+                        stock: stock, 
+                        min: stockMin, 
+                        max: stockMax,
+                        unidad: item.unidad || 'UND', 
+                        valor: costoReposicion 
+                    });
                 }
-
-                if (!familiaValor[fam]) familiaValor[fam] = 0;
-                familiaValor[fam] += valor;
-                if (!window.finInvPorFamilia[fam]) window.finInvPorFamilia[fam] = [];
-                window.finInvPorFamilia[fam].push({
-                    articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
-                    stock: stock,
-                    unidad: item.unidad || 'UND',
-                    valor: valor
-                });
-
-                stockValuado.push({
-                    id: item.id,
-                    articulo: item.descripcion || item.articulo || item.nombre || 'Desconocido',
-                    stock: stock,
-                    valor: valor,
-                    unidad: item.unidad || 'UND'
-                });
             });
 
             // Actualizar UI básica
@@ -197,7 +208,8 @@ window._initDashFinanciero = function() {
                 window.finRenderMuerto();
 
                 // Gráfico de Consumo
-                window.finRenderChartConsumo('all');
+                if (window.finInitFiltros) window.finInitFiltros();
+                else window.finRenderChartConsumo();
             });
 
         })
@@ -284,28 +296,59 @@ window.finAbrirSalidasFam = function(familia) {
 };
 
 window.finAbrirCritico = function() {
-    var tb = document.getElementById('fin-tb-modal-critico');
-    if (!tb) return;
+    window.finCriticoPag = 1;
+    window.finCriticoPorPag = 15;
+    window.finCriticoListOrd = (window.finCriticoList || []).sort(function(a,b){ return b.valor - a.valor; });
     
-    var html = '';
-    var list = (window.finCriticoList || []).sort(function(a,b){ return b.valor - a.valor; });
-    
-    list.forEach(function(item) {
-        html += '<tr>' +
-            '<td><span class="fin-td-nombre" style="width:100%;">' + item.articulo + '</span></td>' +
-            '<td><span class="fin-badge" style="background:#fee2e2;color:#dc2626;">' + item.stock + ' / ' + item.min + ' ' + item.unidad + '</span></td>' +
-            '<td class="fin-td-val" style="color:#dc2626;">S/ ' + item.valor.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
-            '</tr>';
-    });
-    
-    if (!list.length) html = '<tr><td colspan="3" class="text-center py-4 text-muted">No hay artículos en estado crítico.</td></tr>';
-    tb.innerHTML = html;
+    window.finRenderCritico();
     
     var modalEl = document.getElementById('finModalCritico');
     if (modalEl) {
         var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
     }
+};
+
+window.finRenderCritico = function() {
+    var tb = document.getElementById('fin-tb-modal-critico');
+    var pagEl = document.getElementById('fin-pag-modal-critico');
+    if (!tb) return;
+    
+    var inicio = (window.finCriticoPag - 1) * window.finCriticoPorPag;
+    var fin = inicio + window.finCriticoPorPag;
+    var slice = window.finCriticoListOrd.slice(inicio, fin);
+    
+    var html = '';
+    slice.forEach(function(item) {
+        html += '<tr>' +
+            '<td><span class="fin-td-nombre" style="width:100%;">' + item.articulo + '</span></td>' +
+            '<td><span class="fin-badge" style="background:#fee2e2;color:#dc2626;" title="Mínimo: '+item.min+'">' + item.stock + ' / ' + item.max + ' ' + item.unidad + '</span></td>' +
+            '<td class="fin-td-val" style="color:#dc2626;">S/ ' + item.valor.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' +
+            '</tr>';
+    });
+    
+    if (!slice.length) html = '<tr><td colspan="3" class="text-center py-4 text-muted">No hay artículos en estado crítico.</td></tr>';
+    tb.innerHTML = html;
+    
+    if (pagEl) {
+        var totalPag = Math.ceil(window.finCriticoListOrd.length / window.finCriticoPorPag) || 1;
+        if (totalPag > 1) {
+            var btnPrev = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finCriticoIrPag('+(window.finCriticoPag-1)+')" '+(window.finCriticoPag<=1?'disabled':'')+'><i class="bi bi-chevron-left"></i> Anterior</button>';
+            var btnNext = '<button class="btn btn-sm" style="border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-weight:600;" onclick="window.finCriticoIrPag('+(window.finCriticoPag+1)+')" '+(window.finCriticoPag>=totalPag?'disabled':'')+'>Siguiente <i class="bi bi-chevron-right"></i></button>';
+            var lbl = '<span style="font-size:0.8rem; font-weight:700; color:var(--subtext);">Pág. '+window.finCriticoPag+' / '+totalPag+'</span>';
+            pagEl.innerHTML = btnPrev + lbl + btnNext;
+        } else {
+            pagEl.innerHTML = '';
+        }
+    }
+};
+
+window.finCriticoIrPag = function(pag) {
+    var totalPag = Math.ceil(window.finCriticoListOrd.length / window.finCriticoPorPag) || 1;
+    if (pag < 1) pag = 1;
+    if (pag > totalPag) pag = totalPag;
+    window.finCriticoPag = pag;
+    window.finRenderCritico();
 };
 
 // Carga inicial al inyectar script
@@ -350,28 +393,74 @@ window.finAbrirInvFam = function(familia) {
 };
 
 
-window.finRenderChartConsumo = function(filtroMes) {
+window.finInitFiltros = function() {
+    if (!window.finSalData) return;
+    var anios = new Set();
+    window.finSalData.forEach(function(s) {
+        if (s.estado && s.estado !== 'Despachado') return;
+        var f = new Date(s.fecha_salida || s.fecha || s.created_at);
+        if (!isNaN(f.getTime())) anios.add(f.getFullYear());
+    });
+    var arrAnios = Array.from(anios).sort((a,b)=>b-a);
+    
+    var htmlAnio = '<option value="all">Todos los años</option>';
+    arrAnios.forEach(function(a) { htmlAnio += '<option value="'+a+'">'+a+'</option>'; });
+    var selA = document.getElementById('fin-filtro-anio');
+    if(selA) { selA.innerHTML = htmlAnio; selA.value = "all"; }
+    
+    window.finUpdateFiltroMes();
+};
+
+window.finUpdateFiltroMes = function() {
+    var selA = document.getElementById('fin-filtro-anio');
+    var selM = document.getElementById('fin-filtro-mes');
+    if (!selA || !selM || !window.finSalData) return;
+    
+    var selectedAnio = selA.value;
+    var mesesDisponibles = new Set();
+    
+    window.finSalData.forEach(function(s) {
+        if (s.estado && s.estado !== 'Despachado') return;
+        var f = new Date(s.fecha_salida || s.fecha || s.created_at);
+        if (isNaN(f.getTime())) return;
+        if (selectedAnio === 'all' || f.getFullYear() == selectedAnio) {
+            mesesDisponibles.add(f.getMonth());
+        }
+    });
+    
+    var nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var arrMeses = Array.from(mesesDisponibles).sort((a,b)=>b-a); // descendente: b-a ? No, mejor mes reciente primero? b-a
+    
+    var currVal = selM.value;
+    var htmlMes = '<option value="all">Todos los meses</option>';
+    arrMeses.forEach(function(m) { htmlMes += '<option value="'+m+'">'+nombres[m]+'</option>'; });
+    selM.innerHTML = htmlMes;
+    
+    if (arrMeses.includes(parseInt(currVal))) selM.value = currVal;
+    else selM.value = 'all';
+    
+    if (window.finRenderChartConsumo) window.finRenderChartConsumo();
+};
+
+window.finRenderChartConsumo = function() {
     if (!window.finSalData || !window.finInvData) return;
     
     var consumoFamilia = {};
     window.finSalidasPorFamilia = {};
     
-    var ahora = new Date();
-    var mesActual = ahora.getMonth();
-    var anioActual = ahora.getFullYear();
+    var selA = document.getElementById('fin-filtro-anio');
+    var selM = document.getElementById('fin-filtro-mes');
+    var filtroAnio = selA ? selA.value : 'all';
+    var filtroMes = selM ? selM.value : 'all';
     
     window.finSalData.forEach(function(salida) {
         if (salida.estado && salida.estado !== 'Despachado') return;
 
         var f = new Date(salida.fecha_salida || salida.fecha || salida.created_at);
+        if (isNaN(f.getTime())) return;
         
-        if (filtroMes === 'current') {
-            if (f.getMonth() !== mesActual || f.getFullYear() !== anioActual) return;
-        } else if (filtroMes === 'last') {
-            var mAnt = mesActual === 0 ? 11 : mesActual - 1;
-            var aAnt = mesActual === 0 ? anioActual - 1 : anioActual;
-            if (f.getMonth() !== mAnt || f.getFullYear() !== aAnt) return;
-        }
+        if (filtroAnio !== 'all' && f.getFullYear() != filtroAnio) return;
+        if (filtroMes !== 'all' && f.getMonth() != filtroMes) return;
 
         var ts = f.getTime();
         var dets = Array.isArray(salida.items) ? salida.items : (Array.isArray(salida.detalles) ? salida.detalles : []);

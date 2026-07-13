@@ -185,11 +185,14 @@
             <div class="fin-panel">
                 <div class="fin-panel-title" style="justify-content: space-between;">
                     <div><i class="bi bi-bar-chart-line-fill"></i> Familias de Mayor Consumo</div>
-                    <select id="fin-filtro-mes" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem; font-weight: normal;" onchange="if(window.finRenderChartConsumo) window.finRenderChartConsumo(this.value)">
-                        <option value="all">Histórico (Todo)</option>
-                        <option value="current">Mes Actual</option>
-                        <option value="last">Mes Anterior</option>
-                    </select>
+                    <div class="d-flex gap-2">
+                        <select id="fin-filtro-anio" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem; font-weight: normal;" onchange="if(window.finUpdateFiltroMes) window.finUpdateFiltroMes()">
+                            <option value="all">Todos los años</option>
+                        </select>
+                        <select id="fin-filtro-mes" class="form-select form-select-sm" style="width: auto; font-size: 0.8rem; font-weight: normal;" onchange="if(window.finRenderChartConsumo) window.finRenderChartConsumo()">
+                            <option value="all">Todos los meses</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="fin-chart-container">
                     <canvas id="fin-chart-consumo"></canvas>
@@ -312,8 +315,8 @@
                 <thead style="background:var(--surface); position:sticky; top:0; z-index:10;">
                     <tr>
                         <th style="width:100%;">Artículo</th>
-                        <th style="white-space:nowrap;">Stock / Mínimo</th>
-                        <th style="white-space:nowrap; text-align:right;">Valor (S/)</th>
+                        <th style="white-space:nowrap;">Stock / Máx</th>
+                        <th style="white-space:nowrap; text-align:right;">Valor Reposición (S/)</th>
                     </tr>
                 </thead>
                 <tbody id="fin-tb-modal-critico">
@@ -321,6 +324,7 @@
                 </tbody>
             </table>
           </div>
+          <div id="fin-pag-modal-critico" class="p-2 d-flex justify-content-end gap-3 align-items-center" style="background:var(--surface); border-top:1px solid var(--border); border-bottom-left-radius:16px; border-bottom-right-radius:16px;"></div>
         </div>
       </div>
     </div>
