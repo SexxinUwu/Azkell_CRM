@@ -125,14 +125,28 @@
     
     /* Loader */
     #fin-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; color: var(--subtext); }
+    @media print {
+        body * { visibility: hidden; }
+        #dash-fin-container, #dash-fin-container * { visibility: visible; }
+        #dash-fin-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
+        .fin-header button { display: none !important; }
+        .fin-chart-container { page-break-inside: avoid; }
+        .fin-kpi-card { page-break-inside: avoid; }
+        .fin-panel { page-break-inside: avoid; border: 1px solid #e2e8f0; box-shadow: none !important; }
+    }
 </style>
 
 <div id="dash-fin-container">
     <div class="fin-header">
         <div class="fin-title"><i class="bi bi-wallet2"></i> Dashboard Financiero</div>
-        <button class="btn btn-sm" style="background:#eff6ff;color:#2563eb;border-radius:10px;font-weight:700;" onclick="init_almacen_dashboard()">
-            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
-        </button>
+        <div style="display:flex; gap: 8px;">
+            <button class="btn btn-sm d-none d-md-flex" style="background:#f1f5f9;color:#475569;border-radius:10px;font-weight:700; align-items:center;" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i> Exportar a PDF
+            </button>
+            <button class="btn btn-sm" style="background:#eff6ff;color:#2563eb;border-radius:10px;font-weight:700; align-items:center;" onclick="init_almacen_dashboard()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            </button>
+        </div>
     </div>
 
     <!-- Loader -->
