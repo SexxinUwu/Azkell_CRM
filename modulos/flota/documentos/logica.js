@@ -338,51 +338,51 @@ function seleccionarVehiculo(placa, isInitialLoad = false) {
     renderCard('card-tc', 'TARJ. CIRC...', 1, 'bg-c1', [
         {label: 'N°', val: v.tc_constancia||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.tc_vencimiento)}
-    ], m[0]);
+    ], m[0], v.tc_url);
     
     renderCard('card-soat', 'SOAT', 2, 'bg-c2', [
         {label: 'Entidad', val: v.soat_entidad||'---'},
         {label: 'Pago', val: v.soat_pago||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.soat_vencimiento)}
-    ], m[1]);
+    ], m[1], v.soat_url);
         
     renderCard('card-matpel', 'MATPEL', 3, 'bg-c3', [
         {label: 'N°', val: v.matpel_constancia||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.matpel_vencimiento)}
-    ], m[2]);
+    ], m[2], v.matpel_url);
         
     renderCard('card-rt', 'REV. TÉCN...', 4, 'bg-c4', [
         {label: 'Emisión', val: formatearFechaVista(v.rt_emision)},
         {label: 'Vencimiento', val: formatearFechaVista(v.rt_vencimiento)}
-    ], m[3]);
+    ], m[3], v.rt_url);
         
     renderCard('card-boni', 'BONIFICA...', 5, 'bg-c5', [
         {label: 'Emisión', val: formatearFechaVista(v.boni_emision)},
         {label: 'Vencimiento', val: formatearFechaVista(v.boni_vencimiento)}
-    ], m[4]);
+    ], m[4], v.boni_url);
         
     renderCard('card-sv', 'SEG. VEHI...', 6, 'bg-c6', [
         {label: 'Entidad', val: v.sv_entidad||'---'},
         {label: 'Asesor', val: v.sv_asesor||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.sv_vencimiento)}
-    ], m[5]);
+    ], m[5], v.sv_url);
         
     renderCard('card-sc', 'SEG. CAR...', 7, 'bg-c7', [
         {label: 'Entidad', val: v.sc_entidad||'---'},
         {label: 'Asesor', val: v.sc_asesor||'---'},
         {label: 'Vencimiento', val: formatearFechaVista(v.sc_vencimiento)}
-    ], m[6]);
+    ], m[6], v.sc_url);
         
     renderCard('card-fum', 'FUMIGACI...', 8, 'bg-c8', [
         {label: 'Emisión', val: formatearFechaVista(v.fum_emision)},
         {label: 'Vencimiento', val: formatearFechaVista(v.fum_vencimiento)}
-    ], m[7]);
+    ], m[7], v.fum_url);
         
     renderCard('card-ext', 'EXTINTOR...', 9, 'bg-c9', [
         {label: 'Cantidad', val: v.ext_cantidad||1},
         {label: 'Emisión', val: formatearFechaVista(v.ext_emision)},
         {label: 'Vencimiento', val: formatearFechaVista(v.ext_vencimiento)}
-    ], m[8]);
+    ], m[8], v.ext_url);
 }
 
 function renderizarMatriz() {
