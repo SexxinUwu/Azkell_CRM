@@ -126,13 +126,36 @@
     /* Loader */
     #fin-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; color: var(--subtext); }
     @media print {
+        @page { size: landscape; margin: 1cm; }
+        html, body { height: auto !important; min-height: auto !important; overflow: visible !important; }
         body * { visibility: hidden; }
+        
         #dash-fin-container, #dash-fin-container * { visibility: visible; }
-        #dash-fin-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
+        #dash-fin-container { 
+            position: absolute; left: 0; top: 0; width: 100%; 
+            padding: 0 !important; margin: 0 !important; 
+            height: auto !important; overflow: visible !important;
+            background: white !important;
+        }
+        
         .fin-header button { display: none !important; }
-        .fin-chart-container { page-break-inside: avoid; }
-        .fin-kpi-card { page-break-inside: avoid; }
-        .fin-panel { page-break-inside: avoid; border: 1px solid #e2e8f0; box-shadow: none !important; }
+        
+        /* Convertir grids a block para que apilen de forma natural y no se rompa la hoja */
+        .fin-chart-grid, .fin-table-grid { display: block !important; }
+        
+        .fin-panel { 
+            page-break-inside: avoid; 
+            border: 1px solid #e2e8f0 !important; 
+            box-shadow: none !important; 
+            margin-bottom: 20px !important; 
+            width: 100% !important; 
+        }
+        
+        /* Ajustar altura de los gráficos en modo impresión para que no ocupen demasiado */
+        .fin-chart-container { height: 320px !important; page-break-inside: avoid; }
+        
+        /* Evitar scrolls en tablas */
+        .fin-table-container, .modal-body { max-height: none !important; overflow: visible !important; }
     }
 </style>
 
