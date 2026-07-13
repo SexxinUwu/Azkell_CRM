@@ -254,9 +254,21 @@ router.get('/notificaciones/resumen', (req, res) => {
 });
 
 router.get('/inventario', (req, res) => {
-    db.query(_stockSQL, (err, rows) => {
+    db.query(_stockSQL, async (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+        const signedRows = await Promise.all(rows.map(async (row) => {
+            if (row.imagen_url) {
+                const key = s3KeyFromUrl(row.imagen_url);
+                if (key) {
+                    try {
+                        row.imagen_url = await getPresignedUrl(key, 3600);
+                    } catch(e) {}
+                }
+            }
+            return row;
+        }));
+        res.json(signedRows);
     });
 });
 
