@@ -1146,6 +1146,7 @@ window.srEnviarOT = function() {
     var sitIni     = (document.getElementById('sr-ot-situacion')  || {}).value || '';
     var sistema    = ((document.getElementById('sr-ot-sistema')   || {}).value || '').trim();
     var subsistema = ((document.getElementById('sr-ot-subsistema')|| {}).value || '').trim();
+    var fechaIng   = (document.getElementById('sr-ot-fecha-ing')  || {}).value || '';
 
     if (!tipo)    { alert('Selecciona el tipo de OT.');     return; }
     if (!subtipo) { alert('Selecciona el sub tipo de OT.'); return; }
@@ -1157,6 +1158,7 @@ window.srEnviarOT = function() {
         body: JSON.stringify({
             placa:        placa,
             estado:       'Pendiente',
+            fecha_ingreso: fechaIng,
             id_rampa:     idRampa,
             detalles_json: JSON.stringify({
                 tipo_ot:           tipo,
