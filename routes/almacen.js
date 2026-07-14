@@ -188,6 +188,7 @@ const _stockSQL = `
       -- así que lo incluiremos en el JOIN interno para poder agrupar.
       JOIN inventario inv ON inv.id = d.inventario_id
       WHERE (inv.fecha_regularizacion IS NULL OR DATE(e.created_at) >= DATE(inv.fecha_regularizacion))
+        AND (e.estado IS NULL OR e.estado != 'Anulado')
       GROUP BY d.inventario_id
   ) ent ON ent.inventario_id = i.id
   LEFT JOIN (
@@ -821,6 +822,18 @@ router.delete('/entradas/:id', (req, res) => {
     });
 });
 
+router.put('/entradas/:id/anular', (req, res) => {
+    const { id } = req.params;
+    const { motivo } = req.body;
+    db.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
+        ['Anulado', String(motivo || '').trim(), id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); } 
+            res.json({ ok: true });
+        }
+    );
+});
+
 // ============================================================
 // ALMACÉN — Salidas
 // ============================================================
@@ -982,7 +995,7 @@ router.get('/kardex/:inventario_id', (req, res) => {
         db.query(`
             SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
-            WHERE d.inventario_id=?
+            WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado')
             UNION ALL
             SELECT 'Salida' AS tipo, s.fecha, s.created_at, s.id AS doc_id, CONCAT(s.tipo_destino,' / ',COALESCE(s.placa,s.responsable,'—')) AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
             FROM detalle_salidas_inv d JOIN salidas_inv s ON s.id=d.salida_id
