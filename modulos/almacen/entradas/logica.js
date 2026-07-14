@@ -676,6 +676,8 @@ window._entRender = function() {
     var pagina = datos.slice((pag - 1) * _ENT_POR_PAG, pag * _ENT_POR_PAG);
     var canDelete = window.checkPerm('ent_inv', 'd');
     var canEdit = window.checkPerm('ent_inv', 'u');
+    var isAdmin = localStorage.getItem('fleet_role') === 'Administrador';
+    var todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Lima'});
 
     var cont = document.getElementById('ent-contador');
     if (cont) cont.textContent = total + ' registro' + (total !== 1 ? 's' : '');
@@ -692,6 +694,9 @@ window._entRender = function() {
     tbody.innerHTML = '';
     pagina.forEach(function(d) {
         var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+        var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
+        var canEditRow = canEdit && (isAdmin || dCreated === todayStr);
+
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = 'S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         var items = d.items || [];
@@ -713,7 +718,7 @@ window._entRender = function() {
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                        (canEdit ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                        (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                         (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                     '</div>' +
                 '</td>';
@@ -763,7 +768,7 @@ window._entRender = function() {
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                            (canEdit ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                            (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                             (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                         '</div>'
                     : '') +
