@@ -1097,7 +1097,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     function formatDT(iso) {
         if (!iso) return { d: '—', h: '—' };
         try {
-            var d = new Date(iso);
+            var s = typeof iso === 'string' ? iso.replace('Z', '') : iso;
+            var d = new Date(s);
             if (isNaN(d.getTime())) return { d: '—', h: '—' };
             var dd = String(d.getDate()).padStart(2,'0');
             var mm = String(d.getMonth()+1).padStart(2,'0');
