@@ -112,7 +112,7 @@ window._entCargarConfig = function() {
 };
 
 window._entCargarPlacas = function() {
-    fetch('/api/mantenimiento/vehiculos')
+    fetch('/api/placas-lista')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var items = data.map(function(v) { return { value: v.placa, label: v.placa }; })
