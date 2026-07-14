@@ -1167,5 +1167,10 @@ router.get('/valorizado', (req, res) => {
 
 
 
+    router.use((err, req, res, next) => {
+        console.error('Almacen Router Error:', err);
+        res.status(500).json({ error: 'Router Error: ' + err.message, stack: err.stack });
+    });
+
     return router;
 };
