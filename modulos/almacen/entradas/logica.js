@@ -113,9 +113,8 @@ window._entCargarConfig = function() {
 window._entCargarProveedores = function() {
     var fechaEl = document.getElementById('ent-f-fecha');
     if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
-    if (window._entProvItems.length) {
+    if (window._entProvItems && window._entProvItems.length) {
         window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
-        return;
     }
     fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })

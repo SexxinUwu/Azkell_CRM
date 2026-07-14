@@ -520,6 +520,15 @@ window.filtrarInventario = function() {
 
         return matchB && matchF && matchS;
     });
+
+    window._invFiltrados.sort(function(a, b) {
+        var minA = parseFloat(a.stock_min || 0);
+        var minB = parseFloat(b.stock_min || 0);
+        if (minA === 0 && minB !== 0) return 1;
+        if (minA !== 0 && minB === 0) return -1;
+        return 0;
+    });
+
     window._invPagActual = 1;
     window._invRender();
 };
@@ -669,6 +678,9 @@ function _invRenderCard(d) {
             '</div>' +
             '<p style="font-size:0.75rem; font-weight:600; color:#9ca3af; margin:0.25rem 0 0 0;">' +
                 'S/ ' + costo +
+            '</p>' +
+            '<p style="font-size:0.625rem; font-weight:600; color:#6b7280; margin:0.25rem 0 0 0;">' +
+                'MIN: ' + parseFloat(d.stock_min||0) + ' | MÁX: ' + parseFloat(d.stock_max||0) +
             '</p>' +
         '</div>' +
     '</div>';
@@ -1050,6 +1062,11 @@ function _invResetImageUI(item) {
 
 function _invSetField(id, val) {
     var v = val != null ? val : '';
+    if (typeof v === 'string' && /^-?\d+[.,]\d+$/.test(v)) {
+        v = v.replace(/([.,]\d*?[1-9])0+$/, '$1').replace(/[.,]0+$/, '');
+    } else if (typeof v === 'number') {
+        v = v.toString();
+    }
     var el = document.getElementById(id);
     if (el) el.value = v;
     // Si el campo tiene combobox, actualizar también el input de texto
