@@ -207,6 +207,7 @@ function mostrarFleetrun(datos) {
                   <td><span class="badge bg-light text-primary border border-primary shadow-sm px-2 py-1"><i class="bi bi-arrow-repeat me-1"></i>${frecuencia.toLocaleString()}</span></td>
                   <td class="text-center" style="font-size:0.8rem;">${obs ? obs + '<br>' : ''}${obsBadgeHtml}</td>
                   <td style="color: #64748b; font-weight: bold;" class="text-center">${km_desde.toLocaleString()}</td>
+                  <td style="font-size:0.75rem;">${wialonData ? (wialonData.ubicacion || wialonData.direccion || wialonData.location || (wialonData.lat ? (wialonData.lat + ', ' + wialonData.lng) : '-')) : '-'}</td>
                   <td>${menuAcciones}</td>
               </tr>`;
           });
