@@ -1133,8 +1133,11 @@ window.srCambiarTipoOT = function() {
 // ── Enviar OT ────────────────────────────────────────────────────
 window.srEnviarOT = function() {
     var placa      = (document.getElementById('sr-ot-placa-hid') || {}).value || '';
-    var rampa      = (document.getElementById('sr-ot-rampa-hid') || {}).value || '';
+    var rampaId    = (document.getElementById('sr-ot-rampa-hid') || {}).value || '';
     var idRampa    = (document.getElementById('sr-ot-id-rampa-hid') || {}).value || null;
+    var rIdx = window.srCatRampas.findIndex(function(r) { return r.id == rampaId; });
+    var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
+    var rampa = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + rampaId) : ('Rampa ' + rampaId);
     var tipo       = (document.getElementById('sr-ot-tipo')       || {}).value || '';
     var subtipo    = (document.getElementById('sr-ot-subtipo')    || {}).value || '';
     var supervisor = (document.getElementById('sr-ot-supervisor') || {}).value || '';
