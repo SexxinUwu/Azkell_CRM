@@ -577,7 +577,7 @@ window.abrirModalEntrada = function() {
 };
 
 window.abrirModalEditarEntrada = function(id) {
-    var entrada = (window.dataGlobalEntradas || []).find(function(e) { return e.id === id; });
+    var entrada = (window._entData || []).find(function(e) { return e.id === id; });
     if (!entrada) return alert('No se encontró la entrada');
     
     window.abrirModalEntrada(); // Resetea y abre el panel
