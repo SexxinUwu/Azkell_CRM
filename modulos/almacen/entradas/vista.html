@@ -640,25 +640,30 @@
       </div>
 
       <!-- Archivos Adjuntos -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-top:12px;">
-        <label class="ent-file-upload">
-          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
-          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">VOUCHER</span>
-          <input type="file" id="ent-f-voucher" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
-          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
-        </label>
-        <label class="ent-file-upload">
-          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
-          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">COTIZACIÓN</span>
-          <input type="file" id="ent-f-cotizacion" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
-          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
-        </label>
-        <label class="ent-file-upload">
-          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
-          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">FACTURA</span>
-          <input type="file" id="ent-f-factura" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
-          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
-        </label>
+      <div style="margin-top:16px;border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface);">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--subtext);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-paperclip" style="font-size:1.1rem;color:#3b82f6;"></i> DOCUMENTOS ADJUNTOS
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;">
+          <label class="ent-file-upload">
+            <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">VOUCHER</span>
+            <input type="file" id="ent-f-voucher" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor=this.files[0]?'#16a34a':'var(--border)'; this.parentElement.style.background=this.files[0]?'rgba(22, 163, 74, 0.05)':'var(--bg)';">
+            <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+          </label>
+          <label class="ent-file-upload">
+            <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">COTIZACIÓN</span>
+            <input type="file" id="ent-f-cotizacion" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor=this.files[0]?'#16a34a':'var(--border)'; this.parentElement.style.background=this.files[0]?'rgba(22, 163, 74, 0.05)':'var(--bg)';">
+            <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+          </label>
+          <label class="ent-file-upload">
+            <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+            <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">FACTURA</span>
+            <input type="file" id="ent-f-factura" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor=this.files[0]?'#16a34a':'var(--border)'; this.parentElement.style.background=this.files[0]?'rgba(22, 163, 74, 0.05)':'var(--bg)';">
+            <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+          </label>
+        </div>
       </div>
     </div>
 
