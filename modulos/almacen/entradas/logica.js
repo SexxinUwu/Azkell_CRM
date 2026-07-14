@@ -453,6 +453,10 @@ window.guardarEntrada = function() {
 
     if (!fecha)  { alert('Falta la fecha.'); return; }
     if (!provId) { alert('Selecciona un proveedor.'); return; }
+    if (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; })) {
+        alert('El proveedor ingresado no existe en la lista. Por favor, regístrelo primero.');
+        return;
+    }
 
     var invIds = document.querySelectorAll('.ent-item-inv-id');
     var descs  = document.querySelectorAll('.ent-item-desc');
@@ -464,6 +468,10 @@ window.guardarEntrada = function() {
         var invId = invIds[i] ? invIds[i].value : '';
         var desc  = descs[i]  ? descs[i].value  : '';
         if (!invId && !desc) continue;
+        if (!invId) { 
+            alert('El artículo "' + desc + '" en la fila ' + (i+1) + ' no existe en el inventario. Seleccione uno de la lista autocompletada.'); 
+            return; 
+        }
         var cant = parseFloat(cants[i].value) || 0;
         var pu   = parseFloat(pus[i] ? pus[i].value : 0) || 0;
         var imp  = parseFloat(imps[i].value) || cant * pu;
