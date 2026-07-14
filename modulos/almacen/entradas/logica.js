@@ -524,7 +524,17 @@ window.guardarEntrada = function() {
             var uploadFile = async function(file, tipo) {
                 var fd = new FormData();
                 fd.append('archivo', file);
-                await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
+                try {
+                    var res = await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
+                    if (!res.ok) {
+                        var text = await res.text();
+                        alert('Error al subir ' + tipo + ': ' + text);
+                        throw new Error('Upload error: ' + text);
+                    }
+                } catch (err) {
+                    alert('Fallo de conexión o subida para ' + tipo + ': ' + err.message);
+                    throw err;
+                }
             };
 
             try {
@@ -839,10 +849,10 @@ window._entRender = function() {
             tr.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
-                '<td class="text-center col-hide-mob">' + (isFirst ? estadoHtml : '') + '</td>' +
-                '<td class="col-hide-mob">' + (isFirst ? placaHtml : '') + '</td>' +
-                '<td class="col-hide-mob">' + (isFirst ? motivoHtml : '') + '</td>' +
-                '<td class="col-hide-mob">' + provHtml + '</td>' +
+                '<td class="text-center">' + (isFirst ? estadoHtml : '') + '</td>' +
+                '<td>' + (isFirst ? placaHtml : '') + '</td>' +
+                '<td>' + (isFirst ? motivoHtml : '') + '</td>' +
+                '<td>' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
@@ -902,7 +912,9 @@ window._entAbrirDetalle = function(id) {
 
     html += '<div class="ent-sec">';
     html += '<div class="ent-sec-hd">Información General</div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Proveedor</div><div class="ent-field-val">' + _entEsc(d.proveedor_nombre || '—') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Placa</div><div class="ent-field-val">' + _entEsc(d.placa || '-') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Motivo</div><div class="ent-field-val">' + _entEsc(d.motivo_entrada || '-') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Proveedor</div><div class="ent-field-val">' + _entEsc(d.proveedor_nombre || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Doc. Referencia</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '—') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Moneda</div><div class="ent-field-val">' + monSim + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Total PEN</div><div class="ent-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div></div>';
