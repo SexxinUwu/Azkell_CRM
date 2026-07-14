@@ -118,10 +118,18 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
     const { accion, estado, detalles_json, fecha_hora_salida, detalles_cierre, usuario } = req.body;
 
     if (accion === 'iniciar') {
-        const { iniciado_por } = req.body;
+        const { iniciado_por, fecha_inicio } = req.body;
+        let q = "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=NOW(), iniciado_por=? WHERE ticket_entrada=?";
+        let params = [iniciado_por || null, ticketId];
+
+        if (fecha_inicio) {
+            q = "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=?, iniciado_por=? WHERE ticket_entrada=?";
+            params = [fecha_inicio, iniciado_por || null, ticketId];
+        }
+
         db.query(
-            "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=NOW(), iniciado_por=? WHERE ticket_entrada=?",
-            [iniciado_por || null, ticketId],
+            q,
+            params,
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });

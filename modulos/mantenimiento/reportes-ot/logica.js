@@ -41,6 +41,7 @@ function rotCargarSituaciones() {
         .then(function(r) { return r.ok ? r.json() : {}; })
         .then(function(d) {
             window._rotCatSituaciones = (d && d.situaciones) ? d.situaciones : [];
+            window._rotCatRampas = (d && d.rampas) ? d.rampas : [];
             rotPoblarSelectSituacion();
         })
         .catch(function() {});
@@ -316,7 +317,10 @@ window.rotAbrirDetalle = function(idOT) {
     // Datos Generales
     html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
     html += fld('Placa',      esc(ot.placa || '-'));
-    html += fld('Rampa',      esc(det.rampa_origen || '-'));
+    var rId = det.rampa_origen || '';
+    var rObj = (window._rotCatRampas || []).find(function(x) { return x.id == rId; });
+    var rName = rObj ? (rObj.descripcion || rObj.nombre || rId) : rId;
+    html += fld('Rampa',      esc(rName || '-'));
     html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '-'));
     html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
@@ -709,10 +713,18 @@ window.rotAccion = function(accion, idOT) {
     if (accion === 'iniciar') {
         if (!window.guardAction('ot', 'e')) return;
         rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
+            var fInicio = ot.fecha_ingreso || ot.creado_en || null;
+            if (fInicio) {
+                var d = new Date(fInicio);
+                if (!isNaN(d.getTime())) {
+                    var p = function(n){ return n<10?'0'+n:n; };
+                    fInicio = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+                } else { fInicio = null; }
+            }
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '' })
+                body: JSON.stringify({ accion: 'iniciar', iniciado_por: localStorage.getItem('fleet_correo') || '', fecha_inicio: fInicio })
             })
             .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
             .then(function() {
