@@ -684,9 +684,10 @@ router.delete('/marcas/:id', (req, res) => {
 // ALMACÉN — Entradas
 // ============================================================
 router.get('/entradas', (req, res) => {
-    db.query(`SELECT e.*, GROUP_CONCAT(CONCAT(d.descripcion,'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
+    db.query(`SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion),'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
               FROM entradas_inv e
               LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
+              LEFT JOIN inventario i ON d.inventario_id = i.id
               GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         rows.forEach(r => {
@@ -771,7 +772,7 @@ router.get('/salidas', (req, res) => {
     db.query(`SELECT s.*,
               GROUP_CONCAT(CONCAT_WS('\x1F',
                 COALESCE(d.inventario_id,''),
-                COALESCE(d.descripcion,''),
+                COALESCE(i.descripcion, d.descripcion,''),
                 COALESCE(d.cantidad,0),
                 COALESCE(d.costo_unitario,0),
                 COALESCE(d.moneda,'PEN'),
@@ -779,6 +780,7 @@ router.get('/salidas', (req, res) => {
               ) SEPARATOR '\x1E') AS items_raw
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
+              LEFT JOIN inventario i ON d.inventario_id = i.id
               GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC LIMIT 300`, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         rows.forEach(r => {
