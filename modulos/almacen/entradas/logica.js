@@ -632,6 +632,24 @@ window.eliminarEntrada = function(id) {
         .catch(function(err) { alert('Error: '+err.message); });
 };
 
+window.anularEntrada = function(id) {
+    if (!window.checkPerm('ent_inv', 'd')) return;
+    var motivo = prompt('Motivo de anulación para la entrada ' + id + ':');
+    if (motivo === null) return;
+    if (!motivo.trim()) return alert('Debe ingresar un motivo para anular.');
+    fetch('/api/almacen/entradas/' + encodeURIComponent(id) + '/anular', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ motivo: motivo })
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r) {
+        if (window._entDetalleId === id) window._entCerrarDetalle();
+        window.cargarEntradas();
+    })
+    .catch(function(err) { alert('Error: ' + err.message); });
+};
+
 // ── Filtrar + Render ──────────────────────────────────────────────
 window.filtrarEntradas = function() {
     var buscar  = ((document.getElementById('ent-buscar')     ||{}).value||'').toLowerCase();
@@ -694,14 +712,16 @@ window._entRender = function() {
     tbody.innerHTML = '';
     pagina.forEach(function(d) {
         var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+        var isAnulado = d.estado === 'Anulado';
         var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
-        var canEditRow = canEdit && (isAdmin || dCreated === todayStr);
+        var canEditRow = canEdit && !isAnulado && (isAdmin || dCreated === todayStr);
 
         var tp = parseFloat(d.total_pen || 0);
-        var totalFmt = 'S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var totalFmt = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : ('<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>');
         var items = d.items || [];
         var isActive = d.id === window._entDetalleId;
         var activeCls = isActive ? ' ent-row-active' : '';
+        if (isAnulado) activeCls += ' text-muted text-decoration-line-through opacity-75';
 
         if (!items.length) {
             var tr0 = document.createElement('tr');
@@ -713,13 +733,14 @@ window._entRender = function() {
                 '<td class="col-hide-mob" colspan="2" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
                 '<td class="text-end col-hide-mob"></td>' +
-                '<td class="text-end col-hide-mob"><strong style="color:#16a34a;">' + totalFmt + '</strong></td>' +
+                '<td class="text-end col-hide-mob">' + totalFmt + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
                         (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                        (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                        (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
+                        (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                     '</div>' +
                 '</td>';
             tr0.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
@@ -762,14 +783,15 @@ window._entRender = function() {
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-                '<td class="text-end col-hide-mob">' + (isFirst ? '<strong style="color:#16a34a;">' + totalFmt + '</strong>' : '') + '</td>' +
+                '<td class="text-end col-hide-mob">' + (isFirst ? totalFmt : '') + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
                             (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                            (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                            (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
+                            (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                         '</div>'
                     : '') +
                 '</td>';
