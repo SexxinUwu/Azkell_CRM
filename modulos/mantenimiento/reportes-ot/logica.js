@@ -857,7 +857,11 @@ window.rotExportar = function() {
         return;
     }
 
-    var fmtD = function(d) { return d ? d.toISOString().replace('T',' ').substring(0,16) : ''; };
+    var fmtD = function(d) {
+        if (!d) return '';
+        var pad = function(n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    };
     var str  = function(v) { return String(v == null ? '' : v); };
 
     var encabezado = [
