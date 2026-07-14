@@ -37,6 +37,7 @@ window.init_entradas = function() {
     window._entPagActual = 1;
     window.cargarEntradas();
     window._entCargarProveedores();
+    window._entCargarPlacas();
     window._entCargarConfig();
     window._entMobileInit();
     if (!window._entInvData.length) window._entCargarInv();
@@ -107,6 +108,17 @@ window._entCargarConfig = function() {
             window._entTC = parseFloat(cfg.tipo_cambio) || 3.70;
             var tcEl = document.getElementById('ent-f-tc');
             if (tcEl) tcEl.value = window._entTC.toFixed(3);
+        }).catch(function() {});
+};
+
+window._entCargarPlacas = function() {
+    fetch('/api/mantenimiento/vehiculos')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var items = data.map(function(v) { return { value: v.placa, label: v.placa }; })
+                .filter(function(x) { return x.value; })
+                .sort(function(a,b){ return a.label.localeCompare(b.label); });
+            window._cbInit('ent-f-placa', items, 'Buscar placa...');
         }).catch(function() {});
 };
 
@@ -450,6 +462,8 @@ window.guardarEntrada = function() {
     var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
     var obs    = (document.getElementById('ent-f-obs')     || {}).value || '';
+    var motivo = (document.getElementById('ent-f-motivo')  || {}).value || '';
+    var placa  = window._cbGet('ent-f-placa') || '';
 
     if (!fecha)  { alert('Falta la fecha.'); return; }
     if (!provId) { alert('Selecciona un proveedor.'); return; }
@@ -492,6 +506,8 @@ window.guardarEntrada = function() {
             ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70)
             : 1,
         observaciones: obs,
+        motivo_entrada: motivo,
+        placa: placa,
         creado_por: localStorage.getItem('fleet_user')||'', items };
 
     var method = window._entEditId ? 'PUT' : 'POST';
@@ -583,6 +599,13 @@ window.abrirModalEditarEntrada = function(id) {
             obsBtn.style.background = '#e0e7ff';
             obsBtn.style.color = '#4338ca';
         }
+    }
+
+    var fMotivo = document.getElementById('ent-f-motivo');
+    if (fMotivo) fMotivo.value = entrada.motivo_entrada || '';
+    
+    if (entrada.placa) {
+        window._cbSet('ent-f-placa', entrada.placa, entrada.placa);
     }
 
     if (entrada.proveedor_id) {
@@ -742,6 +765,8 @@ window._entRender = function() {
         var tp = parseFloat(d.total_pen || 0);
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var estadoHtml = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : '<span class="badge" style="background-color:#16a34a;">REGISTRADA</span>';
+        var placaHtml = d.placa ? '<span class="badge bg-secondary fw-normal">' + _entEsc(d.placa) + '</span>' : '<span class="text-muted small">—</span>';
+        var motivoHtml = d.motivo_entrada ? '<span style="font-size:0.75rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
         
         var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
         var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
@@ -759,6 +784,8 @@ window._entRender = function() {
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
+                '<td class="col-hide-mob">' + placaHtml + '</td>' +
+                '<td class="col-hide-mob">' + motivoHtml + '</td>' +
                 '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
                 '<td class="col-hide-mob" style="color:var(--subtext);font-size:.78rem;"></td>' +
                 '<td class="col-articulo" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
@@ -813,6 +840,8 @@ window._entRender = function() {
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? estadoHtml : '') + '</td>' +
+                '<td class="col-hide-mob">' + (isFirst ? placaHtml : '') + '</td>' +
+                '<td class="col-hide-mob">' + (isFirst ? motivoHtml : '') + '</td>' +
                 '<td class="col-hide-mob">' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +

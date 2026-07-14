@@ -2394,6 +2394,15 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
+    // Migración: añadir motivo y placa a entradas_inv
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='motivo_entrada'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN motivo_entrada VARCHAR(255) DEFAULT NULL, ADD COLUMN placa VARCHAR(50) DEFAULT NULL", () => {});
+            }
+        }
+    );
     // Migración: añadir url_firma a inspecciones si no existe
     db.query(
         "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspecciones' AND COLUMN_NAME='url_firma'",

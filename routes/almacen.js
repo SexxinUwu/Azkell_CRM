@@ -707,15 +707,15 @@ router.get('/entradas', (req, res) => {
     });
 });
 router.post('/entradas', (req, res) => {
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items } = req.body;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items, motivo_entrada, placa } = req.body;
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null],
+             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
@@ -761,13 +761,13 @@ router.post('/entradas', (req, res) => {
 });
 router.put('/entradas/:id', (req, res) => {
     const { id } = req.params;
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items } = req.body;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items, motivo_entrada, placa } = req.body;
     const tc = parseFloat(tipo_cambio) || 1;
     const total_pen = _calcularTotalPen(items || [], tc);
 
-    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=? WHERE id=?',
+    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=?, motivo_entrada=?, placa=? WHERE id=?',
         [fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', id],
+         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             
