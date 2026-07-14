@@ -202,6 +202,25 @@
 #moduloEntradas .ent-field:last-child { border-bottom:none; }
 #moduloEntradas .ent-field-lbl { width:40%; color:var(--subtext); font-weight:600; font-size:.78rem; }
 #moduloEntradas .ent-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
+
+#moduloEntradas .ent-file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 12px 10px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    height: 100%;
+}
+#moduloEntradas .ent-file-upload:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
 </style>
 
 <div id="moduloEntradas" class="modulo-wrapper d-flex flex-column h-100">
@@ -401,6 +420,8 @@
             <th>Código</th>
             <th>Fecha</th>
             <th class="text-center col-hide-mob" style="font-size:0.65rem;">ESTADO</th>
+            <th class="col-hide-mob">Placa</th>
+            <th class="col-hide-mob">Motivo</th>
             <th class="col-hide-mob">Proveedor</th>
             <th class="col-hide-mob" style="font-size:0.65rem;">Cód. Art.</th>
             <th class="col-articulo">Artículo</th>
@@ -562,6 +583,26 @@
           </div>
         </div>
 
+        <!-- Placa -->
+        <div>
+          <div class="ent-field-label">Placa / Vehículo</div>
+          <div class="position-relative">
+            <input type="text" id="ent-f-placa-txt" class="ent-input-sm"
+                   placeholder="Buscar placa..." autocomplete="off"
+                   oninput="window._entCbFiltrar('ent-f-placa')"
+                   onfocus="window._entCbFiltrar('ent-f-placa')"
+                   onblur="window._cbHide('ent-f-placa')">
+            <input type="hidden" id="ent-f-placa">
+            <div id="ent-f-placa-dd" class="cb-dropdown"></div>
+          </div>
+        </div>
+
+        <!-- Motivo -->
+        <div>
+          <div class="ent-field-label">Motivo</div>
+          <input type="text" id="ent-f-motivo" class="ent-input-sm" placeholder="Motivo de ingreso...">
+        </div>
+
         <!-- Proveedor -->
         <div style="grid-column:1/-1;">
           <div class="ent-field-label">Proveedor <span style="color:#ef4444;">*</span></div>
@@ -599,19 +640,25 @@
       </div>
 
       <!-- Archivos Adjuntos -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-top:12px;">
-        <div>
-          <div class="ent-field-label" style="font-size:0.65rem;">SUBIR VOUCHER</div>
-          <input type="file" id="ent-f-voucher" class="ent-input-sm" style="padding:4px; font-size:0.75rem;">
-        </div>
-        <div>
-          <div class="ent-field-label" style="font-size:0.65rem;">SUBIR ARCHIVO DE COTIZACIÓN</div>
-          <input type="file" id="ent-f-cotizacion" class="ent-input-sm" style="padding:4px; font-size:0.75rem;">
-        </div>
-        <div>
-          <div class="ent-field-label" style="font-size:0.65rem;">SUBIR ARCHIVO DE FACTURA</div>
-          <input type="file" id="ent-f-factura" class="ent-input-sm" style="padding:4px; font-size:0.75rem;">
-        </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-top:12px;">
+        <label class="ent-file-upload">
+          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">VOUCHER</span>
+          <input type="file" id="ent-f-voucher" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
+          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+        </label>
+        <label class="ent-file-upload">
+          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">COTIZACIÓN</span>
+          <input type="file" id="ent-f-cotizacion" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
+          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+        </label>
+        <label class="ent-file-upload">
+          <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
+          <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">FACTURA</span>
+          <input type="file" id="ent-f-factura" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor='#16a34a';">
+          <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
+        </label>
       </div>
     </div>
 
