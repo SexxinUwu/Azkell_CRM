@@ -494,11 +494,15 @@ window.guardarEntrada = function() {
         observaciones: obs,
         creado_por: localStorage.getItem('fleet_user')||'', items };
 
-    fetch('/api/almacen/entradas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    var method = window._entEditId ? 'PUT' : 'POST';
+    var url = window._entEditId ? '/api/almacen/entradas/' + window._entEditId : '/api/almacen/entradas';
+
+    fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(r) {
             window._entCerrarModal();
-            alert('✅ Entrada registrada: '+r.id);
+            alert('✅ Entrada ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+r.id);
+            window._entEditId = null;
             window.cargarEntradas();
         })
         .catch(function(err) { alert('Error: '+err.message); });
@@ -506,6 +510,7 @@ window.guardarEntrada = function() {
 
 // ── Abrir panel ───────────────────────────────────────────────────
 window.abrirModalEntrada = function() {
+    window._entEditId = null;
     var cards = document.getElementById('ent-items-cards');
     if (cards) cards.innerHTML = '';
     window._entItemIdx = 0;
@@ -534,6 +539,75 @@ window.abrirModalEntrada = function() {
     var bd    = document.getElementById('ent-entrada-bd');
     if (panel) panel.classList.add('open');
     if (bd)    bd.style.display = 'block';
+};
+
+window.abrirModalEditarEntrada = function(id) {
+    var entrada = (window.dataGlobalEntradas || []).find(function(e) { return e.id === id; });
+    if (!entrada) return alert('No se encontró la entrada');
+    
+    window.abrirModalEntrada(); // Resetea y abre el panel
+    window._entEditId = id; // Sobrescribimos el reset
+
+    var fFecha = document.getElementById('ent-f-fecha');
+    if (fFecha && entrada.fecha) fFecha.value = String(entrada.fecha).split('T')[0];
+
+    var docRef = document.getElementById('ent-f-doc-ref');
+    if (docRef) docRef.value = entrada.documento_referencia || '';
+
+    var fObs = document.getElementById('ent-f-obs');
+    if (fObs) {
+        fObs.value = entrada.observaciones || '';
+        var obsRow = document.getElementById('ent-obs-row');
+        if (obsRow && entrada.observaciones) obsRow.style.display = 'flex';
+        var obsBtn = document.getElementById('ent-obs-toggle');
+        if (obsBtn && entrada.observaciones) {
+            obsBtn.style.background = '#e0e7ff';
+            obsBtn.style.color = '#4338ca';
+        }
+    }
+
+    if (entrada.proveedor_id) {
+        window._cbSet('ent-f-proveedor', entrada.proveedor_id, entrada.proveedor_nombre);
+    } else if (entrada.proveedor_nombre) {
+        var el = document.getElementById('ent-f-proveedor-txt');
+        if (el) el.value = entrada.proveedor_nombre;
+    }
+
+    var mon = document.getElementById('ent-f-moneda');
+    if (mon && entrada.moneda) mon.value = entrada.moneda;
+    window._entOnMonedaChange();
+
+    window._entSetIgvMode(entrada.tipo_igv || 'sin_igv');
+
+    var cards = document.getElementById('ent-items-cards');
+    if (cards) cards.innerHTML = '';
+    window._entItemIdx = 0;
+
+    var items = entrada.items || [];
+    items.forEach(function(it) {
+        window._entAgregarItem();
+        var idx = window._entItemIdx - 1;
+        var cbId = 'ent-art-' + idx;
+        
+        setTimeout(function() {
+            if (it.inventario_id) {
+                window._cbSet(cbId, it.inventario_id, it.inventario_id + ' — ' + (it.descripcion || ''));
+            } else {
+                var txt = document.getElementById(cbId + '-txt');
+                if (txt) txt.value = it.descripcion || '';
+            }
+            
+            var cantEl = document.querySelector('.ent-item-cant[data-idx="'+idx+'"]');
+            var puEl   = document.querySelector('.ent-item-pu[data-idx="'+idx+'"]');
+            
+            if (cantEl) cantEl.value = it.cantidad || 0;
+            if (puEl) {
+                puEl.value = it.costo_unitario || 0;
+                puEl.dataset.oldCost = it.costo_unitario || 0;
+            }
+            window._entCalcImporte(idx, 'pu');
+        }, 150);
+    });
 };
 
 // ── Cerrar panel ──────────────────────────────────────────────────
@@ -601,6 +675,7 @@ window._entRender = function() {
     window._entPagActual = pag;
     var pagina = datos.slice((pag - 1) * _ENT_POR_PAG, pag * _ENT_POR_PAG);
     var canDelete = window.checkPerm('ent_inv', 'd');
+    var canEdit = window.checkPerm('ent_inv', 'u');
 
     var cont = document.getElementById('ent-contador');
     if (cont) cont.textContent = total + ' registro' + (total !== 1 ? 's' : '');
@@ -638,6 +713,7 @@ window._entRender = function() {
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                        (canEdit ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                         (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                     '</div>' +
                 '</td>';
@@ -687,6 +763,7 @@ window._entRender = function() {
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                            (canEdit ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                             (canDelete ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
                         '</div>'
                     : '') +
