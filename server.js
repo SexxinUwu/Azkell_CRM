@@ -1725,7 +1725,8 @@ const _multerInv = multer({
     limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB máx para fotos de teléfono
     fileFilter: (req, file, cb) => {
         if (/^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(file.mimetype)) return cb(null, true);
-        cb(new Error('Solo imágenes (jpg, png, webp, gif, heic)'));
+        if (file.mimetype === 'application/pdf' && req.url.includes('/archivo/')) return cb(null, true);
+        cb(new Error('Formato no permitido (se espera imagen o PDF)'));
     }
 });
 
