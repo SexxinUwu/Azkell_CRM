@@ -204,15 +204,14 @@ function rotFmtDuracion(ms) {
 }
 
 function rotCalcularTiempos(ot) {
-    var pIso = function(s) { return typeof s === 'string' ? s.replace('Z','') : s; };
-    var inicio = ot.fecha_inicio_ot    ? new Date(pIso(ot.fecha_inicio_ot))    : null;
-    var fin    = ot.fecha_hora_salida  ? new Date(pIso(ot.fecha_hora_salida))  : null;
+    var inicio = ot.fecha_inicio_ot    ? new Date(ot.fecha_inicio_ot)    : null;
+    var fin    = ot.fecha_hora_salida  ? new Date(ot.fecha_hora_salida)  : null;
     var pausas = [];
     for (var i = 1; i <= 3; i++) {
         if (ot['fecha_pausa' + i]) {
             pausas.push({
-                inicio: new Date(pIso(ot['fecha_pausa' + i])),
-                fin:    ot['fecha_fin_pausa' + i] ? new Date(pIso(ot['fecha_fin_pausa' + i])) : null,
+                inicio: new Date(ot['fecha_pausa' + i]),
+                fin:    ot['fecha_fin_pausa' + i] ? new Date(ot['fecha_fin_pausa' + i]) : null,
                 motivo: ot['motivo_pausa' + i] || ''
             });
         }
@@ -716,8 +715,7 @@ window.rotAccion = function(accion, idOT) {
         rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
             var fInicio = ot.fecha_ingreso || ot.creado_en || null;
             if (fInicio) {
-                var pIso = typeof fInicio === 'string' ? fInicio.replace('Z','') : fInicio;
-                var d = new Date(pIso);
+                var d = new Date(fInicio);
                 if (!isNaN(d.getTime())) {
                     var p = function(n){ return n<10?'0'+n:n; };
                     fInicio = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
@@ -1473,7 +1471,7 @@ function rotFmtMoney(val) {
 
 function rotFmtFecha(iso) {
     if (!iso) return '—';
-    var s = typeof iso === 'string' ? iso.replace('Z', '').split('T')[0] : String(iso);
+    var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
     var p = s.split('-');
     if (p.length !== 3) return iso;
     var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -1482,8 +1480,7 @@ function rotFmtFecha(iso) {
 
 function rotFmtFechaHora(iso) {
     if (!iso) return '—';
-    var isoLocal = typeof iso === 'string' ? iso.replace('Z', '') : iso;
-    var d = new Date(isoLocal);
+    var d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
     var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     var hh = String(d.getHours()).padStart(2, '0');
