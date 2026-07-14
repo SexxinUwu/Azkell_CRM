@@ -1371,6 +1371,10 @@ window.filtrarDesdeKpiFleetrun = function(estadoVal) {
 };
 
 window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota) {
+    if (typeof Chart === 'undefined') {
+        if (window.loadCharts) window.loadCharts().then(() => window.updateGraficoFleetrun(vencidos, proximos, vigentes, totalFlota));
+        return;
+    }
     // 1. Actualizar Datos de Empresa y Fecha
     const empNombre = localStorage.getItem('fleet_empresa_nombre') || 'Azkell Fleet';
     const empLogo = localStorage.getItem('fleet_empresa_logo') || '';

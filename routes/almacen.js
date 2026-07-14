@@ -848,17 +848,22 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
         const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
         const col = `url_${tipo}`;
         db.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
-            if (!err && rows && rows.length > 0 && rows[0][col]) {
-                const oldKey = s3KeyFromUrl(rows[0][col]);
-                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+            if (err) return res.status(500).json({ error: 'DB Error: ' + err.message });
+            try {
+                if (rows && rows.length > 0 && rows[0][col]) {
+                    const oldKey = s3KeyFromUrl(rows[0][col]);
+                    if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+                }
+                const ext = req.file.originalname.split('.').pop() || 'pdf';
+                const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
+                const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+                db.query(`UPDATE entradas_inv SET ${col}=? WHERE id=?`, [url, req.params.id], (err2) => {
+                    if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
+                    res.json({ ok: true, url });
+                });
+            } catch (innerError) {
+                res.status(500).json({ error: 'S3 Error: ' + innerError.message });
             }
-            const ext = req.file.originalname.split('.').pop() || 'pdf';
-            const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
-            const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
-            db.query(`UPDATE entradas_inv SET ${col}=? WHERE id=?`, [url, req.params.id], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ ok: true, url });
-            });
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
