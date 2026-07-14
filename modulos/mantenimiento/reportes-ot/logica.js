@@ -787,6 +787,10 @@ window.rotAccion = function(accion, idOT) {
     if (accion === 'cerrar') {
         if (!window.guardAction('ot', 'e')) return;
         rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)…', true, function(comentario) {
+            var pad = function(n) { return String(n).padStart(2, '0'); };
+            var dn = new Date();
+            var fSalida = dn.getFullYear() + '-' + pad(dn.getMonth()+1) + '-' + pad(dn.getDate()) + ' ' + pad(dn.getHours()) + ':' + pad(dn.getMinutes()) + ':' + pad(dn.getSeconds());
+
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -794,7 +798,7 @@ window.rotAccion = function(accion, idOT) {
                     accion: 'cerrar',
                     comentario_cierre: comentario,
                     cerrado_por: localStorage.getItem('fleet_correo') || '',
-                    fecha_hora_salida: new Date().toISOString()
+                    fecha_hora_salida: fSalida
                 })
             })
             .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
@@ -2905,7 +2909,8 @@ window.rotAbrirEditarFechas = function(idOT) {
     var formatForInput = function(isoStr) {
         if (!isoStr) return '';
         try {
-            var d = new Date(isoStr);
+            var s = typeof isoStr === 'string' ? isoStr.replace('Z', '') : isoStr;
+            var d = new Date(s);
             if (isNaN(d.getTime())) return '';
             var pad = function(n) { return String(n).padStart(2, '0'); };
             return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -2930,8 +2935,8 @@ window.rotGuardarFechas = function() {
         return;
     }
 
-    var iniStr = ini ? new Date(ini).toISOString().slice(0, 19).replace('T', ' ') : null;
-    var finStr = fin ? new Date(fin).toISOString().slice(0, 19).replace('T', ' ') : null;
+    var iniStr = ini ? (ini.length === 16 ? ini + ':00' : ini).replace('T', ' ') : null;
+    var finStr = fin ? (fin.length === 16 ? fin + ':00' : fin).replace('T', ' ') : null;
     
     fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT) + '/fechas', {
         method: 'PUT',
