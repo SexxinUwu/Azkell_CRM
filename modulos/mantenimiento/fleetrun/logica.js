@@ -1,3 +1,41 @@
+window._fleetrunDirCache = window._fleetrunDirCache || {};
+window._fleetrunDirQueue = window._fleetrunDirQueue || [];
+window._fleetrunDirProcessing = false;
+
+window._procesarGeocodificacionFleetrun = async function() {
+    if (window._fleetrunDirProcessing) return;
+    window._fleetrunDirProcessing = true;
+    while(window._fleetrunDirQueue.length > 0) {
+        let req = window._fleetrunDirQueue.shift();
+        let key = req.lat.toFixed(4) + ',' + req.lng.toFixed(4);
+        
+        let els = document.querySelectorAll('.fleet-loc-loader[data-key="'+key+'"]');
+        if (!els || !els.length) continue;
+        
+        if (window._fleetrunDirCache[key]) {
+            els.forEach(el => { el.textContent = window._fleetrunDirCache[key]; el.classList.remove('fleet-loc-loader'); });
+            continue;
+        }
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${req.lat}&lon=${req.lng}`);
+            if (res.status === 429) {
+                await new Promise(r => setTimeout(r, 2000));
+                window._fleetrunDirQueue.unshift(req);
+                continue;
+            }
+            const data = await res.json();
+            const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || 'Sin nombre';
+            const ciudad = data.address?.city  || data.address?.town  || data.address?.county || '';
+            let dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+            window._fleetrunDirCache[key] = dirTxt;
+            els.forEach(el => { el.textContent = dirTxt; el.classList.remove('fleet-loc-loader'); });
+        } catch(e) {
+            els.forEach(el => { el.textContent = 'Error GPS'; el.classList.remove('fleet-loc-loader'); });
+        }
+        await new Promise(r => setTimeout(r, 1100)); // Rate limit de Nominatim
+    }
+    window._fleetrunDirProcessing = false;
+};
 
 fetch('/api/conductores-lista')
     .then(function(r) { return r.json(); })
@@ -207,7 +245,16 @@ function mostrarFleetrun(datos) {
                   <td><span class="badge bg-light text-primary border border-primary shadow-sm px-2 py-1"><i class="bi bi-arrow-repeat me-1"></i>${frecuencia.toLocaleString()}</span></td>
                   <td class="text-center" style="font-size:0.8rem;">${obs ? obs + '<br>' : ''}${obsBadgeHtml}</td>
                   <td style="color: #64748b; font-weight: bold;" class="text-center">${km_desde.toLocaleString()}</td>
-                  <td style="font-size:0.75rem;">${wialonData ? (wialonData.ubicacion || wialonData.direccion || wialonData.location || (wialonData.lat ? (wialonData.lat + ', ' + wialonData.lng) : '-')) : '-'}</td>
+                  <td style="font-size:0.75rem;">${(() => {
+                      if (!wialonData) return '-';
+                      if (wialonData.ubicacion || wialonData.direccion) return wialonData.ubicacion || wialonData.direccion;
+                      if (!wialonData.lat) return '-';
+                      let key = wialonData.lat.toFixed(4) + ',' + wialonData.lng.toFixed(4);
+                      if (!window._fleetrunDirQueue.find(q => q.lat === wialonData.lat && q.lng === wialonData.lng)) {
+                          window._fleetrunDirQueue.push({ lat: wialonData.lat, lng: wialonData.lng });
+                      }
+                      return '<span class="fleet-loc-loader" data-key="' + key + '">Cargando...</span>';
+                  })()}</td>
                   <td>${menuAcciones}</td>
               </tr>`;
           });
@@ -253,6 +300,8 @@ function mostrarFleetrun(datos) {
       }
   }
   
+  if (window._fleetrunDirQueue.length > 0) window._procesarGeocodificacionFleetrun();
+
   if (!isHistorialFleetrun) { 
       updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placaEstadoMap.size); 
   }
@@ -624,7 +673,7 @@ window.renderTiposMulti = function() {
                 '<td class="ps-3 py-2"><span class="badge rounded-pill px-2 py-1 shadow-sm" style="background:#0369a1; font-size:0.78rem; font-weight:600;">' + item.tipo + '</span></td>' +
                 '<td class="text-center py-2" style="font-size:0.82rem; color:#334155;">' + frecStr + '</td>' +
                 '<td class="text-center py-2" style="font-size:0.82rem;">' + proxStr + '</td>' +
-                '<td class="pe-3 py-2 text-center"><button type="button" class="btn btn-sm p-0 border-0" style="width:24px;height:24px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseenter="this.style.background=\'#dc2626\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'#fee2e2\';this.style.color=\'#dc2626\'" onclick="window.eliminarTipoMulti(\'' + item.tipo + '\')"><i class="bi bi-x" style="font-size:0.9rem;"></i></button></td>' +
+                '<td class="pe-3 py-2 text-center"><button type="button" class="btn btn-sm p-0 border-0" style="width:24px;height:24px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseenter="this.style.background=\'#dc2626\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'fee2e2\';this.style.color=\'#dc2626\'" onclick="window.eliminarTipoMulti(\'' + item.tipo + '\')"><i class="bi bi-x" style="font-size:0.9rem;"></i></button></td>' +
                 '</tr>';
         }).join('');
     }

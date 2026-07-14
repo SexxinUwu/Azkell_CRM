@@ -468,10 +468,14 @@ window.guardarEntrada = function() {
         var invId = invIds[i] ? invIds[i].value : '';
         var desc  = descs[i]  ? descs[i].value  : '';
         if (!invId && !desc) continue;
-        if (!invId) { 
-            alert('El artículo "' + desc + '" en la fila ' + (i+1) + ' no existe en el inventario. Seleccione uno de la lista autocompletada.'); 
+        
+        var validItem = window._entInvData && window._entInvData.find(function(it) { return it.id === invId; });
+        var expectedLabel = validItem ? (validItem.id + ' — ' + (validItem.descripcion || '')) : '';
+        if (!validItem || desc.trim() !== expectedLabel.trim()) { 
+            alert('El artículo "' + desc + '" en la fila ' + (i+1) + ' no es válido o fue modificado. Seleccione uno correcto de la lista desplegable.'); 
             return; 
         }
+        
         var cant = parseFloat(cants[i].value) || 0;
         var pu   = parseFloat(pus[i] ? pus[i].value : 0) || 0;
         var imp  = parseFloat(imps[i].value) || cant * pu;
