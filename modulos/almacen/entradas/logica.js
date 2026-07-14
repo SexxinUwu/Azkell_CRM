@@ -499,9 +499,28 @@ window.guardarEntrada = function() {
 
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(r) {
+        .then(async function(r) {
+            var entId = window._entEditId || r.id;
+            var fVoucher = document.getElementById('ent-f-voucher') ? document.getElementById('ent-f-voucher').files[0] : null;
+            var fCotizacion = document.getElementById('ent-f-cotizacion') ? document.getElementById('ent-f-cotizacion').files[0] : null;
+            var fFactura = document.getElementById('ent-f-factura') ? document.getElementById('ent-f-factura').files[0] : null;
+
+            var uploadFile = async function(file, tipo) {
+                var fd = new FormData();
+                fd.append('archivo', file);
+                await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
+            };
+
+            try {
+                if (fVoucher) await uploadFile(fVoucher, 'voucher');
+                if (fCotizacion) await uploadFile(fCotizacion, 'cotizacion');
+                if (fFactura) await uploadFile(fFactura, 'factura');
+            } catch (e) {
+                console.error("Error subiendo archivos", e);
+            }
+
             window._entCerrarModal();
-            alert('✅ Entrada ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+r.id);
+            alert('📦 Orden de Compra ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+entId);
             window._entEditId = null;
             window.cargarEntradas();
         })
@@ -617,6 +636,10 @@ window._entCerrarModal = function() {
     var bd    = document.getElementById('ent-entrada-bd');
     if (panel) panel.classList.remove('open');
     if (bd)    bd.style.display = 'none';
+
+    var f1 = document.getElementById('ent-f-voucher'); if (f1) f1.value = '';
+    var f2 = document.getElementById('ent-f-cotizacion'); if (f2) f2.value = '';
+    var f3 = document.getElementById('ent-f-factura'); if (f3) f3.value = '';
 };
 
 // ── Eliminar ──────────────────────────────────────────────────────
@@ -717,11 +740,17 @@ window._entRender = function() {
         var canEditRow = canEdit && !isAnulado && (isAdmin || dCreated === todayStr);
 
         var tp = parseFloat(d.total_pen || 0);
-        var totalFmt = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : ('<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>');
+        var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
+        var estadoHtml = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : '<span class="badge" style="background-color:#16a34a;">REGISTRADA</span>';
+        
+        var vHTML = d.url_voucher_presigned ? '<a href="'+_entEsc(d.url_voucher_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+        var cHTML = d.url_cotizacion_presigned ? '<a href="'+_entEsc(d.url_cotizacion_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+        var fHTML = d.url_factura_presigned ? '<a href="'+_entEsc(d.url_factura_presigned)+'" target="_blank" class="text-danger text-decoration-none" style="font-size:0.75rem;"><i class="bi bi-download"></i> Ver/Descargar</a>' : '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+
         var items = d.items || [];
         var isActive = d.id === window._entDetalleId;
         var activeCls = isActive ? ' ent-row-active' : '';
-        if (isAnulado) activeCls += ' text-muted text-decoration-line-through opacity-75';
+        if (isAnulado) activeCls += ' text-muted opacity-75';
 
         if (!items.length) {
             var tr0 = document.createElement('tr');
@@ -729,11 +758,16 @@ window._entRender = function() {
             tr0.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
+                '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
                 '<td class="col-hide-mob">' + (d.proveedor_nombre ? '<span style="font-size:.8rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>') + '</td>' +
-                '<td class="col-hide-mob" colspan="2" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
+                '<td class="col-hide-mob" style="color:var(--subtext);font-size:.78rem;"></td>' +
+                '<td class="col-articulo" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
                 '<td class="text-end col-hide-mob"></td>' +
                 '<td class="text-end col-hide-mob">' + totalFmt + '</td>' +
+                '<td class="text-center col-hide-mob">' + vHTML + '</td>' +
+                '<td class="text-center col-hide-mob">' + cHTML + '</td>' +
+                '<td class="text-center col-hide-mob">' + fHTML + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
@@ -778,12 +812,16 @@ window._entRender = function() {
             tr.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
+                '<td class="text-center col-hide-mob">' + (isFirst ? estadoHtml : '') + '</td>' +
                 '<td class="col-hide-mob">' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
                 '<td class="text-end col-hide-mob">' + (isFirst ? totalFmt : '') + '</td>' +
+                '<td class="text-center col-hide-mob">' + (isFirst ? vHTML : '') + '</td>' +
+                '<td class="text-center col-hide-mob">' + (isFirst ? cHTML : '') + '</td>' +
+                '<td class="text-center col-hide-mob">' + (isFirst ? fHTML : '') + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
                         '<div class="d-flex gap-1 justify-content-center">' +
