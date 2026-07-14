@@ -753,6 +753,63 @@ router.post('/entradas', (req, res) => {
             });
     });
 });
+router.put('/entradas/:id', (req, res) => {
+    const { id } = req.params;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items } = req.body;
+    const tc = parseFloat(tipo_cambio) || 1;
+    const total_pen = _calcularTotalPen(items || [], tc);
+
+    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=? WHERE id=?',
+        [fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
+         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Delete old details
+            db.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (errDel) => {
+                if (errDel) return res.status(500).json({ error: errDel.message });
+                if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+
+                const descsEntrada = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
+                const resolverEntrada = (cb) => {
+                    if (!descsEntrada.length) return cb({});
+                    db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsEntrada], (e, rows) => {
+                        const mapa = {};
+                        if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
+                        cb(mapa);
+                    });
+                };
+
+                resolverEntrada((mapaInvEnt) => {
+                    const dVals = items.map(d => {
+                        const invId = d.inventario_id || mapaInvEnt[d.descripcion] || null;
+                        return [id, invId, d.descripcion||null,
+                            parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
+                            parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
+                    });
+                    db.query('INSERT INTO detalle_entradas_inv (entrada_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {
+                        const toUpdate = items.filter(d =>
+                            (d.inventario_id || mapaInvEnt[d.descripcion]) && parseFloat(d.costo_unitario) > 0
+                        );
+                        if (!toUpdate.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+                        let done = 0;
+                        toUpdate.forEach(d => {
+                            const invId      = d.inventario_id || mapaInvEnt[d.descripcion];
+                            const isUSD      = d.moneda === 'USD' || moneda === 'USD';
+                            const costoOrig  = parseFloat(d.costo_unitario);
+                            const costoSoles = isUSD ? costoOrig * tc : costoOrig;
+                            db.query(
+                                'UPDATE inventario SET costo_referencial=?, costo_soles=?, tipo_cambio=? WHERE id=? AND activo=1',
+                                [costoOrig, costoSoles, isUSD ? tc : null, invId],
+                                () => { if (++done === toUpdate.length) if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id }); }
+                            );
+                        });
+                    });
+                });
+            });
+        }
+    );
+});
 router.delete('/entradas/:id', (req, res) => {
     const { id } = req.params;
     db.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (err) => {
