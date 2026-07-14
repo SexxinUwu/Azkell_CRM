@@ -1081,7 +1081,10 @@ window.srGenerarOT = function(id) {
     if (!e) return;
 
     var pDisp = document.getElementById('sr-ot-placa-disp'); if (pDisp) pDisp.textContent = e.placa;
-    var rDisp = document.getElementById('sr-ot-rampa-disp'); if (rDisp) rDisp.textContent = 'Rampa ' + e.rampa;
+    var rIdx = window.srCatRampas.findIndex(function(r) { return r.id === e.rampa; });
+    var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
+    var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + e.rampa) : ('Rampa ' + e.rampa);
+    var rDisp = document.getElementById('sr-ot-rampa-disp'); if (rDisp) rDisp.textContent = rNom;
     var pHid  = document.getElementById('sr-ot-placa-hid');  if (pHid)  pHid.value = e.placa;
     var rHid  = document.getElementById('sr-ot-rampa-hid');  if (rHid)  rHid.value = String(e.rampa);
     var idRHid = document.getElementById('sr-ot-id-rampa-hid'); if (idRHid) idRHid.value = e._id || e.id;
