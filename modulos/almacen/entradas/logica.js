@@ -849,9 +849,9 @@ window._entRender = function() {
             tr.innerHTML =
                 '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
-                '<td class="text-center">' + (isFirst ? estadoHtml : '') + '</td>' +
-                '<td>' + (isFirst ? placaHtml : '') + '</td>' +
-                '<td>' + (isFirst ? motivoHtml : '') + '</td>' +
+                '<td class="text-center">' + estadoHtml + '</td>' +
+                '<td>' + placaHtml + '</td>' +
+                '<td>' + motivoHtml + '</td>' +
                 '<td>' + provHtml + '</td>' +
                 '<td class="col-hide-mob" style="font-size:.73rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + invId + '</td>' +
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
