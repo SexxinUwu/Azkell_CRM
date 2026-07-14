@@ -689,16 +689,21 @@ router.get('/entradas', (req, res) => {
               FROM entradas_inv e
               LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
               LEFT JOIN inventario i ON d.inventario_id = i.id
-              GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`, (err, rows) => {
+              GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`, async (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        rows.forEach(r => {
+        const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+        const signedRows = await Promise.all(rows.map(async (r) => {
             r.items = r.items_raw ? r.items_raw.split(';;').map(s => {
                 const [desc, cant, cu, mon, invId] = s.split('|');
                 return { descripcion: desc, cantidad: parseFloat(cant), costo_unitario: parseFloat(cu), moneda: mon, inventario_id: invId };
             }) : [];
             delete r.items_raw;
-        });
-        res.json(rows);
+            if (r.url_voucher) { const k = s3KeyFromUrl(r.url_voucher); if (k) r.url_voucher_presigned = await getPresignedUrl(k).catch(()=>r.url_voucher); }
+            if (r.url_cotizacion) { const k = s3KeyFromUrl(r.url_cotizacion); if (k) r.url_cotizacion_presigned = await getPresignedUrl(k).catch(()=>r.url_cotizacion); }
+            if (r.url_factura) { const k = s3KeyFromUrl(r.url_factura); if (k) r.url_factura_presigned = await getPresignedUrl(k).catch(()=>r.url_factura); }
+            return r;
+        }));
+        res.json(signedRows);
     });
 });
 router.post('/entradas', (req, res) => {
@@ -832,6 +837,32 @@ router.put('/entradas/:id/anular', (req, res) => {
             res.json({ ok: true });
         }
     );
+});
+
+router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, res) => {
+    const { tipo } = req.params;
+    if (!['voucher', 'cotizacion', 'factura'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+    if (!req.file) return res.status(400).json({ error: 'No se recibió archivo' });
+
+    try {
+        const { uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+        const col = `url_${tipo}`;
+        db.query(`SELECT ${col} FROM entradas_inv WHERE id=?`, [req.params.id], async (err, rows) => {
+            if (!err && rows && rows.length > 0 && rows[0][col]) {
+                const oldKey = s3KeyFromUrl(rows[0][col]);
+                if (oldKey) await deleteFromS3(oldKey).catch(() => {});
+            }
+            const ext = req.file.originalname.split('.').pop() || 'pdf';
+            const s3Key = `almacen/entradas/${req.params.id}/${tipo}_${Date.now()}.${ext}`;
+            const url = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+            db.query(`UPDATE entradas_inv SET ${col}=? WHERE id=?`, [url, req.params.id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, url });
+            });
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ============================================================
