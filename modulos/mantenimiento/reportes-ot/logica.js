@@ -204,14 +204,15 @@ function rotFmtDuracion(ms) {
 }
 
 function rotCalcularTiempos(ot) {
-    var inicio = ot.fecha_inicio_ot    ? new Date(ot.fecha_inicio_ot)    : null;
-    var fin    = ot.fecha_hora_salida  ? new Date(ot.fecha_hora_salida)  : null;
+    var pIso = function(s) { return typeof s === 'string' ? s.replace('Z','') : s; };
+    var inicio = ot.fecha_inicio_ot    ? new Date(pIso(ot.fecha_inicio_ot))    : null;
+    var fin    = ot.fecha_hora_salida  ? new Date(pIso(ot.fecha_hora_salida))  : null;
     var pausas = [];
     for (var i = 1; i <= 3; i++) {
         if (ot['fecha_pausa' + i]) {
             pausas.push({
-                inicio: new Date(ot['fecha_pausa' + i]),
-                fin:    ot['fecha_fin_pausa' + i] ? new Date(ot['fecha_fin_pausa' + i]) : null,
+                inicio: new Date(pIso(ot['fecha_pausa' + i])),
+                fin:    ot['fecha_fin_pausa' + i] ? new Date(pIso(ot['fecha_fin_pausa' + i])) : null,
                 motivo: ot['motivo_pausa' + i] || ''
             });
         }
@@ -343,10 +344,10 @@ window.rotAbrirDetalle = function(idOT) {
     }
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
-        html += fld('Inicio OT', rotFmtFechaHora(t.inicio.toISOString()) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
+        html += fld('Inicio OT', rotFmtFechaHora(t.inicio) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
     }
     if (t.fin) {
-        html += fld('Cierre OT', rotFmtFechaHora(t.fin.toISOString()) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
+        html += fld('Cierre OT', rotFmtFechaHora(t.fin) + (ot.cerrado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.cerrado_por)) + '</span>' : ''));
     }
     if (t.inicio) {
         html += '<div style="display:flex;gap:8px;padding:8px 12px 10px;flex-wrap:wrap;">'
@@ -361,9 +362,9 @@ window.rotAbrirDetalle = function(idOT) {
             var dur = p.fin ? rotFmtDuracion(p.fin - p.inicio) : 'En curso';
             html += '<div style="border-left:3px solid #f59e0b;padding:5px 10px;margin-bottom:6px;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">'
                   + '<div style="font-size:0.74rem;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-                  + '<span>' + rotFmtFecha(p.inicio.toISOString()) + '</span>'
+                  + '<span>' + rotFmtFechaHora(p.inicio) + '</span>'
                   + '<span style="opacity:0.6;">→</span>'
-                  + '<span>' + (p.fin ? rotFmtFecha(p.fin.toISOString()) : '<em>Sin reanudar</em>') + '</span>'
+                  + '<span>' + (p.fin ? rotFmtFechaHora(p.fin) : '<em>Sin reanudar</em>') + '</span>'
                   + '<span style="background:rgba(245,158,11,0.2);border-radius:6px;padding:1px 7px;">' + dur + '</span>'
                   + '</div>'
                   + (p.motivo ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:3px;"><i class="bi bi-chat-left-text me-1"></i>' + esc(p.motivo) + '</div>' : '')
@@ -715,7 +716,8 @@ window.rotAccion = function(accion, idOT) {
         rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
             var fInicio = ot.fecha_ingreso || ot.creado_en || null;
             if (fInicio) {
-                var d = new Date(fInicio);
+                var pIso = typeof fInicio === 'string' ? fInicio.replace('Z','') : fInicio;
+                var d = new Date(pIso);
                 if (!isNaN(d.getTime())) {
                     var p = function(n){ return n<10?'0'+n:n; };
                     fInicio = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
@@ -1469,23 +1471,28 @@ function rotFmtMoney(val) {
     return 'S/' + parseFloat(val || 0).toFixed(2);
 }
 
-function rotFmtFecha(iso) {
-    if (!iso) return '—';
-    var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
-    var p = s.split('-');
-    if (p.length !== 3) return iso;
+function rotFmtFecha(val) {
+    if (!val) return '—';
+    var dateObj = val;
+    if (typeof val === 'string') {
+        dateObj = new Date(val.replace('Z', ''));
+    }
+    if (isNaN(dateObj.getTime())) return String(val);
     var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    return p[2] + ' ' + meses[parseInt(p[1],10)-1] + ' ' + p[0].slice(2);
+    return String(dateObj.getDate()).padStart(2, '0') + ' ' + meses[dateObj.getMonth()] + ' ' + String(dateObj.getFullYear()).slice(2);
 }
 
-function rotFmtFechaHora(iso) {
-    if (!iso) return '—';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
+function rotFmtFechaHora(val) {
+    if (!val) return '—';
+    var dateObj = val;
+    if (typeof val === 'string') {
+        dateObj = new Date(val.replace('Z', ''));
+    }
+    if (isNaN(dateObj.getTime())) return String(val);
     var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    var hh = String(d.getHours()).padStart(2, '0');
-    var mm = String(d.getMinutes()).padStart(2, '0');
-    return String(d.getDate()).padStart(2, '0') + ' ' + meses[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2) + ' ' + hh + ':' + mm;
+    var hh = String(dateObj.getHours()).padStart(2, '0');
+    var mm = String(dateObj.getMinutes()).padStart(2, '0');
+    return String(dateObj.getDate()).padStart(2, '0') + ' ' + meses[dateObj.getMonth()] + ' ' + String(dateObj.getFullYear()).slice(2) + ' ' + hh + ':' + mm;
 }
 
 function rotFechaISO(iso) {
