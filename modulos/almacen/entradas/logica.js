@@ -807,8 +807,8 @@ window._entRender = function() {
                 '<td class="text-center col-hide-mob">' + fHTML + '</td>' +
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     '<div class="d-flex gap-1 justify-content-center">' +
-                        '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
-                        '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
+                        '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF" style="display:none;"><i class="bi bi-file-earmark-pdf"></i></button>' +
                         (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                         (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
                         (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
@@ -864,8 +864,8 @@ window._entRender = function() {
                 '<td class="text-center" style="white-space:nowrap;" onclick="event.stopPropagation();">' +
                     (isFirst ?
                         '<div class="d-flex gap-1 justify-content-center">' +
-                            '<button class="btn btn-xs btn-outline-secondary" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver"><i class="bi bi-eye"></i></button>' +
-                            '<button class="btn btn-xs btn-outline-primary" onclick="window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF"><i class="bi bi-file-earmark-pdf"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
+                            '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF" style="display:none;"><i class="bi bi-file-earmark-pdf"></i></button>' +
                             (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
                             (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
                             (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
@@ -964,9 +964,9 @@ window._entAbrirDetalle = function(id) {
     if (footer) {
         footer.style.display = 'flex';
         footer.innerHTML =
-            '<button class="btn btn-sm btn-outline-secondary flex-fill" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(id) + '\')">' +
+            '<button class="btn btn-sm btn-outline-secondary flex-fill" onclick="window.previsualizarComprobanteEntrada(\'' + _entEsc(id) + '\')" style="display:none;">' +
             '<i class="bi bi-eye me-1"></i>Ver</button>' +
-            '<button class="btn btn-sm btn-outline-primary flex-fill" onclick="window.generarComprobanteEntrada(\'' + _entEsc(id) + '\')">' +
+            '<button class="btn btn-sm btn-outline-primary flex-fill" onclick="window.generarComprobanteEntrada(\'' + _entEsc(id) + '\')" style="display:none;">' +
             '<i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>' +
             '<button class="btn btn-sm btn-outline-danger" onclick="window.eliminarEntrada(\'' + _entEsc(id) + '\')">' +
             '<i class="bi bi-trash"></i></button>';
