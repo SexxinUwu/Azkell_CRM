@@ -809,9 +809,9 @@ window._entRender = function() {
                     '<div class="d-flex gap-1 justify-content-center">' +
                         '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
                         '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF" style="display:none;"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                        (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                        (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
-                        (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                        (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
+                        (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-x-circle"></i></button>') +
+                        (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
                     '</div>' +
                 '</td>';
             tr0.onclick = (function(row) { return function() { window._entAbrirDetalle(row.id); }; })(d);
@@ -866,9 +866,9 @@ window._entRender = function() {
                         '<div class="d-flex gap-1 justify-content-center">' +
                             '<button class="btn btn-xs btn-outline-secondary" onclick="event.stopPropagation(); window.previsualizarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="Ver" style="display:none;"><i class="bi bi-eye"></i></button>' +
                             '<button class="btn btn-xs btn-outline-primary" onclick="event.stopPropagation(); window.generarComprobanteEntrada(\'' + _entEsc(d.id) + '\')" title="PDF" style="display:none;"><i class="bi bi-file-earmark-pdf"></i></button>' +
-                            (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                            (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '') +
-                            (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                            (canEditRow ? '<button class="btn btn-xs btn-outline-warning" onclick="window.abrirModalEditarEntrada(\'' + _entEsc(d.id) + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-pencil"></i></button>') +
+                            (canDelete && !isAnulado ? '<button class="btn btn-xs btn-outline-danger" onclick="window.anularEntrada(\'' + _entEsc(d.id) + '\')" title="Anular"><i class="bi bi-x-circle"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-x-circle"></i></button>') +
+                            (canDelete ? '<button class="btn btn-xs btn-outline-secondary" onclick="window.eliminarEntrada(\'' + _entEsc(d.id) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '<button class="btn btn-xs" style="visibility:hidden"><i class="bi bi-trash"></i></button>') +
                         '</div>'
                     : '') +
                 '</td>';
