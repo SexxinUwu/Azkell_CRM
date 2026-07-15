@@ -1396,7 +1396,11 @@ window.renderModernInspForm = function() {
             <div class="row g-3">
                 <div class="col-md-12 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico" placeholder="Ej. Juan Pérez" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <div class="position-relative">
+                        <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico-txt" placeholder="Ej. Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" onfocus="window._cbFiltrar('i_tecnico')" onblur="window._cbHide('i_tecnico')" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;">
+                        <input type="hidden" id="i_tecnico">
+                        <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:8px;"></div>
+                    </div>
                     <div class="mt-3">
                         <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
                         <canvas id="canvasFirma" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
