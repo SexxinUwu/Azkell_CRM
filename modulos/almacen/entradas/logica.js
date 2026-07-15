@@ -462,6 +462,9 @@ window.guardarEntrada = function() {
     var docRef = (document.getElementById('ent-f-doc-ref') || {}).value || '';
     var moneda = (document.getElementById('ent-f-moneda')  || {}).value || 'PEN';
     var obs    = (document.getElementById('ent-f-obs')     || {}).value || '';
+    var tipo_orden = (document.getElementById('ent-f-tipo-orden') || {}).value || 'Orden de compra';
+    var condicion_pago = (document.getElementById('ent-f-condicion-pago') || {}).value || 'Al contado';
+    var dias_credito = parseInt((document.getElementById('ent-f-dias-credito') || {}).value, 10) || 30;
     var motivo = (document.getElementById('ent-f-motivo')  || {}).value || '';
     var placa  = window._cbGet('ent-f-placa') || '';
 
@@ -508,6 +511,9 @@ window.guardarEntrada = function() {
         observaciones: obs,
         motivo_entrada: motivo,
         placa: placa,
+        tipo_orden: tipo_orden,
+        condicion_pago: condicion_pago,
+        dias_credito: dias_credito,
         creado_por: localStorage.getItem('fleet_user')||'', items };
 
     var method = window._entEditId ? 'PUT' : 'POST';
@@ -598,6 +604,18 @@ window.abrirModalEditarEntrada = function(id) {
 
     var docRef = document.getElementById('ent-f-doc-ref');
     if (docRef) docRef.value = entrada.documento_referencia || '';
+
+    var fTipoOrden = document.getElementById('ent-f-tipo-orden');
+    if (fTipoOrden) fTipoOrden.value = entrada.tipo_orden || 'Orden de compra';
+
+    var fCondPago = document.getElementById('ent-f-condicion-pago');
+    if (fCondPago) {
+        fCondPago.value = entrada.condicion_pago || 'Al contado';
+        document.getElementById('ent-f-dias-credito-box').style.display = fCondPago.value === 'A crédito' ? 'block' : 'none';
+    }
+
+    var fDiasCredito = document.getElementById('ent-f-dias-credito');
+    if (fDiasCredito) fDiasCredito.value = entrada.dias_credito || 30;
 
     var fObs = document.getElementById('ent-f-obs');
     if (fObs) {
@@ -916,6 +934,8 @@ window._entAbrirDetalle = function(id) {
     html += '<div class="ent-field"><div class="ent-field-lbl">Motivo</div><div class="ent-field-val">' + _entEsc(d.motivo_entrada || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Proveedor</div><div class="ent-field-val">' + _entEsc(d.proveedor_nombre || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Nº Factura</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '-') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Tipo de Orden</div><div class="ent-field-val">' + _entEsc(d.tipo_orden || 'Orden de compra') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Condición de Pago</div><div class="ent-field-val">' + _entEsc(d.condicion_pago || 'Al contado') + (d.condicion_pago === 'A crédito' ? ' (' + (d.dias_credito || 30) + ' días)' : '') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Moneda</div><div class="ent-field-val">' + monSim + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Total PEN</div><div class="ent-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div></div>';
     // Desglose IGV
@@ -1164,6 +1184,8 @@ window.previsualizarComprobanteEntrada = function(id) {
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:14px 16px;background:#f1f5f9;border-radius:8px">'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Proveedor</div><div style="font-size:13px;font-weight:600">'+(d.proveedor_nombre||'—')+'</div></div>'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Nº Factura</div><div style="font-size:13px;font-weight:600">'+(d.documento_referencia||'-')+'</div></div>'+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Tipo de Orden</div><div style="font-size:13px;font-weight:600">'+(d.tipo_orden||'Orden de compra')+'</div></div>'+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Condición de Pago</div><div style="font-size:13px;font-weight:600">'+(d.condicion_pago||'Al contado')+(d.condicion_pago === 'A crédito' ? ' ('+(d.dias_credito||30)+' días)' : '')+'</div></div>'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Moneda</div><div style="font-size:13px;font-weight:600">'+monSimbolo+'</div></div>'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Registrado por</div><div style="font-size:13px;font-weight:600">'+(d.creado_por||'—')+'</div></div>'+
         '</div>'+
@@ -1198,14 +1220,14 @@ window.exportarEntradasExcel = function() {
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
 
     // Una fila por artículo (detalle completo)
-    var cab = ['Código Entrada','Fecha','Proveedor','Nº Factura','Moneda',
+    var cab = ['Código Entrada','Fecha','Proveedor','Nº Factura','Tipo de Orden','Condición Pago','Días Crédito','Moneda',
                'Código Artículo','Descripción Artículo','Cantidad','Costo Unit.','Importe','Total Entrada PEN','Observaciones'];
     var filas = [];
     datos.forEach(function(d) {
         var items = d.items || [];
         if (!items.length) {
             filas.push([d.id, d.fecha?String(d.fecha).split('T')[0]:'', d.proveedor_nombre||'',
-                d.documento_referencia||'', d.moneda||'PEN',
+                d.documento_referencia||'', d.tipo_orden||'Orden de compra', d.condicion_pago||'Al contado', d.condicion_pago === 'A crédito' ? (d.dias_credito||30) : '', d.moneda||'PEN',
                 '','', 0, 0, 0, parseFloat(d.total_pen||0), d.observaciones||'']);
         } else {
             items.forEach(function(it, i) {
@@ -1214,6 +1236,9 @@ window.exportarEntradasExcel = function() {
                     i===0 ? (d.fecha?String(d.fecha).split('T')[0]:'') : '',
                     i===0 ? (d.proveedor_nombre||'') : '',
                     i===0 ? (d.documento_referencia||'') : '',
+                    i===0 ? (d.tipo_orden||'Orden de compra') : '',
+                    i===0 ? (d.condicion_pago||'Al contado') : '',
+                    i===0 ? (d.condicion_pago === 'A crédito' ? (d.dias_credito||30) : '') : '',
                     d.moneda||'PEN',
                     it.inventario_id||'',
                     it.descripcion||'',
