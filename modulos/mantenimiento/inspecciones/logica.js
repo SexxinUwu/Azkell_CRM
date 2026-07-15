@@ -839,7 +839,7 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                         } else if (match.estado === 'FALLA') {
                             badgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
                         } else {
-                            badgeHtml = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1">${match.estado}</span>`;
+                            badgeHtml = `<span class="badge bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-pill px-3 py-1" style="color: #1e40af !important; font-weight: 700;">${match.estado}</span>`;
                         }
                         
                         let obsHtml = obs ? `<span style="font-size: 13px; color: #000; font-weight: bold;">${obs}</span>` : '';
