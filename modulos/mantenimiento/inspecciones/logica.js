@@ -1718,6 +1718,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
     document.getElementById('i_kmtablero').value = insp.km_tablero || "";
     document.getElementById('i_cliente').value = insp.cliente || "";
     document.getElementById('i_tecnico').value = insp.tecnico || "";
+    if (document.getElementById('i_tecnico-txt')) document.getElementById('i_tecnico-txt').value = insp.tecnico || "";
     
     let diasPropuestos = insp.dias_propuestos || "30";
     let chk30 = document.getElementById('chk_30dias');
