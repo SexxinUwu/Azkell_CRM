@@ -569,45 +569,79 @@ router.post('/:metodo', async (req, res) => {
         const datos = req.body.form || {};
         const isNew = !datos.id;
 
-        const ejecutarGuardado = (idFinal) => {
-            const query = `
-                INSERT INTO inspecciones
-                (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma, id_ot)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?, id_ot=?
-            `;
-            const values = [
-                idFinal, datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-                parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null,
-                datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-                parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null
-            ];
-            db.query(query, values, (err) => {
-                if (err) { console.error("Error BD Inspecciones:", err); return res.json({ data: "Error al guardar inspección" }); }
-                console.log("✅ Inspección guardada correctamente");
-                broadcast('inspecciones', metodo);
-                const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
-                logAudit(usuario, 'inspecciones', isNew ? 'CREÓ' : 'MODIFICÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
-                return res.json({ data: "Éxito", id: idFinal });
-            });
-        };
-
         if (isNew) {
             const anio = new Date().getFullYear();
             const prefix = 'INSP';
             const regex = `^${prefix}-${anio}-[0-9]{4}$`;
-            db.query(`SELECT MAX(id) AS ultimo FROM inspecciones WHERE id REGEXP ?`, [regex], (err, rows) => {
-                let nextId = `${prefix}-${anio}-0001`;
-                if (!err && rows.length && rows[0].ultimo) {
-                    const parts = String(rows[0].ultimo).split('-');
-                    const num = parseInt(parts[parts.length - 1], 10) || 0;
-                    nextId = `${prefix}-${anio}-${String(num + 1).padStart(4, '0')}`;
-                }
-                ejecutarGuardado(nextId);
-            });
+
+            const intentarInsertar = (intentoActual) => {
+                db.query(`SELECT MAX(id) AS ultimo FROM inspecciones WHERE id REGEXP ?`, [regex], (err, rows) => {
+                    let nextId = `${prefix}-${anio}-0001`;
+                    if (!err && rows.length && rows[0].ultimo) {
+                        const parts = String(rows[0].ultimo).split('-');
+                        const num = parseInt(parts[parts.length - 1], 10) || 0;
+                        nextId = `${prefix}-${anio}-${String(num + 1).padStart(4, '0')}`;
+                    }
+
+                    const insertQuery = `
+                        INSERT INTO inspecciones
+                        (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma, id_ot)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `;
+                    const values = [
+                        nextId, datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
+                        parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null
+                    ];
+
+                    db.query(insertQuery, values, (insertErr) => {
+                        if (insertErr) {
+                            if (insertErr.code === 'ER_DUP_ENTRY') {
+                                console.warn(`Colisión de ID en inspecciones (${nextId}). Reintento ${intentoActual}/5`);
+                                if (intentoActual < 5) {
+                                    return intentarInsertar(intentoActual + 1);
+                                } else {
+                                    console.error("Máximos reintentos alcanzados por colisión de ID en inspecciones.");
+                                    return res.json({ data: "Error de concurrencia al crear inspección. Por favor, reintente." });
+                                }
+                            }
+                            console.error("Error BD Inspecciones (INSERT):", insertErr);
+                            return res.json({ data: "Error al guardar inspección" });
+                        }
+                        
+                        console.log("✅ Inspección creada correctamente con ID:", nextId);
+                        broadcast('inspecciones', metodo);
+                        const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
+                        logAudit(usuario, 'inspecciones', 'CREÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
+                        return res.json({ data: "Éxito", id: nextId });
+                    });
+                });
+            };
+            
+            intentarInsertar(1);
+
         } else {
-            ejecutarGuardado(datos.id);
+            const updateQuery = `
+                UPDATE inspecciones SET
+                placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?, id_ot=?
+                WHERE id=?
+            `;
+            const values = [
+                datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
+                parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null,
+                datos.id
+            ];
+
+            db.query(updateQuery, values, (updateErr) => {
+                if (updateErr) {
+                    console.error("Error BD Inspecciones (UPDATE):", updateErr);
+                    return res.json({ data: "Error al actualizar inspección" });
+                }
+                console.log("✅ Inspección actualizada correctamente:", datos.id);
+                broadcast('inspecciones', metodo);
+                const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
+                logAudit(usuario, 'inspecciones', 'MODIFICÓ', `${datos.placa || '?'} · ${datos.fecha_ingreso || '?'}`);
+                return res.json({ data: "Éxito", id: datos.id });
+            });
         }
         return;
     }
