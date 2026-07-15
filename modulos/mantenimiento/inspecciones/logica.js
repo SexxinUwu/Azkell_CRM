@@ -826,16 +826,21 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
                     let obsTd = (idxItem === 0) ? `<td class="w-obs" rowspan="${rowspan}" style="vertical-align:top; border-left: 1px solid #000; padding: 4px;">${allObs}</td>` : '';
                     htmlChecklistPDF += `<tr>
                         <td class="w-crit">${idxItem + 1}. ${lbl}</td>
-                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'OK' ? 'chk-green' : ''}">${match && match.estado === 'OK' ? '✓' : ''}</span></td>
+                        <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'OK' ? 'chk-green' : ''}" style="${match && match.estado !== 'OK' && match.estado !== 'FALLA' && match.estado !== 'SIN DATOS' ? 'font-size:10px;font-family:sans-serif;font-weight:bold;color:#2563eb;' : ''}">${match && match.estado === 'OK' ? '✓' : (match && match.estado !== 'FALLA' && match.estado !== 'SIN DATOS' ? match.estado : '')}</span></td>
                         <td class="w-chk th-center"><span class="chk-icon ${match && match.estado === 'FALLA' ? 'chk-red' : ''}">${match && match.estado === 'FALLA' ? '✗' : ''}</span></td>
                         ${obsTd}
                     </tr>`;
 
                     if (match && match.estado && match.estado !== "SIN DATOS") {
                         hasItems = true;
-                        let badgeHtml = match.estado === 'OK' 
-                            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`
-                            : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
+                        let badgeHtml;
+                        if (match.estado === 'OK') {
+                            badgeHtml = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">OK</span>`;
+                        } else if (match.estado === 'FALLA') {
+                            badgeHtml = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">MAL</span>`;
+                        } else {
+                            badgeHtml = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1">${match.estado}</span>`;
+                        }
                         
                         let obsHtml = obs ? `<span style="font-size: 13px; color: #000; font-weight: bold;">${obs}</span>` : '';
 
@@ -1765,7 +1770,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
                             let inpVal = document.getElementById(`val_${uid}`);
                             if (inpVal) inpVal.value = val;
                             document.querySelectorAll(`.pct-${uid}`).forEach(b => {
-                                if (b.innerText === res.estado || b.innerText === val + '%') {
+                                if (b.textContent.trim() === res.estado || b.textContent.trim() === val + '%') {
                                     b.classList.remove('btn-outline-primary');
                                     b.classList.add('btn-primary', 'text-white');
                                 }
