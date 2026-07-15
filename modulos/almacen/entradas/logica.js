@@ -915,7 +915,7 @@ window._entAbrirDetalle = function(id) {
     html += '<div class="ent-field"><div class="ent-field-lbl">Placa</div><div class="ent-field-val">' + _entEsc(d.placa || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Motivo</div><div class="ent-field-val">' + _entEsc(d.motivo_entrada || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Proveedor</div><div class="ent-field-val">' + _entEsc(d.proveedor_nombre || '-') + '</div></div>';
-    html += '<div class="ent-field"><div class="ent-field-lbl">Doc. Referencia</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '—') + '</div></div>';
+    html += '<div class="ent-field"><div class="ent-field-lbl">Nº Factura</div><div class="ent-field-val">' + _entEsc(d.documento_referencia || '-') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Moneda</div><div class="ent-field-val">' + monSim + (d.moneda === 'USD' && d.tipo_cambio ? ' (T/C: ' + parseFloat(d.tipo_cambio).toFixed(3) + ')' : '') + '</div></div>';
     html += '<div class="ent-field"><div class="ent-field-lbl">Total PEN</div><div class="ent-field-val"><span style="font-size:1.05rem; color:#16a34a; font-weight:800;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div></div>';
     // Desglose IGV
@@ -1041,7 +1041,7 @@ window.generarComprobanteEntrada = function(id) {
                 '<div style="font-size:13px;font-weight:600">' + (d.proveedor_nombre || '—') + '</div>' +
             '</div>' +
             '<div>' +
-                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Doc. Referencia</div>' +
+                '<div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Nº Factura</div>' +
                 '<div style="font-size:13px;font-weight:600">' + (d.documento_referencia || '—') + '</div>' +
             '</div>' +
             '<div>' +
@@ -1163,7 +1163,7 @@ window.previsualizarComprobanteEntrada = function(id) {
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:14px 16px;background:#f1f5f9;border-radius:8px">'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Proveedor</div><div style="font-size:13px;font-weight:600">'+(d.proveedor_nombre||'—')+'</div></div>'+
-            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Doc. Referencia</div><div style="font-size:13px;font-weight:600">'+(d.documento_referencia||'—')+'</div></div>'+
+            '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Nº Factura</div><div style="font-size:13px;font-weight:600">'+(d.documento_referencia||'-')+'</div></div>'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Moneda</div><div style="font-size:13px;font-weight:600">'+monSimbolo+'</div></div>'+
             '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:3px">Registrado por</div><div style="font-size:13px;font-weight:600">'+(d.creado_por||'—')+'</div></div>'+
         '</div>'+
@@ -1198,7 +1198,7 @@ window.exportarEntradasExcel = function() {
     if (!datos.length) { alert('No hay datos para exportar.'); return; }
 
     // Una fila por artículo (detalle completo)
-    var cab = ['Código Entrada','Fecha','Proveedor','Doc. Referencia','Moneda',
+    var cab = ['Código Entrada','Fecha','Proveedor','Nº Factura','Moneda',
                'Código Artículo','Descripción Artículo','Cantidad','Costo Unit.','Importe','Total Entrada PEN','Observaciones'];
     var filas = [];
     datos.forEach(function(d) {
