@@ -2404,6 +2404,15 @@ app.listen(process.env.PORT || 3000, () => {
             }
         }
     );
+    // Migración: añadir tipo_orden, condicion_pago, dias_credito a entradas_inv
+    db.query(
+        "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='entradas_inv' AND COLUMN_NAME='tipo_orden'",
+        (e, r) => {
+            if (!e && r && r[0] && r[0].cnt === 0) {
+                db.query("ALTER TABLE entradas_inv ADD COLUMN tipo_orden VARCHAR(50) DEFAULT 'Orden de compra', ADD COLUMN condicion_pago VARCHAR(50) DEFAULT 'Al contado', ADD COLUMN dias_credito INT DEFAULT 30", () => {});
+            }
+        }
+    );
     // Migración: añadir url_firma a inspecciones si no existe
     db.query(
         "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspecciones' AND COLUMN_NAME='url_firma'",

@@ -575,12 +575,39 @@
             <option value="PEN">PEN (S/)</option>
             <option value="USD">USD ($)</option>
           </select>
-          <div id="ent-tc-row" style="display:none;margin-top:6px;">
-            <div class="ent-field-label">T/C USD → S/</div>
+          <div id="ent-f-tc-box" style="display:none;">
+          <div class="ent-field-label">Tipo de Cambio</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="font-size:.7rem;font-weight:700;color:#94a3b8;">S/</div>
             <input type="number" id="ent-f-tc" class="ent-input-sm"
                    step="0.0001" min="0.01" placeholder="3.70"
                    oninput="window._entActualizarTotal()">
           </div>
+        </div>
+        </div>
+
+        <!-- Tipo Orden -->
+        <div>
+          <div class="ent-field-label">Tipo de Orden <span style="color:#ef4444;">*</span></div>
+          <select id="ent-f-tipo-orden" class="ent-input-sm">
+            <option value="Orden de compra" selected>Orden de Compra</option>
+            <option value="Orden de servicio">Orden de Servicio</option>
+          </select>
+        </div>
+
+        <!-- Condición Pago -->
+        <div>
+          <div class="ent-field-label">Condición de Pago <span style="color:#ef4444;">*</span></div>
+          <select id="ent-f-condicion-pago" class="ent-input-sm" onchange="document.getElementById('ent-f-dias-credito-box').style.display = this.value === 'A crédito' ? 'block' : 'none'">
+            <option value="Al contado" selected>Al Contado</option>
+            <option value="A crédito">A Crédito</option>
+          </select>
+        </div>
+
+        <!-- Días Crédito -->
+        <div id="ent-f-dias-credito-box" style="display:none;">
+          <div class="ent-field-label">Días de Crédito</div>
+          <input type="number" id="ent-f-dias-credito" class="ent-input-sm" value="30" min="0">
         </div>
 
         <!-- Placa -->
@@ -626,19 +653,12 @@
 
       </div>
 
-      <!-- Obs toggle -->
-      <div style="margin-top:8px;">
-        <button type="button" id="ent-obs-toggle"
-                onclick="(function(){var r=document.getElementById('ent-obs-row');var open=r.style.display!=='none';r.style.display=open?'none':'block';var b=document.getElementById('ent-obs-toggle');b.style.background=open?'transparent':'#eff6ff';b.style.color=open?'#94a3b8':'#2563eb';})()"
-                style="background:transparent;border:none;color:#94a3b8;font-size:.72rem;font-weight:700;
-                       cursor:pointer;display:flex;align-items:center;gap:.35rem;padding:0;">
-          <i class="bi bi-chat-text"></i> Observaciones
-        </button>
-        <div id="ent-obs-row" style="display:none;margin-top:6px;">
+        <!-- Observaciones -->
+        <div>
+          <div class="ent-field-label">Observaciones</div>
           <input type="text" id="ent-f-obs" class="ent-input-sm"
                  placeholder="Notas, condiciones de compra…">
         </div>
-      </div>
 
       <!-- Archivos Adjuntos -->
       <div style="margin-top:16px;border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface);">
