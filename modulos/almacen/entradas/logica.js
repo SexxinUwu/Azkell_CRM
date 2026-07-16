@@ -149,11 +149,14 @@ window._entCargarProveedores = function() {
         
         window._cbOnSelect('ent-f-ot', function(val) {
             var ot = window._entCacheOT.find(function(x) { return (x.id_ot||'').toUpperCase() === val; });
-            var placaInput = document.getElementById('ent-f-ot-placa');
-            if (placaInput && ot && ot.placa) {
-                placaInput.value = ot.placa;
-            } else if (placaInput) {
-                placaInput.value = '';
+            if (ot && ot.placa) {
+                if (typeof window._cbSet === 'function') {
+                    window._cbSet('ent-f-ot-placa', ot.placa, ot.placa);
+                }
+            } else {
+                if (typeof window._cbReset === 'function') {
+                    window._cbReset('ent-f-ot-placa');
+                }
             }
         });
     }).catch(function(){});
