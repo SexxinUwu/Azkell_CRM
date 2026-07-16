@@ -111,10 +111,8 @@ window.guSetTab = function(tab) {
     window._guSeleccionado = null;
     var tr = document.getElementById('gu-tab-roles');
     var tm = document.getElementById('gu-tab-miembros');
-    var ta = document.getElementById('gu-tab-auditoria');
     if (tr) tr.classList.toggle('active', tab === 'roles');
     if (tm) tm.classList.toggle('active', tab === 'miembros');
-    if (ta) ta.classList.toggle('active', tab === 'auditoria');
     window.guRenderLista();
     var pc = document.getElementById('guPanelContent');
     var pa = document.getElementById('guPanelActions');
@@ -129,8 +127,6 @@ window.guSetTab = function(tab) {
             ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
         } else if (tab === 'miembros') {
             ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
-        } else if (tab === 'auditoria') {
-            ph.innerHTML = '';
         } else {
             ph.innerHTML = '';
         }
@@ -165,17 +161,6 @@ window.guRenderLista = function() {
     var list = document.getElementById('guList');
     if (!list) return;
     var html = '';
-
-    if (window._guTabActiva === 'auditoria') {
-        html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">'
-             + '<i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;opacity:0.5;"></i>'
-             + 'El registro de auditoría en la barra lateral<br>mostrará logs recientes.'
-             + '</div>';
-        list.innerHTML = html;
-        var pe = document.getElementById('guPanelEmpty');
-        if (pe) pe.innerHTML = '<i class="bi bi-list-task"></i><div class="fw-bold" style="font-size:.9rem;">Registro de Auditoría</div><div style="font-size:.78rem;">Selecciona un evento de la izquierda para ver detalles. (Próximamente)</div>';
-        return;
-    }
 
     if (window._guTabActiva === 'roles') {
         if (!window.dataGlobalRoles.length) {
