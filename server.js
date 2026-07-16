@@ -2294,7 +2294,7 @@ db.query(
 
 // ── Helper: generar código secuencial para Almacén ───────────────────────
 function _generarCodigoAlmacen(tipo, anio, cb) {
-    const tablas = { INV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
+    const tablas = { INV: 'inventario', SERV: 'inventario', ENT: 'entradas_inv', SAL: 'salidas_inv', SA: 'salidas_inv', PROV: 'proveedores_inv' };
     const tabla = tablas[tipo];
     const prefix = anio ? `${tipo}-${anio}-` : `${tipo}-`;
     db.query(
