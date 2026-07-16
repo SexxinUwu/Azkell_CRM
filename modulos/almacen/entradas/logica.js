@@ -96,7 +96,7 @@ window.cargarEntradas = function() {
 
 window._entOnMonedaChange = function() {
     var moneda = (document.getElementById('ent-f-moneda') || {}).value;
-    var tcRow = document.getElementById('ent-tc-row');
+    var tcRow = document.getElementById('ent-f-tc-box');
     if (tcRow) tcRow.style.display = moneda === 'USD' ? 'block' : 'none';
     window._entActualizarTotal();
 };
@@ -105,7 +105,7 @@ window._entCargarConfig = function() {
     fetch('/api/almacen/configuracion')
         .then(function(r) { return r.json(); })
         .then(function(cfg) {
-            window._entTC = parseFloat(cfg.tipo_cambio) || 3.70;
+            window._entTC = parseFloat(cfg.tipo_cambio) || 3.40;
             var tcEl = document.getElementById('ent-f-tc');
             if (tcEl) tcEl.value = window._entTC.toFixed(3);
         }).catch(function() {});
@@ -506,7 +506,7 @@ window.guardarEntrada = function() {
         documento_referencia: docRef||null, moneda,
         tipo_igv: window._entIgvMode || 'sin_igv',
         tipo_cambio: moneda === 'USD'
-            ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.70)
+            ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40)
             : 1,
         observaciones: obs,
         motivo_entrada: motivo,
@@ -568,9 +568,30 @@ window.abrirModalEntrada = function() {
     var totalEl = document.getElementById('ent-total-display');
     if (totalEl) totalEl.textContent = 'S/ 0.00';
 
-    ['ent-f-doc-ref','ent-f-obs'].forEach(function(id) {
+    ['ent-f-doc-ref','ent-f-obs', 'ent-f-placa-txt', 'ent-f-placa', 'ent-f-motivo'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
+    
+    var tipoOrden = document.getElementById('ent-f-tipo-orden');
+    if (tipoOrden) tipoOrden.value = 'Orden de Compra';
+    var condPago = document.getElementById('ent-f-condicion-pago');
+    if (condPago) { condPago.value = 'Al Contado'; var dcb = document.getElementById('ent-f-dias-credito-box'); if(dcb) dcb.style.display = 'none'; }
+    var dias = document.getElementById('ent-f-dias-credito');
+    if (dias) dias.value = '30';
+    
+    ['ent-f-voucher', 'ent-f-cotizacion', 'ent-f-factura'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if(el) {
+            el.value = '';
+            if(el.nextElementSibling) el.nextElementSibling.textContent = 'Ningún archivo';
+            if(el.parentElement) {
+                el.parentElement.style.borderColor = 'var(--border)';
+                el.parentElement.style.background = 'var(--bg)';
+                el.parentElement.style.borderStyle = 'dashed';
+            }
+        }
+    });
+
     var obsRow = document.getElementById('ent-obs-row');
     var obsBtn = document.getElementById('ent-obs-toggle');
     if (obsRow) obsRow.style.display = 'none';
