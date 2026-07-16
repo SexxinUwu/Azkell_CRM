@@ -491,6 +491,37 @@ window._invRenderKPIs = function(data) {
 };
 
 // ── Filtrar ───────────────────────────────────────────────────────
+
+window._invActiveTab = 'fisicos';
+
+window._invSwitchTab = function(tab) {
+    window._invActiveTab = tab;
+    var btnFisicos = document.getElementById('inv-tab-fisicos');
+    var btnServicios = document.getElementById('inv-tab-servicios');
+    if (!btnFisicos || !btnServicios) return;
+    
+    if (tab === 'fisicos') {
+        btnFisicos.className = 'inv-tab-btn active';
+        btnFisicos.style.background = '#0ea5e9';
+        btnFisicos.style.color = '#fff';
+        btnServicios.className = 'inv-tab-btn';
+        btnServicios.style.background = 'transparent';
+        btnServicios.style.color = '#0ea5e9';
+        document.getElementById('inv-fil-familia').style.display = 'inline-block';
+        document.getElementById('inv-fil-sistema').style.display = 'inline-block';
+    } else {
+        btnServicios.className = 'inv-tab-btn active';
+        btnServicios.style.background = '#0ea5e9';
+        btnServicios.style.color = '#fff';
+        btnFisicos.className = 'inv-tab-btn';
+        btnFisicos.style.background = 'transparent';
+        btnFisicos.style.color = '#0ea5e9';
+        document.getElementById('inv-fil-familia').style.display = 'none';
+        document.getElementById('inv-fil-sistema').style.display = 'none';
+    }
+    window.filtrarInventario();
+};
+
 window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
     var filFam  = ((document.getElementById('inv-fil-familia')  || {}).value || '');
@@ -505,6 +536,7 @@ window.filtrarInventario = function() {
             (d.codigo_barras|| '').toLowerCase().includes(buscar);
         var matchF = !filFam || d.familia === filFam;
         var matchS = !filSis || d.sistema === filSis;
+          var matchC = (window._invActiveTab === 'servicios') ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
         
         var f = window._invKpiFiltro || 'todos';
         if (f === 'bajo') {
@@ -518,7 +550,7 @@ window.filtrarInventario = function() {
             if (!(sm > 0 && sa < sm)) return false;
         }
 
-        return matchB && matchF && matchS;
+        return matchB && matchF && matchS && matchC;
     });
 
     window._invFiltrados.sort(function(a, b) {
@@ -916,6 +948,35 @@ window.abrirModalInventario = function(id) {
 
     // Reset chips
     window.invMsInit('');
+
+      // Aislamiento Servicios en el modal
+      var isServicio = window._invActiveTab === 'servicios';
+      
+      // Ocultar elementos si es servicio
+      var toHide = [
+        document.getElementById('inv-f-codigo-barras')?.parentNode,
+        document.getElementById('inv-f-marca-txt')?.closest('div.position-relative')?.parentNode?.parentNode, // Marca
+        document.getElementById('inv-f-familia-txt')?.closest('div.position-relative')?.parentNode?.parentNode, // Familia
+        document.getElementById('inv-f-tipo-txt')?.closest('div.position-relative')?.parentNode, // Tipo
+        document.getElementById('inv-f-sub-tipo-txt')?.closest('div.position-relative')?.parentNode, // Subtipo
+        document.getElementById('inv-f-almacen-txt')?.closest('div.position-relative')?.parentNode, // Almacen
+        document.getElementById('inv-f-anaquel')?.parentNode, // Anaquel
+        document.getElementById('inv-f-unidad-txt')?.closest('div.position-relative')?.parentNode, // Unidad
+        document.getElementById('inv-f-minimo')?.parentNode, // Minimo
+        document.getElementById('inv-f-maximo')?.parentNode  // Maximo
+      ];
+      
+      toHide.forEach(function(el) {
+          if (el && el.style) {
+              el.style.display = isServicio ? \'none\' : \'\';
+          }
+      });
+      
+      if (isServicio && !id) {
+          window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
+          window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
+      }
+
 
     // Tabs removidos
 
