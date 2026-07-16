@@ -64,7 +64,12 @@ router.get('/ordenes-trabajo', (req, res) => {
             COALESCE((
                 SELECT SUM(s.total_pen)
                 FROM salidas_inv s WHERE s.ticket_ot = o.ticket_entrada AND s.estado = 'Despachado'
-            ), 0) AS costo_total
+              ), 0)
+              +
+              COALESCE((
+                  SELECT SUM(e.total_pen)
+                  FROM entradas_inv e WHERE e.ot_id = o.ticket_entrada AND e.tipo_orden = 'Orden de servicio' AND (e.estado IS NULL OR e.estado != 'Anulado')
+              ), 0) AS costo_total
         FROM ordenes_trabajo o
         LEFT JOIN taller_rampas r ON r.id = o.id_rampa
         ORDER BY o.fecha_ingreso DESC`;
