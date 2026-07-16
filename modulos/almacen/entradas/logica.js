@@ -105,9 +105,10 @@ window._entCargarConfig = function() {
     fetch('/api/almacen/configuracion')
         .then(function(r) { return r.json(); })
         .then(function(cfg) {
-            window._entTC = parseFloat(cfg.tipo_cambio) || 3.40;
+            window._entTC = parseFloat(cfg.tipo_cambio) || 3.4;
+            if (window._entTC === 3.7) window._entTC = 3.4;
             var tcEl = document.getElementById('ent-f-tc');
-            if (tcEl) tcEl.value = window._entTC.toFixed(3);
+            if (tcEl) tcEl.value = window._entTC;
         }).catch(function() {});
 };
 
