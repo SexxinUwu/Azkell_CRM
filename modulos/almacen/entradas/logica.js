@@ -129,14 +129,35 @@ window._entCargarProveedores = function() {
     if (window._entProvItems && window._entProvItems.length) {
         window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
     }
-    fetch('/api/taller/ot?limit=100').then(r=>r.json()).then(res => {
-        if(res.data) {
-            window._entCacheOT = res.data;
-            var otItems = window._entCacheOT.map(function(ot) {
-                var p = ot.placa || ot.placa_vehiculo || ot.placa_vehiculo_referencial || '';
-                return { value: ot.id, label: ot.id + (p ? ' — ' + p : '') };
-            });
-            window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
+    fetch('/api/ordenes-trabajo').then(r=>r.json()).then(d => {
+        window._entCacheOT = d || [];
+        var otItems = (d || []).map(function(o) {
+            var idOt = (o.id_ot || '').toUpperCase();
+            var placa = (o.placa || '').toUpperCase();
+            if (!idOt) return null;
+            return { value: idOt, label: placa ? idOt + ' — ' + placa : idOt };
+        }).filter(Boolean);
+        window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
+    fetch('/api/placas-lista').then(function(r){return r.json();}).then(function(d){
+        var items = (d||[]).map(function(p){
+            var placa = (p.placa||'').toUpperCase();
+            return {value:placa, label:placa};
+        }).filter(function(x){return x.value;}).sort(function(a,b){return a.label.localeCompare(b.label);});
+        window._cbInit('ent-f-ot-placa', items, 'Buscar placa...');
+    }).catch(function(){});
+
+        
+        window._cbOnSelect('ent-f-ot', function(val) {
+            var ot = window._entCacheOT.find(function(x) { return (x.id_ot||'').toUpperCase() === val; });
+            var placaInput = document.getElementById('ent-f-ot-placa');
+            if (placaInput && ot && ot.placa) {
+                placaInput.value = ot.placa;
+            } else if (placaInput) {
+                placaInput.value = '';
+            }
+        });
+    }).catch(function(){});
+        window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
             
             window._cbOnSelect('ent-f-ot', function(val) {
                 // Find label to extract placa
@@ -274,7 +295,11 @@ window._entAgregarItem = function() {
 window._entInitCbItem = function(idx, cbId) {
     var isServicio = ((document.getElementById('ent-f-tipo-orden') || {}).value || '').toLowerCase() === 'orden de servicio';
     var dataFiltered = (window._entInvData || []).filter(function(d) {
-        return isServicio ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
+        var isServId = d.id.toUpperCase().startsWith('SERV-');
+          var isFamServ = d.familia === 'Servicio' || d.familia === 'Servicios';
+          var isTipoServ = d.tipo === 'Servicio';
+          var isService = isServId || isFamServ || isTipoServ;
+          return isServicio ? isService : !isService;
     });
     var items = dataFiltered.map(function(d) {
         return { value: d.id, label: d.id + ' — ' + (d.descripcion || '') };
@@ -1475,7 +1500,18 @@ window._entToggleTipoOrden = function() { var tipo = document.getElementById('en
             titleEl.textContent = tipo.toLowerCase() === 'orden de servicio' ? 'Nueva Orden de Servicio' : 'Nueva Orden de Compra';
         }
 
-        if (tipo.toLowerCase() === 'orden de servicio') { elPlaca.style.display = 'none'; elOt.style.display = 'block'; } else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; } };
+        if (tipo.toLowerCase() === 'orden de servicio') { elPlaca.style.display = 'none'; elOt.style.display = 'block'; } else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; }  
+          var itemsDesc = document.querySelectorAll('.ent-item-desc');
+          for (var i = 0; i < itemsDesc.length; i++) {
+              var idx = itemsDesc[i].getAttribute('data-idx');
+              var cbId = 'ent-art-' + idx;
+              if (typeof window._entInitCbItem === 'function') {
+                  window._entInitCbItem(idx, cbId);
+                  window._cbReset(cbId);
+                  window._entCalcImporte(idx, 'pu'); // Reset calculations if needed
+              }
+          }
+     };
 
 window._entSyncServiceCost = function(idx, val) {
     var v = parseFloat(val) || 0;
