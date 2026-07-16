@@ -968,7 +968,7 @@ window.abrirModalInventario = function(id) {
       
       toHide.forEach(function(el) {
           if (el && el.style) {
-              el.style.display = isServicio ? \'none\' : \'\';
+              el.style.display = isServicio ? 'none' : '';
           }
       });
       

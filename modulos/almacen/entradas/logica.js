@@ -937,7 +937,7 @@ window._entRender = function() {
             var provHtml = d.proveedor_nombre ? '<span style="font-size:.78rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                '<td><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                 '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '<span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +
