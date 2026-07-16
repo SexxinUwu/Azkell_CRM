@@ -451,21 +451,15 @@ function _guBuildUserPanel(user) {
 
     // Contraseña: usuario existente vs nuevo
     if (user.id) {
-        // Mostrar contraseña actual con ojo + sección de cambio colapsable
-        html += '<div class="gu-field-label">Contraseña actual</div>'
-            + '<div style="display:flex; position:relative; margin-bottom:24px;">'
-            + '<input type="password" id="guUserPassActual" class="dc-input" value="' + _guEsc(user.password||'') + '" readonly style="background:var(--dc-bg);color:var(--dc-text); margin-bottom:0; padding-right:40px;">'
-            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassActual\',this)" title="Ver contraseña">'
-            + '<i class="bi bi-eye"></i></button></div>'
-            + '<button style="background:transparent; border:none; color:var(--dc-primary); font-size:0.85rem; cursor:pointer;" type="button" onclick="window._guToggleChangePass()">'
-            + '<i class="bi bi-pencil me-1"></i>Cambiar contraseña</button>'
-            + '<div id="guChangePassSection" style="display:none;margin-top:16px;">'
+        html += '<button style="background:transparent; border:none; color:var(--dc-primary); font-size:0.85rem; cursor:pointer; margin-bottom: 16px; padding: 0;" type="button" onclick="window._guToggleChangePass()">'
+            + '<i class="bi bi-key-fill me-1"></i>Restablecer contraseña</button>'
+            + '<div id="guChangePassSection" style="display:none;">'
             + '<div class="gu-field-label">Nueva contraseña</div>'
             + '<div style="display:flex; position:relative; margin-bottom:8px;">'
-            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Nueva contraseña..." style="margin-bottom:0; padding-right:40px;">'
+            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Escribe la nueva contraseña..." style="margin-bottom:0; padding-right:40px;">'
             + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>'
-            + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-top:4px;">Deja vacío para no cambiar la contraseña.</div>'
+            + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-bottom:24px;">Si escribes una contraseña, el usuario perderá su acceso anterior y deberá usar esta.</div>'
             + '</div>';
     } else {
         // Nuevo usuario: campo simple con ojo
