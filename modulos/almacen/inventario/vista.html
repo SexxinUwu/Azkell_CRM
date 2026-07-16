@@ -391,7 +391,7 @@
   </div>
 
   <!-- Filtros -->
-  <div id="inv-filter-row"
+    <div id="inv-filter-row"
        style="display:flex;align-items:center;gap:.6rem;padding:.6rem 1.5rem;
               border-bottom:1px solid var(--border);background:var(--surface);
               flex-shrink:0;flex-wrap:wrap;">
@@ -413,6 +413,22 @@
                    background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
                    font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todas las familias</option>
+    </select>
+    <!-- Sistema -->
+    <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
+            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
+                   background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
+                   font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
+      <option value="">Todos los sistemas</option>
+    </select>
+    <!-- Tipo (Físico vs Servicio) -->
+    <select id="inv-fil-clase" onchange="window.filtrarInventario()"
+            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
+                   background:rgba(14,165,233,0.05);padding:0 2rem 0 .85rem;font-size:.82rem;
+                   font-weight:700;color:#0ea5e9;outline:none;cursor:pointer;max-width:170px;">
+      <option value="fisicos" selected>Artículos Físicos</option>
+      <option value="servicios">Solo Servicios</option>
+      <option value="todos">Todos</option>
     </select>
     <!-- Sistema -->
     <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
