@@ -1040,9 +1040,11 @@ function _entDescLimpia(desc, invId) {
 
 // ── Comprobante PDF ───────────────────────────────────────────────
 
+
 window._entGenerarHtmlPDF = function(d) {
     var fecha = d.fecha ? String(d.fecha).split('T')[0] : '-';
-    var totalPen = parseFloat(d.total_pen || 0);
+    // Use the original total, not the PEN converted total
+    var totalReal = parseFloat(d.total || d.total_pen || 0);
     var monSimbolo = d.moneda === 'USD' ? 'USD' : 'PEN';
 
     function numeroALetras(num) {
@@ -1072,11 +1074,23 @@ window._entGenerarHtmlPDF = function(d) {
 
     var txtMoneda = monSimbolo === 'USD' ? 'DÓLARES' : 'SOLES';
     var txtMonedaS = monSimbolo === 'USD' ? 'US$' : 'S/';
-    var totalText = totalPen.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var totalText = totalReal.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
     var condPagoText = (d.condicion_pago || 'AL CONTADO').toUpperCase();
     if (d.condicion_pago && d.condicion_pago.toLowerCase() === 'a crédito') {
         condPagoText = 'CRÉDITO / ' + (d.dias_credito||0) + ' DÍAS';
+    }
+
+    var numDisplay = (d.id || '').replace(/^ENT-/, '');
+    var tipoDocTitle = (d.tipo_orden || 'ORDEN DE COMPRA').toUpperCase();
+
+    var obsBlock = '';
+    if (d.observaciones && d.observaciones.trim() !== '') {
+        obsBlock = '<!-- OBSERVACIONES -->' +
+        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:4px;padding:15px;font-size:12px;color:#92400e;">' +
+            '<b style="display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones Adicionales</b>' +
+            d.observaciones +
+        '</div>';
     }
 
     return '' +
@@ -1086,23 +1100,18 @@ window._entGenerarHtmlPDF = function(d) {
         '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:20px;margin-bottom:30px;">' +
             '<div>' +
                 '<div style="font-size:36px;font-weight:900;color:#0f172a;letter-spacing:-1px;">' +
-                    'AZKELL <span style="color:#2563eb;">CRM</span>' +
+                    'AZKELL <span style="color:#2563eb;">FLEET</span>' +
                 '</div>' +
-                '<div style="font-size:13px;color:#64748b;margin-top:5px;font-weight:500;">SISTEMA DE GESTIÓN EMPRESARIAL</div>' +
             '</div>' +
             '<div style="text-align:right;">' +
-                '<div style="font-size:24px;font-weight:800;color:#1e293b;letter-spacing:-0.5px;text-transform:uppercase;">ORDEN DE COMPRA</div>' +
-                '<div style="font-size:16px;font-weight:700;color:#2563eb;margin-top:5px;">N° ' + d.id + '</div>' +
+                '<div style="font-size:24px;font-weight:800;color:#1e293b;letter-spacing:-0.5px;text-transform:uppercase;">' + tipoDocTitle + '</div>' +
+                '<div style="font-size:16px;font-weight:700;color:#2563eb;margin-top:5px;">N° ' + numDisplay + '</div>' +
             '</div>' +
         '</div>' +
 
         '<!-- SUMMARY CARDS -->' +
         '<div style="display:flex;gap:15px;margin-bottom:25px;">' +
-            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;">' +
-                '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">Solicitante</div>' +
-                '<div style="font-size:14px;font-weight:700;color:#0f172a;text-transform:uppercase;">' + (d.creado_por || '-') + '</div>' +
-            '</div>' +
-            '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;">' +
+            '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:15px;">' +
                 '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">Fecha de Emisión</div>' +
                 '<div style="font-size:14px;font-weight:700;color:#0f172a;">' + fecha.split('-').reverse().join('/') + '</div>' +
             '</div>' +
@@ -1156,7 +1165,7 @@ window._entGenerarHtmlPDF = function(d) {
             '</table>' +
             '<div style="background:#f8fafc;padding:15px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
                 '<div style="font-size:11px;color:#64748b;max-width:350px;">' +
-                    '<b>SON:</b> ' + numeroALetras(totalPen) + ' ' + txtMoneda +
+                    '<b>SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
                 '</div>' +
                 '<div style="font-size:18px;color:#0f172a;">' +
                     '<span style="font-weight:600;font-size:14px;color:#64748b;margin-right:15px;">TOTAL GENERAL</span>' +
@@ -1165,11 +1174,7 @@ window._entGenerarHtmlPDF = function(d) {
             '</div>' +
         '</div>' +
 
-        '<!-- OBSERVACIONES -->' +
-        '<div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;border-radius:4px;padding:15px;font-size:12px;color:#92400e;">' +
-            '<b style="display:block;margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#b45309;">Observaciones Adicionales</b>' +
-            (d.observaciones || 'No se registraron observaciones adicionales para esta orden.') +
-        '</div>' +
+        obsBlock +
 
     '</div>';
 };
