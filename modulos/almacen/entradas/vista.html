@@ -626,20 +626,28 @@
         </div>
 
         <!-- OT Asociada -->
-        <div id="ent-ot-container" style="display:none;">
-          <div class="ent-field-label">OT Asociada <span style="color:#ef4444;">*</span></div>
-          <div class="position-relative">
-            <input type="text" id="ent-f-ot-txt" class="ent-input-sm"
-                   placeholder="Buscar OT..." autocomplete="off"
-                   oninput="window._entCbFiltrar('ent-f-ot')"
-                   onfocus="window._entCbFiltrar('ent-f-ot')"
-                   onblur="window._cbHide('ent-f-ot')">
-            <input type="hidden" id="ent-f-ot">
-            <div id="ent-f-ot-dd" class="cb-dropdown"></div>
+          <div id="ent-ot-container" style="display:none; grid-column:1/-1;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <div class="ent-field-label">OT Asociada <span style="color:#ef4444;">*</span></div>
+                    <div class="position-relative">
+                    <input type="text" id="ent-f-ot-txt" class="ent-input-sm w-100"
+                            placeholder="Buscar OT..." autocomplete="off"
+                            oninput="window._cbFiltrar('ent-f-ot')"
+                            onfocus="window._cbFiltrar('ent-f-ot')"
+                            onblur="window._cbHide('ent-f-ot')">
+                    <input type="hidden" id="ent-f-ot">
+                    <div id="ent-f-ot-dd" class="cb-dropdown"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="ent-field-label">Placa / Vehículo</div>
+                    <input type="text" id="ent-f-ot-placa" class="ent-input-sm w-100" disabled placeholder="Se llenará al elegir OT...">
+                </div>
+            </div>
           </div>
-        </div>
 
-        <!-- Motivo -->
+          <!-- Motivo -->
         <div>
           <div class="ent-field-label">Motivo</div>
           <input type="text" id="ent-f-motivo" class="ent-input-sm" placeholder="Motivo de ingreso...">

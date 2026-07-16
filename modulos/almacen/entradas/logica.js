@@ -129,7 +129,33 @@ window._entCargarProveedores = function() {
     if (window._entProvItems && window._entProvItems.length) {
         window._cbInit('ent-f-proveedor', window._entProvItems, 'Buscar proveedor…');
     }
-    fetch('/api/almacen/proveedores')
+    fetch('/api/taller/ot?limit=100').then(r=>r.json()).then(res => {
+        if(res.data) {
+            window._entCacheOT = res.data;
+            var otItems = window._entCacheOT.map(function(ot) {
+                var p = ot.placa || ot.placa_vehiculo || ot.placa_vehiculo_referencial || '';
+                return { value: ot.id, label: ot.id + (p ? ' — ' + p : '') };
+            });
+            window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
+            
+            window._cbOnSelect('ent-f-ot', function(val) {
+                // Find label to extract placa
+                var item = otItems.find(function(x) { return x.value === val; });
+                var placaInput = document.getElementById('ent-f-ot-placa');
+                if (placaInput && item && item.label) {
+                    var parts = item.label.split('—');
+                    if (parts.length > 1) {
+                        placaInput.value = parts[1].trim();
+                    } else {
+                        placaInput.value = '';
+                    }
+                } else if (placaInput) {
+                    placaInput.value = '';
+                }
+            });
+        }
+    });
+        fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             window._entProvItems = data.map(function(p) {
@@ -508,9 +534,15 @@ window.guardarEntrada = function() {
     var condicion_pago = (document.getElementById('ent-f-condicion-pago') || {}).value || 'Al contado';
     var dias_credito = parseInt((document.getElementById('ent-f-dias-credito') || {}).value, 10) || 30;
     var motivo = (document.getElementById('ent-f-motivo')  || {}).value || '';
-    var placa  = window._cbGet('ent-f-placa') || '';
-
-    if (!fecha)  { alert('Falta la fecha.'); return; }
+    var placa = window._cbGet('ent-f-placa') || '';
+      var ot_id = window._cbGet('ent-f-ot') || '';
+      if (tipo_orden.toLowerCase() === 'orden de servicio') {
+          placa = (document.getElementById('ent-f-ot-placa') || {}).value || '';
+      } else {
+          ot_id = null;
+      }
+      
+      if (!fecha)  { alert('Falta la fecha.'); return; }
     if (!provId) { alert('Selecciona un proveedor.'); return; }
     if (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; })) {
         alert('El proveedor ingresado no existe en la lista. Por favor, regístrelo primero.');
@@ -545,18 +577,19 @@ window.guardarEntrada = function() {
     if (!items.length) { alert('Agrega al menos un artículo.'); return; }
 
     var payload = { fecha, proveedor_id: provId||null, proveedor_nombre: provNombre||null,
-        documento_referencia: docRef||null, moneda,
-        tipo_igv: window._entIgvMode || 'sin_igv',
-        tipo_cambio: moneda === 'USD'
-            ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40)
-            : 1,
-        observaciones: obs,
-        motivo_entrada: motivo,
-        placa: placa,
-        tipo_orden: tipo_orden,
-        condicion_pago: condicion_pago,
-        dias_credito: dias_credito,
-        creado_por: localStorage.getItem('fleet_user')||'', items };
+          documento_referencia: docRef||null, moneda,
+          tipo_igv: window._entIgvMode || 'sin_igv',
+          tipo_cambio: moneda === 'USD'
+              ? (parseFloat((document.getElementById('ent-f-tc')||{}).value) || window._entTC || 3.40)
+              : 1,
+          observaciones: obs,
+          motivo_entrada: motivo,
+          placa: placa,
+          ot_id: ot_id,
+          tipo_orden: tipo_orden,
+          condicion_pago: condicion_pago,
+          dias_credito: dias_credito,
+          creado_por: localStorage.getItem('fleet_user')||'', items };
 
     var method = window._entEditId ? 'PUT' : 'POST';
     var url = window._entEditId ? '/api/almacen/entradas/' + window._entEditId : '/api/almacen/entradas';
@@ -705,7 +738,13 @@ window.abrirModalEditarEntrada = function(id) {
         window._cbSet('ent-f-placa', entrada.placa, entrada.placa);
     }
 
-    if (entrada.proveedor_id) {
+    if (entrada.ot_id) {
+          window._cbSet('ent-f-ot', entrada.ot_id, entrada.ot_id + (entrada.placa ? ' — ' + entrada.placa : ''));
+          var placaInput = document.getElementById('ent-f-ot-placa');
+          if (placaInput) placaInput.value = entrada.placa || '';
+      }
+      
+      if (entrada.proveedor_id) {
         window._cbSet('ent-f-proveedor', entrada.proveedor_id, entrada.proveedor_nombre);
     } else if (entrada.proveedor_nombre) {
         var el = document.getElementById('ent-f-proveedor-txt');
@@ -939,7 +978,7 @@ window._entRender = function() {
 
             tr.innerHTML =
                  '<td class="text-center" style="vertical-align:middle;"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
-                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '</td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +
