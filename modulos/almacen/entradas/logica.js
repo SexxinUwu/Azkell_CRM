@@ -157,25 +157,7 @@ window._entCargarProveedores = function() {
             }
         });
     }).catch(function(){});
-        window._cbInit('ent-f-ot', otItems, 'Buscar OT...');
-            
-            window._cbOnSelect('ent-f-ot', function(val) {
-                // Find label to extract placa
-                var item = otItems.find(function(x) { return x.value === val; });
-                var placaInput = document.getElementById('ent-f-ot-placa');
-                if (placaInput && item && item.label) {
-                    var parts = item.label.split('—');
-                    if (parts.length > 1) {
-                        placaInput.value = parts[1].trim();
-                    } else {
-                        placaInput.value = '';
-                    }
-                } else if (placaInput) {
-                    placaInput.value = '';
-                }
-            });
-        }
-    });
+
         fetch('/api/almacen/proveedores')
         .then(function(r) { return r.json(); })
         .then(function(data) {
