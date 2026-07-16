@@ -1,436 +1,182 @@
-<!-- Módulo Gestión de Usuarios v3 — Discord-style Light Mode -->
+<!-- Módulo Gestión de Usuarios v2 — Discord-style -->
 <style>
-/* Discord Light Mode Colors */
-:root {
-  --dc-bg: #f2f3f5;
-  --dc-panel-bg: #ffffff;
-  --dc-text: #060607;
-  --dc-subtext: #4e5058;
-  --dc-border: #e3e5e8;
-  --dc-hover: rgba(78, 80, 88, 0.08);
-  --dc-active: rgba(78, 80, 88, 0.16);
-  --dc-primary: #5865f2;
-}
+/* ── Layout principal ─────────────────────────────── */
+#moduloUsuarios { display:flex; flex-direction:column; height:100%; background:var(--bg); }
+.gu-header { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.gu-tabs { background:var(--surface); border-bottom:2px solid var(--border); flex-shrink:0; padding:0 16px; display:flex; gap:0; }
+.gu-tab { font-size:0.82rem; font-weight:600; padding:10px 16px; border:none; background:transparent; color:var(--subtext); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; letter-spacing:.3px; }
+.gu-tab:hover { color:var(--text); }
+.gu-tab.active { color:var(--crm-accent); border-bottom-color:var(--crm-accent); }
+.gu-body { display:flex; flex:1 1 0; min-height:0; overflow:hidden; }
 
-#moduloUsuarios {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 9999;
-    display: flex;
-    background: var(--dc-bg);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
+/* ── Lista ────────────────────────────────────────── */
+.gu-list { width:280px; flex-shrink:0; border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
+.gu-list-item { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border); position:relative; }
+.gu-list-item:hover { background:var(--border); }
+.gu-list-item.selected { background:color-mix(in srgb, var(--crm-accent) 12%, transparent); }
+.gu-role-dot { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:#fff; }
+.gu-list-info { flex:1; min-width:0; }
+.gu-list-name { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gu-list-sub  { font-size:0.7rem; color:var(--subtext); }
+.gu-list-chevron { color:var(--subtext); font-size:0.8rem; }
+.gu-add-btn { margin:10px 12px; padding:8px 12px; border:2px dashed var(--border); border-radius:10px; background:transparent; color:var(--subtext); font-size:0.8rem; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
+.gu-add-btn:hover { border-color:var(--crm-accent); color:var(--crm-accent); }
 
-/* Sidebar (Left) */
-.dc-sidebar {
-    width: 250px;
-    background: var(--dc-bg);
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--dc-border);
-}
-.dc-sidebar-header {
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.dc-back-btn {
-    background: transparent;
-    border: none;
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--dc-subtext);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0;
-}
-.dc-back-btn:hover { color: var(--dc-text); }
-.dc-add-role-btn {
-    background: transparent;
-    border: none;
-    color: var(--dc-subtext);
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0;
-}
-.dc-add-role-btn:hover { color: var(--dc-text); }
-.dc-role-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 10px 20px 10px;
-}
-.dc-role-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-bottom: 2px;
-    transition: background 0.1s;
-}
-.dc-role-item:hover { background: var(--dc-hover); }
-.dc-role-item.active { background: var(--dc-active); }
-.dc-role-dot {
-    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
-}
-.dc-role-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--dc-text);
-    flex: 1;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+/* ── Panel derecho (desktop) ──────────────────────── */
+.gu-panel { flex:1 1 0; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+.gu-panel-body { padding:20px 24px 80px; flex:1; overflow-y:auto; }
+.gu-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--subtext); text-align:center; padding:40px; gap:12px; }
+.gu-panel-empty i { font-size:2.5rem; opacity:.25; }
 
-/* Main Content */
-.dc-main {
-    flex: 1;
-    background: var(--dc-panel-bg);
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    border-top-left-radius: 8px;
-}
-.dc-main-header {
-    padding: 24px 32px 0 32px;
-}
-.dc-main-title {
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--dc-text);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.dc-esc-btn {
-    position: absolute;
-    top: 24px; right: 24px;
-    background: transparent;
-    border: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--dc-subtext);
-    cursor: pointer;
-    font-size: 0.7rem;
-    font-weight: 700;
-}
-.dc-esc-btn i {
-    font-size: 1.2rem;
-    border: 2px solid var(--dc-subtext);
-    border-radius: 50%;
-    padding: 6px;
-    margin-bottom: 4px;
-    transition: all 0.2s;
-}
-.dc-esc-btn:hover i { color: var(--dc-text); border-color: var(--dc-text); }
-.dc-esc-btn:hover { color: var(--dc-text); }
+/* ── Secciones dentro del panel ───────────────────── */
+.gu-section-header { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:var(--subtext); padding:18px 0 8px; border-bottom:1px solid var(--border); margin-bottom:0; }
+.gu-field-label { font-size:0.75rem; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; margin-top:14px; }
+.gu-colors { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; }
+.gu-color-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .1s,border-color .1s; }
+.gu-color-swatch.selected, .gu-color-swatch:hover { border-color:var(--text); transform:scale(1.15); }
+.gu-hex-input { font-size:0.78rem; width:90px; padding:3px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); }
 
-.dc-tabs {
-    display: flex;
-    gap: 32px;
-    padding: 16px 32px 0 32px;
-    border-bottom: 1px solid var(--dc-border);
-}
-.dc-tab {
-    background: transparent;
-    border: none;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dc-subtext);
-    padding: 12px 0;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-}
-.dc-tab:hover { color: var(--dc-text); }
-.dc-tab.active {
-    color: var(--dc-text);
-    border-bottom-color: var(--dc-primary);
-}
+/* ── Módulo permiso row ───────────────────────────── */
+.gu-perm-group { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--subtext); padding:16px 0 4px; }
+.gu-perm-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
+.gu-perm-row:last-child { border-bottom:none; }
+.gu-perm-info { flex:1; }
+.gu-perm-name { font-size:0.85rem; font-weight:600; color:var(--text); }
+.gu-perm-desc { font-size:0.72rem; color:var(--subtext); margin-top:1px; }
+.gu-perm-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.gu-perm-label { font-size:0.65rem; font-weight:600; color:var(--subtext); text-align:center; min-width:28px; }
+/* Toggles estilo Discord */
+.dc-toggle { display:none; }
+.dc-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.dc-toggle-label { display:inline-block; width:36px; height:20px; border-radius:10px; background:#4f545c; cursor:pointer; position:relative; transition:background .15s; flex-shrink:0; }
+.dc-toggle:checked + .dc-toggle-label { background:#5865F2; }
+.dc-toggle-label::after { content:''; position:absolute; width:16px; height:16px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+.dc-toggle:checked + .dc-toggle-label::after { left:18px; }
+.dc-toggle-label.readonly { cursor:not-allowed; opacity:.55; }
+/* Toggle de admin (danger) */
+.dc-toggle:checked + .dc-toggle-label.danger { background:#ED4245; }
 
-.dc-content {
-    padding: 32px;
-    overflow-y: auto;
-    flex: 1;
-}
-.dc-content-inner {
-    max-width: 680px;
-}
+/* ── Miembros del rol ─────────────────────────────── */
+.gu-member-chip { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.gu-member-chip:last-child { border-bottom:none; }
+.gu-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; }
+.gu-member-name { font-size:0.82rem; font-weight:600; color:var(--text); flex:1; }
+.gu-member-cargo { font-size:0.7rem; color:var(--subtext); }
+.gu-badge-rol { font-size:0.63rem; padding:2px 8px; border-radius:10px; font-weight:700; white-space:nowrap; }
 
-/* Common form elements */
-.dc-label {
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: var(--dc-subtext);
-    margin-bottom: 8px;
-    display: block;
-}
-.dc-input {
-    width: 100%;
-    background: var(--dc-bg);
-    border: none;
-    border-radius: 4px;
-    padding: 12px 14px;
-    font-size: 0.95rem;
-    color: var(--dc-text);
-    font-weight: 500;
-    margin-bottom: 24px;
-    outline: none;
-    transition: border 0.2s;
-    border: 1px solid transparent;
-}
-.dc-input:focus {
-    border-color: var(--dc-primary);
-}
+/* ── Actions bar del panel ────────────────────────── */
+.gu-panel-actions { display:flex; gap:8px; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+.btn-gu-danger { background:transparent; border:1px solid #ef4444; color:#ef4444; font-size:0.8rem; font-weight:600; padding:6px 14px; border-radius:8px; cursor:pointer; transition:all .15s; }
+.btn-gu-danger:hover { background:#ef4444; color:#fff; }
+.btn-gu-save { background:var(--crm-accent); border:none; color:#fff; font-size:0.8rem; font-weight:700; padding:6px 18px; border-radius:8px; cursor:pointer; transition:opacity .15s; margin-left:auto; }
+.btn-gu-save:hover { opacity:.88; }
 
-/* Color Picker */
-.dc-color-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-.dc-color-swatch {
-    width: 40px; height: 40px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    border: 3px solid transparent;
-    transition: transform 0.1s, border-color 0.1s;
-}
-.dc-color-swatch.selected, .dc-color-swatch:hover {
-    transform: scale(1.1);
-}
-.dc-color-swatch.selected {
-    border-color: var(--dc-text);
-}
-.dc-color-custom {
-    background: var(--dc-bg);
-    color: var(--dc-text);
-    font-size: 1.2rem;
-}
-
-/* Toggles */
-.dc-perm-group {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--dc-text);
-    margin: 32px 0 16px 0;
-}
-.dc-perm-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--dc-border);
-}
-.dc-perm-info {
-    padding-right: 24px;
-}
-.dc-perm-info h4 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--dc-text);
-    margin: 0 0 6px 0;
-}
-.dc-perm-info p {
-    font-size: 0.85rem;
-    color: var(--dc-subtext);
-    margin: 0;
-    line-height: 1.4;
-}
-.dc-toggle { display: none; }
-.dc-toggle-label {
-    display: inline-block;
-    width: 44px; height: 24px;
-    border-radius: 12px;
-    background: #80848e;
-    cursor: pointer;
-    position: relative;
-    transition: background 0.2s;
-    flex-shrink: 0;
-}
-.dc-toggle:checked + .dc-toggle-label { background: #23a559; }
-.dc-toggle:checked + .dc-toggle-label.danger { background: #da373c; }
-.dc-toggle-label::after {
-    content: ''; position: absolute;
-    width: 18px; height: 18px;
-    border-radius: 50%; background: #fff;
-    top: 3px; left: 3px;
-    transition: left 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-.dc-toggle:checked + .dc-toggle-label::after { left: 23px; }
-
-/* Action Bar */
-.dc-action-bar {
-    position: absolute;
-    bottom: 24px; left: 32px; right: 32px;
-    background: rgba(0,0,0,0.85); /* Dark bar for contrast even in light mode */
-    color: #fff;
-    border-radius: 8px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 10;
-    animation: slideUp 0.3s ease;
-}
-.dc-action-bar-text {
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-.dc-btn-save {
-    background: #23a559;
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.dc-btn-save:hover { background: #1f9450; }
-.dc-btn-reset {
-    background: transparent;
-    color: #fff;
-    border: none;
-    font-weight: 500;
-    font-size: 0.85rem;
-    cursor: pointer;
-    padding: 8px 16px;
-    margin-right: 8px;
-}
-.dc-btn-reset:hover { text-decoration: underline; }
-
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* Simular Rol Banner Multiple */
-.dc-sim-banner {
-    background: var(--dc-primary);
-    color: #fff;
-    padding: 8px 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-.dc-sim-dropdown {
-    position: relative;
-    display: inline-block;
-}
-.dc-sim-btn {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.5);
-    color: #fff;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex; align-items: center; gap: 8px;
-}
-.dc-sim-btn:hover { background: rgba(255,255,255,0.1); }
-.dc-sim-list {
-    position: absolute;
-    top: 100%; left: 0;
-    margin-top: 8px;
-    background: var(--dc-bg);
-    border: 1px solid var(--dc-border);
-    border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    min-width: 200px;
-    max-height: 300px;
-    overflow-y: auto;
-    display: none;
-    z-index: 10001;
-    color: var(--dc-text);
-}
-.dc-sim-list.show { display: block; }
-.dc-sim-list-item {
-    padding: 8px 12px;
-    display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer;
-    transition: background 0.1s;
-}
-.dc-sim-list-item:hover { background: var(--dc-hover); }
-.dc-sim-checkbox {
-    width: 18px; height: 18px;
-    border-radius: 4px;
-    border: 1px solid var(--dc-border);
-    display: flex; align-items: center; justify-content: center;
-    background: var(--dc-panel-bg);
-}
-.dc-sim-list-item.checked .dc-sim-checkbox {
-    background: var(--dc-primary);
-    border-color: var(--dc-primary);
-}
-.dc-sim-list-item.checked .dc-sim-checkbox::after {
-    content: '\2713';
-    color: #fff;
-    font-size: 0.75rem;
+/* ── Mobile ───────────────────────────────────────── */
+@media (max-width:767px) {
+    .gu-list { width:100%; border-right:none; }
+    .gu-panel { display:none; }
+    .gu-body { flex-direction:column; }
 }
 </style>
 
 <div id="moduloUsuarios">
-   <!-- Sidebar -->
-   <div class="dc-sidebar">
-      <div class="dc-sidebar-header">
-         <button class="dc-back-btn" onclick="window.cerrarModuloUsuarios()">
-            <i class="bi bi-arrow-left"></i> ATRÁS
-         </button>
-         <button class="dc-add-role-btn" title="Crear rol" onclick="window.dcNuevoRol()">
-             <i class="bi bi-plus-lg"></i>
-         </button>
-      </div>
-      <div class="dc-role-list" id="dc-role-list">
-          <div class="text-center py-4 text-muted small">Cargando...</div>
-      </div>
-   </div>
-   
-   <!-- Main -->
-   <div class="dc-main">
-      <div class="dc-main-header">
-         <div class="dc-main-title" id="dc-role-title">SELECCIONA UN ROL</div>
-         <button class="dc-esc-btn" onclick="window.cerrarModuloUsuarios()">
-             <i class="bi bi-x-lg"></i>
-             <span>ESC</span>
-         </button>
-      </div>
-      <div class="dc-tabs">
-          <button class="dc-tab active" id="dc-tab-btn-visualizar" onclick="window.dcSetTab('visualizar')" style="display:none;">Visualizar</button>
-          <button class="dc-tab" id="dc-tab-btn-permisos" onclick="window.dcSetTab('permisos')" style="display:none;">Permisos</button>
-          <button class="dc-tab" id="dc-tab-btn-miembros" onclick="window.dcSetTab('miembros')" style="display:none;">Gestionar miembros</button>
-      </div>
-      <div class="dc-content" id="dc-content-area">
-          <div class="text-center py-5 text-muted" style="margin-top: 100px;">
-              <i class="bi bi-shield-check" style="font-size: 3rem; opacity: 0.3;"></i>
-              <div class="mt-3 fw-bold">Selecciona un rol de la lista izquierda para editarlo.</div>
-          </div>
-      </div>
-      
-      <!-- Action Bar (Hidden by default) -->
-      <div class="dc-action-bar" id="dc-action-bar" style="display:none;">
-          <div class="dc-action-bar-text">¡Cuidado! Tienes cambios sin guardar.</div>
-          <div>
-              <button class="dc-btn-reset" onclick="window.dcResetForm()">Restablecer</button>
-              <button class="dc-btn-save" onclick="window.dcGuardarCambios()">Guardar cambios</button>
-          </div>
-      </div>
-   </div>
+    <!-- Header -->
+    <div class="gu-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-people-fill" style="font-size:1.1rem;color:var(--crm-accent);"></i>
+            <div>
+                <div class="fw-bold" style="color:var(--text);font-size:0.88rem;">Gestión de Usuarios</div>
+                <div id="gu-subtitle" style="font-size:0.7rem;color:var(--subtext);">Cargando...</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <div id="top-actions-placeholder"></div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="gu-tabs">
+        <button class="gu-tab active" id="gu-tab-roles" onclick="window.guSetTab && window.guSetTab('roles')"><i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="ms-1 opacity-60"></span></button>
+        <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Miembros <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+    </div>
+
+    <!-- Body split -->
+    <div class="gu-body">
+        <!-- Lista izquierda -->
+        <div class="gu-list" id="guList">
+            <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</div>
+        </div>
+
+        <!-- Panel derecho (solo desktop) -->
+        <div class="gu-panel" id="guPanel">
+            <div class="gu-panel-body">
+                <div class="gu-panel-empty" id="guPanelEmpty">
+                    <i class="bi bi-shield-lock"></i>
+                    <div class="fw-bold" style="font-size:.9rem;">Selecciona un rol o miembro</div>
+                    <div style="font-size:.78rem;">Haz clic en la lista para ver y editar sus detalles.</div>
+                </div>
+                <div id="guPanelContent" style="display:none;"></div>
+            </div>
+            <div class="gu-panel-actions" id="guPanelActions" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+    </div>
 </div>
 
 
+    <!-- FAB Menu Usuarios (Estilo Inventario) -->
+    <div id="us-fab-container" style="position:fixed;bottom:24px;right:24px;z-index:1030;display:flex;flex-direction:column;align-items:flex-end;">
+      <div id="us-fab-backdrop" onclick="document.getElementById('us-fab-menu').style.display='none'; document.getElementById('us-fab-backdrop').style.display='none'; document.getElementById('us-fab-icon').style.transform='rotate(0deg)';" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);background:rgba(0,0,0,.28);z-index:-1;"></div>
+      
+      <!-- Menú expandido -->
+      <div id="us-fab-menu" style="display:none;flex-direction:column;align-items:flex-end;gap:1rem;margin-bottom:1rem;">
+        
+        <!-- NUEVO USUARIO -->
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO USUARIO</span>
+          <button onclick="document.getElementById('us-fab-backdrop').click(); window.guNuevoMiembro && window.guNuevoMiembro()" style="width:56px;height:56px;border-radius:18px;background:#2563eb;border:2px solid #fff;color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(37,99,235,.4);cursor:pointer;transition:transform .15s;">
+            <i class="bi bi-person-plus"></i>
+          </button>
+        </div>
+
+        <!-- NUEVO ROL -->
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span style="background:#0f172a;color:#fff!important;padding:.45rem .95rem;border-radius:14px;font-size:.7rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);-webkit-text-fill-color:#fff;">NUEVO ROL</span>
+          <button onclick="document.getElementById('us-fab-backdrop').click(); window.guNuevoRol && window.guNuevoRol()" style="width:56px;height:56px;border-radius:18px;background:#10b981;border:2px solid #fff;color:#fff!important;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(16,185,129,.4);cursor:pointer;transition:transform .15s;">
+            <i class="bi bi-shield-plus"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Botón principal (cuadrado redondeado) -->
+      <button id="us-fab-btn" onclick="const m = document.getElementById('us-fab-menu'); const b = document.getElementById('us-fab-backdrop'); const i = document.getElementById('us-fab-icon'); if(m.style.display==='none'){ m.style.display='flex'; b.style.display='block'; i.style.transform='rotate(45deg)'; } else { m.style.display='none'; b.style.display='none'; i.style.transform='rotate(0deg)'; }" style="width:60px;height:60px;border-radius:18px;background:#f97316;border:none;color:#fff;font-size:1.5rem;box-shadow:0 6px 24px rgba(249,115,22,.5);display:flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.4,0,.2,1),background .2s;margin-top:.5rem;flex-shrink:0;">
+        <i class="bi bi-plus-lg" id="us-fab-icon" style="transition:transform .25s;"></i>
+      </button>
+    </div>
+    <style>
+      @media (min-width: 769px) {
+         #us-fab-container { display: none !important; }
+      }
+      @media (max-width: 768px) {
+         #us-fab-container { bottom: 90px !important; }
+         .top-btn-reg { display: none !important; }
+      }
+    </style>
+
+
+<!-- Offcanvas para móvil y paneles -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(460px,100vw); background:var(--bg); border:none; margin:16px; height:calc(100% - 32px); border-radius:24px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
+    <div class="offcanvas-header" style="background:var(--surface);border-bottom:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px 24px;">
+        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:var(--text);font-size:1.1rem;letter-spacing:0.3px;">Detalle</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" style="opacity:0.6;transition:all 0.2s;"></button>
+    </div>
+    <div class="offcanvas-body p-0" style="overflow-y:auto;position:relative;">
+        <div id="guOffcanvasContent" style="padding:24px 24px 80px;"></div>
+        <div id="guOffcanvasActions" style="display:none;position:sticky;bottom:0;background:var(--surface);padding:16px 24px;border-top:1px solid var(--border);border-radius:0 0 24px 24px;justify-content:flex-end;gap:12px;z-index:10;box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
+    </div>
+</div>
+</div>
