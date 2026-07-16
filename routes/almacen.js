@@ -302,7 +302,8 @@ router.post('/inventario', (req, res) => {
     if (marca) descGenerada += ' / ' + String(marca).trim();
     const descFinal = descGenerada || descripcion || 'Sin nombre';
 
-    _generarCodigoAlmacen('INV', null, (err, id) => {
+    const prefix = (tipo === 'Servicio' || tipo === 'SERV') ? 'SERV' : 'INV';
+    _generarCodigoAlmacen(prefix, null, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         db.query(`INSERT INTO inventario
             (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,costo_soles,tipo_cambio,

@@ -961,6 +961,20 @@ window.abrirModalInventario = function(id) {
             }
         }
         
+        // Cambiar labels a Servicio
+        var lblTitulo = document.getElementById('modal-inv-titulo');
+        var lblArticulo = document.querySelector('.servicio-keep .ent-field-label');
+        if (lblTitulo) {
+            if (isServicio) {
+                lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Servicio &mdash; ' + id : '<i class="bi bi-box me-1"></i>Nuevo Servicio <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">CATÁLOGO DE SERVICIOS</span>';
+            } else {
+                lblTitulo.innerHTML = id ? '<i class="bi bi-pencil-fill me-1"></i>Editar Artículo &mdash; ' + id : '<i class="bi bi-box me-1"></i>Nuevo Artículo <span style="color:var(--subtext);font-size:0.65em;display:block;margin-top:-2px;font-weight:600;">INVENTARIO DE ALMACÉN</span>';
+            }
+        }
+        if (lblArticulo) {
+            lblArticulo.innerHTML = isServicio ? 'Servicio <span style="color:#ef4444;">*</span>' : 'Artículo <span style="color:#ef4444;">*</span>';
+        }
+        
         if (isServicio && !id) {
           window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
           window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
