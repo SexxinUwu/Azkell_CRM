@@ -543,7 +543,7 @@
         <i class="bi bi-arrow-down-circle-fill" style="color:#16a34a;font-size:1.1rem;"></i>
       </div>
       <div>
-        <div style="font-size:.95rem;font-weight:900;color:#0f172a;line-height:1.1;">Nueva Orden de Compra</div>
+        <div id="ent-modal-title" style="font-size:.95rem;font-weight:900;color:#0f172a;line-height:1.1;">Nueva Orden de Compra</div>
         <div style="font-size:.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Almacén de Artículos</div>
       </div>
     </div>
@@ -633,8 +633,8 @@
                     <div class="position-relative">
                     <input type="text" id="ent-f-ot-txt" class="ent-input-sm w-100"
                             placeholder="Buscar OT..." autocomplete="off"
-                            oninput="window._cbFiltrar('ent-f-ot')"
-                            onfocus="window._cbFiltrar('ent-f-ot')"
+                            oninput="window._entCbFiltrar('ent-f-ot')"
+                            onfocus="window._entCbFiltrar('ent-f-ot')"
                             onblur="window._cbHide('ent-f-ot')">
                     <input type="hidden" id="ent-f-ot">
                     <div id="ent-f-ot-dd" class="cb-dropdown"></div>
@@ -642,7 +642,7 @@
                 </div>
                 <div>
                     <div class="ent-field-label">Placa / Vehículo</div>
-                    <input type="text" id="ent-f-ot-placa" class="ent-input-sm w-100" disabled placeholder="Se llenará al elegir OT...">
+                    <input type="text" id="ent-f-ot-placa" class="ent-input-sm w-100" placeholder="Placa o vehículo...">
                 </div>
             </div>
           </div>

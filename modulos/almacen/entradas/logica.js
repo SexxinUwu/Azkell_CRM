@@ -931,7 +931,7 @@ window._entRender = function() {
                 '<td class="col-articulo" style="color:var(--subtext);font-size:.78rem;">Sin artículos</td>' +
                 '<td class="text-end"></td>' +
                 '<td class="text-end col-hide-mob"></td>' +
-                '<td class="text-end col-hide-mob">' + totalFmt + '</td>' +
+                '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + totalFmt + '</td>' +
                 '<td class="text-center col-hide-mob">' + vHTML + '</td>' +
                 '<td class="text-center col-hide-mob">' + cHTML + '</td>' +
                 '<td class="text-center col-hide-mob">' + fHTML + '</td>' +
@@ -988,7 +988,7 @@ window._entRender = function() {
                 '<td class="col-articulo" style="font-size:.80rem;">' + nombre + '</td>' +
                 '<td class="text-end" style="font-size:.80rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>' +
                 '<td class="text-end col-hide-mob" style="font-size:.80rem;">' + (d.moneda === 'USD' ? '$ ' : 'S/ ') + cu.toLocaleString('es-PE', {minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-                '<td class="text-end col-hide-mob">' + (isFirst ? totalFmt : '') + '</td>' +
+                '<td class="text-end col-hide-mob" style="white-space:nowrap;">' + (isFirst ? totalFmt : '') + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? vHTML : '') + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? cHTML : '') + '</td>' +
                 '<td class="text-center col-hide-mob">' + (isFirst ? fHTML : '') + '</td>' +
@@ -1469,7 +1469,13 @@ window._entRenderKPIs = function(data) {
         '</div>';
 };
 
-window._entToggleTipoOrden = function() { var tipo = document.getElementById('ent-f-tipo-orden').value; var elPlaca = document.getElementById('ent-placa-container'); var elOt = document.getElementById('ent-ot-container'); if (!elPlaca || !elOt) return; if (tipo.toLowerCase() === 'orden de servicio') { elPlaca.style.display = 'none'; elOt.style.display = 'block'; } else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; } };
+window._entToggleTipoOrden = function() { var tipo = document.getElementById('ent-f-tipo-orden').value; var elPlaca = document.getElementById('ent-placa-container'); var elOt = document.getElementById('ent-ot-container'); if (!elPlaca || !elOt) return; 
+        var titleEl = document.getElementById('ent-modal-title');
+        if (titleEl) {
+            titleEl.textContent = tipo.toLowerCase() === 'orden de servicio' ? 'Nueva Orden de Servicio' : 'Nueva Orden de Compra';
+        }
+
+        if (tipo.toLowerCase() === 'orden de servicio') { elPlaca.style.display = 'none'; elOt.style.display = 'block'; } else { elPlaca.style.display = 'block'; elOt.style.display = 'none'; } };
 
 window._entSyncServiceCost = function(idx, val) {
     var v = parseFloat(val) || 0;
