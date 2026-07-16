@@ -402,12 +402,21 @@ window.rotAbrirDetalle = function(idOT) {
           + '<div id="rot-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
-    // Salidas de Almacén (placeholder)
-    html += '<div class="rot-sec" id="rot-sec-materiales">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-          + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-          + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
+    
+      // Salidas de Almacén (placeholder)
+      html += '<div class="rot-sec" id="rot-sec-materiales">'
+            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+            + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+            + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
+            + '</div>';
+
+      // Órdenes de Servicio de Terceros
+      html += '<div class="rot-sec" id="rot-sec-servicios">'
+            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#0ea5e9;">Servicios de Terceros <span id="rot-srv-count" style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
+            + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.location.hash=\'#/almacen/entradas\';"><i class="bi bi-box-arrow-up-right"></i> Ir a Entradas</button>' : '') + '</div>'
+            + '<div id="rot-srv-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
+            + '</div>';
+
 
     // Inspección General (placeholder)
     var puedeCrearInsp = puedeEditar || (window.checkPerm && window.checkPerm('insp', 'c'));

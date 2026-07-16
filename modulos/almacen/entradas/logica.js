@@ -576,6 +576,7 @@ window.abrirModalEntrada = function() {
     var tipoOrden = document.getElementById('ent-f-tipo-orden');
     if (tipoOrden) tipoOrden.value = 'Orden de compra';
     var condPago = document.getElementById('ent-f-condicion-pago');
+    setTimeout(window._entToggleTipoOrden, 50);
     if (condPago) { condPago.value = 'Al contado'; var dcb = document.getElementById('ent-f-dias-credito-box'); if(dcb) dcb.style.display = 'none'; }
     var dias = document.getElementById('ent-f-dias-credito');
     if (dias) dias.value = '30';
@@ -629,6 +630,8 @@ window.abrirModalEditarEntrada = function(id) {
 
     var fTipoOrden = document.getElementById('ent-f-tipo-orden');
     if (fTipoOrden) fTipoOrden.value = entrada.tipo_orden || 'Orden de compra';
+    window._cbSet('ent-f-ot', entrada.ot_id || '', entrada.ot_id || '');
+    setTimeout(window._entToggleTipoOrden, 50);
 
     var fCondPago = document.getElementById('ent-f-condicion-pago');
     if (fCondPago) {

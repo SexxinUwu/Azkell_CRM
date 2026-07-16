@@ -65,7 +65,7 @@ window.init_inventario = function() {
     window._invCargarFamilias();
     window._invCargarMarcasFabricante();
     // Inicializar comboboxes estáticos
-    window._cbInit('inv-f-tipo',     ['','Original','Alternativo'],           'Buscar tipo…');
+    window._cbInit('inv-f-tipo',     ['','Original','Alternativo','Servicio'],        'Buscar tipo...');
     window._cbInit('inv-f-sub-tipo', ['','Nuevo','Reparado'],                 'Buscar sub-tipo…');
     window._cbInit('inv-f-moneda', [
         {value:'PEN', label:'PEN (S/)'},
@@ -524,7 +524,14 @@ window.filtrarInventario = function() {
     window._invFiltrados.sort(function(a, b) {
         var minA = parseFloat(a.stock_min || 0);
         var minB = parseFloat(b.stock_min || 0);
-        if (minA === 0 && minB !== 0) return 1;
+        window._invRenderStockBadge = function(actual, min, tipo) {
+    if (tipo === 'Servicio') return '-';
+    var st = parseFloat(actual||0);
+    var mn = parseFloat(min||0);
+    if(st <= 0) return '<span class="badge bg-danger">Sin Stock</span>';
+    if(st <= mn) return '<span class="badge bg-warning text-dark">Stock Bajo</span>';
+    return '<span class="badge bg-success">Óptimo</span>';
+};     if (minA === 0 && minB !== 0) return 1;
         if (minA !== 0 && minB === 0) return -1;
         return 0;
     });
