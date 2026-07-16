@@ -1,75 +1,87 @@
 <!-- Módulo Gestión de Usuarios v2 — Discord-style -->
 <style>
 /* ── Layout principal ─────────────────────────────── */
-#moduloUsuarios { display:flex; flex-direction:column; height:100%; background:var(--bg); }
-.gu-header { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.gu-tabs { background:var(--surface); border-bottom:2px solid var(--border); flex-shrink:0; padding:0 16px; display:flex; gap:0; }
-.gu-tab { font-size:0.82rem; font-weight:600; padding:10px 16px; border:none; background:transparent; color:var(--subtext); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; letter-spacing:.3px; }
-.gu-tab:hover { color:var(--text); }
-.gu-tab.active { color:var(--crm-accent); border-bottom-color:var(--crm-accent); }
+:root {
+  --dc-bg: #f2f3f5;
+  --dc-panel-bg: #ffffff;
+  --dc-text: #060607;
+  --dc-subtext: #4e5058;
+  --dc-border: #e3e5e8;
+  --dc-hover: rgba(78, 80, 88, 0.08);
+  --dc-active: rgba(78, 80, 88, 0.16);
+  --dc-primary: #5865f2;
+}
+
+#moduloUsuarios { display:flex; flex-direction:column; height:100%; background:var(--dc-bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+.gu-header { background:var(--dc-bg); border-bottom:1px solid var(--dc-border); flex-shrink:0; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.gu-tabs { background:var(--dc-bg); border-bottom:1px solid var(--dc-border); flex-shrink:0; padding:0 20px; display:flex; gap:16px; }
+.gu-tab { font-size:0.9rem; font-weight:600; padding:12px 4px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; }
+.gu-tab:hover { color:var(--dc-text); }
+.gu-tab.active { color:var(--dc-primary); border-bottom-color:var(--dc-primary); }
 .gu-body { display:flex; flex:1 1 0; min-height:0; overflow:hidden; }
 
 /* ── Lista ────────────────────────────────────────── */
-.gu-list { width:280px; flex-shrink:0; border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
-.gu-list-item { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border); position:relative; }
-.gu-list-item:hover { background:var(--border); }
-.gu-list-item.selected { background:color-mix(in srgb, var(--crm-accent) 12%, transparent); }
-.gu-role-dot { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:#fff; }
+.gu-list { width:320px; flex-shrink:0; border-right:1px solid var(--dc-border); background:var(--dc-bg); overflow-y:auto; display:flex; flex-direction:column; padding: 10px; }
+.gu-list-item { display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; transition:background .1s; border-radius: 6px; margin-bottom: 2px; }
+.gu-list-item:hover { background:var(--dc-hover); }
+.gu-list-item.selected { background:var(--dc-active); }
+.gu-role-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .gu-list-info { flex:1; min-width:0; }
-.gu-list-name { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gu-list-sub  { font-size:0.7rem; color:var(--subtext); }
-.gu-list-chevron { color:var(--subtext); font-size:0.8rem; }
-.gu-add-btn { margin:10px 12px; padding:8px 12px; border:2px dashed var(--border); border-radius:10px; background:transparent; color:var(--subtext); font-size:0.8rem; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
-.gu-add-btn:hover { border-color:var(--crm-accent); color:var(--crm-accent); }
+.gu-list-name { font-size:0.9rem; font-weight:600; color:var(--dc-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gu-list-sub  { font-size:0.75rem; color:var(--dc-subtext); }
+.gu-list-chevron { display:none; }
+.gu-add-btn { margin:10px 0; padding:8px 12px; border:none; border-radius:6px; background:transparent; color:var(--dc-subtext); font-size:0.85rem; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
+.gu-add-btn:hover { background:var(--dc-hover); color:var(--dc-text); }
 
 /* ── Panel derecho (desktop) ──────────────────────── */
-.gu-panel { flex:1 1 0; overflow:hidden; display:flex; flex-direction:column; position:relative; }
-.gu-panel-body { padding:20px 24px 80px; flex:1; overflow-y:auto; }
-.gu-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--subtext); text-align:center; padding:40px; gap:12px; }
-.gu-panel-empty i { font-size:2.5rem; opacity:.25; }
+.gu-panel { flex:1 1 0; overflow:hidden; display:flex; flex-direction:column; position:relative; background:var(--dc-panel-bg); }
+.gu-panel-body { padding:32px 40px 80px; flex:1; overflow-y:auto; }
+.gu-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--dc-subtext); text-align:center; padding:40px; gap:16px; }
+.gu-panel-empty i { font-size:3.5rem; opacity:.4; }
 
 /* ── Secciones dentro del panel ───────────────────── */
-.gu-section-header { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:var(--subtext); padding:18px 0 8px; border-bottom:1px solid var(--border); margin-bottom:0; }
-.gu-field-label { font-size:0.75rem; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; margin-top:14px; }
-.gu-colors { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; }
-.gu-color-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:transform .1s,border-color .1s; }
-.gu-color-swatch.selected, .gu-color-swatch:hover { border-color:var(--text); transform:scale(1.15); }
-.gu-hex-input { font-size:0.78rem; width:90px; padding:3px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); }
+.gu-section-header { font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--dc-subtext); padding:0 0 8px; margin-bottom:16px; }
+.gu-field-label { font-size:0.75rem; font-weight:700; color:var(--dc-subtext); text-transform:uppercase; margin-bottom:8px; display:block; }
+.dc-input { width:100%; padding:10px 12px; border:none; border-radius:3px; background:#e3e5e8; color:var(--dc-text); font-size:0.95rem; margin-bottom:24px; outline:none; transition:background 0.2s; }
+.dc-input:focus { background:#ebebeb; }
+
+.gu-colors { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; margin-bottom: 32px; }
+.gu-color-swatch { width:32px; height:32px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform .1s,border-color .1s; display:flex; align-items:center; justify-content:center; color:#fff; }
+.gu-color-swatch.selected { border-color:var(--dc-primary); transform:scale(1.1); box-shadow: 0 0 0 2px var(--dc-panel-bg) inset; }
+.gu-color-swatch:hover { transform:scale(1.1); }
+.gu-color-custom { background: var(--dc-bg); color: var(--dc-subtext); border: 1px solid var(--dc-border); }
 
 /* ── Módulo permiso row ───────────────────────────── */
-.gu-perm-group { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--subtext); padding:16px 0 4px; }
-.gu-perm-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
+.gu-perm-group { font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--dc-subtext); padding:24px 0 12px; }
+.gu-perm-row { display:flex; align-items:center; padding:16px 0; border-bottom:1px solid var(--dc-border); gap:16px; }
 .gu-perm-row:last-child { border-bottom:none; }
 .gu-perm-info { flex:1; }
-.gu-perm-name { font-size:0.85rem; font-weight:600; color:var(--text); }
-.gu-perm-desc { font-size:0.72rem; color:var(--subtext); margin-top:1px; }
-.gu-perm-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
-.gu-perm-label { font-size:0.65rem; font-weight:600; color:var(--subtext); text-align:center; min-width:28px; }
+.gu-perm-name { font-size:0.95rem; font-weight:600; color:var(--dc-text); }
+.gu-perm-desc { font-size:0.85rem; color:var(--dc-subtext); margin-top:4px; line-height:1.4; }
+.gu-perm-actions { display:flex; gap:16px; align-items:center; flex-shrink:0; }
+
 /* Toggles estilo Discord */
 .dc-toggle { display:none; }
-.dc-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.dc-toggle-label { display:inline-block; width:36px; height:20px; border-radius:10px; background:#4f545c; cursor:pointer; position:relative; transition:background .15s; flex-shrink:0; }
-.dc-toggle:checked + .dc-toggle-label { background:#5865F2; }
-.dc-toggle-label::after { content:''; position:absolute; width:16px; height:16px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
-.dc-toggle:checked + .dc-toggle-label::after { left:18px; }
-.dc-toggle-label.readonly { cursor:not-allowed; opacity:.55; }
-/* Toggle de admin (danger) */
-.dc-toggle:checked + .dc-toggle-label.danger { background:#ED4245; }
+.dc-toggle-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.dc-toggle-label { display:inline-block; width:40px; height:24px; border-radius:12px; background:#80848e; cursor:pointer; position:relative; transition:background .15s; flex-shrink:0; }
+.dc-toggle:checked + .dc-toggle-label { background:var(--dc-primary); }
+.dc-toggle-label::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:3px; left:3px; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+.dc-toggle:checked + .dc-toggle-label::after { left:19px; }
+.dc-toggle-label.danger { background:#80848e; }
+.dc-toggle:checked + .dc-toggle-label.danger { background:#da373c; }
 
 /* ── Miembros del rol ─────────────────────────────── */
-.gu-member-chip { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
-.gu-member-chip:last-child { border-bottom:none; }
-.gu-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; }
-.gu-member-name { font-size:0.82rem; font-weight:600; color:var(--text); flex:1; }
-.gu-member-cargo { font-size:0.7rem; color:var(--subtext); }
-.gu-badge-rol { font-size:0.63rem; padding:2px 8px; border-radius:10px; font-weight:700; white-space:nowrap; }
+.gu-member-chip { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--dc-border); }
+.gu-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:700; color:#fff; flex-shrink:0; }
+.gu-member-name { font-size:0.95rem; font-weight:600; color:var(--dc-text); flex:1; }
+.gu-member-cargo { font-size:0.8rem; color:var(--dc-subtext); }
 
 /* ── Actions bar del panel ────────────────────────── */
-.gu-panel-actions { display:flex; gap:8px; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
-.btn-gu-danger { background:transparent; border:1px solid #ef4444; color:#ef4444; font-size:0.8rem; font-weight:600; padding:6px 14px; border-radius:8px; cursor:pointer; transition:all .15s; }
-.btn-gu-danger:hover { background:#ef4444; color:#fff; }
-.btn-gu-save { background:var(--crm-accent); border:none; color:#fff; font-size:0.8rem; font-weight:700; padding:6px 18px; border-radius:8px; cursor:pointer; transition:opacity .15s; margin-left:auto; }
-.btn-gu-save:hover { opacity:.88; }
+.gu-panel-actions { display:flex; gap:12px; padding:16px 40px; background:var(--dc-bg); border-top:1px solid var(--dc-border); flex-shrink:0; align-items:center; justify-content:flex-end; }
+.btn-gu-danger { background:transparent; border:none; color:#da373c; font-size:0.9rem; font-weight:600; padding:8px 16px; border-radius:3px; cursor:pointer; transition:all .15s; margin-right:auto; }
+.btn-gu-danger:hover { text-decoration:underline; }
+.btn-gu-save { background:var(--dc-primary); border:none; color:#fff; font-size:0.9rem; font-weight:600; padding:8px 24px; border-radius:3px; cursor:pointer; transition:background .15s; }
+.btn-gu-save:hover { background:#4752c4; }
 
 /* ── Mobile ───────────────────────────────────────── */
 @media (max-width:767px) {
@@ -83,10 +95,10 @@
     <!-- Header -->
     <div class="gu-header">
         <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-people-fill" style="font-size:1.1rem;color:var(--crm-accent);"></i>
+            <i class="bi bi-people-fill" style="font-size:1.1rem;color:var(--dc-primary);"></i>
             <div>
-                <div class="fw-bold" style="color:var(--text);font-size:0.88rem;">Gestión de Usuarios</div>
-                <div id="gu-subtitle" style="font-size:0.7rem;color:var(--subtext);">Cargando...</div>
+                <div class="fw-bold" style="color:var(--dc-text);font-size:0.88rem;">Gestión de Usuarios</div>
+                <div id="gu-subtitle" style="font-size:0.7rem;color:var(--dc-subtext);">Cargando...</div>
             </div>
         </div>
         <div class="d-flex gap-2 align-items-center">
@@ -97,7 +109,8 @@
     <!-- Tabs -->
     <div class="gu-tabs">
         <button class="gu-tab active" id="gu-tab-roles" onclick="window.guSetTab && window.guSetTab('roles')"><i class="bi bi-shield-fill me-1"></i>Roles <span id="gu-count-roles" class="ms-1 opacity-60"></span></button>
-        <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Miembros <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+        <button class="gu-tab" id="gu-tab-miembros" onclick="window.guSetTab && window.guSetTab('miembros')"><i class="bi bi-people me-1"></i>Usuarios <span id="gu-count-miembros" class="ms-1 opacity-60"></span></button>
+        <button class="gu-tab" id="gu-tab-auditoria" onclick="window.guSetTab && window.guSetTab('auditoria')"><i class="bi bi-list-task me-1"></i>Registro de Auditoría</button>
     </div>
 
     <!-- Body split -->
@@ -169,14 +182,14 @@
 
 
 <!-- Offcanvas para móvil y paneles -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(460px,100vw); background:var(--bg); border:none; margin:16px; height:calc(100% - 32px); border-radius:24px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
-    <div class="offcanvas-header" style="background:var(--surface);border-bottom:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px 24px;">
-        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:var(--text);font-size:1.1rem;letter-spacing:0.3px;">Detalle</h6>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGU" style="width:min(460px,100vw); background:var(--dc-bg); border:none; margin:16px; height:calc(100% - 32px); border-radius:8px; box-shadow:-4px 0 30px rgba(0,0,0,0.15); z-index:1045;">
+    <div class="offcanvas-header" style="background:var(--dc-bg);border-bottom:1px solid var(--dc-border);border-radius:8px 8px 0 0;padding:20px 24px;">
+        <h6 class="offcanvas-title fw-bold" id="offcanvasGUTitle" style="color:var(--dc-text);font-size:1.1rem;letter-spacing:0.3px;">Detalle</h6>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" style="opacity:0.6;transition:all 0.2s;"></button>
     </div>
     <div class="offcanvas-body p-0" style="overflow-y:auto;position:relative;">
         <div id="guOffcanvasContent" style="padding:24px 24px 80px;"></div>
-        <div id="guOffcanvasActions" style="display:none;position:sticky;bottom:0;background:var(--surface);padding:16px 24px;border-top:1px solid var(--border);border-radius:0 0 24px 24px;justify-content:flex-end;gap:12px;z-index:10;box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
+        <div id="guOffcanvasActions" style="display:none;position:sticky;bottom:0;background:var(--dc-bg);padding:16px 24px;border-top:1px solid var(--dc-border);border-radius:0 0 8px 8px;justify-content:flex-end;gap:12px;z-index:10;box-shadow:0 -4px 10px rgba(0,0,0,0.02);"></div>
     </div>
 </div>
 </div>

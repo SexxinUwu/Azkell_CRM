@@ -111,8 +111,10 @@ window.guSetTab = function(tab) {
     window._guSeleccionado = null;
     var tr = document.getElementById('gu-tab-roles');
     var tm = document.getElementById('gu-tab-miembros');
+    var ta = document.getElementById('gu-tab-auditoria');
     if (tr) tr.classList.toggle('active', tab === 'roles');
     if (tm) tm.classList.toggle('active', tab === 'miembros');
+    if (ta) ta.classList.toggle('active', tab === 'auditoria');
     window.guRenderLista();
     var pc = document.getElementById('guPanelContent');
     var pa = document.getElementById('guPanelActions');
@@ -124,9 +126,11 @@ window.guSetTab = function(tab) {
     var ph = document.getElementById('top-actions-placeholder');
     if (ph) {
         if (tab === 'roles') {
-            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoRol()"><i class="bi bi-shield-plus"></i> Registrar Rol</button>';
         } else if (tab === 'miembros') {
-            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--crm-accent);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
+            ph.innerHTML = '<button class="btn btn-sm top-btn-reg" style="background:var(--dc-primary);color:#fff;font-weight:600;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;" onclick="window.guNuevoMiembro()"><i class="bi bi-person-plus"></i> Registrar Usuario</button>';
+        } else if (tab === 'auditoria') {
+            ph.innerHTML = '';
         } else {
             ph.innerHTML = '';
         }
@@ -161,6 +165,18 @@ window.guRenderLista = function() {
     var list = document.getElementById('guList');
     if (!list) return;
     var html = '';
+
+    if (window._guTabActiva === 'auditoria') {
+        html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">'
+             + '<i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;opacity:0.5;"></i>'
+             + 'El registro de auditoría en la barra lateral<br>mostrará logs recientes.'
+             + '</div>';
+        list.innerHTML = html;
+        var pe = document.getElementById('guPanelEmpty');
+        if (pe) pe.innerHTML = '<i class="bi bi-list-task"></i><div class="fw-bold" style="font-size:.9rem;">Registro de Auditoría</div><div style="font-size:.78rem;">Selecciona un evento de la izquierda para ver detalles. (Próximamente)</div>';
+        return;
+    }
+
     if (window._guTabActiva === 'roles') {
         if (!window.dataGlobalRoles.length) {
             html = '<div class="text-center py-4 text-muted" style="font-size:.8rem;padding:20px;">No hay roles. Crea el primero.</div>';
@@ -205,13 +221,13 @@ window.guRenderLista = function() {
                 var r = g.rol;
                 var color = r ? (r.color||'#6b7280') : '#6b7280';
                 var nombre = r ? r.nombre : 'Desconocido';
-                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">'
+                html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dc-subtext);">'
                     + '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></div>'
                     + _guEsc(nombre) + ' — ' + g.users.length + '</div>';
                 g.users.forEach(function(u) { html += _guRenderUserItem(u); });
             });
             if (sinRol.length) {
-                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--subtext);">SIN ROL — ' + sinRol.length + '</div>';
+                html += '<div style="padding:10px 14px 4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dc-subtext);">SIN ROL — ' + sinRol.length + '</div>';
                 sinRol.forEach(function(u) { html += _guRenderUserItem(u); });
             }
         }
@@ -229,7 +245,7 @@ function _guBuildRolPanel(rol) {
 
     // Nombre
     html += '<div class="gu-field-label">Nombre del Rol</div>'
-        + '<input type="text" id="guRolNombre" class="form-control" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
+        + '<input type="text" id="guRolNombre" class="dc-input" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
 
     // Color
     html += '<div class="gu-field-label">Color del Rol</div><div class="gu-colors" id="guColorSwatches">';
@@ -242,8 +258,8 @@ function _guBuildRolPanel(rol) {
 
     // Prioridad
     html += '<div class="gu-field-label">Prioridad / Orden</div>'
-        + '<input type="number" id="guRolOrden" class="form-control" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px;">'
-        + '<div style="font-size:.72rem;color:var(--subtext);margin-top:3px;">Número menor aparece primero en la lista.</div>';
+        + '<input type="number" id="guRolOrden" class="dc-input" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px; margin-bottom: 8px;">'
+        + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-top:3px;">Número menor aparece primero en la lista.</div>';
 
     // Permisos
     html += '<div class="gu-section-header" style="margin-top:18px;">Permisos de Módulo</div>';
@@ -298,10 +314,10 @@ function _guBuildRolPanel(rol) {
         });
     }
     if (rol.id) {
-        html += '<div style="margin-top:32px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;">'
-            + '<div style="font-weight:700; color:var(--text); margin-bottom:4px;">Ver servidor como un rol</div>'
-            + '<div style="font-size:0.8rem; color:var(--subtext); margin-bottom:12px;">Esto te permitirá probar qué acciones puede realizar este rol y qué áreas puede ver.</div>'
-            + '<button class="btn btn-sm" style="background:var(--crm-accent); color:#fff; font-weight:600; padding:6px 16px; border-radius:6px; border:none; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="window.guVerComoRol(' + rol.id + ')">Ver servidor como rol <i class="bi bi-arrow-right ms-1"></i></button>'
+        html += '<div style="margin-top:32px; background:var(--dc-bg); border:1px solid var(--dc-border); border-radius:12px; padding:16px;">'
+            + '<div style="font-weight:700; color:var(--dc-text); margin-bottom:4px;">Ver servidor como un rol</div>'
+            + '<div style="font-size:0.8rem; color:var(--dc-subtext); margin-bottom:12px;">Esto te permitirá probar qué acciones puede realizar este rol y qué áreas puede ver.</div>'
+            + '<button class="btn btn-sm" style="background:var(--dc-primary); color:#fff; font-weight:600; padding:6px 16px; border-radius:6px; border:none; transition:opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="window.guVerComoRol(' + rol.id + ')">Ver servidor como rol <i class="bi bi-arrow-right ms-1"></i></button>'
             + '</div>';
     }
     return html;
@@ -435,54 +451,54 @@ function _guBuildUserPanel(user) {
     var html = '';
 
     if (user.nombre || user.correo) {
-        html += '<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:4px;">'
+        html += '<div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--dc-border);margin-bottom:24px;">'
             + '<div class="gu-avatar" style="width:52px;height:52px;font-size:1rem;background:' + color + ';">' + initials + '</div>'
-            + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">' + _guEsc(user.nombre||'Nuevo usuario') + '</div>'
-            + '<div style="font-size:.75rem;color:var(--subtext);">' + _guEsc(user.correo||'') + '</div></div></div>';
+            + '<div><div style="font-size:.95rem;font-weight:800;color:var(--dc-text);">' + _guEsc(user.nombre||'Nuevo usuario') + '</div>'
+            + '<div style="font-size:.75rem;color:var(--dc-subtext);">' + _guEsc(user.correo||'') + '</div></div></div>';
     }
 
     html += '<div class="gu-field-label">Nombre Completo</div>'
-        + '<input type="text" id="guUserNombre" class="form-control" value="' + _guEsc(user.nombre||'') + '" required>';
+        + '<input type="text" id="guUserNombre" class="dc-input" value="' + _guEsc(user.nombre||'') + '" required>';
     html += '<div class="gu-field-label">Cargo</div>'
-        + '<input type="text" id="guUserCargo" class="form-control" value="' + _guEsc(user.cargo||'') + '">';
+        + '<input type="text" id="guUserCargo" class="dc-input" value="' + _guEsc(user.cargo||'') + '">';
     html += '<div class="gu-field-label">Correo (login)</div>'
-        + '<input type="email" id="guUserCorreo" class="form-control" value="' + _guEsc(user.correo||'') + '" required>';
+        + '<input type="email" id="guUserCorreo" class="dc-input" value="' + _guEsc(user.correo||'') + '" required>';
 
     // Contraseña: usuario existente vs nuevo
     if (user.id) {
         // Mostrar contraseña actual con ojo + sección de cambio colapsable
         html += '<div class="gu-field-label">Contraseña actual</div>'
-            + '<div class="input-group mb-1">'
-            + '<input type="password" id="guUserPassActual" class="form-control" value="' + _guEsc(user.password||'') + '" readonly style="background:var(--surface);color:var(--text);">'
-            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassActual\',this)" title="Ver contraseña">'
+            + '<div style="display:flex; position:relative; margin-bottom:24px;">'
+            + '<input type="password" id="guUserPassActual" class="dc-input" value="' + _guEsc(user.password||'') + '" readonly style="background:var(--dc-bg);color:var(--dc-text); margin-bottom:0; padding-right:40px;">'
+            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassActual\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>'
-            + '<button class="btn btn-sm btn-outline-primary mt-1" type="button" onclick="window._guToggleChangePass()">'
+            + '<button style="background:transparent; border:none; color:var(--dc-primary); font-size:0.85rem; cursor:pointer;" type="button" onclick="window._guToggleChangePass()">'
             + '<i class="bi bi-pencil me-1"></i>Cambiar contraseña</button>'
-            + '<div id="guChangePassSection" style="display:none;margin-top:10px;">'
+            + '<div id="guChangePassSection" style="display:none;margin-top:16px;">'
             + '<div class="gu-field-label">Nueva contraseña</div>'
-            + '<div class="input-group">'
-            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Nueva contraseña...">'
-            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<div style="display:flex; position:relative; margin-bottom:8px;">'
+            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Nueva contraseña..." style="margin-bottom:0; padding-right:40px;">'
+            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>'
-            + '<div style="font-size:.72rem;color:var(--subtext);margin-top:4px;">Deja vacío para no cambiar la contraseña.</div>'
+            + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-top:4px;">Deja vacío para no cambiar la contraseña.</div>'
             + '</div>';
     } else {
         // Nuevo usuario: campo simple con ojo
         html += '<div class="gu-field-label">Contraseña</div>'
-            + '<div class="input-group">'
-            + '<input type="password" id="guUserPassword" class="form-control" placeholder="Contraseña inicial...">'
-            + '<button class="btn btn-outline-secondary" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
+            + '<div style="display:flex; position:relative; margin-bottom:24px;">'
+            + '<input type="password" id="guUserPassword" class="dc-input" placeholder="Contraseña inicial..." style="margin-bottom:0; padding-right:40px;">'
+            + '<button style="position:absolute; right:8px; top:5px; border:none; background:transparent; color:var(--dc-subtext); cursor:pointer;" type="button" onclick="window._guToggleEye(\'guUserPassword\',this)" title="Ver contraseña">'
             + '<i class="bi bi-eye"></i></button></div>';
     }
     html += '<div style="max-width:200px;"><div class="gu-field-label">Estado</div>'
-        + '<select id="guUserEstado" class="form-select">'
+        + '<select id="guUserEstado" class="dc-input">'
         + '<option value="Activo"' + (user.estado==='Activo'?' selected':'') + '>Activo</option>'
         + '<option value="Inactivo"' + (user.estado==='Inactivo'?' selected':'') + '>Inactivo</option>'
         + '</select></div>';
 
     html += '<div class="gu-section-header" style="margin-top:18px;">Rol Asignado</div>'
-        + '<div style="font-size:.75rem;color:var(--subtext);margin:8px 0 6px;">El usuario hereda los permisos del rol seleccionado.</div>'
-        + '<select id="guUserRolId" class="form-select">'
+        + '<div style="font-size:.75rem;color:var(--dc-subtext);margin:8px 0 6px;">El usuario hereda los permisos del rol seleccionado.</div>'
+        + '<select id="guUserRolId" class="dc-input">'
         + '<option value="">— Sin rol asignado —</option>';
     window.dataGlobalRoles.forEach(function(r) {
         html += '<option value="' + r.id + '"' + (user.rol_id==r.id?' selected':'') + '>'
@@ -493,21 +509,21 @@ function _guBuildUserPanel(user) {
     // Última sesión
     if (user.id && (user.ultimo_acceso || user.ultimo_ip || user.ultimo_dispositivo)) {
         html += '<div class="gu-section-header" style="margin-top:18px;">Última Sesión</div>'
-            + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px;">';
+            + '<div style="background:var(--dc-bg);border:1px solid var(--dc-border);border-radius:8px;padding:12px;margin-top:8px;">';
         if (user.ultimo_acceso) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
-                + '<span style="font-size:.75rem;color:var(--subtext);"><i class="bi bi-clock me-1"></i>Último acceso</span>'
-                + '<span style="font-size:.75rem;font-weight:600;color:var(--text);">' + _guRelTime(user.ultimo_acceso) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--dc-border);">'
+                + '<span style="font-size:.75rem;color:var(--dc-subtext);"><i class="bi bi-clock me-1"></i>Último acceso</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:var(--dc-text);">' + _guRelTime(user.ultimo_acceso) + '</span></div>';
         }
         if (user.ultimo_ip) {
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
-                + '<span style="font-size:.75rem;color:var(--subtext);"><i class="bi bi-globe me-1"></i>Dirección IP</span>'
-                + '<span style="font-size:.75rem;font-weight:600;color:var(--text);font-family:monospace;">' + _guEsc(user.ultimo_ip) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--dc-border);">'
+                + '<span style="font-size:.75rem;color:var(--dc-subtext);"><i class="bi bi-globe me-1"></i>Dirección IP</span>'
+                + '<span style="font-size:.75rem;font-weight:600;color:var(--dc-text);font-family:monospace;">' + _guEsc(user.ultimo_ip) + '</span></div>';
         }
         if (user.ultimo_dispositivo) {
             html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;gap:10px;">'
-                + '<span style="font-size:.75rem;color:var(--subtext);flex-shrink:0;"><i class="bi bi-phone me-1"></i>Dispositivo</span>'
-                + '<span style="font-size:.72rem;color:var(--subtext);text-align:right;word-break:break-all;">' + _guEsc(user.ultimo_dispositivo) + '</span></div>';
+                + '<span style="font-size:.75rem;color:var(--dc-subtext);flex-shrink:0;"><i class="bi bi-phone me-1"></i>Dispositivo</span>'
+                + '<span style="font-size:.72rem;color:var(--dc-subtext);text-align:right;word-break:break-all;">' + _guEsc(user.ultimo_dispositivo) + '</span></div>';
         }
         html += '</div>';
     }
@@ -646,32 +662,32 @@ window._guShowCredsPopup = function(nombre, correo, password, esReset) {
     var overlay = document.createElement('div');
     overlay.id = 'guCredsOverlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-    overlay.innerHTML = '<div style="background:var(--surface);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.55);">'
+    overlay.innerHTML = '<div style="background:var(--dc-bg);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.55);">'
 
         // Header con ícono + títulos
         + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">'
         + '<div style="width:46px;height:46px;border-radius:50%;background:' + iconoBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
         + '<i class="bi ' + icono + '" style="color:#fff;font-size:1.2rem;"></i></div>'
-        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--text);">' + titulo + '</div>'
-        + '<div style="font-size:.75rem;color:var(--subtext);margin-top:1px;">' + subtitulo + '</div></div></div>'
+        + '<div><div style="font-size:.95rem;font-weight:800;color:var(--dc-text);">' + titulo + '</div>'
+        + '<div style="font-size:.75rem;color:var(--dc-subtext);margin-top:1px;">' + subtitulo + '</div></div></div>'
 
         // Card de credenciales
-        + '<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;">'
-        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--subtext);margin-bottom:14px;">Credenciales de acceso</div>'
+        + '<div style="background:var(--dc-bg);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;">'
+        + '<div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dc-subtext);margin-bottom:14px;">Credenciales de acceso</div>'
 
         // Correo
         + '<div style="margin-bottom:12px;">'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        + '<i class="bi bi-envelope-fill" style="font-size:.75rem;color:var(--subtext);"></i>'
-        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--subtext);">Correo</span></div>'
-        + '<div style="font-size:.9rem;font-weight:700;color:var(--text);font-family:monospace;word-break:break-all;">' + _guEsc(correo) + '</div></div>'
+        + '<i class="bi bi-envelope-fill" style="font-size:.75rem;color:var(--dc-subtext);"></i>'
+        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dc-subtext);">Correo</span></div>'
+        + '<div style="font-size:.9rem;font-weight:700;color:var(--dc-text);font-family:monospace;word-break:break-all;">' + _guEsc(correo) + '</div></div>'
 
         // Contraseña
         + '<div>'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        + '<i class="bi bi-key-fill" style="font-size:.75rem;color:var(--subtext);"></i>'
-        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--subtext);">Contrase\u00f1a</span></div>'
-        + '<div style="font-size:.9rem;font-weight:700;color:var(--text);font-family:monospace;">' + _guEsc(password) + '</div>'
+        + '<i class="bi bi-key-fill" style="font-size:.75rem;color:var(--dc-subtext);"></i>'
+        + '<span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dc-subtext);">Contrase\u00f1a</span></div>'
+        + '<div style="font-size:.9rem;font-weight:700;color:var(--dc-text);font-family:monospace;">' + _guEsc(password) + '</div>'
         + '</div></div>'
 
         // Botones
@@ -680,7 +696,7 @@ window._guShowCredsPopup = function(nombre, correo, password, esReset) {
         + 'style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.82rem;text-decoration:none;">'
         + '<i class="bi bi-whatsapp" style="font-size:1rem;"></i> Enviar por WhatsApp</a>'
         + '<button onclick="document.getElementById(\'guCredsOverlay\').remove()" '
-        + 'style="background:var(--border);color:var(--text);border:none;border-radius:10px;padding:10px 18px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
+        + 'style="background:var(--border);color:var(--dc-text);border:none;border-radius:10px;padding:10px 18px;font-weight:600;font-size:.82rem;cursor:pointer;">Cerrar</button>'
         + '</div></div>';
 
     document.body.appendChild(overlay);
@@ -728,3 +744,6 @@ window._guCheckCascade = function(el, modKey, action) {
 };
 
 
+
+
+setTimeout(function() { window.guSetTab('roles'); window.guCargarTodo(); }, 100);
