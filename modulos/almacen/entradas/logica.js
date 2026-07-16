@@ -1044,8 +1044,30 @@ function _entDescLimpia(desc, invId) {
 window._entGenerarHtmlPDF = function(d) {
     var fecha = d.fecha ? String(d.fecha).split('T')[0] : '-';
     // Use the original total, not the PEN converted total
-    var totalReal = parseFloat(d.total || d.total_pen || 0);
+    
+    var subtotalItems = 0;
+    (d.items || []).forEach(function(it) {
+        var cant = parseFloat(it.cantidad || 0);
+        var cu   = parseFloat(it.costo_unitario || 0);
+        subtotalItems += (cant * cu);
+    });
+    
+    var totalReal = subtotalItems;
+    if (d.tipo_igv === 'mas_igv') {
+        totalReal = subtotalItems * 1.18;
+    }
+    
+    // Fallback if no items for some reason
+    if (totalReal === 0 && d.total_pen) {
+        totalReal = parseFloat(d.total_pen);
+        if (d.moneda === 'USD') {
+            var tc = parseFloat(d.tipo_cambio || 3.4);
+            if (tc > 0) totalReal = totalReal / tc;
+        }
+    }
+    
     var monSimbolo = d.moneda === 'USD' ? 'USD' : 'PEN';
+
 
     function numeroALetras(num) {
         var data = { enteros: Math.floor(num), centavos: Math.round(num * 100) - Math.floor(num) * 100 };
