@@ -642,7 +642,11 @@
                 </div>
                 <div>
                     <div class="ent-field-label">Placa / Vehículo</div>
-                    <input type="text" id="ent-f-ot-placa" class="ent-input-sm w-100" placeholder="Placa o vehículo...">
+                    <div class="position-relative">
+                        <input type="text" id="ent-f-ot-placa-txt" class="ent-input-sm w-100" placeholder="Placa o vehículo..." autocomplete="off" oninput="window._entCbFiltrar('ent-f-ot-placa')" onfocus="window._entCbFiltrar('ent-f-ot-placa')" onblur="window._cbHide('ent-f-ot-placa')">
+                        <input type="hidden" id="ent-f-ot-placa">
+                        <div id="ent-f-ot-placa-dd" class="cb-dropdown"></div>
+                    </div>
                 </div>
             </div>
           </div>
