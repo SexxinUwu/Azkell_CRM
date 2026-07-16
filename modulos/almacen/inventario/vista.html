@@ -407,6 +407,13 @@
                     font-size:.83rem;color:var(--text);flex:1;min-width:0;padding:.28rem 0;"
              placeholder="Código, descripción, marca…" oninput="window.filtrarInventario()">
     </div>
+    
+    <!-- Pestañas de Aislamiento -->
+    <div style="display:flex; background:rgba(14,165,233,0.1); border-radius:12px; padding:4px; margin-left:12px;">
+      <button id="inv-tab-fisicos" onclick="window._invSwitchTab('fisicos')" class="inv-tab-btn active" style="border:none; border-radius:8px; padding:4px 12px; font-size:.8rem; font-weight:700; background:#0ea5e9; color:#fff; cursor:pointer;">📦 Inventario Físico</button>
+      <button id="inv-tab-servicios" onclick="window._invSwitchTab('servicios')" class="inv-tab-btn" style="border:none; border-radius:8px; padding:4px 12px; font-size:.8rem; font-weight:700; background:transparent; color:#0ea5e9; cursor:pointer; margin-left:4px;">🛠️ Catálogo de Servicios</button>
+    </div>
+
     <!-- Familia -->
     <select id="inv-fil-familia" onchange="window.filtrarInventario()"
             style="height:36px;border-radius:99px;border:1.5px solid var(--border);
@@ -414,6 +421,7 @@
                    font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todas las familias</option>
     </select>
+    
     <!-- Sistema -->
     <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
             style="height:36px;border-radius:99px;border:1.5px solid var(--border);
@@ -421,18 +429,6 @@
                    font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todos los sistemas</option>
     </select>
-    <!-- Tipo (Físico vs Servicio) -->
-    <select id="inv-fil-clase" onchange="window.filtrarInventario()"
-            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
-                   background:rgba(14,165,233,0.05);padding:0 2rem 0 .85rem;font-size:.82rem;
-                   font-weight:700;color:#0ea5e9;outline:none;cursor:pointer;max-width:170px;">
-      <option value="fisicos" selected>Artículos Físicos</option>
-      <option value="servicios">Solo Servicios</option>
-      <option value="todos">Todos</option>
-    </select>
-    <!-- Sistema -->
-    <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
-            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
                    background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
                    font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
       <option value="">Todos los sistemas</option>
