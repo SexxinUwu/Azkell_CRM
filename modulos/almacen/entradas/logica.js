@@ -574,9 +574,9 @@ window.abrirModalEntrada = function() {
     });
     
     var tipoOrden = document.getElementById('ent-f-tipo-orden');
-    if (tipoOrden) tipoOrden.value = 'Orden de Compra';
+    if (tipoOrden) tipoOrden.value = 'Orden de compra';
     var condPago = document.getElementById('ent-f-condicion-pago');
-    if (condPago) { condPago.value = 'Al Contado'; var dcb = document.getElementById('ent-f-dias-credito-box'); if(dcb) dcb.style.display = 'none'; }
+    if (condPago) { condPago.value = 'Al contado'; var dcb = document.getElementById('ent-f-dias-credito-box'); if(dcb) dcb.style.display = 'none'; }
     var dias = document.getElementById('ent-f-dias-credito');
     if (dias) dias.value = '30';
     
