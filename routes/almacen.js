@@ -685,11 +685,17 @@ router.delete('/marcas/:id', (req, res) => {
 // ALMACÉN — Entradas
 // ============================================================
 router.get('/entradas', (req, res) => {
-    db.query(`SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion),'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
-              FROM entradas_inv e
-              LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
-              LEFT JOIN inventario i ON d.inventario_id = i.id
-              GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`, async (err, rows) => {
+    let q = `SELECT e.*, GROUP_CONCAT(CONCAT(COALESCE(i.descripcion, d.descripcion),'|',d.cantidad,'|',d.costo_unitario,'|',d.moneda,'|',d.inventario_id) SEPARATOR ';;') AS items_raw
+             FROM entradas_inv e
+             LEFT JOIN detalle_entradas_inv d ON d.entrada_id=e.id
+             LEFT JOIN inventario i ON d.inventario_id = i.id`;
+    let params = [];
+    if (req.query.ot_id) {
+        q += ` WHERE e.ot_id = ?`;
+        params.push(req.query.ot_id);
+    }
+    q += ` GROUP BY e.id ORDER BY e.fecha DESC, e.id DESC LIMIT 300`;
+    db.query(q, params, async (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
         const signedRows = await Promise.all(rows.map(async (r) => {
@@ -707,15 +713,15 @@ router.get('/entradas', (req, res) => {
     });
 });
 router.post('/entradas', (req, res) => {
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito } = req.body;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, creado_por, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id } = req.body;
     const anio = new Date(fecha || Date.now()).getFullYear();
     const tc = parseFloat(tipo_cambio) || 1;
     _generarCodigoAlmacen('ENT', anio, (err, id) => {
         if (err) return res.status(500).json({ error: err.message });
         const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa,tipo_orden,condicion_pago,dias_credito) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        db.query('INSERT INTO entradas_inv (id,fecha,proveedor_id,proveedor_nombre,documento_referencia,moneda,tipo_cambio,total_pen,observaciones,tipo_igv,creado_por,motivo_entrada,placa,tipo_orden,condicion_pago,dias_credito,ot_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [id, fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30],
+             documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', creado_por||null, motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
@@ -761,13 +767,13 @@ router.post('/entradas', (req, res) => {
 });
 router.put('/entradas/:id', (req, res) => {
     const { id } = req.params;
-    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito } = req.body;
+    const { fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, tipo_igv, observaciones, items, motivo_entrada, placa, tipo_orden, condicion_pago, dias_credito, ot_id } = req.body;
     const tc = parseFloat(tipo_cambio) || 1;
     const total_pen = _calcularTotalPen(items || [], tc);
 
-    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=? WHERE id=?',
+    db.query('UPDATE entradas_inv SET fecha=?, proveedor_id=?, proveedor_nombre=?, documento_referencia=?, moneda=?, tipo_cambio=?, total_pen=?, observaciones=?, tipo_igv=?, motivo_entrada=?, placa=?, tipo_orden=?, condicion_pago=?, dias_credito=?, ot_id=? WHERE id=?',
         [fecha||new Date().toISOString().split('T')[0], proveedor_id||null, proveedor_nombre||null,
-         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, id],
+         documento_referencia||null, moneda||'PEN', tc||null, total_pen, observaciones||null, tipo_igv||'sin_igv', motivo_entrada||null, placa||null, tipo_orden||'Orden de compra', condicion_pago||'Al contado', dias_credito||30, ot_id||null, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             

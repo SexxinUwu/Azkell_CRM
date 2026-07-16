@@ -611,7 +611,7 @@
         </div>
 
         <!-- Placa -->
-        <div>
+        <div id="ent-placa-container">
           <div class="ent-field-label">Placa / Vehículo</div>
           <div class="position-relative">
             <input type="text" id="ent-f-placa-txt" class="ent-input-sm"
@@ -621,6 +621,20 @@
                    onblur="window._cbHide('ent-f-placa')">
             <input type="hidden" id="ent-f-placa">
             <div id="ent-f-placa-dd" class="cb-dropdown"></div>
+          </div>
+        </div>
+
+        <!-- OT Asociada -->
+        <div id="ent-ot-container" style="display:none;">
+          <div class="ent-field-label">OT Asociada <span style="color:#ef4444;">*</span></div>
+          <div class="position-relative">
+            <input type="text" id="ent-f-ot-txt" class="ent-input-sm"
+                   placeholder="Buscar OT..." autocomplete="off"
+                   oninput="window._entCbFiltrar('ent-f-ot')"
+                   onfocus="window._entCbFiltrar('ent-f-ot')"
+                   onblur="window._cbHide('ent-f-ot')">
+            <input type="hidden" id="ent-f-ot">
+            <div id="ent-f-ot-dd" class="cb-dropdown"></div>
           </div>
         </div>
 
