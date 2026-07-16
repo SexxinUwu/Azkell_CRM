@@ -863,8 +863,8 @@ window._entRender = function() {
         var totalFmt = '<strong style="color:#16a34a;">S/ ' + tp.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
         var estadoHtml = isAnulado ? '<span class="badge bg-danger">ANULADA</span>' : '<span class="badge" style="background-color:#16a34a;">REGISTRADA</span>';
           var tipoOrdBadge = (d.tipo_orden && d.tipo_orden.toLowerCase() === 'orden de servicio') 
-                ? '<div class="badge bg-warning text-dark" style="font-size:0.6rem; letter-spacing:0.04em; margin-bottom:4px;">SERVICIO</div><br>' 
-                : '<div class="badge bg-primary" style="font-size:0.6rem; letter-spacing:0.04em; margin-bottom:4px;">COMPRA</div><br>';
+        ? '<span class="badge bg-warning text-dark" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE SERVICIO</span>' 
+        : '<span class="badge bg-primary" style="font-size:0.6rem; letter-spacing:0.04em;">ORDEN DE COMPRA</span>';
         var placaHtml = d.placa ? '<span class="badge bg-secondary fw-normal">' + _entEsc(d.placa) + '</span>' : '<span class="text-muted small">—</span>';
         var motivoHtml = d.motivo_entrada ? '<span style="font-size:0.75rem;">' + _entEsc(d.motivo_entrada) + '</span>' : '<span class="text-muted small">—</span>';
         
@@ -881,7 +881,8 @@ window._entRender = function() {
             var tr0 = document.createElement('tr');
             tr0.className = activeCls.trim();
             tr0.innerHTML =
-                '<td class="text-center">' + tipoOrdBadge + '<span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + tipoOrdBadge + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center col-hide-mob">' + estadoHtml + '</td>' +
                 '<td class="col-hide-mob">' + placaHtml + '</td>' +
@@ -937,7 +938,8 @@ window._entRender = function() {
             var provHtml = d.proveedor_nombre ? '<span style="font-size:.78rem;">' + _entEsc(d.proveedor_nombre) + '</span>' : '<span class="text-muted small">—</span>';
 
             tr.innerHTML =
-                 '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '<span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                 '<td class="text-center" style="vertical-align:middle;"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + _entEsc(d.id || '') + '</span></td>' +
+                '<td class="text-center" style="vertical-align:middle;">' + (isFirst ? tipoOrdBadge : '') + '</td>' +
                 '<td style="white-space:nowrap;font-size:.80rem;">' + fecha + '</td>' +
                 '<td class="text-center">' + estadoHtml + '</td>' +
                 '<td>' + placaHtml + '</td>' +

@@ -633,6 +633,35 @@ window._invRender = function() {
 
 function _invRenderCard(d) {
     var id = _invEsc(d.id || '');
+    
+    // Checkbox modo selección
+    var chkHtml = window._invModoSeleccion
+        ? '<input type="checkbox" class="form-check-input" '
+          + 'style="position:absolute;top:12px;left:12px;width:18px;height:18px;z-index:5;cursor:pointer;" '
+          + 'onchange="window._invToggleCheck(\'' + id + '\',this.checked)" onclick="event.stopPropagation()">'
+        : '';
+
+    var clickAttr = window._invModoSeleccion
+        ? 'onclick="var cb=this.querySelector(\'input[type=checkbox]\');if(cb){cb.checked=!cb.checked;window._invToggleCheck(\'' + id + '\',cb.checked);}"'
+        : 'onclick="window.abrirDetalleInv(\'' + id + '\')"';
+
+    var desc   = _invEsc(d.descripcion || d.articulo || '');
+
+    // Is it a service?
+    var isService = d.tipo === 'Servicio' || id.startsWith('SERV');
+
+    if (isService) {
+        return '<div data-id="' + id + '" ' + clickAttr + ' style="position:relative; background-color:white; border-radius:0.75rem; padding:0.75rem 1rem; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); border:1px solid rgba(243,244,246,0.5); display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; cursor:pointer;">' +
+            chkHtml +
+            '<div style="width:2.5rem; height:2.5rem; border-radius:0.5rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; background-color:#fef3c7; color:#d97706;">' +
+                '<i class="bi bi-briefcase-fill" style="font-size:1.2rem;"></i>' +
+            '</div>' +
+            '<div style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;">' +
+                '<div style="font-weight:600; color:#1e293b; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + desc + '</div>' +
+                '<div style="color:#64748b; font-size:0.75rem;">' + id + ' <span style="margin:0 4px;">&bull;</span> <span class="badge bg-warning text-dark" style="font-size:0.6rem; letter-spacing:0.04em;">SERVICIO</span></div>' +
+            '</div>' +
+        '</div>';
+    }
 
     // Semáforo de stock
     var stockActual = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
