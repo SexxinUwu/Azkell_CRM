@@ -1,5 +1,12 @@
 <!-- Módulo Almacén / Inventario — SPA Aislado v3 (Cards, formulario unificado) -->
 <style>
+    .form-servicio-mode .ent-doc-card > div > div:not(.servicio-keep) {
+        display: none !important;
+    }
+    .form-servicio-mode .ent-doc-card:not(:first-child) {
+        display: none !important;
+    }
+    
 /* ─── Lista estilo KeyFacil — tarjetas horizontales ─────────────── */
 .inv-list-card {
     display: flex; align-items: center; gap: .85rem;
@@ -509,7 +516,7 @@
           </div>
 
           <!-- Artículo -->
-          <div>
+          <div class="servicio-keep">
             <div class="ent-field-label">Artículo <span style="color:#ef4444;">*</span></div>
             <input type="text" id="inv-f-articulo" class="ent-input-sm" required placeholder="Ej: Filtro Aceite" oninput="window._invActualizarPreview()">
           </div>

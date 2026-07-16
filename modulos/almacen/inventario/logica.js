@@ -951,28 +951,17 @@ window.abrirModalInventario = function(id) {
 
       // Aislamiento Servicios en el modal
       var isServicio = window._invActiveTab === 'servicios';
-      
-      // Ocultar elementos si es servicio
-      var toHide = [
-        document.getElementById('inv-f-codigo-barras')?.parentNode,
-        document.getElementById('inv-f-marca-txt')?.closest('div.position-relative')?.parentNode?.parentNode, // Marca
-        document.getElementById('inv-f-familia-txt')?.closest('div.position-relative')?.parentNode?.parentNode, // Familia
-        document.getElementById('inv-f-tipo-txt')?.closest('div.position-relative')?.parentNode, // Tipo
-        document.getElementById('inv-f-sub-tipo-txt')?.closest('div.position-relative')?.parentNode, // Subtipo
-        document.getElementById('inv-f-almacen-txt')?.closest('div.position-relative')?.parentNode, // Almacen
-        document.getElementById('inv-f-anaquel')?.parentNode, // Anaquel
-        document.getElementById('inv-f-unidad-txt')?.closest('div.position-relative')?.parentNode, // Unidad
-        document.getElementById('inv-f-minimo')?.parentNode, // Minimo
-        document.getElementById('inv-f-maximo')?.parentNode  // Maximo
-      ];
-      
-      toHide.forEach(function(el) {
-          if (el && el.style) {
-              el.style.display = isServicio ? 'none' : '';
-          }
-      });
-      
-      if (isServicio && !id) {
+        
+        var f = document.getElementById('form-inv-articulo');
+        if (f) {
+            if (isServicio) {
+                f.classList.add('form-servicio-mode');
+            } else {
+                f.classList.remove('form-servicio-mode');
+            }
+        }
+        
+        if (isServicio && !id) {
           window._cbSet('inv-f-tipo', 'Servicio', 'Servicio');
           window._cbSet('inv-f-unidad', 'Servicio', 'Servicio');
       }
