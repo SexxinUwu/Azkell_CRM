@@ -1100,6 +1100,8 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+const perfilRoutes = require('./routes/perfil')(db, logAudit);
+app.use('/api', perfilRoutes);
 // ============================================================
 // 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)
 // ============================================================

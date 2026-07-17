@@ -25,6 +25,15 @@
             .catch(err => console.error('Error en Service Worker', err));
         }
     </script>
+<style>
+@media (min-width: 768px) {
+  .topbar {
+    border-radius: 20px !important;
+    margin: 8px 12px 12px 12px !important;
+    border: 1px solid var(--border) !important;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -301,7 +310,7 @@
             <p class="mb-0" id="perfil-correo" style="color: #cbd5e1 !important; font-size: 0.85rem;">correo@azkell.com</p>
         </div>
         <div class="list-group list-group-flush" style="border-radius: 0;">
-            <a href="#" class="list-group-item list-group-item-action py-3 px-4 fw-semibold" style="border-color: var(--border); color: var(--text);" onclick="cargarModuloAislado('sistema/perfil'); document.querySelector('#sidebar').classList.remove('show'); return false;">
+            <a href="#" class="list-group-item list-group-item-action py-3 px-4 fw-semibold" style="border-color: var(--border); color: var(--text);" onclick="cargarModuloAislado('sistema/perfil'); if(window.innerWidth<768 && typeof toggleSidebar==='function') toggleSidebar(); return false;">
                 <i class="bi bi-person-badge fs-5 me-2 text-primary" style="vertical-align: middle;"></i> Mi Perfil
             </a>
         </div>
