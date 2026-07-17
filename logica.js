@@ -2948,6 +2948,9 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const respHTML = await fetch(`${_rutaDisco}/vista.html?v=${Date.now()}`, { cache: 'no-cache' });
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
+        // Cerrar y remover el drawer de inspecciones del body si quedó zombie
+        var _inspDrawer = document.getElementById('drawerInspeccion');
+        if (_inspDrawer && !root.contains(_inspDrawer)) { _inspDrawer.classList.remove('open'); _inspDrawer.remove(); }
         root.classList.add('module-transitioning');
         root.innerHTML = await respHTML.text();
 

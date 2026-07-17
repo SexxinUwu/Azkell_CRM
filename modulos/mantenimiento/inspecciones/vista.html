@@ -445,52 +445,87 @@
 </div>
 
 
-<style>
-/* Estilos nativos al estilo de Entradas */
-.insp-sub-drawer {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
-    width: 700px; max-width: 95vw; height: 92vh;
-    border-radius: 28px 28px 0 0;
-    background: #ffffff; border: 1px solid #e1e4e8; border-bottom: none;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.18);
-    transition: transform .28s ease;
-    z-index: 1062; display: flex; flex-direction: column;
+<!-- FORMULARIO DE INSPECCIONES — CSS self-contained, no depende de reportes-ot -->
+<div id="drawerInspeccion" style="
+    position: fixed;
+    bottom: -100vh;
+    left: 0; right: 0;
+    margin: 0 auto;
+    width: 650px;
+    max-width: 100vw;
+    height: 85vh;
+    border-radius: 16px 16px 0 0;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-bottom: none;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.22);
+    transition: bottom .25s ease;
+    z-index: 1062;
+    display: flex;
+    flex-direction: column;
     visibility: hidden;
-}
-.insp-sub-drawer.open { transform: translateX(-50%) translateY(0); visibility: visible; }
-@media (max-width: 767px) {
-    .insp-sub-drawer {
-        width: 100vw !important; height: 92vh !important;
-        border-radius: 22px 22px 0 0 !important;
-    }
-}
-.insp-drawer-hd {
-    padding: 20px 24px; border-bottom: 1px solid #e1e4e8;
-    display: flex; justify-content: space-between; align-items: flex-start; background: #fff;
-    border-radius: 28px 28px 0 0;
-}
-</style>
-
-<!-- FORMULARIO DE INSPECCIONES (estilo nativo rot-sub-drawer) -->
-<div class="rot-sub-drawer" id="drawerInspeccion">
-    <div class="rot-drawer-hd">
+">
+    <style>
+        #drawerInspeccion.open {
+            bottom: 0 !important;
+            visibility: visible !important;
+        }
+        @media (max-width: 767px) {
+            #drawerInspeccion {
+                width: 100vw !important;
+                height: 92vh !important;
+                border-radius: 22px 22px 0 0 !important;
+            }
+        }
+        #drawerInspeccion .insp-hd {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border, #e2e8f0);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: var(--surface, #fff);
+            flex-shrink: 0;
+        }
+        #drawerInspeccion .insp-hd-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text, #1e293b);
+            letter-spacing: -0.01em;
+        }
+        #drawerInspeccion .insp-body {
+            flex: 1;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+        #drawerInspeccion .insp-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border, #e2e8f0);
+            background: var(--surface, #fff);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);
+        }
+    </style>
+    <div class="insp-hd">
         <div>
-            <div class="rot-drawer-title">Formulario de Inspecciones</div>
-            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="insp-header-ot-lbl"></div>
+            <div class="insp-hd-title">Formulario de Inspecciones</div>
+            <div style="font-size:.75rem;color:var(--subtext,#64748b);margin-top:2px;" id="insp-header-ot-lbl"></div>
         </div>
-        <button class="btn btn-sm" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext)">
+        <button class="btn btn-sm" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext,#64748b);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body p-0" style="overflow-y:auto; flex:1; background:#f8fafc;">
+    <div class="insp-body">
         <form id="formNuevaInspeccion" class="d-flex flex-column h-100">
             <div id="wizard-dynamic-tabs" class="p-3" style="flex-grow:1;">
                 <!-- El contenido se generará dinámicamente aquí -->
             </div>
         </form>
     </div>
-    <div class="rot-drawer-footer d-flex justify-content-end p-3" style="background:#ffffff; border-top:1px solid var(--border,#e2e8f0); flex-shrink:0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);">
-        <button type="button" class="btn btn-light fw-bold px-4 me-2 border text-muted" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">Cancelar</button>
+    <div class="insp-footer">
+        <button type="button" class="btn btn-light fw-bold px-4 border text-muted" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">Cancelar</button>
         <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()"><i class="bi bi-save me-1"></i> Guardar Registro</button>
     </div>
 </div>
