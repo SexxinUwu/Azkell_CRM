@@ -2,26 +2,7 @@
 <!-- MÓDULO: INSPECCIONES (vista aislada — sin <html>, <head> ni <body>) -->
 <!-- ================================================================ -->
 
-<style>
-#drawerInspeccion {
-    width: 650px !important;
-    max-width: 100vw !important;
-    height: 85vh !important;
-    max-height: 85vh !important;
-    margin: 0 auto !important;
-    border-radius: 16px 16px 0 0 !important;
-    border: 1px solid #e1e4e8 !important;
-    border-bottom: none !important;
-}
-@media (max-width: 767px) {
-    #drawerInspeccion {
-        width: 100vw !important;
-        height: 92vh !important;
-        max-height: 92vh !important;
-        border-radius: 22px 22px 0 0 !important;
-    }
-}
-</style>
+
 
 <style>
 /* Funnel inspecciones: flex-column solo cuando está abierto */
@@ -463,7 +444,27 @@
 
 </div>
 
-<div class="offcanvas offcanvas-bottom shadow-lg border-0" tabindex="-1" id="drawerInspeccion">
+<div class="offcanvas offcanvas-bottom shadow-lg border-0" tabindex="-1" id="drawerInspeccion" style="width: 650px !important; max-width: 100vw !important; height: 85vh !important; max-height: 85vh !important; margin: 0 auto !important; border-radius: 16px 16px 0 0 !important; border: 1px solid #e1e4e8 !important; border-bottom: none !important;">
+    <style>
+        @media (max-width: 767px) {
+            #drawerInspeccion {
+                width: 100vw !important;
+                height: 92vh !important;
+                max-height: 92vh !important;
+                border-radius: 22px 22px 0 0 !important;
+            }
+        }
+    </style>
+    <style>
+        @media (max-width: 767px) {
+            #drawerInspeccion {
+                width: 100vw !important;
+                height: 92vh !important;
+                max-height: 92vh !important;
+                border-radius: 22px 22px 0 0 !important;
+            }
+        }
+    </style>
     <div class="offcanvas-header" style="padding: 20px 24px; border-bottom: 1px solid #e1e4e8; background: #fff; align-items: flex-start;">
         <div>
             <h5 class="offcanvas-title fw-bold" style="font-size: 1.15rem; font-weight: 800 !important; color: #1e293b; letter-spacing: -0.01em;">Formulario de Inspecciones</h5>
