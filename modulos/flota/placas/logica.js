@@ -1565,7 +1565,7 @@ window.exportarPlacasExcel = function() {
     }
     
     var exportData = [];
-    var headers = ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'AÑO', 'COMBUSTIBLE', 'ESTADO'];
+    var headers = ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIï¿½N', 'Aï¿½O', 'COMBUSTIBLE', 'ESTADO'];
     
     var inicio = 0;
     if (datos.length > 0 && String(datos[0][0]).toUpperCase() === 'PLACA') {
@@ -1578,7 +1578,7 @@ window.exportarPlacasExcel = function() {
     }
     
     if (typeof XLSX === 'undefined') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería de exportación no encontrada.', 'error');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librerï¿½a de exportaciï¿½n no encontrada.', 'error');
         return;
     }
     
