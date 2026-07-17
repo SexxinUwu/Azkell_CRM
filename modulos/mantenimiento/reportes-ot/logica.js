@@ -508,7 +508,7 @@ window.rotAbrirDetalle = function(idOT) {
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
         window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
           var servicios = Array.isArray(res[4]) ? res[4] : [];
-          servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio'; });
+            servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio' && (s.estado || '').toLowerCase() !== 'anulado' && (s.estado || '').toLowerCase() !== 'anulada'; });
           var srvBody = document.getElementById('rot-srv-body');
           var srvCount = document.getElementById('rot-srv-count');
           if (srvCount) srvCount.textContent = servicios.length;
@@ -1959,7 +1959,7 @@ window.rotAgregarSalida = function(idOt) {
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(d) {
             var lista = (Array.isArray(d) ? d : []).map(function(p){ return (p.placa || String(p) || '').toUpperCase(); }).filter(Boolean).sort();
-            if (window.SS) window.SS.init('rot-placa', 'rot-mat-placa', lista, '', null, 'Buscar placa…');
+            if (window._cbInit) window._cbInit('rot-mat-placa', lista);
         })
         .catch(function() {});
     fetch('/api/conductores-lista')
