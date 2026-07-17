@@ -1918,7 +1918,11 @@ window.rotAgregarSalida = function(idOt) {
     }
     var lbl = document.getElementById('rot-mat-ot-lbl'); if (lbl) lbl.textContent = 'OT: ' + idOt;
     var hid = document.getElementById('rot-mat-ot-id');  if (hid) hid.value = idOt;
-    var vis = document.getElementById('rot-mat-ot-vis'); if (vis) vis.value = idOt;
+    var otObj = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
+    var placa = otObj ? (otObj.placa || '') : '';
+    
+    var vis = document.getElementById('rot-mat-ot-vis');
+    if (vis) vis.value = placa ? (idOt + ' — ' + placa) : idOt;
 
     // Pre-llenar fecha de hoy
     var hoy = new Date();
@@ -1928,9 +1932,8 @@ window.rotAgregarSalida = function(idOt) {
     var fecEl = document.getElementById('rot-mat-fecha'); if (fecEl) fecEl.value = fechaHoy;
 
     // Pre-llenar placa desde la OT activa
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
-    var placa = ot ? (ot.placa || '') : '';
     var placaEl = document.getElementById('rot-mat-placa'); if (placaEl) placaEl.value = placa;
+    if (typeof window._cbSet === 'function') { window._cbSet('rot-mat-placa', placa.toUpperCase(), placa.toUpperCase()); }
 
     var tipoEl = document.getElementById('rot-mat-tipo'); if (tipoEl) tipoEl.value = 'Vehiculo';
     var solic = document.getElementById('rot-mat-solicitante'); if (solic) solic.value = '';
