@@ -518,12 +518,12 @@ window.rotAbrirDetalle = function(idOT) {
               } else {
                   var sHTML = '';
                   servicios.forEach(function(srv) {
+                      var svcNames = (srv.items && srv.items.length > 0) ? srv.items.map(function(it) { return it.descripcion; }).join(', ') : 'Servicio sin descripción';
                       sHTML += '<div style="padding:10px 12px; border-bottom:1px solid var(--border); font-size:0.8rem;">' +
                                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-                                  '<strong>' + rotEscHtml(srv.id) + '</strong>' +
+                                  '<strong>' + rotEscHtml(svcNames) + '</strong>' +
                                   '<span style="color:#16a34a; font-weight:bold;">S/ ' + Number(srv.total_pen || 0).toLocaleString('es-PE', {minimumFractionDigits:2}) + '</span>' +
                                '</div>' +
-                               '<div style="color:var(--subtext); font-size:0.75rem; margin-top:4px;">Proveedor: ' + rotEscHtml(srv.proveedor_nombre || 'N/A') + '</div>' +
                                '</div>';
                   });
                   srvBody.innerHTML = sHTML;
