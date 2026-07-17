@@ -9,6 +9,9 @@
       <p class="text-muted small mb-0">Gestión de Placas</p>
     </div>
     <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-success fw-bold text-white shadow-sm" onclick="window.exportarPlacasExcel()" title="Exportar a Excel">
+        <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Exportar</span>
+      </button>
       <button class="btn btn-sm btn-outline-secondary" onclick="recargarModulo('placas')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
       <button class="btn btn-sm btn-primary" onclick="document.getElementById('formPlaca').reset(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPlaca')).show();" data-perm-crear="flota">
         <i class="bi bi-plus-lg"></i><span class="d-none d-md-inline ms-1">Nueva Placa</span>
