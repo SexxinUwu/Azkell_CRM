@@ -508,7 +508,7 @@ window.rotAbrirDetalle = function(idOT) {
         var backlogItems              = Array.isArray(res[2]) ? res[2] : [];
         window.rotOtInspeccionesActivas = Array.isArray(res[3]) ? res[3] : [];
           var servicios = Array.isArray(res[4]) ? res[4] : [];
-          servicios = servicios.filter(function(s) { return s.tipo_orden === 'Orden de Servicio'; });
+          servicios = servicios.filter(function(s) { return (s.tipo_orden||'').toLowerCase() === 'orden de servicio'; });
           var srvBody = document.getElementById('rot-srv-body');
           var srvCount = document.getElementById('rot-srv-count');
           if (srvCount) srvCount.textContent = servicios.length;
