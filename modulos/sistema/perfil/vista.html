@@ -1,0 +1,242 @@
+<style>
+/* CSS para el módulo Perfil Premium */
+.perfil-banner {
+    width: 100%;
+    height: 250px;
+    background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
+    border-radius: 16px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.perfil-banner-edit {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s;
+}
+.perfil-banner-edit:hover {
+    background: #fff;
+    transform: translateY(-2px);
+}
+.perfil-avatar-wrap {
+    margin-top: -80px;
+    margin-left: 40px;
+    position: relative;
+    display: inline-block;
+    z-index: 10;
+}
+.perfil-avatar {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 6px solid var(--crm-bg);
+    background-color: var(--crm-accent, #3b82f6);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fff;
+}
+.perfil-avatar-edit {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--crm-accent, #3b82f6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 3px solid var(--crm-bg);
+    transition: transform 0.2s;
+}
+.perfil-avatar-edit:hover {
+    transform: scale(1.1);
+}
+.perfil-card {
+    background: var(--crm-card-bg, #fff);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    border: 1px solid var(--crm-border);
+    padding: 24px;
+    height: 100%;
+}
+.perfil-card-title {
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dark);
+}
+.color-picker-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.color-picker-btn.active {
+    border-color: var(--text-dark);
+    transform: scale(1.15);
+}
+.session-item {
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.02);
+    border: 1px solid var(--crm-border);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+[data-bs-theme="dark"] .session-item {
+    background: rgba(255,255,255,0.02);
+}
+</style>
+
+<div class="container-fluid py-4" style="max-width: 1400px;">
+    <!-- HEADER / BANNER -->
+    <div class="perfil-banner" id="p-banner">
+        <button class="btn perfil-banner-edit btn-sm text-dark fw-bold shadow-sm" onclick="document.getElementById('file-banner').click()">
+            <i class="bi bi-camera"></i> Cambiar Portada
+        </button>
+        <input type="file" id="file-banner" accept="image/*" class="d-none" onchange="perfilSubirImagen(this, 'banner')">
+    </div>
+
+    <!-- AVATAR Y TÍTULO -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5">
+        <div class="perfil-avatar-wrap">
+            <div class="perfil-avatar" id="p-avatar">
+                <!-- Se llenará con imagen o iniciales -->
+            </div>
+            <div class="perfil-avatar-edit shadow" onclick="document.getElementById('file-avatar').click()">
+                <i class="bi bi-camera-fill"></i>
+            </div>
+            <input type="file" id="file-avatar" accept="image/*" class="d-none" onchange="perfilSubirImagen(this, 'avatar')">
+        </div>
+        
+        <div class="mt-4 mt-md-0 ms-4 ms-md-0 flex-grow-1 ps-md-4">
+            <h2 class="fw-bold mb-1" id="p-nombre-head">Cargando...</h2>
+            <p class="text-muted mb-0 fs-5" id="p-cargo-head">Usuario del Sistema</p>
+        </div>
+        <div class="mt-3 mt-md-0 ms-4 ms-md-0">
+            <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="perfilGuardarDatos()">
+                <i class="bi bi-save me-2"></i>Guardar Cambios
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- COLUMNA IZQUIERDA (Datos y Firma) -->
+        <div class="col-12 col-lg-5">
+            <!-- Datos Personales -->
+            <div class="perfil-card mb-4">
+                <h5 class="perfil-card-title"><i class="bi bi-person-lines-fill text-primary"></i> Información Personal</h5>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Nombre Completo</label>
+                    <input type="text" class="form-control" id="p-input-nombre">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Correo Electrónico (Login)</label>
+                    <input type="email" class="form-control" id="p-input-correo" readonly disabled>
+                    <div class="form-text">El correo de login solo puede ser cambiado por un Administrador desde el módulo Usuarios.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Teléfono / Anexo</label>
+                    <input type="text" class="form-control" id="p-input-telefono" placeholder="+51 999 888 777">
+                </div>
+            </div>
+
+            <!-- Firma Digital -->
+            <div class="perfil-card">
+                <h5 class="perfil-card-title"><i class="bi bi-pen text-primary"></i> Firma Digital</h5>
+                <p class="text-muted small mb-3">Dibuja tu firma para estamparla automáticamente en PDFs y OTs.</p>
+                
+                <div class="border rounded bg-white text-center position-relative" style="height: 150px; overflow: hidden;" id="p-firma-container">
+                    <canvas id="p-firma-canvas" style="width: 100%; height: 100%; touch-action: none;"></canvas>
+                    <div id="p-firma-preview" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #fff; display:none; align-items:center; justify-content:center;">
+                        <img id="p-firma-img" src="" style="max-height: 120px; max-width: 100%;">
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="perfilLimpiarFirma()"><i class="bi bi-eraser"></i> Limpiar Canvas</button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="perfilAlternarFirma()" id="btn-alternar-firma"><i class="bi bi-pencil"></i> Redibujar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA (Seguridad y Ajustes) -->
+        <div class="col-12 col-lg-7">
+            <!-- Personalización Visual -->
+            <div class="perfil-card mb-4">
+                <h5 class="perfil-card-title"><i class="bi bi-palette text-primary"></i> Personalización Visual</h5>
+                
+                <div class="row">
+                    <div class="col-12 col-md-6 mb-4">
+                        <label class="form-label text-muted small fw-bold mb-3">Color de Acento (Tema)</label>
+                        <div class="d-flex flex-wrap gap-2" id="p-color-picker">
+                            <div class="color-picker-btn" style="background:#3b82f6" onclick="perfilSetColor('#3b82f6')"></div>
+                            <div class="color-picker-btn" style="background:#10b981" onclick="perfilSetColor('#10b981')"></div>
+                            <div class="color-picker-btn" style="background:#8b5cf6" onclick="perfilSetColor('#8b5cf6')"></div>
+                            <div class="color-picker-btn" style="background:#f59e0b" onclick="perfilSetColor('#f59e0b')"></div>
+                            <div class="color-picker-btn" style="background:#ef4444" onclick="perfilSetColor('#ef4444')"></div>
+                            <div class="color-picker-btn" style="background:#0f172a" onclick="perfilSetColor('#0f172a')"></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 mb-4">
+                        <label class="form-label text-muted small fw-bold mb-3">Modo Visual</label>
+                        <select class="form-select" id="p-input-tema" onchange="perfilSetTheme(this.value)">
+                            <option value="system">Automático (Sistema)</option>
+                            <option value="light">Modo Claro</option>
+                            <option value="dark">Modo Oscuro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seguridad (Contraseña) -->
+            <div class="perfil-card mb-4">
+                <h5 class="perfil-card-title"><i class="bi bi-shield-lock text-primary"></i> Seguridad</h5>
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
+                        <input type="password" class="form-control" id="p-pwd-actual">
+                    </div>
+                    <div class="col-12 col-md-4 mb-3">
+                        <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
+                        <input type="password" class="form-control" id="p-pwd-nueva">
+                    </div>
+                    <div class="col-12 col-md-4 mb-3 d-flex align-items-end">
+                        <button class="btn btn-outline-danger w-100 fw-bold" onclick="perfilCambiarClave()">Actualizar Clave</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dispositivos y Sesiones -->
+            <div class="perfil-card">
+                <h5 class="perfil-card-title"><i class="bi bi-laptop text-primary"></i> Dispositivos Conectados</h5>
+                <p class="text-muted small mb-3">Aquí puedes ver los dispositivos donde has iniciado sesión. Revoca el acceso a los que no reconozcas.</p>
+                
+                <div id="p-sesiones-list">
+                    <div class="text-center py-4 text-muted"><i class="bi bi-arrow-repeat spin"></i> Cargando sesiones...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="modulos/sistema/perfil/logica.js"></script>
