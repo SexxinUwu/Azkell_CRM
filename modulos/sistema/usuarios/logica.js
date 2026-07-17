@@ -585,6 +585,19 @@ window.guGuardarUsuario = async function() {
         var res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
         var json = await res.json();
         if (!res.ok) throw new Error(json.error || res.statusText);
+        
+        if (eId) {
+            var oldUser = window.dataGlobalUsuarios.find(function(u){ return String(u.id) === String(eId); });
+            var loggedEmail = localStorage.getItem('fleet_correo') || '';
+            if (oldUser && (oldUser.correo || '').toLowerCase() === loggedEmail.toLowerCase()) {
+                localStorage.setItem('fleet_user', body.nombre);
+                localStorage.setItem('fleet_correo', body.correo);
+                if (typeof window.verificarSesionGuardada === 'function') {
+                    window.verificarSesionGuardada();
+                }
+            }
+        }
+        
         var newId = eId || json.id;
         var savedPass = password.trim();
         await window.guCargarTodo(true);
