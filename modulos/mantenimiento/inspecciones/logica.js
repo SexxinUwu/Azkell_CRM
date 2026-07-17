@@ -1226,8 +1226,7 @@ async function procesarGuardadoInspeccion() {
                 let finalId = isNew ? r.id : idInsp;
                 let offEl = document.getElementById('drawerInspeccion');
                 if (offEl) {
-                    let inst = bootstrap.Offcanvas.getInstance(offEl) || bootstrap.Offcanvas.getOrCreateInstance(offEl);
-                    if (inst) inst.hide();
+                    offEl.classList.remove("open");
                 }
                 if (window.dataGlobalInspecciones) {
                     let existing = window.dataGlobalInspecciones.find(x => x.id === finalId);
@@ -1614,7 +1613,7 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
             if(inputDias) inputDias.value = diasPrevios;
         }
 
-        let titleEl = document.querySelector('#drawerInspeccion .offcanvas-title');
+        let titleEl = document.querySelector('#drawerInspeccion h5');
         let indicator = document.getElementById('ot-linked-indicator');
         if (!indicator && titleEl) {
             indicator = document.createElement('span');
@@ -1643,12 +1642,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
             document.body.appendChild(offEl);
         }
         offEl.style.zIndex = '1080';
-        offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
-            let backdrops = document.querySelectorAll('.offcanvas-backdrop');
-            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1079';
-            offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
-        });
-        new bootstrap.Offcanvas(offEl).show();
+        
+        offEl.classList.add("open");
     }
 };
 
@@ -1795,12 +1790,8 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
             document.body.appendChild(offEl);
         }
         offEl.style.zIndex = '1080';
-        offEl.addEventListener('shown.bs.offcanvas', function _fixZ() {
-            let backdrops = document.querySelectorAll('.offcanvas-backdrop');
-            if (backdrops.length > 0) backdrops[backdrops.length - 1].style.zIndex = '1079';
-            offEl.removeEventListener('shown.bs.offcanvas', _fixZ);
-        });
-        new bootstrap.Offcanvas(offEl).show();
+        
+        offEl.classList.add("open");
     }
 };
 
