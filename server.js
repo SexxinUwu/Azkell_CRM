@@ -248,6 +248,32 @@ db.getConnection((err, connection) => {
             (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER ultimo_dispositivo:', e.message); });
         connection.query(`ALTER TABLE usuarios ADD COLUMN password_visible VARCHAR(255) NOT NULL DEFAULT ''`,
             (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn('ALTER password_visible:', e.message); });
+            
+        // Módulo Perfil
+        const perfilCols = [
+            'avatar_url VARCHAR(255) NULL',
+            'banner_url VARCHAR(255) NULL',
+            'telefono VARCHAR(50) NULL',
+            'firma_digital TEXT NULL',
+            'preferencias_json TEXT NULL'
+        ];
+        perfilCols.forEach(colDef => {
+            const colName = colDef.split(' ')[0];
+            connection.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`, (e) => {
+                if (e && e.code !== 'ER_DUP_FIELDNAME') console.warn(`ALTER usuarios ${colName}:`, e.message);
+            });
+        });
+
+        connection.query(`CREATE TABLE IF NOT EXISTS sesiones_activas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_correo VARCHAR(255) NOT NULL,
+            token VARCHAR(500) NOT NULL,
+            ip VARCHAR(80) NULL,
+            dispositivo VARCHAR(255) NULL,
+            fecha_login DATETIME NOT NULL,
+            ultima_actividad DATETIME NOT NULL
+        )`, (e) => { if (e) console.warn('CREATE sesiones_activas:', e.message); });
+
         // Orden/jerarquía en roles
         connection.query(`ALTER TABLE roles ADD COLUMN orden INT NOT NULL DEFAULT 0`,
             (e) => {
@@ -894,8 +920,18 @@ function verifyToken(req, res, next) {
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'No autorizado' });
     try {
-        req.user = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-        next();
+        const token = auth.slice(7);
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Verificar que la sesión exista en la base de datos (no fue revocada)
+        db.query('SELECT 1 FROM sesiones_activas WHERE token = ?', [token], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error verificando sesión' });
+            if (results.length === 0) return res.status(401).json({ error: 'Sesión revocada o cerrada' });
+            
+            // Actualizar última actividad sin bloquear el request
+            db.query('UPDATE sesiones_activas SET ultima_actividad = NOW() WHERE token = ?', [token], () => {});
+            next();
+        });
     } catch(e) {
         return res.status(401).json({ error: 'Token inválido o expirado' });
     }
@@ -1038,13 +1074,21 @@ app.post('/api/login', (req, res) => {
                     (err) => { if (err) console.warn('UPDATE sesion:', err.message); }
                 );
 
+                const token = jwt.sign(
+                    { id: usuario.idUsuario, correo: usuario.correo, rol: rolFinal, permisos: permisosFinales },
+                    process.env.JWT_SECRET,
+                    { expiresIn: '12h' }
+                );
+                
+                db.query(
+                    'INSERT INTO sesiones_activas (usuario_correo, token, ip, dispositivo, fecha_login, ultima_actividad) VALUES (?, ?, ?, ?, NOW(), NOW())',
+                    [usuario.correo, token, ip, dispositivo],
+                    (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
+                );
+
                 return res.json({
                     exito: true,
-                    token: jwt.sign(
-                        { id: usuario.idUsuario, correo: usuario.correo, rol: rolFinal, permisos: permisosFinales },
-                        process.env.JWT_SECRET,
-                        { expiresIn: '12h' }
-                    ),
+                    token: token,
                     nombre: usuario.nombre,
                     rol: rolFinal,
                     permisos: permisosFinales,

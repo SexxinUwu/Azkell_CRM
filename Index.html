@@ -300,6 +300,11 @@
             <span class="badge bg-secondary mt-2 mb-2" id="perfil-rol-badge">Rol</span>
             <p class="mb-0" id="perfil-correo" style="color: #cbd5e1 !important; font-size: 0.85rem;">correo@azkell.com</p>
         </div>
+        <div class="list-group list-group-flush" style="border-radius: 0;">
+            <a href="#" class="list-group-item list-group-item-action py-3 px-4 fw-semibold" style="border-color: var(--border); color: var(--text);" onclick="cargarModuloAislado('sistema/perfil'); document.querySelector('#sidebar').classList.remove('show'); return false;">
+                <i class="bi bi-person-badge fs-5 me-2 text-primary" style="vertical-align: middle;"></i> Mi Perfil
+            </a>
+        </div>
         <div class="p-3 text-center" style="background-color: var(--bg);">
             <button class="btn btn-danger fw-bold w-100 shadow-sm" onclick="cerrarSesion()" style="border-radius: 8px;">
                 <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión

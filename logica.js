@@ -149,22 +149,63 @@ window.verificarSesionGuardada = function() {
     // --- Topbar ---
     let nombreUsuarioTopEl = document.getElementById('nombre-usuario-top');
     if (nombreUsuarioTopEl) nombreUsuarioTopEl.innerText = usuarioLogueado;
+    
+    // Sincronizar perfil (avatar y preferencias) una vez en background
+    if (!window.perfilSyncDone && guardadoToken) {
+        window.perfilSyncDone = true;
+        fetch('/api/perfil/me', { headers: { 'Authorization': 'Bearer ' + guardadoToken } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data) {
+                    let changed = false;
+                    if ((data.avatar_url || '') !== (localStorage.getItem('fleet_avatar') || '')) {
+                        localStorage.setItem('fleet_avatar', data.avatar_url || '');
+                        changed = true;
+                    }
+                    if (data.preferencias) {
+                        localStorage.setItem('fleet_prefs', JSON.stringify(data.preferencias));
+                        if (data.preferencias.color) document.documentElement.style.setProperty('--crm-accent', data.preferencias.color);
+                        if (data.preferencias.tema && typeof window.applyDark === 'function') window.applyDark(data.preferencias.tema);
+                    }
+                    if (changed) window.verificarSesionGuardada(); // re-render avatar
+                }
+            }).catch(()=>window.perfilSyncDone=false);
+    }
+    
+    // Aplicar preferencias cacheadas si existen
+    try {
+        let prefs = JSON.parse(localStorage.getItem('fleet_prefs') || '{}');
+        if (prefs.color) document.documentElement.style.setProperty('--crm-accent', prefs.color);
+        if (prefs.tema && typeof window.applyDark === 'function') window.applyDark(prefs.tema);
+    } catch(e) {}
 
     let perfilNombreEl = document.getElementById('perfil-nombre');
     if (perfilNombreEl) perfilNombreEl.innerText = usuarioLogueado;
 
-    // Avatar generado con iniciales en el topbar
+    // Avatar generado con iniciales en el topbar o desde S3
+    const cachedAvatar = localStorage.getItem('fleet_avatar');
     var avatarTopWrap = document.getElementById('topbar-avatar-icon');
-    if (avatarTopWrap && typeof window.generarAvatar === 'function') {
-        avatarTopWrap.outerHTML = window.generarAvatar(usuarioLogueado, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
+    if (avatarTopWrap) {
+        if (cachedAvatar) {
+            avatarTopWrap.outerHTML = '<div class="user-avatar" id="topbar-avatar-icon" style="width:32px;height:32px;border-radius:9px;background:url('+cachedAvatar+') center/cover no-repeat;flex-shrink:0;border:1px solid rgba(0,0,0,0.1);"></div>';
+        } else if (typeof window.generarAvatar === 'function') {
+            avatarTopWrap.outerHTML = window.generarAvatar(usuarioLogueado, 32).replace('class="user-avatar"','class="user-avatar" id="topbar-avatar-icon"');
+        }
     }
+    
     // Avatar grande en dropdown de perfil
     var avatarDrop = document.getElementById('perfil-avatar-dropdown');
-    if (avatarDrop && typeof window.generarAvatar === 'function') {
-        avatarDrop.innerHTML = window.generarAvatar(usuarioLogueado, 68).replace(
-            'border-radius:' + Math.round(68/3) + 'px',
-            'border-radius:50%;width:100%;height:100%'
-        );
+    if (avatarDrop) {
+        if (cachedAvatar) {
+            avatarDrop.innerHTML = '';
+            avatarDrop.style.background = 'url('+cachedAvatar+') center/cover no-repeat';
+        } else if (typeof window.generarAvatar === 'function') {
+            avatarDrop.innerHTML = window.generarAvatar(usuarioLogueado, 68).replace(
+                'border-radius:' + Math.round(68/3) + 'px',
+                'border-radius:50%;width:100%;height:100%'
+            );
+            avatarDrop.style.background = 'rgba(255,255,255,0.15)';
+        }
     }
 
     if (guardadoCorreo) {
