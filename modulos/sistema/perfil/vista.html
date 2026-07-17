@@ -151,7 +151,7 @@
                 <div class="mb-3">
                     <label class="form-label text-muted small fw-bold">Correo Electrónico (Login)</label>
                     <input type="email" class="form-control" id="p-input-correo" readonly disabled>
-                    <div class="form-text">El correo de login solo puede ser cambiado por un Administrador desde el módulo Usuarios.</div>
+                    <div class="form-text">El correo de login solo puede ser cambiado por un Administrador. Contactar con soporte para cambiar el correo.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-muted small fw-bold">Teléfono / Anexo</label>
@@ -210,19 +210,21 @@
             <!-- Seguridad (Contraseña) -->
             <div class="perfil-card mb-4">
                 <h5 class="perfil-card-title"><i class="bi bi-shield-lock text-primary"></i> Seguridad</h5>
-                <div class="row">
-                    <div class="col-12 col-md-4 mb-3">
-                        <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
-                        <input type="password" class="form-control" id="p-pwd-actual">
+                <form autocomplete="off" onsubmit="event.preventDefault(); perfilCambiarClave();">
+                    <div class="row">
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
+                            <input type="password" class="form-control" id="p-pwd-actual" autocomplete="current-password">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="p-pwd-nueva" autocomplete="new-password">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-danger w-100 fw-bold">Actualizar Clave</button>
+                        </div>
                     </div>
-                    <div class="col-12 col-md-4 mb-3">
-                        <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
-                        <input type="password" class="form-control" id="p-pwd-nueva">
-                    </div>
-                    <div class="col-12 col-md-4 mb-3 d-flex align-items-end">
-                        <button class="btn btn-outline-danger w-100 fw-bold" onclick="perfilCambiarClave()">Actualizar Clave</button>
-                    </div>
-                </div>
+                </form>
             </div>
 
             <!-- Dispositivos y Sesiones -->
