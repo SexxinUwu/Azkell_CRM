@@ -1553,3 +1553,38 @@ window.actualizarBadgeGlobalFiltros = function() {
         }
     }
 };
+
+// ================================================================
+// EXPORTAR A EXCEL
+// ================================================================
+window.exportarPlacasExcel = function() {
+    var datos = window.datosFiltradosPlacas && window.datosFiltradosPlacas.length > 0 ? window.datosFiltradosPlacas : window.dataGlobalPlacas;
+    if (!datos || datos.length === 0) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No hay datos para exportar.', 'warning');
+        return;
+    }
+    
+    var exportData = [];
+    var headers = ['PLACA', 'CLIENTE', 'RUC/DNI', 'MARCA', 'MODELO', 'TIPO', 'SUB TIPO', 'COLOR', 'NRO MOTOR', 'NRO CAJA', 'NRO CORONA', 'NRO VIN', 'CONFIGURACIÓN', 'AÑO', 'COMBUSTIBLE', 'ESTADO'];
+    
+    var inicio = 0;
+    if (datos.length > 0 && String(datos[0][0]).toUpperCase() === 'PLACA') {
+        inicio = 1;
+    }
+    exportData.push(headers);
+    
+    for (var i = inicio; i < datos.length; i++) {
+        exportData.push(datos[i].slice(0, 16));
+    }
+    
+    if (typeof XLSX === 'undefined') {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería de exportación no encontrada.', 'error');
+        return;
+    }
+    
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Placas');
+    XLSX.writeFile(wb, 'Reporte_Placas_' + new Date().getTime() + '.xlsx');
+};
+
