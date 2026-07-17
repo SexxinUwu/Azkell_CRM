@@ -1638,11 +1638,7 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
-        if (offEl.parentElement !== document.body) {
-            document.body.appendChild(offEl);
-        }
         offEl.style.zIndex = '1080';
-        
         offEl.classList.add("open");
     }
 };
@@ -1786,11 +1782,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
-        if (offEl.parentElement !== document.body) {
-            document.body.appendChild(offEl);
-        }
         offEl.style.zIndex = '1080';
-        
         offEl.classList.add("open");
     }
 };
