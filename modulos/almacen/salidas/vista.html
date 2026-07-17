@@ -63,7 +63,8 @@
     /* Drawer full-screen en mobile */
     #moduloSalidas .sal-drawer {
         width: 100vw !important; max-width: 100vw !important;
-        border-radius: 0 !important;
+        height: 92vh !important;
+        border-radius: 22px 22px 0 0 !important;
     }
     #moduloSalidas .sal-table-wrap {
         border-radius: 20px;
@@ -198,13 +199,15 @@
 #salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:1059; }
 #salNuevoBackdrop.open { display:block; }
 #moduloSalidas .sal-drawer {
-    position:fixed; top:0; right:0; width:560px; max-width:96vw; height:100vh;
-    background:var(--surface); border-left:1px solid var(--border);
-    box-shadow:-8px 0 30px rgba(0,0,0,.14);
-    transform:translateX(100%); transition:transform .28s ease; z-index:1060;
-    display:flex; flex-direction:column;
+    position:fixed; top:auto; bottom:-100vh; right:0; left:0; margin:0 auto;
+    width:650px; max-width:100vw; height:85vh;
+    border-radius:16px 16px 0 0;
+    background:var(--surface); border:1px solid var(--border); border-bottom:none;
+    box-shadow:0 -8px 40px rgba(0,0,0,.18);
+    transition:bottom .3s cubic-bezier(.4,0,.2,1); z-index:1060;
+    display:flex; flex-direction:column; visibility:hidden;
 }
-#moduloSalidas .sal-drawer.open { transform:translateX(0); }
+#moduloSalidas .sal-drawer.open { bottom:0; visibility:visible; }
 #moduloSalidas .sal-drawer-hd {
     display:flex; align-items:center; justify-content:space-between;
     padding:0 1.25rem; height:52px; border-bottom:1px solid var(--border); flex-shrink:0;

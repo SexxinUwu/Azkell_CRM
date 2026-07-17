@@ -1984,7 +1984,13 @@ window._rotAgregarItemMat = function() {
     tr.id = 'rot-mat-item-' + idx;
     tr.innerHTML =
         '<td>' +
-            '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+            '<div style="display:flex;gap:4px;align-items:center;">' +
+                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
+                    'onclick="window._rotAbrirQR(' + idx + ')" title="Escanear código de barras">' +
+                    '<i class="bi bi-upc-scan"></i>' +
+                '</button>' +
+            '</div>' +
             '<input type="hidden" class="rot-mat-item-inv-id" data-idx="' + idx + '">' +
             '<input type="hidden" class="rot-mat-item-stock" data-idx="' + idx + '" value="">' +
             '<div class="rot-mat-item-stock-lbl" data-idx="' + idx + '" style="font-size:0.71rem;margin-top:2px;display:none;"></div>' +
@@ -1994,6 +2000,49 @@ window._rotAgregarItemMat = function() {
         '<td><input type="number" class="form-control form-control-sm rot-mat-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
         '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._rotQuitarItemMat(' + idx + ')"><i class="bi bi-x"></i></button></td>';
     tbody.appendChild(tr);
+};
+
+window._rotQrTargetIdx = window._rotQrTargetIdx || null;
+
+window._rotAbrirQR = function(idx) {
+    window._rotQrTargetIdx = idx;
+    if (window._abrirEscaner) {
+        window._abrirEscaner(function(valor) {
+            window._rotSeleccionarItemPorQR(valor, window._rotQrTargetIdx);
+        }, 'Escanear Artículo');
+    } else {
+        alert("El módulo de escáner no está disponible.");
+    }
+};
+
+window._rotSeleccionarItemPorQR = function(valor, idx) {
+    var item = (window._rotInvData || []).find(function(d) {
+        return String(d.id).trim() === valor.trim() ||
+               (d.codigo_barras && d.codigo_barras.trim() === valor.trim());
+    });
+    if (!item) {
+        if (typeof window.rotToast === 'function') window.rotToast('Artículo no encontrado: ' + valor, 'bg-danger');
+        else alert('Artículo no encontrado: ' + valor);
+        return;
+    }
+    var descEl = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
+    var hidEl  = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
+    var cuEl   = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
+    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
+    if (hidEl) hidEl.value = item.id;
+    if (cuEl && item.costo) cuEl.value = item.costo;
+    
+    var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
+    var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
+    if (stockEl) stockEl.value = item.stock || 0;
+    if (lblEl) {
+        lblEl.textContent = 'Stock: ' + (item.stock || 0);
+        lblEl.style.display = 'block';
+        lblEl.style.color = (item.stock > 0) ? '#16a34a' : '#dc2626';
+    }
+    
+    window._rotCalcItemMat(idx);
+    if (typeof window.rotToast === 'function') window.rotToast('Artículo agregado correctamente', 'bg-success');
 };
 
 window._rotBuscarArtMat = function(input, idx) {
