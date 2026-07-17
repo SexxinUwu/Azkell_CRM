@@ -1284,11 +1284,9 @@ window.renderModernInspForm = function() {
              + '<input type="hidden" id="i_id_ot" value="">';
     
     // Tarjeta 1: Registro Fijo
-    html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
-        <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
-            <h6 class="fw-bold text-primary m-0"><i class="bi bi-card-heading me-1"></i> 1. DATOS DE REGISTRO</h6>
-        </div>
-        <div class="card-body">
+    html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
+    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-card-heading me-1"></i> 1. DATOS DE REGISTRO</div>
+    <div style="padding:1rem;">
             <div class="row g-3">
                 <div class="col-md-6 col-12">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">N° Registro</label>
@@ -1345,11 +1343,9 @@ window.renderModernInspForm = function() {
 
     // Tarjetas Dinámicas de Categorías
     window.DYNAMIC_INSP_SCHEMA.forEach((sec, i) => {
-        html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
-            <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
-                <h6 class="fw-bold text-primary m-0"><i class="bi bi-list-check me-1"></i> ${i+2}. ${sec.tab}</h6>
-            </div>
-            <div class="card-body">`;
+        html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
+    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-list-check me-1"></i> ${i+2}. ${sec.tab}</div>
+    <div style="padding:1rem;">`;
             
         sec.items.forEach((item, j) => {
             let lbl = typeof item === 'string' ? item : item.label; 
@@ -1362,9 +1358,9 @@ window.renderModernInspForm = function() {
             if (t === 'okfalla') {
                 html += `<div class="d-flex gap-2 w-100">
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
-                    <label class="btn btn-outline-success fw-bold flex-grow-1" for="${uid}_ok" style="border-radius:8px;">OK</label>
+                    <label class="btn btn-outline-success fw-bold flex-grow-1" for="${uid}_ok" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;">OK</label>
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
-                    <label class="btn btn-outline-danger fw-bold flex-grow-1" for="${uid}_fa" style="border-radius:8px;">FALLA</label>
+                    <label class="btn btn-outline-danger fw-bold flex-grow-1" for="${uid}_fa" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;">FALLA</label>
                 </div>
                 <div id="f_${uid}" style="display:none;" class="mt-2 p-3 bg-light rounded border-start border-danger border-4 shadow-sm">
                     <label class="form-label text-danger fw-bold" style="font-size:0.8rem;"><i class="bi bi-pencil-square"></i> Observación</label>
@@ -1380,7 +1376,7 @@ window.renderModernInspForm = function() {
                 });
                 html += `</div>`;
             } else if (t === 'text') {
-                html += `<textarea class="form-control border-primary shadow-sm" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..." style="border-radius:8px;"></textarea>`;
+                html += `<textarea class="form-control border-primary shadow-sm" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..." style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;"></textarea>`;
             }
             html += `</div>`;
         });
@@ -1388,18 +1384,16 @@ window.renderModernInspForm = function() {
     });
 
     // Tarjeta Final: Firma
-    html += `<div class="card shadow-sm border-0 mb-3" style="border-radius:12px;">
-        <div class="card-header bg-white border-bottom-0 pb-0 pt-3">
-            <h6 class="fw-bold text-primary m-0"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMAS</h6>
-        </div>
-        <div class="card-body">
+    html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
+    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMAS</div>
+    <div style="padding:1rem;">
             <div class="row g-3">
                 <div class="col-md-12 mb-3">
                     <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
                     <div class="position-relative">
                         <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico-txt" placeholder="Ej. Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" onfocus="window._cbFiltrar('i_tecnico')" onblur="window._cbHide('i_tecnico')" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;">
                         <input type="hidden" id="i_tecnico">
-                        <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:8px;"></div>
+                        <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;"></div>
                     </div>
                     <div class="mt-3">
                         <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
