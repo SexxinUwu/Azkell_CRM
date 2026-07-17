@@ -323,16 +323,17 @@
 .rot-id-lbl { font-size: .7rem; font-weight: 700; color: var(--primary,#5865F2); text-transform: uppercase; }
 /* Sub-drawers */
 .rot-sub-drawer {
-    position: fixed; top: 0; right: -500px;
-    width: 440px; max-width: 100vw; height: 100vh;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 40px rgba(0,0,0,.22);
-    transition: right .25s ease;
+    position: fixed; top: auto; bottom: -100vh; right: 0; left: 0; margin: 0 auto;
+    width: 650px; max-width: 100vw; height: 85vh;
+    border-radius: 16px 16px 0 0;
+    background: var(--surface); border: 1px solid var(--border); border-bottom: none;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.22);
+    transition: bottom .25s ease;
     z-index: 1062; display: flex; flex-direction: column;
     visibility: hidden;
 }
-.rot-sub-drawer.open { right: 0; visibility: visible; }
-#rot-drawer-material { width: 560px; }
+.rot-sub-drawer.open { bottom: 0; visibility: visible; }
+
 
 /* ── Responsive móvil ─────────────────────────────────────────── */
 @media (max-width: 767px) {
