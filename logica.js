@@ -165,7 +165,10 @@ window.verificarSesionGuardada = function() {
                     if (data.preferencias) {
                         localStorage.setItem('fleet_prefs', JSON.stringify(data.preferencias));
                         if (data.preferencias.color) document.documentElement.style.setProperty('--crm-accent', data.preferencias.color);
-                        if (data.preferencias.tema && typeof window.applyDark === 'function') window.applyDark(data.preferencias.tema);
+                        if (data.preferencias.tema && typeof window.applyDark === 'function') {
+                            let isDark = data.preferencias.tema === 'dark' || (data.preferencias.tema === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                            window.applyDark(isDark);
+                        }
                     }
                     if (changed) window.verificarSesionGuardada(); // re-render avatar
                 }
@@ -176,7 +179,10 @@ window.verificarSesionGuardada = function() {
     try {
         let prefs = JSON.parse(localStorage.getItem('fleet_prefs') || '{}');
         if (prefs.color) document.documentElement.style.setProperty('--crm-accent', prefs.color);
-        if (prefs.tema && typeof window.applyDark === 'function') window.applyDark(prefs.tema);
+        if (prefs.tema && typeof window.applyDark === 'function') {
+            let isDark = prefs.tema === 'dark' || (prefs.tema === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            window.applyDark(isDark);
+        }
     } catch(e) {}
 
     let perfilNombreEl = document.getElementById('perfil-nombre');

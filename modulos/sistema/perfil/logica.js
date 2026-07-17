@@ -47,7 +47,10 @@ window.perfilCargarDatos = async function() {
             if (user.preferencias.tema) {
                 var sTema = document.getElementById('p-input-tema');
                 if (sTema) sTema.value = user.preferencias.tema;
-                window.applyDark && window.applyDark(user.preferencias.tema);
+                if (window.applyDark) {
+                    let isDark = user.preferencias.tema === 'dark' || (user.preferencias.tema === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    window.applyDark(isDark);
+                }
             }
         }
         
@@ -197,7 +200,10 @@ window.perfilSetColor = async function(colorHex) {
 };
 
 window.perfilSetTheme = async function(theme) {
-    if (window.applyDark) window.applyDark(theme);
+    if (window.applyDark) {
+        let isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        window.applyDark(isDark);
+    }
     
     perfilData.preferencias = perfilData.preferencias || {};
     perfilData.preferencias.tema = theme;
