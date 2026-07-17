@@ -470,24 +470,26 @@
     border-radius: 28px 28px 0 0;
 }
 </style>
-<div class="insp-sub-drawer shadow-lg border-0" id="drawerInspeccion">
-    <div class="insp-drawer-hd">
+
+<!-- FORMULARIO DE INSPECCIONES (estilo nativo rot-sub-drawer) -->
+<div class="rot-sub-drawer" id="drawerInspeccion">
+    <div class="rot-drawer-hd">
         <div>
-            <h5 class="fw-bold m-0" style="font-size: 1.15rem; font-weight: 800 !important; color: #1e293b; letter-spacing: -0.01em;">Formulario de Inspecciones</h5>
-            <div style="font-size: .75rem; color: #64748b; margin-top: 1px;" id="insp-header-ot-lbl"></div>
+            <div class="rot-drawer-title">Formulario de Inspecciones</div>
+            <div style="font-size:.75rem;color:var(--subtext);margin-top:1px;" id="insp-header-ot-lbl"></div>
         </div>
-        <button type="button" class="btn btn-sm" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:#64748b; background:none; border:none; padding:0;">
-            <i class="bi bi-x-lg" style="font-size:1.2rem;"></i>
+        <button class="btn btn-sm" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext)">
+            <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="rot-drawer-body p-0" style="background-color:#f8fafc; flex: 1; overflow-y: auto;">
+    <div class="rot-drawer-body p-0" style="overflow-y:auto; flex:1; background:#f8fafc;">
         <form id="formNuevaInspeccion" class="d-flex flex-column h-100">
-            <div id="wizard-dynamic-tabs" class="p-3" style="flex-grow: 1;">
+            <div id="wizard-dynamic-tabs" class="p-3" style="flex-grow:1;">
                 <!-- El contenido se generará dinámicamente aquí -->
             </div>
         </form>
     </div>
-    <div class="rot-drawer-footer d-flex justify-content-end p-3" style="background:#ffffff; border-top:1px solid #e2e8f0; flex-shrink:0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);">
+    <div class="rot-drawer-footer d-flex justify-content-end p-3" style="background:#ffffff; border-top:1px solid var(--border,#e2e8f0); flex-shrink:0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);">
         <button type="button" class="btn btn-light fw-bold px-4 me-2 border text-muted" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">Cancelar</button>
         <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()"><i class="bi bi-save me-1"></i> Guardar Registro</button>
     </div>
