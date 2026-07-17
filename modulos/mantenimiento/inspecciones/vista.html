@@ -4,6 +4,8 @@
 
 
 
+
+<div class="insp-sub-drawer shadow-lg border-0" id="drawerInspeccion">
 <style>
 /* Funnel inspecciones: flex-column solo cuando está abierto */
 #moduloStatus #btnFiltrosInsp ~ .dropdown-menu.show {
@@ -447,16 +449,16 @@
 <style>
 /* Estilos calcados de rot-sub-drawer para que sea 100% nativo */
 .insp-sub-drawer {
-    position: fixed; top: auto; bottom: -100vh; right: 0; left: 0; margin: 0 auto;
-    width: 650px; max-width: 100vw; height: 85vh;
-    border-radius: 16px 16px 0 0;
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 700px; max-width: 95vw; height: 92vh;
+    border-radius: 28px 28px 0 0;
     background: #ffffff; border: 1px solid #e1e4e8; border-bottom: none;
     box-shadow: 0 -8px 40px rgba(0,0,0,.22);
-    transition: bottom .25s ease;
+    transition: transform .28s ease;
     z-index: 1062; display: flex; flex-direction: column;
     visibility: hidden;
 }
-.insp-sub-drawer.open { bottom: 0; visibility: visible; }
+.insp-sub-drawer.open { transform: translateX(-50%) translateY(0); visibility: visible; }
 @media (max-width: 767px) {
     .insp-sub-drawer {
         width: 100vw !important; height: 92vh !important;
@@ -466,10 +468,9 @@
 .insp-drawer-hd {
     padding: 20px 24px; border-bottom: 1px solid #e1e4e8;
     display: flex; justify-content: space-between; align-items: flex-start; background: #fff;
-    border-radius: 16px 16px 0 0;
+    border-radius: 28px 28px 0 0;
 }
 </style>
-<div class="insp-sub-drawer shadow-lg border-0" id="drawerInspeccion">
     <div class="insp-drawer-hd" style="padding: 20px 24px; border-bottom: 1px solid #e1e4e8; background: #fff; ">
         <div>
             <h5 class="fw-bold m-0" style="font-size: 1.15rem; font-weight: 800 !important; color: #1e293b; letter-spacing: -0.01em;">Formulario de Inspecciones</h5>
