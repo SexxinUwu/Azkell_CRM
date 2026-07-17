@@ -1289,21 +1289,21 @@ window.renderModernInspForm = function() {
     <div style="padding:1rem;">
             <div class="row g-3">
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">N° Registro</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light text-uppercase" id="i_id_inspeccion_show" readonly placeholder="Automático" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">N° Registro</label>
+                    <input type="text" class="form-control form-control-sm bg-light text-uppercase" id="i_id_inspeccion_show" readonly placeholder="Automático" >
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Fecha de Ingreso</label>
-                    <input type="date" class="form-control fw-bold shadow-sm text-primary" id="i_fecha" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Fecha de Ingreso</label>
+                    <input type="date" class="form-control form-control-sm" id="i_fecha" required >
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">
                         <i class="bi bi-truck"></i> Placa *
                     </label>
                     <div class="position-relative">
-                        <input type="text" id="i_placa-txt" class="form-control fw-bold shadow-sm text-primary"
+                        <input type="text" id="i_placa-txt" class="form-control form-control-sm"
                                placeholder="Buscar placa..." autocomplete="off" required
-                               style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;"
+                               style="text-transform:uppercase;"
                                oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_placa')"
                                onfocus="window._cbFiltrar('i_placa')"
                                onblur="window._cbHide('i_placa')">
@@ -1312,29 +1312,29 @@ window.renderModernInspForm = function() {
                     </div>
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Kilometraje de Tablero</label>
-                    <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Kilometraje de Tablero</label>
+                    <input type="number" class="form-control form-control-sm" id="i_kmtablero" placeholder="Ej: 150000" >
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Cliente</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light" id="i_cliente" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Cliente</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="i_cliente" readonly >
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Tipo</label>
-                    <input type="text" class="form-control fw-bold shadow-sm text-primary bg-light text-uppercase" id="i_modelo" readonly style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Tipo</label>
+                    <input type="text" class="form-control form-control-sm bg-light text-uppercase" id="i_modelo" readonly >
                 </div>
                 <div class="col-md-6 col-12">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
-                    <input type="number" class="form-control text-primary bg-light fw-bold shadow-sm" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
+                    <input type="number" class="form-control form-control-sm bg-light" id="i_kmgps" readonly placeholder="Calculando..." >
                 </div>
                 <div class="col-md-6 col-12">
                     <div class="form-check form-switch mb-2 mt-md-4">
                         <input class="form-check-input" type="checkbox" id="chk_30dias" checked onchange="document.getElementById('i_dias_container').style.display = this.checked ? 'none' : 'block'; document.getElementById('i_dias').value = this.checked ? '30' : '';">
-                        <label class="form-check-label fw-bold text-primary" for="chk_30dias">Inspección Válida por 30 Días</label>
+                        <label class="form-check-label" style="font-size:0.85rem;font-weight:600;color:#1e293b;" for="chk_30dias">Inspección Válida por 30 Días</label>
                     </div>
                     <div id="i_dias_container" style="display: none;">
-                        <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Días Personalizados</label>
-                        <input type="number" class="form-control fw-bold shadow-sm text-primary" id="i_dias" value="30" placeholder="Ej: 15" style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);">
+                        <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Días Personalizados</label>
+                        <input type="number" class="form-control form-control-sm" id="i_dias" value="30" placeholder="Ej: 15" >
                     </div>
                 </div>
             </div>
@@ -1389,9 +1389,9 @@ window.renderModernInspForm = function() {
     <div style="padding:1rem;">
             <div class="row g-3">
                 <div class="col-md-12 mb-3">
-                    <label class="fw-bold text-primary" style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;">Técnico Inspector *</label>
+                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Técnico Inspector *</label>
                     <div class="position-relative">
-                        <input type="text" class="form-control fw-bold shadow-sm text-primary" id="i_tecnico-txt" placeholder="Ej. Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" onfocus="window._cbFiltrar('i_tecnico')" onblur="window._cbHide('i_tecnico')" required style="border-radius:12px;min-height:44px;border:1.5px solid var(--border);text-transform:uppercase;">
+                        <input type="text" class="form-control form-control-sm" id="i_tecnico-txt" placeholder="Ej. Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" onfocus="window._cbFiltrar('i_tecnico')" onblur="window._cbHide('i_tecnico')" required style="text-transform:uppercase;">
                         <input type="hidden" id="i_tecnico">
                         <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;"></div>
                     </div>
@@ -1562,6 +1562,8 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
     }
 
     let idOtInput = document.getElementById('i_id_ot');
+    let inspHeaderLbl = document.getElementById('insp-header-ot-lbl');
+    if (inspHeaderLbl) inspHeaderLbl.textContent = idOtPreselect ? "OT: " + idOtPreselect : "";
     if (idOtInput) idOtInput.value = idOtPreselect || "";
 
     let tzOffset = (new Date()).getTimezoneOffset() * 60000;
