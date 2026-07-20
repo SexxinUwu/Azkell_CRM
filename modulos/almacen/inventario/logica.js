@@ -176,15 +176,6 @@ window._invCargarSistemas = function() {
             );
             window._cbInit('inv-f-sistema', items, 'Buscar sistema…');
             if (prev) { window._cbSet('inv-f-sistema', prev, prev); window._invFiltrarSubSistemas(); }
-            // Poblar filtro barra (select simple, no combobox)
-            var filSis = document.getElementById('inv-fil-sistema');
-            if (filSis) {
-                var prevF = filSis.value;
-                filSis.innerHTML = '<option value="">Todos los sistemas</option>' +
-                    data.map(function(s) {
-                        return '<option value="' + _invEsc(s.nombre) + '"' + (s.nombre === prevF ? ' selected' : '') + '>' + _invEsc(s.nombre) + '</option>';
-                    }).join('');
-            }
         })
         .catch(function() {});
 };
@@ -213,15 +204,6 @@ window._invCargarFamilias = function() {
             );
             window._cbInit('inv-f-familia', items, 'Buscar familia…');
             if (prev) window._cbSet('inv-f-familia', prev, prev);
-            // Poblar filtro barra (select simple)
-            var filFam = document.getElementById('inv-fil-familia');
-            if (filFam) {
-                var prevF = filFam.value;
-                filFam.innerHTML = '<option value="">Todas las familias</option>' +
-                    data.map(function(f) {
-                        return '<option value="' + _invEsc(f.nombre) + '"' + (f.nombre === prevF ? ' selected' : '') + '>' + _invEsc(f.nombre) + '</option>';
-                    }).join('');
-            }
         })
         .catch(function() {});
 };
@@ -524,8 +506,7 @@ window._invSwitchTab = function(tab) {
 
 window.filtrarInventario = function() {
     var buscar  = ((document.getElementById('inv-buscar')       || {}).value || '').toLowerCase().trim();
-    var filFam  = ((document.getElementById('inv-fil-familia')  || {}).value || '');
-    var filSis  = ((document.getElementById('inv-fil-sistema')  || {}).value || '');
+    
     window._invFiltrados = (window._invData || []).filter(function(d) {
         var matchB = !buscar ||
             (d.id           || '').toLowerCase().includes(buscar) ||
@@ -534,9 +515,24 @@ window.filtrarInventario = function() {
             (d.familia      || '').toLowerCase().includes(buscar) ||
             (d.codigo_item  || '').toLowerCase().includes(buscar) ||
             (d.codigo_barras|| '').toLowerCase().includes(buscar);
-        var matchF = !filFam || d.familia === filFam;
-        var matchS = !filSis || d.sistema === filSis;
-          var matchC = (window._invActiveTab === 'servicios') ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
+        
+        var matchC = (window._invActiveTab === 'servicios') ? (d.tipo === 'Servicio') : (d.tipo !== 'Servicio');
+        
+        var matchAdv = true;
+        if (window.inventarioFiltros && typeof INVENTARIO_COLUMNAS !== 'undefined') {
+            for (let i = 0; i < INVENTARIO_COLUMNAS.length; i++) {
+                let col = INVENTARIO_COLUMNAS[i];
+                let selected = window.inventarioFiltros[col.key];
+                if (selected && selected.size > 0) {
+                    let dVal = d[col.key] ? String(d[col.key]).trim() : '';
+                    if (dVal === '') dVal = '(Vacío)';
+                    if (!selected.has(dVal)) {
+                        matchAdv = false;
+                        break;
+                    }
+                }
+            }
+        }
         
         var f = window._invKpiFiltro || 'todos';
         if (f === 'bajo') {
@@ -550,20 +546,22 @@ window.filtrarInventario = function() {
             if (!(sm > 0 && sa < sm)) return false;
         }
 
-        return matchB && matchF && matchS && matchC;
+        return matchB && matchC && matchAdv;
     });
+
+    window._invRenderStockBadge = function(actual, min, tipo) {
+        if (tipo === 'Servicio') return '-';
+        var st = parseFloat(actual||0);
+        var mn = parseFloat(min||0);
+        if(st <= 0) return '<span class="badge bg-danger">Sin Stock</span>';
+        if(st <= mn) return '<span class="badge bg-warning text-dark">Stock Bajo</span>';
+        return '<span class="badge bg-success">Óptimo</span>';
+    };
 
     window._invFiltrados.sort(function(a, b) {
         var minA = parseFloat(a.stock_min || 0);
         var minB = parseFloat(b.stock_min || 0);
-        window._invRenderStockBadge = function(actual, min, tipo) {
-    if (tipo === 'Servicio') return '-';
-    var st = parseFloat(actual||0);
-    var mn = parseFloat(min||0);
-    if(st <= 0) return '<span class="badge bg-danger">Sin Stock</span>';
-    if(st <= mn) return '<span class="badge bg-warning text-dark">Stock Bajo</span>';
-    return '<span class="badge bg-success">Óptimo</span>';
-};     if (minA === 0 && minB !== 0) return 1;
+        if (minA === 0 && minB !== 0) return 1;
         if (minA !== 0 && minB === 0) return -1;
         return 0;
     });
@@ -1783,3 +1781,156 @@ window._invMobileSearchToggle = function() {
 };
 
 // _invBottomNav reemplazado por _invRenderBottomNav (dinámico por permisos)
+
+// =========================================================================
+// FILTROS AVANZADOS (ESTILO APPSHEET) - INVENTARIO
+// =========================================================================
+
+window.inventarioFiltros = {}; // { colKey: Set(val1, val2...) }
+window._columnaActivaFiltroInv = null;
+
+const INVENTARIO_COLUMNAS = [
+    { key: "familia", label: "Familia" },
+    { key: "sistema", label: "Sistema" },
+    { key: "almacen", label: "Almacén" },
+    { key: "anaquel", label: "Anaquel" },
+    { key: "marca", label: "Marca" },
+    { key: "tipo", label: "Tipo" },
+    { key: "sub_tipo", label: "Sub Tipo" }
+];
+
+window.abrirFiltrosInventario = function() {
+    const contenedor = document.getElementById('lista-columnas-filtro-inv');
+    let html = '';
+    
+    for (let i = 0; i < INVENTARIO_COLUMNAS.length; i++) {
+        let col = INVENTARIO_COLUMNAS[i];
+        let seleccionados = window.inventarioFiltros[col.key] ? window.inventarioFiltros[col.key].size : 0;
+        let badge = seleccionados > 0 ? `<span class="badge bg-primary rounded-pill">${seleccionados}</span>` : '';
+        
+        html += `
+            <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" 
+                    style="background: transparent; color: var(--text); border-color: var(--border); cursor: pointer;"
+                    onclick="window.entrarFiltroDetalleInv('${col.key}', '${col.label}')">
+                <span class="fw-bold" style="font-size: 0.95rem;">${col.label}</span>
+                <div class="d-flex align-items-center gap-2">
+                    ${badge}
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </div>
+            </button>
+        `;
+    }
+    
+    contenedor.innerHTML = html;
+    
+    document.getElementById('filtros-inv-slider').style.transform = 'translateX(0)';
+    document.getElementById('header-filtros-inv-main').classList.remove('d-none');
+    document.getElementById('footer-filtros-inv-main').classList.remove('d-none');
+    document.getElementById('header-filtros-inv-detalle').classList.add('d-none');
+    
+    const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('offcanvasFiltrosInventario'));
+    bsOffcanvas.show();
+};
+
+window.entrarFiltroDetalleInv = function(colKey, colLabel) {
+    window._columnaActivaFiltroInv = colKey;
+    document.getElementById('titulo-columna-filtro-inv').innerText = colLabel;
+    document.getElementById('buscador-opciones-filtro-inv').value = '';
+    
+    let valoresSet = new Set();
+    (window._invData || []).forEach(row => {
+        let val = row[colKey] ? String(row[colKey]).trim() : '';
+        if (val === '') val = '(Vacío)';
+        valoresSet.add(val);
+    });
+    
+    let valores = Array.from(valoresSet).sort();
+    
+    const contenedor = document.getElementById('lista-opciones-filtro-inv');
+    let html = '';
+    
+    let seleccionados = window.inventarioFiltros[colKey] || new Set();
+    
+    valores.forEach(val => {
+        let isChecked = seleccionados.has(val) ? 'checked' : '';
+        let safeId = val.replace(/[^a-zA-Z0-9]/g, '');
+        html += `
+            <div class="form-check py-2 border-bottom opt-filtro-item-inv" style="border-color: var(--border) !important;">
+                <input class="form-check-input" type="checkbox" value="${val}" id="chk-flt-inv-${colKey}-${safeId}" ${isChecked} onchange="window._toggleFiltroValorInv('${colKey}', this.value, this.checked)" style="transform: scale(1.2); cursor: pointer;">
+                <label class="form-check-label w-100 ms-2" for="chk-flt-inv-${colKey}-${safeId}" style="cursor: pointer; color: var(--text); font-size: 0.95rem;">
+                    ${val}
+                </label>
+            </div>
+        `;
+    });
+    
+    contenedor.innerHTML = html;
+    
+    document.getElementById('header-filtros-inv-main').classList.add('d-none');
+    document.getElementById('footer-filtros-inv-main').classList.add('d-none');
+    document.getElementById('header-filtros-inv-detalle').classList.remove('d-none');
+    document.getElementById('filtros-inv-slider').style.transform = 'translateX(-100%)';
+};
+
+window.filtrosInventarioNavAtras = function() {
+    window.abrirFiltrosInventario();
+};
+
+window._toggleFiltroValorInv = function(colKey, val, isChecked) {
+    if (!window.inventarioFiltros[colKey]) {
+        window.inventarioFiltros[colKey] = new Set();
+    }
+    if (isChecked) {
+        window.inventarioFiltros[colKey].add(val);
+    } else {
+        window.inventarioFiltros[colKey].delete(val);
+    }
+    window.actualizarBadgeGlobalFiltrosInv();
+};
+
+window.buscarEnFiltroOpcionesInv = function(txt) {
+    txt = txt.toLowerCase();
+    const items = document.querySelectorAll('.opt-filtro-item-inv');
+    items.forEach(item => {
+        const lbl = item.querySelector('label').innerText.toLowerCase();
+        if (lbl.includes(txt)) {
+            item.classList.remove('d-none');
+        } else {
+            item.classList.add('d-none');
+        }
+    });
+};
+
+window.limpiarFiltroColumnaActualInv = function() {
+    let col = window._columnaActivaFiltroInv;
+    if (window.inventarioFiltros[col]) {
+        window.inventarioFiltros[col].clear();
+    }
+    document.querySelectorAll('.opt-filtro-item-inv input[type="checkbox"]').forEach(chk => {
+        chk.checked = false;
+    });
+    window.actualizarBadgeGlobalFiltrosInv();
+};
+
+window.limpiarTodosFiltrosInv = function() {
+    window.inventarioFiltros = {};
+    window.actualizarBadgeGlobalFiltrosInv();
+    window.filtrarInventario();
+    bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasFiltrosInventario')).hide();
+};
+
+window.actualizarBadgeGlobalFiltrosInv = function() {
+    let totalActivos = 0;
+    for (let col in window.inventarioFiltros) {
+        if (window.inventarioFiltros[col].size > 0) totalActivos++;
+    }
+    const badge = document.getElementById('badge-filtros-inventario');
+    if (badge) {
+        if (totalActivos > 0) {
+            badge.innerText = totalActivos;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
+};

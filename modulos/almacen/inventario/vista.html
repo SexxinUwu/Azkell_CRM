@@ -421,37 +421,14 @@
       <button id="inv-tab-servicios" onclick="window._invSwitchTab('servicios')" class="inv-tab-btn" style="border:none; border-radius:8px; padding:4px 12px; font-size:.8rem; font-weight:700; background:transparent; color:#0ea5e9; cursor:pointer; margin-left:4px;">🛠️ Catálogo de Servicios</button>
     </div>
 
-    <!-- Familia -->
-    <select id="inv-fil-familia" onchange="window.filtrarInventario()"
-            style="height:36px;border-radius:99px;border:1.5px solid var(--border);
-                   background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
-                   font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
-      <option value="">Todas las familias</option>
-    </select>
-    
-    <!-- Sistema -->
-    <select id="inv-fil-sistema" onchange="window.filtrarInventario()"
-              style="height:36px;border-radius:99px;border:1.5px solid var(--border);
-                     background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
-                     font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
-        <option value="">Todos los sistemas</option>
-      </select>
-      
-    <!-- Almacén -->
-    <select id="inv-fil-almacen" onchange="window.filtrarInventario()"
-              style="height:36px;border-radius:99px;border:1.5px solid var(--border);
-                     background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
-                     font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
-        <option value="">Todos los almacenes</option>
-      </select>
-
-    <!-- Anaquel -->
-    <select id="inv-fil-anaquel" onchange="window.filtrarInventario()"
-              style="height:36px;border-radius:99px;border:1.5px solid var(--border);
-                     background:var(--surface);padding:0 2rem 0 .85rem;font-size:.82rem;
-                     font-weight:500;color:var(--text);outline:none;cursor:pointer;max-width:170px;">
-        <option value="">Todos los anaqueles</option>
-      </select>
+    <!-- Botón Filtros Avanzados -->
+    <button onclick="window.abrirFiltrosInventario()"
+            style="height:36px;padding:0 .85rem;border-radius:99px;border:1.5px solid var(--border);
+                   background:var(--surface);color:var(--text);font-size:.82rem;font-weight:700;
+                   display:flex;align-items:center;gap:.4rem;cursor:pointer;transition:all .2s;">
+      <i class="bi bi-funnel"></i>Filtros
+      <span id="badge-filtros-inventario" class="badge bg-primary rounded-pill d-none" style="font-size:.65rem;padding:.2em .5em;">0</span>
+    </button>
     <span id="inv-contador"
           style="font-size:.78rem;font-weight:700;color:var(--subtext);margin-left:auto;"></span>
   </div>
@@ -1001,4 +978,66 @@
       <i class="bi bi-plus-lg me-1"></i>Agregar
     </button>
   </div>
+</div>
+
+<!-- OFFCANVAS: FILTROS AVANZADOS (Estilo AppSheet) -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFiltrosInventario" style="width: 380px; border-left: 1px solid var(--border); background: var(--surface);">
+    
+    <!-- HEADER GENERAL -->
+    <div class="offcanvas-header border-bottom py-3" style="background: var(--surface);" id="header-filtros-inv-main">
+        <div class="d-flex align-items-center gap-2 w-100">
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);">Filtros</h5>
+            <button type="button" class="btn-close ms-auto shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <!-- HEADER DETALLE (Oculto por defecto) -->
+    <div class="offcanvas-header border-bottom py-3 d-none" style="background: var(--surface);" id="header-filtros-inv-detalle">
+        <div class="d-flex align-items-center gap-3 w-100">
+            <button type="button" class="btn btn-sm btn-light p-1" onclick="window.filtrosInventarioNavAtras()" style="border-radius: 50%; color: var(--text); background: transparent; border: none;">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </button>
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);" id="titulo-columna-filtro-inv">Columna</h5>
+        </div>
+    </div>
+
+    <div class="offcanvas-body p-0 position-relative" style="overflow-x: hidden; background: var(--surface);">
+        <!-- CONTENEDOR ANIMADO -->
+        <div id="filtros-inv-slider" class="d-flex w-100 h-100" style="transition: transform 0.3s ease;">
+            
+            <!-- VISTA 1: LISTA DE COLUMNAS -->
+            <div id="filtros-inv-main-view" class="w-100 h-100 flex-shrink-0" style="overflow-y: auto;">
+                <div class="list-group list-group-flush" id="lista-columnas-filtro-inv">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <!-- VISTA 2: OPCIONES DE COLUMNA -->
+            <div id="filtros-inv-detail-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column" style="background: var(--surface);">
+                <div class="p-3 border-bottom">
+                    <div class="input-group input-group-sm" style="border-radius: 8px; border: 1px solid var(--primary); overflow: hidden;">
+                        <span class="input-group-text bg-transparent border-0 text-primary"><i class="bi bi-search"></i></span>
+                        <input type="text" id="buscador-opciones-filtro-inv" class="form-control border-0 shadow-none" placeholder="Buscar..." oninput="window.buscarEnFiltroOpcionesInv(this.value)">
+                    </div>
+                </div>
+                
+                <div class="flex-grow-1 p-3 pt-2" style="overflow-y: auto;" id="lista-opciones-filtro-inv">
+                    <!-- Dinámico -->
+                </div>
+                
+                <!-- FOOTER DETALLE -->
+                <div class="p-3 border-top d-flex justify-content-between align-items-center" style="background: var(--surface);">
+                    <button class="btn btn-link text-muted fw-bold text-decoration-none px-0" onclick="window.limpiarFiltroColumnaActualInv()">Limpiar</button>
+                    <button class="btn btn-link text-success fw-bold text-decoration-none px-0" onclick="window.filtrosInventarioNavAtras()">Hecho</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- FOOTER GENERAL (Visible en main view) -->
+    <div class="p-3 border-top d-flex justify-content-between align-items-center" id="footer-filtros-inv-main" style="background: var(--surface);">
+        <button class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.limpiarTodosFiltrosInv()">Limpiar todo</button>
+        <button class="btn btn-primary fw-bold px-4 rounded-pill" data-bs-dismiss="offcanvas" onclick="window.filtrarInventario()">Aplicar</button>
+    </div>
 </div>
