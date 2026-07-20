@@ -604,6 +604,13 @@ window.guardarEntrada = function() {
     var method = window._entEditId ? 'PUT' : 'POST';
     var url = window._entEditId ? '/api/almacen/entradas/' + window._entEditId : '/api/almacen/entradas';
 
+    var btnGuardar = document.getElementById('btn-guardar-entrada');
+    var originalBtnHtml = btnGuardar ? btnGuardar.innerHTML : '';
+    if (btnGuardar) {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;"></span>Procesando...';
+    }
+
     fetch(url, { method: method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
         .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(async function(r) {
@@ -619,29 +626,41 @@ window.guardarEntrada = function() {
                     var res = await fetch('/api/almacen/entradas/'+entId+'/archivo/'+tipo, { method: 'POST', body: fd });
                     if (!res.ok) {
                         var text = await res.text();
-                        alert('Error al subir ' + tipo + ': ' + text);
+                        console.warn('Error subiendo ' + tipo + ': ' + text);
                         throw new Error('Upload error: ' + text);
                     }
                 } catch (err) {
-                    alert('Fallo de conexión o subida para ' + tipo + ': ' + err.message);
+                    console.warn('Fallo de conexión o subida para ' + tipo + ': ' + err.message);
                     throw err;
                 }
             };
 
+            var erroresArchivos = false;
             try {
                 if (fVoucher) await uploadFile(fVoucher, 'voucher');
                 if (fCotizacion) await uploadFile(fCotizacion, 'cotizacion');
                 if (fFactura) await uploadFile(fFactura, 'factura');
             } catch (e) {
                 console.error("Error subiendo archivos", e);
+                erroresArchivos = true;
             }
 
             window._entCerrarModal();
-            alert('📦 Orden de Compra ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+entId);
+            if (erroresArchivos) {
+                alert('📦 Orden ' + entId + ' registrada exitosamente, PERO hubo problemas subiendo algunos archivos (pueden ser muy pesados o el servidor tardó demasiado).');
+            } else {
+                alert('📦 Orden de Compra ' + (window._entEditId ? 'actualizada' : 'registrada') + ': '+entId);
+            }
             window._entEditId = null;
             window.cargarEntradas();
         })
-        .catch(function(err) { alert('Error: '+err.message); });
+        .catch(function(err) { alert('Error: '+err.message); })
+        .finally(function() {
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = originalBtnHtml;
+            }
+        });
 };
 
 // ── Abrir panel ───────────────────────────────────────────────────
