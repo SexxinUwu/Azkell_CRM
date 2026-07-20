@@ -2405,7 +2405,10 @@ window.renderTablaFrenos = function(todasLasInspecciones) {
         if (insp.detalles_json) {
             try {
                 let detalles = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : insp.detalles_json;
-                let secFrenos = detalles.find(s => s.seccion === "Frenos" || s.seccion === "Sistema de Frenos");
+                let secFrenos = detalles.find(s => {
+                    let st = (s.seccion || "").toUpperCase();
+                    return st === "FRENOS" || st === "SISTEMA DE FRENOS" || st.includes("FRENOS");
+                });
                 if (secFrenos && secFrenos.items && secFrenos.items.length > 0) {
                     tieneFrenos = true;
                     dataFrenos = secFrenos.items;
@@ -2447,8 +2450,8 @@ window.renderTablaFrenos = function(todasLasInspecciones) {
                     let nom = (it.item || '').toLowerCase();
                     let est = (it.estado || '').replace('%', '').trim();
                     if (nom.includes("delantera")) valZapDel = est;
-                    else if (nom.includes("1er eje") || nom.includes("primer eje")) valZap1 = est;
-                    else if (nom.includes("2do eje") || nom.includes("segundo eje")) valZap2 = est;
+                    else if (nom.includes("1er eje") || nom.includes("primer eje") || nom.includes("tracci")) valZap1 = est;
+                    else if (nom.includes("2do eje") || nom.includes("segundo eje") || nom.includes("loca")) valZap2 = est;
                     else if (nom.includes("embrague")) valDisco = est;
                     
                     if (it.obs) obs = it.obs;
