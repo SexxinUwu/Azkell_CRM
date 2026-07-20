@@ -5,6 +5,11 @@
 
 
 <style>
+/* Fix para que los tab-panes activos usen flexbox y no se amontonen */
+#insp-tabContent .tab-pane.active {
+    display: flex !important;
+}
+
 /* Funnel inspecciones: flex-column solo cuando está abierto */
 #moduloStatus #btnFiltrosInsp ~ .dropdown-menu.show {
     display: flex !important;
@@ -245,7 +250,7 @@
 
     <div class="tab-content flex-grow-1 d-flex flex-column overflow-hidden" id="insp-tabContent" style="background:var(--surface);">
         <!-- PESTAÑA GENERAL -->
-        <div class="tab-pane fade show active h-100 flex-column" id="insp-general" role="tabpanel" style="display:flex;">
+        <div class="tab-pane fade show active h-100 flex-column" id="insp-general" role="tabpanel">
             <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0"><div class="table-container flex-grow-1 overflow-auto"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
         <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);"><tr><th onclick="sortTable('tablaStatus', 0)"><span data-i18n="insp.col.plate">Placa / Cliente</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)"><span data-i18n="insp.col.type">Tipo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)"><span data-i18n="insp.col.tech">Técnico</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)"><span data-i18n="insp.col.date">Fecha de Insp.</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)"><span data-i18n="insp.col.next">Prox Insp</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)"><span data-i18n="insp.col.semaforo">Semáforo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> <span data-i18n="insp.col.gps">Ubicación GPS</span></th><th class="text-center" style="width:48px;"></th></tr></thead>
         <tbody id="cuerpoTablaStatus"><tr><td colspan="10" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr></tbody>
@@ -266,7 +271,7 @@
     </div>
 
         <!-- PESTAÑA FRENOS -->
-        <div class="tab-pane fade h-100 flex-column" id="insp-frenos" role="tabpanel" style="display:flex;">
+        <div class="tab-pane fade h-100 flex-column" id="insp-frenos" role="tabpanel">
             <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0">
                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
                     <div>
