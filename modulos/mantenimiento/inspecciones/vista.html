@@ -599,7 +599,8 @@
                 <form id="formRegistroFrenos">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-muted small">PLACA</label>
-                        <select class="form-select" id="rf-placa" required></select>
+                        <input type="text" class="form-control text-uppercase" id="rf-placa" list="rf-placa-list" placeholder="Buscar o escribir placa..." required>
+                        <datalist id="rf-placa-list"></datalist>
                     </div>
                     <div class="row">
                         <div class="col-6 mb-3">
