@@ -2392,9 +2392,22 @@ window.guardarRegistroFrenos = async function() {
     }
 };
 
-window.renderTablaFrenos = function(todasLasInspecciones) {
+window.renderTablaFrenos = async function(todasLasInspecciones) {
     let tbody = document.getElementById('cuerpoTablaFrenos');
     if (!tbody) return;
+
+    // Si no hay datos de placas, intentar cargarlos
+    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando datos de flota...</td></tr>';
+        try {
+            let r = await fetch('/api/script/obtenerPlacas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ args: [] })
+            }).then(res => res.json());
+            if (r && r.data) window.dataGlobalPlacas = r.data;
+        } catch(e) {}
+    }
 
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
