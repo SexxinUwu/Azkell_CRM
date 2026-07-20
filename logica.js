@@ -3053,9 +3053,9 @@ function descargarExcelDinamico(tablaId, nombreArchivo) {
 
 
 function initGrafico(canvasId) {
-    if (typeof Chart === 'undefined') return null;
+    if (typeof window.Chart === 'undefined') return null;
     let ctx = document.getElementById(canvasId); if(!ctx) return null;
-    return new Chart(ctx.getContext('2d'), {
+    return new window.Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: { labels: ['Vigentes', 'Vencidas'], datasets: [{ data: [1], backgroundColor: ['#475569'], borderWidth: 2, hoverOffset: 4 }] },
         options: {
@@ -3071,7 +3071,7 @@ function initGrafico(canvasId) {
     });
 }
 function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVigNoMot) {
-    if (typeof Chart === 'undefined') {
+    if (typeof window.Chart === 'undefined') {
         if (window.loadCharts) {
             window.loadCharts().then(function() {
                 updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVigNoMot);

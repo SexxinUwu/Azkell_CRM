@@ -2290,23 +2290,33 @@ window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
 // 🚀 MÓDULO DE FRENOS
 // ==========================================
 
-window.abrirModalFrenos = function() {
+window.abrirModalFrenos = async function() {
     let modalEl = document.getElementById('modalRegistrarFrenos');
     if (modalEl && modalEl.parentElement !== document.body) {
         document.body.appendChild(modalEl);
     }
     let form = document.getElementById('formRegistroFrenos');
     if (form) form.reset();
-    let sel = document.getElementById('rf-placa');
-    if (sel) {
-        sel.innerHTML = '<option value="">Seleccione Placa...</option>';
+    
+    // Si no hay placas cargadas, cargarlas
+    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
+        try {
+            let r = await fetch('/api/script/obtenerPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(res => res.json());
+            if (r && r.data) window.dataGlobalPlacas = r.data;
+        } catch(e) {}
+    }
+    
+    let list = document.getElementById('rf-placa-list');
+    if (list) {
+        list.innerHTML = '';
         if (window.dataGlobalPlacas) {
             window.dataGlobalPlacas.forEach(p => {
-                if (p[0] !== 'PLACA' && p[18] === 'ACTIVA' && p[22] !== 'NO') {
+                let placaVal = p[0] || '';
+                if (placaVal.toUpperCase() !== 'PLACA' && (p[18] === 'ACTIVA' || p[8] === 'ACTIVA')) {
                     let opt = document.createElement('option');
-                    opt.value = p[0];
-                    opt.textContent = p[0] + ' - ' + (p[5] || '');
-                    sel.appendChild(opt);
+                    opt.value = placaVal;
+                    opt.textContent = p[5] ? p[5] : '';
+                    list.appendChild(opt);
                 }
             });
         }
@@ -2405,13 +2415,26 @@ window.renderTablaFrenos = function(todasLasInspecciones) {
         if (insp.detalles_json) {
             try {
                 let detalles = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : insp.detalles_json;
+                
+                // Formato anidado (Solo Frenos)
                 let secFrenos = detalles.find(s => {
                     let st = (s.seccion || "").toUpperCase();
-                    return st === "FRENOS" || st === "SISTEMA DE FRENOS" || st.includes("FRENOS");
+                    return st.includes("FRENOS");
                 });
+                
                 if (secFrenos && secFrenos.items && secFrenos.items.length > 0) {
                     tieneFrenos = true;
                     dataFrenos = secFrenos.items;
+                } else {
+                    // Formato plano (Wizard)
+                    let itemsFrenosFlat = detalles.filter(d => {
+                        let cat = (d.categoria || "").toUpperCase();
+                        return cat.includes("FRENOS");
+                    });
+                    if (itemsFrenosFlat.length > 0) {
+                        tieneFrenos = true;
+                        dataFrenos = itemsFrenosFlat;
+                    }
                 }
             } catch(e) {}
         }
