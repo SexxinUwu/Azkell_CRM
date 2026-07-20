@@ -1,4 +1,4 @@
-﻿// ================================================================
+// ================================================================
 // MÃ³dulo Reportes OT â€” Azkell Fleet
 // PatrÃ³n SPA: window.* globals, init_reportes_ot() entry point
 // Muestra histÃ³rico filtrable de Órdenes de Trabajo
@@ -482,7 +482,8 @@ window.rotAbrirDetalle = function(idOT) {
     if (puedeEditar) {
         ftHtml += '<button class="btn btn-sm btn-outline-info" onclick="window.rotAbrirEditarFechas(\'' + esc(idOT) + '\')">'
                 + '<i class="bi bi-calendar3 me-1"></i>Editar Fechas</button>';
-    }
+    }
+
     ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
             + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>';
     ftHtml += '</div>';
@@ -1437,7 +1438,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
         </div>
     </div>`;
 
-        var htmlBody = container.innerHTML;
+    var htmlBody = container.innerHTML;
     var finalHtml = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Orden de Trabajo</title>\n'
                   + '<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">\n'
                   + '<style>\n'
@@ -1446,20 +1447,15 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
                   + '#btnPrint:hover { opacity: 0.9; }\n'
                   + '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; } body { background: none; padding: 0; margin: 0; display: block; } #btnPrint { display: none; } .page-container { margin: 0 !important; box-shadow: none !important; } }\n'
                   + '</style>\n</head>\n<body>\n'
-                  + '<button id="btnPrint" onclick="window.print()">ðŸ–¨ï¸ Imprimir / Guardar PDF</button>\n'
+                  + '<button id="btnPrint" onclick="window.print()">Imprimir / Guardar PDF</button>\n'
                   + htmlBody
                   + '\n</body>\n</html>';
-
-    var win = window.open('', '_blank');
-    win.document.open();
-    win.document.write(finalHtml);
-    win.document.close();
-    win.onload = function() {
-        setTimeout(function() {
-            win.print();
-        }, 500);
-    };
+    // Usar Blob con charset UTF-8 explicito para evitar caracteres corruptos
+    var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
 };
+
 
 window.rotGenerarPlantillaVaciaOT = function(idOt, placa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
