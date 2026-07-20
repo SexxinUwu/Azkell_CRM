@@ -922,6 +922,9 @@ window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
         setTimeout(generarPDFInspeccion, 500);
     } else {
         let modalEl = document.getElementById('modalResumenInspeccion');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
         modalEl.style.setProperty('z-index', '1080', 'important');
         let modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
@@ -1646,6 +1649,9 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
+        if (offEl.parentElement !== document.body) {
+            document.body.appendChild(offEl);
+        }
         offEl.style.zIndex = '1080';
         offEl.classList.add("open");
     }
@@ -1790,6 +1796,9 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
 
     let offEl = document.getElementById('drawerInspeccion');
     if (offEl) {
+        if (offEl.parentElement !== document.body) {
+            document.body.appendChild(offEl);
+        }
         offEl.style.zIndex = '1080';
         offEl.classList.add("open");
     }
@@ -2282,6 +2291,10 @@ window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
 // ==========================================
 
 window.abrirModalFrenos = function() {
+    let modalEl = document.getElementById('modalRegistrarFrenos');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
     let form = document.getElementById('formRegistroFrenos');
     if (form) form.reset();
     let sel = document.getElementById('rf-placa');
@@ -2298,7 +2311,7 @@ window.abrirModalFrenos = function() {
             });
         }
     }
-    var m = new bootstrap.Modal(document.getElementById('modalRegistrarFrenos'));
+    var m = new bootstrap.Modal(modalEl);
     m.show();
 };
 

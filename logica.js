@@ -3053,6 +3053,7 @@ function descargarExcelDinamico(tablaId, nombreArchivo) {
 
 
 function initGrafico(canvasId) {
+    if (typeof Chart === 'undefined') return null;
     let ctx = document.getElementById(canvasId); if(!ctx) return null;
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
@@ -3070,6 +3071,14 @@ function initGrafico(canvasId) {
     });
 }
 function updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVigNoMot) {
+    if (typeof Chart === 'undefined') {
+        if (window.loadCharts) {
+            window.loadCharts().then(function() {
+                updateGraficosEnVivo(vigTot, noVigTot, vigMot, noVigMot, vigNoMot, noVigNoMot);
+            });
+        }
+        return;
+    }
     // Si el canvas fue reemplazado por el SPA router, destruir la instancia obsoleta
     if (chartTotalInst    && !document.contains(chartTotalInst.canvas))    { chartTotalInst.destroy();    chartTotalInst    = null; }
     if (chartMotorasInst  && !document.contains(chartMotorasInst.canvas))  { chartMotorasInst.destroy();  chartMotorasInst  = null; }
