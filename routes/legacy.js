@@ -585,12 +585,12 @@ router.post('/:metodo', async (req, res) => {
 
                     const insertQuery = `
                         INSERT INTO inspecciones
-                        (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma, id_ot)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (id, placa, fecha_ingreso, cliente, tecnico, km_tablero, dias_propuestos, detalles_json, url_firma, id_ot, tipo_inspeccion)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `;
                     const values = [
                         nextId, datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-                        parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null
+                        parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null, datos.tipo_inspeccion || 'General'
                     ];
 
                     db.query(insertQuery, values, (insertErr) => {
@@ -622,12 +622,12 @@ router.post('/:metodo', async (req, res) => {
         } else {
             const updateQuery = `
                 UPDATE inspecciones SET
-                placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?, id_ot=?
+                placa=?, fecha_ingreso=?, cliente=?, tecnico=?, km_tablero=?, dias_propuestos=?, detalles_json=?, url_firma=?, id_ot=?, tipo_inspeccion=?
                 WHERE id=?
             `;
             const values = [
                 datos.placa, datos.fecha_ingreso || null, datos.cliente, datos.tecnico,
-                parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null,
+                parseInt(datos.km_tablero) || 0, parseInt(datos.dias_propuestos) || 0, datos.detalles_json, datos.firma_base64, datos.id_ot || null, datos.tipo_inspeccion || 'General',
                 datos.id
             ];
 

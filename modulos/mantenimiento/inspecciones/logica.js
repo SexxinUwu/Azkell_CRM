@@ -267,6 +267,8 @@ function mostrarStatusInspecciones(inspecciones) {
     };
     let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
     inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
+    
+    let inspeccionesGeneral = inspeccionesOrdenadas.filter(i => i.tipo_inspeccion !== 'Solo Frenos');
     let dataFinal = [];
 
     let placasActivasEnUso = (window.dataGlobalPlacas || []).filter(p => {
@@ -280,11 +282,11 @@ function mostrarStatusInspecciones(inspecciones) {
     if (!isHistorialStatus) {
         placasActivasEnUso.forEach(p => {
             let placaStr = normalizeStr(p[0]);
-            let insp = inspeccionesOrdenadas.find(i => normalizeStr(i.placa) === placaStr);
+            let insp = inspeccionesGeneral.find(i => normalizeStr(i.placa) === placaStr);
             dataFinal.push({ infoPlaca: p, insp: insp });
         });
     } else {
-        inspeccionesOrdenadas.forEach(insp => {
+        inspeccionesGeneral.forEach(insp => {
             let placaStr = normalizeStr(insp.placa);
             let p = (window.dataGlobalPlacas || []).find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
             dataFinal.push({ infoPlaca: p, insp: insp });
@@ -518,8 +520,14 @@ function mostrarStatusInspecciones(inspecciones) {
             { label: 'Técnico', idx: 3, visible: true },
             { label: 'Fecha Insp.', idx: 4, visible: true },
             { label: 'Prox. Insp.', idx: 5, visible: true },
-            { label: 'GPS', idx: 8, visible: true }
+            { label: 'Semáforo', idx: 6, visible: true },
+            { label: 'Ubicación GPS', idx: 8, visible: true }
         ], 'fleet_cols_insp');
+    }
+    
+    // Renderizar tabla de frenos
+    if (typeof renderTablaFrenos === 'function') {
+        renderTablaFrenos(window.dataFinalInspGlobal);
     }
 }
 
@@ -2268,3 +2276,206 @@ window.toggleRadioOkFalla = function(el, cajaId, isFalla) {
         caja.style.display = isFalla ? 'block' : 'none';
     }
 };
+
+// ==========================================
+// 🚀 MÓDULO DE FRENOS
+// ==========================================
+
+window.abrirModalFrenos = function() {
+    let form = document.getElementById('formRegistroFrenos');
+    if (form) form.reset();
+    let sel = document.getElementById('rf-placa');
+    if (sel) {
+        sel.innerHTML = '<option value="">Seleccione Placa...</option>';
+        if (window.dataGlobalPlacas) {
+            window.dataGlobalPlacas.forEach(p => {
+                if (p[0] !== 'PLACA' && p[18] === 'ACTIVA' && p[22] !== 'NO') {
+                    let opt = document.createElement('option');
+                    opt.value = p[0];
+                    opt.textContent = p[0] + ' - ' + (p[5] || '');
+                    sel.appendChild(opt);
+                }
+            });
+        }
+    }
+    var m = new bootstrap.Modal(document.getElementById('modalRegistrarFrenos'));
+    m.show();
+};
+
+window.guardarRegistroFrenos = async function() {
+    let placa = document.getElementById('rf-placa').value;
+    let zapDel = document.getElementById('rf-zap-delantera').value;
+    let zap1 = document.getElementById('rf-zap-1eje').value;
+    let zap2 = document.getElementById('rf-zap-2eje').value;
+    let disco = document.getElementById('rf-disco').value;
+    let tecnico = document.getElementById('rf-tecnico').value;
+    let obs = document.getElementById('rf-observacion').value;
+
+    if (!placa || !tecnico) {
+        alert("La Placa y el Técnico son obligatorios.");
+        return;
+    }
+
+    let itemsFrenos = [
+        { item: "Zapatas Delanteras", type: "porcentaje", estado: zapDel ? zapDel + "%" : "", obs: obs }
+    ];
+    if (zap1) itemsFrenos.push({ item: "Zapatas 1er Eje Tracción", type: "porcentaje", estado: zap1 + "%", obs: "" });
+    if (zap2) itemsFrenos.push({ item: "Zapatas 2do Eje Loca", type: "porcentaje", estado: zap2 + "%", obs: "" });
+    if (disco) itemsFrenos.push({ item: "Disco Embrague", type: "porcentaje", estado: disco + "%", obs: "" });
+
+    let payload = {
+        placa: placa,
+        tecnico: tecnico,
+        tipo_inspeccion: 'Solo Frenos',
+        detalles_json: JSON.stringify([{ seccion: "Frenos", items: itemsFrenos }]),
+        km: 0,
+        fecha: new Date().toISOString().split('T')[0],
+        cliente: "-",
+        dias: 30,
+        id_ot: null
+    };
+
+    let btn = document.querySelector('#modalRegistrarFrenos .btn-danger');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+    }
+
+    try {
+        let res = await fetch('/api/script/guardarInspeccion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: [payload] })
+        });
+        let json = await res.json();
+        if (json.ok) {
+            if (typeof rotToast === 'function') rotToast("Inspección de frenos registrada", "bg-success");
+            let m = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarFrenos'));
+            if(m) m.hide();
+            if (typeof window.recargarInspecciones === 'function') {
+                window.recargarInspecciones();
+            }
+        } else {
+            alert("Error: " + json.error);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error al guardar: " + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save"></i> Registrar';
+        }
+    }
+};
+
+window.renderTablaFrenos = function(todasLasInspecciones) {
+    let tbody = document.getElementById('cuerpoTablaFrenos');
+    if (!tbody) return;
+
+    // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
+    let frenosMasRecientesPorPlaca = new Map();
+    
+    // Asumiendo que "todasLasInspecciones" ya vienen ordenadas por ID descendente
+    todasLasInspecciones.forEach(insp => {
+        if (!insp.placa) return;
+        let placaStr = (insp.placa || '').toUpperCase().trim();
+        if (frenosMasRecientesPorPlaca.has(placaStr)) return; // Ya tenemos la más reciente
+        
+        let tieneFrenos = false;
+        let dataFrenos = null;
+        
+        if (insp.tipo_inspeccion === 'Solo Frenos') {
+            tieneFrenos = true;
+        }
+        
+        if (insp.detalles_json) {
+            try {
+                let detalles = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : insp.detalles_json;
+                let secFrenos = detalles.find(s => s.seccion === "Frenos" || s.seccion === "Sistema de Frenos");
+                if (secFrenos && secFrenos.items && secFrenos.items.length > 0) {
+                    tieneFrenos = true;
+                    dataFrenos = secFrenos.items;
+                }
+            } catch(e) {}
+        }
+
+        if (tieneFrenos) {
+            frenosMasRecientesPorPlaca.set(placaStr, { insp: insp, dataFrenos: dataFrenos });
+        }
+    });
+
+    // Construir tabla con placas activas (al igual que Status)
+    let html = '';
+    let placasActivasEnUso = (window.dataGlobalPlacas || []).filter(p => {
+        if ((p[0] || '').toUpperCase() === 'PLACA') return false;
+        let estado = (p[18] || p[8] || '').trim().toUpperCase();
+        let enUso = (p[22] || p[13] || '').trim().toUpperCase();
+        return estado === "ACTIVA" && enUso !== "NO";
+    });
+
+    let cont = 1;
+    placasActivasEnUso.forEach(p => {
+        let placaStr = (p[0] || '').toUpperCase().trim();
+        let itemFrenos = frenosMasRecientesPorPlaca.get(placaStr);
+        
+        let valZapDel = "-", valZap1 = "-", valZap2 = "-", valDisco = "-", obs = "-";
+        let tec = "-", fec = "-";
+        
+        if (itemFrenos) {
+            tec = itemFrenos.insp.tecnico || "-";
+            if (itemFrenos.insp.fecha_ingreso) {
+                let ds = itemFrenos.insp.fecha_ingreso.split('T')[0].split('-');
+                if (ds.length === 3) fec = `${ds[2]}/${ds[1]}/${ds[0]}`;
+                else fec = itemFrenos.insp.fecha_ingreso;
+            }
+            if (itemFrenos.dataFrenos) {
+                itemFrenos.dataFrenos.forEach(it => {
+                    let nom = (it.item || '').toLowerCase();
+                    let est = (it.estado || '').replace('%', '').trim();
+                    if (nom.includes("delantera")) valZapDel = est;
+                    else if (nom.includes("1er eje") || nom.includes("primer eje")) valZap1 = est;
+                    else if (nom.includes("2do eje") || nom.includes("segundo eje")) valZap2 = est;
+                    else if (nom.includes("embrague")) valDisco = est;
+                    
+                    if (it.obs) obs = it.obs;
+                });
+            }
+        }
+
+        // Función para colorear el valor
+        let renderBadge = (val) => {
+            if (val === "-" || val === "") return `<span class="text-muted">-</span>`;
+            let num = parseInt(val);
+            if (isNaN(num)) return val;
+            
+            let colorCls = "bg-success text-white";
+            if (num <= 20) colorCls = "bg-danger text-white px-2 py-1 shadow-sm";
+            else if (num <= 30) colorCls = "bg-warning text-dark px-2 py-1 shadow-sm";
+            else colorCls = "bg-success text-white px-2 py-1 shadow-sm";
+            
+            return `<span class="badge rounded-pill ${colorCls}" style="font-size: 0.85rem;">${num}%</span>`;
+        };
+
+        html += `
+            <tr class="align-middle bg-white border-bottom">
+                <td class="text-muted fw-bold">${cont++}</td>
+                <td class="fw-bold text-primary">${placaStr}</td>
+                <td class="text-muted">${fec}</td>
+                <td class="text-center">${renderBadge(valZapDel)}</td>
+                <td class="text-center">${renderBadge(valZap1)}</td>
+                <td class="text-center">${renderBadge(valZap2)}</td>
+                <td class="text-center">${renderBadge(valDisco)}</td>
+                <td class="text-truncate" style="max-width: 120px;" title="${tec}">${tec}</td>
+                <td class="text-muted" style="font-size: 0.85rem;" title="${obs}">${obs.length > 20 ? obs.substring(0, 20) + '...' : obs}</td>
+            </tr>
+        `;
+    });
+
+    if (placasActivasEnUso.length === 0) {
+        html = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="bi bi-info-circle fs-4 d-block mb-2"></i> No hay unidades activas para monitorear.</td></tr>';
+    }
+
+    tbody.innerHTML = html;
+};
+

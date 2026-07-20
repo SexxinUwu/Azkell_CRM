@@ -233,7 +233,20 @@
             </div>
         </div>
     </div>
-    <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column"><div class="table-container flex-grow-1 overflow-auto"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
+    
+    <ul class="nav nav-tabs px-3 border-0 mt-2" id="insp-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold text-dark border-0 border-bottom border-primary border-3 bg-transparent" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" type="button" role="tab" aria-selected="true" onclick="document.getElementById('insp-general-tab').classList.add('border-primary','border-3');document.getElementById('insp-frenos-tab').classList.remove('border-primary','border-3');">General</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold text-danger border-0 bg-transparent" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" type="button" role="tab" aria-selected="false" onclick="document.getElementById('insp-frenos-tab').classList.add('border-primary','border-3');document.getElementById('insp-general-tab').classList.remove('border-primary','border-3');"><i class="bi bi-stop-circle-fill me-1"></i>Sistema de Frenos</button>
+        </li>
+    </ul>
+
+    <div class="tab-content flex-grow-1 d-flex flex-column overflow-hidden" id="insp-tabContent" style="background:var(--surface);">
+        <!-- PESTAÑA GENERAL -->
+        <div class="tab-pane fade show active h-100 flex-column" id="insp-general" role="tabpanel" style="display:flex;">
+            <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0"><div class="table-container flex-grow-1 overflow-auto"><table class="table table-custom m-0" id="tablaStatus" data-sort-dir="asc">
         <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);"><tr><th onclick="sortTable('tablaStatus', 0)"><span data-i18n="insp.col.plate">Placa / Cliente</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Cliente</th><th onclick="sortTable('tablaStatus', 2)"><span data-i18n="insp.col.type">Tipo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 3)"><span data-i18n="insp.col.tech">Técnico</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 4)"><span data-i18n="insp.col.date">Fecha de Insp.</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 5)"><span data-i18n="insp.col.next">Prox Insp</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th onclick="sortTable('tablaStatus', 6)"><span data-i18n="insp.col.semaforo">Semáforo</span> <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th><th class="d-none">Estado Vigencia</th><th><i class="bi bi-geo-alt text-primary"></i> <span data-i18n="insp.col.gps">Ubicación GPS</span></th><th class="text-center" style="width:48px;"></th></tr></thead>
         <tbody id="cuerpoTablaStatus"><tr><td colspan="10" class="text-center py-5" data-i18n="common.noCargar">Selecciona este módulo para cargar datos...</td></tr></tbody>
     </table></div>
@@ -249,7 +262,45 @@
             <div class="d-flex gap-1" id="insp-controles-paginacion"></div>
         </div>
     </div>
-</div>
+    </div>
+    </div>
+
+        <!-- PESTAÑA FRENOS -->
+        <div class="tab-pane fade h-100 flex-column" id="insp-frenos" role="tabpanel" style="display:flex;">
+            <div class="card p-0 flex-grow-1 overflow-hidden d-flex flex-column border-top-0 rounded-top-0">
+                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-speedometer2 text-danger"></i> Monitoreo de Frenos</h6>
+                        <small class="text-muted">Unidades activas y estado de zapatas / embrague</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger btn-sm fw-bold" onclick="abrirModalFrenos()"><i class="bi bi-plus-circle me-1"></i> Registrar Frenos</button>
+                    </div>
+                </div>
+                <div class="table-container flex-grow-1 overflow-auto">
+                    <table class="table table-custom m-0" id="tablaFrenos" data-sort-dir="asc">
+                        <thead style="position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 2px solid var(--border);">
+                            <tr>
+                                <th>N°</th>
+                                <th onclick="sortTable('tablaFrenos', 1)">Placa <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+                                <th onclick="sortTable('tablaFrenos', 2)">Fec. Insp. <i class="bi bi-arrow-down-up ms-1 text-muted"></i></th>
+                                <th>Zap. Delantera</th>
+                                <th>Zap. 1er Eje Tracción</th>
+                                <th>Zap. 2do Eje Loca</th>
+                                <th>Disco Embrague</th>
+                                <th>Técnico</th>
+                                <th>Observación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaFrenos">
+                            <tr><td colspan="9" class="text-center py-5">Cargando frenos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="modal fade" id="modalResumenInspeccion" tabindex="-1">
@@ -528,6 +579,56 @@
     <div class="insp-footer">
         <button type="button" class="btn btn-light fw-bold px-4 border text-muted" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">Cancelar</button>
         <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()"><i class="bi bi-save me-1"></i> Guardar Registro</button>
+    </div>
+</div>
+
+<!-- Modal: Registrar Frenos -->
+<div class="modal fade" id="modalRegistrarFrenos" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-speedometer2"></i> Registrar Sistema de Frenos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formRegistroFrenos">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PLACA</label>
+                        <select class="form-select" id="rf-placa" required></select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold text-muted small">Zapatas Delanteras (%)</label>
+                            <input type="number" class="form-control" id="rf-zap-delantera" min="0" max="100" placeholder="Ej: 80">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold text-muted small">Zapatas 1er Eje (%)</label>
+                            <input type="number" class="form-control" id="rf-zap-1eje" min="0" max="100" placeholder="Ej: 60">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold text-muted small">Zapatas 2do Eje (%)</label>
+                            <input type="number" class="form-control" id="rf-zap-2eje" min="0" max="100" placeholder="Ej: 50">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold text-muted small">Disco Embrague (%)</label>
+                            <input type="number" class="form-control" id="rf-disco" min="0" max="100" placeholder="Ej: 70">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Técnico Supervisor</label>
+                        <input type="text" class="form-control" id="rf-tecnico" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Observación</label>
+                        <textarea class="form-control" id="rf-observacion" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger fw-bold" onclick="guardarRegistroFrenos()"><i class="bi bi-save"></i> Registrar</button>
+            </div>
+        </div>
     </div>
 </div>
 
