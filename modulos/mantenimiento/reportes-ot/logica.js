@@ -1,5 +1,5 @@
 // ================================================================
-// MÃ³dulo Reportes OT â€” Azkell Fleet
+// MÃ³dulo Reportes OT — Azkell Fleet
 // PatrÃ³n SPA: window.* globals, init_reportes_ot() entry point
 // Muestra histÃ³rico filtrable de Órdenes de Trabajo
 // ================================================================
@@ -51,7 +51,7 @@ function rotPoblarSelectSituacion() {
     var sel = document.getElementById('rot-eot-situacion');
     if (!sel) return;
     var current = sel.value;
-    sel.innerHTML = '<option value="">â€” Seleccionar â€”</option>' +
+    sel.innerHTML = '<option value="">— Seleccionar —</option>' +
         window._rotCatSituaciones.map(function(s) {
             var l = s.descripcion || s.nombre || '';
             return '<option value="' + l.replace(/"/g,'&quot;') + '">' + l + '</option>';
@@ -303,7 +303,7 @@ window.rotAbrirDetalle = function(idOT) {
             'Finalizado': ['rot-b-finalizado', 'Finalizado'],
             'Anulado':    ['rot-b-anulado',    'Anulado']
         };
-        var v = map[e] || ['rot-b-pendiente', e || 'â€”'];
+        var v = map[e] || ['rot-b-pendiente', e || '—'];
         return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
     }
 
@@ -323,9 +323,9 @@ window.rotAbrirDetalle = function(idOT) {
     var rName = rObj ? (rObj.descripcion || rObj.nombre || rId) : rId;
     html += fld('Rampa',      esc(rName || '-'));
     html += fld('Tipo OT',    esc(det.tipo_ot   || ot.tipo      || '-'));
-    html += fld('Sub Tipo',   esc(det.sub_tipo   || 'â€”'));
-    html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| 'â€”'));
-    html += fld('Status Rampa',  esc(det.situacion_inicial || ot.situacion || 'â€”'));
+    html += fld('Sub Tipo',   esc(det.sub_tipo   || '—'));
+    html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
+    html += fld('Status Rampa',  esc(det.situacion_inicial || ot.situacion || '—'));
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
@@ -990,7 +990,7 @@ window.rotExportarPDF = function() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('REPORTE DE Ã“RDENES DE TRABAJO â€” AZKELL FLEET', 14, 12);
+    doc.text('REPORTE DE Ã“RDENES DE TRABAJO — AZKELL FLEET', 14, 12);
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text('Generado: ' + new Date().toLocaleString('es-PE'), pageW - 14, 12, { align: 'right' });
@@ -1036,14 +1036,14 @@ window.rotExportarPDF = function() {
     // Tabla
     var body = lista.map(function(ot) {
         var det   = rotDetalles(ot);
-        var idOT  = ot.ticket_entrada || ot.id_ot || 'â€”';
-        var tipo  = det.tipo_ot || ot.tipo || 'â€”';
-        var sub   = det.sub_tipo || 'â€”';
-        var sup   = det.supervisor || ot.supervisor || 'â€”';
-        var estado = ot.aprobacion || ot.estado || 'â€”';
+        var idOT  = ot.ticket_entrada || ot.id_ot || '—';
+        var tipo  = det.tipo_ot || ot.tipo || '—';
+        var sub   = det.sub_tipo || '—';
+        var sup   = det.supervisor || ot.supervisor || '—';
+        var estado = ot.aprobacion || ot.estado || '—';
         var costo = 'S/' + parseFloat(ot.costo_total || 0).toFixed(2);
         var fecha = rotFechaISO(ot.creado_en || ot.fecha_ingreso);
-        return [idOT, ot.placa || 'â€”', tipo + ' / ' + sub, sup, estado, costo, fecha];
+        return [idOT, ot.placa || '—', tipo + ' / ' + sub, sup, estado, costo, fecha];
     });
 
     doc.autoTable({
@@ -1130,18 +1130,18 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     }
 
     function formatDT(iso) {
-        if (!iso) return { d: 'â€”', h: 'â€”' };
+        if (!iso) return { d: '—', h: '—' };
         try {
             var s = typeof iso === 'string' ? iso.replace('Z', '') : iso;
             var d = new Date(s);
-            if (isNaN(d.getTime())) return { d: 'â€”', h: 'â€”' };
+            if (isNaN(d.getTime())) return { d: '—', h: '—' };
             var dd = String(d.getDate()).padStart(2,'0');
             var mm = String(d.getMonth()+1).padStart(2,'0');
             var yy = d.getFullYear();
             var hh = String(d.getHours()).padStart(2,'0');
             var min = String(d.getMinutes()).padStart(2,'0');
             return { d: dd+'/'+mm+'/'+yy, h: hh+':'+min };
-        } catch(e) { return { d: 'â€”', h: 'â€”' }; }
+        } catch(e) { return { d: '—', h: '—' }; }
     }
 
     var iniDT = formatDT(ot.fecha_inicio_ot || ot.fecha_ingreso);
@@ -1149,7 +1149,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
 
     var htmlMotivos = '';
     if (det.motivo) {
-        htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(det.motivo) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || 'â€”') + '</td></tr>';
+        htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(det.motivo) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
     } else {
         htmlMotivos = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay motivos de ingreso registrados.</td></tr>';
     }
@@ -1170,14 +1170,14 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
             
             var tIni = formatDT(t.fecha_trabajo || t.fecha_inicio || t.fecha || t.fecha_creacion);
             var tFin = formatDT(t.fecha_salida || t.fecha_fin || t.fecha_cierre);
-            var tIniStr = (tIni.d !== 'â€”') ? tIni.d + ' ' + tIni.h : 'â€”';
-            var tFinStr = (tFin.d !== 'â€”') ? tFin.d + ' ' + tFin.h : 'â€”';
+            var tIniStr = (tIni.d !== '—') ? tIni.d + ' ' + tIni.h : '—';
+            var tFinStr = (tFin.d !== '—') ? tFin.d + ' ' + tFin.h : '—';
             
             htmlTrabajos += '<tr>'
                 + '<td class="text-center">' + (i+1) + '</td>'
                 + '<td class="text-center">' + tIniStr + '</td>'
-                + '<td>' + rotEscHtml(t.trabajo_realizado || 'â€”') + '</td>'
-                + '<td class="text-center">' + rotEscHtml(det2.personal || t.tecnico || 'â€”') + '</td>'
+                + '<td>' + rotEscHtml(t.trabajo_realizado || '—') + '</td>'
+                + '<td class="text-center">' + rotEscHtml(det2.personal || t.tecnico || '—') + '</td>'
                 + '<td class="text-center">' + tFinStr + '</td>'
                 + '</tr>';
         }
@@ -1192,18 +1192,18 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
         items.forEach(function(it) {
             var desc = it.descripcion || '';
             var codigo = it.inventario_id || '';
-            var pDesc = desc.replace(/ â€”\s*$/, '').trim();
+            var pDesc = desc.replace(/ —\s*$/, '').trim();
             var pMarca = '';
 
-            // Limpiar prefijo repetido (ej. "INV-0642 â€” INV-0642 â€” Tuerca...")
+            // Limpiar prefijo repetido (ej. "INV-0642 — INV-0642 — Tuerca...")
             if (codigo) {
-                while (pDesc.startsWith(codigo + ' â€” ') || pDesc.startsWith(codigo + ' - ')) {
+                while (pDesc.startsWith(codigo + ' — ') || pDesc.startsWith(codigo + ' - ')) {
                     pDesc = pDesc.substring(codigo.length + 3).trim();
                 }
                 if (pDesc === codigo) pDesc = '';
             }
 
-            var lastDash = pDesc.lastIndexOf(' â€” ');
+            var lastDash = pDesc.lastIndexOf(' — ');
             if (lastDash !== -1) {
                 var posMarca = pDesc.substring(lastDash + 3).trim();
                 if (posMarca.toUpperCase() === 'SIN MARCA') {
@@ -1341,38 +1341,38 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
                 </td>
                 <td class="title-cell" rowspan="3">
                     ORDEN DE TRABAJO<br>
-                    <span class="sub-title">MANTENIMIENTO MECÃNICO</span>
+                    <span class="sub-title">MANTENIMIENTO MECÁNICO</span>
                 </td>
-                <td class="qms-item"><b>CÃ“DIGO:</b> F-MAN-002</td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-002</td>
             </tr>
-            <tr><td class="qms-item"><b>VERSIÃ“N:</b> 0</td></tr>
-            <tr><td class="qms-item"><b>F. EMISIÃ“N:</b> 10/11/2025</td></tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>
         </table>
 
         <table class="data-grid">
             <tr>
-                <td style="width: 33%;">NÂº OT: <span class="val-blue">${anioPart ? anioPart + "-" : ""}${numPart}</span></td>
-                <td style="width: 33%;">Placa: <span class="val-normal">${rotEscHtml(ot.placa || 'â€”')}</span></td>
-                <td style="width: 34%;">Marca: <span class="val-normal">${rotEscHtml(pMarca || 'â€”')}</span></td>
+                <td style="width: 33%;">Nº OT: <span class="val-blue">${anioPart ? anioPart + "-" : ""}${numPart}</span></td>
+                <td style="width: 33%;">Placa: <span class="val-normal">${rotEscHtml(ot.placa || '—')}</span></td>
+                <td style="width: 34%;">Marca: <span class="val-normal">${rotEscHtml(pMarca || '—')}</span></td>
             </tr>
             <tr>
-                <td>Cliente: <span class="val-normal">${rotEscHtml(pCliente || 'â€”')}</span></td>
-                <td>Kms GPS: <span class="val-normal">${rotEscHtml(det.km_gps || 'â€”')}</span></td>
-                <td>Kms Tablero: <span class="val-normal">${rotEscHtml(det.km || 'â€”')}</span></td>
+                <td>Cliente: <span class="val-normal">${rotEscHtml(pCliente || '—')}</span></td>
+                <td>Kms GPS: <span class="val-normal">${rotEscHtml(det.km_gps || '—')}</span></td>
+                <td>Kms Tablero: <span class="val-normal">${rotEscHtml(det.km || '—')}</span></td>
             </tr>
             <tr>
-                <td>Tipo OT: <span class="val-normal">${rotEscHtml(det.tipo_ot || 'â€”')}</span></td>
-                <td>Sub Tipo: <span class="val-normal">${rotEscHtml(det.sub_tipo || 'â€”')}</span></td>
-                <td>Rampa: <span class="val-normal">${rotEscHtml(det.rampa_origen || 'â€”')}</span></td>
+                <td>Tipo OT: <span class="val-normal">${rotEscHtml(det.tipo_ot || '—')}</span></td>
+                <td>Sub Tipo: <span class="val-normal">${rotEscHtml(det.sub_tipo || '—')}</span></td>
+                <td>Rampa: <span class="val-normal">${rotEscHtml(det.rampa_origen || '—')}</span></td>
             </tr>
             <tr>
                 <td colspan="2">Inicio: <span class="val-normal">${iniDT.d} &nbsp;&nbsp;|&nbsp;&nbsp; Hora: ${iniDT.h}</span></td>
-                <td>TÃ©rmino: <span class="val-normal">${finDT.d} &nbsp;&nbsp;|&nbsp;&nbsp; Hora: ${finDT.h}</span></td>
+                <td>Término: <span class="val-normal">${finDT.d} &nbsp;&nbsp;|&nbsp;&nbsp; Hora: ${finDT.h}</span></td>
             </tr>
         </table>
 
         <div class="aviso">
-            Se le informa que la unidad ingresÃ³ a mantenimiento para el siguiente servicio. PLACA: <span>${rotEscHtml(ot.placa || 'â€”')}</span>
+            Se le informa que la unidad ingresó a mantenimiento para el siguiente servicio. PLACA: <span>${rotEscHtml(ot.placa || '—')}</span>
         </div>
 
         <div class="section-title">Motivo de ingreso</div>
@@ -1381,7 +1381,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
                 <tr>
                     <th style="width: 30px;" class="text-center">#</th>
                     <th>Lista de motivos</th>
-                    <th style="width: 120px;" class="text-center">TÃ©cnico</th>
+                    <th style="width: 120px;" class="text-center">Técnico</th>
                 </tr>
             </thead>
             <tbody>
@@ -1410,8 +1410,8 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
                     <th style="width: 30px;" class="text-center">#</th>
                     <th style="width: 100px;" class="text-center">Fecha/Hora inicio</th>
                     <th>Trabajo a realizar</th>
-                    <th style="width: 80px;" class="text-center">TÃ©cnico</th>
-                    <th style="width: 100px;" class="text-center">Fecha/Hora tÃ©rmino</th>
+                    <th style="width: 80px;" class="text-center">Técnico</th>
+                    <th style="width: 100px;" class="text-center">Fecha/Hora término</th>
                 </tr>
             </thead>
             <tbody>
@@ -1511,7 +1511,7 @@ function rotFmtMoney(val) {
 }
 
 function rotFmtFecha(val) {
-    if (!val) return 'â€”';
+    if (!val) return '—';
     var dateObj = val;
     if (typeof val === 'string') {
         dateObj = new Date(val.replace('Z', ''));
@@ -1522,7 +1522,7 @@ function rotFmtFecha(val) {
 }
 
 function rotFmtFechaHora(val) {
-    if (!val) return 'â€”';
+    if (!val) return '—';
     var dateObj = val;
     if (typeof val === 'string') {
         dateObj = new Date(val.replace('Z', ''));
@@ -1546,12 +1546,12 @@ function rotBadgeAprobacion(estado) {
         'Cerrada':   ['rot-b-cerrada',   'Cerrada'],
         'Anulado':   ['rot-b-anulado',   'Anulado']
     };
-    var v = map[estado] || ['rot-b-pendiente', estado || 'â€”'];
+    var v = map[estado] || ['rot-b-pendiente', estado || '—'];
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
 function rotBadgeSituacion(sit) {
-    if (!sit) return 'â€”';
+    if (!sit) return '—';
     var map = {
         'En atenciÃ³n':            ['rot-b-en-atencion', 'En AtenciÃ³n'],
         'Espera de repuesto':     ['rot-b-espera',      'Espera Repuesto'],
@@ -1563,7 +1563,7 @@ function rotBadgeSituacion(sit) {
 }
 
 function rotBadgeTipo(tipo) {
-    if (!tipo) return 'â€”';
+    if (!tipo) return '—';
     return tipo === 'Preventivo'
         ? '<span class="rot-badge rot-b-tipo-prev">Prev.</span>'
         : '<span class="rot-badge rot-b-tipo-corr">Corr.</span>';
@@ -1668,7 +1668,7 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
                   + '<div><span style="font-weight:700;color:var(--primary,#5865F2);font-size:0.72rem;">' + ticket + '</span> ' + bdg + '</div>'
                   + (det2.costo ? '<span style="font-weight:700;color:#16a34a;font-size:0.78rem;">S/' + parseFloat(det2.costo).toFixed(2) + '</span>' : '')
                   + '</div>'
-                  + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(t.trabajo_realizado || 'â€”') + '</div>'
+                  + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(t.trabajo_realizado || '—') + '</div>'
                   + (det2.personal ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + rotEscHtml(det2.personal) + '</div>' : '')
                   + ((fecIni || fecFin) ? '<div style="font-size:0.75rem;color:var(--subtext);margin-top:1px;"><i class="bi bi-calendar me-1"></i>' + fecIni + (fecFin ? ' â†’ ' + fecFin : '') + '</div>' : '')
                   + '<div style="font-size:0.7rem;color:var(--primary,#5865F2);margin-top:3px;opacity:0.7;">Clic para editar</div>'
@@ -1770,10 +1770,10 @@ function rotRenderSecMateriales(idOt, esAprobada) {
                 ? '<span style="background:rgba(220,38,38,0.1);color:#dc2626;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Anulado</span>'
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
             var items = m.items || [];
-            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || 'â€”'); }).join(', ') || 'â€”';
+            var artResumen = items.map(function(it) { return rotEscHtml(it.descripcion || it.inventario_id || '—'); }).join(', ') || '—';
             html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
                   + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || 'â€”') + '</span> ' + badge + '</div>'
+                  + '<div><span style="font-weight:700;color:var(--text);font-size:0.75rem;">' + rotEscHtml(m.id || '—') + '</span> ' + badge + '</div>'
                   + '<button class="btn btn-sm" style="color:var(--subtext);padding:0 4px;" onclick="event.stopPropagation();window.rotEliminarMaterial(\'' + m.id + '\',\'' + rotEscHtml(idOt) + '\')" title="Eliminar"><i class="bi bi-trash" style="font-size:0.75rem;"></i></button>'
                   + '</div>'
                   + '<div style="color:var(--subtext);margin-top:2px;font-size:0.79rem;">' + artResumen + '</div>'
@@ -1902,7 +1902,7 @@ window.rotEliminarTrabajo = function() {
     }, 'danger');
 };
 
-// ── Agregar Salida (material) â€” form rico multi-artÃ­culo ──────────
+// ── Agregar Salida (material) — form rico multi-artÃ­culo ──────────
 window.rotAgregarSalida = function(idOt) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
     var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
@@ -1920,7 +1920,7 @@ window.rotAgregarSalida = function(idOt) {
     var placa = otObj ? (otObj.placa || '') : '';
     
     var vis = document.getElementById('rot-mat-ot-vis');
-    if (vis) vis.value = placa ? (idOt + ' â€” ' + placa) : idOt;
+    if (vis) vis.value = placa ? (idOt + ' — ' + placa) : idOt;
 
     // Pre-llenar fecha de hoy
     var hoy = new Date();
@@ -1951,7 +1951,7 @@ window.rotAgregarSalida = function(idOt) {
                 window._rotInvData = d || [];
                 var dl = document.getElementById('rot-mat-inv-list');
                 if (dl) dl.innerHTML = (d || []).map(function(a) {
-                    return '<option value="' + rotEscHtml(a.id + ' â€” ' + a.descripcion) + '">';
+                    return '<option value="' + rotEscHtml(a.id + ' — ' + a.descripcion) + '">';
                 }).join('');
             })
             .catch(function() {});
@@ -2029,7 +2029,7 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
     var descEl = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
     var hidEl  = document.querySelector('.rot-mat-item-inv-id[data-idx="' + idx + '"]');
     var cuEl   = document.querySelector('.rot-mat-item-cu[data-idx="' + idx + '"]');
-    if (descEl) descEl.value = item.id + ' â€” ' + (item.descripcion || '');
+    if (descEl) descEl.value = item.id + ' — ' + (item.descripcion || '');
     if (hidEl) hidEl.value = item.id;
     if (cuEl && item.costo) cuEl.value = item.costo;
     
@@ -2048,7 +2048,7 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
 
 window._rotBuscarArtMat = function(input, idx) {
     var val = input.value || '';
-    var invId = val.split(' â€” ')[0].trim();
+    var invId = val.split(' — ')[0].trim();
     var item = (window._rotInvData || []).find(function(d) { return d.id === invId; });
     var stockEl = document.querySelector('.rot-mat-item-stock[data-idx="' + idx + '"]');
     var lblEl   = document.querySelector('.rot-mat-item-stock-lbl[data-idx="' + idx + '"]');
@@ -2141,7 +2141,7 @@ window.rotGuardarMaterial = function() {
             if (inv) {
                 var stockDisp = parseFloat(inv.stock_actual != null ? inv.stock_actual : 0);
                 if (it.cantidad > stockDisp) {
-                    sinStock.push('"' + it.descripcion + '" â€” solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
+                    sinStock.push('"' + it.descripcion + '" — solicitado: ' + it.cantidad + ', disponible: ' + (stockDisp <= 0 ? 'Sin stock' : stockDisp));
                 }
             }
         }
@@ -2368,7 +2368,7 @@ function rotRenderSecBacklog(items) {
               + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
               + '</div>'
               + '</div>'
-              + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(b.tarea || 'â€”') + '</div>'
+              + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(b.tarea || '—') + '</div>'
               + (b.reportado_por ? '<div style="font-size:0.73rem;color:var(--subtext);margin-top:2px;"><i class="bi bi-person me-1"></i>' + rotEscHtml(b.reportado_por) + '</div>' : '')
               + '</div>';
     });
@@ -2455,7 +2455,7 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
     });
 };
 
-// ── Editar OT â€” abrir sub-drawer ─────────────────────────────────
+// ── Editar OT — abrir sub-drawer ─────────────────────────────────
 var ROT_SUBTIPOS = {
     'Preventivo': ['Inspección Pre-PM','CampaÃ±a','Limpieza Integral','Rutina','Programado','Oportuno'],
     'Correctivo': ['Falla','Varado','Programado','GarantÃ­a','Accidentabilidad','Mala OperaciÃ³n'],
@@ -2502,7 +2502,7 @@ window.rotCambiarTipoEOT = function() {
     var sel  = document.getElementById('rot-eot-subtipo');
     if (!sel) return;
     var opts = ROT_SUBTIPOS[tipo] || [];
-    sel.innerHTML = '<option value="">â€” Seleccionar â€”</option>' + opts.map(function(s) {
+    sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(function(s) {
         return '<option value="' + s + '">' + s + '</option>';
     }).join('');
     sel.disabled = !opts.length;
@@ -2542,7 +2542,7 @@ window.rotGuardarEdicionOT = function() {
     });
 };
 
-// â€” Descargar Plantilla VacÃ­a para Inspección â€”
+// — Descargar Plantilla VacÃ­a para Inspección —
 window.rotDescargarPlantillaOT = function(idOt, placa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla OT...', 'bg-info');
     
@@ -2802,14 +2802,14 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
                     INSPECCIÃ“N DE PRE USO DE UNIDAD<br>
                     <span class="sub-title">REPORTE DE FALLAS MECÃNICAS</span>
                 </td>
-                <td class="qms-item"><b>CÃ“DIGO:</b> F-MAN-003</td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>
             </tr>
-            <tr><td class="qms-item"><b>VERSIÃ“N:</b> 0</td></tr>
-            <tr><td class="qms-item"><b>F. EMISIÃ“N:</b> 10/11/2025</td></tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>F. EMISIÓN:</b> 10/11/2025</td></tr>
         </table>
         <table class="data-grid">
             <tr>
-                <td class="col-left">NÂº de Reporte: <span class="val-blue">${rotEscHtml(idOt)}</span></td>
+                <td class="col-left">Nº de Reporte: <span class="val-blue">${rotEscHtml(idOt)}</span></td>
                 <td class="col-mid">Placa: <span class="val-normal">${rotEscHtml(placa)}</span></td>
                 <td class="col-right" rowspan="2">
                     Rampa:<br>
@@ -3018,7 +3018,7 @@ window.rotGuardarFechas = function() {
     var fin = document.getElementById('rot-ef-termino').value;
     
     if (ini && fin && new Date(ini) > new Date(fin)) {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La fecha de inicio no puede ser mayor al tÃ©rmino.', 'warning');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La fecha de inicio no puede ser mayor al término.', 'warning');
         return;
     }
 
