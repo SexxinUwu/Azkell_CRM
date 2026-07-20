@@ -1,10 +1,10 @@
 ﻿// ================================================================
 // MÃ³dulo Reportes OT â€” Azkell Fleet
 // PatrÃ³n SPA: window.* globals, init_reportes_ot() entry point
-// Muestra histÃ³rico filtrable de Ã“rdenes de Trabajo
+// Muestra histÃ³rico filtrable de Órdenes de Trabajo
 // ================================================================
 
-// â”€â”€ Estado global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Estado global ────────────────────────────────────────────────
 window.rotData               = window.rotData               || [];
 window.rotDatosFiltrados     = window.rotDatosFiltrados     || [];
 window.rotDetalleId          = window.rotDetalleId          || null;
@@ -16,7 +16,7 @@ window._rotMatIdx            = window._rotMatIdx            || 0;
 window._rotInvData           = window._rotInvData           || [];
 window._rotCatSituaciones    = window._rotCatSituaciones    || [];
 
-// â”€â”€ Entry point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
     window._rotFiltroEstado = '';
     window.rotCargar();
@@ -35,7 +35,7 @@ window.init_reportes_ot = function() {
     }
 };
 
-// â”€â”€ Carga catÃ¡logo de situaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Carga catÃ¡logo de situaciones ────────────────────────────────
 function rotCargarSituaciones() {
     fetch('/api/catalogos_taller')
         .then(function(r) { return r.ok ? r.json() : {}; })
@@ -59,7 +59,7 @@ function rotPoblarSelectSituacion() {
     if (current) sel.value = current;
 }
 
-// â”€â”€ Carga desde API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Carga desde API ──────────────────────────────────────────────
 window.rotCargar = function() {
     var tbody = document.getElementById('rot-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="td-empty"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</td></tr>';
@@ -81,7 +81,7 @@ window.rotCargar = function() {
         });
 };
 
-// â”€â”€ Chips de estado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Chips de estado ───────────────────────────────────────────────
 window.rotChipEstado = function(btn, estado) {
     document.querySelectorAll('#moduloReportesOT .rot-chip').forEach(function(c) { c.classList.remove('active'); });
     if (btn) btn.classList.add('active');
@@ -89,7 +89,7 @@ window.rotChipEstado = function(btn, estado) {
     window.rotFiltrar();
 };
 
-// â”€â”€ Filtrar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Filtrar ──────────────────────────────────────────────────────
 window.rotFiltrar = function() {
     var libre   = (rotVal('rot-busqueda-libre') || rotVal('rotMobileSearch')).toLowerCase();
     var filOT   = rotVal('rot-fil-ot').toLowerCase();
@@ -136,7 +136,7 @@ window.rotFiltrar = function() {
     window.rotRenderTabla(resultado);
 };
 
-// â”€â”€ Permiso ediciÃ³n OT (lectura directa, sin depender de checkPerm global) â”€â”€â”€
+// ── Permiso ediciÃ³n OT (lectura directa, sin depender de checkPerm global) ───
 function rotPuedeEditar() {
     try {
         var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
@@ -145,7 +145,7 @@ function rotPuedeEditar() {
     } catch(e) { return false; }
 }
 
-// â”€â”€ Botones de acciÃ³n modernos por estado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Botones de acciÃ³n modernos por estado ─────────────────────────
 function rotBotonesAccion(ot) {
     var idOT   = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
     var estado = ot.estado || 'Pendiente';
@@ -193,7 +193,7 @@ function rotBadgeEstado(estado) {
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
-// â”€â”€ CÃ¡lculo de tiempos de OT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CÃ¡lculo de tiempos de OT ──────────────────────────────────────
 function rotFmtDuracion(ms) {
     if (!ms || ms <= 0) return '0 min';
     var mins = Math.floor(ms / 60000);
@@ -233,7 +233,7 @@ function rotCalcularTiempos(ot) {
     };
 }
 
-// â”€â”€ Render tabla â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Render tabla ─────────────────────────────────────────────────
 window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
     var mobileList = document.getElementById('otListMobile');
@@ -397,31 +397,31 @@ window.rotAbrirDetalle = function(idOT) {
 
     // Trabajos (placeholder)
     html += '<div class="rot-sec" id="rot-sec-trabajos">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">â€¦</span>'
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Trabajos <span id="rot-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
           + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarTrabajo(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
 
     
-      // Salidas de AlmacÃ©n (placeholder)
+      // Salidas de Almacén (placeholder)
       html += '<div class="rot-sec" id="rot-sec-materiales">'
-            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de AlmacÃ©n <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">â€¦</span>'
+            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:var(--primary,#5865F2);">Salidas de Almacén <span id="rot-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
             + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(88,101,242,0.1);color:#5865F2;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAgregarSalida(\'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
             + '<div id="rot-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
             + '</div>';
 
-      // Ã“rdenes de Servicio de Terceros
+      // Órdenes de Servicio de Terceros
       html += '<div class="rot-sec" id="rot-sec-servicios">'
-            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#0ea5e9;">Servicios de Terceros <span id="rot-srv-count" style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">â€¦</span>'
+            + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#0ea5e9;">Servicios de Terceros <span id="rot-srv-count" style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
             + '</div>'
             + '<div id="rot-srv-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
             + '</div>';
 
 
-    // InspecciÃ³n General (placeholder)
+    // Inspección General (placeholder)
     var puedeCrearInsp = puedeEditar || (window.checkPerm && window.checkPerm('insp', 'c'));
     html += '<div class="rot-sec" id="rot-sec-inspecciones">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">InspecciÃ³n General '
+          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">Inspección General '
           + (puedeCrearInsp ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
           + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
           + '</div>';
@@ -429,7 +429,7 @@ window.rotAbrirDetalle = function(idOT) {
     // Backlog pendiente de la unidad (placeholder)
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
-              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">â€¦</span>'
+              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
               + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
@@ -498,84 +498,6 @@ window.rotAbrirDetalle = function(idOT) {
     window.rotOtInspeccionesActivas = [];
 
 
-    // InspecciÃ³n General (placeholder)
-    var puedeCrearInsp = puedeEditar || (window.checkPerm && window.checkPerm('insp', 'c'));
-    html += '<div class="rot-sec" id="rot-sec-inspecciones">'
-          + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#7c3aed;">InspecciÃ³n General '
-          + (puedeCrearInsp ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(124,58,237,0.1);color:#7c3aed;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirInspeccionWrapper(\'' + esc(ot.placa) + '\', \'' + esc(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-          + '<div id="rot-insp-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
-
-    // Backlog pendiente de la unidad (placeholder)
-    if (ot.placa) {
-        html += '<div class="rot-sec" id="rot-sec-backlog">'
-              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">â€¦</span>'
-              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
-              + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-              + '</div>';
-    }
-
-    var body   = document.getElementById('rot-drawer-body');
-    var footer = document.getElementById('rot-drawer-footer');
-    var back   = document.getElementById('rotDrawerBackdrop');
-    var drawer = document.getElementById('rot-drawer-detalle');
-    if (!body || !footer || !drawer) return;
-
-    body.innerHTML = html;
-
-    // Footer
-    var puedeEliminar = window.checkPerm('ot', 'd');
-    var ftHtml = (puedeEditar
-        ? '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'editar\',\'' + esc(idOT) + '\')">'
-        + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
-        : '')
-        + (puedeEliminar
-        ? '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'eliminar\',\'' + esc(idOT) + '\')">'
-        + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
-        : '');
-
-    ftHtml += '<div class="ms-auto d-flex gap-2">';
-    if (puedeEditar) {
-        if (estado === 'Pendiente') {
-            ftHtml += '<button class="btn btn-sm btn-outline-danger" onclick="window.rotAccion(\'anular\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-x-circle me-1"></i>Anular</button>'
-                    + '<button class="btn btn-sm btn-info text-white" onclick="window.rotAccion(\'iniciar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-play-fill me-1"></i>Iniciar</button>';
-        } else if (estado === 'En Proceso') {
-            ftHtml += '<button class="btn btn-sm btn-warning" onclick="window.rotAccion(\'pausar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-pause-fill me-1"></i>Pausar</button>'
-                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
-        } else if (estado === 'Pausada') {
-            ftHtml += '<button class="btn btn-sm btn-success" onclick="window.rotAccion(\'reanudar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-play-fill me-1"></i>Reanudar</button>'
-                    + '<button class="btn btn-sm btn-danger text-white" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar</button>';
-        } else if (estado === 'Aprobada') {
-            ftHtml += '<button class="btn btn-sm btn-primary" onclick="window.rotAccion(\'cerrar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-lock-fill me-1"></i>Cerrar OT</button>';
-        } else if (estado === 'Finalizado' || estado === 'Cerrada') {
-            ftHtml += '<button class="btn btn-sm btn-outline-success" onclick="window.rotAccion(\'reactivar\',\'' + esc(idOT) + '\')">'
-                    + '<i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar OT</button>';
-        }
-    }
-    if (puedeEditar) {
-        ftHtml += '<button class="btn btn-sm btn-outline-info" onclick="window.rotAbrirEditarFechas(\'' + esc(idOT) + '\')">'
-                + '<i class="bi bi-calendar3 me-1"></i>Editar Fechas</button>';
-    }
-    ftHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="window.rotAccion(\'pdf\',\'' + esc(idOT) + '\')">'
-            + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>';
-    ftHtml += '</div>';
-    footer.innerHTML = ftHtml;
-    footer.style.display = 'flex';
-
-    if (back) back.classList.add('open');
-    drawer.classList.add('open');
-
-    // Fetch trabajos + materiales + backlog + inspecciones en paralelo
-    window.rotOtTrabajosActivos   = [];
-    window.rotOtMaterialesActivos = [];
-    window.rotOtInspeccionesActivas = [];
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='       + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
@@ -628,7 +550,7 @@ window.rotAbrirDetalle = function(idOT) {
     });
 };
 
-// â”€â”€ Cerrar drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Cerrar drawer ─────────────────────────────────────────────────
 window.rotCerrarDetalle = function() {
     ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion'].forEach(function(id) {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
@@ -641,7 +563,7 @@ window.rotCerrarDetalle = function() {
     window.rotRenderTabla(window.rotDatosFiltrados);
 };
 
-// â”€â”€ Modal de comentario (pausar / cerrar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Modal de comentario (pausar / cerrar) ─────────────────────────
 function rotModalComentario(titulo, placeholder, requerido, onConfirm) {
     var existente = document.getElementById('rot-modal-comentario');
     if (existente) existente.remove();
@@ -779,7 +701,7 @@ function rotPromptKm(currentKm, onConfirm) {
     });
 }
 
-// â”€â”€ Acciones del drawer (Editar, Eliminar, Cerrar, PDF) â”€â”€
+// ── Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ──
 window.rotAccion = function(accion, idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot && accion !== 'pdf') return;
@@ -856,7 +778,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'pausar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotModalComentario('Motivo de la pausa', 'Escribe el motivo (obligatorio)â€¦', true, function(motivo) {
+        rotModalComentario('Motivo de la pausa', 'Escribe el motivo (obligatorio)…', true, function(motivo) {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -898,7 +820,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'cerrar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)â€¦', true, function(comentario) {
+        rotModalComentario('Comentario de cierre', 'Escribe las observaciones de cierre (obligatorio)…', true, function(comentario) {
             var pad = function(n) { return String(n).padStart(2, '0'); };
             var dn = new Date();
             var fSalida = dn.getFullYear() + '-' + pad(dn.getMonth()+1) + '-' + pad(dn.getDate()) + ' ' + pad(dn.getHours()) + ':' + pad(dn.getMinutes()) + ':' + pad(dn.getSeconds());
@@ -961,7 +883,7 @@ window.rotAccion = function(accion, idOT) {
     }
 };
 
-// â”€â”€ Exportar a Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Exportar a Excel ──────────────────────────────────────────────
 window.rotExportar = function() {
     var lista = window.rotDatosFiltrados.length > 0 ? window.rotDatosFiltrados : window.rotData;
     if (!lista || lista.length === 0) {
@@ -1038,14 +960,14 @@ window.rotExportar = function() {
     XLSX.writeFile(wb, 'Reportes_OT_' + new Date().toISOString().slice(0,10) + '.xlsx');
 };
 
-// â”€â”€ PDF de una OT (jsPDF + autoTable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PDF de una OT (jsPDF + autoTable) ────────────────────────────
 function rotGenerarPDF(idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT no encontrada', 'danger'); return; }
     window.generarPDF_OT(ot, window.rotOtTrabajosActivos, window.rotOtMaterialesActivos);
 }
 
-// â”€â”€ PDF del reporte (tabla filtrada) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PDF del reporte (tabla filtrada) ─────────────────────────────
 window.rotExportarPDF = function() {
     var lista = window.rotDatosFiltrados.length > 0 ? window.rotDatosFiltrados : window.rotData;
     if (!lista || lista.length === 0) {
@@ -1150,7 +1072,7 @@ window.rotExportarPDF = function() {
     doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
 };
 
-// â”€â”€ Generador global de PDF de OT (reutilizable desde otros mÃ³dulos) â”€â”€
+// ── Generador global de PDF de OT (reutilizable desde otros mÃ³dulos) ──
 window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     if (typeof window.html2pdf !== 'function') {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('LibrerÃ­a html2pdf no cargada.', 'danger');
@@ -1341,7 +1263,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     var htmlMaterialesTable = '';
     if (!isPlantilla) {
         htmlMaterialesTable = `
-        <div class="section-title">Salidas de AlmacÃ©n</div>
+        <div class="section-title">Salidas de Almacén</div>
         <table class="content-table trabajos-table">
             <thead>
                 <tr>
@@ -1544,7 +1466,7 @@ window.rotGenerarPlantillaVaciaOT = function(idOt, placa) {
     window.generarPDF_OT({ id_ot: idOt, placa: placa }, [], []);
 };
 
-// â”€â”€ KPIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── KPIs ─────────────────────────────────────────────────────────
 function rotActualizarKPIs(lista) {
     var total       = lista.length;
     var correctivos = lista.filter(function(o) {
@@ -1581,7 +1503,7 @@ function rotSetKPI(id, val) {
     if (el) el.textContent = val;
 }
 
-// â”€â”€ Helpers de formato â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers de formato ────────────────────────────────────────────
 function rotDetalles(ot) {
     if (!ot) return {};
     try { return typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); }
@@ -1717,7 +1639,7 @@ function rotCapitalize(str) {
     return str.replace(/_/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
 }
 
-// â”€â”€ Render dinÃ¡mico: secciÃ³n Trabajos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Render dinÃ¡mico: secciÃ³n Trabajos ────────────────────────────
 function rotRenderSecTrabajos(idOt, esAprobada) {
     var body  = document.getElementById('rot-tr-body');
     var count = document.getElementById('rot-tr-count');
@@ -1763,7 +1685,7 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// â”€â”€ Render dinÃ¡mico: secciÃ³n Inspecciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Render dinÃ¡mico: secciÃ³n Inspecciones ──────────────────────────
 function rotRenderSecInspecciones(idOt) {
     var body = document.getElementById('rot-insp-body');
     if (!body) return;
@@ -1870,7 +1792,7 @@ function rotRenderSecMateriales(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// â”€â”€ Agregar Trabajo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Agregar Trabajo ───────────────────────────────────────────────
 window.rotAgregarTrabajo = function(idOt) {
     var lbl  = document.getElementById('rot-tr-ot-lbl');      if (lbl)  lbl.textContent = idOt;
     var hid  = document.getElementById('rot-tr-ot-id');        if (hid)  hid.value = idOt;
@@ -1891,7 +1813,7 @@ window.rotAgregarTrabajo = function(idOt) {
     rotMsInit('');
 };
 
-// â”€â”€ Editar Trabajo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Editar Trabajo ────────────────────────────────────────────────
 window.rotEditarTrabajo = function(ticket, idOt) {
     var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.ticket_visita || '') === String(ticket); });
     if (!t) return;
@@ -1917,7 +1839,7 @@ window.rotEditarTrabajo = function(ticket, idOt) {
     rotMsInit(det2.personal || t.tecnico || '');
 };
 
-// â”€â”€ Guardar Trabajo (nuevo o ediciÃ³n) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Guardar Trabajo (nuevo o ediciÃ³n) ────────────────────────────
 window.rotGuardarTrabajo = function() {
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
@@ -1961,7 +1883,7 @@ window.rotGuardarTrabajo = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
-// â”€â”€ Eliminar Trabajo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Eliminar Trabajo ──────────────────────────────────────────────
 window.rotEliminarTrabajo = function() {
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
@@ -1984,7 +1906,7 @@ window.rotEliminarTrabajo = function() {
     }, 'danger');
 };
 
-// â”€â”€ Agregar Salida (material) â€” form rico multi-artÃ­culo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Agregar Salida (material) â€” form rico multi-artÃ­culo ──────────
 window.rotAgregarSalida = function(idOt) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
     var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
@@ -2058,7 +1980,7 @@ window.rotAgregarSalida = function(idOt) {
     rotAbrirSubDrawer('rot-drawer-material');
 };
 
-// â”€â”€ Item helpers para el form de materiales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Item helpers para el form de materiales ───────────────────────
 window._rotAgregarItemMat = function() {
     var tbody = document.getElementById('rot-mat-items-tbody');
     if (!tbody) return;
@@ -2068,7 +1990,7 @@ window._rotAgregarItemMat = function() {
     tr.innerHTML =
         '<td>' +
             '<div style="display:flex;gap:4px;align-items:center;">' +
-                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="ArtÃ­culoâ€¦" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="ArtÃ­culo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
                 '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
                     'onclick="window._rotAbrirQR(' + idx + ')" title="Escanear cÃ³digo de barras">' +
                     '<i class="bi bi-upc-scan"></i>' +
@@ -2177,7 +2099,7 @@ function _rotActualizarTotalMat() {
     if (el) el.textContent = 'S/. ' + total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// â”€â”€ Guardar Material â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Guardar Material ──────────────────────────────────────────────
 window.rotGuardarMaterial = function() {
     var idOt  = ((document.getElementById('rot-mat-ot-id')      || {}).value || '');
     var fecha = ((document.getElementById('rot-mat-fecha')       || {}).value || '');
@@ -2265,7 +2187,7 @@ window.rotGuardarMaterial = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar solicitud', 'danger'); });
 };
 
-// â”€â”€ Eliminar Material â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Eliminar Material ─────────────────────────────────────────────
 window.rotEliminarMaterial = function(idSolicitud, idOt) {
     rotConfirmModerno('Eliminar Solicitud', 'Â¿Eliminar esta solicitud de material?', function() {
         fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
@@ -2284,7 +2206,7 @@ window.rotEliminarMaterial = function(idSolicitud, idOt) {
     }, 'danger');
 };
 
-// â”€â”€ Sub-drawer helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sub-drawer helpers ────────────────────────────────────────────
 function rotAbrirSubDrawer(id) {
     var d = document.getElementById(id);
     if (d) d.classList.add('open');
@@ -2295,7 +2217,7 @@ window.rotCerrarSubDrawer = function(drawerId) {
     if (d) d.classList.remove('open');
 };
 
-// â”€â”€ Multiselect Personal (Agregar/Editar Trabajo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Multiselect Personal (Agregar/Editar Trabajo) ────────────────
 window._rotPersonalLista = window._rotPersonalLista || [];
 window._rotSeleccionados = window._rotSeleccionados || [];
 
@@ -2425,7 +2347,7 @@ document.removeEventListener('click', window._rotMsOutsideClick);
 document.addEventListener('click', window._rotMsOutsideClick);
 
 
-// â”€â”€ Render secciÃ³n Backlog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Render secciÃ³n Backlog ────────────────────────────────────────
 function rotRenderSecBacklog(items) {
     var body  = document.getElementById('rot-bkg-body');
     var count = document.getElementById('rot-bkg-count');
@@ -2457,7 +2379,7 @@ function rotRenderSecBacklog(items) {
     body.innerHTML = html;
 }
 
-// â”€â”€ Eliminar backlog item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Eliminar backlog item ─────────────────────────────────────────
 window.rotEliminarBacklogItem = function(id, btn) {
     if (!confirm('Â¿Eliminar este mantenimiento pendiente?')) return;
     if (btn) btn.disabled = true;
@@ -2478,7 +2400,7 @@ window.rotEliminarBacklogItem = function(id, btn) {
     });
 };
 
-// â”€â”€ Abrir sub-drawer agregar backlog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Abrir sub-drawer agregar backlog ──────────────────────────────
 window.rotAbrirAgregarBacklog = function(placa) {
     var lbl = document.getElementById('rot-bkg-placa-lbl'); if (lbl) lbl.textContent = 'Placa: ' + placa;
     var hid = document.getElementById('rot-bkg-placa-hid'); if (hid) hid.value = placa;
@@ -2488,7 +2410,7 @@ window.rotAbrirAgregarBacklog = function(placa) {
     rotAbrirSubDrawer('rot-drawer-backlog');
 };
 
-// â”€â”€ Guardar nuevo backlog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Guardar nuevo backlog ─────────────────────────────────────────
 window.rotGuardarBacklog = function() {
     var placa = ((document.getElementById('rot-bkg-placa-hid')     || {}).value || '').trim();
     var tema  = ((document.getElementById('rot-bkg-tema')          || {}).value || '').trim();
@@ -2515,7 +2437,7 @@ window.rotGuardarBacklog = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al agregar pendiente', 'danger'); });
 };
 window.rotMarcarBacklogRealizado = function(id, btn) {
-    if (btn) { btn.disabled = true; btn.textContent = 'â€¦'; }
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
     fetch('/api/ot-backlog/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -2537,9 +2459,9 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
     });
 };
 
-// â”€â”€ Editar OT â€” abrir sub-drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Editar OT â€” abrir sub-drawer ─────────────────────────────────
 var ROT_SUBTIPOS = {
-    'Preventivo': ['InspecciÃ³n Pre-PM','CampaÃ±a','Limpieza Integral','Rutina','Programado','Oportuno'],
+    'Preventivo': ['Inspección Pre-PM','CampaÃ±a','Limpieza Integral','Rutina','Programado','Oportuno'],
     'Correctivo': ['Falla','Varado','Programado','GarantÃ­a','Accidentabilidad','Mala OperaciÃ³n'],
     'Predictivo': ['Por condiciÃ³n','Prueba'],
     'Proactivo':  ['Mejora'],
@@ -2624,7 +2546,7 @@ window.rotGuardarEdicionOT = function() {
     });
 };
 
-// â€” Descargar Plantilla VacÃ­a para InspecciÃ³n â€”
+// â€” Descargar Plantilla VacÃ­a para Inspección â€”
 window.rotDescargarPlantillaOT = function(idOt, placa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla OT...', 'bg-info');
     
