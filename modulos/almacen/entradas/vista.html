@@ -703,68 +703,6 @@
             <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
             <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">COTIZACIÓN</span>
             <input type="file" id="ent-f-cotizacion" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor=this.files[0]?'#16a34a':'var(--border)'; this.parentElement.style.background=this.files[0]?'rgba(22, 163, 74, 0.05)':'var(--bg)'; this.parentElement.style.borderStyle=this.files[0]?'solid':'dashed';">
-            <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
-          </label>
-          <label class="ent-file-upload" style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed var(--border);border-radius:12px;padding:12px 10px;background:var(--bg);cursor:pointer;text-align:center;height:100%;transition:all 0.2s;" onmouseover="if(!this.querySelector('input').files[0]){this.style.borderColor='#3b82f6';this.style.background='rgba(59, 130, 246, 0.05)';}" onmouseout="if(!this.querySelector('input').files[0]){this.style.borderColor='var(--border)';this.style.background='var(--bg)';}">
-            <i class="bi bi-cloud-arrow-up-fill mb-1" style="font-size:1.4rem;color:#3b82f6;"></i>
-            <span style="font-size:0.65rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:0.05em;">FACTURA</span>
-            <input type="file" id="ent-f-factura" style="display:none;" onchange="this.nextElementSibling.textContent=this.files[0]?this.files[0].name:'Ningún archivo'; this.parentElement.style.borderColor=this.files[0]?'#16a34a':'var(--border)'; this.parentElement.style.background=this.files[0]?'rgba(22, 163, 74, 0.05)':'var(--bg)'; this.parentElement.style.borderStyle=this.files[0]?'solid':'dashed';">
-            <span class="file-name text-truncate d-block mt-1 fw-bold" style="font-size:0.75rem;color:var(--text);max-width:120px;margin:auto;">Ningún archivo</span>
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <!-- Encabezado artículos -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:.2rem 0 .65rem;">
-      <div style="font-size:.68rem;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:.08em;">
-        <i class="bi bi-list-ul me-1" style="color:#16a34a;"></i>Artículos
-      </div>
-      <button type="button" onclick="window._entAgregarItem()"
-              style="display:flex;align-items:center;gap:.35rem;padding:.35rem .85rem;
-                     border-radius:12px;border:1.5px solid #16a34a;background:#f0fdf4;
-                     color:#16a34a;font-weight:800;font-size:.72rem;cursor:pointer;">
-        <i class="bi bi-plus-lg"></i>Agregar
-      </button>
-    </div>
-
-    <!-- Cards de artículos -->
-    <div id="ent-items-cards" style="padding-bottom:1rem;"></div>
-
-  </div>
-
-  <!-- Footer fijo -->
-  <div style="flex-shrink:0;padding:.85rem 1rem;border-top:1.5px solid #e2e8f0;background:#fff;">
-
-    <!-- Selector IGV -->
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:.6rem;">
-      <span style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;white-space:nowrap;flex-shrink:0;">Tipo IGV</span>
-      <div style="display:flex;gap:3px;flex:1;">
-        <button type="button" id="ent-igv-btn-sin"
-                onclick="window._entSetIgvMode('sin_igv')"
-                style="flex:1;height:26px;border-radius:99px;font-size:.6rem;font-weight:800;
-                       border:1.5px solid #e2e8f0;background:#f1f5f9;color:#64748b;cursor:pointer;transition:all .15s;">Sin IGV</button>
-        <button type="button" id="ent-igv-btn-inc"
-                onclick="window._entSetIgvMode('incluido')"
-                style="flex:1;height:26px;border-radius:99px;font-size:.6rem;font-weight:800;
-                       border:1.5px solid #16a34a;background:#16a34a;color:#fff;cursor:pointer;transition:all .15s;">Inc. IGV</button>
-        <button type="button" id="ent-igv-btn-mas"
-                onclick="window._entSetIgvMode('mas_igv')"
-                style="flex:1;height:26px;border-radius:99px;font-size:.6rem;font-weight:800;
-                       border:1.5px solid #e2e8f0;background:#f1f5f9;color:#64748b;cursor:pointer;transition:all .15s;">+ IGV 18%</button>
-      </div>
-    </div>
-
-    <!-- Desglose IGV (visible solo cuando hay IGV) -->
-    <div id="ent-igv-desglose" style="display:none;margin-bottom:.5rem;
-         background:#f8fafc;border-radius:10px;padding:6px 10px;border:1px solid #e2e8f0;">
-      <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.73rem;color:#64748b;">
-        <span>Total Gravado</span>
-        <span id="ent-total-gravado" style="font-weight:700;color:#0f172a;">S/ 0.00</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.73rem;color:#64748b;border-top:1px solid #e2e8f0;">
-        <span>IGV 18%</span>
-        <span id="ent-total-igv" style="font-weight:700;color:#f59e0b;">S/ 0.00</span>
                     </div>
                 </div>
             </div>
