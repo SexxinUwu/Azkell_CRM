@@ -1810,15 +1810,15 @@ window.rotAgregarTrabajo = function(idOt) {
 };
 
 // ── Editar Trabajo ────────────────────────────────────────────────
-window.rotEditarTrabajo = function(ticket, idOt) {
-    var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.ticket_visita || '') === String(ticket); });
+window.rotEditarTrabajo = function(idTrabajo, idOt) {
+    var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.id_ot || '') === String(idTrabajo); });
     if (!t) return;
     var det2 = {};
     try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
 
     var lbl  = document.getElementById('rot-tr-ot-lbl');      if (lbl)  lbl.textContent = idOt;
     var hid  = document.getElementById('rot-tr-ot-id');        if (hid)  hid.value = idOt;
-    var hid2 = document.getElementById('rot-tr-ticket-hid');   if (hid2) hid2.value = ticket;
+    var hid2 = document.getElementById('rot-tr-ticket-hid');   if (hid2) hid2.value = idTrabajo;
     var desc = document.getElementById('rot-tr-desc');         if (desc) desc.value = t.trabajo_realizado || '';
     var cos  = document.getElementById('rot-tr-costo');        if (cos)  cos.value  = det2.costo !== undefined ? det2.costo : '0';
 
@@ -2324,7 +2324,7 @@ function rotMsRenderBox() {
             return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
                 + n
                 + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
-                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">Ã—</span>'
+                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">&times;</span>'
                 + '</span>';
         }).join('');
     }

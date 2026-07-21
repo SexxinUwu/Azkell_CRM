@@ -1366,7 +1366,7 @@ window.renderModernInspForm = function() {
                 <label class="fw-bold text-dark d-block mb-2" style="font-size:0.9rem;">${lbl}</label>`;
 
             if (t === 'okfalla') {
-                html += `<div class="d-flex gap-2 w-100">
+                html += `<div class="d-flex gap-2 w-100 position-relative">
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
                     <label class="btn btn-outline-success fw-bold flex-grow-1" for="${uid}_ok" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;">OK</label>
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
