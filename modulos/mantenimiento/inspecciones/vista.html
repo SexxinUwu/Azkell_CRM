@@ -620,9 +620,16 @@
                             <input type="number" class="form-control" id="rf-disco" min="0" max="100" placeholder="Ej: 70">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">Técnico Supervisor</label>
-                        <input type="text" class="form-control" id="rf-tecnico" required>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">Fecha de Inspección</label>
+                            <input type="date" class="form-control" id="rf-fecha" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">Técnico Supervisor</label>
+                            <input type="text" class="form-control text-uppercase" id="rf-tecnico" list="rf-tecnico-list" placeholder="Ej: Juan Pérez" required>
+                            <datalist id="rf-tecnico-list"></datalist>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold text-muted small">Observación</label>

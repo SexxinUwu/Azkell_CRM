@@ -2321,6 +2321,25 @@ window.abrirModalFrenos = async function() {
             });
         }
     }
+
+    let listTecnicos = document.getElementById('rf-tecnico-list');
+    if (listTecnicos) {
+        listTecnicos.innerHTML = '';
+        let opcionesTecnicos = new Set();
+        if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
+        if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
+        
+        Array.from(opcionesTecnicos).sort().forEach(tec => {
+            let opt = document.createElement('option');
+            opt.value = tec;
+            listTecnicos.appendChild(opt);
+        });
+    }
+
+    let fechaInput = document.getElementById('rf-fecha');
+    if (fechaInput) {
+        fechaInput.value = new Date().toISOString().split('T')[0];
+    }
     var m = new bootstrap.Modal(modalEl);
     m.show();
 };
@@ -2352,7 +2371,7 @@ window.guardarRegistroFrenos = async function() {
         tipo_inspeccion: 'Solo Frenos',
         detalles_json: JSON.stringify([{ seccion: "Frenos", items: itemsFrenos }]),
         km: 0,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha_ingreso: document.getElementById('rf-fecha') ? document.getElementById('rf-fecha').value : new Date().toISOString().split('T')[0],
         cliente: "-",
         dias: 30,
         id_ot: null
@@ -2368,7 +2387,7 @@ window.guardarRegistroFrenos = async function() {
         let res = await fetch('/api/script/guardarInspeccion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: [payload] })
+            body: JSON.stringify({ form: payload })
         });
         let json = await res.json();
         if (json.ok) {
@@ -2498,7 +2517,7 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
 
         // Función para colorear el valor
         let renderBadge = (val) => {
-            if (val === "-" || val === "") return `<span class="text-muted">-</span>`;
+            if (val === "-" || val === "" || String(val).trim().toUpperCase() === "SIN DATOS") return `<span class="text-muted">-</span>`;
             let num = parseInt(val);
             if (isNaN(num)) return val;
             
