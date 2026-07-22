@@ -86,7 +86,8 @@ function srCargarEntradas() {
                     fechaSalida:  r.fecha_salida  ? String(r.fecha_salida).split('T')[0] : '',
                     horaSalida:   r.hora_salida   ? String(r.hora_salida).slice(0,5) : '',
                     situacion:    r.situacion || '',
-                    obs:          r.obs || ''
+                    obs:          r.obs || '',
+                    evidencia_url: r.evidencia_url || ''
                 };
             });
             srRenderTabla();
@@ -583,7 +584,10 @@ window.srAbrirDetalle = function(id) {
     html += '  </div>';
     html += '  <div class="card-body p-3">';
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
-    html += '    <div class="rounded-3 p-3" style="background:#f8fafc; border:1px solid #f1f5f9; font-size:0.8rem; color:#0f172a; font-weight:500; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
+    html += '    <div class="p-3" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem; color:#334155; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
+    if (e.evidencia_url) {
+        html += '    <div class="mt-3"><a href="' + e.evidencia_url + '" target="_blank" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
+    }
     html += '  </div>';
     html += '</div>';
 
@@ -686,6 +690,20 @@ window.srEditarRampa = function(id) {
     set('sr-f-obs',       e.obs);
     var esi = document.getElementById('sr-f-situacion');
     if (esi) esi.value = e.situacion || '';
+    
+    var hEvid = document.getElementById('sr-f-evidencia-url');
+    var aEvid = document.getElementById('sr-f-evidencia-link');
+    var iEvid = document.getElementById('sr-f-evidencia');
+    if (iEvid) iEvid.value = '';
+    if (hEvid) hEvid.value = e.evidencia_url || '';
+    if (aEvid) {
+        if (e.evidencia_url) {
+            aEvid.href = e.evidencia_url;
+            aEvid.style.display = 'inline';
+        } else {
+            aEvid.style.display = 'none';
+        }
+    }
     srAbrirDrawer('sr-drawer-registro');
 };
 
@@ -1041,6 +1059,8 @@ window.srGuardarRegistro = function() {
         : (sRampa ? parseInt(sRampa.value, 10) : 0);
     var eid      = (hidEl   ? parseInt(hidEl.value, 10) : NaN);
 
+    var sEvidUrl = document.getElementById('sr-f-evidencia-url');
+    
     if (!placa)    { alert('La placa es obligatoria.'); return; }
     if (!rampaNum) { alert('Selecciona una rampa.'); return; }
 
@@ -1054,25 +1074,63 @@ window.srGuardarRegistro = function() {
         hora_salida:   sHorSal ? (sHorSal.value || null) : null,
         situacion:    sSit    ? (sSit.value     || '') : '',
         obs:          sObs    ? (sObs.value     || '') : '',
-        creado_por:   localStorage.getItem('fleet_user') || ''
+        creado_por:   localStorage.getItem('fleet_user') || '',
+        evidencia_url: sEvidUrl ? sEvidUrl.value : ''
     };
 
     var esEdicion = !isNaN(eid) && eid > 0;
     var url    = esEdicion ? '/api/taller-rampas/' + eid : '/api/taller-rampas';
     var method = esEdicion ? 'PUT' : 'POST';
 
-    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function(d) {
-            if (!esEdicion && d.id) window.srDetalleId = d.id;
-            if (sRampa) sRampa.disabled = false;
-            srCerrarDrawers();
-            srCargarEntradas(); // recarga desde BD
+    var finishSave = function() {
+        fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function(d) {
+                if (!esEdicion && d.id) window.srDetalleId = d.id;
+                if (sRampa) sRampa.disabled = false;
+                srCerrarDrawers();
+                srCargarEntradas(); // recarga desde BD
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Guardado correctamente', 'success');
+            })
+            .catch(function(err) {
+                console.error('Error guardando rampa:', err);
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar', 'danger');
+            });
+    };
+
+    var fInput = document.getElementById('sr-f-evidencia');
+    if (fInput && fInput.files && fInput.files[0]) {
+        var file = fInput.files[0];
+        if (file.size > 15 * 1024 * 1024) {
+            alert('El archivo no debe exceder los 15MB.');
+            return;
+        }
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Subiendo evidencia...', 'info');
+        
+        fetch('/api/taller-rampas/upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: file.name, fileType: file.type })
+        })
+        .then(function(res) { if(!res.ok) throw new Error(); return res.json(); })
+        .then(function(data) {
+            return fetch(data.uploadUrl, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type }
+            }).then(function(uRes) {
+                if(!uRes.ok) throw new Error('S3 error');
+                payload.evidencia_url = data.finalUrl;
+                finishSave();
+            });
         })
         .catch(function(err) {
-            console.error('Error guardando rampa:', err);
-            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar', 'danger');
+            console.error('Upload Error:', err);
+            if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al subir la evidencia.', 'danger');
         });
+    } else {
+        finishSave();
+    }
 };
 
 // ── Generar OT ───────────────────────────────────────────────────
