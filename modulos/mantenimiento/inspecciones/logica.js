@@ -2413,8 +2413,9 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     let frenosMasRecientesPorPlaca = new Map();
     
     // Asumiendo que "todasLasInspecciones" ya vienen ordenadas por ID descendente
-    todasLasInspecciones.forEach(insp => {
-        if (!insp.placa) return;
+    todasLasInspecciones.forEach(item => {
+        let insp = item.insp || item; // Extraer si viene en el wrapper {infoPlaca, insp}
+        if (!insp || !insp.placa) return;
         let placaStr = (insp.placa || '').toUpperCase().trim();
         if (frenosMasRecientesPorPlaca.has(placaStr)) return; // Ya tenemos la más reciente
         
