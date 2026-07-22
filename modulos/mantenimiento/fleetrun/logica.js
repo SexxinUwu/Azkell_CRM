@@ -1371,7 +1371,7 @@ window.filtrarDesdeKpiFleetrun = function(estadoVal) {
 };
 
 window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota) {
-    if (typeof Chart === 'undefined') {
+    if (typeof Chart === 'undefined' || typeof ChartDataLabels === 'undefined') {
         if (window.loadCharts) window.loadCharts().then(() => window.updateGraficoFleetrun(vencidos, proximos, vigentes, totalFlota));
         return;
     }
