@@ -638,11 +638,11 @@ db.query(
 );
 // ── Fix: corregir encoding UTF-8 corrupto en tipos_mantenimiento ──────────
 const _encFixes = [
-    ["CampaÃ±a",  "Campaña"],  ["CorreccioÌ€n", "Corrección"],
-    ["ProteccioÌ€n","Protección"],["InspecciÃ³n","Inspección"],
-    ["reparaciÃ³n","reparación"],["cambioÂ",    "cambio"],
-    ["Ã³",        "ó"],         ["Ã©",         "é"],
-    ["Ãº",        "ú"],         ["Ãñ",         "ñ"],
+    ["Campaña",  "Campaña"],  ["CorreccioÌ€n", "Corrección"],
+    ["ProteccioÌ€n","Protección"],["Inspección","Inspección"],
+    ["reparación","reparación"],["cambioÂ",    "cambio"],
+    ["ó",        "ó"],         ["é",         "é"],
+    ["ú",        "ú"],         ["Ãñ",         "ñ"],
 ];
 _encFixes.forEach(([bad, good]) => {
     db.query(

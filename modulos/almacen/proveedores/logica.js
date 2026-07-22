@@ -484,8 +484,8 @@ window.consultarDocProveedor = async function() {
     let tipo = tipoSel.value;
     
     if (!numero) {
-        if(typeof window.rotToast === 'function') window.rotToast("Ingrese un nÃºmero de documento.", "bg-warning");
-        else alert("Ingrese un nÃºmero de documento.");
+        if(typeof window.rotToast === 'function') window.rotToast("Ingrese un número de documento.", "bg-warning");
+        else alert("Ingrese un número de documento.");
         return;
     }
     
@@ -497,12 +497,12 @@ window.consultarDocProveedor = async function() {
         if (tipo === 'RUC' || tipo === 'DNI') {
             url = '/api/proxy/documento?tipo=' + tipo + '&numero=' + numero;
         } else {
-            throw new Error("La consulta automÃ¡tica solo estÃ¡ disponible para RUC y DNI.");
+            throw new Error("La consulta automática solo está disponible para RUC y DNI.");
         }
         
         let res = await fetch(url);
         if (!res.ok) {
-            throw new Error("No se encontrÃ³ informaciÃ³n o hubo un error en la consulta.");
+            throw new Error("No se encontró información o hubo un error en la consulta.");
         }
         let data = await res.json();
         
@@ -515,7 +515,7 @@ window.consultarDocProveedor = async function() {
             if (nombre && !nombre.value) nombre.value = data.nombre || '';
             if (dir) dir.value = data.direccion || '';
             
-            if(typeof window.rotToast === 'function') window.rotToast("Datos RUC consultados con Ã©xito.", "bg-success");
+            if(typeof window.rotToast === 'function') window.rotToast("Datos RUC consultados con éxito.", "bg-success");
         } else if (tipo === 'DNI') {
             let razon = document.getElementById('prov-f-razon');
             let nombre = document.getElementById('prov-f-nombre');
@@ -524,7 +524,7 @@ window.consultarDocProveedor = async function() {
             if (razon) razon.value = nombreCompleto;
             if (nombre && !nombre.value) nombre.value = nombreCompleto;
             
-            if(typeof window.rotToast === 'function') window.rotToast("Datos DNI consultados con Ã©xito.", "bg-success");
+            if(typeof window.rotToast === 'function') window.rotToast("Datos DNI consultados con éxito.", "bg-success");
         }
     } catch(err) {
         if(typeof window.rotToast === 'function') window.rotToast(err.message, "bg-danger");

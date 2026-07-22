@@ -37,15 +37,15 @@ class GoogleRunner {
             });
             let json = await res.json();
 
-            // 🧹 FILTRO PURIFICADOR GLOBAL: Arregla "CamiÃ³n" y tildes rotas en todo el CRM al instante
+            // 🧹 FILTRO PURIFICADOR GLOBAL: Arregla "Camión" y tildes rotas en todo el CRM al instante
             if (json.data && typeof json.data === 'object') {
                 let strData = JSON.stringify(json.data);
-                strData = strData.replace(/CamiÃ³n/gi, 'Camión')
+                strData = strData.replace(/Camión/gi, 'Camión')
                                  .replace(/CAMIÃ.N/g, 'CAMIÓN')
                                  .replace(/CamiÃ.n/g, 'Camión')
-                                 .replace(/Ã³/g, 'ó')
+                                 .replace(/ó/g, 'ó')
                                  .replace(/Ã"/g, 'Ó')
-                                 .replace(/Ã±/g, 'ñ')
+                                 .replace(/ñ/g, 'ñ')
                                  .replace(/Ã'/g, 'Ñ')
                                  .replace(/Ã/g, 'í');
                 json.data = JSON.parse(strData);

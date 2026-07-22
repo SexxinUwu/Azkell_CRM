@@ -163,8 +163,8 @@ window.obtenerTipoCompuesto = function(motora, nomotora) {
         if (!txt) return "";
         // Corregir encoding y pasar a title case
         return txt
-            .replace(/Ã³/g, 'ó').replace(/Ã"/g, 'Ó')
-            .replace(/Ã¡/g, 'á').replace(/Ã©/g, 'é').replace(/Ã­/g, 'í').replace(/Ã±/g, 'ñ')
+            .replace(/ó/g, 'ó').replace(/Ã"/g, 'Ó')
+            .replace(/á/g, 'á').replace(/é/g, 'é').replace(/í/g, 'í').replace(/ñ/g, 'ñ')
             .toLowerCase()
             .replace(/(^|[\s\-])(\S)/g, (_, sep, ch) => sep + ch.toUpperCase());
     };
