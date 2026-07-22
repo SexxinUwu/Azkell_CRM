@@ -666,6 +666,24 @@ router.post('/taller-rampas/upload-url', async (req, res) => {
     }
 });
 
+router.get('/taller-rampas/:id/evidencia', async (req, res) => {
+    db.query('SELECT evidencia_url FROM taller_rampas WHERE id = ?', [req.params.id], async (err, rows) => {
+        if (err) return res.status(500).send('Error BD');
+        if (!rows.length || !rows[0].evidencia_url) return res.status(404).send('Sin evidencia');
+        const url = rows[0].evidencia_url;
+        try {
+            const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+            const key = s3KeyFromUrl(url);
+            if (!key) return res.redirect(url);
+            const signed = await getPresignedUrl(key, 3600);
+            res.redirect(signed);
+        } catch(e) {
+            console.error('S3 Presign Error:', e);
+            res.redirect(url); // fallback
+        }
+    });
+});
+
 router.post('/taller-rampas', (req, res) => {
     const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
     if (!rampa || !placa) return res.status(400).json({ error: 'rampa y placa son requeridos' });
