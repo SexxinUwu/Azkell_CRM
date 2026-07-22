@@ -610,6 +610,9 @@ db.query(`ALTER TABLE taller_rampas ADD COLUMN hora_salida_real TIME NULL`, (e) 
 db.query(`ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`, (e) => {
     if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas creado_en:', e.message);
 });
+db.query(`ALTER TABLE taller_rampas ADD COLUMN evidencia_url VARCHAR(255) NULL`, (e) => {
+    if (e && !e.message.includes('Duplicate column')) console.warn('ALTER taller_rampas evidencia_url:', e.message);
+});
 
 // ── Migraciones ordenes_trabajo: flujo OT (iniciar / pausar / cerrar) ─────────
 [
@@ -649,13 +652,27 @@ router.get('/taller-rampas', (req, res) => {
     });
 });
 
+router.post('/taller-rampas/upload-url', async (req, res) => {
+    try {
+        const { getPresignedUploadUrl } = require('../utils/s3');
+        const { fileType, fileName } = req.body;
+        const ext = fileName ? fileName.split('.').pop() : 'jpg';
+        const s3Key = `taller_rampas/evidencia_${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
+        const uploadUrl = await getPresignedUploadUrl(s3Key, fileType || 'application/octet-stream', 300);
+        const finalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+        res.json({ ok: true, uploadUrl, s3Key, finalUrl });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 router.post('/taller-rampas', (req, res) => {
-    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por } = req.body;
+    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
     if (!rampa || !placa) return res.status(400).json({ error: 'rampa y placa son requeridos' });
     db.query(
-        `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
-        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || ''],
+        `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
@@ -694,10 +711,10 @@ router.put('/taller-rampas/:id', (req, res) => {
         );
         return;
     }
-    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs } = req.body;
+    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, evidencia_url } = req.body;
     db.query(
-        `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=? WHERE id=?`,
-        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', req.params.id],
+        `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
+        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
