@@ -2306,35 +2306,45 @@ window.abrirModalFrenos = async function() {
         } catch(e) {}
     }
     
-    let list = document.getElementById('rf-placa-list');
-    if (list) {
-        list.innerHTML = '';
-        if (window.dataGlobalPlacas) {
-            window.dataGlobalPlacas.forEach(p => {
-                let placaVal = p[0] || '';
-                if (placaVal.toUpperCase() !== 'PLACA' && (p[18] === 'ACTIVA' || p[8] === 'ACTIVA')) {
-                    let opt = document.createElement('option');
-                    opt.value = placaVal;
-                    opt.textContent = p[5] ? p[5] : '';
-                    list.appendChild(opt);
-                }
-            });
-        }
-    }
+    let listPlacasFrenos = (window.dataGlobalPlacas || [])
+        .map(function(p){ return (p[0]||'').trim().toUpperCase(); })
+        .filter(function(p,i,a){ return p && p !== 'PLACA' && a.indexOf(p) === i; })
+        .sort();
+    
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('rf-placa', listPlacasFrenos, 'BUSCAR PLACA...');
+        window._cbOnSelect('rf-placa', function(val) {
+            let txt = document.getElementById('rf-placa-txt');
+            if (txt) txt.value = val;
+            let hd = document.getElementById('rf-placa');
+            if (hd) hd.value = val;
+        });
 
-    let listTecnicos = document.getElementById('rf-tecnico-list');
-    if (listTecnicos) {
-        listTecnicos.innerHTML = '';
         let opcionesTecnicos = new Set();
         if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
         if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
         
-        Array.from(opcionesTecnicos).sort().forEach(tec => {
-            let opt = document.createElement('option');
-            opt.value = tec;
-            listTecnicos.appendChild(opt);
+        window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'BUSCAR TÉCNICO...');
+        window._cbOnSelect('rf-tecnico', function(val) {
+            let txt = document.getElementById('rf-tecnico-txt');
+            if (txt) txt.value = val;
+            let hd = document.getElementById('rf-tecnico');
+            if (hd) hd.value = val;
         });
     }
+
+    let inputPlaca = document.getElementById('rf-placa-txt');
+    if (inputPlaca) {
+        inputPlaca.value = '';
+        inputPlaca.addEventListener('input', function() { document.getElementById('rf-placa').value = this.value; }, { once: true });
+    }
+    let inputTec = document.getElementById('rf-tecnico-txt');
+    if (inputTec) {
+        inputTec.value = '';
+        inputTec.addEventListener('input', function() { document.getElementById('rf-tecnico').value = this.value; }, { once: true });
+    }
+    document.getElementById('rf-placa').value = '';
+    document.getElementById('rf-tecnico').value = '';
 
     let fechaInput = document.getElementById('rf-fecha');
     if (fechaInput) {
@@ -2390,7 +2400,7 @@ window.guardarRegistroFrenos = async function() {
             body: JSON.stringify({ form: payload })
         });
         let json = await res.json();
-        if (json.ok) {
+        if (json.data === 'Éxito') {
             if (typeof rotToast === 'function') rotToast("Inspección de frenos registrada", "bg-success");
             let m = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarFrenos'));
             if(m) m.hide();
@@ -2398,7 +2408,7 @@ window.guardarRegistroFrenos = async function() {
                 window.recargarInspecciones();
             }
         } else {
-            alert("Error: " + json.error);
+            alert("Error: " + (json.data || "Error al guardar inspección"));
         }
     } catch (e) {
         console.error(e);
