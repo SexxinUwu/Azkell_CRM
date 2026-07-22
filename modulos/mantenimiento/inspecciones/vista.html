@@ -597,10 +597,11 @@
             </div>
             <div class="modal-body">
                 <form id="formRegistroFrenos">
-                    <div class="mb-3">
+                    <div class="mb-3 position-relative">
                         <label class="form-label fw-bold text-muted small">PLACA</label>
-                        <input type="text" class="form-control text-uppercase" id="rf-placa" list="rf-placa-list" placeholder="Buscar o escribir placa..." required>
-                        <datalist id="rf-placa-list"></datalist>
+                        <input type="text" class="form-control text-uppercase" id="rf-placa-txt" placeholder="Buscar o escribir placa..." autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rf-placa')" onfocus="window._cbFiltrar('rf-placa')" onblur="window._cbHide('rf-placa')" required style="text-transform:uppercase;">
+                        <input type="hidden" id="rf-placa">
+                        <div id="rf-placa-dd" class="cb-dropdown shadow-sm" style="border-radius:10px; text-transform:uppercase; font-size:0.85rem;"></div>
                     </div>
                     <div class="row">
                         <div class="col-6 mb-3">
@@ -625,10 +626,11 @@
                             <label class="form-label fw-bold text-muted small">Fecha de Inspección</label>
                             <input type="date" class="form-control" id="rf-fecha" required>
                         </div>
-                        <div class="col-6">
+                        <div class="col-6 position-relative">
                             <label class="form-label fw-bold text-muted small">Técnico Supervisor</label>
-                            <input type="text" class="form-control text-uppercase" id="rf-tecnico" list="rf-tecnico-list" placeholder="Ej: Juan Pérez" required>
-                            <datalist id="rf-tecnico-list"></datalist>
+                            <input type="text" class="form-control text-uppercase" id="rf-tecnico-txt" placeholder="Ej: Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rf-tecnico')" onfocus="window._cbFiltrar('rf-tecnico')" onblur="window._cbHide('rf-tecnico')" required style="text-transform:uppercase;">
+                            <input type="hidden" id="rf-tecnico">
+                            <div id="rf-tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:10px; text-transform:uppercase; font-size:0.85rem;"></div>
                         </div>
                     </div>
                     <div class="mb-3">
