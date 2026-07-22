@@ -2324,7 +2324,25 @@ window.abrirModalFrenos = async function() {
         if (window.dataGlobalUsuarios) window.dataGlobalUsuarios.forEach(u => { if(u[1]) opcionesTecnicos.add(u[1]); });
         if (window.dataGlobalInspecciones) window.dataGlobalInspecciones.forEach(i => { if(i.tecnico) opcionesTecnicos.add(i.tecnico); });
         
-        window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'BUSCAR TÉCNICO...');
+        let cacheCond = (window.CACHE && window.CACHE.conductores) ? window.CACHE.conductores : window.dataGlobalConductores;
+        
+        if (cacheCond && cacheCond.length > 0) {
+            cacheCond.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+            window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'BUSCAR TÉCNICO...');
+        } else {
+            window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'CARGANDO DIRECTORIO...');
+            fetch('/api/conductores')
+                .then(r => r.ok ? r.json() : [])
+                .then(data => {
+                    window.CACHE = window.CACHE || {};
+                    window.CACHE.conductores = data;
+                    window.dataGlobalConductores = data;
+                    data.forEach(c => { if(c.nombre) opcionesTecnicos.add(c.nombre); });
+                    window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'BUSCAR TÉCNICO...');
+                })
+                .catch(e => window._cbInit('rf-tecnico', Array.from(opcionesTecnicos).sort(), 'BUSCAR TÉCNICO...'));
+        }
+
         window._cbOnSelect('rf-tecnico', function(val) {
             let txt = document.getElementById('rf-tecnico-txt');
             if (txt) txt.value = val;
@@ -2441,8 +2459,14 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
     
-    // Asumiendo que "todasLasInspecciones" ya vienen ordenadas por ID descendente
-    todasLasInspecciones.forEach(item => {
+    // Sort descending by ID to ensure the most recent is processed first
+    let arrOrdenado = [...(todasLasInspecciones || [])].sort((a, b) => {
+        let iA = a.insp || a;
+        let iB = b.insp || b;
+        return String(iB.id || '').localeCompare(String(iA.id || ''));
+    });
+
+    arrOrdenado.forEach(item => {
         let insp = item.insp || item; // Extraer si viene en el wrapper {infoPlaca, insp}
         if (!insp || !insp.placa) return;
         let placaStr = (insp.placa || '').toUpperCase().trim();
