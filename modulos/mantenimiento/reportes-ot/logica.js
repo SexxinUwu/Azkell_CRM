@@ -1,7 +1,7 @@
 // ================================================================
-// MÃ³dulo Reportes OT — Azkell Fleet
-// PatrÃ³n SPA: window.* globals, init_reportes_ot() entry point
-// Muestra histÃ³rico filtrable de Órdenes de Trabajo
+// Módulo Reportes OT — Azkell Fleet
+// Patrón SPA: window.* globals, init_reportes_ot() entry point
+// Muestra histórico filtrable de Órdenes de Trabajo
 // ================================================================
 
 // ── Estado global ────────────────────────────────────────────────
@@ -23,11 +23,11 @@ window.init_reportes_ot = function() {
     rotCargarSituaciones();
     if (typeof window.initColPicker === 'function') {
         window.initColPicker('col-picker-rot', 'rot-tabla', [
-            {label: 'NÂ° OT',        idx: 1, visible: true},
+            {label: 'N° OT',        idx: 1, visible: true},
             {label: 'Placa',        idx: 2, visible: true},
             {label: 'Tipo / Sub',   idx: 3, visible: true},
             {label: 'Supervisor',   idx: 4, visible: true},
-            {label: 'SituaciÃ³n',    idx: 5, visible: true},
+            {label: 'Situación',    idx: 5, visible: true},
             {label: 'Observaciones',idx: 6, visible: true},
             {label: 'Costo Total',  idx: 7, visible: true},
             {label: 'Fecha',        idx: 8, visible: true}
@@ -35,7 +35,7 @@ window.init_reportes_ot = function() {
     }
 };
 
-// ── Carga catÃ¡logo de situaciones ────────────────────────────────
+// ── Carga catálogo de situaciones ────────────────────────────────
 function rotCargarSituaciones() {
     fetch('/api/catalogos_taller')
         .then(function(r) { return r.ok ? r.json() : {}; })
@@ -103,7 +103,7 @@ window.rotFiltrar = function() {
         var det = rotDetalles(ot);
         var fechaOT = rotFechaISO(ot.creado_en);
 
-        // BÃºsqueda libre (NÂ° OT, tÃ©cnico, supervisor, placa)
+        // Búsqueda libre (N° OT, técnico, supervisor, placa)
         if (libre) {
             var hayText =
                 (String(ot.ticket_entrada || ot.id_ot || '')).toLowerCase().indexOf(libre) !== -1 ||
@@ -115,7 +115,7 @@ window.rotFiltrar = function() {
                 (det.sub_tipo  || '').toLowerCase().indexOf(libre) !== -1;
             if (!hayText) return false;
         }
-        // Filtro NÂ° OT
+        // Filtro N° OT
         if (filOT && String(ot.ticket_entrada || ot.id_ot || '').toLowerCase().indexOf(filOT) === -1) return false;
         // Filtro placa
         if (filPlaca && (ot.placa || '').toUpperCase().indexOf(filPlaca) === -1) return false;
@@ -125,7 +125,7 @@ window.rotFiltrar = function() {
         if (filDesde && fechaOT < filDesde) return false;
         // Filtro hasta
         if (filHasta && fechaOT > filHasta) return false;
-        // Filtro estado (aprobaciÃ³n)
+        // Filtro estado (aprobación)
         if (filEst && ot.aprobacion !== filEst) return false;
 
         return true;
@@ -136,7 +136,7 @@ window.rotFiltrar = function() {
     window.rotRenderTabla(resultado);
 };
 
-// ── Permiso ediciÃ³n OT (lectura directa, sin depender de checkPerm global) ───
+// ── Permiso edición OT (lectura directa, sin depender de checkPerm global) ───
 function rotPuedeEditar() {
     try {
         var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
@@ -145,7 +145,7 @@ function rotPuedeEditar() {
     } catch(e) { return false; }
 }
 
-// ── Botones de acciÃ³n modernos por estado ─────────────────────────
+// ── Botones de acción modernos por estado ─────────────────────────
 function rotBotonesAccion(ot) {
     var idOT   = rotEscHtml(String(ot.ticket_entrada || ot.id_ot || ''));
     var estado = ot.estado || 'Pendiente';
@@ -193,7 +193,7 @@ function rotBadgeEstado(estado) {
     return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
 }
 
-// ── CÃ¡lculo de tiempos de OT ──────────────────────────────────────
+// ── Cálculo de tiempos de OT ──────────────────────────────────────
 function rotFmtDuracion(ms) {
     if (!ms || ms <= 0) return '0 min';
     var mins = Math.floor(ms / 60000);
@@ -310,7 +310,7 @@ window.rotAbrirDetalle = function(idOT) {
     var html = '';
     // ID bar
     html += '<div class="rot-id-bar">';
-    html += '<div><div class="rot-id-lbl">NÂ° Orden de Trabajo</div><div class="rot-id-num">' + esc(idOT) + '</div></div>';
+    html += '<div><div class="rot-id-lbl">N° Orden de Trabajo</div><div class="rot-id-num">' + esc(idOT) + '</div></div>';
     html += '<div style="text-align:right;">' + badge(estado)
           + '<div style="font-size:0.72rem;color:var(--subtext);margin-top:4px;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</div></div>';
     html += '</div>';
@@ -384,7 +384,7 @@ window.rotAbrirDetalle = function(idOT) {
         html += '</div>';
     }
 
-    // Acciones RÃ¡pidas (Plantillas)
+    // Acciones Rápidas (Plantillas)
     html += '<div class="rot-sec" style="display:flex; gap:15px; padding:15px; align-items:center;">';
     html += '<button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);" onclick="event.stopPropagation();window.descargarPlantillaVaciaOT(\'' + rotEscHtml(idOT) + '\', \'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || '') + '\', \'' + (det.km||'') + '\', \'' + rotEscHtml(det.rampa_origen||'') + '\')">'
           + '<div style="background:#16a34a;color:white;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;"><i class="bi bi-card-checklist" style="font-size:1.2rem;"></i></div>'
@@ -622,7 +622,7 @@ function rotConfirmModerno(titulo, mensaje, onConfirm, type) {
     type = type || 'danger';
     var iconClass = type === 'danger' ? 'bi-exclamation-triangle-fill text-danger' : 'bi-info-circle-fill text-primary';
     var btnClass = type === 'danger' ? 'btn-danger' : 'btn-primary';
-    var btnText = type === 'danger' ? 'SÃ­, eliminar' : 'Confirmar';
+    var btnText = type === 'danger' ? 'Sí, eliminar' : 'Confirmar';
 
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s ease;';
@@ -709,7 +709,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'reactivar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotConfirmModerno('Reactivar OT', 'Â¿Deseas reactivar la OT ' + idOT + '? VolverÃ¡ a estar En Proceso.', function() {
+        rotConfirmModerno('Reactivar OT', '¿Deseas reactivar la OT ' + idOT + '? Volverá a estar En Proceso.', function() {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -730,7 +730,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'eliminar') {
         if (!window.guardAction('ot', 'd')) return;
-        rotConfirmModerno('Eliminar OT', 'Â¿Eliminar la OT ' + idOT + '? Esta acciÃ³n no se puede deshacer.', function() {
+        rotConfirmModerno('Eliminar OT', '¿Eliminar la OT ' + idOT + '? Esta acción no se puede deshacer.', function() {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), { method: 'DELETE' })
                 .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); })
                 .then(function() {
@@ -748,7 +748,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'iniciar') {
         if (!window.guardAction('ot', 'e')) return;
-        rotConfirmModerno('Iniciar OT', 'Â¿Iniciar la OT ' + idOT + '?', function() {
+        rotConfirmModerno('Iniciar OT', '¿Iniciar la OT ' + idOT + '?', function() {
             var fInicio = ot.fecha_ingreso || ot.creado_en || null;
             if (fInicio) {
                 var pIso = typeof fInicio === 'string' ? fInicio.replace('Z','') : fInicio;
@@ -858,7 +858,7 @@ window.rotAccion = function(accion, idOT) {
 
     if (accion === 'anular') {
         if (!window.guardAction('ot', 'e')) return;
-        rotConfirmModerno('Anular OT', 'Â¿Anular la OT ' + idOT + '?', function() {
+        rotConfirmModerno('Anular OT', '¿Anular la OT ' + idOT + '?', function() {
             fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -900,8 +900,8 @@ window.rotExportar = function() {
     var str  = function(v) { return String(v == null ? '' : v); };
 
     var encabezado = [
-        'NÂ° OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
-        'Supervisor', 'SituaciÃ³n Inicial', 'Observaciones', 'Costo Total (S/)',
+        'N° OT', 'Placa', 'Estado', 'Tipo OT', 'Sub Tipo', 'Sistema', 'Sub Sistema',
+        'Supervisor', 'Situación Inicial', 'Observaciones', 'Costo Total (S/)',
         'Ingreso Taller', 'Inicio OT', 'Iniciado Por',
         'Pausa 1', 'Motivo Pausa 1', 'Fin Pausa 1',
         'Pausa 2', 'Motivo Pausa 2', 'Fin Pausa 2',
@@ -948,7 +948,7 @@ window.rotExportar = function() {
     var datos = [encabezado].concat(filas);
     var ws = XLSX.utils.aoa_to_sheet(datos);
 
-    // Ancho automÃ¡tico por columna
+    // Ancho automático por columna
     var wscols = encabezado.map(function(h, i) {
         var maxLen = h.length;
         filas.forEach(function(f) { var v = str(f[i]); if (v.length > maxLen) maxLen = v.length; });
@@ -990,7 +990,7 @@ window.rotExportarPDF = function() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('REPORTE DE Ã“RDENES DE TRABAJO — AZKELL FLEET', 14, 12);
+    doc.text('REPORTE DE ÓRDENES DE TRABAJO — AZKELL FLEET', 14, 12);
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text('Generado: ' + new Date().toLocaleString('es-PE'), pageW - 14, 12, { align: 'right' });
@@ -1004,8 +1004,8 @@ window.rotExportarPDF = function() {
     var filHasta = rotVal('rot-fil-hasta');
     var filEst   = window._rotFiltroEstado || '';
     var filLibre = rotVal('rot-busqueda-libre');
-    if (filLibre) filtros.push('BÃºsqueda: ' + filLibre);
-    if (filOT)    filtros.push('NÂ° OT: ' + filOT);
+    if (filLibre) filtros.push('Búsqueda: ' + filLibre);
+    if (filOT)    filtros.push('N° OT: ' + filOT);
     if (filPlaca) filtros.push('Placa: ' + filPlaca);
     if (filMes)   filtros.push('Mes: ' + filMes);
     if (filDesde) filtros.push('Desde: ' + filDesde);
@@ -1048,7 +1048,7 @@ window.rotExportarPDF = function() {
 
     doc.autoTable({
         startY: y,
-        head:   [['NÂ° OT', 'Placa', 'Tipo / Sub Tipo', 'Supervisor', 'Estado', 'Costo Total', 'Fecha']],
+        head:   [['N° OT', 'Placa', 'Tipo / Sub Tipo', 'Supervisor', 'Estado', 'Costo Total', 'Fecha']],
         body:   body,
         theme:  'striped',
         headStyles: { fillColor: azul, textColor: 255, fontStyle: 'bold', fontSize: 8 },
@@ -1073,10 +1073,10 @@ window.rotExportarPDF = function() {
     doc.save('Reporte_OT_' + new Date().toISOString().slice(0, 10) + '.pdf');
 };
 
-// ── Generador global de PDF de OT (reutilizable desde otros mÃ³dulos) ──
+// ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
 window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
     if (typeof window.html2pdf !== 'function') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('LibrerÃ­a html2pdf no cargada.', 'danger');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería html2pdf no cargada.', 'danger');
         return;
     }
 
@@ -1269,7 +1269,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
             <thead>
                 <tr>
                     <th style="width: 30px;" class="text-center">#</th>
-                    <th style="width: 70px;" class="text-center">CÃ³d. Producto</th>
+                    <th style="width: 70px;" class="text-center">Cód. Producto</th>
                     <th>Producto</th>
                     <th style="width: 75px;" class="text-center">Marca</th>
                     <th style="width: 40px;" class="text-center">Cant.</th>
@@ -1553,9 +1553,9 @@ function rotBadgeAprobacion(estado) {
 function rotBadgeSituacion(sit) {
     if (!sit) return '—';
     var map = {
-        'En atenciÃ³n':            ['rot-b-en-atencion', 'En AtenciÃ³n'],
+        'En atención':            ['rot-b-en-atencion', 'En Atención'],
         'Espera de repuesto':     ['rot-b-espera',      'Espera Repuesto'],
-        'Espera de autorizaciÃ³n': ['rot-b-espera',      'Espera Autor.'],
+        'Espera de autorización': ['rot-b-espera',      'Espera Autor.'],
         'Finalizado':             ['rot-b-cerrada',     'Finalizado']
     };
     var v = map[sit] || [null, sit];
@@ -1594,14 +1594,14 @@ window.rotAbrirInspeccionWrapper = function(placa, idOT, km) {
     if (typeof window.abrirModalNuevaInspeccion === 'function') {
         window.abrirModalNuevaInspeccion(placa, idOT, km);
     } else {
-        if (typeof window.rotToast === 'function') window.rotToast("Cargando mÃ³dulo de inspecciones...", "bg-info");
+        if (typeof window.rotToast === 'function') window.rotToast("Cargando módulo de inspecciones...", "bg-info");
         var script = document.createElement('script');
         script.src = '/modulos/mantenimiento/inspecciones/logica.js?v=' + Date.now();
         script.onload = function() {
             if (typeof window.abrirModalNuevaInspeccion === 'function') {
                 window.abrirModalNuevaInspeccion(placa, idOT, km);
             } else {
-                alert("No se pudo cargar el mÃ³dulo de inspecciones.");
+                alert("No se pudo cargar el módulo de inspecciones.");
             }
         };
         script.onerror = function() {
@@ -1635,7 +1635,7 @@ function rotCapitalize(str) {
     return str.replace(/_/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
 }
 
-// ── Render dinÃ¡mico: secciÃ³n Trabajos ────────────────────────────
+// ── Render dinámico: sección Trabajos ────────────────────────────
 function rotRenderSecTrabajos(idOt, esAprobada) {
     var body  = document.getElementById('rot-tr-body');
     var count = document.getElementById('rot-tr-count');
@@ -1681,7 +1681,7 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
     body.innerHTML = html;
 }
 
-// ── Render dinÃ¡mico: secciÃ³n Inspecciones ──────────────────────────
+// ── Render dinámico: sección Inspecciones ──────────────────────────
 function rotRenderSecInspecciones(idOt) {
     var body = document.getElementById('rot-insp-body');
     if (!body) return;
@@ -1725,7 +1725,7 @@ window.rotAbrirTabInspeccion = function(idInsp) {
             }, 50);
         };
         script.onerror = function() {
-            alert('Error al cargar la lÃ³gica de inspecciones.');
+            alert('Error al cargar la lógica de inspecciones.');
         };
         document.body.appendChild(script);
     }
@@ -1835,7 +1835,7 @@ window.rotEditarTrabajo = function(idTrabajo, idOt) {
     rotMsInit(det2.personal || t.tecnico || '');
 };
 
-// ── Guardar Trabajo (nuevo o ediciÃ³n) ────────────────────────────
+// ── Guardar Trabajo (nuevo o edición) ────────────────────────────
 window.rotGuardarTrabajo = function() {
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
@@ -1845,7 +1845,7 @@ window.rotGuardarTrabajo = function() {
     var fFin   = ((document.getElementById('rot-tr-fecha-fin')  || {}).value || '');
     var costo  = parseFloat((document.getElementById('rot-tr-costo')   || {}).value || 0);
 
-    if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripciÃ³n es requerida', 'danger'); return; }
+    if (!desc) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
 
     var esEdicion = !!ticket;
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
@@ -1884,7 +1884,7 @@ window.rotEliminarTrabajo = function() {
     var ticket = ((document.getElementById('rot-tr-ticket-hid') || {}).value || '').trim();
     var idOt   = ((document.getElementById('rot-tr-ot-id')      || {}).value || '');
     if (!ticket) return;
-    rotConfirmModerno('Eliminar Trabajo', 'Â¿Eliminar el trabajo ' + ticket + '? Esta acciÃ³n no se puede deshacer.', function() {
+    rotConfirmModerno('Eliminar Trabajo', '¿Eliminar el trabajo ' + ticket + '? Esta acción no se puede deshacer.', function() {
         fetch('/api/ot-trabajos/' + encodeURIComponent(ticket), { method: 'DELETE' })
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function() {
@@ -1902,12 +1902,12 @@ window.rotEliminarTrabajo = function() {
     }, 'danger');
 };
 
-// ── Agregar Salida (material) — form rico multi-artÃ­culo ──────────
+// ── Agregar Salida (material) — form rico multi-artículo ──────────
 window.rotAgregarSalida = function(idOt) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOt); });
     var estadoOT = ot ? (ot.estado || 'Pendiente') : 'Pendiente';
     if (estadoOT === 'Anulado') {
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT estÃ¡ cerrada. No se pueden agregar salidas de material.', 'warning');
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La OT está cerrada. No se pueden agregar salidas de material.', 'warning');
         return;
     }
     if (estadoOT === 'Pendiente') {
@@ -1943,7 +1943,7 @@ window.rotAgregarSalida = function(idOt) {
     var tot = document.getElementById('rot-mat-items-total'); if (tot) tot.textContent = 'S/. 0.00';
     _rotAgregarItemMat();
 
-    // Cargar inventario y placas si no estÃ¡n cargados
+    // Cargar inventario y placas si no están cargados
     if (!window._rotInvData.length) {
         fetch('/api/almacen/inventario')
             .then(function(r) { return r.json(); })
@@ -1986,9 +1986,9 @@ window._rotAgregarItemMat = function() {
     tr.innerHTML =
         '<td>' +
             '<div style="display:flex;gap:4px;align-items:center;">' +
-                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="ArtÃ­culo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
+                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
                 '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
-                    'onclick="window._rotAbrirQR(' + idx + ')" title="Escanear cÃ³digo de barras">' +
+                    'onclick="window._rotAbrirQR(' + idx + ')" title="Escanear código de barras">' +
                     '<i class="bi bi-upc-scan"></i>' +
                 '</button>' +
             '</div>' +
@@ -2010,9 +2010,9 @@ window._rotAbrirQR = function(idx) {
     if (window._abrirEscaner) {
         window._abrirEscaner(function(valor) {
             window._rotSeleccionarItemPorQR(valor, window._rotQrTargetIdx);
-        }, 'Escanear ArtÃ­culo');
+        }, 'Escanear Artículo');
     } else {
-        alert("El mÃ³dulo de escÃ¡ner no estÃ¡ disponible.");
+        alert("El módulo de escáner no está disponible.");
     }
 };
 
@@ -2022,8 +2022,8 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
                (d.codigo_barras && d.codigo_barras.trim() === valor.trim());
     });
     if (!item) {
-        if (typeof window.rotToast === 'function') window.rotToast('ArtÃ­culo no encontrado: ' + valor, 'bg-danger');
-        else alert('ArtÃ­culo no encontrado: ' + valor);
+        if (typeof window.rotToast === 'function') window.rotToast('Artículo no encontrado: ' + valor, 'bg-danger');
+        else alert('Artículo no encontrado: ' + valor);
         return;
     }
     var descEl = document.querySelector('.rot-mat-item-desc[data-idx="' + idx + '"]');
@@ -2043,7 +2043,7 @@ window._rotSeleccionarItemPorQR = function(valor, idx) {
     }
     
     window._rotCalcItemMat(idx);
-    if (typeof window.rotToast === 'function') window.rotToast('ArtÃ­culo agregado correctamente', 'bg-success');
+    if (typeof window.rotToast === 'function') window.rotToast('Artículo agregado correctamente', 'bg-success');
 };
 
 window._rotBuscarArtMat = function(input, idx) {
@@ -2118,10 +2118,10 @@ window.rotGuardarMaterial = function() {
         var cu   = parseFloat(cus[i].value)   || 0;
         var imp  = parseFloat(imps[i].value)  || cant * cu;
         var invId = (invIds[i] && invIds[i].value) ? invIds[i].value : null;
-        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad invÃ¡lida en fila ' + (i+1), 'danger'); return; }
+        if (cant <= 0) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Cantidad inválida en fila ' + (i+1), 'danger'); return; }
         items.push({ inventario_id: invId, descripcion: desc, cantidad: cant, costo_unitario: cu, importe: imp });
     }
-    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artÃ­culo', 'danger'); return; }
+    if (!items.length) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Agrega al menos un artículo', 'danger'); return; }
 
     // Validar stock antes de guardar
     var sinStock = [];
@@ -2185,7 +2185,7 @@ window.rotGuardarMaterial = function() {
 
 // ── Eliminar Material ─────────────────────────────────────────────
 window.rotEliminarMaterial = function(idSolicitud, idOt) {
-    rotConfirmModerno('Eliminar Solicitud', 'Â¿Eliminar esta solicitud de material?', function() {
+    rotConfirmModerno('Eliminar Solicitud', '¿Eliminar esta solicitud de material?', function() {
         fetch('/api/ot-materiales/' + encodeURIComponent(idSolicitud), { method: 'DELETE' })
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function() {
@@ -2317,7 +2317,7 @@ function rotMsRenderBox() {
     if (!box) return;
     var sel = window._rotSeleccionados;
     if (sel.length === 0) {
-        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona tÃ©cnico(s)...</span>';
+        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
     } else {
         box.innerHTML = sel.map(function(n) {
             var nEsc = n.replace(/'/g, "\\'");
@@ -2343,7 +2343,7 @@ document.removeEventListener('click', window._rotMsOutsideClick);
 document.addEventListener('click', window._rotMsOutsideClick);
 
 
-// ── Render secciÃ³n Backlog ────────────────────────────────────────
+// ── Render sección Backlog ────────────────────────────────────────
 function rotRenderSecBacklog(items) {
     var body  = document.getElementById('rot-bkg-body');
     var count = document.getElementById('rot-bkg-count');
@@ -2377,7 +2377,7 @@ function rotRenderSecBacklog(items) {
 
 // ── Eliminar backlog item ─────────────────────────────────────────
 window.rotEliminarBacklogItem = function(id, btn) {
-    if (!confirm('Â¿Eliminar este mantenimiento pendiente?')) return;
+    if (!confirm('¿Eliminar este mantenimiento pendiente?')) return;
     if (btn) btn.disabled = true;
     fetch('/api/ot-backlog/' + id, { method: 'DELETE' })
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -2413,7 +2413,7 @@ window.rotGuardarBacklog = function() {
     var tarea = ((document.getElementById('rot-bkg-tarea')         || {}).value || '').trim();
     var rep   = ((document.getElementById('rot-bkg-reportado-por') || {}).value || '').trim();
 
-    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripciÃ³n es requerida', 'danger'); return; }
+    if (!placa || !tarea) { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('La descripción es requerida', 'danger'); return; }
     var user = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_correo') || '';
     fetch('/api/ot-backlog', {
         method: 'POST',
@@ -2457,9 +2457,9 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
 
 // ── Editar OT — abrir sub-drawer ─────────────────────────────────
 var ROT_SUBTIPOS = {
-    'Preventivo': ['Inspección Pre-PM','CampaÃ±a','Limpieza Integral','Rutina','Programado','Oportuno'],
-    'Correctivo': ['Falla','Varado','Programado','GarantÃ­a','Accidentabilidad','Mala OperaciÃ³n'],
-    'Predictivo': ['Por condiciÃ³n','Prueba'],
+    'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
+    'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
+    'Predictivo': ['Por condición','Prueba'],
     'Proactivo':  ['Mejora'],
     'Servicio':   ['Stock','Taller']
 };
@@ -2477,7 +2477,7 @@ function rotAbrirEditarOT(idOT) {
     set('rot-eot-supervisor', det.supervisor || ot.supervisor || '');
     set('rot-eot-motivo',     det.motivo || ot.observaciones || '');
 
-    // SituaciÃ³n
+    // Situación
     var sitEl = document.getElementById('rot-eot-situacion');
     if (sitEl) sitEl.value = det.situacion_inicial || ot.situacion || '';
 
@@ -2542,7 +2542,7 @@ window.rotGuardarEdicionOT = function() {
     });
 };
 
-// — Descargar Plantilla VacÃ­a para Inspección —
+// — Descargar Plantilla Vacía para Inspección —
 window.rotDescargarPlantillaOT = function(idOt, placa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla OT...', 'bg-info');
     
@@ -2613,7 +2613,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte Fallas MecÃ¡nicas</title>
+    <title>Reporte Fallas Mecánicas</title>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -2799,8 +2799,8 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
                     <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
                 </td>
                 <td class="title-cell" rowspan="3">
-                    INSPECCIÃ“N DE PRE USO DE UNIDAD<br>
-                    <span class="sub-title">REPORTE DE FALLAS MECÃNICAS</span>
+                    INSPECCIÓN DE PRE USO DE UNIDAD<br>
+                    <span class="sub-title">REPORTE DE FALLAS MECÁNICAS</span>
                 </td>
                 <td class="qms-item"><b>CÓDIGO:</b> F-MAN-003</td>
             </tr>
@@ -2907,7 +2907,7 @@ window.rotVerFormatoOT = function(idOT) {
             return;
         }
 
-        // Usamos un pequeÃ±o truco: llamamos a la misma funciÃ³n generarPDF_OT, pero sobreescribimos temporalmente window.open
+        // Usamos un pequeño truco: llamamos a la misma función generarPDF_OT, pero sobreescribimos temporalmente window.open
         var originalOpen = window.open;
         var modalContentHtml = '';
 
@@ -2930,7 +2930,7 @@ window.rotVerFormatoOT = function(idOT) {
         // Restaurar window.open
         window.open = originalOpen;
 
-        // Quitar el botÃ³n de imprimir del htmlStr porque aquÃ­ solo vamos a ver (y si queremos imprimir le ponemos un botÃ³n nativo del modal)
+        // Quitar el botón de imprimir del htmlStr porque aquí solo vamos a ver (y si queremos imprimir le ponemos un botón nativo del modal)
         modalContentHtml = modalContentHtml.replace('<button id="btnPrint" onclick="window.print()">ðŸ–¨ï¸ Imprimir / Guardar PDF</button>', '');
 
         // Mostrar en un modal con iframe
@@ -2955,7 +2955,7 @@ window.rotVerFormatoOT = function(idOT) {
                         + '</div>';
             document.body.appendChild(m.firstChild);
         } else {
-            // Actualizar tÃ­tulo y botÃ³n imprimir
+            // Actualizar título y botón imprimir
             var btnPrint = document.querySelector('#modalFormatoOT .btn-primary');
             if(btnPrint) {
                 btnPrint.setAttribute('onclick', "window.generarPDF_OT(window.rotData.find(o=>String(o.ticket_entrada||o.id_ot)===String('" + idOT + "')), window.currentVerTrabajos, window.currentVerMateriales)");

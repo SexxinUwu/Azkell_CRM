@@ -36,7 +36,7 @@ function mostrarConductores(datos) {
 
     var limpiarN = function(txt) {
         if (!txt) return '';
-        return txt.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ');
+        return txt.toString().replace(/ñ/g, 'ñ').replace(/Ã'/g, 'Ñ');
     };
 
     if (!datos || !datos.length) {
@@ -171,7 +171,7 @@ function abrirModalConductor(f = null) {
     if (hdr) hdr.classList.remove('verde', 'gris', 'rojo');
 
     if (f) {
-        const limpiar = t => t ? t.toString().replace(/Ã±/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
+        const limpiar = t => t ? t.toString().replace(/ñ/g, 'ñ').replace(/Ã'/g, 'Ñ') : "";
         var nombre   = toTitleCase(limpiar(f.nombre || ''));
         var empresa  = f.empresa || '';
         var telf     = f.telefono ? f.telefono.toString().replace(/[^0-9]/g, '') : '';
