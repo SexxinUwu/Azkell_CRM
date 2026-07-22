@@ -899,12 +899,12 @@ router.post('/:metodo', async (req, res) => {
                 isEdit ? form.editF_dueno   : form.f_dueno,
                 isEdit ? form.editF_uts     : form.f_uts,
                 isEdit ? form.editF_tipomp  : form.f_tipomp,
-                isEdit ? form.editF_kmact   : form.f_kmact,
-                isEdit ? form.editF_freckm  : form.f_freckm,
-                isEdit ? form.editF_kmprox  : form.f_kmprox,
+                (isEdit ? form.editF_kmact   : form.f_kmact) === '' ? null : (isEdit ? form.editF_kmact   : form.f_kmact),
+                (isEdit ? form.editF_freckm  : form.f_freckm) === '' ? null : (isEdit ? form.editF_freckm  : form.f_freckm),
+                (isEdit ? form.editF_kmprox  : form.f_kmprox) === '' ? null : (isEdit ? form.editF_kmprox  : form.f_kmprox),
                 isEdit ? form.editF_obs     : form.f_obs,
                 isEdit ? form.editF_tec     : form.f_tec,
-                isEdit ? form.editF_kmgps   : form.f_kmgps,
+                (isEdit ? form.editF_kmgps   : form.f_kmgps) === '' ? null : (isEdit ? form.editF_kmgps   : form.f_kmgps),
                 isEdit ? form.editF_combustible : form.f_combustible,
                 isEdit ? form.editF_modelo      : form.f_modelo
             ];
