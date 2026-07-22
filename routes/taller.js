@@ -668,18 +668,18 @@ router.post('/taller-rampas/upload-url', async (req, res) => {
 
 router.get('/taller-rampas/:id/evidencia', async (req, res) => {
     db.query('SELECT evidencia_url FROM taller_rampas WHERE id = ?', [req.params.id], async (err, rows) => {
-        if (err) return res.status(500).send('Error BD');
-        if (!rows.length || !rows[0].evidencia_url) return res.status(404).send('Sin evidencia');
+        if (err) return res.status(500).json({ error: 'Error BD' });
+        if (!rows.length || !rows[0].evidencia_url) return res.status(404).json({ error: 'Sin evidencia' });
         const url = rows[0].evidencia_url;
         try {
             const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
             const key = s3KeyFromUrl(url);
-            if (!key) return res.redirect(url);
+            if (!key) return res.json({ url });
             const signed = await getPresignedUrl(key, 3600);
-            res.redirect(signed);
+            res.json({ url: signed });
         } catch(e) {
             console.error('S3 Presign Error:', e);
-            res.redirect(url); // fallback
+            res.json({ url }); // fallback
         }
     });
 });

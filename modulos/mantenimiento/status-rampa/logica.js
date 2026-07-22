@@ -586,7 +586,7 @@ window.srAbrirDetalle = function(id) {
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
     html += '    <div class="p-3" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem; color:#334155; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
     if (e.evidencia_url) {
-        html += '    <div class="mt-3"><a href="/api/taller-rampas/' + (e._id || e.id) + '/evidencia" target="_blank" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
+        html += '    <div class="mt-3"><a href="#" onclick="event.preventDefault(); window.srAbrirEvidencia(' + (e._id || e.id) + ')" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
     }
     html += '  </div>';
     html += '</div>';
@@ -698,13 +698,30 @@ window.srEditarRampa = function(id) {
     if (hEvid) hEvid.value = e.evidencia_url || '';
     if (aEvid) {
         if (e.evidencia_url) {
-            aEvid.href = '/api/taller-rampas/' + (e._id || e.id) + '/evidencia';
+            aEvid.href = "#";
+            aEvid.onclick = function(ev) { ev.preventDefault(); window.srAbrirEvidencia(e._id || e.id); };
             aEvid.style.display = 'inline';
         } else {
             aEvid.style.display = 'none';
         }
     }
     srAbrirDrawer('sr-drawer-registro');
+};
+
+window.srAbrirEvidencia = async function(id) {
+    var win = window.open('', '_blank');
+    try {
+        var r = await fetch('/api/taller-rampas/' + id + '/evidencia', {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+        });
+        if (!r.ok) throw new Error();
+        var d = await r.json();
+        if (d.url) win.location.href = d.url;
+        else win.close();
+    } catch (e) {
+        win.close();
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al abrir la evidencia', 'danger');
+    }
 };
 
 // ── Liberar entrada ──────────────────────────────────────────────
