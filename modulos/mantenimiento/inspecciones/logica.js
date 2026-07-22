@@ -2370,10 +2370,10 @@ window.guardarRegistroFrenos = async function() {
         tecnico: tecnico,
         tipo_inspeccion: 'Solo Frenos',
         detalles_json: JSON.stringify([{ seccion: "Frenos", items: itemsFrenos }]),
-        km: 0,
+        km_tablero: 0,
         fecha_ingreso: document.getElementById('rf-fecha') ? document.getElementById('rf-fecha').value : new Date().toISOString().split('T')[0],
         cliente: "-",
-        dias: 30,
+        dias_propuestos: 30,
         id_ot: null
     };
 
