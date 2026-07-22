@@ -899,8 +899,17 @@ function srRenderHistorial() {
             var diffH  = (hEnd - hStart) / 3600000;
             if (diffH > 0) hTaller = diffH.toFixed(1) + 'h';
         }
+        var rampaId = parseInt(r.rampa, 10);
+        var rIdx = window.srCatRampas ? window.srCatRampas.findIndex(function(c) { return c.id == rampaId; }) : -1;
+        var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
+        var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || String(rampaId)) : String(rampaId);
+        var textRampa = (rampaId >= 1 && rampaId <= 3) ? String(rampaId) : rNom;
+        var styleRampa = (rampaId >= 1 && rampaId <= 3) 
+            ? 'background:#64748b;' 
+            : 'background:#64748b; padding:2px 8px; border-radius:10px; font-size:0.65rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block; vertical-align:middle;';
+            
         return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
-            + '<td style="padding:5px 8px;"><span class="sr-badge-rampa" style="background:#64748b;">' + (r.rampa || '—') + '</span></td>'
+            + '<td style="padding:5px 8px;"><span class="' + ((rampaId >= 1 && rampaId <= 3) ? 'sr-badge-rampa' : '') + '" style="' + styleRampa + ' color:#fff; font-weight:700;" title="' + _srEsc(rNom) + '">' + _srEsc(textRampa) + '</span></td>'
             + '<td style="padding:5px 8px;font-weight:700;">' + (r.placa || '—') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fIng) + ' ' + (r.hora_ingreso ? String(r.hora_ingreso).slice(0,5) : '') + '</td>'
             + '<td style="padding:5px 8px;font-size:0.78rem;">' + srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') + '</td>'
