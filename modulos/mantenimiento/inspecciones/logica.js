@@ -638,6 +638,17 @@ function filtrarStatusAvanzado() {
     if (!isHistorialStatus) {
         updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig);
     }
+
+    // Filtrar también tabla Frenos si está renderizada
+    let rowsFrenos = document.querySelectorAll('#cuerpoTablaFrenos tr');
+    if (rowsFrenos.length > 0) {
+        rowsFrenos.forEach(row => {
+            if (row.cells.length > 1) {
+                let textoFila = row.textContent.toLowerCase();
+                row.style.display = (!txt || textoFila.includes(txt)) ? '' : 'none';
+            }
+        });
+    }
 }
 
 window.verDetalleInspeccion = async function(idBusqueda, autoDescargarPDF) {
