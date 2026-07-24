@@ -882,6 +882,18 @@ router.post('/entradas/:id/archivo/:tipo', _multerInv.single('archivo'), (req, r
 // ============================================================
 router.get('/salidas', (req, res) => {
     const SEP_FIELD = '\x1F', SEP_ROW = '\x1E';
+    const q = (req.query.q || '').trim();
+
+    // Si hay búsqueda por ID específico, no aplicar límite
+    let whereClause = '';
+    let queryParams = [];
+    if (q) {
+        whereClause = 'WHERE s.id LIKE ?';
+        queryParams = [`%${q}%`];
+    }
+
+    const limit = q ? '' : 'LIMIT 2000';
+
     db.query(`SELECT s.*,
               GROUP_CONCAT(CONCAT_WS('\x1F',
                 COALESCE(d.inventario_id,''),
@@ -894,7 +906,8 @@ router.get('/salidas', (req, res) => {
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
               LEFT JOIN inventario i ON d.inventario_id = i.id
-              GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC LIMIT 300`, (err, rows) => {
+              ${whereClause}
+              GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         rows.forEach(r => {
             r.items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
