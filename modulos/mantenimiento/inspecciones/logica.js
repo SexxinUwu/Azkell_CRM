@@ -525,9 +525,9 @@ function mostrarStatusInspecciones(inspecciones) {
         ], 'fleet_cols_insp');
     }
     
-    // Renderizar tabla de frenos
+    // Renderizar tabla de frenos (pasar datos CRUDOS para incluir registros 'Solo Frenos')
     if (typeof renderTablaFrenos === 'function') {
-        renderTablaFrenos(window.dataFinalInspGlobal);
+        renderTablaFrenos(window.dataGlobalInspecciones || window.dataFinalInspGlobal);
     }
 }
 
@@ -2550,9 +2550,11 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
                 itemFrenos.dataFrenos.forEach(it => {
                     let nom = (it.item || '').toLowerCase();
                     let est = (it.estado || '').replace('%', '').trim();
-                    if (nom.includes("delantera")) valZapDel = est;
+                    // IMPORTANT: check '2do'/'loca' BEFORE 'tracci' to avoid misclassifying
+                    // items like 'Zapatas Eje Loca o 2do Eje Tracciona'
+                    if (nom.includes("delantera") || nom.includes("pastilla")) valZapDel = est;
+                    else if (nom.includes("2do eje") || nom.includes("segundo eje") || (nom.includes("loca") && !nom.includes("1er"))) valZap2 = est;
                     else if (nom.includes("1er eje") || nom.includes("primer eje") || nom.includes("tracci")) valZap1 = est;
-                    else if (nom.includes("2do eje") || nom.includes("segundo eje") || nom.includes("loca")) valZap2 = est;
                     else if (nom.includes("embrague")) valDisco = est;
                     
                     if (it.obs) obs = it.obs;
