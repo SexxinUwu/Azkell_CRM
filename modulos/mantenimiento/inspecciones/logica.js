@@ -2470,11 +2470,12 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
     
-    // Sort descending by ID (numeric) to ensure the most recent is processed first
+    // Sort descending by ID — extract trailing number from IDs like 'INSP-2026-0085'
+    const extractIdNum = (id) => { const m = String(id || '').match(/(\d+)$/); return m ? parseInt(m[1], 10) : 0; };
     let arrOrdenado = [...(todasLasInspecciones || [])].sort((a, b) => {
         let iA = a.insp || a;
         let iB = b.insp || b;
-        return (parseInt(iB.id) || 0) - (parseInt(iA.id) || 0);
+        return extractIdNum(iB.id) - extractIdNum(iA.id);
     });
 
     arrOrdenado.forEach(item => {
