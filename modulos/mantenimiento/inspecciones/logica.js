@@ -2470,11 +2470,11 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     // Obtener la inspección más reciente de Frenos por placa (puede ser General con sección Frenos, o "Solo Frenos")
     let frenosMasRecientesPorPlaca = new Map();
     
-    // Sort descending by ID to ensure the most recent is processed first
+    // Sort descending by ID (numeric) to ensure the most recent is processed first
     let arrOrdenado = [...(todasLasInspecciones || [])].sort((a, b) => {
         let iA = a.insp || a;
         let iB = b.insp || b;
-        return String(iB.id || '').localeCompare(String(iA.id || ''));
+        return (parseInt(iB.id) || 0) - (parseInt(iA.id) || 0);
     });
 
     arrOrdenado.forEach(item => {
