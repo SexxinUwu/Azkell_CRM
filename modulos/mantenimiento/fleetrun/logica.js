@@ -275,6 +275,7 @@ function mostrarFleetrun(datos) {
       });
   }
   
+  if (!tbodyFleetrun) return;
   tbodyFleetrun.innerHTML = html;
   if(typeof window.fleetrunPaginar === 'function') window.fleetrunPaginar(0);
   if(datosAMostrar && datosAMostrar.length > 0) {
