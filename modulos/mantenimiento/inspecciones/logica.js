@@ -525,9 +525,10 @@ function mostrarStatusInspecciones(inspecciones) {
         ], 'fleet_cols_insp');
     }
     
-    // Renderizar tabla de frenos (pasar datos CRUDOS para incluir registros 'Solo Frenos')
+    // Renderizar tabla de frenos — usar variable local dataGlobalInspecciones
+    // (window.dataGlobalInspecciones no existe; la variable es local al módulo)
     if (typeof renderTablaFrenos === 'function') {
-        renderTablaFrenos(window.dataGlobalInspecciones || window.dataFinalInspGlobal);
+        renderTablaFrenos(dataGlobalInspecciones);
     }
 }
 
@@ -2153,7 +2154,12 @@ window.recargarInspecciones = function () {
     dataGlobalInspecciones = null;
     fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
         .then(function (r) { return r.json(); })
-        .then(function (r) { mostrarStatusInspecciones(r.data || []); })
+        .then(function (r) {
+            // Guardar en variable local Y en window para acceso externo
+            dataGlobalInspecciones = r.data || [];
+            window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
+            mostrarStatusInspecciones(dataGlobalInspecciones);
+        })
         .catch(function () { mostrarStatusInspecciones([]); });
 };
 
@@ -2433,9 +2439,17 @@ window.guardarRegistroFrenos = async function() {
             if (typeof rotToast === 'function') rotToast("Inspección de frenos registrada", "bg-success");
             let m = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarFrenos'));
             if(m) m.hide();
-            if (typeof window.recargarInspecciones === 'function') {
-                window.recargarInspecciones();
-            }
+            // Recargar TODOS los datos de inspecciones y re-renderizar la tabla de frenos
+            fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
+                .then(function(r) { return r.json(); })
+                .then(function(r) {
+                    dataGlobalInspecciones = r.data || [];
+                    window._dataGlobalInspeccionesRaw = dataGlobalInspecciones;
+                    if (typeof renderTablaFrenos === 'function') {
+                        renderTablaFrenos(dataGlobalInspecciones);
+                    }
+                })
+                .catch(function(e) { console.error('Error recargando frenos:', e); });
         } else {
             alert("Error: " + (json.data || "Error al guardar inspección"));
         }
@@ -2543,9 +2557,16 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
         if (itemFrenos) {
             tec = itemFrenos.insp.tecnico || "-";
             if (itemFrenos.insp.fecha_ingreso) {
-                let ds = itemFrenos.insp.fecha_ingreso.split('T')[0].split('-');
-                if (ds.length === 3) fec = `${ds[2]}/${ds[1]}/${ds[0]}`;
-                else fec = itemFrenos.insp.fecha_ingreso;
+                let fi = itemFrenos.insp.fecha_ingreso;
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(fi)) {
+                    // Ya viene formateado como DD/MM/YYYY desde la API
+                    fec = fi;
+                } else {
+                    // Formato ISO: 2026-07-24T05:00:00.000Z o 2026-07-24
+                    let ds = fi.split('T')[0].split('-');
+                    if (ds.length === 3) fec = `${ds[2]}/${ds[1]}/${ds[0]}`;
+                    else fec = fi;
+                }
             }
             if (itemFrenos.dataFrenos) {
                 itemFrenos.dataFrenos.forEach(it => {
