@@ -607,10 +607,10 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
     });
     if (!match) return 0;
 
+    // Usar _metricaMap (cargado desde /api/config-metrica) — fuente confiable
     var placaInput = document.getElementById('f_placa').value;
-    var pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(function(p) { return p[0] === placaInput; });
-    var metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
-    if (metrica.includes('HR') || metrica.includes('HORA')) {
+    var metrica = (window._metricaMap && window._metricaMap[placaInput.toUpperCase()]) || 'km';
+    if (metrica === 'horas') {
         return parseFloat(match.frecuencia_horas) || parseFloat(match.frecuencia_km) || 0;
     }
     return parseFloat(match.frecuencia_km) || parseFloat(match.frecuencia_horas) || 0;
@@ -664,17 +664,27 @@ window.renderTiposMulti = function() {
         tbody.innerHTML = '<tr id="f_tipomp-empty-row"><td colspan="4" class="text-center py-3" style="color:#94a3b8; font-size:0.8rem;"><i class="bi bi-inbox me-1"></i>Agrega tipos de mantenimiento</td></tr>';
     } else {
         tbody.innerHTML = window.fleetrunTiposMulti.map(function(item, idx) {
-            var frecStr = item.frecuencia > 0 
-                ? item.frecuencia.toLocaleString('es-PE') + ' ' + unidad 
-                : '<span style="color:#f59e0b"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin frec.</span>';
-            var proxStr = item.kmProximo > 0 
-                ? '<span class="fw-bold" style="color:#059669">' + item.kmProximo.toLocaleString('es-PE') + ' ' + unidad + '</span>' 
+            // Frecuencia editable inline
+            var frecInput = '<input type="number" class="form-control form-control-sm text-center border-0 bg-transparent fw-bold" ' +
+                'style="width:75px; display:inline-block; color:#0369a1;" ' +
+                'value="' + (item.frecuencia || '') + '" min="0" ' +
+                'onchange="window._editarFrecTipo(' + idx + ', this.value)" ' +
+                'title="Editar frecuencia para este registro">' +
+                '<span style="color:#64748b; font-size:0.78rem;"> ' + unidad + '</span>';
+            // KM Próximo editable inline
+            var proxInput = item.kmProximo > 0
+                ? '<input type="number" class="form-control form-control-sm text-center border-0 fw-bold" ' +
+                  'style="width:90px; display:inline-block; color:#059669; background:#f0fdf4; border-radius:6px;" ' +
+                  'value="' + item.kmProximo + '" min="0" ' +
+                  'onchange="window._editarProxTipo(' + idx + ', this.value)" ' +
+                  'title="Editar próximo para este registro"> ' +
+                  '<span style="color:#64748b; font-size:0.78rem;">' + unidad + '</span>'
                 : '—';
             return '<tr style="border-top:1px solid #e2e8f0; transition:background 0.15s;" onmouseenter="this.style.background=\'#f1f5f9\'" onmouseleave="this.style.background=\'transparent\'">' +
                 '<td class="ps-3 py-2"><span class="badge rounded-pill px-2 py-1 shadow-sm" style="background:#0369a1; font-size:0.78rem; font-weight:600;">' + item.tipo + '</span></td>' +
-                '<td class="text-center py-2" style="font-size:0.82rem; color:#334155;">' + frecStr + '</td>' +
-                '<td class="text-center py-2" style="font-size:0.82rem;">' + proxStr + '</td>' +
-                '<td class="pe-3 py-2 text-center"><button type="button" class="btn btn-sm p-0 border-0" style="width:24px;height:24px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseenter="this.style.background=\'#dc2626\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'fee2e2\';this.style.color=\'#dc2626\'" onclick="window.eliminarTipoMulti(\'' + item.tipo + '\')"><i class="bi bi-x" style="font-size:0.9rem;"></i></button></td>' +
+                '<td class="text-center py-2" style="font-size:0.82rem; color:#334155;">' + frecInput + '</td>' +
+                '<td class="text-center py-2" style="font-size:0.82rem;">' + proxInput + '</td>' +
+                '<td class="pe-3 py-2 text-center"><button type="button" class="btn btn-sm p-0 border-0" style="width:24px;height:24px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseenter="this.style.background=\'#dc2626\';this.style.color=\'#fff\'" onmouseleave="this.style.background=\'fee2e2\';this.style.color=\'#dc2626\'" onclick="window.eliminarTipoMulti(\'' + item.tipo + '\')" title="Eliminar tipo"><i class="bi bi-x" style="font-size:0.9rem;"></i></button></td>' +
                 '</tr>';
         }).join('');
     }
@@ -1875,14 +1885,14 @@ window.calcularFrecuenciaFleetrunMulti = function(tipoMP, prefix) {
 
     if (match) {
         let placaInput = document.getElementById(prefix + '_placa').value;
-        let pMatch = window.dataGlobalPlacas && window.dataGlobalPlacas.find(p => p[0] === placaInput);
-        let metrica = (pMatch && pMatch[23] ? pMatch[23].toString().toUpperCase() : 'KM');
+        // Usar _metricaMap — fuente confiable para tipo de métrica por placa
+        let metrica = (window._metricaMap && window._metricaMap[placaInput.toUpperCase()]) || 'km';
         
         let frec = 0;
-        if (metrica.includes('HR') || metrica.includes('HORA')) {
-            frec = match.frecuencia_horas || match.frecuencia_km || 0;
+        if (metrica === 'horas') {
+            frec = parseFloat(match.frecuencia_horas) || parseFloat(match.frecuencia_km) || 0;
         } else {
-            frec = match.frecuencia_km || match.frecuencia_horas || 0;
+            frec = parseFloat(match.frecuencia_km) || parseFloat(match.frecuencia_horas) || 0;
         }
 
         if (frec > 0) {
@@ -1894,5 +1904,28 @@ window.calcularFrecuenciaFleetrunMulti = function(tipoMP, prefix) {
                 }
             }
         }
+    }
+};
+
+// ── Editar frecuencia inline en la tabla multi-tipo ─────────────
+window._editarFrecTipo = function(idx, newVal) {
+    var v = parseFloat(newVal) || 0;
+    if (window.fleetrunTiposMulti[idx]) {
+        window.fleetrunTiposMulti[idx].frecuencia = v;
+        // Recalcular próximo automáticamente si hay un km actual
+        var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+        if (v > 0 && kmAct > 0) {
+            window.fleetrunTiposMulti[idx].kmProximo = kmAct + v;
+        }
+        window.renderTiposMulti();
+    }
+};
+
+// ── Editar KM/Hora próximo inline en la tabla multi-tipo ─────────
+window._editarProxTipo = function(idx, newVal) {
+    var v = parseFloat(newVal) || 0;
+    if (window.fleetrunTiposMulti[idx]) {
+        window.fleetrunTiposMulti[idx].kmProximo = v;
+        window.renderTiposMulti();
     }
 };
