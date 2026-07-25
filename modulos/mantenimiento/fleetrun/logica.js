@@ -1322,13 +1322,66 @@ window.limpiarFiltrosFleetrun = function() {
 };
 
 window.toggleGraficosFleetrun = function() {
-    let panel = document.getElementById('panelGraficosFleetrun');
-    if(panel.style.display === 'none') {
-        panel.style.display = 'flex';
+    var panel = document.getElementById('scaniaDashboard');
+    var icon  = document.getElementById('iconToggleGraficos');
+    var btn   = document.getElementById('btnToggleGraficosFleetrun');
+    if (!panel) return;
+
+    var hidden = panel.dataset.graficosHidden === '1';
+
+    if (hidden) {
+        // Mostrar: animar desde 0 hasta altura real
+        panel.style.maxHeight  = '0px';
+        panel.style.opacity    = '0';
+        panel.style.marginBottom = '0';
+        panel.style.overflow   = 'hidden';
+        panel.style.transition = 'max-height 0.35s ease, opacity 0.3s ease, margin-bottom 0.35s ease';
+        requestAnimationFrame(function() {
+            panel.style.maxHeight    = '600px';
+            panel.style.opacity      = '1';
+            panel.style.marginBottom = '';
+        });
+        panel.dataset.graficosHidden = '0';
+        if (icon) { icon.className = 'bi bi-bar-chart-fill text-warning'; }
+        if (btn)  { btn.title = 'Ocultar gráficos'; btn.style.opacity = '1'; }
+        localStorage.setItem('fleetrun_graficos_hidden', '0');
     } else {
-        panel.style.display = 'none';
+        // Ocultar: animar hasta 0
+        panel.style.maxHeight  = panel.scrollHeight + 'px';
+        panel.style.opacity    = '1';
+        panel.style.overflow   = 'hidden';
+        panel.style.transition = 'max-height 0.35s ease, opacity 0.3s ease, margin-bottom 0.35s ease';
+        requestAnimationFrame(function() {
+            panel.style.maxHeight    = '0px';
+            panel.style.opacity      = '0';
+            panel.style.marginBottom = '0px';
+        });
+        panel.dataset.graficosHidden = '1';
+        if (icon) { icon.className = 'bi bi-bar-chart-line text-secondary'; }
+        if (btn)  { btn.title = 'Mostrar gráficos'; btn.style.opacity = '0.55'; }
+        localStorage.setItem('fleetrun_graficos_hidden', '1');
     }
 };
+
+// Restaurar preferencia al cargar el módulo
+(function _initToggleGraficos() {
+    if (localStorage.getItem('fleetrun_graficos_hidden') === '1') {
+        var panel = document.getElementById('scaniaDashboard');
+        var icon  = document.getElementById('iconToggleGraficos');
+        var btn   = document.getElementById('btnToggleGraficosFleetrun');
+        if (panel) {
+            panel.style.maxHeight    = '0px';
+            panel.style.opacity      = '0';
+            panel.style.marginBottom = '0px';
+            panel.style.overflow     = 'hidden';
+            panel.style.transition   = 'max-height 0.35s ease, opacity 0.3s ease, margin-bottom 0.35s ease';
+            panel.dataset.graficosHidden = '1';
+        }
+        if (icon) icon.className = 'bi bi-bar-chart-line text-secondary';
+        if (btn)  { btn.title = 'Mostrar gráficos'; btn.style.opacity = '0.55'; }
+    }
+})();
+
 
 window.initGraficoFleetrun = function() {
     let ctx = document.getElementById('chartFleetrunStatus');
