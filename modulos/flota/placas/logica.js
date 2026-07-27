@@ -466,19 +466,27 @@ function renderizarPaginaPlacas() {
     // Actualizar controles paginación
     let pagHtml = '';
     if (totalPaginas > 1) {
-        pagHtml += '<button class="btn btn-xs btn-outline-secondary" onclick="cambiarPaginaPlacas(-1)" '+(paginaActualPlacas<=1?'disabled':'')+'>‹ Ant</button>';
+        pagHtml += '<nav><ul class="pagination pagination-sm mb-0 shadow-sm" style="border-radius: 8px; overflow: hidden; font-size: 0.85rem;">';
+        
+        pagHtml += '<li class="page-item ' + (paginaActualPlacas<=1?'disabled':'') + '"><button class="page-link border-0 text-dark fw-bold" onclick="cambiarPaginaPlacas(-1)"><i class="bi bi-chevron-left"></i></button></li>';
         
         var start = Math.max(1, paginaActualPlacas - 2), end = Math.min(totalPaginas, start + 4);
         if (end - start < 4) start = Math.max(1, end - 4);
         
         for (var i = start; i <= end; i++) {
-            pagHtml += '<button class="btn btn-xs '+(i===paginaActualPlacas?'btn-primary':'btn-outline-secondary')+'" onclick="window._placasIrPagina('+i+')">'+i+'</button>';
+            if (i === paginaActualPlacas) {
+                pagHtml += '<li class="page-item active"><button class="page-link border-0 bg-primary text-white fw-bold shadow-sm rounded-2 mx-1">' + i + '</button></li>';
+            } else {
+                pagHtml += '<li class="page-item"><button class="page-link border-0 text-muted fw-bold mx-1 hover-bg-light rounded-2" onclick="window._placasIrPagina('+i+')">' + i + '</button></li>';
+            }
         }
         
-        pagHtml += '<button class="btn btn-xs btn-outline-secondary" onclick="cambiarPaginaPlacas(1)" '+(paginaActualPlacas>=totalPaginas?'disabled':'')+'>Sig ›</button>';
-        pagHtml += '<span class="text-muted small ms-2">Pág '+paginaActualPlacas+' de '+totalPaginas+'</span>';
+        pagHtml += '<li class="page-item ' + (paginaActualPlacas>=totalPaginas?'disabled':'') + '"><button class="page-link border-0 text-dark fw-bold" onclick="cambiarPaginaPlacas(1)"><i class="bi bi-chevron-right"></i></button></li>';
+        
+        pagHtml += '</ul></nav>';
+        pagHtml += '<span class="text-muted fw-bold ms-3" style="font-size: 0.8rem;">Página '+paginaActualPlacas+' de '+totalPaginas+'</span>';
     }
-    if(ctrlPag) ctrlPag.innerHTML = pagHtml;
+        if(ctrlPag) ctrlPag.innerHTML = pagHtml;
 
     if (window.placasSeleccionadasGlobalmente) {
         const selSet = new Set(window.placasSeleccionadasGlobalmente);
@@ -697,8 +705,7 @@ window.abrirDetallePlaca = function(event, index) {
                     bCl = 'secondary';
                     diasLabel = 'Registrada';
                 }
-                const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
-                var lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
+                const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
                 return '<div class="d-flex gap-3 mb-3">'
                     + '<div class="d-flex flex-column align-items-center" style="width:2.2rem;">'
                     + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' text-white shadow-sm" style="width:2.2rem;height:2.2rem;flex-shrink:0;">'
@@ -750,7 +757,7 @@ window._cargarHistorialPlaca = function() {
     var body  = document.getElementById('tab-historial-body');
     if (!body || !placa) return;
 
-    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial clínico de trabajos...</div>';
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial de trabajos...</div>';
 
     fetch('/api/ot-trabajos')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -769,38 +776,55 @@ window._cargarHistorialPlaca = function() {
                 return;
             }
 
-            body.innerHTML = '<div style="padding:0.5rem;">' + rows.map(function(t, idx) {
+            body.innerHTML = '<div style="padding:0.5rem 1rem;">' + rows.map(function(t, idx) {
                 var iso = t.fecha_trabajo || '';
                 var s = String(iso).replace('Z', '').replace('+00:00', '');
                 if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
                 var d = new Date(s);
-                var fechaStr = isNaN(d.getTime()) ? (iso.split('T')[0] || '—') : d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
+                var fechaStr = isNaN(d.getTime()) ? (iso.split('T')[0] || '—') : d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
                 
                 var trabajo = t.trabajo_realizado || 'Trabajo sin descripción';
                 
                 var personal = t.tecnico || 'Sin asignar';
+                var tipoOt = t.tipo || 'MANTENIMIENTO';
                 try {
                     var det = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {});
                     if (det.personal) personal = det.personal;
+                    if (det.tipo) tipoOt = det.tipo;
                 } catch(e) {}
 
                 var idTrabajo = t.id_ot || t.ticket_visita || 'TR';
                 var idOt = t.ot_id || t.id_ot_padre || 'OT';
+                if (!String(idOt).startsWith('OT-') && String(idOt) !== 'OT') idOt = 'OT-' + idOt;
 
-                var lineH = idx < rows.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
-                var lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
+                var lineH = idx < rows.length - 1 ? '<div style="width:2px;flex-grow:1;background:#e2e8f0;margin-top:2px;min-height:30px;"></div>' : '';
+                
                 return '<div class="d-flex gap-3 mb-3">'
-                    + '<div class="d-flex flex-column align-items-center" style="width:2.2rem;">'
-                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' text-white shadow-sm" style="width:2.2rem;height:2.2rem;flex-shrink:0;">'
-                    + '<i class="bi bi-clipboard2-check" style="font-size:1.1rem;"></i></div>'
+                    + '<div class="d-flex flex-column align-items-center" style="width:1.5rem; margin-top:0.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-white" style="width:1.5rem;height:1.5rem;flex-shrink:0; border: 1.5px solid #10b981;">'
+                    + '<i class="bi bi-check2 text-success" style="font-size:0.9rem; -webkit-text-stroke: 0.5px;"></i></div>'
                     + lineH + '</div>'
-                    + '<div class="flex-grow-1 bg-light rounded-3 p-3 border text-start shadow-sm">'
+                    
+                    + '<div class="flex-grow-1 bg-white rounded-4 p-3 border" style="box-shadow: 0 2px 8px rgba(0,0,0,0.02); border-color:#e2e8f0 !important;">'
+                    
                     + '<div class="d-flex justify-content-between align-items-center mb-2">'
-                    + '<span class="fw-bold text-dark" style="font-size:0.95rem;">#' + (i.id || '—') + '</span>'
-                    + '<span class="badge bg-' + bCl + ' text-white px-2 py-1" style="font-size:0.75rem;">' + diasLabel + '</span>'
+                    + '  <div class="d-flex align-items-center gap-2">'
+                    + '    <span class="badge" style="background-color:#eff6ff; color:#3b82f6; font-weight:700; font-size:0.75rem; letter-spacing:0.3px; padding:0.4rem 0.6rem;">#' + idOt + '</span>'
+                    + '    <span style="color:#94a3b8; font-size:0.7rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">' + tipoOt + '</span>'
+                    + '  </div>'
+                    + '  <span class="badge rounded-pill" style="background-color:#dcfce7; color:#166534; font-weight:600; font-size:0.7rem; padding:0.35rem 0.6rem;"><i class="bi bi-check text-success me-1"></i>Finalizado</span>'
                     + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.85rem;" class="mb-1"><i class="bi bi-calendar3 me-2"></i> ' + (i.fecha_ingreso || '—') + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.85rem;"><i class="bi bi-person me-2"></i> ' + (i.tecnico || 'Sin asignar') + '</div>'
+                    
+                    + '<div class="mb-3 mt-3">'
+                    + '  <div class="fw-bold" style="color:#1e293b; font-size:0.9rem; line-height:1.3; margin-bottom:0.2rem;">' + trabajo + '</div>'
+                    + '  <div style="color:#64748b; font-size:0.8rem; line-height:1.4;">Realizado por: ' + personal + '</div>'
+                    + '</div>'
+                    
+                    + '<div class="d-flex align-items-center justify-content-between mt-1">'
+                    + '  <div style="color:#94a3b8; font-size:0.8rem; font-weight:500;"><i class="bi bi-calendar3 me-1"></i> ' + fechaStr + '</div>'
+                    + '  <a href="javascript:void(0)" class="text-primary text-decoration-none fw-bold" style="font-size:0.8rem;">Detalles <i class="bi bi-chevron-right" style="font-size:0.7rem;"></i></a>'
+                    + '</div>'
+                    
                     + '</div></div>';
             }).join('') + '</div>';
         })
