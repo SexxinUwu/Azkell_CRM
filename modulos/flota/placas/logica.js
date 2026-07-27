@@ -705,70 +705,20 @@ window.abrirDetallePlaca = function(event, index) {
     }
 
     // ── Pestaña MP (Fleetrun) ─────────────────────────────────────────────────
-    const fleetPanelEl = document.getElementById('tab-fleet-panel-body');
+    const fleetPanelEl = document.getElementById('odp-tab-fleet');
     if (fleetPanelEl) {
         const fleetRecs = (window.dataGlobalFleetrun || []).filter(function(r) {
             return (r[4] || '').toString().toUpperCase().trim() === placaActual;
         });
         const utsP = p[19] || '';
-        const umbralP = (utsP || '').toUpperCase() === 'LOCAL' ? 100 : 1500;
-        const wD2 = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaActual) : null;
-        const esHorasLocal = (utsP || '').toUpperCase() === 'LOCAL';
-        const unitL = esHorasLocal ? ' h' : ' km';
-
-        const byTipo = {};
-        fleetRecs.forEach(function(r) {
-            const tipo = (r[8] || '').toUpperCase().trim();
-            if (!byTipo[tipo] || parseInt(r[0]) > parseInt(byTipo[tipo][0])) byTipo[tipo] = r;
-        });
-        let recsLatest = Object.values(byTipo);
-        recsLatest.sort(function(a, b) {
-            const ta = (a[8] || '').toUpperCase().trim(), tb = (b[8] || '').toUpperCase().trim();
-            const mpa = ta.match(/^MP(\d+)$/), mpb = tb.match(/^MP(\d+)$/);
-            if (mpa && mpb) return parseInt(mpa[1]) - parseInt(mpb[1]);
-            if (mpa) return -1; if (mpb) return 1;
-            return ta.localeCompare(tb);
-        });
-
-        if (!recsLatest.length) {
-            fleetPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-tools fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de mantenimiento.</div></div>';
-        } else {
-            fleetPanelEl.innerHTML = '<div style="padding:0.5rem;">' + recsLatest.map(function(r) {
-                const kmProx = parseFloat(r[11]) || 0;
-                const kmGps = wD2 ? wD2.km : (parseFloat(r[14]) || 0);
-                const kmUlt = parseFloat(r[9]) || 0;
-                const frecKm = parseFloat(r[10]) || 0;
-                const falta = kmProx - kmGps;
-                
-                let bCl = 'success';
-                let estadoLabel = 'VIGENTE';
-                if (falta <= 0) {
-                    bCl = 'danger';
-                    estadoLabel = 'VENCIDO';
-                } else if (falta <= umbralP) {
-                    bCl = 'warning';
-                    estadoLabel = 'PRÓXIMO';
-                }
-
-                const fechaM = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
-                return '<div class="card border-0 shadow-sm mb-3 rounded-4" style="background:#fff;">' +
-                    '<div class="card-body p-3">' +
-                        '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                            '<h6 class="mb-0 fw-bold text-dark text-uppercase">' + (r[8] || '—') + '</h6>' +
-                            '<span class="badge rounded-pill" style="background-color: #e0f2fe; color: #0284c7;"><i class="bi bi-stopwatch"></i> ' + frecKm.toLocaleString() + unitL + '</span>' +
-                        '</div>' +
-                        '<div class="d-flex justify-content-between text-muted" style="font-size:0.75rem;">' +
-                            '<span>Último: ' + fechaM + ' a ' + kmUlt.toLocaleString() + unitL + '</span>' +
-                            '<span>' + (esHorasLocal ? 'HM' : 'GPS') + ': ' + kmGps.toLocaleString() + unitL + '</span>' +
-                        '</div>' +
-                        '<hr class="my-2" style="border-top: 1px dashed #cbd5e1;">' +
-                        '<div class="d-flex justify-content-between align-items-center">' +
-                            '<span class="fw-bold text-' + bCl + '" style="font-size:0.75rem;">' + estadoLabel + ' (' + (falta < 0 ? 'Excedido por ' : 'Faltan ') + Math.abs(falta).toLocaleString() + unitL + ')</span>' +
-                            '<i class="bi bi-arrow-right text-muted"></i>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
+        
+        window._odpFleetRecs = fleetRecs;
+        window._odpFleetMode = 'current';
+        window._odpFleetUts = utsP;
+        window._odpPlacaActual = placaActual;
+        
+        if (typeof window._buildFleetTab === 'function') {
+            window._buildFleetTab('current');
         }
     }
 
