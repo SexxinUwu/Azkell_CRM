@@ -1,4 +1,4 @@
-// ================================================================
+﻿// ================================================================
 // Módulo Reportes OT — Azkell Fleet
 // Patrón SPA: window.* globals, init_reportes_ot() entry point
 // Muestra histórico filtrable de Órdenes de Trabajo
@@ -1074,7 +1074,7 @@ window.rotExportarPDF = function() {
 };
 
 // ── Generador global de PDF de OT (reutilizable desde otros módulos) ──
-window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
+window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlReady) {
     if (typeof window.html2pdf !== 'function') {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Librería html2pdf no cargada.', 'danger');
         return;
@@ -1450,6 +1450,11 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla) {
                   + '<button id="btnPrint" onclick="window.print()">Imprimir / Guardar PDF</button>\n'
                   + htmlBody
                   + '\n</body>\n</html>';
+    // Si se pasa un callback, devolver el HTML sin abrir ventana (para preview en modal)
+    if (typeof _onHtmlReady === 'function') {
+        _onHtmlReady(finalHtml);
+        return;
+    }
     // Usar Blob con charset UTF-8 explicito para evitar caracteres corruptos
     var blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
     var url = URL.createObjectURL(blob);
@@ -2892,92 +2897,77 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
 
 window.rotVerFormatoOT = function(idOT) {
     if (typeof window.rotToast === 'function') window.rotToast('Cargando detalle de OT...', 'bg-info');
-    
-    // Fetch trabajos y materiales si no los tenemos
+
     Promise.all([
-        fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOT)).then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(r => r.ok ? r.json() : []).catch(() => [])
+        fetch('/api/ot-trabajos?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
     ]).then(function(res) {
-        var trabajos = Array.isArray(res[0]) ? res[0] : [];
+        var trabajos   = Array.isArray(res[0]) ? res[0] : [];
         var materiales = Array.isArray(res[1]) ? res[1] : [];
-        var ot = window.rotData.find(function(o) { return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-        
-        if (!ot) {
-            alert('OT no encontrada.');
-            return;
-        }
+        var ot = window.rotData.find(function(o) {
+            return String(o.ticket_entrada || o.id_ot || '') === String(idOT);
+        });
+        if (!ot) { alert('OT no encontrada.'); return; }
 
-        // Usamos un pequeño truco: llamamos a la misma función generarPDF_OT, pero sobreescribimos temporalmente window.open
-        var originalOpen = window.open;
-        var modalContentHtml = '';
+        window.currentVerTrabajos   = trabajos;
+        window.currentVerMateriales = materiales;
 
-        window.open = function() {
-            return {
-                document: {
-                    open: function() {},
-                    write: function(htmlStr) {
-                        modalContentHtml = htmlStr;
-                    },
-                    close: function() {}
-                },
-                print: function() {},
-                onload: null
-            };
-        };
-
-        window.generarPDF_OT(ot, trabajos, materiales);
-        
-        // Restaurar window.open
-        window.open = originalOpen;
-
-        // Quitar el botón de imprimir del htmlStr porque aquí solo vamos a ver (y si queremos imprimir le ponemos un botón nativo del modal)
-        modalContentHtml = modalContentHtml.replace('<button id="btnPrint" onclick="window.print()">ðŸ–¨ï¸ Imprimir / Guardar PDF</button>', '');
-
-        // Mostrar en un modal con iframe
+        // Crear el modal si no existe
         if (!document.getElementById('modalFormatoOT')) {
             var m = document.createElement('div');
-            m.innerHTML = '<div class="modal fade" id="modalFormatoOT" tabindex="-1" aria-hidden="true">'
-                        + '  <div class="modal-dialog modal-xl modal-dialog-scrollable">'
-                        + '    <div class="modal-content" style="height: 90vh;">'
-                        + '      <div class="modal-header py-2" style="background:#f8fafc;">'
-                        + '        <h5 class="modal-title fw-bold" style="font-size:15px; color:#1e293b;"><i class="bi bi-file-earmark-text text-primary"></i> Detalle de OT ' + rotEscHtml(idOT) + '</h5>'
-                        + '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
-                        + '      </div>'
-                        + '      <div class="modal-body p-0" style="background:#e0e0e0; display:flex; justify-content:center;">'
-                        + '         <iframe id="iframeFormatoOT" style="width:100%; height:100%; border:none;"></iframe>'
-                        + '      </div>'
-                        + '      <div class="modal-footer py-2" style="background:#f8fafc;">'
-                        + '        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>'
-                        + '        <button type="button" class="btn btn-sm btn-primary" onclick="window.generarPDF_OT(window.rotData.find(o=>String(o.ticket_entrada||o.id_ot)===String(\'' + idOT + '\')), window.currentVerTrabajos, window.currentVerMateriales)"><i class="bi bi-printer"></i> Imprimir</button>'
-                        + '      </div>'
-                        + '    </div>'
-                        + '  </div>'
-                        + '</div>';
+            m.innerHTML =
+                '<div class="modal fade" id="modalFormatoOT" tabindex="-1" aria-hidden="true">'
+              + '  <div class="modal-dialog modal-xl modal-dialog-scrollable">'
+              + '    <div class="modal-content" style="height:90vh;">'
+              + '      <div class="modal-header py-2" style="background:#f8fafc;">'
+              + '        <h5 class="modal-title fw-bold" id="tituloModalFormatoOT" style="font-size:15px;color:#1e293b;"><i class="bi bi-file-earmark-text text-primary"></i> Detalle de OT</h5>'
+              + '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+              + '      </div>'
+              + '      <div class="modal-body p-0" style="background:#e0e0e0;display:flex;justify-content:center;">'
+              + '        <iframe id="iframeFormatoOT" style="width:100%;height:100%;border:none;"></iframe>'
+              + '      </div>'
+              + '      <div class="modal-footer py-2" style="background:#f8fafc;">'
+              + '        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>'
+              + '        <button type="button" class="btn btn-sm btn-primary" id="btnImprimirModalOT"><i class="bi bi-printer me-1"></i>Imprimir</button>'
+              + '      </div>'
+              + '    </div>'
+              + '  </div>'
+              + '</div>';
             document.body.appendChild(m.firstChild);
-        } else {
-            // Actualizar título y botón imprimir
-            var btnPrint = document.querySelector('#modalFormatoOT .btn-primary');
-            if(btnPrint) {
-                btnPrint.setAttribute('onclick', "window.generarPDF_OT(window.rotData.find(o=>String(o.ticket_entrada||o.id_ot)===String('" + idOT + "')), window.currentVerTrabajos, window.currentVerMateriales)");
-            }
-            var title = document.querySelector('#modalFormatoOT .modal-title');
-            if(title) {
-                title.innerHTML = '<i class="bi bi-file-earmark-text text-primary"></i> Detalle de OT ' + rotEscHtml(idOT);
-            }
         }
 
-        window.currentVerTrabajos = trabajos;
-        window.currentVerMateriales = materiales;
-        var myModal = new bootstrap.Modal(document.getElementById('modalFormatoOT'));
+        // Actualizar titulo
+        var titleEl = document.getElementById('tituloModalFormatoOT');
+        if (titleEl) titleEl.innerHTML = '<i class="bi bi-file-earmark-text text-primary"></i> Detalle de OT ' + rotEscHtml(idOT);
+
+        // Configurar boton Imprimir para esta OT especifica
+        var btnImprimir = document.getElementById('btnImprimirModalOT');
+        if (btnImprimir) {
+            btnImprimir.onclick = function() {
+                window.generarPDF_OT(
+                    window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot) === String(idOT); }),
+                    window.currentVerTrabajos,
+                    window.currentVerMateriales
+                );
+            };
+        }
+
+        // Mostrar modal
+        var modalEl = document.getElementById('modalFormatoOT');
+        var myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         myModal.show();
 
-        setTimeout(function() {
-            var iframe = document.getElementById('iframeFormatoOT');
-            if (iframe) {
-                iframe.srcdoc = modalContentHtml;
-            }
-        }, 100);
+        // Placeholder de carga en el iframe
+        var iframe = document.getElementById('iframeFormatoOT');
+        if (iframe) iframe.srcdoc = '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#94a3b8;"><span>Cargando previsualizacion...</span></body></html>';
 
+        // Generar HTML via callback, sin abrir ventana emergente
+        window.generarPDF_OT(ot, trabajos, materiales, false, function(htmlStr) {
+            // Quitar el boton de imprimir interno; el modal tiene el suyo
+            htmlStr = htmlStr.replace(/<button[^>]*id="btnPrint"[^>]*>[\s\S]*?<\/button>/i, '');
+            var iframe2 = document.getElementById('iframeFormatoOT');
+            if (iframe2) iframe2.srcdoc = htmlStr;
+        });
     });
 };
 
