@@ -706,6 +706,12 @@ window.abrirDetallePlaca = function(event, index) {
                     diasLabel = 'Registrada';
                 }
                 const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
+                let tipoBadge = '';
+                if (i.tipo_inspeccion === 'Solo Frenos') {
+                    tipoBadge = '<span class="badge bg-danger text-white ms-2" style="font-size:0.7rem; font-weight: 600; padding: 0.25rem 0.5rem;"><i class="bi bi-stop-circle-fill me-1"></i>Frenos</span>';
+                } else {
+                    tipoBadge = '<span class="badge bg-primary text-white ms-2" style="font-size:0.7rem; font-weight: 600; padding: 0.25rem 0.5rem;"><i class="bi bi-card-checklist me-1"></i>General</span>';
+                }
                 return '<div class="d-flex gap-3 mb-3">'
                     + '<div class="d-flex flex-column align-items-center" style="width:2.2rem;">'
                     + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' text-white shadow-sm" style="width:2.2rem;height:2.2rem;flex-shrink:0;">'
@@ -713,7 +719,7 @@ window.abrirDetallePlaca = function(event, index) {
                     + lineH + '</div>'
                     + '<div class="flex-grow-1 bg-light rounded-3 p-3 border text-start shadow-sm">'
                     + '<div class="d-flex justify-content-between align-items-center mb-2">'
-                    + '<span class="fw-bold text-dark" style="font-size:0.95rem;">#' + (i.id || '—') + '</span>'
+                    + '<span class="fw-bold text-dark d-flex align-items-center" style="font-size:0.95rem;">#' + (i.id || '—') + tipoBadge + '</span>'
                     + '<span class="badge bg-' + bCl + ' text-white px-2 py-1" style="font-size:0.75rem;">' + diasLabel + '</span>'
                     + '</div>'
                     + '<div style="color:var(--subtext);font-size:0.85rem;" class="mb-1"><i class="bi bi-calendar3 me-2"></i> ' + (i.fecha_ingreso || '—') + '</div>'
