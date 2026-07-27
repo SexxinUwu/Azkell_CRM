@@ -489,7 +489,7 @@ window.filtrarFleetrunAvanzado = function() {
         let bestKpiFila = null;
         if(matchCli && matchUts) {
             childRows.forEach(row => {
-                let textoRow = row.innerText.toLowerCase() + " " + placaRaw.toLowerCase();
+                let textoRow = row.textContent.toLowerCase() + " " + placaRaw.toLowerCase();
                 let rowFecha = row.getAttribute('data-fecha');
                 let kpiFila = row.getAttribute('data-estado-kpi');
                 let matchTxt = (!txt || textoRow.includes(txt));
