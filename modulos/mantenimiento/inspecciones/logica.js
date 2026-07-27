@@ -637,7 +637,7 @@ function filtrarStatusAvanzado() {
     });
 
     if (!isHistorialStatus) {
-        updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig);
+        try { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); } catch(e) { }
     }
 
     // Filtrar también tabla Frenos si está renderizada

@@ -671,8 +671,13 @@ window.abrirDetallePlaca = function(event, index) {
     const inspPanelEl = document.getElementById('tab-insp-panel-body');
     if (inspPanelEl) {
         const insps = (window.dataGlobalInspecciones || []).filter(function(i) {
-            return (i.placa || '').toString().toUpperCase().trim() === placaActual;
-        }).sort(function(a, b) { return parseInt(b.id || 0) - parseInt(a.id || 0); });
+            return (i.placa || '').toString().toUpperCase().trim() === placaActual.toUpperCase().trim() && (i.estado !== 'Eliminada');
+        }).sort(function(a, b) {
+            var numA = parseInt((a.id || '').split('-').pop()) || 0;
+            var numB = parseInt((b.id || '').split('-').pop()) || 0;
+            return numB - numA;
+        });
+
         if (!insps.length) {
             inspPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-clipboard2-x fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de inspección.</div></div>';
         } else {
@@ -693,17 +698,19 @@ window.abrirDetallePlaca = function(event, index) {
                     diasLabel = 'Registrada';
                 }
                 const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
-                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
-                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
-                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + '" style="width:1.5rem;height:1.5rem;flex-shrink:0;">'
-                    + '<i class="bi bi-clipboard2-check text-white" style="font-size:0.6rem;"></i></div>'
+                var lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
+                return '<div class="d-flex gap-3 mb-3">'
+                    + '<div class="d-flex flex-column align-items-center" style="width:2.2rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' text-white shadow-sm" style="width:2.2rem;height:2.2rem;flex-shrink:0;">'
+                    + '<i class="bi bi-clipboard2-check" style="font-size:1.1rem;"></i></div>'
                     + lineH + '</div>'
-                    + '<div class="flex-grow-1 pb-1">'
-                    + '<div class="d-flex justify-content-between align-items-center">'
-                    + '<span class="fw-bold" style="color:var(--crm-accent);">#' + (i.id || '—') + '</span>'
-                    + '<span class="badge bg-' + bCl + '" style="font-size:0.62rem;">' + diasLabel + '</span>'
+                    + '<div class="flex-grow-1 bg-light rounded-3 p-3 border text-start shadow-sm">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-2">'
+                    + '<span class="fw-bold text-dark" style="font-size:0.95rem;">#' + (i.id || '—') + '</span>'
+                    + '<span class="badge bg-' + bCl + ' text-white px-2 py-1" style="font-size:0.75rem;">' + diasLabel + '</span>'
                     + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.72rem;">' + (i.fecha_ingreso || '—') + (i.tecnico ? ' · ' + i.tecnico : '') + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.85rem;" class="mb-1"><i class="bi bi-calendar3 me-2"></i> ' + (i.fecha_ingreso || '—') + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.85rem;"><i class="bi bi-person me-2"></i> ' + (i.tecnico || 'Sin asignar') + '</div>'
                     + '</div></div>';
             }).join('');
         }
@@ -781,21 +788,19 @@ window._cargarHistorialPlaca = function() {
                 var idOt = t.ot_id || t.id_ot_padre || 'OT';
 
                 var lineH = idx < rows.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
-                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
-                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
-                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-theme-main border" style="width:1.5rem;height:1.5rem;flex-shrink:0;">'
-                    + '<i class="bi bi-heart-pulse text-danger" style="font-size:0.6rem;"></i></div>'
+                var lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:4px;min-height:20px;"></div>' : '';
+                return '<div class="d-flex gap-3 mb-3">'
+                    + '<div class="d-flex flex-column align-items-center" style="width:2.2rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-' + bCl + ' text-white shadow-sm" style="width:2.2rem;height:2.2rem;flex-shrink:0;">'
+                    + '<i class="bi bi-clipboard2-check" style="font-size:1.1rem;"></i></div>'
                     + lineH + '</div>'
-                    + '<div class="flex-grow-1 pb-2">'
-                    + '<div class="d-flex justify-content-between align-items-center">'
-                    + '<span class="fw-bold" style="color:var(--crm-accent); font-size: 0.85rem;">#' + idOt + '</span>'
-                    + '<span class="badge bg-light text-secondary border" style="font-size:0.65rem;">' + idTrabajo + '</span>'
+                    + '<div class="flex-grow-1 bg-light rounded-3 p-3 border text-start shadow-sm">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-2">'
+                    + '<span class="fw-bold text-dark" style="font-size:0.95rem;">#' + (i.id || '—') + '</span>'
+                    + '<span class="badge bg-' + bCl + ' text-white px-2 py-1" style="font-size:0.75rem;">' + diasLabel + '</span>'
                     + '</div>'
-                    + '<div class="fw-medium mt-1 text-dark" style="font-size:0.8rem; line-height:1.2;">' + trabajo + '</div>'
-                    + '<div class="d-flex align-items-center justify-content-between mt-1">'
-                    + '<div style="color:var(--subtext);font-size:0.72rem;"><i class="bi bi-person me-1"></i> ' + personal + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.72rem;"><i class="bi bi-calendar3 me-1"></i> ' + fechaStr + '</div>'
-                    + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.85rem;" class="mb-1"><i class="bi bi-calendar3 me-2"></i> ' + (i.fecha_ingreso || '—') + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.85rem;"><i class="bi bi-person me-2"></i> ' + (i.tecnico || 'Sin asignar') + '</div>'
                     + '</div></div>';
             }).join('') + '</div>';
         })
