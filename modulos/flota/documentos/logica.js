@@ -674,6 +674,28 @@ function abrirModalEdicion(placa) {
     
     switchTab(0, document.querySelector('.fm-tab'));
 
+    // Helper: sincroniza campo hidden + boton Ver + boton Eliminar para cada documento
+    var _setDocUrl = function(key, url) {
+        var hidEl  = document.getElementById('f_' + key + '_url');
+        var lnkEl  = document.getElementById('link_' + key);
+        var delEl  = document.getElementById('del_' + key);
+        var fileEl = document.getElementById('file_' + key);
+        if (hidEl)  hidEl.value = url || '';
+        if (fileEl) fileEl.value = '';   // limpiar cualquier archivo seleccionado previo
+        if (url) {
+            if (lnkEl) { lnkEl.href = url; lnkEl.style.display = 'inline-flex'; }
+            if (delEl) delEl.style.display = 'inline-flex';
+        } else {
+            if (lnkEl) { lnkEl.href = '#'; lnkEl.style.display = 'none'; }
+            if (delEl) delEl.style.display = 'none';
+        }
+    };
+
+    // Limpiar visualmente todos los archivos
+    ['tc', 'soat', 'matpel', 'rt', 'boni', 'sv', 'sc', 'fum', 'ext'].forEach(function(k) {
+        _setDocUrl(k, null);
+    });
+
     if(placa) {
         const v = vehiculosFlota.find(x => x.placa === placa);
         if(v) {
@@ -717,23 +739,6 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_ext_cantidad').value = v.ext_cantidad || 1;
             document.getElementById('f_ext_emision').value = (v.ext_emision||'').split('T')[0];
             document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
-
-            // Helper: sincroniza campo hidden + boton Ver + boton Eliminar para cada documento
-            var _setDocUrl = function(key, url) {
-                var hidEl  = document.getElementById('f_' + key + '_url');
-                var lnkEl  = document.getElementById('link_' + key);
-                var delEl  = document.getElementById('del_' + key);
-                var fileEl = document.getElementById('file_' + key);
-                if (hidEl)  hidEl.value = url || '';
-                if (fileEl) fileEl.value = '';   // limpiar cualquier archivo seleccionado previo
-                if (url) {
-                    if (lnkEl) { lnkEl.href = url; lnkEl.style.display = 'inline-flex'; }
-                    if (delEl) delEl.style.display = 'inline-flex';
-                } else {
-                    if (lnkEl) { lnkEl.href = '#'; lnkEl.style.display = 'none'; }
-                    if (delEl) delEl.style.display = 'none';
-                }
-            };
 
             _setDocUrl('tc',     v.tc_url);
             _setDocUrl('soat',   v.soat_url);
