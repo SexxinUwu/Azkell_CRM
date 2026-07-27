@@ -34,7 +34,158 @@ function actualizarDatalistPlacas() {
     }
 }
 
-// First autocompletarDatosPlaca removed to avoid duplication
+// =========================================================================
+// FILTROS AVANZADOS DOCS (ESTILO APPSHEET)
+// =========================================================================
+
+window.docFiltros = {}; // { colKey: Set(val1, val2...) }
+window._columnaActivaFiltroDoc = null;
+
+const DOC_COLUMNAS = [
+    { key: 'placa', label: 'Placa' },
+    { key: 'empresa', label: 'Cliente' },
+    { key: 'marca', label: 'Marca' },
+    { key: 'modelo', label: 'Modelo' },
+    { key: 'tipo', label: 'Tipo' },
+    { key: 'color', label: 'Color' },
+    { key: 'anio', label: 'Año' },
+    { key: 'propiedad', label: 'Propiedad' }
+];
+
+window.abrirFiltrosDoc = function() {
+    const contenedor = document.getElementById('lista-columnas-filtro');
+    let html = '';
+    
+    for (let i = 0; i < DOC_COLUMNAS.length; i++) {
+        let colDef = DOC_COLUMNAS[i];
+        let seleccionados = window.docFiltros[colDef.key] ? window.docFiltros[colDef.key].size : 0;
+        let badge = seleccionados > 0 ? `<span class="badge bg-primary rounded-pill">${seleccionados}</span>` : '';
+        
+        html += `
+            <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" 
+                    style="background: transparent; color: var(--text); border-color: var(--border); cursor: pointer;"
+                    onclick="window.entrarFiltroDetalleDoc('${colDef.key}', '${colDef.label}')">
+                <span class="fw-bold" style="font-size: 0.95rem;">${colDef.label}</span>
+                <div class="d-flex align-items-center gap-2">
+                    ${badge}
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </div>
+            </button>
+        `;
+    }
+    
+    contenedor.innerHTML = html;
+    
+    document.getElementById('filtros-slider').style.transform = 'translateX(0)';
+    document.getElementById('header-filtros-main').classList.remove('d-none');
+    document.getElementById('footer-filtros-main').classList.remove('d-none');
+    document.getElementById('header-filtros-detalle').classList.add('d-none');
+    const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('offcanvasFiltrosDoc'));
+    bsOffcanvas.show();
+};
+
+window.entrarFiltroDetalleDoc = function(colKey, colName) {
+    window._columnaActivaFiltroDoc = colKey;
+    document.getElementById('titulo-columna-filtro').innerText = colName;
+    document.getElementById('buscador-opciones-filtro').value = '';
+    
+    let valoresSet = new Set();
+    vehiculosFlota.forEach(row => {
+        let val = row[colKey] ? String(row[colKey]).trim() : '';
+        if (val === '') val = '(Vacío)';
+        valoresSet.add(val);
+    });
+    
+    let valores = Array.from(valoresSet).sort();
+    
+    const contenedor = document.getElementById('lista-opciones-filtro');
+    let html = '';
+    
+    let seleccionados = window.docFiltros[colKey] || new Set();
+    
+    valores.forEach(val => {
+        let isChecked = seleccionados.has(val) ? 'checked' : '';
+        let safeVal = val.replace(/[^a-zA-Z0-9]/g, '');
+        html += `
+            <div class="form-check py-2 border-bottom opt-filtro-item" style="border-color: var(--border) !important;">
+                <input class="form-check-input" type="checkbox" value="${val}" id="chk-flt-${colKey}-${safeVal}" ${isChecked} onchange="window._toggleFiltroValorDoc('${colKey}', this.value, this.checked)" style="transform: scale(1.2); cursor: pointer;">
+                <label class="form-check-label w-100 ms-2" for="chk-flt-${colKey}-${safeVal}" style="cursor: pointer; color: var(--text); font-size: 0.95rem;">
+                    ${val}
+                </label>
+            </div>
+        `;
+    });
+    
+    contenedor.innerHTML = html;
+    
+    document.getElementById('header-filtros-main').classList.add('d-none');
+    document.getElementById('footer-filtros-main').classList.add('d-none');
+    document.getElementById('header-filtros-detalle').classList.remove('d-none');
+    document.getElementById('filtros-slider').style.transform = 'translateX(-100%)';
+};
+
+window.filtrosDocNavAtras = function() {
+    window.abrirFiltrosDoc();
+};
+
+window._toggleFiltroValorDoc = function(colKey, val, isChecked) {
+    if (!window.docFiltros[colKey]) {
+        window.docFiltros[colKey] = new Set();
+    }
+    if (isChecked) {
+        window.docFiltros[colKey].add(val);
+    } else {
+        window.docFiltros[colKey].delete(val);
+    }
+    window.actualizarBadgeGlobalFiltrosDoc();
+};
+
+window.buscarEnFiltroOpciones = function(txt) {
+    txt = txt.toLowerCase();
+    const items = document.querySelectorAll('.opt-filtro-item');
+    items.forEach(item => {
+        const lbl = item.querySelector('label').innerText.toLowerCase();
+        if (lbl.includes(txt)) {
+            item.classList.remove('d-none');
+        } else {
+            item.classList.add('d-none');
+        }
+    });
+};
+
+window.limpiarFiltroColumnaActual = function() {
+    let col = window._columnaActivaFiltroDoc;
+    if (window.docFiltros[col]) {
+        window.docFiltros[col].clear();
+    }
+    document.querySelectorAll('.opt-filtro-item input[type="checkbox"]').forEach(chk => {
+        chk.checked = false;
+    });
+    window.actualizarBadgeGlobalFiltrosDoc();
+};
+
+window.limpiarTodosFiltrosDoc = function() {
+    window.docFiltros = {};
+    window.actualizarBadgeGlobalFiltrosDoc();
+    filtrarListaLocal();
+    bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasFiltrosDoc')).hide();
+};
+
+window.actualizarBadgeGlobalFiltrosDoc = function() {
+    let totalActivos = 0;
+    for (let col in window.docFiltros) {
+        if (window.docFiltros[col].size > 0) totalActivos++;
+    }
+    const badge = document.getElementById('badge-filtros-doc');
+    if (badge) {
+        if (totalActivos > 0) {
+            badge.innerText = totalActivos;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
+};
 
 function calcularEstado(fechaVencimiento) {
     if (!fechaVencimiento) return { text: 'Indefinido', class: 's-gray', color: '#94a3b8', bgClass: 'bg-gray', bdgClass: 'bdg-gray', score: -1, diff: null };
@@ -130,15 +281,24 @@ function cargarDatosVehiculos() {
 }
 
 function actualizarKPIs() {
-    let empFilter = '';
-    let sel = document.getElementById('fleet-empresa-select');
-    if(sel) empFilter = sel.value || '';
-    
     let t = 0, vig = 0, ale = 0, ven = 0;
     
     vehiculosFlota.forEach(v => {
-        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
-        if(!matchEmp) return;
+        let matchAvanzado = true;
+        if (window.docFiltros) {
+            for (let colKey in window.docFiltros) {
+                let setVals = window.docFiltros[colKey];
+                if (setVals && setVals.size > 0) {
+                    let vVal = v[colKey] ? String(v[colKey]).trim() : '';
+                    if (vVal === '') vVal = '(Vacío)';
+                    if (!setVals.has(vVal)) {
+                        matchAvanzado = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if(!matchAvanzado) return;
         
         t++;
         if(v._meta.peorEstado.score === 3) vig++;
@@ -184,19 +344,33 @@ function actualizarFiltroEmpresas() {
 function renderizarListaLateral() {
     const listDiv = document.getElementById('vehicle-list');
     const term = (document.getElementById('fleet-search').value || '').toLowerCase();
-    const empFilter = (document.getElementById('fleet-empresa-select').value || '');
     
     let html = '';
     
     let filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
-        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
+        
+        let matchAvanzado = true;
+        if (window.docFiltros) {
+            for (let colKey in window.docFiltros) {
+                let setVals = window.docFiltros[colKey];
+                if (setVals && setVals.size > 0) {
+                    let vVal = v[colKey] ? String(v[colKey]).trim() : '';
+                    if (vVal === '') vVal = '(Vacío)';
+                    if (!setVals.has(vVal)) {
+                        matchAvanzado = false;
+                        break;
+                    }
+                }
+            }
+        }
+        
         let matchKpi = true;
         if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
         else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
         else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
         
-        return matchTerm && matchEmp && matchKpi;
+        return matchTerm && matchAvanzado && matchKpi;
     });
 
     if(filtrados.length === 0) {
