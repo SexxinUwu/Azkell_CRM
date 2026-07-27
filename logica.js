@@ -1231,7 +1231,6 @@ window.showNoPermMsg = function(containerIdOrEl) {
         + '<div class="small">No cuentas con los permisos necesarios.<br>Contáctate con el administrador.</div>'
         + '</div>';
 };
-
 window.guardAction = function(modKey, action) {
     if (!window.checkPerm(modKey, action)) {
         var modal = document.getElementById('modalNoPermiso');
@@ -1240,17 +1239,6 @@ window.guardAction = function(modKey, action) {
         return false;
     }
     return true;
-};
-
-// Oculta botones/elementos sin permiso en el módulo activo
-window.enforceModuleUI = function(modKey) {
-    var pL = window.checkPerm(modKey,'l');
-    var pC = window.checkPerm(modKey,'c');
-    var pE = window.checkPerm(modKey,'e');
-    var pD = window.checkPerm(modKey,'d');
-    document.querySelectorAll('[data-perm-c]').forEach(function(el){ if(el.dataset.permC===modKey){ el.style.display=pC?'':'none'; } });
-    document.querySelectorAll('[data-perm-e]').forEach(function(el){ if(el.dataset.permE===modKey){ el.style.display=pE?'':'none'; } });
-    document.querySelectorAll('[data-perm-d]').forEach(function(el){ if(el.dataset.permD===modKey){ el.style.display=pD?'':'none'; } });
 };
 
 // ── PDF Ficha Individual de Placa ────────────────────────────────
@@ -1308,90 +1296,278 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
                     if (da !== db) return db - da;
                     return parseInt(b.id||0) - parseInt(a.id||0);
                 });
-                trabajos = trabajos.slice(0, 15);
+                trabajos = trabajos.slice(0, 20);
             }
         } catch(e) { console.error('Error fetching ot-trabajos', e); }
 
-        // Fetch GPS (KM, Horas)
+        // GPS Data
         var wialonData = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
-        var kmTxt = (wialonData && wialonData.km > 0) ? Number(wialonData.km).toLocaleString() + ' km' : '—';
-        var horasTxt = (wialonData && wialonData.horas > 0) ? Number(wialonData.horas).toLocaleString() + ' h' : '—';
+        var kmTxt    = (wialonData && wialonData.km > 0)    ? Number(wialonData.km).toLocaleString('es-PE')    + ' km' : '—';
+        var horasTxt = (wialonData && wialonData.horas > 0) ? Number(wialonData.horas).toLocaleString('es-PE') + ' h'  : '—';
 
-        function r2(a,b,c,d){ return '<tr><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(a||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(b||'—')+'</td><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(c||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(d||'—')+'</td></tr>'; }
-        function sec(title,rows){ return '<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">'+title+'</div><table style="width:100%;border-collapse:collapse;">'+rows+'</table></div>'; }
-        
-        var html='<div style="font-family:Arial,sans-serif;padding:18px;font-size:0.82rem;">'
-            +'<div style="background:#2D438A;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:14px;">'
-            +'<div style="font-size:2rem;font-weight:700;letter-spacing:3px;">'+placa+'</div>'
-            +'<div style="margin-top:4px;opacity:.9">'+(p[1]||'Sin cliente')+(p[2]?' · RUC: '+p[2]:'')+'</div>'
-            +'<div style="margin-top:6px"><span style="background:'+(p[18]==='Activa'?'#22c55e':'#ef4444')+';padding:2px 10px;border-radius:4px;font-size:0.82rem">'+(p[18]||'—')+'</span>'+(p[19]?' <span style="background:#06b6d4;padding:2px 10px;border-radius:4px;font-size:0.82rem;margin-left:5px;">'+p[19]+'</span>':'')+'</div>'
-            +'<div style="margin-top:10px; display:flex; gap:20px; border-top:1px solid rgba(255,255,255,0.2); padding-top:8px;">'
-            +'<div style="font-size:0.85rem;"><strong style="opacity:0.8">Kilometraje:</strong> <span style="font-weight:700">'+kmTxt+'</span></div>'
-            +'<div style="font-size:0.85rem;"><strong style="opacity:0.8">Horas Motor:</strong> <span style="font-weight:700">'+horasTxt+'</span></div>'
-            +'</div>'
-            +'</div>';
-        
-        html+=sec('Especificaciones Técnicas',r2('Marca',p[3],'Modelo',p[4])+r2('Tipo',p[5],'Sub Tipo',p[6])+r2('Color',p[7],'Configuración',p[12])+r2('Año',p[13],'Combustible',p[14]));
-        html+=sec('Datos de Identificación',r2('Nº Motor',p[8],'Nº Caja',p[9])+r2('Nº Corona',p[10],'Nº VIN',p[11]));
-        html+=sec('Capacidades y Operatividad',r2('Carga Útil',p[15],'Peso Neto',p[16])+r2('Peso Bruto',p[17],'Llantas',p[21])+r2('En Uso',p[22],'',''));
-        
+        // ── Helpers de estilo ────────────────────────────────────────
+        var AZUL  = '#1e3a8a';
+        var AZUL2 = '#2563eb';
+        var BORDE = '#e2e8f0';
+        var GRIS  = '#64748b';
+        var GRIS2 = '#f8fafc';
+        var fechaHoy = new Date().toLocaleDateString('es-PE', {day:'2-digit',month:'long',year:'numeric'});
+
+        function fila2(a,b,c,d){
+            return '<tr>'
+                +'<td style="color:'+GRIS+';font-size:0.72rem;padding:5px 10px;width:22%;font-weight:500;">'+a+'</td>'
+                +'<td style="font-weight:700;padding:5px 10px;width:28%;color:#1e293b;font-size:0.8rem;">'+(b||'—')+'</td>'
+                +'<td style="color:'+GRIS+';font-size:0.72rem;padding:5px 10px;width:22%;font-weight:500;">'+c+'</td>'
+                +'<td style="font-weight:700;padding:5px 10px;width:28%;color:#1e293b;font-size:0.8rem;">'+(d||'—')+'</td>'
+                +'</tr>';
+        }
+        function seccion(icono, titulo, filas){
+            return '<div style="margin-bottom:16px;">'
+                +'<div style="display:flex;align-items:center;gap:6px;border-bottom:2px solid '+AZUL+';padding-bottom:5px;margin-bottom:8px;">'
+                +'<span style="font-size:1rem;">'+icono+'</span>'
+                +'<span style="font-weight:700;color:'+AZUL+';font-size:0.78rem;text-transform:uppercase;letter-spacing:0.8px;">'+titulo+'</span>'
+                +'</div>'
+                +'<table style="width:100%;border-collapse:collapse;background:#fff;">'+filas+'</table>'
+                +'</div>';
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PÁGINA 1: FICHA TÉCNICA DEL VEHÍCULO
+        // ══════════════════════════════════════════════════════
+        var estadoColor = (p[18]==='Activa') ? '#16a34a' : '#dc2626';
+        var estadoBg    = (p[18]==='Activa') ? '#dcfce7' : '#fee2e2';
+
+        var htmlPag1 = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:0.8rem;padding:0;margin:0;">'
+
+            // — HEADER —
+            + '<div style="background:'+AZUL+';color:#fff;padding:20px 22px 16px;margin-bottom:0;">'
+
+            // Logo / empresa row
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+            + '<div>'
+            + '<div style="font-size:0.68rem;opacity:0.7;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;margin-bottom:2px;">FICHA TÉCNICA · VEHÍCULO</div>'
+            + '<div style="font-size:2.2rem;font-weight:800;letter-spacing:4px;line-height:1;">'+placa+'</div>'
+            + '<div style="margin-top:6px;font-size:0.85rem;opacity:0.9;font-weight:500;">'+(p[1]||'Sin cliente')+'</div>'
+            + (p[2] ? '<div style="font-size:0.72rem;opacity:0.7;margin-top:2px;">RUC: '+p[2]+'</div>' : '')
+            + '</div>'
+            + '<div style="text-align:right;">'
+            + '<div style="background:'+estadoBg+';color:'+estadoColor+';border-radius:20px;padding:4px 14px;font-size:0.72rem;font-weight:700;display:inline-block;margin-bottom:6px;">'+(p[18]||'—')+'</div>'
+            + (p[19] ? '<br><div style="background:rgba(255,255,255,0.15);color:#fff;border-radius:20px;padding:3px 12px;font-size:0.7rem;font-weight:600;display:inline-block;margin-top:4px;">'+p[19]+'</div>' : '')
+            + '<div style="font-size:0.65rem;opacity:0.6;margin-top:8px;">Generado: '+fechaHoy+'</div>'
+            + '</div>'
+            + '</div>'
+
+            // — KM / HORAS strip —
+            + '<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.2);padding-top:12px;">'
+            + '<div style="flex:1;text-align:center;border-right:1px solid rgba(255,255,255,0.15);padding:0 10px;">'
+            + '<div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Kilometraje GPS</div>'
+            + '<div style="font-size:1.4rem;font-weight:800;">'+kmTxt+'</div>'
+            + '</div>'
+            + '<div style="flex:1;text-align:center;padding:0 10px;">'
+            + '<div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Horas Motor GPS</div>'
+            + '<div style="font-size:1.4rem;font-weight:800;">'+horasTxt+'</div>'
+            + '</div>'
+            + '</div>'
+            + '</div>' // /header
+
+            // — BODY —
+            + '<div style="padding:16px 22px;">'
+
+            + seccion('Especificaciones Técnicas','Especificaciones Técnicas',
+                fila2('Marca',p[3],'Modelo',p[4])
+                +fila2('Tipo',p[5],'Sub Tipo',p[6])
+                +fila2('Color',p[7],'Configuración',p[12])
+                +fila2('Año',p[13],'Combustible',p[14])
+            )
+            + seccion('Datos de Identificación','Datos de Identificación',
+                fila2('N° Motor',p[8],'N° Caja',p[9])
+                +fila2('N° Corona',p[10],'N° VIN',p[11])
+            )
+            + seccion('Capacidades y Operatividad','Capacidades y Operatividad',
+                fila2('Carga Útil (TN)',p[15],'Peso Neto (TN)',p[16])
+                +fila2('Peso Bruto (TN)',p[17],'Llantas',p[21])
+                +fila2('Zona UTS',p[19],'En Uso',p[22])
+            )
+
+            + '</div>' // /body
+            + '</div>'; // /pag1
+
+        // ══════════════════════════════════════════════════════
+        // PÁGINA 2: INSPECCIONES + MANTENIMIENTOS + HISTORIAL
+        // ══════════════════════════════════════════════════════
+        var htmlPag2 = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:0.8rem;padding:0;margin:0;">'
+
+            // Mini header de continuación
+            + '<div style="background:'+AZUL+';color:#fff;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">'
+            + '<div style="font-size:0.7rem;opacity:0.85;letter-spacing:1px;text-transform:uppercase;">Azkell Fleet · Historial Operativo</div>'
+            + '<div style="font-size:1rem;font-weight:800;letter-spacing:3px;">'+placa+'</div>'
+            + '</div>'
+
+            + '<div style="padding:16px 22px;">';
+
+        // — INSPECCIONES —
         if (insps.length) {
-            var hoy=new Date(); hoy.setHours(0,0,0,0);
-            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Últimas Inspecciones</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">ID</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Técnico</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Tipo</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Estado</td></tr>'
-            +insps.map(function(i, idx){
-                var est='—', cls='#64748b';
-                var firstGeneralIdx = insps.findIndex(x => x.tipo_inspeccion !== 'Solo Frenos');
-                if (idx === firstGeneralIdx) {
-                    if(i.fecha_ingreso){ try{ var fi=i.fecha_ingreso.includes('/')?(function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})():new Date(i.fecha_ingreso+'T00:00:00'); var fp=new Date(fi);fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30)); var d=Math.ceil((fp-hoy)/864e5); est=d<0?'Vencida':(d===0?'Vence hoy':'Faltan '+d+'d'); cls=d<0?'#ef4444':(d<=7?'#f59e0b':'#22c55e'); }catch(e){} }
-                } else {
-                    est = 'Registrada';
-                }
-                var t = (i.tipo_inspeccion === 'Solo Frenos') ? 'Frenos' : 'General';
-                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px">'+(i.id||'—')+'</td><td style="padding:3px 8px">'+(i.fecha_ingreso||'—')+'</td><td style="padding:3px 8px">'+(i.tecnico||'—')+'</td><td style="padding:3px 8px;font-weight:600;color:'+(t==='Frenos'?'#dc3545':'#0d6efd')+'">'+t+'</td><td style="padding:3px 8px;color:'+cls+';font-weight:700">'+est+'</td></tr>';
-            }).join('')+'</table></div>';
-        }
-        
-        if (mps.length) {
-            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Mantenimientos Preventivos (Últimos por Tipo)</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Tipo MP</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha Registro</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Próx. Cambio</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Observación</td></tr>'
-            +mps.map(function(r){ 
-                var kmStr = (parseFloat(r[11])||0).toLocaleString();
-                var kmFmt = kmStr.includes(',') ? kmStr : (parseFloat(r[11])||0).toLocaleString('en-US'); // Ensure decent formatting fallback
-                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;font-weight:600">'+(r[8]||'—')+'</td><td style="padding:3px 8px">'+(typeof parseDateToDDMMYYYY==='function'?parseDateToDDMMYYYY(r[3]):r[3])+'</td><td style="padding:3px 8px">'+kmFmt+' km</td><td style="padding:3px 8px;color:#64748b">'+(r[13]||'—')+'</td></tr>'; 
-            }).join('')+'</table></div>';
-        }
+            var hoy = new Date(); hoy.setHours(0,0,0,0);
+            var firstGeneralIdx = insps.findIndex(function(x){ return x.tipo_inspeccion !== 'Solo Frenos'; });
 
-        if (trabajos.length) {
-            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Historial de Trabajos Recientes</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">ODP</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Trabajo / Obs</td></tr>'
-            +trabajos.map(function(t){ 
-                let f = '';
-                if(t.fecha_trabajo) { try { f = new Date(t.fecha_trabajo).toLocaleDateString('es-PE'); } catch(e){} }
-                let idOt = t.ot_id || t.id_ot_padre || t.id_ot || '—';
-                if (idOt !== '—' && !String(idOt).startsWith('OT-') && !String(idOt).startsWith('TR-')) idOt = 'OT-' + idOt;
-                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;white-space:nowrap">'+(f||'—')+'</td><td style="padding:3px 8px;font-weight:600">#'+(idOt)+'</td><td style="padding:3px 8px">'+(t.trabajo_realizado||'—')+'</td></tr>'; 
-            }).join('')+'</table></div>';
-        }
-
-        html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
-        
-        var fullHtml = '<html><head><title>Ficha de Placa ' + placa + '</title><style>'
-            + '@media screen { body { background-color: #525659; display: flex; justify-content: center; padding: 2rem 0; font-family: sans-serif; margin: 0; } '
-            + '.hoja-a4 { background-color: white; width: 210mm; min-height: 297mm; padding: 15mm; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin: 0 auto; box-sizing: border-box; } } '
-            + '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; background-color: white; } '
-            + '.hoja-a4 { width: 100%; min-height: auto; padding: 0; box-shadow: none; margin: 0; } }'
-            + '</style></head><body><div class="hoja-a4">' + html + '</div></body></html>';
-        
-        var win = window.open('', '_blank');
-        if (win) {
-            win.document.open();
-            win.document.write(fullHtml);
-            win.document.close();
-            // Automatically prompt for printing after a short delay to allow images/fonts to load
-            setTimeout(function() { win.print(); }, 500);
+            htmlPag2 += '<div style="margin-bottom:18px;">'
+                +'<div style="display:flex;align-items:center;gap:6px;border-bottom:2px solid '+AZUL+';padding-bottom:5px;margin-bottom:8px;">'
+                +'<span style="font-weight:700;color:'+AZUL+';font-size:0.78rem;text-transform:uppercase;letter-spacing:0.8px;">Ultimas Inspecciones</span>'
+                +'</div>'
+                +'<table style="width:100%;border-collapse:collapse;background:#fff;">'
+                +'<tr style="background:'+GRIS2+';font-size:0.72rem;font-weight:700;color:'+GRIS+';">'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">ID</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Fecha</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Técnico</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Tipo</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Estado / Vigencia</td>'
+                +'</tr>'
+                + insps.map(function(i, idx){
+                    var est = 'Registrada', cls = GRIS;
+                    if (idx === firstGeneralIdx && i.fecha_ingreso) {
+                        try {
+                            var fi = i.fecha_ingreso.includes('/')
+                                ? (function(){ var px=i.fecha_ingreso.split('/'); return new Date(px[2],px[1]-1,px[0]); })()
+                                : new Date(i.fecha_ingreso+'T00:00:00');
+                            var fp = new Date(fi); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos)||30));
+                            var d  = Math.ceil((fp - hoy) / 864e5);
+                            est = d < 0 ? 'VENCIDA ('+Math.abs(d)+'d)' : (d === 0 ? 'VENCE HOY' : 'Faltan '+d+' dias');
+                            cls = d < 0 ? '#dc2626' : (d <= 7 ? '#d97706' : '#16a34a');
+                        } catch(e) {}
+                    }
+                    var esFreno  = i.tipo_inspeccion === 'Solo Frenos';
+                    var tipoCol  = esFreno ? '#dc2626' : '#2563eb';
+                    var tipoTxt  = esFreno ? 'Frenos'  : 'General';
+                    var bg = idx % 2 === 0 ? '#fff' : GRIS2;
+                    return '<tr style="background:'+bg+';border-bottom:1px solid '+BORDE+';">'
+                        +'<td style="padding:5px 10px;font-weight:600;font-size:0.75rem;">'+(i.id||'—')+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.75rem;">'+(i.fecha_ingreso||'—')+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.75rem;">'+(i.tecnico||'Sin asignar')+'</td>'
+                        +'<td style="padding:5px 10px;font-weight:700;font-size:0.72rem;color:'+tipoCol+';">'+tipoTxt+'</td>'
+                        +'<td style="padding:5px 10px;font-weight:700;font-size:0.72rem;color:'+cls+';">'+est+'</td>'
+                        +'</tr>';
+                }).join('')
+                +'</table>'
+                +'</div>';
         } else {
-            alert('Por favor, permite las ventanas emergentes (pop-ups) para ver el formato.');
+            htmlPag2 += '<div style="background:'+GRIS2+';border-radius:8px;padding:14px;text-align:center;color:'+GRIS+';font-size:0.75rem;margin-bottom:18px;">Sin registros de inspección para esta placa.</div>';
         }
-        
-        if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
+
+        // — MANTENIMIENTOS PREVENTIVOS —
+        if (mps.length) {
+            htmlPag2 += '<div style="margin-bottom:18px;">'
+                +'<div style="display:flex;align-items:center;gap:6px;border-bottom:2px solid '+AZUL+';padding-bottom:5px;margin-bottom:8px;">'
+                +'<span style="font-weight:700;color:'+AZUL+';font-size:0.78rem;text-transform:uppercase;letter-spacing:0.8px;">Mantenimientos Preventivos (Ultimo por Tipo)</span>'
+                +'</div>'
+                +'<table style="width:100%;border-collapse:collapse;background:#fff;">'
+                +'<tr style="background:'+GRIS2+';font-size:0.72rem;font-weight:700;color:'+GRIS+';">'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Tipo MP</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Fecha Registro</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Prox. Cambio (km/h)</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Observación</td>'
+                +'</tr>'
+                + mps.map(function(r, idx){
+                    var prox = (parseFloat(r[11])||0) > 0 ? Number(parseFloat(r[11])).toLocaleString('es-PE') : '—';
+                    var bg = idx % 2 === 0 ? '#fff' : GRIS2;
+                    var fechaReg = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3]||'—');
+                    return '<tr style="background:'+bg+';border-bottom:1px solid '+BORDE+';">'
+                        +'<td style="padding:5px 10px;font-weight:700;font-size:0.75rem;color:'+AZUL2+';">'+(r[8]||'—')+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.75rem;">'+fechaReg+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.75rem;font-weight:600;">'+prox+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.72rem;color:'+GRIS+';">'+(r[13]||'—')+'</td>'
+                        +'</tr>';
+                }).join('')
+                +'</table>'
+                +'</div>';
+        }
+
+        // — HISTORIAL DE TRABAJOS —
+        if (trabajos.length) {
+            htmlPag2 += '<div style="margin-bottom:18px;">'
+                +'<div style="display:flex;align-items:center;gap:6px;border-bottom:2px solid '+AZUL+';padding-bottom:5px;margin-bottom:8px;">'
+                +'<span style="font-weight:700;color:'+AZUL+';font-size:0.78rem;text-transform:uppercase;letter-spacing:0.8px;">Historial de Trabajos Recientes</span>'
+                +'</div>'
+                +'<table style="width:100%;border-collapse:collapse;background:#fff;">'
+                +'<tr style="background:'+GRIS2+';font-size:0.72rem;font-weight:700;color:'+GRIS+';">'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Fecha</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">ODP / OT</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Tipo</td>'
+                +'<td style="padding:6px 10px;border-bottom:1px solid '+BORDE+';">Trabajo Realizado</td>'
+                +'</tr>'
+                + trabajos.map(function(t, idx){
+                    var f = '—';
+                    if(t.fecha_trabajo){ try{ f = new Date(t.fecha_trabajo).toLocaleDateString('es-PE'); }catch(e){} }
+                    var idOt = t.ot_id || t.id_ot_padre || t.id_ot || '—';
+                    if (idOt !== '—' && !String(idOt).startsWith('OT-') && !String(idOt).startsWith('TR-')) idOt = 'OT-' + idOt;
+                    var tipoOt = 'MANTENIMIENTO';
+                    try { var det = typeof t.detalles_json==='string'?JSON.parse(t.detalles_json):(t.detalles_json||{}); if(det.tipo) tipoOt=det.tipo; } catch(e){}
+                    var bg = idx % 2 === 0 ? '#fff' : GRIS2;
+                    return '<tr style="background:'+bg+';border-bottom:1px solid '+BORDE+';">'
+                        +'<td style="padding:5px 10px;font-size:0.72rem;white-space:nowrap;">'+f+'</td>'
+                        +'<td style="padding:5px 10px;font-weight:700;font-size:0.72rem;color:'+AZUL2+';">#'+idOt+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.68rem;color:'+GRIS+';text-transform:uppercase;">'+tipoOt+'</td>'
+                        +'<td style="padding:5px 10px;font-size:0.72rem;">'+(t.trabajo_realizado||'—')+'</td>'
+                        +'</tr>';
+                }).join('')
+                +'</table>'
+                +'</div>';
+        }
+
+        // Pie de página
+        htmlPag2 += '<div style="border-top:1px solid '+BORDE+';margin-top:12px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">'
+            +'<span style="font-size:0.65rem;color:'+GRIS+';">Generado por <strong>Azkell Fleet ERP</strong> · '+fechaHoy+'</span>'
+            +'<span style="font-size:0.65rem;color:'+GRIS+';">Placa: <strong>'+placa+'</strong></span>'
+            +'</div>'
+            +'</div>' // /padding
+            +'</div>'; // /pag2
+
+        // ── HTML final con salto de página entre p1 y p2 ──────────
+        var html = htmlPag1
+            + '<div class="html2pdf__page-break"></div>'
+            + htmlPag2;
+
+        // ── Generar PDF ───────────────────────────────────────────
+        var loadHtml2pdf = function() {
+            if (typeof window.html2pdf === 'function') return Promise.resolve();
+            return new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = '/libs/html2pdf.bundle.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        };
+
+        loadHtml2pdf().then(function() {
+            var div = document.createElement('div');
+            div.style.cssText = 'position:absolute;left:-99999px;top:0;width:794px;font-family:Arial,Helvetica,sans-serif;';
+            div.innerHTML = html;
+            document.body.appendChild(div);
+
+            var opt = {
+                margin: [0, 0, 0, 0],
+                filename: 'Ficha-' + placa + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(div).outputPdf('blob').then(function(pdfBlob) {
+                document.body.removeChild(div);
+                var blobUrl = URL.createObjectURL(pdfBlob);
+                window.open(blobUrl, '_blank');
+                if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
+            }).catch(function(e) {
+                document.body.removeChild(div);
+                console.error(e);
+                alert('Ocurrió un error al generar el PDF.');
+                if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
+            });
+        }).catch(function(e) {
+            console.error(e);
+            alert('No se pudo cargar la librería de PDF.');
+            if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
+        });
 
     } catch (e) {
         console.error(e);
