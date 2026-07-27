@@ -921,12 +921,10 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
                 </div>
                 
                 <div style="position:relative; width: 42px; height: 42px; flex-shrink: 0;">
-                    <button style="width: 100%; height: 100%; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #475569; display:flex; align-items:center; justify-content:center; font-size: 1.1rem; pointer-events:none;">
+                    <button class="btn" style="width: 100%; height: 100%; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #475569; display:flex; align-items:center; justify-content:center; font-size: 1.1rem; position:relative;" onclick="window.abrirFiltrosDoc()" title="Filtros avanzados">
                         <i class="bi bi-funnel"></i>
+                        <span id="badge-filtros-doc" class="badge bg-primary rounded-pill position-absolute top-0 start-100 translate-middle d-none" style="font-size: 0.6rem;">0</span>
                     </button>
-                    <select id="fleet-empresa-select" onchange="filtrarListaLocal()" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;" title="Filtrar por empresa">
-                        <option value="">Todas las empresas</option>
-                    </select>
                 </div>
                 
                 <button class="btn-dark-square d-none d-md-flex" onclick="abrirModalEdicion(null)" style="background:#0f172a; color:#fff; border:none; border-radius:12px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -1359,6 +1357,65 @@ th.sticky-col, th.sticky-col-2 { z-index: 13; background: #f8fafc; }
     </div>
 </div>
 
+
+<!-- OFFCANVAS: FILTROS AVANZADOS (Estilo AppSheet) -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasFiltrosDoc" style="width: 380px; border-left: 1px solid var(--border); background: var(--surface);">
+    <!-- HEADER GENERAL -->
+    <div class="offcanvas-header border-bottom py-3" style="background: var(--surface);" id="header-filtros-main">
+        <div class="d-flex align-items-center gap-2 w-100">
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);">Filtros</h5>
+            <button type="button" class="btn-close ms-auto shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <!-- HEADER DETALLE (Oculto por defecto) -->
+    <div class="offcanvas-header border-bottom py-3 d-none" style="background: var(--surface);" id="header-filtros-detalle">
+        <div class="d-flex align-items-center gap-3 w-100">
+            <button type="button" class="btn btn-sm btn-light p-1" onclick="window.filtrosDocNavAtras()" style="border-radius: 50%; color: var(--text); background: transparent; border: none;">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </button>
+            <h5 class="offcanvas-title fw-bold m-0" style="color: var(--text);" id="titulo-columna-filtro">Columna</h5>
+        </div>
+    </div>
+
+    <div class="offcanvas-body p-0 position-relative" style="overflow-x: hidden; background: var(--surface);">
+        <!-- CONTENEDOR ANIMADO -->
+        <div id="filtros-slider" class="d-flex w-100 h-100" style="transition: transform 0.3s ease;">
+            <!-- VISTA 1: LISTA DE COLUMNAS -->
+            <div id="filtros-main-view" class="w-100 h-100 flex-shrink-0" style="overflow-y: auto;">
+                <div class="list-group list-group-flush" id="lista-columnas-filtro">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+            <!-- VISTA 2: OPCIONES DE COLUMNA -->
+            <div id="filtros-detail-view" class="w-100 h-100 flex-shrink-0 d-flex flex-column" style="background: var(--surface);">
+                <div class="p-3 border-bottom">
+                    <div class="input-group input-group-sm" style="border-radius: 8px; border: 1px solid var(--primary); overflow: hidden;">
+                        <span class="input-group-text bg-transparent border-0 text-primary"><i class="bi bi-search"></i></span>
+                        <input type="text" id="buscador-opciones-filtro" class="form-control border-0 shadow-none" placeholder="Buscar..." oninput="window.buscarEnFiltroOpciones(this.value)">
+                    </div>
+                </div>
+                
+                <div class="flex-grow-1 p-3 pt-2" style="overflow-y: auto;" id="lista-opciones-filtro">
+                    <!-- Dinámico -->
+                </div>
+                
+                <!-- FOOTER DETALLE -->
+                <div class="p-3 border-top d-flex justify-content-between align-items-center" style="background: var(--surface);">
+                    <button class="btn btn-link text-muted fw-bold text-decoration-none px-0" onclick="window.limpiarFiltroColumnaActual()">Limpiar</button>
+                    <button class="btn btn-link text-success fw-bold text-decoration-none px-0" onclick="window.filtrosDocNavAtras()">Hecho</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FOOTER GENERAL (Visible en main view) -->
+    <div class="p-3 border-top d-flex justify-content-between align-items-center" id="footer-filtros-main" style="background: var(--surface);">
+        <button class="btn btn-link text-danger fw-bold text-decoration-none px-0" onclick="window.limpiarTodosFiltrosDoc()">Limpiar todo</button>
+        <button class="btn btn-primary fw-bold px-4 rounded-pill" data-bs-dismiss="offcanvas" onclick="filtrarListaLocal()">Aplicar</button>
+    </div>
+</div>
 
 <!-- Mobile FAB -->
 <button class="mobile-fab-plus d-md-none" onclick="abrirModalEdicion(null)" style="position:fixed; bottom: 105px; right: 20px; width: 56px; height: 56px; background: #f97316; color: white; border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); z-index: 999; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s;">

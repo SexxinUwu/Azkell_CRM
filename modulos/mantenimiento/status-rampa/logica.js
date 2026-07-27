@@ -1088,6 +1088,18 @@ window.srGuardarRegistro = function() {
     var sEvidUrl = document.getElementById('sr-f-evidencia-url');
     
     if (!placa)    { alert('La placa es obligatoria.'); return; }
+    if (window.dataGlobalPlacas && window.dataGlobalPlacas.length > 0) {
+        var isValidPlaca = false;
+        for (var i = 0; i < window.dataGlobalPlacas.length; i++) {
+            var r = window.dataGlobalPlacas[i];
+            var p = String(Array.isArray(r) ? (r[0] || '') : (r.placa || r[0] || '')).trim().toUpperCase();
+            if (p === placa) { isValidPlaca = true; break; }
+        }
+        if (!isValidPlaca) {
+            alert('La placa "' + placa + '" no se encuentra registrada en el sistema. Por favor, seleccione una placa válida.');
+            return;
+        }
+    }
     if (!rampaNum) { alert('Selecciona una rampa.'); return; }
 
     var payload = {
