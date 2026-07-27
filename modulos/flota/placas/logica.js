@@ -689,10 +689,11 @@ window.abrirDetallePlaca = function(event, index) {
         if (!insps.length) {
             inspPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-clipboard2-x fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de inspección.</div></div>';
         } else {
+            let firstGeneralIdx = insps.findIndex(i => i.tipo_inspeccion !== 'Solo Frenos');
             const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
             inspPanelEl.innerHTML = insps.map(function(i, idx) {
                 let bCl = 'secondary', diasLabel = '—';
-                if (idx === 0) {
+                if (idx === firstGeneralIdx) {
                     try {
                         let fi; const fv = i.fecha_ingreso || '';
                         if (fv.includes('/')) { const px = fv.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(fv + 'T00:00:00'); }
