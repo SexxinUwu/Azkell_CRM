@@ -672,21 +672,26 @@ window.abrirDetallePlaca = function(event, index) {
     if (inspPanelEl) {
         const insps = (window.dataGlobalInspecciones || []).filter(function(i) {
             return (i.placa || '').toString().toUpperCase().trim() === placaActual;
-        }).sort(function(a, b) { return parseInt(b.id || 0) - parseInt(a.id || 0); }).slice(0, 5);
+        }).sort(function(a, b) { return parseInt(b.id || 0) - parseInt(a.id || 0); });
         if (!insps.length) {
             inspPanelEl.innerHTML = '<div class="text-muted text-center py-4"><i class="bi bi-clipboard2-x fs-3 opacity-50"></i><div class="mt-2 small">Sin registros de inspección.</div></div>';
         } else {
             const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
             inspPanelEl.innerHTML = insps.map(function(i, idx) {
                 let bCl = 'secondary', diasLabel = '—';
-                try {
-                    let fi; const fv = i.fecha_ingreso || '';
-                    if (fv.includes('/')) { const px = fv.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(fv + 'T00:00:00'); }
-                    const fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
-                    const dias = Math.ceil((fp - hoy2) / 864e5);
-                    bCl = dias < 0 ? 'danger' : (dias <= 7 ? 'warning' : 'success');
-                    diasLabel = dias < 0 ? 'Vencida' : (dias === 0 ? 'Vence hoy' : 'Faltan ' + dias + 'd');
-                } catch(e) {}
+                if (idx === 0) {
+                    try {
+                        let fi; const fv = i.fecha_ingreso || '';
+                        if (fv.includes('/')) { const px = fv.split('/'); fi = new Date(px[2],px[1]-1,px[0]); } else { fi = new Date(fv + 'T00:00:00'); }
+                        const fp = new Date(fi.getTime()); fp.setDate(fp.getDate() + (parseInt(i.dias_propuestos) || 30));
+                        const dias = Math.ceil((fp - hoy2) / 864e5);
+                        bCl = dias < 0 ? 'danger' : (dias <= 7 ? 'warning' : 'success');
+                        diasLabel = dias < 0 ? 'Vencida' : (dias === 0 ? 'Vence hoy' : 'Faltan ' + dias + 'd');
+                    } catch(e) {}
+                } else {
+                    bCl = 'secondary';
+                    diasLabel = 'Registrada';
+                }
                 const lineH = idx < insps.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
                 return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
                     + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
