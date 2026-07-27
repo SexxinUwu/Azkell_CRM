@@ -798,8 +798,11 @@ window.subirDocumentoS3 = async function(input, hiddenId, linkId, docId) {
         if(!resUp.ok) throw new Error('Error al subir a S3');
         
         document.getElementById(hiddenId).value = urlData.fileUrl;
-        document.getElementById(linkId).href = urlData.fileUrl;
-        document.getElementById(linkId).style.display = 'inline-flex';
+        var lnkEl = document.getElementById(linkId);
+        if(lnkEl) {
+            lnkEl.href = urlData.fileUrl;
+            lnkEl.style.display = 'inline-flex';
+        }
         const dLnkBtn = document.getElementById('del_' + docId);
         if(dLnkBtn) dLnkBtn.style.display = 'inline-flex';
         alert('Documento subido. Recuerda Guardar Configuración.');
@@ -831,8 +834,11 @@ window.eliminarDocumentoS3 = async function(hiddenId, linkId, btnId, docId) {
         if(!res.ok) throw new Error('Error al eliminar en servidor');
         
         document.getElementById(hiddenId).value = '';
-        document.getElementById(linkId).href = '#';
-        document.getElementById(linkId).style.display = 'none';
+        var lnkEl = document.getElementById(linkId);
+        if(lnkEl) {
+            lnkEl.href = '#';
+            lnkEl.style.display = 'none';
+        }
         document.getElementById(btnId).style.display = 'none';
         
         alert('Documento eliminado temporalmente. Recuerda hacer clic en "Guardar Configuración" para aplicar este cambio.');
