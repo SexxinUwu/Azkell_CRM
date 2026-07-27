@@ -1083,13 +1083,15 @@ window.abrirDocModal = function(title, contentRows, est, docUrl) {
     
     if (btnVer && btnDescargar) {
         if (docUrl) {
-            btnVer.style.display = 'flex';
-            btnDescargar.style.display = 'flex';
+            btnVer.style.setProperty('display', 'flex', 'important');
+            btnDescargar.style.setProperty('display', 'flex', 'important');
             btnVer.onclick = () => window.procesarDocumento(docUrl, 'ver');
             btnDescargar.onclick = () => window.procesarDocumento(docUrl, 'descargar');
         } else {
-            btnVer.style.display = 'none';
-            btnDescargar.style.display = 'none';
+            btnVer.style.setProperty('display', 'none', 'important');
+            btnDescargar.style.setProperty('display', 'none', 'important');
+            btnVer.onclick = null;
+            btnDescargar.onclick = null;
         }
     }
 
