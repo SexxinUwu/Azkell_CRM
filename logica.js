@@ -1254,39 +1254,140 @@ window.enforceModuleUI = function(modKey) {
 };
 
 // ── PDF Ficha Individual de Placa ────────────────────────────────
-window.exportarFichaPlacaPDF = function(placaArg) {
+window.exportarFichaPlacaPDF = async function(placaArg) {
     var placa = (placaArg || (document.getElementById('det-placa-titulo')||{}).innerText || window._odpPlacaActual || '').toString().toUpperCase().trim();
     if (!placa) return;
     var p = (window.dataGlobalPlacas||[]).find(function(x){ return (x[0]||'').toUpperCase()===placa; });
     if (!p) { alert('Sin datos de placa para exportar.'); return; }
-    var insps = (window.dataGlobalInspecciones||[]).filter(function(i){ return normalizeStr(i.placa)===placa; }).slice(0,8);
-    var mps   = (window.dataGlobalFleetrun||[]).filter(function(r){ return normalizeStr(r[4])===placa; });
-    function r2(a,b,c,d){ return '<tr><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(a||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(b||'—')+'</td><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(c||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(d||'—')+'</td></tr>'; }
-    function sec(title,rows){ return '<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">'+title+'</div><table style="width:100%;border-collapse:collapse;">'+rows+'</table></div>'; }
-    var html='<div style="font-family:Arial,sans-serif;padding:18px;font-size:0.82rem;">'
-        +'<div style="background:#2D438A;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:14px;">'
-        +'<div style="font-size:2rem;font-weight:700;letter-spacing:3px;">'+placa+'</div>'
-        +'<div style="margin-top:4px;opacity:.9">'+(p[1]||'Sin cliente')+(p[2]?' · RUC: '+p[2]:'')+'</div>'
-        +'<div style="margin-top:6px"><span style="background:'+(p[18]==='Activa'?'#22c55e':'#ef4444')+';padding:2px 10px;border-radius:4px;font-size:0.82rem">'+(p[18]||'—')+'</span>'+(p[19]?' <span style="background:#06b6d4;padding:2px 10px;border-radius:4px;font-size:0.82rem">'+p[19]+'</span>':'')+'</div>'
-        +'</div>';
-    html+=sec('Especificaciones Técnicas',r2('Marca',p[3],'Modelo',p[4])+r2('Tipo',p[5],'Sub Tipo',p[6])+r2('Color',p[7],'Configuración',p[12])+r2('Año',p[13],'Combustible',p[14]));
-    html+=sec('Datos de Identificación',r2('Nº Motor',p[8],'Nº Caja',p[9])+r2('Nº Corona',p[10],'Nº VIN',p[11]));
-    html+=sec('Capacidades y Operatividad',r2('Carga Útil',p[15],'Peso Neto',p[16])+r2('Peso Bruto',p[17],'Llantas',p[21])+r2('Zona UTS',p[19],'En Uso',p[22]));
-    if (insps.length) {
-        var hoy=new Date(); hoy.setHours(0,0,0,0);
-        html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Últimas Inspecciones</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px">ID</td><td style="padding:4px 8px">Fecha</td><td style="padding:4px 8px">Técnico</td><td style="padding:4px 8px">Estado</td></tr>'
-        +insps.map(function(i){
-            var est='—', cls='#64748b';
-            if(i.fecha_ingreso){ try{ var fi=i.fecha_ingreso.includes('/')?(function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})():new Date(i.fecha_ingreso+'T00:00:00'); var fp=new Date(fi);fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30)); var d=Math.ceil((fp-hoy)/864e5); est=d<0?'Vencida':(d<=7?'Por vencer':'Vigente'); cls=d<0?'#ef4444':(d<=7?'#f59e0b':'#22c55e'); }catch(e){} }
-            return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px">'+(i.id||'—')+'</td><td style="padding:3px 8px">'+(i.fecha_ingreso||'—')+'</td><td style="padding:3px 8px">'+(i.tecnico||'—')+'</td><td style="padding:3px 8px;color:'+cls+';font-weight:700">'+est+'</td></tr>';
-        }).join('')+'</table></div>';
+    
+    // UI feedback
+    var btn = document.querySelector('button[onclick*="exportarFichaPlacaPDF"]');
+    var originalHtml = '';
+    if(btn) { originalHtml = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...'; btn.disabled = true; }
+
+    try {
+        var insps = (window.dataGlobalInspecciones||[]).filter(function(i){ return normalizeStr(i.placa)===placa; }).slice(0,8);
+        
+        // Mantenimientos Preventivos logic (últimos por tipo)
+        var rawMps = (window.dataGlobalFleetrun||[]).filter(function(r){ return normalizeStr(r[4])===placa; });
+        var byTipo = {};
+        var parseFechaLocal = function(str) {
+            if(!str) return 0;
+            var pts = str.split('/');
+            if(pts.length === 3) return new Date(pts[2], pts[1]-1, pts[0]).getTime();
+            return new Date(str).getTime() || 0;
+        };
+        rawMps.forEach(function(r) {
+            var tipo = (r[8] || '').toUpperCase().trim();
+            if (!byTipo[tipo]) byTipo[tipo] = r;
+            else {
+                var ta = parseFechaLocal(r[3]); var tb = parseFechaLocal(byTipo[tipo][3]);
+                if (ta > tb) byTipo[tipo] = r;
+                else if (ta === tb) {
+                    var idA = parseInt((String(r[0]).match(/\d+$/) || [0])[0], 10);
+                    var idB = parseInt((String(byTipo[tipo][0]).match(/\d+$/) || [0])[0], 10);
+                    if (idA > idB) byTipo[tipo] = r;
+                }
+            }
+        });
+        var mps = Object.values(byTipo);
+        mps.sort((a,b) => parseFechaLocal(b[3]) - parseFechaLocal(a[3]));
+
+        // Fetch Historial Trabajos
+        var trabajos = [];
+        try {
+            let res = await fetch('/api/ot-trabajos');
+            if (res.ok) {
+                let data = await res.json();
+                trabajos = (data || []).filter(function(t) {
+                    return (t.placa || '').toString().toUpperCase().trim() === placa;
+                });
+                trabajos.sort(function(a, b) {
+                    var da = new Date(a.fecha_trabajo || 0).getTime();
+                    var db = new Date(b.fecha_trabajo || 0).getTime();
+                    if (da !== db) return db - da;
+                    return parseInt(b.id||0) - parseInt(a.id||0);
+                });
+                trabajos = trabajos.slice(0, 15);
+            }
+        } catch(e) { console.error('Error fetching ot-trabajos', e); }
+
+        // Fetch GPS (KM, Horas)
+        var wialonData = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
+        var kmTxt = (wialonData && wialonData.km > 0) ? Number(wialonData.km).toLocaleString() + ' km' : '—';
+        var horasTxt = (wialonData && wialonData.horas > 0) ? Number(wialonData.horas).toLocaleString() + ' h' : '—';
+
+        function r2(a,b,c,d){ return '<tr><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(a||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(b||'—')+'</td><td style="color:#64748b;font-size:0.78rem;padding:3px 8px;width:25%">'+(c||'')+'</td><td style="font-weight:600;padding:3px 8px;width:25%">'+(d||'—')+'</td></tr>'; }
+        function sec(title,rows){ return '<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">'+title+'</div><table style="width:100%;border-collapse:collapse;">'+rows+'</table></div>'; }
+        
+        var html='<div style="font-family:Arial,sans-serif;padding:18px;font-size:0.82rem;">'
+            +'<div style="background:#2D438A;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:14px;">'
+            +'<div style="font-size:2rem;font-weight:700;letter-spacing:3px;">'+placa+'</div>'
+            +'<div style="margin-top:4px;opacity:.9">'+(p[1]||'Sin cliente')+(p[2]?' · RUC: '+p[2]:'')+'</div>'
+            +'<div style="margin-top:6px"><span style="background:'+(p[18]==='Activa'?'#22c55e':'#ef4444')+';padding:2px 10px;border-radius:4px;font-size:0.82rem">'+(p[18]||'—')+'</span>'+(p[19]?' <span style="background:#06b6d4;padding:2px 10px;border-radius:4px;font-size:0.82rem;margin-left:5px;">'+p[19]+'</span>':'')+'</div>'
+            +'<div style="margin-top:10px; display:flex; gap:20px; border-top:1px solid rgba(255,255,255,0.2); padding-top:8px;">'
+            +'<div style="font-size:0.85rem;"><strong style="opacity:0.8">Kilometraje:</strong> <span style="font-weight:700">'+kmTxt+'</span></div>'
+            +'<div style="font-size:0.85rem;"><strong style="opacity:0.8">Horas Motor:</strong> <span style="font-weight:700">'+horasTxt+'</span></div>'
+            +'</div>'
+            +'</div>';
+        
+        html+=sec('Especificaciones Técnicas',r2('Marca',p[3],'Modelo',p[4])+r2('Tipo',p[5],'Sub Tipo',p[6])+r2('Color',p[7],'Configuración',p[12])+r2('Año',p[13],'Combustible',p[14]));
+        html+=sec('Datos de Identificación',r2('Nº Motor',p[8],'Nº Caja',p[9])+r2('Nº Corona',p[10],'Nº VIN',p[11]));
+        html+=sec('Capacidades y Operatividad',r2('Carga Útil',p[15],'Peso Neto',p[16])+r2('Peso Bruto',p[17],'Llantas',p[21])+r2('En Uso',p[22],'',''));
+        
+        if (insps.length) {
+            var hoy=new Date(); hoy.setHours(0,0,0,0);
+            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Últimas Inspecciones</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">ID</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Técnico</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Tipo</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Estado</td></tr>'
+            +insps.map(function(i, idx){
+                var est='—', cls='#64748b';
+                var firstGeneralIdx = insps.findIndex(x => x.tipo_inspeccion !== 'Solo Frenos');
+                if (idx === firstGeneralIdx) {
+                    if(i.fecha_ingreso){ try{ var fi=i.fecha_ingreso.includes('/')?(function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})():new Date(i.fecha_ingreso+'T00:00:00'); var fp=new Date(fi);fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30)); var d=Math.ceil((fp-hoy)/864e5); est=d<0?'Vencida':(d===0?'Vence hoy':'Faltan '+d+'d'); cls=d<0?'#ef4444':(d<=7?'#f59e0b':'#22c55e'); }catch(e){} }
+                } else {
+                    est = 'Registrada';
+                }
+                var t = (i.tipo_inspeccion === 'Solo Frenos') ? 'Frenos' : 'General';
+                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px">'+(i.id||'—')+'</td><td style="padding:3px 8px">'+(i.fecha_ingreso||'—')+'</td><td style="padding:3px 8px">'+(i.tecnico||'—')+'</td><td style="padding:3px 8px;font-weight:600;color:'+(t==='Frenos'?'#dc3545':'#0d6efd')+'">'+t+'</td><td style="padding:3px 8px;color:'+cls+';font-weight:700">'+est+'</td></tr>';
+            }).join('')+'</table></div>';
+        }
+        
+        if (mps.length) {
+            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Mantenimientos Preventivos (Últimos por Tipo)</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Tipo MP</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha Registro</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Próx. Cambio</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Observación</td></tr>'
+            +mps.map(function(r){ 
+                var kmStr = (parseFloat(r[11])||0).toLocaleString();
+                var kmFmt = kmStr.includes(',') ? kmStr : (parseFloat(r[11])||0).toLocaleString('en-US'); // Ensure decent formatting fallback
+                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;font-weight:600">'+(r[8]||'—')+'</td><td style="padding:3px 8px">'+(typeof parseDateToDDMMYYYY==='function'?parseDateToDDMMYYYY(r[3]):r[3])+'</td><td style="padding:3px 8px">'+kmFmt+' km</td><td style="padding:3px 8px;color:#64748b">'+(r[13]||'—')+'</td></tr>'; 
+            }).join('')+'</table></div>';
+        }
+
+        if (trabajos.length) {
+            html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Historial de Trabajos Recientes</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Fecha</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">ODP</td><td style="padding:4px 8px;border-bottom:1px solid #e2e8f0">Trabajo / Obs</td></tr>'
+            +trabajos.map(function(t){ 
+                let f = '';
+                if(t.fecha_trabajo) { try { f = new Date(t.fecha_trabajo).toLocaleDateString('es-PE'); } catch(e){} }
+                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;white-space:nowrap">'+(f||'—')+'</td><td style="padding:3px 8px;font-weight:600">'+(t.odp||'—')+'</td><td style="padding:3px 8px">'+(t.observacion||'—')+'</td></tr>'; 
+            }).join('')+'</table></div>';
+        }
+
+        html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
+        
+        html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,logging:false,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} })
+            .from(html)
+            .outputPdf('bloburl')
+            .then(function(pdfUrl) {
+                window.open(pdfUrl, '_blank');
+            }).catch(function(err) {
+                console.error(err);
+                alert('Error al generar PDF');
+            }).finally(function() {
+                if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
+            });
+
+    } catch (e) {
+        console.error(e);
+        alert('Ocurrió un error al generar la ficha.');
+        if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
     }
-    if (mps.length) {
-        html+='<div style="margin-bottom:12px"><div style="font-weight:700;color:#2D438A;font-size:0.82rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #2D438A;padding-bottom:3px;margin-bottom:5px">Mantenimientos Preventivos</div><table style="width:100%;border-collapse:collapse;font-size:0.78rem"><tr style="background:#f1f5f9;font-weight:700"><td style="padding:4px 8px">Tipo MP</td><td style="padding:4px 8px">Fecha Registro</td><td style="padding:4px 8px">Próx. Cambio</td><td style="padding:4px 8px">Observación</td></tr>'
-        +mps.map(function(r){ return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;font-weight:600">'+(r[8]||'—')+'</td><td style="padding:3px 8px">'+(parseDateToDDMMYYYY(r[3]))+'</td><td style="padding:3px 8px">'+(parseFloat(r[11])||0).toLocaleString()+' km</td><td style="padding:3px 8px;color:#64748b">'+(r[13]||'—')+'</td></tr>'; }).join('')+'</table></div>';
-    }
-    html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
-    html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,logging:false,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(html).save();
 };
 
 // Aplica color de acento guardado (accesible desde módulo configuración)
