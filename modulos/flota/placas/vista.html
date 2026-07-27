@@ -115,22 +115,23 @@
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA ─────────────────────────────────── -->
 <div class="offcanvas offcanvas-end shadow-lg border-start-0" tabindex="-1" id="offcanvasDetallePlaca" style="width: 400px; background-color: var(--surface);">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2 text-primary">
-            <i class="bi bi-truck fs-4"></i> <span id="det-placa-titulo">ABC-123</span>
-        </h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+    <div class="offcanvas-header border-bottom d-flex flex-column align-items-start gap-3" style="background: linear-gradient(145deg, #f8fafc, #f1f5f9);">
+        <div class="w-100 d-flex justify-content-between align-items-center">
+            <h5 class="offcanvas-title fw-bolder d-flex align-items-center gap-2" style="color: #0369a1; font-size: 1.4rem;">
+                <i class="bi bi-truck"></i> <span id="det-placa-titulo">ABC-123</span>
+            </h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill fw-bold" style="background-color: #dcfce7; color: #166534; font-size: 0.75rem;" id="det-estado">ACTIVA</span>
+            <span class="badge rounded-pill fw-bold" style="background-color: #e0f2fe; color: #075985; font-size: 0.75rem;" id="det-motora">MOTORA</span>
+        </div>
+        <div class="w-100 bg-white rounded-3 p-3 shadow-sm border border-light">
+            <div class="fs-6 fw-bold text-dark mb-1" id="det-cliente">EMPRESA EJEMPLO S.A.C.</div>
+            <div class="text-muted small fw-medium"><i class="bi bi-card-heading me-1"></i> RUC: <span id="det-ruc">20123456789</span></div>
+        </div>
     </div>
     <div class="offcanvas-body custom-scrollbar p-0">
-        <!-- Cabecera resumen -->
-        <div class="p-3 border-bottom bg-theme-main">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="badge-premium" id="det-estado">ACTIVA</span>
-                <span class="text-muted small fw-bold" id="det-motora">MOTORA</span>
-            </div>
-            <div class="fs-6 fw-bold text-secondary mb-1" id="det-cliente">EMPRESA EJEMPLO S.A.C.</div>
-            <div class="text-muted small"><i class="bi bi-card-heading"></i> RUC: <span id="det-ruc">20123456789</span></div>
-        </div>
 
         <!-- Pestañas -->
         <ul class="nav nav-tabs nav-fill border-bottom px-3 pt-2 bg-theme-main" id="tabsDetallePlaca" role="tablist">
@@ -242,8 +243,8 @@
             </div>
 
             <!-- PESTAÑA 4: Mantenimiento Preventivo (Fleetrun) -->
-            <div class="tab-pane fade p-3" id="tab-fleet-panel" role="tabpanel">
-                <div id="tab-fleet-panel-body" class="text-muted text-center py-4">
+            <div class="tab-pane fade p-1" id="tab-fleet-panel" role="tabpanel" style="background-color: #f8fafc;">
+                <div id="odp-tab-fleet" class="text-muted text-center py-4">
                     <i class="bi bi-tools fs-3 opacity-50"></i>
                     <div class="mt-2 small">Sin registros de mantenimiento.</div>
                 </div>
