@@ -349,21 +349,38 @@ function totMsInit(valorActual) {
     if (cnt) cnt.textContent = window._totSeleccionados.length + ' seleccionados';
 
     var doRender = function() { totMsRenderOptions(''); window.totCalcularCostoAuto(); };
-    if (window._totPersonalLista.length > 0) { doRender(); return; }
-    
-    // ✨ Cargar personal desde nueva BD taller_personal ✨
+    // Siempre recargar para obtener lista completa (taller-personal + conductores)
     window._totPersonalDatos = {};
-    fetch('/api/taller-personal')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            window._totPersonalLista = data.map(function(p) {
-                var n = (p.nombre || '').trim();
+    window._totPersonalLista = [];
+    Promise.all([
+        fetch('/api/taller-personal').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+        fetch('/api/conductores').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+    ]).then(function(results) {
+        var tallerPers  = Array.isArray(results[0]) ? results[0] : [];
+        var conductores = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
+        var nombresSet = {};
+        var lista = [];
+        // Personal de taller (con costo/hora)
+        tallerPers.forEach(function(p) {
+            var n = (p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
                 window._totPersonalDatos[n] = parseFloat(p.costo_hora || 0);
-                return n;
-            }).filter(Boolean).sort();
-            doRender();
-        })
-        .catch(function() {});
+                lista.push(n);
+            }
+        });
+        // Conductores sin costo de hora (solo nombre)
+        conductores.forEach(function(p) {
+            var n = (p.nombre_completo || p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
+                window._totPersonalDatos[n] = 0;
+                lista.push(n);
+            }
+        });
+        window._totPersonalLista = lista.sort();
+        doRender();
+    });
 }
 
 // ✨ Algoritmo de autocalculo de costo basado en horas netas trabajadas ✨

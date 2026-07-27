@@ -1253,11 +1253,14 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
     var originalHtml = '';
     if(btn) { originalHtml = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...'; btn.disabled = true; }
 
+    // Helper local de normalización (evita depender de función global)
+    var _norm = function(s){ return (s||'').toString().toUpperCase().trim(); };
+
     try {
-        var insps = (window.dataGlobalInspecciones||[]).filter(function(i){ return normalizeStr(i.placa)===placa; }).slice(0,8);
+        var insps = (window.dataGlobalInspecciones||[]).filter(function(i){ return _norm(i.placa)===placa; }).slice(0,8);
         
         // Mantenimientos Preventivos logic (últimos por tipo)
-        var rawMps = (window.dataGlobalFleetrun||[]).filter(function(r){ return normalizeStr(r[4])===placa; });
+        var rawMps = (window.dataGlobalFleetrun||[]).filter(function(r){ return _norm(r[4])===placa; });
         var byTipo = {};
         var parseFechaLocal = function(str) {
             if(!str) return 0;
@@ -1527,38 +1530,32 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
             + htmlPag2;
 
         // ── Generar PDF ───────────────────────────────────────────
-        var loadHtml2pdf = function() {
-            if (typeof window.html2pdf === 'function') return Promise.resolve();
-            return new Promise(function(resolve, reject) {
-                var s = document.createElement('script');
-                s.src = '/libs/html2pdf.bundle.min.js';
-                s.onload = resolve;
-                s.onerror = reject;
-                document.head.appendChild(s);
-            });
-        };
-
         loadHtml2pdf().then(function() {
-            var div = document.createElement('div');
-            div.style.cssText = 'position:absolute;left:-99999px;top:0;width:794px;font-family:Arial,Helvetica,sans-serif;';
-            div.innerHTML = html;
-            document.body.appendChild(div);
-
             var opt = {
-                margin: [0, 0, 0, 0],
+                margin: 0,
                 filename: 'Ficha-' + placa + '.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: 'css', before: '.html2pdf__page-break' }
             };
 
+            var div = document.createElement('div');
+            div.innerHTML = html;
+            div.style.position = 'absolute';
+            div.style.top = '-9999px';
+            div.style.left = '-9999px';
+            div.style.width = '794px';
+            div.style.background = '#fff';
+            document.body.appendChild(div);
+
             html2pdf().set(opt).from(div).outputPdf('blob').then(function(pdfBlob) {
-                document.body.removeChild(div);
+                if (document.body.contains(div)) document.body.removeChild(div);
                 var blobUrl = URL.createObjectURL(pdfBlob);
                 window.open(blobUrl, '_blank');
                 if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
             }).catch(function(e) {
-                document.body.removeChild(div);
+                if (document.body.contains(div)) document.body.removeChild(div);
                 console.error(e);
                 alert('Ocurrió un error al generar el PDF.');
                 if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
