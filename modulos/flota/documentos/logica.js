@@ -565,15 +565,30 @@ function renderizarMatriz() {
     let filtrados = vehiculosFlota;
 
     const term = (document.getElementById('fleet-search').value || '').toLowerCase();
-    const empFilter = (document.getElementById('fleet-empresa-select').value || '');
     filtrados = vehiculosFlota.filter(v => {
         let matchTerm = v.placa.toLowerCase().includes(term) || (v.tipo || '').toLowerCase().includes(term);
-        let matchEmp = empFilter === '' || (v.empresa && v.empresa.trim() === empFilter);
+        
+        let matchAvanzado = true;
+        if (window.docFiltros) {
+            for (let colKey in window.docFiltros) {
+                let setVals = window.docFiltros[colKey];
+                if (setVals && setVals.size > 0) {
+                    let vVal = v[colKey] ? String(v[colKey]).trim() : '';
+                    if (vVal === '') vVal = '(Vacío)';
+                    if (!setVals.has(vVal)) {
+                        matchAvanzado = false;
+                        break;
+                    }
+                }
+            }
+        }
+        
         let matchKpi = true;
         if(currentFiltroKPI === 'vigente') matchKpi = (v._meta.peorEstado.score === 3);
         else if(currentFiltroKPI === 'alerta') matchKpi = (v._meta.peorEstado.score === 1 || v._meta.peorEstado.score === 2);
         else if(currentFiltroKPI === 'vencido') matchKpi = (v._meta.peorEstado.score === 0);
-        return matchTerm && matchEmp && matchKpi;
+        
+        return matchTerm && matchAvanzado && matchKpi;
     });
 
     if(filtrados.length === 0){
