@@ -350,14 +350,14 @@ function filtrarStatusFlotaAvanzado() {
     const headers = document.querySelectorAll('#cuerpoTablaStatusFlota tr.group-header');
     headers.forEach(header => {
         const claseZ = header.getAttribute('data-group-clase');
-        const childRows = document.querySelectorAll(`.child-row-sf[data-zona="${header.querySelector('.sf-group-label')?.innerText || ''}"]`);
+        const childRows = document.querySelectorAll(`.child-row-sf[data-zona="${header.querySelector('.sf-group-label')?.textContent || ''}"]`);
         let hasVisibleChild = false;
         let isExpanded = expandSFMap[claseZ] !== false;
 
         childRows.forEach(row => {
             const rCliMot = row.getAttribute('data-climot'); const rCliNoMot = row.getAttribute('data-clinomot');
             const rCorte = row.getAttribute('data-corte'); const rFecha = row.getAttribute('data-fecha');
-            const textoFila = row.innerText.toLowerCase();
+            const textoFila = row.textContent.toLowerCase();
 
             const matchTxt = !txt || textoFila.includes(txt);
             const matchCli = !chkCli.length || chkCli.includes(rCliMot) || chkCli.includes(rCliNoMot);
