@@ -544,122 +544,32 @@ function abrirModalEdicion(placa) {
             document.getElementById('f_ext_emision').value = (v.ext_emision||'').split('T')[0];
             document.getElementById('f_ext_vencimiento').value = (v.ext_vencimiento||'').split('T')[0];
 
-            document.getElementById('f_tc_url').value = v.tc_url || '';
-            if(v.tc_url) {
-                const lnk = document.getElementById('link_tc');
-                if(lnk) { lnk.href = v.tc_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_tc');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_tc');
-                if(lnk) lnk.style.display = 'none';
-                var dLnk = document.getElementById('del_ext');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_fum');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_sc');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_sv');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_boni');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_rt');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_matpel');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_soat');
-                if(dLnk) dLnk.style.display = 'none';
-                var dLnk = document.getElementById('del_tc');
-                if(dLnk) dLnk.style.display = 'none';
-            }
+            // Helper: sincroniza campo hidden + boton Ver + boton Eliminar para cada documento
+            var _setDocUrl = function(key, url) {
+                var hidEl  = document.getElementById('f_' + key + '_url');
+                var lnkEl  = document.getElementById('link_' + key);
+                var delEl  = document.getElementById('del_' + key);
+                var fileEl = document.getElementById('file_' + key);
+                if (hidEl)  hidEl.value = url || '';
+                if (fileEl) fileEl.value = '';   // limpiar cualquier archivo seleccionado previo
+                if (url) {
+                    if (lnkEl) { lnkEl.href = url; lnkEl.style.display = 'inline-flex'; }
+                    if (delEl) delEl.style.display = 'inline-flex';
+                } else {
+                    if (lnkEl) { lnkEl.href = '#'; lnkEl.style.display = 'none'; }
+                    if (delEl) delEl.style.display = 'none';
+                }
+            };
 
-            document.getElementById('f_soat_url').value = v.soat_url || '';
-            if(v.soat_url) {
-                const lnk = document.getElementById('link_soat');
-                if(lnk) { lnk.href = v.soat_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_soat');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_soat');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_matpel_url').value = v.matpel_url || '';
-            if(v.matpel_url) {
-                const lnk = document.getElementById('link_matpel');
-                if(lnk) { lnk.href = v.matpel_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_matpel');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_matpel');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_rt_url').value = v.rt_url || '';
-            if(v.rt_url) {
-                const lnk = document.getElementById('link_rt');
-                if(lnk) { lnk.href = v.rt_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_rt');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_rt');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_boni_url').value = v.boni_url || '';
-            if(v.boni_url) {
-                const lnk = document.getElementById('link_boni');
-                if(lnk) { lnk.href = v.boni_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_boni');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_boni');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_sv_url').value = v.sv_url || '';
-            if(v.sv_url) {
-                const lnk = document.getElementById('link_sv');
-                if(lnk) { lnk.href = v.sv_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_sv');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_sv');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_sc_url').value = v.sc_url || '';
-            if(v.sc_url) {
-                const lnk = document.getElementById('link_sc');
-                if(lnk) { lnk.href = v.sc_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_sc');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_sc');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_fum_url').value = v.fum_url || '';
-            if(v.fum_url) {
-                const lnk = document.getElementById('link_fum');
-                if(lnk) { lnk.href = v.fum_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_fum');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_fum');
-                if(lnk) lnk.style.display = 'none';
-            }
-
-            document.getElementById('f_ext_url').value = v.ext_url || '';
-            if(v.ext_url) {
-                const lnk = document.getElementById('link_ext');
-                if(lnk) { lnk.href = v.ext_url; lnk.style.display = 'inline-flex'; }
-                var dLnk = document.getElementById('del_ext');
-                if(dLnk) dLnk.style.display = 'inline-flex';
-            } else {
-                const lnk = document.getElementById('link_ext');
-                if(lnk) lnk.style.display = 'none';
-            }
+            _setDocUrl('tc',     v.tc_url);
+            _setDocUrl('soat',   v.soat_url);
+            _setDocUrl('matpel', v.matpel_url);
+            _setDocUrl('rt',     v.rt_url);
+            _setDocUrl('boni',   v.boni_url);
+            _setDocUrl('sv',     v.sv_url);
+            _setDocUrl('sc',     v.sc_url);
+            _setDocUrl('fum',    v.fum_url);
+            _setDocUrl('ext',    v.ext_url);
 
         }
     }
