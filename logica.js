@@ -1373,7 +1373,12 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
 
         html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
         
-        var fullHtml = '<html><head><title>Ficha de Placa ' + placa + '</title><style>@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; } }</style></head><body style="margin:0;padding:20px;background:#fff;">' + html + '</body></html>';
+        var fullHtml = '<html><head><title>Ficha de Placa ' + placa + '</title><style>'
+            + '@media screen { body { background-color: #525659; display: flex; justify-content: center; padding: 2rem 0; font-family: sans-serif; margin: 0; } '
+            + '.hoja-a4 { background-color: white; width: 210mm; min-height: 297mm; padding: 15mm; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin: 0 auto; box-sizing: border-box; } } '
+            + '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; background-color: white; } '
+            + '.hoja-a4 { width: 100%; min-height: auto; padding: 0; box-shadow: none; margin: 0; } }'
+            + '</style></head><body><div class="hoja-a4">' + html + '</div></body></html>';
         
         var win = window.open('', '_blank');
         if (win) {
