@@ -686,9 +686,16 @@
     </div>
     <div class="rot-drawer-body">
         <input type="hidden" id="rot-bkg-placa-hid">
-        <div class="mb-3">
-            <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
-            <input type="text" class="form-control form-control-sm" id="rot-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
+        <input type="hidden" id="rot-bkg-ticket-ot">
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Kilometraje</label>
+                <input type="number" class="form-control form-control-sm" id="rot-bkg-km" placeholder="0" min="0">
+            </div>
+            <div class="col-6">
+                <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
+                <input type="text" class="form-control form-control-sm" id="rot-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Descripción del Mantenimiento *</label>
