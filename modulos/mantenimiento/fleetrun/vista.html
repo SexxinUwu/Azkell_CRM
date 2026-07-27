@@ -126,8 +126,7 @@
             <!-- Izquierda: búsqueda + filtros embudo (siempre visible) -->
             <div class="d-flex align-items-center gap-2">
                 <div class="input-group input-group-sm" style="max-width: 250px; height: 32px;">
-                    <span class="input-group-text bg-white border-end-0 text-muted rounded-start d-flex align-items-center pe-1"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control bg-white border-start-0 shadow-none ps-1 h-100 rounded-end" id="buscadorFleetrun" onkeyup="filtrarFleetrunAvanzado()" placeholder="Buscar placa, cliente...">
+                    <input type="text" class="form-control shadow-sm h-100 rounded" style="border: 1px solid #e2e8f0; padding-left: 0.75rem;" id="buscadorFleetrun" onkeyup="debounceFiltrarFleetrunAvanzado()" placeholder="Buscar o ingresa la placa...">
                 </div>
                 <!-- Botón embudo — abre panel con todos los filtros -->
                 <div class="dropdown">
@@ -269,7 +268,7 @@
 </div>
 <div class="offcanvas offcanvas-end" tabindex="-1" id="drawerFleetrun" style="width:420px;max-width:96vw;"><div class="offcanvas-header" style="border-bottom:1px solid var(--border);background:var(--surface);"><h5 class="offcanvas-title fw-bold"><i class="bi bi-speedometer2 text-warning me-2"></i><span data-i18n="fleet.modal.new">Registrar Mantenimiento Preventivo</span></h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div><form id="formFleetrun" onsubmit="enviarFleetrun(event, this)" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;"><input type="hidden" name="usuarioAutor"><input type="hidden" name="f_id" id="f_id"><input type="hidden" name="f_mes" id="f_mes"><input type="hidden" name="f_anio" id="f_anio"><div class="offcanvas-body" style="overflow-y:auto;"><div class="row"><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha</label><input type="date" class="form-control form-control-sm fw-bold border-primary shadow-sm" style="border-radius:12px;min-height:44px;" name="f_fecha" id="f_fecha" onchange="autocompletarFecha('f')" required></div><div class="col-6 mb-3"><label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa *</label>
 <div class="position-relative">
-  <input type="text" id="f_placa-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar placa…" autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_placa')" onfocus="window._cbFiltrar('f_placa')" onblur="window._cbHide('f_placa')">
+  <input type="text" id="f_placa-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar o ingresa la placa..." autocomplete="off" style="border-radius:12px;min-height:44px;" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('f_placa')" onfocus="window._cbFiltrar('f_placa')" onblur="window._cbHide('f_placa')">
   <input type="hidden" id="f_placa" name="f_placa" onchange="window.autocompletarFleetrun('f')">
   <div id="f_placa-dd" class="cb-dropdown"></div>
 </div>
