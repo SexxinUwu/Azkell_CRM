@@ -743,54 +743,64 @@ window._cargarHistorialPlaca = function() {
     var body  = document.getElementById('tab-historial-body');
     if (!body || !placa) return;
 
-    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial de trabajos...</div>';
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial clínico de trabajos...</div>';
 
-    fetch('/api/ordenes-trabajo')
+    fetch('/api/ot-trabajos')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function(data) {
-            var rows = (data || []).filter(function(ot) {
-                return (ot.placa || '').toString().toUpperCase().trim() === placa.toUpperCase().trim();
+            var rows = (data || []).filter(function(t) {
+                return (t.placa || '').toString().toUpperCase().trim() === placa.toUpperCase().trim();
             });
             rows.sort(function(a, b) { 
-                var ia = parseInt(a.ticket_entrada) || parseInt(a.id_ot) || 0;
-                var ib = parseInt(b.ticket_entrada) || parseInt(b.id_ot) || 0;
-                return ib - ia; 
+                var da = new Date(a.fecha_trabajo || 0).getTime();
+                var db = new Date(b.fecha_trabajo || 0).getTime();
+                return db - da; 
             });
 
             if (!rows.length) {
-                body.innerHTML = '<div class="text-muted text-center py-5"><i class="bi bi-tools fs-3 opacity-40"></i><div class="mt-2 small">Sin trabajos registrados aún.</div><div class="text-muted" style="font-size:0.72rem;margin-top:4px">Las Órdenes de Trabajo de esta placa aparecerán aquí.</div></div>';
+                body.innerHTML = '<div class="text-muted text-center py-5"><i class="bi bi-journal-medical fs-3 opacity-40"></i><div class="mt-2 small">Sin historial clínico aún.</div><div class="text-muted" style="font-size:0.72rem;margin-top:4px">Los trabajos realizados a esta placa aparecerán aquí.</div></div>';
                 return;
             }
 
-            body.innerHTML = '<div style="padding:0.5rem;">' + rows.map(function(ot, idx) {
-                var d = new Date(ot.fecha_ingreso || ot.fecha_creacion || '');
-                var fechaStr = isNaN(d.getTime()) ? (ot.fecha_ingreso || ot.fecha_creacion || '—') : d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
-                var badgeEst = (ot.estado === 'Cerrada' || ot.estado === 'Finalizado') ? 'success' : (ot.estado === 'Pendiente' ? 'warning text-dark' : 'primary');
+            body.innerHTML = '<div style="padding:0.5rem;">' + rows.map(function(t, idx) {
+                var iso = t.fecha_trabajo || '';
+                var s = String(iso).replace('Z', '').replace('+00:00', '');
+                if (s.indexOf('T') === -1) s = s.replace(' ', 'T');
+                var d = new Date(s);
+                var fechaStr = isNaN(d.getTime()) ? (iso.split('T')[0] || '—') : d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
                 
-                var motivo = 'Trabajo de Taller';
+                var trabajo = t.trabajo_realizado || 'Trabajo sin descripción';
+                
+                var personal = t.tecnico || 'Sin asignar';
                 try {
-                    var det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {});
-                    if (det.motivo) motivo = det.motivo;
+                    var det = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {});
+                    if (det.personal) personal = det.personal;
                 } catch(e) {}
+
+                var idTrabajo = t.id_ot || t.ticket_visita || 'TR';
+                var idOt = t.ot_id || t.id_ot_padre || 'OT';
 
                 var lineH = idx < rows.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
                 return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
                     + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
                     + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-theme-main border" style="width:1.5rem;height:1.5rem;flex-shrink:0;">'
-                    + '<i class="bi bi-wrench text-secondary" style="font-size:0.6rem;"></i></div>'
+                    + '<i class="bi bi-heart-pulse text-danger" style="font-size:0.6rem;"></i></div>'
                     + lineH + '</div>'
-                    + '<div class="flex-grow-1 pb-1">'
+                    + '<div class="flex-grow-1 pb-2">'
                     + '<div class="d-flex justify-content-between align-items-center">'
-                    + '<span class="fw-bold" style="color:var(--crm-accent);">#' + (ot.ticket_entrada || ot.id_ot || 'OT') + '</span>'
-                    + '<span class="badge bg-' + badgeEst + '" style="font-size:0.62rem;">' + (ot.estado || 'Abierta') + '</span>'
+                    + '<span class="fw-bold" style="color:var(--crm-accent); font-size: 0.85rem;">#' + idOt + '</span>'
+                    + '<span class="badge bg-light text-secondary border" style="font-size:0.65rem;">' + idTrabajo + '</span>'
                     + '</div>'
-                    + '<div style="color:var(--subtext);font-size:0.75rem;margin-bottom:2px;">' + motivo + '</div>'
+                    + '<div class="fw-medium mt-1 text-dark" style="font-size:0.8rem; line-height:1.2;">' + trabajo + '</div>'
+                    + '<div class="d-flex align-items-center justify-content-between mt-1">'
+                    + '<div style="color:var(--subtext);font-size:0.72rem;"><i class="bi bi-person me-1"></i> ' + personal + '</div>'
                     + '<div style="color:var(--subtext);font-size:0.72rem;"><i class="bi bi-calendar3 me-1"></i> ' + fechaStr + '</div>'
+                    + '</div>'
                     + '</div></div>';
             }).join('') + '</div>';
         })
         .catch(function(err) {
-            if (body) body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Error al cargar OTs: ' + err.message + '</div>';
+            if (body) body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Error al cargar historial: ' + err.message + '</div>';
         });
 };
 window.abrirModalEditarPlaca = function(index) {
