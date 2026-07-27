@@ -743,76 +743,54 @@ window._cargarHistorialPlaca = function() {
     var body  = document.getElementById('tab-historial-body');
     if (!body || !placa) return;
 
-    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial...</div>';
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Cargando historial de trabajos...</div>';
 
-    fetch('/api/placas/' + encodeURIComponent(placa) + '/historial')
+    fetch('/api/ordenes-trabajo')
         .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function(rows) {
+        .then(function(data) {
+            var rows = (data || []).filter(function(ot) {
+                return (ot.placa || '').toString().toUpperCase().trim() === placa.toUpperCase().trim();
+            });
+            rows.sort(function(a, b) { 
+                var ia = parseInt(a.ticket_entrada) || parseInt(a.id_ot) || 0;
+                var ib = parseInt(b.ticket_entrada) || parseInt(b.id_ot) || 0;
+                return ib - ia; 
+            });
+
             if (!rows.length) {
-                body.innerHTML = '<div class="text-muted text-center py-5"><i class="bi bi-clock-history fs-3 opacity-40"></i><div class="mt-2 small">Sin cambios registrados aún.</div><div class="text-muted" style="font-size:0.72rem;margin-top:4px">Los cambios aparecerán aquí al editar la placa.</div></div>';
+                body.innerHTML = '<div class="text-muted text-center py-5"><i class="bi bi-tools fs-3 opacity-40"></i><div class="mt-2 small">Sin trabajos registrados aún.</div><div class="text-muted" style="font-size:0.72rem;margin-top:4px">Las Órdenes de Trabajo de esta placa aparecerán aquí.</div></div>';
                 return;
             }
 
-            var _nombreCampo = {
-                cliente:'Cliente', ruc_dni:'RUC/DNI', marca:'Marca', modelo_uts:'Modelo',
-                tipo:'Tipo', sub_tipo:'Sub Tipo', color:'Color', nro_motor:'Nº Motor',
-                nro_caja:'Nº Caja', nro_corona:'Nº Corona', nro_vin:'Nº VIN',
-                configuracion:'Configuración', anio:'Año', combustible:'Combustible',
-                carga_util:'Carga Útil', peso_neto:'Peso Neto', peso_bruto:'Peso Bruto',
-                estado:'Estado', uts:'Zona UTS', motora:'Motora', llantas:'Llantas', en_uso:'En Uso'
-            };
+            body.innerHTML = '<div style="padding:0.5rem;">' + rows.map(function(ot, idx) {
+                var d = new Date(ot.fecha_ingreso || ot.fecha_creacion || '');
+                var fechaStr = isNaN(d.getTime()) ? (ot.fecha_ingreso || ot.fecha_creacion || '—') : d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+                var badgeEst = (ot.estado === 'Cerrada' || ot.estado === 'Finalizado') ? 'success' : (ot.estado === 'Pendiente' ? 'warning text-dark' : 'primary');
+                
+                var motivo = 'Trabajo de Taller';
+                try {
+                    var det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {});
+                    if (det.motivo) motivo = det.motivo;
+                } catch(e) {}
 
-            // Agrupar entradas por fecha+usuario (misma edición)
-            var grupos = [];
-            var mapaGrupo = {};
-            rows.forEach(function(r) {
-                var d  = new Date(r.fecha);
-                var ts = d.toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
-                var hr = d.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
-                var key = r.usuario + '|' + ts + '|' + hr;
-                if (!mapaGrupo[key]) {
-                    mapaGrupo[key] = { ts: ts, hr: hr, usuario: r.usuario || 'Sistema', items: [] };
-                    grupos.push(mapaGrupo[key]);
-                }
-                mapaGrupo[key].items.push(r);
-            });
-
-            body.innerHTML = grupos.map(function(g, gi) {
-                var isLast = gi === grupos.length - 1;
-                var itemsHtml = g.items.map(function(it) {
-                    var isEstado = it.campo === 'estado';
-                    var badgeAnt = it.valor_ant
-                        ? '<span class="badge" style="background:#fee2e2;color:#991b1b;font-weight:500;font-size:0.68rem">' + (it.valor_ant || '—') + '</span>'
-                        : '<span class="text-muted" style="font-size:0.72rem">vacío</span>';
-                    var badgeNue = it.valor_nuevo
-                        ? '<span class="badge" style="background:#dcfce7;color:#166534;font-weight:500;font-size:0.68rem">' + it.valor_nuevo + '</span>'
-                        : '<span class="text-muted" style="font-size:0.72rem">vacío</span>';
-                    return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:0.78rem;flex-wrap:wrap">'
-                        + '<span style="color:var(--subtext);min-width:80px;font-size:0.72rem">' + (_nombreCampo[it.campo] || it.campo) + '</span>'
-                        + badgeAnt
-                        + '<i class="bi bi-arrow-right" style="color:#94a3b8;font-size:0.65rem"></i>'
-                        + badgeNue
-                        + '</div>';
-                }).join('');
-
-                var lineH = !isLast ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:12px;"></div>' : '';
-
-                return '<div class="d-flex gap-2 mb-2">'
-                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem">'
-                    + '<div class="rounded-circle d-flex align-items-center justify-content-center" style="width:1.6rem;height:1.6rem;flex-shrink:0;background:var(--crm-accent, #2563eb)">'
-                    + '<i class="bi bi-pencil text-white" style="font-size:0.55rem"></i></div>'
+                var lineH = idx < rows.length - 1 ? '<div style="width:2px;flex-grow:1;background:var(--border);margin-top:3px;min-height:14px;"></div>' : '';
+                return '<div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">'
+                    + '<div class="d-flex flex-column align-items-center" style="min-width:1.8rem;">'
+                    + '<div class="rounded-circle d-flex align-items-center justify-content-center bg-theme-main border" style="width:1.5rem;height:1.5rem;flex-shrink:0;">'
+                    + '<i class="bi bi-wrench text-secondary" style="font-size:0.6rem;"></i></div>'
                     + lineH + '</div>'
-                    + '<div class="flex-grow-1 pb-2" style="border-bottom:' + (!isLast ? '1px solid var(--border)' : 'none') + '">'
-                    + '<div class="d-flex justify-content-between align-items-center mb-1">'
-                    + '<span style="font-size:0.75rem;font-weight:600;color:var(--crm-accent)">' + (g.usuario) + '</span>'
-                    + '<span style="font-size:0.68rem;color:var(--subtext)">' + g.ts + ' · ' + g.hr + '</span>'
+                    + '<div class="flex-grow-1 pb-1">'
+                    + '<div class="d-flex justify-content-between align-items-center">'
+                    + '<span class="fw-bold" style="color:var(--crm-accent);">#' + (ot.ticket_entrada || ot.id_ot || 'OT') + '</span>'
+                    + '<span class="badge bg-' + badgeEst + '" style="font-size:0.62rem;">' + (ot.estado || 'Abierta') + '</span>'
                     + '</div>'
-                    + itemsHtml
+                    + '<div style="color:var(--subtext);font-size:0.75rem;margin-bottom:2px;">' + motivo + '</div>'
+                    + '<div style="color:var(--subtext);font-size:0.72rem;"><i class="bi bi-calendar3 me-1"></i> ' + fechaStr + '</div>'
                     + '</div></div>';
-            }).join('');
+            }).join('') + '</div>';
         })
         .catch(function(err) {
-            if (body) body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Error: ' + err.message + '</div>';
+            if (body) body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Error al cargar OTs: ' + err.message + '</div>';
         });
 };
 window.abrirModalEditarPlaca = function(index) {
