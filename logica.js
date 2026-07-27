@@ -1365,23 +1365,28 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
             +trabajos.map(function(t){ 
                 let f = '';
                 if(t.fecha_trabajo) { try { f = new Date(t.fecha_trabajo).toLocaleDateString('es-PE'); } catch(e){} }
-                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;white-space:nowrap">'+(f||'—')+'</td><td style="padding:3px 8px;font-weight:600">'+(t.odp||'—')+'</td><td style="padding:3px 8px">'+(t.observacion||'—')+'</td></tr>'; 
+                let idOt = t.ot_id || t.id_ot_padre || t.id_ot || '—';
+                if (idOt !== '—' && !String(idOt).startsWith('OT-') && !String(idOt).startsWith('TR-')) idOt = 'OT-' + idOt;
+                return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:3px 8px;white-space:nowrap">'+(f||'—')+'</td><td style="padding:3px 8px;font-weight:600">#'+(idOt)+'</td><td style="padding:3px 8px">'+(t.trabajo_realizado||'—')+'</td></tr>'; 
             }).join('')+'</table></div>';
         }
 
         html+='<div style="text-align:right;color:#94a3b8;font-size:0.7rem;margin-top:8px">Generado por Azkell Fleet · '+new Date().toLocaleDateString('es-PE')+'</div></div>';
         
-        html2pdf().set({ margin:[8,8,8,8], filename:'Ficha_'+placa+'.pdf', image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,logging:false,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} })
-            .from(html)
-            .outputPdf('bloburl')
-            .then(function(pdfUrl) {
-                window.open(pdfUrl, '_blank');
-            }).catch(function(err) {
-                console.error(err);
-                alert('Error al generar PDF');
-            }).finally(function() {
-                if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
-            });
+        var fullHtml = '<html><head><title>Ficha de Placa ' + placa + '</title><style>@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; } }</style></head><body style="margin:0;padding:20px;background:#fff;">' + html + '</body></html>';
+        
+        var win = window.open('', '_blank');
+        if (win) {
+            win.document.open();
+            win.document.write(fullHtml);
+            win.document.close();
+            // Automatically prompt for printing after a short delay to allow images/fonts to load
+            setTimeout(function() { win.print(); }, 500);
+        } else {
+            alert('Por favor, permite las ventanas emergentes (pop-ups) para ver el formato.');
+        }
+        
+        if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 
     } catch (e) {
         console.error(e);
