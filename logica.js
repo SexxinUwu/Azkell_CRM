@@ -1530,7 +1530,7 @@ window.exportarFichaPlacaPDF = async function(placaArg) {
             + htmlPag2;
 
         // ── Generar PDF ───────────────────────────────────────────
-        loadHtml2pdf().then(function() {
+        loadPDF().then(function() {
             var opt = {
                 margin: 0,
                 filename: 'Ficha-' + placa + '.pdf',
