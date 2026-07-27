@@ -134,30 +134,94 @@
     <div class="offcanvas-body custom-scrollbar p-0">
 
         <!-- Pestañas -->
-        <ul class="nav nav-tabs nav-fill border-bottom px-3 pt-2 bg-theme-main" id="tabsDetallePlaca" role="tablist">
+        <style>
+            .modern-tabs-container {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+                background: #f8fafc;
+                padding: 0.6rem 1rem;
+                gap: 0.5rem;
+                border-bottom: 1px solid #e2e8f0;
+                margin: 0;
+            }
+            .modern-tabs-container::-webkit-scrollbar {
+                display: none;
+            }
+            .modern-tabs-container .nav-item {
+                flex: 0 0 auto;
+                margin: 0;
+            }
+            .modern-tabs-container .nav-link {
+                border-radius: 20px;
+                padding: 0.4rem 1.2rem;
+                color: #64748b;
+                border: 1px solid transparent;
+                transition: all 0.2s ease;
+                background: transparent;
+                font-weight: 600;
+                font-size: 0.85rem;
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                line-height: 1.2;
+            }
+            .modern-tabs-container .nav-link:hover {
+                background-color: #e2e8f0;
+                color: #334155;
+            }
+            .modern-tabs-container .nav-link.active {
+                background-color: #e0e7ff;
+                color: #4f46e5;
+                border-color: rgba(79, 70, 229, 0.2);
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .dark .modern-tabs-container {
+                background: var(--surface, #1e293b);
+                border-bottom-color: var(--border, #334155);
+            }
+            .dark .modern-tabs-container .nav-link {
+                color: #94a3b8;
+            }
+            .dark .modern-tabs-container .nav-link:hover {
+                background-color: #334155;
+                color: #e2e8f0;
+            }
+            .dark .modern-tabs-container .nav-link.active {
+                background-color: rgba(99, 102, 241, 0.15);
+                color: #818cf8;
+                border-color: rgba(129, 140, 248, 0.2);
+            }
+            .modern-tabs-container .nav-link i {
+                font-size: 1.1em;
+            }
+        </style>
+        <ul class="nav nav-pills modern-tabs-container" id="tabsDetallePlaca" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold small" id="tab-general-btn" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" role="tab">
-                    <i class="bi bi-info-circle me-1"></i> <span data-i18n="plates.panel.general">Info General</span>
+                <button class="nav-link active" id="tab-general-btn" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" role="tab">
+                    <i class="bi bi-info-circle"></i> <span data-i18n="plates.panel.general">Info General</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold small" id="tab-gps-btn" data-bs-toggle="tab" data-bs-target="#tab-gps" type="button" role="tab">
-                    <i class="bi bi-broadcast me-1"></i> GPS
+                <button class="nav-link" id="tab-gps-btn" data-bs-toggle="tab" data-bs-target="#tab-gps" type="button" role="tab">
+                    <i class="bi bi-broadcast"></i> GPS
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold small" id="tab-insp-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-insp-panel" type="button" role="tab">
-                    <i class="bi bi-clipboard2-check me-1"></i> Inspecciones
+                <button class="nav-link" id="tab-insp-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-insp-panel" type="button" role="tab">
+                    <i class="bi bi-clipboard2-check"></i> Inspecciones
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold small" id="tab-fleet-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-fleet-panel" type="button" role="tab">
-                    <i class="bi bi-tools me-1"></i> Mantenimiento Preventivo
+                <button class="nav-link" id="tab-fleet-panel-btn" data-bs-toggle="tab" data-bs-target="#tab-fleet-panel" type="button" role="tab">
+                    <i class="bi bi-tools"></i> Mantenimiento Preventivo
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold small" id="tab-historial-btn" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button" role="tab" onclick="window._cargarHistorialPlaca()">
-                    <i class="bi bi-clock-history me-1"></i> Historial
+                <button class="nav-link" id="tab-historial-btn" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button" role="tab" onclick="window._cargarHistorialPlaca()">
+                    <i class="bi bi-clock-history"></i> Historial
                 </button>
             </li>
         </ul>
