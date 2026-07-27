@@ -459,6 +459,13 @@ function mostrarFleetrunCards(datosAMostrar) {
     container.innerHTML = html;
 }
 
+window.debounceFiltrarFleetrunAvanzado = function() {
+    clearTimeout(window._fleetrunSearchTimer);
+    window._fleetrunSearchTimer = setTimeout(function() {
+        window.filtrarFleetrunAvanzado();
+    }, 400);
+};
+
 window.filtrarFleetrunAvanzado = function() {
     const txt = document.getElementById('buscadorFleetrun')?.value.toLowerCase() || '';
     const dateF = document.getElementById('buscadorFechaFleetrun')?.value || '';
