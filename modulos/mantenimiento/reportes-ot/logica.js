@@ -1,4 +1,4 @@
-﻿// ================================================================
+// ================================================================
 // Módulo Reportes OT — Azkell Fleet
 // Patrón SPA: window.* globals, init_reportes_ot() entry point
 // Muestra histórico filtrable de Órdenes de Trabajo
@@ -1667,10 +1667,11 @@ function rotRenderSecTrabajos(idOt, esAprobada) {
                 : '<span style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:12px;padding:2px 8px;font-size:0.68rem;font-weight:700;">Pendiente</span>';
             var fecIni = t.fecha_trabajo ? String(t.fecha_trabajo).replace('T',' ').slice(0,16) : '';
             var fecFin = t.fecha_salida  ? String(t.fecha_salida).replace('T',' ').slice(0,16)  : '';
-            var ticket = rotEscHtml(String(t.ticket_visita || ''));
-            html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;cursor:pointer;" onclick="window.rotEditarTrabajo(\'' + ticket + '\',\'' + rotEscHtml(idOt) + '\')">'
+            var ticketDisplay = rotEscHtml(String(t.ticket_visita || ''));
+            var jobId = rotEscHtml(String(t.id_ot || t.ticket_visita || t.id || ''));
+            html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;cursor:pointer;" onclick="window.rotEditarTrabajo(\'' + jobId + '\',\'' + rotEscHtml(idOt) + '\')">'
                   + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
-                  + '<div><span style="font-weight:700;color:var(--primary,#5865F2);font-size:0.72rem;">' + ticket + '</span> ' + bdg + '</div>'
+                  + '<div><span style="font-weight:700;color:var(--primary,#5865F2);font-size:0.72rem;">' + ticketDisplay + '</span> ' + bdg + '</div>'
                   + (det2.costo ? '<span style="font-weight:700;color:#16a34a;font-size:0.78rem;">S/' + parseFloat(det2.costo).toFixed(2) + '</span>' : '')
                   + '</div>'
                   + '<div style="color:var(--text);margin-top:3px;">' + rotEscHtml(t.trabajo_realizado || '—') + '</div>'
@@ -1816,7 +1817,8 @@ window.rotAgregarTrabajo = function(idOt) {
 
 // ── Editar Trabajo ────────────────────────────────────────────────
 window.rotEditarTrabajo = function(idTrabajo, idOt) {
-    var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.id_ot || '') === String(idTrabajo); });
+    // idTrabajo es el id del trabajo o ticket_visita
+    var t = window.rotOtTrabajosActivos.find(function(x){ return String(x.id_ot || x.ticket_visita || x.id || '') === String(idTrabajo); });
     if (!t) return;
     var det2 = {};
     try { det2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
@@ -1834,7 +1836,7 @@ window.rotEditarTrabajo = function(idTrabajo, idOt) {
     };
     var fi = document.getElementById('rot-tr-fecha-ini'); if (fi) fi.value = toLocalDT(t.fecha_trabajo || '');
     var ff = document.getElementById('rot-tr-fecha-fin'); if (ff) ff.value = toLocalDT(t.fecha_salida  || '');
-    var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Editar Trabajo ' + ticket;
+    var tit = document.getElementById('rot-tr-drawer-titulo'); if (tit) tit.textContent = 'Editar Trabajo ' + idTrabajo;
     var btnElim = document.getElementById('rot-tr-btn-eliminar'); if (btnElim) btnElim.style.display = '';
     rotAbrirSubDrawer('rot-drawer-trabajo');
     rotMsInit(det2.personal || t.tecnico || '');
@@ -1882,6 +1884,126 @@ window.rotGuardarTrabajo = function() {
             }).catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
+};
+
+// ── Multiselect Personal ──────────────────────────────────────────────────
+window.rotMsInit = function(valorActual) {
+    window._rotSeleccionados = valorActual ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean) : [];
+    window.rotMsRenderBox();
+    var dd = document.getElementById('rot-ms-dropdown'); if (dd) dd.style.display = 'none';
+    var s = document.getElementById('rot-ms-search'); if (s) s.value = '';
+    var cnt = document.getElementById('rot-ms-count'); if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+
+    var doRender = function() { window.rotMsRenderOptions(''); window.rotCalcularCostoAuto(); };
+    window._rotPersonalDatos = {};
+    window._rotPersonalLista = [];
+    Promise.all([
+        fetch('/api/taller-personal').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+        fetch('/api/conductores').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+    ]).then(function(results) {
+        var tallerPers = Array.isArray(results[0]) ? results[0] : [];
+        var conductores = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
+        var nombresSet = {};
+        var lista = [];
+        tallerPers.forEach(function(p) {
+            var n = (p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
+                window._rotPersonalDatos[n] = parseFloat(p.costo_hora || 0);
+                lista.push(n);
+            }
+        });
+        conductores.forEach(function(p) {
+            var n = (p.nombre_completo || p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
+                window._rotPersonalDatos[n] = 0;
+                lista.push(n);
+            }
+        });
+        window._rotPersonalLista = lista.sort();
+        doRender();
+    });
+};
+window.rotCalcularCostoAuto = function() {
+    var fIni = document.getElementById('rot-tr-fecha-ini').value;
+    var fFin = document.getElementById('rot-tr-fecha-fin').value;
+    if (!fIni || !fFin) return;
+    var inicio = new Date(fIni); var fin = new Date(fFin);
+    if (fin <= inicio) return;
+    var esMinutoLaboral = function(d) {
+        var day = d.getDay(); var h = d.getHours();
+        if (day === 0) return false;
+        if (h < 8) return false;
+        if (day >= 1 && day <= 5 && h >= 18) return false;
+        if (day === 6 && h >= 14) return false;
+        if (day >= 1 && day <= 5 && h === 13) return false;
+        return true;
+    };
+    var minutosNetos = 0; var current = new Date(inicio.getTime());
+    while(current < fin) {
+        var nextMinute = new Date(current.getTime() + 60000);
+        if (nextMinute > fin) {
+            var diff = (fin - current) / 60000;
+            if (esMinutoLaboral(current)) minutosNetos += diff;
+            break;
+        } else {
+            if (esMinutoLaboral(current)) minutosNetos += 1;
+            current = nextMinute;
+        }
+    }
+    var costoHoraTotal = 0;
+    window._rotSeleccionados.forEach(function(n) { costoHoraTotal += window._rotPersonalDatos[n] || 0; });
+    var total = (minutosNetos / 60) * costoHoraTotal;
+    var costoInput = document.getElementById('rot-tr-costo');
+    if (costoInput) costoInput.value = total.toFixed(2);
+};
+window.rotMsToggle = function() {
+    var dd = document.getElementById('rot-ms-dropdown'); var box = document.getElementById('rot-ms-box');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) { dd.style.display = 'none'; if (box) box.style.borderColor = ''; }
+    else { dd.style.display = 'block'; if (box) box.style.borderColor = 'var(--primary, #5865F2)'; var s = document.getElementById('rot-ms-search'); if (s) { s.value = ''; s.focus(); } window.rotMsRenderOptions(''); }
+};
+window.rotMsFiltrar = function(q) { window.rotMsRenderOptions(q || ''); };
+window.rotMsRenderOptions = function(query) {
+    var cont = document.getElementById('rot-ms-options'); if (!cont) return;
+    var q = query.toLowerCase();
+    var html = '';
+    window._rotPersonalLista.forEach(function(n) {
+        if (q && n.toLowerCase().indexOf(q) === -1) return;
+        var chk = window._rotSeleccionados.indexOf(n) !== -1;
+        var bg = chk ? 'var(--bg-active, rgba(88,101,242,0.1))' : 'transparent';
+        var fw = chk ? '600' : '400';
+        html += '<div onclick="window.rotMsToggleItem(\'' + window.rotEscHtml(n).replace(/'/g, "\\'") + '\')" style="padding:6px 12px; cursor:pointer; font-size:.82rem; background:'+bg+'; font-weight:'+fw+'; display:flex; align-items:center; transition:background .15s;">' +
+            '<div style="width:16px; height:16px; border:1px solid '+(chk?'var(--primary,#5865F2)':'var(--subtext)')+'; border-radius:3px; margin-right:8px; display:flex; align-items:center; justify-content:center; background:'+(chk?'var(--primary,#5865F2)':'transparent')+'">' +
+            (chk?'<i class="bi bi-check2" style="color:#fff;font-size:.7rem;"></i>':'') + '</div>' + n + '</div>';
+    });
+    if (!html) html = '<div style="padding:8px 12px; font-size:.8rem; color:var(--subtext); text-align:center;">No hay resultados</div>';
+    cont.innerHTML = html;
+};
+window.rotMsToggleItem = function(n) {
+    var idx = window._rotSeleccionados.indexOf(n);
+    if (idx === -1) window._rotSeleccionados.push(n); else window._rotSeleccionados.splice(idx,1);
+    window.rotMsRenderOptions(document.getElementById('rot-ms-search') ? document.getElementById('rot-ms-search').value : '');
+    window.rotMsRenderBox();
+    window.rotCalcularCostoAuto();
+};
+window.rotMsLimpiar = function() { window._rotSeleccionados = []; window.rotMsRenderOptions(''); window.rotMsRenderBox(); window.rotCalcularCostoAuto(); };
+window.rotMsRenderBox = function() {
+    var box = document.getElementById('rot-ms-box'); if (!box) return;
+    var h = document.getElementById('rot-tr-personal'); if (h) h.value = window._rotSeleccionados.join(',');
+    var cnt = document.getElementById('rot-ms-count'); if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+    if (window._rotSeleccionados.length === 0) {
+        box.innerHTML = '<span style="color:var(--subtext); font-size:.85rem;">Selecciona técnico(s)...</span>';
+    } else {
+        var html = '';
+        window._rotSeleccionados.forEach(function(n) {
+            html += '<span style="background:var(--primary, #5865F2); color:#fff; padding:2px 6px; border-radius:6px; font-size:.72rem; display:flex; align-items:center; gap:4px;">' +
+                window.rotEscHtml(n) + '<i class="bi bi-x" onclick="event.stopPropagation(); window.rotMsToggleItem(\'' + window.rotEscHtml(n).replace(/'/g, "\\'") + '\')" style="cursor:pointer; font-size:.85rem; opacity:.8;"></i></span>';
+        });
+        box.innerHTML = html;
+    }
 };
 
 // ── Eliminar Trabajo ──────────────────────────────────────────────
@@ -2237,20 +2359,33 @@ function rotMsInit(valorActual) {
     if (hidden) hidden.value = window._rotSeleccionados.join(', ');
 
     var doRender = function() { rotMsRenderOptions(''); };
-    if (window._rotPersonalLista.length > 0) { doRender(); return; }
-    fetch('/api/conductores')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            var lista = Array.isArray(data) ? data : (data.data || []);
-            window._rotPersonalLista = lista.map(function(p) {
-                var n = (p.nombre_completo || p.nombre || '').trim();
-                return n.split(' ').map(function(w) {
-                    return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
-                }).join(' ');
-            }).filter(Boolean).sort();
-            doRender();
-        })
-        .catch(function() {});
+    // Siempre recargar para obtener lista completa (conductores + personal taller)
+    window._rotPersonalLista = [];
+    Promise.all([
+        fetch('/api/conductores').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+        fetch('/api/taller-personal').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+    ]).then(function(results) {
+        var conductores = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
+        var tallerPers  = Array.isArray(results[1]) ? results[1] : [];
+        var nombresSet = {};
+        var lista = [];
+        conductores.forEach(function(p) {
+            var n = (p.nombre_completo || p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
+                lista.push(n);
+            }
+        });
+        tallerPers.forEach(function(p) {
+            var n = (p.nombre || '').trim();
+            if (n && !nombresSet[n.toUpperCase()]) {
+                nombresSet[n.toUpperCase()] = true;
+                lista.push(n);
+            }
+        });
+        window._rotPersonalLista = lista.sort();
+        doRender();
+    });
 }
 
 window.rotMsToggle = function() {
