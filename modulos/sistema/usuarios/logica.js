@@ -313,7 +313,7 @@ function _guBuildRolPanel(rol) {
         }
 
         if (mod.type === 'hub') {
-            var hubEnabled = hubsActivos[mod.key];
+            var hubEnabled = esAdmin ? true : hubsActivos[mod.key];
             var rdonly = esAdmin ? ' readonly' : '';
             var rowCls = 'gu-perm-row gu-perm-hub';
             var parentAttr = '';
@@ -341,6 +341,7 @@ function _guBuildRolPanel(rol) {
         var isChild = (mod.type === 'child' || mod.type === 'child_admin');
         if (mod.type === 'normal' || mod.type === 'normal_r' || isChild || !mod.type) {
             var m = p[mod.key] || {};
+            if (esAdmin) m = { l:1, c:1, e:1, d:1 };
             var accs = ['l','c','e','d'];
             var lbls = ['Leer','Crear','Editar','Eliminar'];
             var rdonly = esAdmin ? ' readonly' : '';
@@ -448,10 +449,21 @@ window._guHexColorInput = function(val) {
 };
 
 window._guToggleAdmin = function(chk) {
-    document.querySelectorAll('.dc-toggle-label:not(.danger)').forEach(function(lbl){
-        lbl.classList.toggle('readonly', chk.checked);
-    });
-};
+      var isAdm = chk.checked;
+      document.querySelectorAll('.dc-toggle-label:not(.danger)').forEach(function(lbl){
+          lbl.classList.toggle('readonly', isAdm);
+      });
+      document.querySelectorAll('.gu-perm-label').forEach(function(lbl){
+          if (lbl.id && lbl.id.endsWith('-lbl')) {
+              if (isAdm) lbl.innerText = 'Habilitado';
+          }
+      });
+      document.querySelectorAll('.dc-toggle:not(#pt-admin)').forEach(function(input){
+          if (isAdm) {
+              input.checked = true;
+          }
+      });
+  };
 
 function _guCollectPermisos() {
     var pObj = {};
