@@ -220,13 +220,17 @@ window.verificarSesionGuardada = function() {
     }
     let inputInsp = document.getElementById('input-inspector-nuevo'); if (inputInsp) inputInsp.value = usuarioLogueado;
 
-    let p = permisosUsuario || {};
-    let isAdm = p?.admin === true || (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+    window.checkPerm('init', 'l'); // Asegura que window._permCache esté inicializado
+    let pActive = window._permCache || {};
+    let isSimulating = !!localStorage.getItem('fleet_simulated_role');
+    let isAdm = pActive.admin === true || (!isSimulating && guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
 
-    let rolHtml = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com')
+    let rolStr = isSimulating ? (JSON.parse(localStorage.getItem('fleet_simulated_role')).nombre || rolLogueado) : rolLogueado;
+
+    let rolHtml = (!isSimulating && guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com')
         ? '<span class="badge bg-dark text-warning shadow-sm"><i class="bi bi-star-fill"></i> Fundador</span>'
         : (isAdm ? '<span class="badge bg-warning text-dark shadow-sm"><i class="bi bi-star-fill"></i> Administrador</span>'
-        : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolLogueado}</span>`);
+        : `<span class="badge bg-primary shadow-sm"><i class="bi bi-person-gear"></i> ${rolStr}</span>`);
 
     let topBadge = document.getElementById('badge-rol-top'); if (topBadge) topBadge.innerHTML = rolHtml;
     let perfilBadge = document.getElementById('perfil-rol-badge'); if (perfilBadge) perfilBadge.innerHTML = rolHtml;
@@ -2184,7 +2188,8 @@ function inicializarMenu() {
 window.aplicarPermisosBotonesUI = function() {
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
-    let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
+    let isSimulating = !!localStorage.getItem('fleet_simulated_role');
+    let isAdm = p?.admin === true || (!isSimulating && correoActual === 'admin@azkell.com');
 
     const check = (selector, permiso) => {
         document.querySelectorAll(selector).forEach(btn => {
@@ -2399,7 +2404,8 @@ window.cambiarModulo = function(modulo, idBoton) {
     let bloqueado = false;
     let p = permisosUsuario || {};
     let correoActual = (localStorage.getItem('fleet_correo') || '').toLowerCase();
-    let isAdm = p?.admin === true || correoActual === 'admin@azkell.com';
+    let isSimulating = !!localStorage.getItem('fleet_simulated_role');
+    let isAdm = p?.admin === true || (!isSimulating && correoActual === 'admin@azkell.com');
 
     if (modulo === 'statusMant' && !isAdm && !p?.insp?.l) bloqueado = true;
     if ((modulo === 'placas' || modulo === 'almacenPlacas') && !isAdm && !p?.placas?.l) bloqueado = true;
