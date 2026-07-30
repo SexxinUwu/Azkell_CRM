@@ -2222,8 +2222,12 @@ function recargarWialon(forzarVista = false) {
             // Si las tablas están visibles, se refrescan solas para inyectar GPS
             if (document.getElementById('moduloStatus')?.style.display === 'flex') mostrarStatusInspecciones(dataGlobalInspecciones);
             // SPA: verificar ruta actual en lugar del elemento legacy #moduloFleetrun
-            if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun' && typeof window.mostrarFleetrun === 'function') {
+            let rActual = sessionStorage.getItem('fleet_rutaActual');
+            if (rActual === 'mantenimiento/fleetrun' && typeof window.mostrarFleetrun === 'function') {
                 window.mostrarFleetrun(window.dataGlobalFleetrun);
+            }
+            if ((rActual === 'dashboard' || rActual === null || rActual === '') && typeof window.recargarDashboard === 'function') {
+                window.recargarDashboard();
             }
             if (typeof window.renderListaUnidadesGPS === 'function') window.renderListaUnidadesGPS(d);
         } else {
