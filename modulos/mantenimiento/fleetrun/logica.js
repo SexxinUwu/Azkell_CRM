@@ -146,7 +146,8 @@ function mostrarFleetrun(datos) {
               : null;
           // Race condition F5: si placas no cargaron aún, mostrar todo; root re-renderizará cuando lleguen
           const placasListas = dataGlobalPlacas && dataGlobalPlacas.length > 0;
-          if (!mapa.has(key) && (!placasListas || (infoPlaca && infoPlaca[18] === 'Activa'))) {
+          let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
+          if (!mapa.has(key) && (!placasListas || (infoPlaca && estadoPlaca === 'ACTIVA'))) {
               mapa.set(key, row);
           }
       });
@@ -169,7 +170,8 @@ function mostrarFleetrun(datos) {
           let pageNum = Math.floor(_groupIndex / window.fleetrunPageSize) + 1;
           _groupIndex++;
           let infoP = dataGlobalPlacas.find(p => p[0] === placaRaw); let cli = infoP ? infoP[1] : (mantenimientos[0][6] || "-"); let utsRaw = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (mantenimientos[0][7] || "-"); let utsDisplay = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
-          let isActive = infoP && infoP[18] === 'Activa'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
+          let estadoPlaca = normalizeStr((infoP && infoP[18]) ? infoP[18] : ((infoP && infoP[8]) ? infoP[8] : ''));
+          let isActive = infoP && estadoPlaca === 'ACTIVA'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
           let kmDiaInfo = window._kmDiaMap[(placaRaw||'').toUpperCase()];
           let esHorasGrp = (window._metricaMap[(placaRaw||'').toUpperCase()] === 'horas');
@@ -203,12 +205,18 @@ function mostrarFleetrun(datos) {
               let metricSuffix = esHoras ? '_HORAS' : '_KM';
               let combinedKey = utsDisplay.toUpperCase() + metricSuffix;
               
-              if (window._fleetrun_umbrales_uts) {
+              if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
                   if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
                       utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
                   } else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
                       utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+                  } else {
+                      if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
+                      else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
                   }
+              } else {
+                  if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
+                  else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
               }
               
               if (km_restante <= 0) { badgeClass = "bg-danger text-white"; iconFalta = `<i class="bi bi-exclamation-circle-fill"></i>`; estadoKpi = "VENCIDO";
@@ -376,12 +384,18 @@ function mostrarFleetrunCards(datosAMostrar) {
             var utsDisp = (utsRaw === "-" || utsRaw === "") ? "-" : utsRaw.charAt(0).toUpperCase() + utsRaw.slice(1).toLowerCase();
             let metricSuffix = esHorasGrp ? '_HORAS' : '_KM';
             let combinedKey = utsDisp.toUpperCase() + metricSuffix;
-            if (window._fleetrun_umbrales_uts) {
+            if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
                 if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
                     utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
                 } else if (window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
                     utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+                } else {
+                    if (normalizeStr(utsDisp) === "NACIONAL") utsUmbral = 1500;
+                    else if (normalizeStr(utsDisp) === "LOCAL") utsUmbral = 100;
                 }
+            } else {
+                if (normalizeStr(utsDisp) === "NACIONAL") utsUmbral = 1500;
+                else if (normalizeStr(utsDisp) === "LOCAL") utsUmbral = 100;
             }
             
             if (falta <= 0) estado = 'VENCIDO';
@@ -558,12 +572,18 @@ function _filtrarDatosAMostrar(datos) {
         var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
         var metricSuffix = esHoras ? '_HORAS' : '_KM';
         var combinedKey = utsDisp.toUpperCase() + metricSuffix;
-        if (window._fleetrun_umbrales_uts) {
+        if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
             if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
                 utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
             } else if (window._fleetrun_umbrales_uts[utsDisp.toUpperCase()] !== undefined) {
                 utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisp.toUpperCase()]);
+            } else {
+                if (normalizeStr(utsDisp) === "NACIONAL") utsUmbral = 1500;
+                else if (normalizeStr(utsDisp) === "LOCAL") utsUmbral = 100;
             }
+        } else {
+            if (normalizeStr(utsDisp) === "NACIONAL") utsUmbral = 1500;
+            else if (normalizeStr(utsDisp) === "LOCAL") utsUmbral = 100;
         }
         if (falta_km <= 0) estado = 'VENCIDO';
         else if (falta_km <= utsUmbral) estado = 'PROXIMO';
@@ -1505,120 +1525,6 @@ window.updateGraficoFleetrun = function(vencidos, proximos, vigentes, totalFlota
     window.chartFleetrunInst.update();
 };
 
-window.procesarFleetrunParaDashboard = function() {
-    if (!dataGlobalFleetrun || dataGlobalFleetrun.length === 0 || !dataGlobalPlacas || dataGlobalPlacas.length === 0) {
-        setTimeout(procesarFleetrunParaDashboard, 500);
-        return;
-    }
-
-    let cntCrit = 0, cntRiesgo = 0, cntInmed = 0, cntOper = 0;
-    let parseFecha = (str) => {
-        if(!str) return 0;
-        if(str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
-        return new Date(str).getTime() || 0;
-    };
-
-    let mapa = new Map();
-    [...dataGlobalFleetrun].sort((a,b) => parseFecha(b[3]) - parseFecha(a[3])).forEach(row => {
-        let placa = normalizeStr(row[4]);
-        let tipo = normalizeStr(row[8]);
-        let key = placa + "_" + tipo;
-
-        let infoPlaca = dataGlobalPlacas.find(p => normalizeStr(p[0]) === placa);
-        if (infoPlaca && infoPlaca[18] === 'Activa' && !mapa.has(key)) {
-            mapa.set(key, { row: row, infoPlaca: infoPlaca });
-        }
-    });
-
-    let datosActuales = Array.from(mapa.values());
-
-    datosActuales.forEach((item) => {
-        let fila = item.row;
-        let km_prox = parseFloat(fila[11]) || 0;
-        let km_cambio = parseFloat(fila[9]) || 0;
-        let frecuencia = parseFloat(fila[10]) || 0;
-        let placaRaw = fila[4];
-
-        let km_gps = 0;
-        let wialonData = buscarWialonPorPlaca(placaRaw);
-        if (wialonData) { km_gps = wialonData.km; }
-
-        let km_desde = km_gps - km_cambio;
-        let km_restante = km_prox - km_gps;
-
-        if (km_restante <= 0) {
-            cntCrit++;
-        } else if (km_restante <= 1000) {
-            cntRiesgo++;
-        } else if (km_restante <= 2500) {
-            cntInmed++;
-        } else {
-            cntOper++;
-        }
-    });
-
-    updateGraficoDashFleetrun(cntCrit, cntRiesgo, cntInmed, cntOper);
-};
-
-window.initGraficoDashFleetrun = function() {
-    let ctx = document.getElementById('chartDashFleetrunStatus');
-    if (!ctx) return null;
-    Chart.defaults.font.family = 'Inter';
-
-    return new Chart(ctx.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'],
-            datasets: [{
-                data: [1, 0, 0, 0],
-                backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754'],
-                borderWidth: 2,
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '65%',
-            layout: { padding: 6 },
-            plugins: {
-                legend: { position: 'right', labels: { font: { weight: 'bold', size: 11 }, boxWidth: 12, padding: 8 } },
-                datalabels: {
-                    display: function(ctx) {
-                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return false;
-                        return (ctx.dataset.data[ctx.dataIndex] / total) >= 0.06;
-                    },
-                    color: '#ffffff',
-                    font: { weight: 'bold', size: 11, family: 'Inter' },
-                    formatter: function(value, ctx) {
-                        var total = ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
-                        if (!total || ctx.chart.data.labels[0]==='Sin Datos') return '';
-                        return Math.round(value/total*100)+'%';
-                    },
-                    anchor: 'center', align: 'center'
-                }
-            }
-        }
-    });
-};
-
-window.updateGraficoDashFleetrun = function(criticos, riesgo, inmediatos, operativos) {
-    if(!chartDashFleetrunInst) chartDashFleetrunInst = initGraficoDashFleetrun();
-    if(!chartDashFleetrunInst) return;
-    let isDark = document.body.classList.contains('dark');
-    chartDashFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    chartDashFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    let totalMant = (criticos || 0) + (riesgo || 0) + (inmediatos || 0) + (operativos || 0);
-    if(totalMant === 0) {
-        chartDashFleetrunInst.data.labels = ['Sin Datos'];
-        chartDashFleetrunInst.data.datasets[0].data = [1];
-        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
-    } else {
-        chartDashFleetrunInst.data.labels = ['Críticos', 'En Riesgo', 'Inmediatos', 'Operativos'];
-        chartDashFleetrunInst.data.datasets[0].data = [criticos, riesgo, inmediatos, operativos];
-        chartDashFleetrunInst.data.datasets[0].backgroundColor = ['#dc3545', '#fd7e14', '#ffc107', '#198754'];
-    }
-    chartDashFleetrunInst.update();
-};
 
 // ── Eliminar masivo de fleetrun ──────────────────────────────────────────────
 window.eliminarMasivo = function(coleccion, contexto) {

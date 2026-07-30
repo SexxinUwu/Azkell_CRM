@@ -121,7 +121,8 @@ window.procesarFleetrunParaDashboard = function() {
         let placa = normalizeStr(placaRaw);
         let infoPlaca = (window.dataGlobalPlacas || []).find(p => normalizeStr(p[0]) === placa);
         
-        if (infoPlaca && infoPlaca[18] === 'Activa') {
+        let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
+        if (infoPlaca && estadoPlaca === 'ACTIVA') {
             let km_cambio = parseFloat(row[9]) || 0;
             let frecuencia = parseFloat(row[10]) || 0;
             let km_prox = parseFloat(row[11]) || 0;
@@ -141,15 +142,18 @@ window.procesarFleetrunParaDashboard = function() {
             let metricSuffix = esHoras ? '_HORAS' : '_KM';
             let combinedKey = utsDisplay.toUpperCase() + metricSuffix;
             
-            if (window._fleetrun_umbrales_uts) {
+            if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
                 if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
                     utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
                 } else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
                     utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+                } else {
+                    if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
+                    else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
                 }
             } else {
-                if (normalizeStr(utsDisplay) === "nacional") utsUmbral = 1500;
-                else if (normalizeStr(utsDisplay) === "local") utsUmbral = 100;
+                if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
+                else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
             }
             
             let estadoKpi = 'VIGENTE';
