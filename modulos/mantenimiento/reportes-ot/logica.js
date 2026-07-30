@@ -2503,7 +2503,7 @@ function rotRenderSecBacklog(items) {
               + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
               + '<div style="display:flex;gap:4px;">'
               + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
-              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado">âœ“ Realizado</button>'
+              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado"><i class="bi bi-check-lg"></i> Realizado</button>'
               + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
               + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
               + '</div>'
@@ -2594,7 +2594,7 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
         }
     })
     .catch(function() {
-        if (btn) { btn.disabled = false; btn.innerHTML = 'âœ“ Realizado'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Realizado'; }
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al actualizar el backlog', 'danger');
     });
 };
