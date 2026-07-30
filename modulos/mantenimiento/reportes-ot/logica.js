@@ -2500,10 +2500,11 @@ function rotRenderSecBacklog(items) {
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
               + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
               + '<div><span style="font-weight:700;font-size:0.72rem;color:#d97706;">' + rotEscHtml(b.backlog_id || String(b.id)) + '</span>'
-              + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
+              + ' <span style="background:#fff7ed;color:#ea580c;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;margin-left:4px;border:1px solid #ffedd5;">Pendiente</span>'
+              + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);margin-left:4px;">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
               + '<div style="display:flex;gap:4px;">'
-              + '<button class="btn btn-sm" style="padding:1px 7px;font-size:0.7rem;background:rgba(22,163,74,0.1);color:#16a34a;font-weight:700;border-radius:12px;" '
-              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado"><i class="bi bi-check-lg"></i> Realizado</button>'
+              + '<button class="btn btn-sm btn-outline-success" style="padding:1px 7px;font-size:0.7rem;font-weight:600;" '
+              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado"><i class="bi bi-check-lg"></i> Marcar Realizado</button>'
               + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
               + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
               + '</div>'
@@ -2594,7 +2595,7 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
         }
     })
     .catch(function() {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Realizado'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Marcar Realizado'; }
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al actualizar el backlog', 'danger');
     });
 };
