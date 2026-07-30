@@ -430,7 +430,7 @@ window.rotAbrirDetalle = function(idOT) {
     if (ot.placa) {
         html += '<div class="rot-sec" id="rot-sec-backlog">'
               + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="rot-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(idOT) + '\')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
+              + (esAprobada ? '<button class="btn btn-sm rot-btn-agregar" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.rotAbrirAgregarBacklog(\'' + rotEscHtml(ot.placa) + '\', \'' + rotEscHtml(idOT) + '\', ' + (det.km||0) + ')"><i class="bi bi-plus"></i> Agregar</button>' : '') + '</div>'
               + '<div id="rot-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
               + '</div>';
     }
@@ -2537,11 +2537,11 @@ window.rotEliminarBacklogItem = function(id, btn) {
 };
 
 // ── Abrir sub-drawer agregar backlog ──────────────────────────────
-window.rotAbrirAgregarBacklog = function(placa, ticket_ot) {
+window.rotAbrirAgregarBacklog = function(placa, ticket_ot, km_ot) {
     var lbl = document.getElementById('rot-bkg-placa-lbl'); if (lbl) lbl.textContent = 'Placa: ' + placa;
     var hid = document.getElementById('rot-bkg-placa-hid'); if (hid) hid.value = placa;
     var hidOt = document.getElementById('rot-bkg-ticket-ot'); if (hidOt) hidOt.value = ticket_ot || '';
-    var km = document.getElementById('rot-bkg-km');           if (km) km.value = '';
+    var km = document.getElementById('rot-bkg-km');           if (km) km.value = km_ot || '';
     var tema = document.getElementById('rot-bkg-tema');       if (tema) tema.value = '';
     var tarea = document.getElementById('rot-bkg-tarea');     if (tarea) tarea.value = '';
     var rep   = document.getElementById('rot-bkg-reportado-por'); if (rep) rep.value = '';

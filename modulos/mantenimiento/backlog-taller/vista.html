@@ -270,13 +270,20 @@
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Tema / Categoría</label>
-                <input type="text" class="form-control form-control-sm" id="bkt-f-tema"
-                    placeholder="Ej. Motor, Neumáticos, Frenos...">
+                <select class="form-select form-select-sm" id="bkt-f-tema">
+                    <option value="" disabled selected>Seleccione...</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Logística">Logística</option>
+                    <option value="Flota">Flota</option>
+                </select>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">Reportado por</label>
-                <input type="text" class="form-control form-control-sm" id="bkt-f-reporta"
-                    placeholder="Ej. Conductor, Mecánico">
+                <select class="form-select form-select-sm" id="bkt-f-reporta">
+                    <option value="" disabled selected>Seleccione...</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Flota">Flota</option>
+                </select>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold" style="font-size:0.78rem; color:var(--subtext); text-transform:uppercase; letter-spacing:0.04em;">OT Relacionada (opcional)</label>

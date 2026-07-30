@@ -694,7 +694,12 @@
             </div>
             <div class="col-6">
                 <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Categoría / Tema</label>
-                <input type="text" class="form-control form-control-sm" id="rot-bkg-tema" placeholder="Ej. Frenos, Suspensión, Luces…">
+                <select class="form-select form-select-sm" id="rot-bkg-tema">
+                    <option value="" disabled selected>Seleccione...</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Logística">Logística</option>
+                    <option value="Flota">Flota</option>
+                </select>
             </div>
         </div>
         <div class="mb-3">
@@ -703,7 +708,11 @@
         </div>
         <div class="mb-4">
             <label class="form-label fw-bold" style="font-size:.78rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.04em;">Reportado por</label>
-            <input type="text" class="form-control form-control-sm" id="rot-bkg-reportado-por" placeholder="Nombre de quien reporta">
+            <select class="form-select form-select-sm" id="rot-bkg-reportado-por">
+                <option value="" disabled selected>Seleccione...</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Flota">Flota</option>
+            </select>
         </div>
         <button class="btn btn-warning w-100 fw-bold" style="color:#fff;" onclick="window.rotGuardarBacklog()">
             <i class="bi bi-plus-lg me-1"></i>Agregar Pendiente
