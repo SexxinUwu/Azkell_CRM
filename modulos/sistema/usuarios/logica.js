@@ -331,7 +331,8 @@ function _guBuildRolPanel(rol) {
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
                 + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
                 + '<input type="checkbox" class="dc-toggle dc-toggle--hub" id="pt-' + mod.key + '-enabled"' + (hubEnabled ? ' checked' : '') + ' onchange="window._guToggleHub(this, \'' + mod.key + '\')">'
-                + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label><span class="gu-perm-label">Habilitado</span></div>'
+                + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label>'
+                + '<label class="gu-perm-label" id="pt-' + mod.key + '-lbl" for="pt-' + mod.key + '-enabled" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">' + (hubEnabled ? 'Habilitado' : 'Deshabilitado') + '</label></div>'
                 + '<button type="button" class="gu-hub-expand-btn" id="gu-hub-btn-' + mod.key + '" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos" style="' + (hubEnabled ? '' : 'display:none;') + '"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
                 + '</div></div>';
             return;
@@ -356,12 +357,12 @@ function _guBuildRolPanel(rol) {
             if (soloLeer) {
                 html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (m['l']?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
                     + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-l"></label>'
-                    + '<span class="gu-perm-label">Leer</span></div>';
+                    + '<label class="gu-perm-label" for="pt-' + mod.key + '-l" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">Leer</label></div>';
             } else {
                 accs.forEach(function(a,i) {
                     html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
                         + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-' + a + '"></label>'
-                        + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
+                        + '<label class="gu-perm-label" for="pt-' + mod.key + '-' + a + '" style="' + (esAdmin?'pointer-events:none;opacity:0.5;':'cursor:pointer;') + '">' + lbls[i] + '</label></div>';
                 });
             }
             html += '</div></div>';
@@ -840,6 +841,9 @@ window._guToggleHub = function(el, hubKey) {
     
     var btn = document.getElementById('gu-hub-btn-' + hubKey);
     if (btn) btn.style.display = enabled ? '' : 'none';
+
+    var lbl = document.getElementById('pt-' + hubKey + '-lbl');
+    if (lbl) lbl.innerText = enabled ? 'Habilitado' : 'Deshabilitado';
 
     function setDisplay(parentKey, isVisible) {
         document.querySelectorAll('.gu-perm-child[data-parent="' + parentKey + '"]').forEach(function(row) {
