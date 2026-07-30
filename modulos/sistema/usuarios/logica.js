@@ -320,13 +320,38 @@ function _guBuildRolPanel(rol) {
                 + '<input type="checkbox" class="dc-toggle dc-toggle--hub" id="pt-' + mod.key + '-enabled"' + (hubEnabled ? ' checked' : '') + ' onchange="window._guToggleHub(this, \'' + mod.key + '\')">'
                 + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label><span class="gu-perm-label">Habilitado</span></div>'
                 + '<button type="button" class="gu-hub-expand-btn" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
-                + '</div></div>'
-                + '<div class="gu-hub-children" id="gu-hub-children-' + mod.key + '" style="' + (hubEnabled ? '' : 'display:none;') + '"></div>';
+                + '</div></div>';
             return;
         }
 
-        if (mod.type === 'child' || mod.type === 'child_admin') {
+        var isChild = (mod.type === 'child' || mod.type === 'child_admin');
+        if (mod.type === 'normal' || mod.type === 'normal_r' || isChild || !mod.type) {
             var m = p[mod.key] || {};
+            var accs = ['l','c','e','d'];
+            var lbls = ['Leer','Crear','Editar','Eliminar'];
+            var rdonly = esAdmin ? ' readonly' : '';
+            var rowCls = isChild ? 'gu-perm-row gu-perm-child' : 'gu-perm-row';
+            var parentAttr = isChild ? ' data-parent="' + mod.parent + '"' : '';
+            var display = (isChild && !hubsActivos[mod.parent]) ? 'display:none;' : '';
+            
+            var soloLeer = (mod.lcad === false || mod.type === 'normal_r');
+
+            html += '<div class="' + rowCls + '"' + parentAttr + ' style="' + display + '">'
+                + '<div class="gu-perm-info"><div class="gu-perm-name">' + (isChild?'<i class="bi bi-arrow-return-right me-1" style="opacity:0.5;"></i>':'') + mod.nombre + '</div>'
+                + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
+            
+            if (soloLeer) {
+                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (m['l']?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
+                    + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-l"></label>'
+                    + '<span class="gu-perm-label">Leer</span></div>';
+            } else {
+                accs.forEach(function(a,i) {
+                    html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
+                        + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-' + a + '"></label>'
+                        + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
+                });
+            }
+            html += '</div></div>';
         }
     });
 
