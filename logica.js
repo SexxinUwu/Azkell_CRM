@@ -277,8 +277,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-status-flota', vStatus);
     safe('nav-placas',       vPlacas);
     safe('mbnav-placas',     vPlacas);
-    safe('nav-documentos',   vDocsFlota);
-    safe('mbnav-documentos', vDocsFlota);
+    safe('nav-documentos-flota',   vDocsFlota);
+    safe('mbnav-documentos-flota', vDocsFlota);
 
     var showFlota = vGps || vStatus || vPlacas || vDocsFlota;
     safe('wrap-flota', showFlota);
@@ -287,6 +287,7 @@ window.verificarSesionGuardada = function() {
     var showMantHub  = _cHub('hub_mant');
     var vStatusRampa = showMantHub && _cL('status_rampa');
     var vInsp        = showMantHub && _cL('insp');
+    var vFleetrun    = showMantHub && _cL('fleetrun');
     var vReportesOT  = showMantHub && _cL('reportes_ot');
     var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
     
@@ -302,6 +303,8 @@ window.verificarSesionGuardada = function() {
     safe('mbnav-status-rampa',  vStatusRampa);
     safe('nav-inspecciones',    vInsp);
     safe('mbnav-inspecciones',  vInsp);
+    safe('nav-fleetrun',        vFleetrun);
+    safe('mbnav-fleetrun',      vFleetrun);
     safe('nav-reportes-ot',     vReportesOT);
     safe('mbnav-reportes-ot',   vReportesOT);
     safe('nav-trabajos-ot',     vTrabajosOT);
@@ -321,8 +324,8 @@ window.verificarSesionGuardada = function() {
     var vKardex  = showAlmacenHub && _cL('kardex');
     var vProv    = showAlmacenHub && _cL('prov_inv');
 
-    safe('nav-dash-alm',        vDashAlm);
-    safe('mbnav-dash-alm',      vDashAlm);
+    safe('nav-finanzas-inv',        vDashAlm);
+    safe('mbnav-finanzas-inv',      vDashAlm);
     safe('nav-inventario',      vInv);
     safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
