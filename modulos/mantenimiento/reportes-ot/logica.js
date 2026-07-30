@@ -278,6 +278,8 @@ window.rotRenderTabla = function(lista) {
 window.rotAbrirDetalle = function(idOT) {
     var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
     if (!ot) return;
+    
+    window.rotCurrentOt = ot;
 
     window.rotDetalleId  = idOT;
     window.rotOtActivaId = idOT;
@@ -363,7 +365,7 @@ window.rotAbrirDetalle = function(idOT) {
             html += '<div style="border-left:3px solid #f59e0b;padding:5px 10px;margin-bottom:6px;background:rgba(245,158,11,0.05);border-radius:0 8px 8px 0;">'
                   + '<div style="font-size:0.74rem;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
                   + '<span>' + rotFmtFechaHora(p.inicio) + '</span>'
-                  + '<span style="opacity:0.6;">â†’</span>'
+                  + '<span style="opacity:0.6;"><i class="bi bi-arrow-right"></i></span>'
                   + '<span>' + (p.fin ? rotFmtFechaHora(p.fin) : '<em>Sin reanudar</em>') + '</span>'
                   + '<span style="background:rgba(245,158,11,0.2);border-radius:6px;padding:1px 7px;">' + dur + '</span>'
                   + '</div>'
@@ -502,7 +504,7 @@ window.rotAbrirDetalle = function(idOT) {
     Promise.all([
         fetch('/api/ot-trabajos?id_ot='       + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([]),
+        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([]),
         fetch('/api/inspecciones-por-ot?id_ot=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/almacen/entradas?ot_id=' + encodeURIComponent(idOT)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
     ]).then(function(res) {
@@ -534,7 +536,7 @@ window.rotAbrirDetalle = function(idOT) {
           }
         rotRenderSecTrabajos(idOT, esAprobada);
         rotRenderSecMateriales(idOT, puedeAgregarMaterial);
-        rotRenderSecBacklog(backlogItems);
+        rotRenderSecBacklog(backlogItems, idOT);
         rotRenderSecInspecciones(idOT);
         // Actualizar costo total dinámico
         var costoTr = window.rotOtTrabajosActivos
@@ -2484,27 +2486,37 @@ document.addEventListener('click', window._rotMsOutsideClick);
 
 
 // ── Render sección Backlog ────────────────────────────────────────
-function rotRenderSecBacklog(items) {
+function rotRenderSecBacklog(items, idOT) {
     var body  = document.getElementById('rot-bkg-body');
     var count = document.getElementById('rot-bkg-count');
     if (!body) return;
+
+    items = items.filter(function(b) {
+        return b.estado === 'Pendiente' || String(b.ticket_ot) === String(idOT);
+    });
+
     if (count) count.textContent = items.length;
 
     if (!items.length) {
-        body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay pendientes para esta unidad</div>';
+        body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;">No hay pendientes ni realizados relacionados a esta unidad.</div>';
         return;
     }
 
     var html = '';
     items.forEach(function(b) {
+        var isPendiente = b.estado === 'Pendiente';
+        var badgeHtml = isPendiente
+            ? ' <span style="background:#fff7ed;color:#ea580c;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;margin-left:4px;border:1px solid #ffedd5;">Pendiente</span>'
+            : ' <span style="background:#f0fdf4;color:#16a34a;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;margin-left:4px;border:1px solid #dcfce7;">Realizado</span>';
+        
         html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.81rem;">'
               + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'
               + '<div><span style="font-weight:700;font-size:0.72rem;color:#d97706;">' + rotEscHtml(b.backlog_id || String(b.id)) + '</span>'
-              + ' <span style="background:#fff7ed;color:#ea580c;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;margin-left:4px;border:1px solid #ffedd5;">Pendiente</span>'
+              + badgeHtml
               + (b.tema ? ' <span style="font-size:0.72rem;color:var(--subtext);margin-left:4px;">' + rotEscHtml(b.tema) + '</span>' : '') + '</div>'
               + '<div style="display:flex;gap:4px;">'
-              + '<button class="btn btn-sm btn-outline-success" style="padding:1px 7px;font-size:0.7rem;font-weight:600;" '
-              + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado"><i class="bi bi-check-lg"></i> Marcar Realizado</button>'
+              + (isPendiente ? '<button class="btn btn-sm btn-outline-success" style="padding:1px 7px;font-size:0.7rem;font-weight:600;" '
+                             + 'onclick="event.stopPropagation();window.rotMarcarBacklogRealizado(' + b.id + ',this)" title="Marcar como Realizado"><i class="bi bi-check-lg"></i> Marcar Realizado</button>' : '')
               + '<button class="btn btn-sm" style="padding:1px 6px;color:var(--subtext);font-size:0.78rem;" '
               + 'onclick="event.stopPropagation();window.rotEliminarBacklogItem(' + b.id + ',this)" title="Eliminar"><i class="bi bi-trash"></i></button>'
               + '</div>'
@@ -2570,9 +2582,9 @@ window.rotGuardarBacklog = function() {
         window.rotCerrarSubDrawer('rot-drawer-backlog');
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Mantenimiento pendiente agregado', 'success');
         // Recargar backlog
-        fetch('/api/ot-backlog?placa=' + encodeURIComponent(placa) + '&estado=Pendiente')
+        fetch('/api/ot-backlog?placa=' + encodeURIComponent(placa))
             .then(function(r){ return r.ok ? r.json() : []; })
-            .then(function(items) { rotRenderSecBacklog(Array.isArray(items) ? items : []); })
+            .then(function(items) { rotRenderSecBacklog(Array.isArray(items) ? items : [], ticket_ot); })
             .catch(function(){});
     })
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al agregar pendiente', 'danger'); });
@@ -2587,11 +2599,11 @@ window.rotMarcarBacklogRealizado = function(id, btn) {
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Backlog marcado como Realizado', 'success');
-        if (btn) {
-            var row = btn.closest ? btn.closest('[style]') : btn.parentNode.parentNode;
-            if (row && row.parentNode) row.parentNode.removeChild(row);
-            var count = document.getElementById('rot-bkg-count');
-            if (count) count.textContent = Math.max(0, (parseInt(count.textContent) || 1) - 1);
+        if (window.rotCurrentOt && window.rotCurrentOt.placa) {
+             fetch('/api/ot-backlog?placa=' + encodeURIComponent(window.rotCurrentOt.placa))
+                 .then(function(r){ return r.ok ? r.json() : []; })
+                 .then(function(items) { rotRenderSecBacklog(Array.isArray(items) ? items : [], window.rotCurrentOt.id_ot); })
+                 .catch(function(){});
         }
     })
     .catch(function() {
