@@ -3,6 +3,11 @@
 // ============================================================
 
 window.init_ajustes = function() {
+    if (!window.checkPerm('cfg_empresa', 'l')) {
+        var wrap = document.getElementById('ajustes-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     // Rellenar datos del usuario
     let nombreEl = document.getElementById('ajustes-user-name');
     let roleEl   = document.getElementById('ajustes-user-role');

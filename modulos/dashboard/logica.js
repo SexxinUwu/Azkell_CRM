@@ -688,6 +688,11 @@ window.recargarDashboard = function() {
 // ============================================================
 
 window.init_dashboard = function(retries) {
+    if (!window.checkPerm('dashboard', 'l')) {
+        var dashWrap = document.getElementById('moduloDashboard');
+        if (dashWrap) window.showNoPermMsg(dashWrap);
+        return;
+    }
     retries = retries || 0;
     // Lazy-load Chart.js + Leaflet antes de inicializar
     var chartsReady = (typeof Chart !== 'undefined') ? Promise.resolve() : window.loadCharts();

@@ -16,6 +16,11 @@ function totGetId(t) {
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_trabajos_ot = function() {
+    if (!window.checkPerm('trabajos_ot', 'l')) {
+        var wrap = document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     totCargar();
 };
 

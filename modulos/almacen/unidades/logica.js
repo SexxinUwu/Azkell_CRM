@@ -6,6 +6,16 @@ window._undData     = window._undData     || [];
 window._undFiltrado = window._undFiltrado || [];
 
 window.init_unidades = function() {
+    if (!window.checkPerm('cfg_unidades', 'l')) {
+        var wrap = document.getElementById('mod-unidades') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('cfg_unidades', 'l')) {
+        var wrap = document.getElementById('root-dinamico');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.cargarUnidades();
 };
 
@@ -53,8 +63,8 @@ window._undRender = function() {
             '<td style="font-weight:600;color:var(--text);">' + display + '</td>' +
             '<td>' + (u.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarUnidad(' + u.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                (window.checkPerm('cfg_unidades','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalUnidad(' + u.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_unidades','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarUnidad(' + u.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');

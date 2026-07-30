@@ -8,30 +8,74 @@ window._guSeleccionado    = window._guSeleccionado    || null;
 window._guEsNuevo         = window._guEsNuevo         || false;
 
 // ── Módulos de permisos ──────────────────────────────────────────
+// type: 'normal'  → fila LCAD estándar
+// type: 'hub'     → toggle Habilitado/Deshabilitado; hijos se muestran indentados
+// type: 'child'   → hijo de un hub (indentado, LCAD)
+// type: 'solo_admin' → solo administrador (badge, sin toggles)
+// type: 'todos'   → todos los usuarios (badge, sin toggles)
 window._GU_MODULOS = window._GU_MODULOS || [
-    { grupo:'FLOTA',         key:'gps',           nombre:'GPS / Ubicación',  desc:'Visualización en tiempo real',  lcad:false },
-    { grupo:'FLOTA',         key:'status',        nombre:'Status Flota',     desc:'Estado y agrupación de unidades', lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'status_rampa',  nombre:'Status Rampa',     desc:'Gestión visual en taller',      lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'insp',          nombre:'Análisis de Inspecciones', desc:'Registro de inspecciones', lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'fleet',         nombre:'Mantenimiento Preventivo', desc:'Datos operativos de la flota',  lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'reportes_ot',   nombre:'Reportes OT',      desc:'Métricas de mantenimiento',     lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'trabajos_ot',   nombre:'Historial de Trabajos', desc:'Gestión de técnicos',           lcad:true  },
-    { grupo:'MANTENIMIENTO', key:'otros_mant',    nombre:'Otros',            desc:'Módulos complementarios',       lcad:true  },
-    { grupo:'ALMACÉN',       key:'inv',           nombre:'Inventario',       desc:'Catálogo de artículos',         lcad:true  },
-    { grupo:'ALMACÉN',       key:'ent_inv',       nombre:'Entradas',         desc:'Ingresos al almacén',           lcad:true  },
-    { grupo:'ALMACÉN',       key:'sal_inv',       nombre:'Salidas',          desc:'Egresos del almacén',           lcad:true  },
-    { grupo:'ALMACÉN',       key:'prov_inv',      nombre:'Proveedores',      desc:'Directorio de proveedores',     lcad:true  },
-    { grupo:'ALMACÉN',       key:'kardex',        nombre:'Kardex',           desc:'Movimientos por artículo',      lcad:false },
-    { grupo:'DIRECTORIO',    key:'cond',          nombre:'Personal',         desc:'Directorio operativo',          lcad:true  },
-    { grupo:'SEGURIDAD',     key:'placas',        nombre:'CheckList de Ingreso/Salidas de Unidades',desc:'Fichas técnicas', lcad:true  },
-    { grupo:'SEGURIDAD',     key:'asist',         nombre:'Tareo',            desc:'Asistencia del personal',       lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'usuarios',      nombre:'Usuarios',         desc:'Gestión de accesos',            lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'mod_auditoria', nombre:'Auditoría',        desc:'Bitácora de actividad',         lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',nombre:'Apariencia',       desc:'Personalización visual',        lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad', desc:'Ajustes de uso',                lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',    nombre:'Idioma',           desc:'Idiomas del sistema',           lcad:true  },
-    { grupo:'CONFIGURACIÓN', key:'administracion',nombre:'Administración',   desc:'Hub de administración',         lcad:true  }
+    // ── DASHBOARD ────────────────────────────────────────────────────
+    { grupo:'DASHBOARD',     key:'dashboard',        nombre:'Dashboard',                   desc:'Vista general y KPIs del sistema',             type:'normal', lcad:false },
+
+    // ── FLOTA (hub) ──────────────────────────────────────────────────
+    { grupo:'FLOTA',         key:'hub_flota',        nombre:'Flota',                       desc:'Habilitar o deshabilitar acceso al módulo Flota completo', type:'hub' },
+    { grupo:'FLOTA',         key:'gps',              nombre:'GPS / Ubicación',             desc:'Rastreo en tiempo real de unidades',            type:'child', parent:'hub_flota' },
+    { grupo:'FLOTA',         key:'status',           nombre:'Status Flota',                desc:'Estado y agrupación de unidades',               type:'child', parent:'hub_flota' },
+    { grupo:'FLOTA',         key:'placas',           nombre:'Placas',                      desc:'Registro y gestión de unidades de la flota',   type:'child', parent:'hub_flota' },
+    { grupo:'FLOTA',         key:'docs_flota',       nombre:'Documentos',                  desc:'Documentos por vehículo (SOAT, tarjetas, etc.)', type:'child', parent:'hub_flota' },
+
+    // ── MANTENIMIENTO ────────────────────────────────────────────────
+    { grupo:'MANTENIMIENTO', key:'status_rampa',     nombre:'Status Rampa',                desc:'Gestión visual del estado en taller',           type:'normal' },
+    { grupo:'MANTENIMIENTO', key:'insp',             nombre:'Análisis de Inspecciones',    desc:'Registro y análisis de inspecciones de unidades', type:'normal' },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'normal' },
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',      nombre:'Historial de Trabajos',       desc:'Historial de trabajos realizados por técnicos', type:'normal' },
+    // Otros (hub)
+    { grupo:'MANTENIMIENTO', key:'otros_mant',       nombre:'Otros',                       desc:'Habilitar acceso a los sub-módulos complementarios de Mantenimiento', type:'hub' },
+    { grupo:'MANTENIMIENTO', key:'plan',             nombre:'Planificación de Mantenimientos', desc:'Programación y seguimiento de MP',          type:'child', parent:'otros_mant' },
+    { grupo:'MANTENIMIENTO', key:'backlog',          nombre:'Backlog Pendientes',           desc:'Lista de trabajos pendientes por atender',      type:'child', parent:'otros_mant' },
+    { grupo:'MANTENIMIENTO', key:'kpis',             nombre:'Métricas y KPIs',             desc:'Indicadores de rendimiento del taller',         type:'child', parent:'otros_mant' },
+    { grupo:'MANTENIMIENTO', key:'productividad',    nombre:'Productividad Personal',      desc:'Reporte de productividad del personal técnico', type:'child', parent:'otros_mant' },
+    { grupo:'MANTENIMIENTO', key:'fin_taller',       nombre:'Reporte Financiero',          desc:'Costos de mano de obra y repuestos por OT',    type:'child', parent:'otros_mant' },
+
+    // ── ALMACÉN ──────────────────────────────────────────────────────
+    { grupo:'ALMACÉN',       key:'dash_alm',         nombre:'Dashboard Financiero',        desc:'Resumen financiero del almacén',                type:'normal' },
+    { grupo:'ALMACÉN',       key:'inv',              nombre:'Inventario',                  desc:'Catálogo de artículos y stock',                 type:'normal' },
+    { grupo:'ALMACÉN',       key:'ent_inv',          nombre:'Órdenes de Compra',           desc:'Ingresos y órdenes de compra al almacén',      type:'normal' },
+    { grupo:'ALMACÉN',       key:'sal_inv',          nombre:'Órdenes de Salida',           desc:'Egresos y salidas del almacén',                 type:'normal' },
+    { grupo:'ALMACÉN',       key:'kardex',           nombre:'Kardex',                      desc:'Movimientos históricos por artículo',           type:'normal', lcad:false },
+    { grupo:'ALMACÉN',       key:'prov_inv',         nombre:'Proveedores',                 desc:'Directorio de proveedores',                     type:'normal' },
+
+    // ── DIRECTORIO ───────────────────────────────────────────────────
+    { grupo:'DIRECTORIO',    key:'cond',             nombre:'Personal',                    desc:'Directorio operativo del personal',             type:'normal' },
+
+    // ── SEGURIDAD ────────────────────────────────────────────────────
+    { grupo:'SEGURIDAD',     key:'checklist',        nombre:'CheckList de Unidades',       desc:'Inspecciones de ingreso/salida de unidades',    type:'normal' },
+    { grupo:'SEGURIDAD',     key:'asist',            nombre:'Tareo',                       desc:'Control de asistencia del personal',            type:'normal' },
+
+    // ── CONFIGURACIÓN ────────────────────────────────────────────────
+    { grupo:'CONFIGURACIÓN', key:'usuarios',         nombre:'Usuarios',                    desc:'Gestión de usuarios y roles del sistema',       type:'solo_admin' },
+    { grupo:'CONFIGURACIÓN', key:'mod_auditoria',    nombre:'Auditoría',                   desc:'Bitácora de actividad del sistema',             type:'solo_admin' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_empresa',      nombre:'Empresa',                     desc:'Datos y configuración de la empresa',           type:'normal' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_apariencia',   nombre:'Apariencia',                  desc:'Personalización visual de la interfaz',         type:'todos' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad',               desc:'Ajustes de accesibilidad del sistema',          type:'todos' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_idioma',       nombre:'Idioma',                      desc:'Configuración de idioma del sistema',           type:'todos' },
+    { grupo:'CONFIGURACIÓN', key:'mi_perfil',        nombre:'Mi Perfil',                   desc:'Configuración personal del usuario',            type:'todos' },
+    // Administración (hub)
+    { grupo:'CONFIGURACIÓN', key:'administracion',   nombre:'Administración',              desc:'Habilitar acceso a la configuración avanzada del sistema', type:'hub' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_familias',     nombre:'Familias',                    desc:'Familias de artículos de almacén',             type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_unidades',     nombre:'Unidades de Medida',          desc:'Unidades de medida del sistema',                type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_sistemas',     nombre:'Sistemas',                    desc:'Sistemas de vehículos',                         type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_marcas',       nombre:'Marcas',                      desc:'Marcas de vehículos y repuestos',               type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_frec',         nombre:'Frecuencias MP',              desc:'Frecuencias de mantenimiento preventivo',       type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_kits',         nombre:'Kits MP',                     desc:'Kits de mantenimiento por tipo de vehículo',   type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_tipos_mp',     nombre:'Tipos MP',                    desc:'Tipos de mantenimiento preventivo',             type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_metrica',      nombre:'Config. Métrica',             desc:'Configuración de métricas de vehículos',       type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_situacion',    nombre:'Situación',                   desc:'Estados de situación de mantenimiento',         type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_personal',     nombre:'Personal Taller',             desc:'Configuración del personal técnico',            type:'child', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_fleetrun',     nombre:'Config. Fleetrun',            desc:'Configuración del módulo Fleetrun',             type:'child_admin', parent:'administracion' },
+    { grupo:'CONFIGURACIÓN', key:'cfg_integ',        nombre:'Integraciones',               desc:'Conexiones con sistemas externos',              type:'child_admin', parent:'administracion' },
 ];
+
 
 
 window._GU_COLORS = window._GU_COLORS || [
@@ -229,11 +273,9 @@ function _guBuildRolPanel(rol) {
     var colorActual = rol.color || '#5865F2';
     var html = '';
 
-    // Nombre
     html += '<div class="gu-field-label">Nombre del Rol</div>'
         + '<input type="text" id="guRolNombre" class="dc-input" value="' + _guEsc(rol.nombre||'') + '" placeholder="Nombre del rol..." style="font-weight:700;">';
 
-    // Color
     html += '<div class="gu-field-label">Color del Rol</div><div class="gu-colors" id="guColorSwatches">';
     window._GU_COLORS.forEach(function(c) {
         html += '<div class="gu-color-swatch' + (c.toLowerCase()===colorActual.toLowerCase()?' selected':'') + '" '
@@ -242,36 +284,49 @@ function _guBuildRolPanel(rol) {
     html += '<input type="text" class="gu-hex-input" id="guRolColor" value="' + _guEsc(colorActual) + '" '
         + 'placeholder="#5865F2" oninput="window._guHexColorInput(this.value)"></div>';
 
-    // Prioridad (Oculta)
-
-    // Permisos
     html += '<div class="gu-section-header" style="margin-top:18px;">Permisos de Módulo</div>';
     var lastGrp = '';
+    var accs = ['l','c','e','d'];
+    var lbls = ['Leer','Crear','Editar','Eliminar'];
+
+    var hubsActivos = {};
+    window._GU_MODULOS.forEach(function(mod) {
+        if (mod.type === 'hub') hubsActivos[mod.key] = !!(p[mod.key] && p[mod.key]['enabled']);
+    });
+
     window._GU_MODULOS.forEach(function(mod) {
         if (mod.grupo !== lastGrp) {
             html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
             lastGrp = mod.grupo;
         }
-        if (!mod.lcad) {
-            var lv = p[mod.key] ? (p[mod.key]['l'] ? true : false) : false;
-            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
+
+        if (mod.type === 'todos') {
+            html += '<div class="gu-perm-row gu-perm-row--muted"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div><div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions"><span class="gu-badge-todos"><i class="bi bi-people-fill me-1"></i>Todos los roles</span></div></div>';
+            return;
+        }
+
+        if (mod.type === 'solo_admin') {
+            html += '<div class="gu-perm-row gu-perm-row--muted"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div><div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions"><span class="gu-badge-admin"><i class="bi bi-shield-fill me-1"></i>Solo Administrador</span></div></div>';
+            return;
+        }
+
+        if (mod.type === 'hub') {
+            var hubEnabled = hubsActivos[mod.key];
+            var rdonly = esAdmin ? ' readonly' : '';
+            html += '<div class="gu-perm-row gu-perm-hub" id="gu-hub-row-' + mod.key + '">'
+                + '<div class="gu-perm-info"><div class="gu-perm-name" style="color:var(--dc-primary);font-weight:700;"><i class="bi bi-folder2-open me-1" style="font-size:.85em;"></i>' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
                 + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
-                + '<input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-l"' + (lv?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'l\')">'
-                + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-l"></label>'
-                + '<span class="gu-perm-label">Leer</span></div></div></div>';
-        } else {
+                + '<input type="checkbox" class="dc-toggle dc-toggle--hub" id="pt-' + mod.key + '-enabled"' + (hubEnabled ? ' checked' : '') + ' onchange="window._guToggleHub(this, \'' + mod.key + '\')">'
+                + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label><span class="gu-perm-label">Habilitado</span></div>'
+                + '<button type="button" class="gu-hub-expand-btn" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
+                + '</div></div>'
+                + '<div class="gu-hub-children" id="gu-hub-children-' + mod.key + '" style="' + (hubEnabled ? '' : 'display:none;') + '"></div>';
+            return;
+        }
+
+        if (mod.type === 'child' || mod.type === 'child_admin') {
             var m = p[mod.key] || {};
-            var accs = ['l','c','e','d'];
-            var lbls = ['Leer','Crear','Editar','Elim'];
-            html += '<div class="gu-perm-row"><div class="gu-perm-info"><div class="gu-perm-name">' + mod.nombre + '</div>'
-                + '<div class="gu-perm-desc">' + mod.desc + '</div></div><div class="gu-perm-actions">';
-            accs.forEach(function(a,i) {
-                html += '<div class="dc-toggle-wrap"><input type="checkbox" class="dc-toggle" id="pt-' + mod.key + '-' + a + '"' + (m[a]?' checked':'') + ' onchange="window._guCheckCascade(this, \'' + mod.key + '\', \'' + a + '\')">'
-                    + '<label class="dc-toggle-label' + (esAdmin?' readonly':'') + '" for="pt-' + mod.key + '-' + a + '"></label>'
-                    + '<span class="gu-perm-label">' + lbls[i] + '</span></div>';
-            });
-            html += '</div></div>';
         }
     });
 
@@ -362,17 +417,28 @@ window._guToggleAdmin = function(chk) {
 function _guCollectPermisos() {
     var pObj = {};
     window._GU_MODULOS.forEach(function(mod) {
-        if (!mod.lcad) {
+        var t = mod.type || (mod.lcad === false ? 'normal_r' : 'normal');
+        // Ignorar tipos que no tienen permisos propios
+        if (t === 'todos' || t === 'solo_admin' || t === 'child_admin') return;
+
+        if (t === 'hub') {
+            var enabledEl = document.getElementById('pt-' + mod.key + '-enabled');
+            pObj[mod.key] = { enabled: enabledEl && enabledEl.checked ? 1 : 0 };
+            return;
+        }
+        // normal solo-leer o child con solo leer
+        if (mod.lcad === false) {
             var el = document.getElementById('pt-' + mod.key + '-l');
             pObj[mod.key] = { l: el && el.checked ? 1 : 0 };
-        } else {
-            pObj[mod.key] = {
-                l: !!(document.getElementById('pt-'+mod.key+'-l')||{}).checked ? 1 : 0,
-                c: !!(document.getElementById('pt-'+mod.key+'-c')||{}).checked ? 1 : 0,
-                e: !!(document.getElementById('pt-'+mod.key+'-e')||{}).checked ? 1 : 0,
-                d: !!(document.getElementById('pt-'+mod.key+'-d')||{}).checked ? 1 : 0,
-            };
+            return;
         }
+        // normal o child con LCAD
+        pObj[mod.key] = {
+            l: !!(document.getElementById('pt-'+mod.key+'-l')||{}).checked ? 1 : 0,
+            c: !!(document.getElementById('pt-'+mod.key+'-c')||{}).checked ? 1 : 0,
+            e: !!(document.getElementById('pt-'+mod.key+'-e')||{}).checked ? 1 : 0,
+            d: !!(document.getElementById('pt-'+mod.key+'-d')||{}).checked ? 1 : 0,
+        };
     });
     return JSON.stringify(pObj);
 }
@@ -696,7 +762,7 @@ window._guShowCredsPopup = function(nombre, correo, password, esReset) {
 // ── Init ──────────────────────────────────────────────────────
 window.init_usuarios = function() {
     // Solo administradores pueden acceder a este módulo
-    if (!window.checkPerm('seg', 'l')) {
+    if (!window.checkPerm('usuarios', 'l') && !window.checkPerm('admin', '')) {
         var list = document.getElementById('guList');
         if (list) window.showNoPermMsg(list);
         var panel = document.getElementById('guPanel');
@@ -717,13 +783,11 @@ window.init_usuarios = function() {
 window._guCheckCascade = function(el, modKey, action) {
     if (!el || el.classList.contains('readonly')) return;
     var chk = el.checked;
-    
-    // Auto-activación: Si se activa c, e, d => activa l
+    // Auto-activación: Si se activa c, e, d => activa l también
     if (chk && (action === 'c' || action === 'e' || action === 'd')) {
         var lEl = document.getElementById('pt-' + modKey + '-l');
         if (lEl && !lEl.checked) lEl.checked = true;
     }
-    
     // Auto-desactivación: Si se desactiva l => desactiva c, e, d
     if (!chk && action === 'l') {
         ['c', 'e', 'd'].forEach(function(a) {
@@ -731,6 +795,40 @@ window._guCheckCascade = function(el, modKey, action) {
             if (subEl && subEl.checked) subEl.checked = false;
         });
     }
+};
+
+// ── Hub toggle (Habilitado/Deshabilitado) ─────────────────────────
+window._guToggleHub = function(el, hubKey) {
+    var enabled = el && el.checked;
+    // Mostrar u ocultar hijos
+    document.querySelectorAll('.gu-perm-child[data-parent="' + hubKey + '"]').forEach(function(row) {
+        row.style.display = enabled ? '' : 'none';
+    });
+    // Actualizar icono expand
+    var icon = document.getElementById('gu-hub-icon-' + hubKey);
+    if (icon) {
+        icon.className = 'bi bi-chevron-' + (enabled ? 'up' : 'down');
+    }
+    // Si se deshabilita el hub, desactivar todos los permisos hijos
+    if (!enabled) {
+        document.querySelectorAll('[id^="pt-"][id$="-l"],[id^="pt-"][id$="-c"],[id^="pt-"][id$="-e"],[id^="pt-"][id$="-d"]').forEach(function(chk) {
+            // Solo los hijos de este hub
+            var modK = (chk.id || '').replace(/^pt-/, '').replace(/-[lcde]$/, '');
+            var modDef = window._GU_MODULOS.find(function(m){ return m.key === modK; });
+            if (modDef && modDef.parent === hubKey) chk.checked = false;
+        });
+    }
+};
+
+// ── Expand/collapse hub children section ─────────────────────────
+window._guExpandHub = function(hubKey) {
+    var container = document.getElementById('gu-hub-children-' + hubKey);
+    var icon = document.getElementById('gu-hub-icon-' + hubKey);
+    var children = document.querySelectorAll('.gu-perm-child[data-parent="' + hubKey + '"]');
+    if (!children.length) return;
+    var isHidden = (children[0].style.display === 'none');
+    children.forEach(function(c){ c.style.display = isHidden ? '' : 'none'; });
+    if (icon) icon.className = 'bi bi-chevron-' + (isHidden ? 'up' : 'down');
 };
 
 

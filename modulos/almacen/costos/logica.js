@@ -6,6 +6,11 @@ window.cosValData  = window.cosValData  || null;
 window.cosCosData  = window.cosCosData  || null;
 
 window.init_costos = function() {
+    if (!window.checkPerm('dash_alm', 'l')) {
+        var wrap = document.getElementById('mod-costos') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.cosValData = null;
     window.cosCosData = null;
     cosCargar();

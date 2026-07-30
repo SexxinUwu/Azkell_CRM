@@ -11,6 +11,11 @@ window.bktDetalleId = window.bktDetalleId || null;
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_backlog_taller = function() {
+    if (!window.checkPerm('backlog', 'l')) {
+        var wrap = document.getElementById('moduloBacklog');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.bktDetalleId = null;
     var panel = document.getElementById('bkt-panel-detalle');
     if (panel) panel.classList.remove('open');

@@ -69,6 +69,29 @@
 .dc-toggle:checked + .dc-toggle-label::after { left:19px; }
 .dc-toggle-label.danger { background:#80848e; }
 .dc-toggle:checked + .dc-toggle-label.danger { background:#da373c; }
+.dc-toggle-label.readonly { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
+/* ── Hub modules (expandable) ─────────────────────── */
+.gu-perm-hub { background:rgba(88,101,242,0.06); border-radius:10px; padding:14px 16px; border:1px solid rgba(88,101,242,0.2) !important; margin:4px 0; }
+.gu-perm-hub .gu-perm-name { font-size:0.92rem; }
+.gu-hub-expand-btn { background:transparent; border:1px solid var(--dc-border); color:var(--dc-subtext); border-radius:6px; padding:2px 8px; font-size:0.8rem; cursor:pointer; transition:all .15s; margin-left:6px; }
+.gu-hub-expand-btn:hover { border-color:var(--dc-primary); color:var(--dc-primary); }
+.gu-hub-children { overflow:hidden; transition:all .2s ease; }
+
+/* ── Child module rows (indented) ─────────────────── */
+.gu-perm-child { display:flex; align-items:center; padding:12px 0 12px 24px; border-bottom:1px solid var(--dc-border); gap:16px; border-left:2px solid rgba(88,101,242,0.3); margin-left:8px; padding-left:20px; }
+.gu-perm-child .gu-perm-name { font-size:0.88rem; }
+.gu-perm-child .gu-perm-desc { font-size:0.78rem; }
+
+/* ── Muted rows (admin/todos badges) ──────────────── */
+.gu-perm-row--muted { opacity:0.8; }
+
+/* ── Badges ───────────────────────────────────────── */
+.gu-badge-admin { display:inline-flex; align-items:center; gap:4px; background:rgba(237,66,69,0.12); color:#ED4245; border:1px solid rgba(237,66,69,0.3); border-radius:20px; padding:4px 12px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+.gu-badge-todos { display:inline-flex; align-items:center; gap:4px; background:rgba(87,242,135,0.1); color:#57F287; border:1px solid rgba(87,242,135,0.25); border-radius:20px; padding:4px 12px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+
+/* ── Permission label under toggles ──────────────── */
+.gu-perm-label { font-size:0.65rem; color:var(--dc-subtext); text-align:center; white-space:nowrap; }
 
 /* ── Miembros del rol ─────────────────────────────── */
 .gu-member-chip { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--dc-border); }

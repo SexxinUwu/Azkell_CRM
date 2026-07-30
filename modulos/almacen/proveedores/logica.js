@@ -10,6 +10,11 @@ window._provPagina        = window._provPagina        || 1;
 window._provPorPagina     = 25;
 
 window.init_proveedores = function() {
+    if (!window.checkPerm('prov_inv', 'l')) {
+        var wrap = document.getElementById('mod-proveedores') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     // Inyectar CSS Bento Grid
     if (!document.getElementById('almacen-bento-css')) {
         var lnk = document.createElement('link');
@@ -19,7 +24,8 @@ window.init_proveedores = function() {
         document.head.appendChild(lnk);
     }
     if (!window.checkPerm('prov_inv', 'l')) {
-        window.showNoPermMsg('mod-proveedores');
+        var wrap = document.getElementById('mod-proveedores') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
     window.cargarProveedores();

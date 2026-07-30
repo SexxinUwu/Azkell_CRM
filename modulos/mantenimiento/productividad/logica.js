@@ -12,6 +12,11 @@ var PROD_META_HORAS = 9; // meta diaria en horas
 
 // ── Entry point ─────────────────────────────────────────────────
 window.init_productividad = function() {
+    if (!window.checkPerm('productividad', 'l')) {
+        var wrap = document.getElementById('moduloProductividad');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     // NO poner fecha por defecto — muestra todos los trabajos al inicio
     window.prodDetalleWorker = null;
     prodCargar();

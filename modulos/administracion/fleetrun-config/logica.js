@@ -1,4 +1,9 @@
 window.init_fleetrun_config = function() {
+    if (!window.checkPerm('cfg_fleetrun', 'l')) {
+        var wrap = document.getElementById('mod-fleetrun-config') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     cargarFleetrunConfig();
 };
 

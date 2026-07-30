@@ -18,6 +18,11 @@ window._rotCatSituaciones    = window._rotCatSituaciones    || [];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
+    if (!window.checkPerm('reportes_ot', 'l')) {
+        var wrap = document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window._rotFiltroEstado = '';
     window.rotCargar();
     rotCargarSituaciones();

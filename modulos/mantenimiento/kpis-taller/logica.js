@@ -9,6 +9,11 @@ window.kpiDataOts = window.kpiDataOts || [];
 
 // ── Entry point ─────────────────────────────────────────────────
 window.init_kpis_taller = function() {
+    if (!window.checkPerm('kpis', 'l')) {
+        var wrap = document.getElementById('moduloKpis');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     kpiCargar();
 };
 

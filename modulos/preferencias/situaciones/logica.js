@@ -8,12 +8,13 @@ window.sitFiltrados = window.sitFiltrados || [];
 
 // ── Entry point ─────────────────────────────────────────────────
 window.init_situaciones = function() {
-    if (!window.checkPerm('ot', 'l') && !window.checkPerm('cfg_mant', 'l')) {
-        window.showNoPermMsg('root-dinamico');
+    if (!window.checkPerm('cfg_situacion', 'l')) {
+        var wrap = document.getElementById('root-dinamico');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
     var btnNuevo = document.querySelector('[onclick*="sitNueva"]');
-    if (btnNuevo) btnNuevo.style.display = window.checkPerm('ot', 'c') ? '' : 'none';
+    if (btnNuevo) btnNuevo.style.display = window.checkPerm('cfg_situacion', 'c') ? '' : 'none';
     sitCargar();
 };
 
@@ -57,8 +58,8 @@ function sitRenderizar() {
               + _sitEsc(label)
               + '</span></td>';
         html += '<td style="text-align:right;">' +
-            (window.checkPerm('ot','e') ? '<button class="btn btn-sm btn-outline-secondary me-1" onclick="window.sitEditar(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-            (window.checkPerm('ot','d') ? '<button class="btn btn-sm btn-outline-danger" onclick="window.sitEliminar(' + s.id + ',\'' + _sitEsc(label) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+            (window.checkPerm('cfg_situacion','e') ? '<button class="btn btn-sm btn-outline-secondary me-1" onclick="window.sitEditar(' + s.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+            (window.checkPerm('cfg_situacion','d') ? '<button class="btn btn-sm btn-outline-danger" onclick="window.sitEliminar(' + s.id + ',\'' + _sitEsc(label) + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>';
         html += '</tr>';
     });

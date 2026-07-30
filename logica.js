@@ -248,136 +248,147 @@ window.verificarSesionGuardada = function() {
     // ── VISIBILIDAD DEL MENÚ (nivel Google/Microsoft) ─────────────────
     // Regla: cada nav-item se oculta si checkPerm(key,'l') === false.
     // La sección entera se oculta si NINGÚN ítem de ella es visible.
+    // Los "hubs" se verifican con checkPerm('hub_key', 'enabled') pero internamente
+    // _permCache['hub_key'].enabled guardará la bandera (nuestra función checkPerm 
+    // retorna true para 'l' si un boolean está en true, pero para el hub 
+    // lo manejamos leyendo el .enabled). Para simplificar, usaremos un helper.
 
     var _cL = function(key) { return isAdm || window.checkPerm(key, 'l'); };
+    var _cHub = function(key) { 
+        if (isAdm) return true;
+        try { return window._permCache[key] && window._permCache[key].enabled === 1; } catch(e) { return false; }
+    };
 
-    // MANTENIMIENTO — ítems individuales
-    var vInsp        = _cL('insp');
-    var vPlacas      = _cL('placas');
-    var vFleet       = _cL('fleet');
-    var vPlan        = _cL('plan');
-    var vOT          = _cL('ot');
-    var vCfgMant     = _cL('cfg_mant');
+    // DASHBOARD
+    var vDash = _cL('dashboard');
+    safe('nav-dashboard', vDash);
+    safe('mbnav-dashboard', vDash);
+
+    // FLOTA — hub: hub_flota
+    var showFlotaHub = _cHub('hub_flota');
+    var vGps       = showFlotaHub && _cL('gps');
+    var vStatus    = showFlotaHub && _cL('status');
+    var vPlacas    = showFlotaHub && _cL('placas');
+    var vDocsFlota = showFlotaHub && _cL('docs_flota');
+
+    safe('nav-ubicacion',    vGps);
+    safe('mbnav-ubicacion',  vGps);
+    safe('nav-status-flota', vStatus);
+    safe('mbnav-status-flota', vStatus);
+    safe('nav-placas',       vPlacas);
+    safe('mbnav-placas',     vPlacas);
+    safe('nav-documentos',   vDocsFlota);
+    safe('mbnav-documentos', vDocsFlota);
+
+    var showFlota = vGps || vStatus || vPlacas || vDocsFlota;
+    safe('wrap-flota', showFlota);
+
+    // MANTENIMIENTO
     var vStatusRampa = _cL('status_rampa');
+    var vInsp        = _cL('insp');
     var vReportesOT  = _cL('reportes_ot');
     var vTrabajosOT  = _cL('trabajos_ot');
+    
+    var showOtrosMantHub = _cHub('otros_mant');
+    var vPlan        = showOtrosMantHub && _cL('plan');
+    var vBacklog     = showOtrosMantHub && _cL('backlog');
+    var vKpis        = showOtrosMantHub && _cL('kpis');
+    var vProduct     = showOtrosMantHub && _cL('productividad');
+    var vFinTaller   = showOtrosMantHub && _cL('fin_taller');
+    var showOtrosMant = vPlan || vBacklog || vKpis || vProduct || vFinTaller;
 
-    safe('nav-inspecciones',    vInsp);
-    safe('mbnav-inspecciones',  vInsp);
-    safe('nav-placas',          vPlacas);
-    safe('nav-fleetrun',        vFleet);
-    safe('mbnav-fleetrun',      vFleet);
     safe('nav-status-rampa',    vStatusRampa);
     safe('mbnav-status-rampa',  vStatusRampa);
+    safe('nav-inspecciones',    vInsp);
+    safe('mbnav-inspecciones',  vInsp);
     safe('nav-reportes-ot',     vReportesOT);
     safe('mbnav-reportes-ot',   vReportesOT);
     safe('nav-trabajos-ot',     vTrabajosOT);
     safe('mbnav-trabajos-ot',   vTrabajosOT);
-    safe('nav-otros-mant',      vOT || vPlan || vCfgMant);
-    safe('mbnav-otros-mant',    vOT || vPlan || vCfgMant);
-    safe('nav-ordenes',         vOT);
-    // planificacion/backlog/kpis/productividad/finanzas están ocultos del sidebar
-    // (accesibles vía hub Otros) — no llamar safe() sobre ellos
+    safe('nav-otros-mant',      showOtrosMant);
+    safe('mbnav-otros-mant',    showOtrosMant);
 
-
-    var showMant = vInsp || vPlacas || vFleet || vPlan || vOT || vStatusRampa || vReportesOT || vTrabajosOT || vCfgMant;
+    var showMant = vStatusRampa || vInsp || vReportesOT || vTrabajosOT || showOtrosMant;
     safe('wrap-mantenimiento', showMant);
 
-    // ALMACÉN — ítems individuales
+    // ALMACÉN
+    var vDashAlm = _cL('dash_alm');
     var vInv     = _cL('inv');
     var vEnt     = _cL('ent_inv');
     var vSal     = _cL('sal_inv');
-    var vProv    = _cL('prov_inv');
     var vKardex  = _cL('kardex');
-    var vCostos  = _cL('costos_inv');
-    var vCfgAlm  = _cL('cfg_almacen');
+    var vProv    = _cL('prov_inv');
 
+    safe('nav-dash-alm',        vDashAlm);
+    safe('mbnav-dash-alm',      vDashAlm);
     safe('nav-inventario',      vInv);
     safe('mbnav-inventario',    vInv);
     safe('nav-entradas-inv',    vEnt);
     safe('mbnav-entradas-inv',  vEnt);
     safe('nav-salidas-inv',     vSal);
     safe('mbnav-salidas-inv',   vSal);
-    safe('nav-proveedores-inv', vProv);
     safe('nav-kardex',          vKardex);
     safe('mbnav-kardex',        vKardex);
-    safe('nav-costos-inv',      vCostos);
+    safe('nav-proveedores-inv', vProv);
+    safe('mbnav-proveedores-inv', vProv);
 
-    var showAlm = vInv || vEnt || vSal || vProv || vKardex || vCostos;
+    var showAlm = vDashAlm || vInv || vEnt || vSal || vKardex || vProv;
     safe('wrap-almacen', showAlm);
 
+    // DIRECTORIO
+    var vCond = _cL('cond');
+    safe('nav-conductores',  vCond);
+    safe('mbnav-conductores', vCond);
+    safe('wrap-directorio', vCond);
+
     // SEGURIDAD
-    var vAsist   = _cL('asist');
-    var vSegUnid = _cL('placas') || _cL('unid');
-    safe('nav-seg-unidades',    vSegUnid);
-    safe('mbnav-seg-unidades',  vSegUnid);
+    var vChecklist = _cL('checklist');
+    var vAsist     = _cL('asist');
+    
+    safe('nav-seg-unidades',    vChecklist);
+    safe('mbnav-seg-unidades',  vChecklist);
     safe('nav-seg-asistencia',  vAsist);
     safe('mbnav-seg-asistencia',vAsist);
 
-    var showSeg = vSegUnid || vAsist;
+    var showSeg = vChecklist || vAsist;
     safe('wrap-seguridad', showSeg);
     safe('bnav-seguridad', showSeg);
 
-    // PREFERENCIAS — Config. Preventivos + Config. Taller + Config. Almacén (admin-only por defecto)
-    safe('nav-configuracion-mp', vCfgMant);
-    safe('nav-kits-mp',          vCfgMant);
-    safe('nav-tipos-mp',         vCfgMant);
-    safe('nav-config-metrica',   vCfgMant);
-    safe('nav-situaciones',      vCfgMant || vCfgAlm || isAdm);
-    safe('nav-familias-inv',     vCfgAlm);
-    safe('nav-unidades-inv',     vCfgAlm);
-    safe('nav-sistemas-inv',     vCfgAlm);
-    safe('nav-marcas-inv',       vCfgAlm);
+    // CONFIGURACIÓN & ADMINISTRACIÓN
+    var vUsuarios   = isAdm || _cL('usuarios');
+    var vAuditoria  = isAdm || _cL('mod_auditoria');
+    var vCfgEmpresa = _cL('cfg_empresa');
+    
+    var showAdmHub  = _cHub('administracion');
+    var vCfgFamilias = showAdmHub && _cL('cfg_familias');
+    var vCfgUnidades = showAdmHub && _cL('cfg_unidades');
+    var vCfgSistemas = showAdmHub && _cL('cfg_sistemas');
+    var vCfgMarcas   = showAdmHub && _cL('cfg_marcas');
+    var vCfgFrec     = showAdmHub && _cL('cfg_frec');
+    var vCfgKits     = showAdmHub && _cL('cfg_kits');
+    var vCfgTiposMp  = showAdmHub && _cL('cfg_tipos_mp');
+    var vCfgMetrica  = showAdmHub && _cL('cfg_metrica');
+    var vCfgSituacion= showAdmHub && _cL('cfg_situacion');
+    var vCfgPersonal = showAdmHub && _cL('cfg_personal');
+    var vCfgFleetrun = showAdmHub && (isAdm || _cL('cfg_fleetrun'));
+    var vCfgInteg    = showAdmHub && (isAdm || _cL('cfg_integ'));
+    
+    var showAdm = vCfgFamilias || vCfgUnidades || vCfgSistemas || vCfgMarcas || vCfgFrec || vCfgKits || vCfgTiposMp || vCfgMetrica || vCfgSituacion || vCfgPersonal || vCfgFleetrun || vCfgInteg;
 
-    // ADMINISTRACIÓN — hub visible si tiene algún permiso de configuración
-    var showAdm = vCfgMant || vCfgAlm || isAdm;
+    safe('nav-usuarios',  vUsuarios);
+    safe('mbnav-usuarios', vUsuarios);
+    safe('nav-auditoria', vAuditoria);
+    safe('mbnav-auditoria', vAuditoria);
+    safe('wrap-usuarios',  vUsuarios);
+    safe('wrap-auditoria', vAuditoria);
+    
+    safe('nav-cfg-empresa', vCfgEmpresa);
+    safe('mbnav-cfg-empresa', vCfgEmpresa);
+
     safe('wrap-administracion', showAdm);
     safe('nav-administracion',  showAdm);
     safe('mbnav-administracion', showAdm);
-    safe('mbnav-configuracion', showAdm);
-
-    // Sub-labels de Preferencias
-    var elSubCfgPrev   = document.getElementById('nav-sub-cfg-prev');
-    var elSubCfgTaller = document.getElementById('nav-sub-cfg-taller');
-    var elSubCfgAlm    = document.getElementById('nav-sub-cfg-alm');
-    if (elSubCfgPrev)   elSubCfgPrev.style.display   = vCfgMant ? '' : 'none';
-    if (elSubCfgTaller) elSubCfgTaller.style.display  = (vCfgMant || vCfgAlm || isAdm) ? '' : 'none';
-    if (elSubCfgAlm)    elSubCfgAlm.style.display     = vCfgAlm  ? '' : 'none';
-
-    var showPref = vCfgMant || vCfgAlm || isAdm;
-    safe('wrap-preferencias', showPref);
-
-    // FLOTA — ítems individuales
-    var vGps    = _cL('gps');
-    var vStatus = _cL('status');
-    var vCond   = _cL('cond');
-
-    safe('nav-ubicacion',    vGps);
-    safe('mbnav-ubicacion',  vGps);
-    safe('nav-status-flota', vStatus);
-    safe('mbnav-status-flota', vStatus);
-    safe('nav-conductores',  vCond);
-    safe('mbnav-conductores', vCond);
-    safe('nav-talleres',     false); // no implementado aún
-
-    var showFlota = vGps || vStatus;
-    safe('wrap-flota', showFlota);
-    safe('wrap-directorio', vCond);
-
-    // SISTEMA — solo admin ve usuarios; auditoria puede tener permiso propio
-    var vSeg   = isAdm;
-    var vAudit = isAdm || window.checkPerm('mod_auditoria', 'l');
-
-    safe('nav-usuarios',  vSeg);
-    safe('mbnav-usuarios', vSeg);
-    safe('nav-auditoria', vAudit);
-    safe('mbnav-auditoria', vAudit);
-    safe('wrap-usuarios',  vSeg);
-    safe('wrap-auditoria', vAudit);
-    
-    // Configuración
-    safe('nav-cfg-empresa', vSeg);
-    safe('mbnav-cfg-empresa', vSeg);
+    safe('mbnav-configuracion', showAdm || vCfgEmpresa || vUsuarios || vAuditoria);
     // ─────────────────────────────────────────────────────────────────
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---

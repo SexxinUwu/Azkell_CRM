@@ -4,6 +4,11 @@ var currentPlaca = null;
 var currentFiltroKPI = 'total';
 
 function init_documentos() {
+    if (!window.checkPerm('docs_flota', 'l')) {
+        var wrap = document.getElementById('moduloDocumentos') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('fd_placa', function(val) {
             autocompletarDatosPlaca(val);

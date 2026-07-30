@@ -62,6 +62,11 @@ function _sguFetch(url, opts) {
 
 // ── INIT Y CARGA ─────────────────────────────────────────────────
 window.init_unidades = function() {
+    if (!window.checkPerm('checklist', 'l')) {
+        var wrap = document.getElementById('sgu-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     _sguView = 'list';
     _sguLoadResources();
     _sguLoadTemplate(function() {

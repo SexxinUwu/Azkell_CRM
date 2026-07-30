@@ -31,6 +31,11 @@ window._invModoSeleccion = false;
 window._invSeleccionados = window._invSeleccionados instanceof Set ? new Set() : new Set();
 
 window.init_inventario = function() {
+    if (!window.checkPerm('inv', 'l')) {
+        var wrap = document.getElementById('mod-inventario') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     // Inyectar CSS Bento Grid
     if (!document.getElementById('almacen-bento-css')) {
         var lnk = document.createElement('link');
@@ -40,7 +45,8 @@ window.init_inventario = function() {
         document.head.appendChild(lnk);
     }
     if (!window.checkPerm('inv', 'l')) {
-        window.showNoPermMsg('mod-inventario');
+        var wrap = document.getElementById('mod-inventario') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
     var btnNuevo = document.querySelector('#mod-inventario .btn-primary[onclick*="abrirModalArticulo"]');
