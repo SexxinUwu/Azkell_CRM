@@ -87,19 +87,19 @@ window.finFiltrar = function() {
         var tipoOt  = (detalles.tipo_ot || '').trim();
         var fInicio = detalles.f_inicio || ot.creado_en || null;
 
-        // COSTO MANO DE OBRA: suma de ot-trabajos con estado=Aprobado y mismo ticket_ot
+        // COSTO MANO DE OBRA: suma de ot-trabajos
         var costoMO = window.finDataTrabajos
             .filter(function(t) {
-                return String(t.ticket_ot) === String(ot.ticket_entrada) &&
-                       (t.estado || '') === 'Aprobado';
+                return String(t.ticket_visita || t.ticket_ot || t.id_ot) === String(ot.ticket_entrada || ot.id_ot) &&
+                       (t.estado || '').toLowerCase() !== 'anulado';
             })
             .reduce(function(acc, t) { return acc + parseFloat(t.costo || 0); }, 0);
 
-        // COSTO REPUESTOS: suma de ot-materiales con estado=Despachado y mismo ticket_ot
+        // COSTO REPUESTOS: suma de ot-materiales
         var costoRep = window.finDataMateriales
             .filter(function(m) {
-                return String(m.ticket_ot) === String(ot.ticket_entrada) &&
-                       (m.estado || '') === 'Despachado';
+                return String(m.ticket_ot || m.id_ot) === String(ot.ticket_entrada || ot.id_ot) &&
+                       (m.estado || '').toLowerCase() !== 'anulado';
             })
             .reduce(function(acc, m) { return acc + parseFloat(m.costo_total || 0); }, 0);
 
