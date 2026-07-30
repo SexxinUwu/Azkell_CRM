@@ -152,8 +152,6 @@ window.init_ordenes = function() {
         window.showNoPermMsg('root-dinamico');
         return;
     }
-    window.enforceModuleUI('ot');
-
     // Ocultar botón Nueva OT si no puede crear
     var btnNuevo = document.getElementById('btn-nueva-ot');
     if (btnNuevo) btnNuevo.style.display = window.checkPerm('ot', 'c') ? '' : 'none';

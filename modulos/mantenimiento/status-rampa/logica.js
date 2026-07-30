@@ -2468,5 +2468,3 @@ window.srNavegarDetalle = function(direccion) {
     }, {passive: true});
 })();
 
-window.enforceModuleUI('status_rampa');
-
