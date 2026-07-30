@@ -25,12 +25,12 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'FLOTA',         key:'docs_flota',       nombre:'Documentos',                  desc:'Documentos por vehículo (SOAT, tarjetas, etc.)', type:'child', parent:'hub_flota' },
 
     // ── MANTENIMIENTO ────────────────────────────────────────────────
-    { grupo:'MANTENIMIENTO', key:'status_rampa',     nombre:'Status Rampa',                desc:'Gestión visual del estado en taller',           type:'normal' },
-    { grupo:'MANTENIMIENTO', key:'insp',             nombre:'Análisis de Inspecciones',    desc:'Registro y análisis de inspecciones de unidades', type:'normal' },
-    { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'normal' },
-    { grupo:'MANTENIMIENTO', key:'trabajos_ot',      nombre:'Historial de Trabajos',       desc:'Historial de trabajos realizados por técnicos', type:'normal' },
-    // Otros (hub)
-    { grupo:'MANTENIMIENTO', key:'otros_mant',       nombre:'Otros',                       desc:'Habilitar acceso a los sub-módulos complementarios de Mantenimiento', type:'hub' },
+    { grupo:'MANTENIMIENTO', key:'hub_mant',         nombre:'Mantenimiento',               desc:'Habilitar o deshabilitar acceso al módulo Mantenimiento completo', type:'hub' },
+    { grupo:'MANTENIMIENTO', key:'status_rampa',     nombre:'Status Rampa',                desc:'Gestión visual del estado en taller',           type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'insp',             nombre:'Análisis de Inspecciones',    desc:'Registro y análisis de inspecciones de unidades', type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'trabajos_ot',      nombre:'Historial de Trabajos',       desc:'Historial de trabajos realizados por técnicos', type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'otros_mant',       nombre:'Otros',                       desc:'Habilitar acceso a los sub-módulos complementarios de Mantenimiento', type:'hub', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'plan',             nombre:'Planificación de Mantenimientos', desc:'Programación y seguimiento de MP',          type:'child', parent:'otros_mant' },
     { grupo:'MANTENIMIENTO', key:'backlog',          nombre:'Backlog Pendientes',           desc:'Lista de trabajos pendientes por atender',      type:'child', parent:'otros_mant' },
     { grupo:'MANTENIMIENTO', key:'kpis',             nombre:'Métricas y KPIs',             desc:'Indicadores de rendimiento del taller',         type:'child', parent:'otros_mant' },
@@ -38,19 +38,22 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'MANTENIMIENTO', key:'fin_taller',       nombre:'Reporte Financiero',          desc:'Costos de mano de obra y repuestos por OT',    type:'child', parent:'otros_mant' },
 
     // ── ALMACÉN ──────────────────────────────────────────────────────
-    { grupo:'ALMACÉN',       key:'dash_alm',         nombre:'Dashboard Financiero',        desc:'Resumen financiero del almacén',                type:'normal' },
-    { grupo:'ALMACÉN',       key:'inv',              nombre:'Inventario',                  desc:'Catálogo de artículos y stock',                 type:'normal' },
-    { grupo:'ALMACÉN',       key:'ent_inv',          nombre:'Órdenes de Compra',           desc:'Ingresos y órdenes de compra al almacén',      type:'normal' },
-    { grupo:'ALMACÉN',       key:'sal_inv',          nombre:'Órdenes de Salida',           desc:'Egresos y salidas del almacén',                 type:'normal' },
-    { grupo:'ALMACÉN',       key:'kardex',           nombre:'Kardex',                      desc:'Movimientos históricos por artículo',           type:'normal', lcad:false },
-    { grupo:'ALMACÉN',       key:'prov_inv',         nombre:'Proveedores',                 desc:'Directorio de proveedores',                     type:'normal' },
+    { grupo:'ALMACÉN',       key:'hub_almacen',      nombre:'Almacén',                     desc:'Habilitar o deshabilitar acceso al módulo Almacén completo', type:'hub' },
+    { grupo:'ALMACÉN',       key:'dash_alm',         nombre:'Dashboard Financiero',        desc:'Resumen financiero del almacén',                type:'child', parent:'hub_almacen' },
+    { grupo:'ALMACÉN',       key:'inv',              nombre:'Inventario',                  desc:'Catálogo de artículos y stock',                 type:'child', parent:'hub_almacen' },
+    { grupo:'ALMACÉN',       key:'ent_inv',          nombre:'Órdenes de Compra',           desc:'Ingresos y órdenes de compra al almacén',      type:'child', parent:'hub_almacen' },
+    { grupo:'ALMACÉN',       key:'sal_inv',          nombre:'Órdenes de Salida',           desc:'Egresos y salidas del almacén',                 type:'child', parent:'hub_almacen' },
+    { grupo:'ALMACÉN',       key:'kardex',           nombre:'Kardex',                      desc:'Movimientos históricos por artículo',           type:'child', parent:'hub_almacen', lcad:false },
+    { grupo:'ALMACÉN',       key:'prov_inv',         nombre:'Proveedores',                 desc:'Directorio de proveedores',                     type:'child', parent:'hub_almacen' },
 
     // ── DIRECTORIO ───────────────────────────────────────────────────
-    { grupo:'DIRECTORIO',    key:'cond',             nombre:'Personal',                    desc:'Directorio operativo del personal',             type:'normal' },
+    { grupo:'DIRECTORIO',    key:'hub_directorio',   nombre:'Directorio',                  desc:'Habilitar o deshabilitar acceso al módulo Directorio', type:'hub' },
+    { grupo:'DIRECTORIO',    key:'cond',             nombre:'Personal',                    desc:'Directorio operativo del personal',             type:'child', parent:'hub_directorio' },
 
     // ── SEGURIDAD ────────────────────────────────────────────────────
-    { grupo:'SEGURIDAD',     key:'checklist',        nombre:'CheckList de Unidades',       desc:'Inspecciones de ingreso/salida de unidades',    type:'normal' },
-    { grupo:'SEGURIDAD',     key:'asist',            nombre:'Tareo',                       desc:'Control de asistencia del personal',            type:'normal' },
+    { grupo:'SEGURIDAD',     key:'hub_seguridad',    nombre:'Seguridad',                   desc:'Habilitar o deshabilitar acceso al módulo Seguridad', type:'hub' },
+    { grupo:'SEGURIDAD',     key:'checklist',        nombre:'CheckList de Unidades',       desc:'Inspecciones de ingreso/salida de unidades',    type:'child', parent:'hub_seguridad' },
+    { grupo:'SEGURIDAD',     key:'asist',            nombre:'Tareo',                       desc:'Control de asistencia del personal',            type:'child', parent:'hub_seguridad' },
 
     // ── CONFIGURACIÓN ────────────────────────────────────────────────
     { grupo:'CONFIGURACIÓN', key:'usuarios',         nombre:'Usuarios',                    desc:'Gestión de usuarios y roles del sistema',       type:'solo_admin' },
@@ -60,7 +63,6 @@ window._GU_MODULOS = window._GU_MODULOS || [
     { grupo:'CONFIGURACIÓN', key:'cfg_accesibilidad',nombre:'Accesibilidad',               desc:'Ajustes de accesibilidad del sistema',          type:'todos' },
     { grupo:'CONFIGURACIÓN', key:'cfg_idioma',       nombre:'Idioma',                      desc:'Configuración de idioma del sistema',           type:'todos' },
     { grupo:'CONFIGURACIÓN', key:'mi_perfil',        nombre:'Mi Perfil',                   desc:'Configuración personal del usuario',            type:'todos' },
-    // Administración (hub)
     { grupo:'CONFIGURACIÓN', key:'administracion',   nombre:'Administración',              desc:'Habilitar acceso a la configuración avanzada del sistema', type:'hub' },
     { grupo:'CONFIGURACIÓN', key:'cfg_familias',     nombre:'Familias',                    desc:'Familias de artículos de almacén',             type:'child', parent:'administracion' },
     { grupo:'CONFIGURACIÓN', key:'cfg_unidades',     nombre:'Unidades de Medida',          desc:'Unidades de medida del sistema',                type:'child', parent:'administracion' },
@@ -313,13 +315,24 @@ function _guBuildRolPanel(rol) {
         if (mod.type === 'hub') {
             var hubEnabled = hubsActivos[mod.key];
             var rdonly = esAdmin ? ' readonly' : '';
-            html += '<div class="gu-perm-row gu-perm-hub" id="gu-hub-row-' + mod.key + '">'
-                + '<div class="gu-perm-info"><div class="gu-perm-name" style="color:var(--dc-primary);font-weight:700;"><i class="bi bi-folder2-open me-1" style="font-size:.85em;"></i>' + mod.nombre + '</div>'
+            var rowCls = 'gu-perm-row gu-perm-hub';
+            var parentAttr = '';
+            var display = '';
+            if (mod.parent) {
+                rowCls += ' gu-perm-child';
+                parentAttr = ' data-parent="' + mod.parent + '"';
+                display = hubsActivos[mod.parent] ? '' : 'display:none;';
+            }
+
+            html += '<div class="' + rowCls + '" id="gu-hub-row-' + mod.key + '"' + parentAttr + ' style="' + display + '">'
+                + '<div class="gu-perm-info"><div class="gu-perm-name" style="color:var(--dc-primary);font-weight:700;">'
+                + (mod.parent?'<i class="bi bi-arrow-return-right me-1" style="opacity:0.5;"></i>':'')
+                + '<i class="bi bi-folder2-open me-1" style="font-size:.85em;"></i>' + mod.nombre + '</div>'
                 + '<div class="gu-perm-desc">' + mod.desc + '</div></div>'
                 + '<div class="gu-perm-actions"><div class="dc-toggle-wrap">'
                 + '<input type="checkbox" class="dc-toggle dc-toggle--hub" id="pt-' + mod.key + '-enabled"' + (hubEnabled ? ' checked' : '') + ' onchange="window._guToggleHub(this, \'' + mod.key + '\')">'
                 + '<label class="dc-toggle-label' + rdonly + '" for="pt-' + mod.key + '-enabled"></label><span class="gu-perm-label">Habilitado</span></div>'
-                + '<button type="button" class="gu-hub-expand-btn" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
+                + '<button type="button" class="gu-hub-expand-btn" id="gu-hub-btn-' + mod.key + '" onclick="window._guExpandHub(\'' + mod.key + '\')" title="Ver sub-módulos" style="' + (hubEnabled ? '' : 'display:none;') + '"><i class="bi bi-chevron-' + (hubEnabled ? 'up' : 'down') + '" id="gu-hub-icon-' + mod.key + '"></i></button>'
                 + '</div></div>';
             return;
         }
@@ -822,13 +835,28 @@ window._guCheckCascade = function(el, modKey, action) {
     }
 };
 
-// ── Hub toggle (Habilitado/Deshabilitado) ─────────────────────────
 window._guToggleHub = function(el, hubKey) {
     var enabled = el && el.checked;
-    // Mostrar u ocultar hijos
-    document.querySelectorAll('.gu-perm-child[data-parent="' + hubKey + '"]').forEach(function(row) {
-        row.style.display = enabled ? '' : 'none';
-    });
+    
+    var btn = document.getElementById('gu-hub-btn-' + hubKey);
+    if (btn) btn.style.display = enabled ? '' : 'none';
+
+    function setDisplay(parentKey, isVisible) {
+        document.querySelectorAll('.gu-perm-child[data-parent="' + parentKey + '"]').forEach(function(row) {
+            row.style.display = isVisible ? '' : 'none';
+            var childHubMatch = row.id.match(/^gu-hub-row-(.+)$/);
+            if (childHubMatch) {
+                var childHubKey = childHubMatch[1];
+                var childHubEl = document.getElementById('pt-' + childHubKey + '-enabled');
+                var childHubEnabled = childHubEl ? childHubEl.checked : false;
+                var icon = document.getElementById('gu-hub-icon-' + childHubKey);
+                var isExpanded = icon && icon.classList.contains('bi-chevron-up');
+                setDisplay(childHubKey, isVisible && childHubEnabled && isExpanded);
+            }
+        });
+    }
+    setDisplay(hubKey, enabled);
+
     // Actualizar icono expand
     var icon = document.getElementById('gu-hub-icon-' + hubKey);
     if (icon) {
@@ -836,23 +864,43 @@ window._guToggleHub = function(el, hubKey) {
     }
     // Si se deshabilita el hub, desactivar todos los permisos hijos
     if (!enabled) {
-        document.querySelectorAll('[id^="pt-"][id$="-l"],[id^="pt-"][id$="-c"],[id^="pt-"][id$="-e"],[id^="pt-"][id$="-d"]').forEach(function(chk) {
-            // Solo los hijos de este hub
-            var modK = (chk.id || '').replace(/^pt-/, '').replace(/-[lcde]$/, '');
+        document.querySelectorAll('[id^="pt-"]').forEach(function(chk) {
+            var modK = (chk.id || '').replace(/^pt-/, '').replace(/-(l|c|e|d|enabled)$/, '');
             var modDef = window._GU_MODULOS.find(function(m){ return m.key === modK; });
-            if (modDef && modDef.parent === hubKey) chk.checked = false;
+            if (modDef && modDef.parent === hubKey) {
+                chk.checked = false;
+                if (chk.id.endsWith('-enabled')) {
+                    // Si el hijo es un hub, también aplicar en cascada
+                    window._guToggleHub(chk, modK);
+                }
+            }
         });
     }
 };
 
 // ── Expand/collapse hub children section ─────────────────────────
 window._guExpandHub = function(hubKey) {
-    var container = document.getElementById('gu-hub-children-' + hubKey);
     var icon = document.getElementById('gu-hub-icon-' + hubKey);
     var children = document.querySelectorAll('.gu-perm-child[data-parent="' + hubKey + '"]');
     if (!children.length) return;
     var isHidden = (children[0].style.display === 'none');
-    children.forEach(function(c){ c.style.display = isHidden ? '' : 'none'; });
+    
+    function setDisplay(parentKey, isVisible) {
+        document.querySelectorAll('.gu-perm-child[data-parent="' + parentKey + '"]').forEach(function(row) {
+            row.style.display = isVisible ? '' : 'none';
+            var childHubMatch = row.id.match(/^gu-hub-row-(.+)$/);
+            if (childHubMatch) {
+                var childHubKey = childHubMatch[1];
+                var childHubEl = document.getElementById('pt-' + childHubKey + '-enabled');
+                var childHubEnabled = childHubEl ? childHubEl.checked : false;
+                var iconC = document.getElementById('gu-hub-icon-' + childHubKey);
+                var childExpanded = iconC && iconC.classList.contains('bi-chevron-up');
+                setDisplay(childHubKey, isVisible && childHubEnabled && childExpanded);
+            }
+        });
+    }
+    
+    setDisplay(hubKey, isHidden);
     if (icon) icon.className = 'bi bi-chevron-' + (isHidden ? 'up' : 'down');
 };
 

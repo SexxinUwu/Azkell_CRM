@@ -284,12 +284,13 @@ window.verificarSesionGuardada = function() {
     safe('wrap-flota', showFlota);
 
     // MANTENIMIENTO
-    var vStatusRampa = _cL('status_rampa');
-    var vInsp        = _cL('insp');
-    var vReportesOT  = _cL('reportes_ot');
-    var vTrabajosOT  = _cL('trabajos_ot');
+    var showMantHub  = _cHub('hub_mant');
+    var vStatusRampa = showMantHub && _cL('status_rampa');
+    var vInsp        = showMantHub && _cL('insp');
+    var vReportesOT  = showMantHub && _cL('reportes_ot');
+    var vTrabajosOT  = showMantHub && _cL('trabajos_ot');
     
-    var showOtrosMantHub = _cHub('otros_mant');
+    var showOtrosMantHub = showMantHub && _cHub('otros_mant');
     var vPlan        = showOtrosMantHub && _cL('plan');
     var vBacklog     = showOtrosMantHub && _cL('backlog');
     var vKpis        = showOtrosMantHub && _cL('kpis');
@@ -312,12 +313,13 @@ window.verificarSesionGuardada = function() {
     safe('wrap-mantenimiento', showMant);
 
     // ALMACÉN
-    var vDashAlm = _cL('dash_alm');
-    var vInv     = _cL('inv');
-    var vEnt     = _cL('ent_inv');
-    var vSal     = _cL('sal_inv');
-    var vKardex  = _cL('kardex');
-    var vProv    = _cL('prov_inv');
+    var showAlmacenHub = _cHub('hub_almacen');
+    var vDashAlm = showAlmacenHub && _cL('dash_alm');
+    var vInv     = showAlmacenHub && _cL('inv');
+    var vEnt     = showAlmacenHub && _cL('ent_inv');
+    var vSal     = showAlmacenHub && _cL('sal_inv');
+    var vKardex  = showAlmacenHub && _cL('kardex');
+    var vProv    = showAlmacenHub && _cL('prov_inv');
 
     safe('nav-dash-alm',        vDashAlm);
     safe('mbnav-dash-alm',      vDashAlm);
@@ -336,14 +338,16 @@ window.verificarSesionGuardada = function() {
     safe('wrap-almacen', showAlm);
 
     // DIRECTORIO
-    var vCond = _cL('cond');
+    var showDirectorioHub = _cHub('hub_directorio');
+    var vCond = showDirectorioHub && _cL('cond');
     safe('nav-conductores',  vCond);
     safe('mbnav-conductores', vCond);
     safe('wrap-directorio', vCond);
 
     // SEGURIDAD
-    var vChecklist = _cL('checklist');
-    var vAsist     = _cL('asist');
+    var showSeguridadHub = _cHub('hub_seguridad');
+    var vChecklist = showSeguridadHub && _cL('checklist');
+    var vAsist     = showSeguridadHub && _cL('asist');
     
     safe('nav-seg-unidades',    vChecklist);
     safe('mbnav-seg-unidades',  vChecklist);
