@@ -46,7 +46,7 @@ function actualizarDatalistPlacas() {
 window.docFiltros = {}; // { colKey: Set(val1, val2...) }
 window._columnaActivaFiltroDoc = null;
 
-const DOC_COLUMNAS = [
+var DOC_COLUMNAS = [
     { key: 'placa', label: 'Placa' },
     { key: 'empresa', label: 'Cliente' },
     { key: 'marca', label: 'Marca' },
