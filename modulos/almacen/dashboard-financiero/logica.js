@@ -3,6 +3,16 @@ window.finChartConsumo = null;
 
 window.finCriticoList = [];
 window.init_almacen_dashboard = function() {
+    if (!window.checkPerm('dash_alm', 'l')) {
+        var wrap = document.getElementById('mod-almacen-dashboard') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('dash_alm', 'l')) {
+        var wrap = document.getElementById('dash-fin-container') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     document.getElementById('fin-loader').style.display = 'flex';
     document.getElementById('fin-content').style.display = 'none';
 

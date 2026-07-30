@@ -27,6 +27,11 @@ function toggleAllCondGroups() {
 }
 
 function mostrarConductores(datos) {
+    if (!window.checkPerm('conductores', 'l')) {
+        var wrap = document.getElementById('moduloConductores') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     dataGlobalConductores = datos;
     window.dataGlobalConductores = datos;
 

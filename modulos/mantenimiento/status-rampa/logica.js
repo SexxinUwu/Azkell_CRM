@@ -37,6 +37,11 @@ var SR_COLORES = [
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_status_rampa = function() {
+    if (!window.checkPerm('status_rampa', 'l')) {
+        var wrap = document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.srDetalleId = null;
     var panelD = document.getElementById('sr-panel-detalle');
     if (panelD) panelD.classList.remove('open');

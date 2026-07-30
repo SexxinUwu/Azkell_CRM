@@ -190,6 +190,11 @@ window.obtenerTipoCompuesto = function(motora, nomotora) {
 // 📋 MOSTRAR TABLA STATUS FLOTA
 // ================================================================
 function mostrarStatusFlota(datos) {
+    if (!window.checkPerm('status', 'l')) {
+        var wrap = document.getElementById('moduloStatusFlota') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     if (!dataGlobalInspecciones || dataGlobalInspecciones.length === 0) {
         const _cS = document.getElementById('cuerpoTablaStatusFlota');
         if (_cS) _cS.innerHTML = typeof generarSkeletonHtml === 'function'
@@ -620,7 +625,8 @@ window.generarPDFStatusFlota = function(event) {
 // ================================================================
 window.init_status = function() {
     if (!window.checkPerm('status', 'l')) {
-        window.showNoPermMsg('mod-status-flota');
+        var wrap = document.getElementById('flota-status-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
     var btnNuevo = document.querySelector('[onclick*="abrirModalNuevoStatusFlota"]');

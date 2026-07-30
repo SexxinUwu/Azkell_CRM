@@ -6,6 +6,16 @@ window._mrcData     = window._mrcData     || [];
 window._mrcFiltrado = window._mrcFiltrado || [];
 
 window.init_marcas = function() {
+    if (!window.checkPerm('cfg_marcas', 'l')) {
+        var wrap = document.getElementById('mod-marcas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('cfg_marcas', 'l')) {
+        var wrap = document.getElementById('root-dinamico');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.cargarMarcas();
 };
 
@@ -48,15 +58,16 @@ window._mrcRender = function() {
         return;
     }
     tb.innerHTML = datos.map(function(m) {
-        return '<tr>' +
+        var html = '<tr>' +
             '<td style="font-weight:700;color:var(--text);">' + _mrcEsc(m.nombre) + '</td>' +
             '<td class="text-muted small">' + _mrcEsc(m.descripcion || '—') + '</td>' +
-            '<td>' + (m.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
-            '<td class="text-end">' +
-                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalMarca(' + m.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarMarca(' + m.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+            '<td>' + (m.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>';
+            html += '<td style="text-align:right;">' +
+            (window.checkPerm('cfg_marcas','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalMarca(' + m.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+            (window.checkPerm('cfg_marcas','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarMarca(' + m.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
+        return html;
     }).join('');
 };
 

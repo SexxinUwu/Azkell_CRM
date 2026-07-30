@@ -6,6 +6,16 @@ window._famData     = window._famData     || [];
 window._famFiltrado = window._famFiltrado || [];
 
 window.init_familias = function() {
+    if (!window.checkPerm('cfg_familias', 'l')) {
+        var wrap = document.getElementById('mod-familias') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('cfg_familias', 'l')) {
+        var wrap = document.getElementById('root-dinamico');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.cargarFamilias();
 };
 
@@ -53,8 +63,8 @@ window._famRender = function() {
             '<td class="text-muted small">' + _famEsc(f.descripcion || '—') + '</td>' +
             '<td>' + (f.activo ? '<span class="badge bg-success-subtle text-success">Activo</span>' : '<span class="badge bg-secondary">Inact.</span>') + '</td>' +
             '<td class="text-end">' +
-                (window.checkPerm('cfg_almacen','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalFamilia(' + f.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
-                (window.checkPerm('cfg_almacen','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarFamilia(' + f.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
+                (window.checkPerm('cfg_familias','e') ? '<button class="btn btn-xs btn-outline-primary me-1" onclick="window.abrirModalFamilia(' + f.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' : '') +
+                (window.checkPerm('cfg_familias','d') ? '<button class="btn btn-xs btn-outline-danger" onclick="window.eliminarFamilia(' + f.id + ')" title="Eliminar"><i class="bi bi-trash"></i></button>' : '') +
             '</td>' +
         '</tr>';
     }).join('');

@@ -11,7 +11,12 @@ window._placaGPSActiva   = window._placaGPSActiva   || null;
 // INIT — llamado por el router SPA
 // ------------------------------------------------------------
 window.init_ubicacion = function() {
-    window._filtroGPSActivo = '';
+    if (!window.checkPerm('gps', 'l')) {
+        var wrap = document.getElementById('flota-ubicacion-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    document.getElementById('fu-filter-sede').value = '';
     window._placaGPSActiva  = null;
 
     // Usar caché Wialon si ya existe

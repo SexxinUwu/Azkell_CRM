@@ -125,6 +125,11 @@ window.setAuditFilter = function(f) {
 window.filtrarAuditFeed = function() { window.renderAuditFeed(window.dataAuditoria); };
 
 window.init_auditoria = function() {
+    if (!window.checkPerm('mod_auditoria', 'l') && !window.checkPerm('admin', '')) {
+        var wrap = document.getElementById('auditoria-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.dataAuditoria = [];
     window._auditFilter = 'all';
     window.cargarAuditoria(true);

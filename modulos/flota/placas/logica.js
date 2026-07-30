@@ -149,6 +149,11 @@ window.guardarNuevoCliente = function() {
 };
 
 function mostrarPlacas(datos) {
+    if (!window.checkPerm('placas', 'l')) {
+        var wrap = document.getElementById('moduloPlacas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     if(procesadorErroresCuota(datos, 'contenedorPlacasDinamico')) return;
     dataGlobalPlacas = datos;
     if (typeof poblarSelectsFormularios === 'function') poblarSelectsFormularios(datos);
@@ -1260,9 +1265,11 @@ window.limpiarFiltrosPlacas = function() {
 // ================================================================
 window.init_placas = function() {
     if (!window.checkPerm('placas', 'l')) {
-        window.showNoPermMsg('contenedorPlacasDinamico');
+        var wrap = document.getElementById('placas-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
         return;
     }
+    window._placasActiveTab = 'lista';
     // Registrar callbacks de autocompletado RUC al seleccionar cliente
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('p_cliente', function(val) { window.autocompletarRucSelect(val, 'p_ruc'); });

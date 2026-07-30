@@ -1,4 +1,9 @@
 window.init_mantenimiento_personal = function() {
+    if (!window.checkPerm('pers_mant', 'l')) {
+        var wrap = document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     ptCargarSelectConductores();
     ptCargarLista();
 };

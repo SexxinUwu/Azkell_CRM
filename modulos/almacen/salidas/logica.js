@@ -24,6 +24,16 @@ window._salIrPag = function(p) {
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_salidas = function() {
+    if (!window.checkPerm('sal_inv', 'l')) {
+        var wrap = document.getElementById('mod-salidas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('sal_inv', 'l')) {
+        var wrap = document.getElementById('mod-salidas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window.salTabActiva = 'desp';
     salSincronizarTabs();
     salCargar();

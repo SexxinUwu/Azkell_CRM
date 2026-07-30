@@ -33,6 +33,16 @@ window._entIgvMode   = window._entIgvMode   || 'sin_igv';
 var _ENT_POR_PAG = 20;
 
 window.init_entradas = function() {
+    if (!window.checkPerm('ent_inv', 'l')) {
+        var wrap = document.getElementById('mod-entradas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('ent_inv', 'l')) {
+        var wrap = document.getElementById('mod-entradas') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     window._entDetalleId = null;
     window._entPagActual = 1;
     window.cargarEntradas();

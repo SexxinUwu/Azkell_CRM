@@ -10,6 +10,16 @@ window._kdxFechaReg     = window._kdxFechaReg     || null;
 window._kdxDropdownIdx  = window._kdxDropdownIdx  !== undefined ? window._kdxDropdownIdx : -1;
 
 window.init_kardex = function() {
+    if (!window.checkPerm('kardex', 'l')) {
+        var wrap = document.getElementById('mod-kardex') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
+    if (!window.checkPerm('kardex', 'l')) {
+        var wrap = document.getElementById('mod-kardex') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     if (!document.getElementById('almacen-bento-css')) {
         var lnk = document.createElement('link');
         lnk.id = 'almacen-bento-css';

@@ -12,6 +12,11 @@ window.finDataFiltrado  = window.finDataFiltrado  || [];
 
 // ── Entry point ─────────────────────────────────────────────────
 window.init_finanzas_taller = function() {
+    if (!window.checkPerm('fin_taller', 'l')) {
+        var wrap = document.getElementById('moduloFinanzas');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     finCargar();
 };
 

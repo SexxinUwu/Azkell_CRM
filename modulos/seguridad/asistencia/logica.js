@@ -280,6 +280,11 @@ window._sgaExportCSV = function() {
 
 // ── INIT ─────────────────────────────────────────────────────────
 window.init_asistencia = function() {
+    if (!window.checkPerm('asist', 'l')) {
+        var wrap = document.getElementById('sga-app') || document.querySelector('.container-fluid');
+        if (wrap) window.showNoPermMsg(wrap);
+        return;
+    }
     var todayISO = _sgaGetTodayISO();
     document.getElementById('sga-date-filter').value = todayISO;
     _sgaLastScanResult = null;
