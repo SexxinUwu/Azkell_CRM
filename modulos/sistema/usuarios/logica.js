@@ -242,10 +242,7 @@ function _guBuildRolPanel(rol) {
     html += '<input type="text" class="gu-hex-input" id="guRolColor" value="' + _guEsc(colorActual) + '" '
         + 'placeholder="#5865F2" oninput="window._guHexColorInput(this.value)"></div>';
 
-    // Prioridad
-    html += '<div class="gu-field-label">Prioridad / Orden</div>'
-        + '<input type="number" id="guRolOrden" class="dc-input" value="' + (rol.orden||0) + '" min="0" max="9999" style="max-width:120px; margin-bottom: 8px;">'
-        + '<div style="font-size:.72rem;color:var(--dc-subtext);margin-top:3px;">Número menor aparece primero en la lista.</div>';
+    // Prioridad (Oculta)
 
     // Permisos
     html += '<div class="gu-section-header" style="margin-top:18px;">Permisos de Módulo</div>';
