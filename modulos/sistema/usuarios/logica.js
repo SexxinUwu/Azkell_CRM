@@ -427,11 +427,22 @@ function _guBuildRolPanel(rol) {
 window.guVerComoRol = function(rolId) {
     var rol = window.dataGlobalRoles.find(function(r){ return r.id == rolId; });
     if (!rol) return;
+    
+    var isEditing = (window._guSeleccionado && window._guSeleccionado.id == rolId);
+    var permisosToSimulate = rol.permisos_json || '{}';
+    var esAdmin = !!rol.es_admin;
+    
+    if (isEditing) {
+        var adminEl = document.getElementById('pt-admin');
+        esAdmin = adminEl ? adminEl.checked : false;
+        permisosToSimulate = esAdmin ? '{}' : _guCollectPermisos();
+    }
+
     localStorage.setItem('fleet_simulated_role', JSON.stringify({
         id: rol.id,
         nombre: rol.nombre,
-        permisos: rol.permisos_json || '{}',
-        es_admin: !!rol.es_admin
+        permisos: permisosToSimulate,
+        es_admin: esAdmin
     }));
     window.location.reload();
 };
