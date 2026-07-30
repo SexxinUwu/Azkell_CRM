@@ -296,6 +296,29 @@ function _guBuildRolPanel(rol) {
         if (mod.type === 'hub') hubsActivos[mod.key] = !!(p[mod.key] && p[mod.key]['enabled']);
     });
 
+    // Compatibilidad: Si un hijo tiene permisos activos, el hub padre debe activarse automáticamente.
+    var changed = true;
+    while (changed) {
+        changed = false;
+        window._GU_MODULOS.forEach(function(mod) {
+            if (mod.parent && !hubsActivos[mod.parent]) {
+                var hasPerm = false;
+                if (mod.type === 'hub') {
+                    hasPerm = hubsActivos[mod.key];
+                } else {
+                    var m = p[mod.key];
+                    if (m && (m['l'] || m['c'] || m['e'] || m['d'])) hasPerm = true;
+                }
+                if (hasPerm) {
+                    hubsActivos[mod.parent] = true;
+                    if (!p[mod.parent]) p[mod.parent] = {};
+                    p[mod.parent]['enabled'] = 1;
+                    changed = true;
+                }
+            }
+        });
+    }
+
     window._GU_MODULOS.forEach(function(mod) {
         if (mod.grupo !== lastGrp) {
             html += '<div class="gu-perm-group">' + mod.grupo + '</div>';
