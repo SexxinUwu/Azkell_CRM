@@ -357,7 +357,7 @@ function mostrarFleetrunCards(datosAMostrar) {
 
     var mapPlacas = new Map();
     datosAMostrar.forEach(function(fila) {
-        var p = fila[4] || '-';
+        var p = fila[2] || '-';
         if (!mapPlacas.has(p)) mapPlacas.set(p, []);
         mapPlacas.get(p).push(fila);
     });
