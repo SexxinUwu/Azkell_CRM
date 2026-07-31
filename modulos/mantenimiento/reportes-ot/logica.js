@@ -132,8 +132,15 @@ window.rotFiltrar = function() {
         if (filHasta && fechaOT > filHasta) return false;
         // Filtro estado (aprobación)
         if (filEst && ot.aprobacion !== filEst) return false;
-
         return true;
+    });
+
+    resultado.sort(function(a, b) {
+        var numA = String(a.ticket_entrada || a.id_ot || '').toLowerCase();
+        var numB = String(b.ticket_entrada || b.id_ot || '').toLowerCase();
+        if (numA < numB) return 1;
+        if (numA > numB) return -1;
+        return 0;
     });
 
     window.rotDatosFiltrados = resultado;
