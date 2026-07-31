@@ -186,13 +186,13 @@ window._kdxRenderKardex = function(res, item) {
     var fechaReg  = res.fecha_regularizacion || null;
     var fechaRegStr = fechaReg ? _kdxFmtISO(fechaReg) : null;
 
-    // Separar pre y post regularización usando created_at (DATETIME) para precisión
+    // Separar pre y post regularización usando la fecha del movimiento
     var movsPreReg  = fechaRegStr ? movs.filter(function(m) {
-        var mFecha = m.created_at ? _kdxFmtISO(m.created_at) : _kdxFmtISO(m.fecha);
+        var mFecha = _kdxFmtISO(m.fecha);
         return mFecha < fechaRegStr;
     }) : [];
     var movsPostReg = fechaRegStr ? movs.filter(function(m) {
-        var mFecha = m.created_at ? _kdxFmtISO(m.created_at) : _kdxFmtISO(m.fecha);
+        var mFecha = _kdxFmtISO(m.fecha);
         return mFecha >= fechaRegStr;
     }) : movs;
 
@@ -342,7 +342,7 @@ window.exportarKardexExcel = function() {
     // Movimientos pre-regularización
     var saldoPre = 0;
     var movsPreReg = fechaRegStr ? movs.filter(function(m){
-        var mFecha = m.created_at ? _kdxFmtISO(m.created_at) : _kdxFmtISO(m.fecha);
+        var mFecha = _kdxFmtISO(m.fecha);
         return mFecha < fechaRegStr;
     }) : [];
     movsPreReg.forEach(function(m) {
@@ -362,7 +362,7 @@ window.exportarKardexExcel = function() {
     // Movimientos post-regularización
     var saldoPost = stockBase;
     var movsPostReg = fechaRegStr ? movs.filter(function(m){
-        var mFecha = m.created_at ? _kdxFmtISO(m.created_at) : _kdxFmtISO(m.fecha);
+        var mFecha = _kdxFmtISO(m.fecha);
         return mFecha >= fechaRegStr;
     }) : movs;
     movsPostReg.forEach(function(m) {

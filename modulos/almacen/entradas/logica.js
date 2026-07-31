@@ -1164,8 +1164,9 @@ function _entEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&
 function _entDescLimpia(desc, invId) {
     if (!desc) return '—';
     if (invId && desc.indexOf(invId + ' — ') === 0) return desc.slice(invId.length + 3);
-    var sep = desc.indexOf(' — ');
-    return sep !== -1 ? desc.slice(sep + 3) : desc;
+    var match = desc.match(/^[A-Z0-9]+-\d+\s*—\s*(.*)/i);
+    if (match) return match[1];
+    return desc;
 }
 
 // ── Comprobante PDF ───────────────────────────────────────────────
