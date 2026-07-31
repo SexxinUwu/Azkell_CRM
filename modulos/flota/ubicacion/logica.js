@@ -16,7 +16,8 @@ window.init_ubicacion = function() {
         if (wrap) window.showNoPermMsg(wrap);
         return;
     }
-    document.getElementById('fu-filter-sede').value = '';
+    let elSede = document.getElementById('fu-filter-sede');
+    if (elSede) elSede.value = '';
     window._placaGPSActiva  = null;
 
     // Usar caché Wialon si ya existe
