@@ -255,7 +255,7 @@ window.procesarInspeccionesParaDashboard = async function() {
 
     let hoy = new Date(); hoy.setHours(0,0,0,0);
     let vigentes = 0, vencidas = 0;
-    let inspecciones = inspData.filter(i => i.estado !== 'Eliminada');
+    let inspecciones = inspData.filter(i => i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos');
 
     // Todas las placas ACTIVAS (sin filtro de en_uso)
     let placasActivas = window.dataGlobalPlacas.filter(p => {
@@ -283,7 +283,8 @@ window.procesarInspeccionesParaDashboard = async function() {
                 let px = insp.fecha_ingreso.split('/');
                 fIngreso = new Date(px[2], px[1]-1, px[0]);
             } else {
-                fIngreso = new Date(insp.fecha_ingreso + "T00:00:00");
+                let ds = insp.fecha_ingreso.split('T')[0].split('-');
+                fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
             }
         } catch(e) { vencidas++; return; }
 
@@ -441,7 +442,7 @@ window.renderKpiMetrics = async function() {
     }
 
     var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var inspecciones = (inspData || []).filter(function(i) { return i.estado !== 'Eliminada'; });
+    var inspecciones = (inspData || []).filter(function(i) { return i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
 
     var vigentes = 0, porVencer = 0, vencidas = 0;
 
@@ -462,7 +463,8 @@ window.renderKpiMetrics = async function() {
                 var px = insp.fecha_ingreso.split('/');
                 fIngreso = new Date(px[2], px[1]-1, px[0]);
             } else {
-                fIngreso = new Date(insp.fecha_ingreso + 'T00:00:00');
+                var ds = insp.fecha_ingreso.split('T')[0].split('-');
+                fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
             }
         } catch(e) { vencidas++; return; }
 
@@ -515,7 +517,8 @@ window.renderKpiMetrics = async function() {
                 var px = i.fecha_ingreso.split('/');
                 fi = new Date(px[2], px[1]-1, px[0]);
             } else {
-                fi = new Date(i.fecha_ingreso + 'T00:00:00');
+                var ds = i.fecha_ingreso.split('T')[0].split('-');
+                fi = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(i.fecha_ingreso);
             }
         } catch(e) { return; }
         var dProp = parseInt(i.dias_propuestos) || 30;
@@ -590,7 +593,8 @@ function _renderDashActivityFeed(inspData) {
                 var px = i.fecha_ingreso.split('/');
                 fi = new Date(px[2], px[1]-1, px[0]);
             } else {
-                fi = new Date(i.fecha_ingreso + 'T00:00:00');
+                var ds = i.fecha_ingreso.split('T')[0].split('-');
+                fi = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(i.fecha_ingreso);
             }
         } catch(e) { fi = null; }
 
@@ -630,7 +634,7 @@ window.calcularPrediccionVencimientos = function() {
     (window.dataGlobalInspecciones||[]).forEach(function(i) {
         if (i.estado === 'Eliminada' || !i.fecha_ingreso) return;
         try {
-            var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { fi=new Date(i.fecha_ingreso+'T00:00:00'); }
+            var fi; if (i.fecha_ingreso.includes('/')) { var px=i.fecha_ingreso.split('/'); fi=new Date(px[2],px[1]-1,px[0]); } else { var ds=i.fecha_ingreso.split('T')[0].split('-'); fi=ds.length===3?new Date(parseInt(ds[0]),parseInt(ds[1])-1,parseInt(ds[2])):new Date(i.fecha_ingreso); }
             var fp=new Date(fi.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
             var dRest=Math.ceil((fp-hoy)/864e5);
             if (dRest >= 0 && dRest < 91) { semanas[Math.min(Math.floor(dRest/7), 12)]++; }
