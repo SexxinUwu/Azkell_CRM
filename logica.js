@@ -1183,14 +1183,39 @@ window.verificarNotificacionesPWA = function() {
     var todayStr = hoy.toISOString().slice(0, 10);
     if (localStorage.getItem('fleet_lastNotif') === todayStr) return;
     var vencidas = new Set(), porVencer = new Set();
-    insps.forEach(function(i) {
-        if (!i.fecha_ingreso) return;
+    var numId = function(id) {
+        if (!id) return 0;
+        var parts = id.split('-');
+        if (parts.length > 2 && parts[1].length === 4) return parseInt(parts[1] + parts[2] + parts[3]) || 0;
+        return parseInt(parts[1]) || 0;
+    };
+    var inspsOrd = insps.slice().sort(function(a,b) { return numId(b.id) - numId(a.id); });
+    var procesadas = new Set();
+
+    inspsOrd.forEach(function(i) {
+        if (!i.fecha_ingreso || i.estado === 'Eliminada' || i.tipo_inspeccion === 'Solo Frenos') return;
+        var placa = (i.placa || '').trim().toUpperCase();
+        if (!placa || procesadas.has(placa)) return;
+        
+        if (window.dataGlobalPlacas) {
+            var pInfo = window.dataGlobalPlacas.find(function(p) { return (p[0]||'').toUpperCase() === placa; });
+            if (pInfo && (pInfo[18] || pInfo[8] || '').toUpperCase() !== 'ACTIVA') return;
+        }
+
+        procesadas.add(placa);
         try {
-            var fi = i.fecha_ingreso.includes('/') ? (function(){var px=i.fecha_ingreso.split('/');return new Date(px[2],px[1]-1,px[0]);})() : new Date(i.fecha_ingreso+'T00:00:00');
-            var fp = new Date(fi); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
+            var fIngreso;
+            if (i.fecha_ingreso.includes('/')) {
+                var px = i.fecha_ingreso.split('/');
+                fIngreso = new Date(px[2], px[1]-1, px[0]);
+            } else {
+                var ds = i.fecha_ingreso.split('T')[0].split('-');
+                fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1])-1, parseInt(ds[2])) : new Date(i.fecha_ingreso);
+            }
+            var fp = new Date(fIngreso.getTime()); fp.setDate(fp.getDate()+(parseInt(i.dias_propuestos)||30));
             var dias = Math.ceil((fp-hoy)/864e5);
-            if (dias < 0) vencidas.add(i.placa);
-            else if (dias <= 7) porVencer.add(i.placa);
+            if (dias < 0) vencidas.add(placa);
+            else if (dias <= 7) porVencer.add(placa);
         } catch(e) {}
     });
     if (!vencidas.size && !porVencer.size) return;
