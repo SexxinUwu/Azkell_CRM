@@ -168,6 +168,16 @@
                 box-shadow: 0 2px 4px rgba(0,0,0,0.02);
                 position: relative;
                 overflow: hidden;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .kpi-card-frenos:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            }
+            .kpi-card-frenos.active {
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+                border-color: rgba(59, 130, 246, 0.4);
             }
             .dark .kpi-card-frenos { background: #1e293b; border-color: #334155; }
             .dark .kpi-card-frenos .text-dark { color: #f8fafc !important; }
@@ -178,7 +188,7 @@
         </style>
         <div class="row mb-3 px-2 px-md-0 kpi-container-frenos" id="panelGraficosFrenos" style="display: none;">
             <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos">
+                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('vigentes', this)">
                     <div class="kpi-info-frenos">
                         <span class="text-success fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">VIGENTES</span>
                         <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-vigentes">0</span>
@@ -189,7 +199,7 @@
                 </div>
             </div>
             <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos">
+                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('alerta', this)">
                     <div class="kpi-info-frenos">
                         <span class="text-warning fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">EN ALERTA</span>
                         <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-alerta">0</span>
@@ -200,7 +210,7 @@
                 </div>
             </div>
             <div class="col-12 col-md-4">
-                <div class="kpi-card-frenos">
+                <div class="kpi-card-frenos" onclick="window.filtrarTablaFrenosPorKPI && window.filtrarTablaFrenosPorKPI('vencidos', this)">
                     <div class="kpi-info-frenos">
                         <span class="text-danger fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">VENCIDOS</span>
                         <span class="text-dark fw-bold" style="font-size: 2.5rem; line-height: 1.1;" id="frenos-cnt-vencidos">0</span>

@@ -2605,6 +2605,7 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
         let parseNum = (v) => { let n = parseInt(v); return isNaN(n) ? null : n; };
         let zD = parseNum(valZapDel), z1 = parseNum(valZap1), z2 = parseNum(valZap2), di = parseNum(valDisco);
         
+        let estadoFrenosRow = "sin_datos";
         let hasData = (zD !== null || z1 !== null || z2 !== null || di !== null);
         if (hasData) {
             let minVal = Math.min(
@@ -2613,9 +2614,9 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
                 z2 !== null ? z2 : 999,
                 di !== null ? di : 999
             );
-            if (minVal <= 20) kpiFrenos.vencidos++;
-            else if (minVal <= 30) kpiFrenos.alerta++;
-            else kpiFrenos.vigentes++;
+            if (minVal <= 20) { kpiFrenos.vencidos++; estadoFrenosRow = "vencidos"; }
+            else if (minVal <= 30) { kpiFrenos.alerta++; estadoFrenosRow = "alerta"; }
+            else { kpiFrenos.vigentes++; estadoFrenosRow = "vigentes"; }
         }
 
         // Función para colorear el valor
@@ -2633,7 +2634,7 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
         };
 
         html += `
-            <tr class="align-middle bg-white border-bottom">
+            <tr class="align-middle bg-white border-bottom" data-estado-frenos="${estadoFrenosRow}">
                 <td class="text-muted fw-bold">${cont++}</td>
                 <td class="fw-bold text-primary">${placaStr}</td>
                 <td class="text-muted">${fec}</td>
@@ -2666,5 +2667,34 @@ window.updateFrenosKPIs = function() {
     if (elVigentes) elVigentes.innerText = window.frenosKPIData.vigentes || 0;
     if (elAlerta) elAlerta.innerText = window.frenosKPIData.alerta || 0;
     if (elVencidos) elVencidos.innerText = window.frenosKPIData.vencidos || 0;
+};
+
+window.filtrarTablaFrenosPorKPI = function(estado, el) {
+    let cards = document.querySelectorAll('.kpi-card-frenos');
+    let wasActive = el.classList.contains('active');
+    
+    cards.forEach(c => c.classList.remove('active'));
+    
+    let targetEstado = estado;
+    if (wasActive) {
+        targetEstado = 'todos';
+    } else {
+        el.classList.add('active');
+    }
+    
+    let rows = document.querySelectorAll('#cuerpoTablaFrenos tr');
+    let cont = 1;
+    rows.forEach(row => {
+        if (!row.hasAttribute('data-estado-frenos')) return;
+        
+        let rowEstado = row.getAttribute('data-estado-frenos');
+        if (targetEstado === 'todos' || rowEstado === targetEstado) {
+            row.style.display = '';
+            let tdIndex = row.querySelector('td:first-child');
+            if (tdIndex) tdIndex.innerText = cont++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
 };
 
