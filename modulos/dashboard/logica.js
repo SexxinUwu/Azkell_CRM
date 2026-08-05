@@ -264,14 +264,17 @@ window.procesarInspeccionesParaDashboard = async function() {
         return estado === "ACTIVA";
     });
 
+    let numId = (id) => {
+        if (!id) return 0;
+        let parts = id.split('-');
+        if (parts.length > 2 && parts[1].length === 4) return parseInt(parts[1] + parts[2] + parts[3]) || 0;
+        return parseInt(parts[1]) || 0;
+    };
+
     placasActivas.forEach(p => {
         let placaStr = normalizeStr(p[0]);
         let insp = [...inspecciones]
-            .sort((a, b) => {
-                let pa = parseInt((a.id || '').split('-')[1]) || 0;
-                let pb = parseInt((b.id || '').split('-')[1]) || 0;
-                return pb - pa;
-            })
+            .sort((a, b) => numId(b.id) - numId(a.id))
             .find(i => normalizeStr(i.placa) === placaStr);
 
         // Sin registro → vencida (igual que el módulo real: data-dias=-9999 < 0)
@@ -446,12 +449,17 @@ window.renderKpiMetrics = async function() {
 
     var vigentes = 0, porVencer = 0, vencidas = 0;
 
+    var numId = function(id) {
+        if (!id) return 0;
+        var parts = id.split('-');
+        if (parts.length > 2 && parts[1].length === 4) return parseInt(parts[1] + parts[2] + parts[3]) || 0;
+        return parseInt(parts[1]) || 0;
+    };
+
     placasActivas.forEach(function(p) {
         var placaStr = normalizeStr(p[0]);
         var listaOrd = inspecciones.slice().sort(function(a, b) {
-            var pa = parseInt((a.id || '').split('-')[1]) || 0;
-            var pb = parseInt((b.id || '').split('-')[1]) || 0;
-            return pb - pa;
+            return numId(b.id) - numId(a.id);
         });
         var insp = listaOrd.find(function(i) { return normalizeStr(i.placa) === placaStr; });
 
@@ -570,12 +578,17 @@ function _renderDashActivityFeed(inspData) {
     if (!feed) return;
     var hoy = new Date(); hoy.setHours(0,0,0,0);
 
+    var numId = function(id) {
+        if (!id) return 0;
+        var parts = id.split('-');
+        if (parts.length > 2 && parts[1].length === 4) return parseInt(parts[1] + parts[2] + parts[3]) || 0;
+        return parseInt(parts[1]) || 0;
+    };
+
     var sorted = (inspData || [])
         .filter(function(i) { return i.estado !== 'Eliminada' && i.fecha_ingreso; })
         .sort(function(a, b) {
-            var pa = parseInt((a.id || '').split('-')[1]) || 0;
-            var pb = parseInt((b.id || '').split('-')[1]) || 0;
-            return pb - pa;
+            return numId(b.id) - numId(a.id);
         })
         .slice(0, 12);
 
