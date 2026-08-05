@@ -154,6 +154,15 @@
             <div class="col-6 col-md-4"><div class="card p-3 shadow-sm h-100 position-relative"><span style="position:absolute; top:10px; right:10px; font-size:0.65rem; color:var(--subtext); background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:6px; font-weight:700;">Objetivo <span contenteditable="true" style="outline:none;border-bottom:1px dashed var(--border);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">95</span>%</span><h6 class="fw-bold text-center mb-2" data-i18n="insp.nonMotors">U. No Motoras</h6><div class="chart-container-status"><canvas id="chartNoMotoras"></canvas></div></div></div>
         </div>
 
+        <div class="row mb-3 px-2 px-md-0" id="panelGraficosFrenos" style="display: none;">
+            <div class="col-12 col-md-12 mb-3 mb-md-0">
+                <div class="card p-3 shadow-sm h-100 position-relative">
+                    <h6 class="fw-bold text-center mb-2 text-danger"><i class="bi bi-speedometer2"></i> Estado General Promedio de Sistema de Frenos</h6>
+                    <div class="chart-container-status" style="height: 200px;"><canvas id="chartPromedioFrenos"></canvas></div>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                 <div class="d-none d-md-flex align-items-center" style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;transition:all .2s;overflow:hidden;height:36px;padding:0 .8rem;gap:.4rem;min-width:240px;flex:1;max-width:300px;" onfocusin="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 4px rgba(99,102,241,0.1)'" onfocusout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
@@ -241,10 +250,10 @@
     
     <ul class="nav nav-tabs px-3 border-0 mt-2" id="insp-tabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold text-dark border-0 border-bottom border-primary border-3 bg-transparent" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" type="button" role="tab" aria-selected="true" onclick="document.getElementById('insp-general-tab').classList.add('border-primary','border-3');document.getElementById('insp-frenos-tab').classList.remove('border-primary','border-3');">General</button>
+            <button class="nav-link active fw-bold text-dark border-0 border-bottom border-primary border-3 bg-transparent" id="insp-general-tab" data-bs-toggle="tab" data-bs-target="#insp-general" type="button" role="tab" aria-selected="true" onclick="document.getElementById('insp-general-tab').classList.add('border-primary','border-3');document.getElementById('insp-frenos-tab').classList.remove('border-primary','border-3'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();">General</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-danger border-0 bg-transparent" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" type="button" role="tab" aria-selected="false" onclick="document.getElementById('insp-frenos-tab').classList.add('border-primary','border-3');document.getElementById('insp-general-tab').classList.remove('border-primary','border-3');"><i class="bi bi-stop-circle-fill me-1"></i>Sistema de Frenos</button>
+            <button class="nav-link fw-bold text-danger border-0 bg-transparent" id="insp-frenos-tab" data-bs-toggle="tab" data-bs-target="#insp-frenos" type="button" role="tab" aria-selected="false" onclick="document.getElementById('insp-frenos-tab').classList.add('border-primary','border-3');document.getElementById('insp-general-tab').classList.remove('border-primary','border-3'); window.actualizarVistaGraficos && window.actualizarVistaGraficos();"><i class="bi bi-stop-circle-fill me-1"></i>Sistema de Frenos</button>
         </li>
     </ul>
 

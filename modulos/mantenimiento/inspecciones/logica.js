@@ -247,7 +247,23 @@ window.verFotoEvidencia = function (fotoOrIndex, titulo = '') {
 // ==========================================
 // 🔥 MÓDULO ANÁLISIS DE INSPECCIONES (STATUS) 🔥
 // ==========================================
-function toggleGraficosStatus() { let panel = document.getElementById('panelGraficosStatus'); if (panel.style.display === 'none') { panel.style.display = 'flex'; } else { panel.style.display = 'none'; } }
+window.graficosStatusAbiertos = false;
+window.actualizarVistaGraficos = function() {
+    let panelG = document.getElementById('panelGraficosStatus'); 
+    let panelF = document.getElementById('panelGraficosFrenos');
+    let isFrenos = document.getElementById('insp-frenos-tab') && document.getElementById('insp-frenos-tab').classList.contains('active');
+    
+    if (panelG) panelG.style.display = (window.graficosStatusAbiertos && !isFrenos) ? 'flex' : 'none';
+    if (panelF) panelF.style.display = (window.graficosStatusAbiertos && isFrenos) ? 'flex' : 'none';
+    
+    if (window.graficosStatusAbiertos && isFrenos && typeof renderChartPromedioFrenos === 'function') {
+        renderChartPromedioFrenos();
+    }
+};
+window.toggleGraficosStatus = function() { 
+    window.graficosStatusAbiertos = !window.graficosStatusAbiertos; 
+    window.actualizarVistaGraficos();
+};
 function toggleVistaStatus() { isHistorialStatus = !isHistorialStatus; let textBtn = document.getElementById('text-toggle-status'); if (textBtn) { textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; } expandAllStatusState = false; expandStatusMap = {}; mostrarStatusInspecciones(dataGlobalInspecciones); }
 function toggleGroupRowStatus(classTipo) { expandStatusMap[classTipo] = !expandStatusMap[classTipo]; filtrarStatusAvanzado(); }
 function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState; for (let key in expandStatusMap) { expandStatusMap[key] = expandAllStatusState; } const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header'); headers.forEach(header => { let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/); if (matchIcon) expandStatusMap[matchIcon[1]] = expandAllStatusState; }); filtrarStatusAvanzado(); }
@@ -2547,6 +2563,8 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     });
 
     let cont = 1;
+    let stats = { zDelSum: 0, zDelCount: 0, z1Sum: 0, z1Count: 0, z2Sum: 0, z2Count: 0, dSum: 0, dCount: 0 };
+
     placasActivasEnUso.forEach(p => {
         let placaStr = (p[0] || '').toUpperCase().trim();
         let itemFrenos = frenosMasRecientesPorPlaca.get(placaStr);
@@ -2584,6 +2602,13 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
             }
         }
 
+        let parseNum = (v) => { let n = parseInt(v); return isNaN(n) ? null : n; };
+        let zD = parseNum(valZapDel), z1 = parseNum(valZap1), z2 = parseNum(valZap2), di = parseNum(valDisco);
+        if(zD !== null) { stats.zDelSum += zD; stats.zDelCount++; }
+        if(z1 !== null) { stats.z1Sum += z1; stats.z1Count++; }
+        if(z2 !== null) { stats.z2Sum += z2; stats.z2Count++; }
+        if(di !== null) { stats.dSum += di; stats.dCount++; }
+
         // Función para colorear el valor
         let renderBadge = (val) => {
             if (val === "-" || val === "" || String(val).trim().toUpperCase() === "SIN DATOS") return `<span class="text-muted">-</span>`;
@@ -2618,5 +2643,67 @@ window.renderTablaFrenos = async function(todasLasInspecciones) {
     }
 
     tbody.innerHTML = html;
+
+    window.promediosFrenosData = [
+        stats.zDelCount > 0 ? Math.round(stats.zDelSum / stats.zDelCount) : 0,
+        stats.z1Count > 0 ? Math.round(stats.z1Sum / stats.z1Count) : 0,
+        stats.z2Count > 0 ? Math.round(stats.z2Sum / stats.z2Count) : 0,
+        stats.dCount > 0 ? Math.round(stats.dSum / stats.dCount) : 0
+    ];
+    if (typeof window.actualizarVistaGraficos === 'function') window.actualizarVistaGraficos();
+};
+
+window.chartPromedioFrenosInst = null;
+window.renderChartPromedioFrenos = function() {
+    let ctx = document.getElementById('chartPromedioFrenos');
+    if (!ctx) return;
+    
+    let data = window.promediosFrenosData || [0, 0, 0, 0];
+    let isDark = document.body.classList.contains('dark');
+    let textColor = isDark ? '#f8fafc' : '#1a1a2e';
+    let gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
+    if (window.chartPromedioFrenosInst) {
+        window.chartPromedioFrenosInst.data.datasets[0].data = data;
+        window.chartPromedioFrenosInst.options.scales.x.ticks.color = textColor;
+        window.chartPromedioFrenosInst.options.scales.y.ticks.color = textColor;
+        window.chartPromedioFrenosInst.options.scales.x.grid.color = gridColor;
+        window.chartPromedioFrenosInst.options.scales.y.grid.color = gridColor;
+        window.chartPromedioFrenosInst.update();
+        return;
+    }
+
+    if (typeof window.Chart === 'undefined') {
+        if (window.loadCharts) {
+            window.loadCharts().then(window.renderChartPromedioFrenos);
+        }
+        return;
+    }
+
+    window.chartPromedioFrenosInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Zap. Delantera', 'Zap. 1er Eje', 'Zap. 2do Eje', 'Disco Embrague'],
+            datasets: [{
+                label: 'Promedio (%)',
+                data: data,
+                backgroundColor: data.map(v => v <= 20 ? '#ef4444' : v <= 30 ? '#f59e0b' : '#10b981'),
+                borderRadius: 4,
+                barThickness: 24
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(context) { return context.parsed.y + '%'; } } }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { color: textColor }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+            }
+        }
+    });
 };
 
