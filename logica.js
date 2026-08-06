@@ -3285,9 +3285,15 @@ window.cargarModuloAislado = async function(rutaModulo) {
         const respHTML = await fetch(`${_rutaDisco}/vista.html?v=${Date.now()}`, { cache: 'no-cache' });
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
-        // Cerrar y remover el drawer de inspecciones del body si quedó zombie
-        var _inspDrawer = document.getElementById('drawerInspeccion');
-        if (_inspDrawer && !root.contains(_inspDrawer)) { _inspDrawer.classList.remove('open'); _inspDrawer.remove(); }
+        // Cerrar y remover drawers zombies y backdrops residuales
+        document.querySelectorAll('.offcanvas-backdrop, .modal-backdrop').forEach(b => b.remove());
+        document.querySelectorAll('#drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion').forEach(function(el) {
+            if (el && !root.contains(el)) {
+                var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
+                if (inst) inst.hide();
+                el.remove();
+            }
+        });
         root.classList.add('module-transitioning');
         root.innerHTML = await respHTML.text();
 
@@ -3646,7 +3652,21 @@ window.filtrarFleetrunAvanzado = function() {
     });
     updateGraficoFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
 };
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); new bootstrap.Modal(document.getElementById('modalFleetrun')).show(); }
+function abrirModalNuevoFleetrun() {
+    let el = document.getElementById('drawerFleetrun');
+    if (el) {
+        let formObj = document.getElementById('formFleetrun');
+        if (formObj) formObj.reset();
+        let fId = document.getElementById('f_id');
+        if (fId) fId.value = '';
+        let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+        let fFecha = document.getElementById('f_fecha');
+        if (fFecha) fFecha.value = today;
+        if (typeof autocompletarFecha === 'function') autocompletarFecha('f');
+        bootstrap.Offcanvas.getOrCreateInstance(el).show();
+    }
+}
 function autocompletarFecha(prefix) { let dateInput = document.getElementById(prefix + '_fecha').value; if(dateInput) { let d = new Date(dateInput + "T00:00:00"); const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; document.getElementById(prefix + '_mes').value = meses[d.getMonth()]; document.getElementById(prefix + '_anio').value = d.getFullYear(); } }
 
 window.autocompletarFleetrun = function(prefix) {
@@ -3826,9 +3846,37 @@ window.mostrarDetalleFleetrun = function(index) {
         bsOffcanvas.show();
     }
 };
-function abrirModalEditarFleetrun(idReg) { const p = dataGlobalFleetrun.find(x => x[0] === idReg); if (!p) return; document.getElementById('formEditarFleetrun').reset(); let dDate = new Date(p[1]); let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0]; document.getElementById('eF_id').value = p[0]; document.getElementById('eF_fecha').value = fechaFormat; document.getElementById('eF_mes').value = p[2]; document.getElementById('eF_anio').value = p[3]; document.getElementById('eF_placa').value = p[4]; document.getElementById('eF_marca').value = p[5]; document.getElementById('eF_dueno').value = p[6]; document.getElementById('eF_uts').value = p[7]; document.getElementById('eF_tipomp').value = p[8]; document.getElementById('eF_kmact').value = p[9]; document.getElementById('eF_freckm').value = p[10]; document.getElementById('eF_kmprox').value = p[11]; document.getElementById('eF_obs').value = p[12]; document.getElementById('eF_tec').value = p[13]; document.getElementById('eF_kmgps').value = p[14]; const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; new bootstrap.Modal(document.getElementById('modalEditarFleetrun')).show(); }
-function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { formObj.reset(); bootstrap.Modal.getInstance(document.getElementById('modalFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Guardar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }); }
-function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { bootstrap.Modal.getInstance(document.getElementById('modalEditarFleetrun')).hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }); }
+function abrirModalEditarFleetrun(idReg) {
+    let el = document.getElementById('drawerEditarFleetrun');
+    if (el) {
+        const p = dataGlobalFleetrun.find(x => x[0] === idReg);
+        if (!p) return;
+        let formObj = document.getElementById('formEditarFleetrun');
+        if (formObj) formObj.reset();
+        let dDate = new Date(p[1]);
+        let fechaFormat = isNaN(dDate.getTime()) ? "" : dDate.toISOString().split('T')[0];
+        if (document.getElementById('eF_id')) document.getElementById('eF_id').value = p[0];
+        if (document.getElementById('eF_fecha')) document.getElementById('eF_fecha').value = fechaFormat;
+        if (document.getElementById('eF_mes')) document.getElementById('eF_mes').value = p[2];
+        if (document.getElementById('eF_anio')) document.getElementById('eF_anio').value = p[3];
+        if (document.getElementById('eF_placa')) document.getElementById('eF_placa').value = p[4];
+        if (document.getElementById('eF_marca')) document.getElementById('eF_marca').value = p[5];
+        if (document.getElementById('eF_dueno')) document.getElementById('eF_dueno').value = p[6];
+        if (document.getElementById('eF_uts')) document.getElementById('eF_uts').value = p[7];
+        if (document.getElementById('eF_tipomp')) document.getElementById('eF_tipomp').value = p[8];
+        if (document.getElementById('eF_kmact')) document.getElementById('eF_kmact').value = p[9];
+        if (document.getElementById('eF_freckm')) document.getElementById('eF_freckm').value = p[10];
+        if (document.getElementById('eF_kmprox')) document.getElementById('eF_kmprox').value = p[11];
+        if (document.getElementById('eF_obs')) document.getElementById('eF_obs').value = p[12];
+        if (document.getElementById('eF_tec')) document.getElementById('eF_tec').value = p[13];
+        if (document.getElementById('eF_kmgps')) document.getElementById('eF_kmgps').value = p[14];
+        const btn = document.getElementById('btnActualizarFleetrun');
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Actualizar Registro'; }
+        bootstrap.Offcanvas.getOrCreateInstance(el).show();
+    }
+}
+function enviarFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnGuardarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...'; if(!formObj.f_id.value) formObj.f_id.value = "FL-" + Date.now(); formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/guardarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { formObj.reset(); var el = document.getElementById('drawerFleetrun'); if (el) bootstrap.Offcanvas.getInstance(el)?.hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Guardar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Guardar'; }); }
+function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const btn = document.getElementById('btnActualizarFleetrun'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Actualizando...'; formObj.usuarioAutor.value = usuarioLogueado; const data = {}; for (let i = 0; i < formObj.elements.length; i++) { const el = formObj.elements[i]; if (el.name) data[el.name] = el.value; } fetch('/api/script/actualizarFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [data] }) }).then(r => r.json()).then(r => { if (r.data === 'Éxito') { var el = document.getElementById('drawerEditarFleetrun'); if (el) bootstrap.Offcanvas.getInstance(el)?.hide(); cargarTablaFleetrun(true); } else alert(r.data); btn.disabled = false; btn.innerHTML = 'Actualizar'; }).catch(e => { alert('Error de red: ' + e.message); btn.disabled = false; btn.innerHTML = 'Actualizar'; }); }
 
 // TRADUCTOR DE COORDENADAS A CALLES (OpenStreetMap)
 window.obtenerDireccion = async function(lat, lng, btn) {
