@@ -763,8 +763,9 @@ window.recalcularTodosMultiDesdeAutocompletar = function() {
 function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; window.fleetrunTiposMulti = []; window.renderTiposMulti(); let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
     if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
     if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
-    if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores, 'Buscar responsable…');
-  new bootstrap.Offcanvas(document.getElementById('drawerFleetrun')).show(); }
+    let offcanvasEl = document.getElementById('drawerFleetrun');
+    if (offcanvasEl) bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
+}
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
