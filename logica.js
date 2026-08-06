@@ -3655,16 +3655,18 @@ window.filtrarFleetrunAvanzado = function() {
 function abrirModalNuevoFleetrun() {
     let el = document.getElementById('drawerFleetrun');
     if (el) {
-        let formObj = document.getElementById('formFleetrun');
-        if (formObj) formObj.reset();
-        let fId = document.getElementById('f_id');
-        if (fId) fId.value = '';
-        let tzOffset = (new Date()).getTimezoneOffset() * 60000;
-        let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-        let fFecha = document.getElementById('f_fecha');
-        if (fFecha) fFecha.value = today;
-        if (typeof autocompletarFecha === 'function') autocompletarFecha('f');
         bootstrap.Offcanvas.getOrCreateInstance(el).show();
+        setTimeout(function() {
+            let formObj = document.getElementById('formFleetrun');
+            if (formObj) formObj.reset();
+            let fId = document.getElementById('f_id');
+            if (fId) fId.value = '';
+            let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+            let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+            let fFecha = document.getElementById('f_fecha');
+            if (fFecha) fFecha.value = today;
+            if (typeof autocompletarFecha === 'function') autocompletarFecha('f');
+        }, 0);
     }
 }
 function autocompletarFecha(prefix) { let dateInput = document.getElementById(prefix + '_fecha').value; if(dateInput) { let d = new Date(dateInput + "T00:00:00"); const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; document.getElementById(prefix + '_mes').value = meses[d.getMonth()]; document.getElementById(prefix + '_anio').value = d.getFullYear(); } }

@@ -760,11 +760,35 @@ window.recalcularTodosMultiDesdeAutocompletar = function() {
     window.renderTiposMulti();
 };
 
-function abrirModalNuevoFleetrun() { document.getElementById('formFleetrun').reset(); document.getElementById('f_id').value = ''; window.fleetrunTiposMulti = []; window.renderTiposMulti(); let tzOffset = (new Date()).getTimezoneOffset() * 60000; let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0]; document.getElementById('f_fecha').value = today; autocompletarFecha('f'); 
-    if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
-    if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
+function abrirModalNuevoFleetrun() {
     let offcanvasEl = document.getElementById('drawerFleetrun');
     if (offcanvasEl) bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
+    setTimeout(function() {
+        var form = document.getElementById('formFleetrun');
+        if (form) form.reset();
+        var fId = document.getElementById('f_id');
+        if (fId) fId.value = '';
+        window.fleetrunTiposMulti = [];
+        if (typeof window.renderTiposMulti === 'function') window.renderTiposMulti();
+        let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        let today = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+        let fFecha = document.getElementById('f_fecha');
+        if (fFecha) fFecha.value = today;
+        if (typeof autocompletarFecha === 'function') autocompletarFecha('f');
+
+        if (!window._frCbInitDone) {
+            if (window.dataGlobalPlacas) window._cbInit('f_placa', window.dataGlobalPlacas.map(function(p){ return {value:p[0], label:p[0]}; }), 'Buscar placa...');
+            if (window._frTipoLista) window._cbInit('f_tipomp', window._frTipoLista.map(function(t){ return {value:t, label:t}; }), 'Buscar tipo...');
+            if (window.dataGlobalConductores) window._cbInit('f_tec', window.dataGlobalConductores, 'Buscar responsable…');
+            window._frCbInitDone = true;
+        } else {
+            if (typeof window._cbSet === 'function') {
+                window._cbSet('f_placa', '', '');
+                window._cbSet('f_tipomp', '', '');
+                window._cbSet('f_tec', '', '');
+            }
+        }
+    }, 0);
 }
 
 window.autocompletarFleetrun = function(prefix) {
