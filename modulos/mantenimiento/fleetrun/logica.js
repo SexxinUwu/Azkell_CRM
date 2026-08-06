@@ -173,8 +173,8 @@ function mostrarFleetrun(datos) {
           let estadoPlaca = normalizeStr((infoP && infoP[18]) ? infoP[18] : ((infoP && infoP[8]) ? infoP[8] : ''));
           let isActive = infoP && estadoPlaca === 'ACTIVA'; if(isActive && cli && cli !== "-") setFClientes.add(cli); if(utsDisplay !== "-") setFUts.add(utsDisplay);
           let classPlaca = normalizarClase(placaRaw);
-          let kmDiaInfo = window._kmDiaMap[(placaRaw||'').toUpperCase()];
-          let esHorasGrp = (window._metricaMap[(placaRaw||'').toUpperCase()] === 'horas');
+          let kmDiaInfo = window._kmDiaMap[String(placaRaw||'').toUpperCase()];
+          let esHorasGrp = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
           let kmDiaBadge = '';
           if (kmDiaInfo) {
               let val = esHorasGrp ? kmDiaInfo.horas_dia : kmDiaInfo.km_dia;
@@ -191,7 +191,7 @@ function mostrarFleetrun(datos) {
               let km_gps = parseFloat(fila[14]) || 0;
               let isLive = false;
               let wialonData = buscarWialonPorPlaca(placaRaw);
-              let esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
+              let esHoras = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
               if (wialonData) {
                   km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
                   isLive = true;
@@ -432,7 +432,7 @@ function mostrarFleetrunCards(datosAMostrar) {
             desgastePct = Math.min(100, Math.round((kmDesdeUlt / frecuencia) * 100));
         }
         var barColor = (criticalEstado === 'VENCIDO') ? '#ef4444' : ((criticalEstado === 'PROXIMO') ? '#f59e0b' : '#10b981');
-        var esHorasLocal = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
+        var esHorasLocal = window._metricaMap && window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas';
         var unitL = esHorasLocal ? ' h' : ' km';
 
         html += `<div class="card mb-3 border border-light shadow-sm bg-white" style="border-radius: 16px; cursor:pointer;" onclick="if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}','fleet')">
@@ -564,12 +564,12 @@ function _filtrarDatosAMostrar(datos) {
         // Cálculo estado KPI
         var km_prox   = parseFloat(fila[11]) || 0;
         var wD = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
-        var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
+        var esHoras = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
         var km_gps = wD ? (esHoras ? (wD.horas || 0) : (wD.km || 0)) : (parseFloat(fila[14]) || 0);
         var falta_km  = km_prox - km_gps;
         var estado;
         var utsUmbral = 2000;
-        var esHoras = (window._metricaMap[placaRaw.toUpperCase()] === 'horas');
+        var esHoras = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
         var metricSuffix = esHoras ? '_HORAS' : '_KM';
         var combinedKey = utsDisp.toUpperCase() + metricSuffix;
         if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
