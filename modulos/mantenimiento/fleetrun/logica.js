@@ -373,7 +373,7 @@ function mostrarFleetrunCards(datosAMostrar) {
 
         // Determinar el MP más crítico
         var criticalMp = null, criticalEstado = 'VIGENTE';
-        var esHorasGrp = (window._metricaMap[(placaRaw||'').toUpperCase()] === 'horas');
+        var esHorasGrp = (window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas');
         mantenimientos.forEach(function(fila) {
             var km_prox = parseFloat(fila[11]) || 0;
             var km_gps  = wialonData ? (esHorasGrp ? wialonData.horas : wialonData.km) : (parseFloat(fila[14]) || 0);
