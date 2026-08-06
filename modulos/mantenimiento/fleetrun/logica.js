@@ -357,7 +357,7 @@ function mostrarFleetrunCards(datosAMostrar) {
 
     var mapPlacas = new Map();
     datosAMostrar.forEach(function(fila) {
-        var p = fila[2] || '-';
+        var p = fila[4] || '-';
         if (!mapPlacas.has(p)) mapPlacas.set(p, []);
         mapPlacas.get(p).push(fila);
     });
@@ -1413,6 +1413,7 @@ window.toggleGraficosFleetrun = function() {
 window.initGraficoFleetrun = function() {
     let ctx = document.getElementById('chartFleetrunStatus');
     if(!ctx) return null;
+    if(typeof Chart === 'undefined') return null;
 
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
