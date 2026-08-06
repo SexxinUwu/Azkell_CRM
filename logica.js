@@ -4914,6 +4914,7 @@ window.toggleGraficosFleetrun = function() {
 window.initGraficoFleetrun = function() {
     let ctx = document.getElementById('chartFleetrunStatus');
     if(!ctx) return null;
+    if(typeof Chart === 'undefined') return null;
 
     return new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
@@ -4951,22 +4952,28 @@ window.initGraficoFleetrun = function() {
 };
 
 window.updateGraficoFleetrun = function(vigentes, porVencer, vencidos) {
-    if(!chartFleetrunInst) chartFleetrunInst = initGraficoFleetrun();
-    if(!chartFleetrunInst) return;
-    let isDark = document.body.classList.contains('dark');
-    chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
-    chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
-    chartFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
-    if(vigentes + porVencer + vencidos === 0) {
-        chartFleetrunInst.data.labels = ['Sin Datos'];
-        chartFleetrunInst.data.datasets[0].data = [1];
-        chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
-    } else {
-        chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
-        chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
-        chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+    if(typeof Chart === 'undefined') {
+        if(typeof window.loadCharts === 'function') {
+            window.loadCharts().then(() => window.updateGraficoFleetrun(vigentes, porVencer, vencidos));
+        }
+        return;
     }
-    chartFleetrunInst.update();
+    if(!window.chartFleetrunInst) window.chartFleetrunInst = window.initGraficoFleetrun();
+    if(!window.chartFleetrunInst) return;
+    let isDark = document.body.classList.contains('dark');
+    window.chartFleetrunInst.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#1a1a2e';
+    window.chartFleetrunInst.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+    window.chartFleetrunInst.options.plugins.datalabels.color = isDark ? '#ffffff' : '#000000';
+    if(vigentes + porVencer + vencidos === 0) {
+        window.chartFleetrunInst.data.labels = ['Sin Datos'];
+        window.chartFleetrunInst.data.datasets[0].data = [1];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#475569'];
+    } else {
+        window.chartFleetrunInst.data.labels = ['Vigentes', 'Por Vencer', 'Vencidos'];
+        window.chartFleetrunInst.data.datasets[0].data = [vigentes, porVencer, vencidos];
+        window.chartFleetrunInst.data.datasets[0].backgroundColor = ['#16a34a', '#eab308', '#dc2626'];
+    }
+    window.chartFleetrunInst.update();
 };
 
 // ============================================================
