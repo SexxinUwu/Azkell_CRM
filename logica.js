@@ -1015,7 +1015,7 @@ window._buildFleetTab = function(mode) {
         var statusColor = (falta <= 0) ? '#ef4444' : ((falta <= umbral) ? '#f59e0b' : '#10b981');
         
         var frecuencia = parseFloat(r[10]) || 0;
-        var kmRegistro = parseFloat(r[2]) || 0;
+        var kmRegistro = parseFloat(r[9]) || 0;
 
         html += `<div class="card mb-3 border border-light shadow-sm bg-white" data-mp-tipo="${(r[8] || '').replace(/"/g,'')}" style="border-radius: 12px; cursor:pointer;" onclick="window._showMPDetail(${globalIdx})">
             <div class="card-body p-3">
@@ -1080,8 +1080,8 @@ window._showMPDetail = function(idx) {
     var statusColor = (falta <= 0) ? '#ef4444' : ((falta <= umbral) ? '#f59e0b' : '#10b981');
     var fechaMost = typeof parseDateToDDMMYYYY === 'function' ? parseDateToDDMMYYYY(r[3]) : (r[3] || '-');
     var frecuencia = parseFloat(r[10]) || 0;
-    var kmRegistro = parseFloat(r[2]) || 0;
-    var observaciones = r[9] || 'Sin observaciones registradas.';
+    var kmRegistro = parseFloat(r[9]) || 0;
+    var observaciones = r[12] || 'Sin observaciones registradas.';
 
     function _fila(label, val, valStyle = 'color: #1e293b;') {
         return `<div class="d-flex justify-content-between py-3 px-3" style="border-bottom: 1px dashed #e2e8f0;">
