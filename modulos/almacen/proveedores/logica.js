@@ -313,9 +313,16 @@ window.abrirModalProveedor = function(id, soloDetalle) {
         }
     }
     window._provRenderTags();
-    document.getElementById('modal-proveedor').classList.add('open');
+    var mEl = document.getElementById('modal-proveedor');
+    if (mEl) {
+        mEl.style.zIndex = '1080';
+        mEl.classList.add('open');
+    }
     var b = document.getElementById('prov-backdrop');
-    if (b) b.style.display = 'block';
+    if (b) {
+        b.style.zIndex = '1075';
+        b.style.display = 'block';
+    }
 };
 
 window._provCerrarModal = function() {
