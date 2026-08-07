@@ -1650,12 +1650,12 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
         fetch('/modulos/almacen/proveedores/vista.html')
             .then(function(r) { return r.text(); })
             .then(function(htmlText) {
-                var tempDiv = document.createElement('div');
-                tempDiv.innerHTML = htmlText;
-                var modalEl = tempDiv.querySelector('#modal-proveedor');
-                var backdropEl = tempDiv.querySelector('#prov-backdrop');
-                if (modalEl && !document.getElementById('modal-proveedor')) document.body.appendChild(modalEl);
-                if (backdropEl && !document.getElementById('prov-backdrop')) document.body.appendChild(backdropEl);
+                if (!document.getElementById('modal-proveedor')) {
+                    var containerDiv = document.createElement('div');
+                    containerDiv.id = 'prov-injected-container';
+                    containerDiv.innerHTML = htmlText;
+                    document.body.appendChild(containerDiv);
+                }
 
                 if (typeof window.abrirModalProveedor === 'function') {
                     openForm();
