@@ -50,6 +50,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     // ── DIRECTORIO ───────────────────────────────────────────────────
     { grupo:'DIRECTORIO',    key:'hub_directorio',   nombre:'Directorio',                  desc:'Habilitar o deshabilitar acceso al módulo Directorio', type:'hub' },
     { grupo:'DIRECTORIO',    key:'cond',             nombre:'Personal',                    desc:'Directorio operativo del personal',             type:'child', parent:'hub_directorio' },
+    { grupo:'DIRECTORIO',    key:'clientes',         nombre:'Clientes',                    desc:'Directorio comercial de clientes',              type:'child', parent:'hub_directorio' },
 
     // ── SEGURIDAD ────────────────────────────────────────────────────
     { grupo:'SEGURIDAD',     key:'hub_seguridad',    nombre:'Seguridad',                   desc:'Habilitar o deshabilitar acceso al módulo Seguridad', type:'hub' },
