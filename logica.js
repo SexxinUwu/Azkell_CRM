@@ -1263,7 +1263,21 @@ window.checkPerm = function(modKey, action) {
         }
         var p = window._permCache;
         if (p.admin === true) return true;
+        
+        // Aliases para sincronizar las claves del Editor de Roles (_GU_MODULOS) con la lógica de los módulos
+        var keyAliases = {
+            'fleet': 'fleetrun',
+            'fleetrun': 'fleet',
+            'pers_mant': 'cfg_personal',
+            'cfg_personal': 'pers_mant',
+            'cond': 'conductores',
+            'conductores': 'cond'
+        };
+
         var m = p[modKey];
+        if ((m === undefined || m === null) && keyAliases[modKey]) {
+            m = p[keyAliases[modKey]];
+        }
         if (m === undefined || m === null) return false;
         if (typeof m === 'boolean') return action === 'l' ? m : false;
         if (action === 'l') return m.l === 1 || m.l === true;

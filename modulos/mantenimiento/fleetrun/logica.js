@@ -1776,12 +1776,12 @@ document.addEventListener('click', window._frTipoOutsideClick);
 // 🚀 FUNCIÓN DE ARRANQUE — llamada por el Router
 // ================================================================
 window.init_fleetrun = function() {
-    if (!window.checkPerm('fleet', 'l')) {
+    if (!window.checkPerm('fleetrun', 'l') && !window.checkPerm('fleet', 'l')) {
         window.showNoPermMsg('mod-fleetrun');
         return;
     }
     var btnNuevoFR = document.getElementById('btnNuevoFleetrun');
-    if (btnNuevoFR) btnNuevoFR.style.display = window.checkPerm('fleet','c') ? '' : 'none';
+    if (btnNuevoFR) btnNuevoFR.style.display = (window.checkPerm('fleetrun','c') || window.checkPerm('fleet','c')) ? '' : 'none';
 
     // Ocultar filtro Empresa para no administradores/fundadores
     let role = window.userRole || localStorage.getItem('fleet_rol') || 'tecnico';
