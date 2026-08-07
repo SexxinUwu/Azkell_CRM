@@ -149,6 +149,92 @@ window.consultarDocNuevoCliente = async function() {
     }
 };
 
+// ── Consulta Ficha Técnica por Placa (Búsqueda Automática) ──────────────────
+window.consultarDatosPlaca = async function(inputId) {
+    let placaEl = document.getElementById(inputId) || document.querySelector(`[name="${inputId}"]`);
+    if (!placaEl) return;
+    let num = placaEl.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!num) { alert('Ingresa el número de placa'); return; }
+
+    let isEdit = inputId.startsWith('e_');
+    let prefix = isEdit ? 'e_' : 'p_';
+
+    let btnIcon = document.getElementById(prefix + 'btn_search_placa_icon');
+    if (btnIcon) btnIcon.className = "spinner-border spinner-border-sm";
+
+    try {
+        let res = await fetch('/api/proxy/placa?numero=' + num);
+        if (!res.ok) throw new Error("No se encontraron datos para esta placa");
+        let d = await res.json();
+
+        // 1. Datos Generales
+        if (d.cliente) {
+            if (typeof window._cbSet === 'function') window._cbSet(prefix + 'cliente', d.cliente, d.cliente);
+            else {
+                let el = document.getElementById(prefix + 'cliente') || document.querySelector(`[name="${prefix}cliente"]`);
+                if (el) el.value = d.cliente;
+            }
+        }
+        if (d.ruc_dni) {
+            let rucEl = document.getElementById(prefix + 'ruc') || document.querySelector(`[name="${prefix}ruc"]`);
+            if (rucEl) rucEl.value = d.ruc_dni;
+        }
+
+        // 2. Especificaciones Técnicas
+        if (d.marca) {
+            if (typeof window._cbSet === 'function') window._cbSet(prefix + 'marca', d.marca, d.marca);
+            else {
+                let el = document.getElementById(prefix + 'marca') || document.querySelector(`[name="${prefix}marca"]`);
+                if (el) el.value = d.marca;
+            }
+        }
+        if (d.modelo) {
+            let el = document.querySelector(`[name="${prefix}modelo"]`);
+            if (el) el.value = d.modelo;
+        }
+        if (d.tipo) {
+            if (typeof window._cbSet === 'function') window._cbSet(prefix + 'tipo', d.tipo, d.tipo);
+            else {
+                let el = document.getElementById(prefix + 'tipo') || document.querySelector(`[name="${prefix}tipo"]`);
+                if (el) el.value = d.tipo;
+            }
+        }
+        if (d.sub_tipo) {
+            if (typeof window._cbSet === 'function') window._cbSet(prefix + 'sub_tipo', d.sub_tipo, d.sub_tipo);
+            else {
+                let el = document.getElementById(prefix + 'sub_tipo') || document.querySelector(`[name="${prefix}sub_tipo"]`);
+                if (el) el.value = d.sub_tipo;
+            }
+        }
+
+        // 3. Configuración Avanzada
+        if (d.color && typeof window._cbSet === 'function') window._cbSet(prefix + 'color', d.color, d.color);
+        if (d.nro_motor) { let el = document.querySelector(`[name="${prefix}nro_motor"]`); if (el) el.value = d.nro_motor; }
+        if (d.nro_caja) { let el = document.querySelector(`[name="${prefix}nro_caja"]`); if (el) el.value = d.nro_caja; }
+        if (d.nro_corona) { let el = document.querySelector(`[name="${prefix}nro_corona"]`); if (el) el.value = d.nro_corona; }
+        if (d.nro_vin) { let el = document.querySelector(`[name="${prefix}nro_vin"]`); if (el) el.value = d.nro_vin; }
+        if (d.configuracion && typeof window._cbSet === 'function') window._cbSet(prefix + 'conf', d.configuracion, d.configuracion);
+        if (d.anio) { let el = document.querySelector(`[name="${prefix}anio"]`); if (el) el.value = d.anio; }
+        if (d.combustible) { let el = document.querySelector(`[name="${prefix}comb"]`); if (el) el.value = d.combustible; }
+
+        // 4. Pesos y Capacidades
+        if (d.carga_util) { let el = document.querySelector(`[name="${prefix}carga_util"]`); if (el) el.value = d.carga_util; }
+        if (d.peso_neto) { let el = document.querySelector(`[name="${prefix}peso_neto"]`); if (el) el.value = d.peso_neto; }
+        if (d.peso_bruto) { let el = document.querySelector(`[name="${prefix}peso_bruto"]`); if (el) el.value = d.peso_bruto; }
+
+        // Mostrar sección avanzada si estaba oculta
+        let advCont = document.getElementById(isEdit ? 'contenedorCamposAvanzadosEdit' : 'contenedorCamposAvanzadosReg');
+        if (advCont) advCont.classList.remove('d-none');
+
+        if (typeof window.rotToast === 'function') window.rotToast("Ficha técnica obtenida", "bg-success");
+    } catch (err) {
+        console.warn('Consulta datos placa:', err);
+        if (typeof window.rotToast === 'function') window.rotToast("No se encontraron datos automáticos para esta placa", "bg-warning");
+    } finally {
+        if (btnIcon) btnIcon.className = "bi bi-search";
+    }
+};
+
 // ── Guarda el nuevo cliente desde el modal y lo inyecta en el select ─────────
 window.guardarNuevoCliente = function() {
     const nombre    = (document.getElementById('nc_nombre')?.value    || '').trim().toUpperCase();
