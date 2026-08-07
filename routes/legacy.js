@@ -487,7 +487,7 @@ router.post('/:metodo', async (req, res) => {
                 // [0]id [1]nombre [2]cargo [3]correo [4]rol_label [5]estado [6]password_visible [7]permisos [8]rol_id [9]rol_color [10]ultimo_acceso [11]ultimo_ip [12]ultimo_dispositivo
                 return [
                     r.idUsuario, r.nombre, r.cargo, r.correo,
-                    rolLabel, r.estado, r.password_visible || '',
+                    rolLabel, r.estado, '••••••••',
                     JSON.stringify(permisosFinales), r.rol_id || null, r.rol_color || null,
                     r.ultimo_acceso || null, r.ultimo_ip || null, r.ultimo_dispositivo || null
                 ];

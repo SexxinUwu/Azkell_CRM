@@ -1240,7 +1240,9 @@ window._permCache = null; // Se invalida en login/logout
 window.checkPerm = function(modKey, action) {
     try {
         if (!window._permCache) {
-            var simRoleStr = localStorage.getItem('fleet_simulated_role');
+            var realPerms = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+            var isRealAdmin = realPerms.admin === true || localStorage.getItem('fleet_usuario_rol') === 'Fundador';
+            var simRoleStr = isRealAdmin ? localStorage.getItem('fleet_simulated_role') : null;
             if (simRoleStr) {
                 var simRole = JSON.parse(simRoleStr);
                 window._permCache = typeof simRole.permisos === 'string' ? JSON.parse(simRole.permisos) : (simRole.permisos || {});
@@ -1256,7 +1258,7 @@ window.checkPerm = function(modKey, action) {
                     document.body.style.paddingTop = '40px';
                 }
             } else {
-                window._permCache = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
+                window._permCache = realPerms;
             }
         }
         var p = window._permCache;
