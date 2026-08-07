@@ -150,29 +150,12 @@ window.verificarSesionGuardada = function() {
     let nombreUsuarioTopEl = document.getElementById('nombre-usuario-top');
     if (nombreUsuarioTopEl) nombreUsuarioTopEl.innerText = usuarioLogueado;
     
-    // Sincronizar perfil (avatar y preferencias) una vez en background
+    // Sincronizar perfil y permisos del usuario en background
     if (!window.perfilSyncDone && guardadoToken) {
         window.perfilSyncDone = true;
-        fetch('/api/perfil/me', { headers: { 'Authorization': 'Bearer ' + guardadoToken } })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                if (data) {
-                    let changed = false;
-                    if ((data.avatar_url || '') !== (localStorage.getItem('fleet_avatar') || '')) {
-                        localStorage.setItem('fleet_avatar', data.avatar_url || '');
-                        changed = true;
-                    }
-                    if (data.preferencias) {
-                        localStorage.setItem('fleet_prefs', JSON.stringify(data.preferencias));
-                        if (data.preferencias.color) document.documentElement.style.setProperty('--crm-accent', data.preferencias.color);
-                        if (data.preferencias.tema && typeof window.applyDark === 'function') {
-                            let isDark = data.preferencias.tema === 'dark' || (data.preferencias.tema === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                            window.applyDark(isDark);
-                        }
-                    }
-                    if (changed) window.verificarSesionGuardada(); // re-render avatar
-                }
-            }).catch(()=>window.perfilSyncDone=false);
+        if (typeof window.sincronizarPermisosSesion === 'function') {
+            window.sincronizarPermisosSesion(false);
+        }
     }
     
     // Aplicar preferencias cacheadas si existen
@@ -613,8 +596,11 @@ window.initSSE = function() {
         planificacion: 'mantenimiento/planificacion'
     };
 
-    window._sse.addEventListener('datos-actualizados', function(e) {
+        window._sse.addEventListener('datos-actualizados', function(e) {
         var d; try { d = JSON.parse(e.data); } catch(err) { return; }
+        if (d.modulo === 'usuarios') {
+            window.sincronizarPermisosSesion(true);
+        }
         var cacheKey = CACHE_KEY_MAP[d.modulo];
         if (cacheKey) { CACHE[cacheKey] = null; CACHE_TIME[cacheKey] = null; }
         var rutaActual = sessionStorage.getItem('fleet_rutaActual') || '';
@@ -624,6 +610,41 @@ window.initSSE = function() {
         mostrarToastSSE(d.modulo);
     });
     // onerror: EventSource reconecta automáticamente, no se necesita ninguna acción
+};
+
+window.sincronizarPermisosSesion = function(autoReload) {
+    var guardadoToken = localStorage.getItem('fleet_token');
+    if (!guardadoToken) return;
+    fetch('/api/perfil/me', { headers: { 'Authorization': 'Bearer ' + guardadoToken } })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+            if (data && data.permisos) {
+                var prevPermsStr = localStorage.getItem('fleet_permisos') || '{}';
+                var newPermsStr = JSON.stringify(data.permisos);
+                var permsChanged = (prevPermsStr !== newPermsStr);
+                
+                localStorage.setItem('fleet_permisos', newPermsStr);
+                if (data.rol) localStorage.setItem('fleet_rol', data.rol);
+                window._permCache = null;
+                
+                if (data.avatar_url !== undefined) localStorage.setItem('fleet_avatar', data.avatar_url || '');
+                if (data.preferencias) {
+                    localStorage.setItem('fleet_prefs', JSON.stringify(data.preferencias));
+                    if (data.preferencias.color) document.documentElement.style.setProperty('--crm-accent', data.preferencias.color);
+                    if (data.preferencias.tema && typeof window.applyDark === 'function') {
+                        var isDark = data.preferencias.tema === 'dark' || (data.preferencias.tema === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                        window.applyDark(isDark);
+                    }
+                }
+                
+                if (permsChanged && autoReload) {
+                    var rutaActual = sessionStorage.getItem('fleet_rutaActual') || '';
+                    if (rutaActual && typeof cargarModuloAislado === 'function') {
+                        cargarModuloAislado(rutaActual);
+                    }
+                }
+            }
+        }).catch(function(){});
 };
 
 window.cerrarSSE = function() {
