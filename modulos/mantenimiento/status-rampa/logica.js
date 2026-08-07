@@ -639,6 +639,10 @@ window.srAbrirDetalle = function(id) {
 window.srCerrarDetalle = function() {
     var panel = document.getElementById('sr-panel-detalle');
     if (panel) panel.classList.remove('open');
+    var bd1 = document.getElementById('srDrawerBackdrop');
+    if (bd1) bd1.classList.remove('open');
+    var bd2 = document.getElementById('rotDrawerBackdrop');
+    if (bd2) bd2.classList.remove('open');
     window.srDetalleId = null;
     srRenderTabla();
 };
@@ -2020,9 +2024,11 @@ function srAbrirDrawer(id) {
 }
 
 window.srCerrarDrawers = function() {
-    var back = document.getElementById('srDrawerBackdrop');
-    if (back) back.classList.remove('open');
-    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot', 'sr-panel-detalle', 'sr-panel-detalle-hist'].forEach(function(id) {
+    var back1 = document.getElementById('srDrawerBackdrop');
+    if (back1) back1.classList.remove('open');
+    var back2 = document.getElementById('rotDrawerBackdrop');
+    if (back2) back2.classList.remove('open');
+    ['sr-drawer-registro','sr-drawer-ot','sr-drawer-ot-det','sr-drawer-trabajo','sr-drawer-material','sr-drawer-editar-ot', 'sr-panel-detalle', 'sr-panel-detalle-hist', 'rot-drawer-detalle', 'rot-drawer-trabajo', 'rot-drawer-material', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas'].forEach(function(id) {
         var d = document.getElementById(id);
         if (d) d.classList.remove('open');
     });
