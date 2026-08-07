@@ -277,20 +277,20 @@
 }
 #rotDrawerBackdrop.open { display: block; }
 .rot-drawer {
-    position: fixed; top: auto; bottom: -100vh; right: 0; left: 0; margin: 0 auto;
-    width: 650px; max-width: 100vw; height: 85vh;
-    border-radius: 16px 16px 0 0;
-    background: var(--surface); border: 1px solid var(--border); border-bottom: none;
-    box-shadow: 0 -8px 40px rgba(0,0,0,.18);
-    transition: bottom .3s cubic-bezier(.4,0,.2,1);
+    position: fixed; top: 0; bottom: 0; right: -650px; left: auto; margin: 0;
+    width: 540px; max-width: 95vw; height: 100vh;
+    border-radius: 0;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 30px rgba(0,0,0,.18);
+    transition: right .28s ease;
     z-index: 1060; display: flex; flex-direction: column;
     visibility: hidden;
 }
-.rot-drawer.open { bottom: 0; visibility: visible; }
+.rot-drawer.open { right: 0; visibility: visible; }
 .rot-drawer-hd {
     display: flex; align-items: center;
     justify-content: space-between;
-    padding: 0 1.25rem; height: 52px;
+    padding: 0 1.25rem; height: 48px;
     border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .rot-drawer-title { font-size: .95rem; font-weight: 800; color: var(--text); }
@@ -305,34 +305,31 @@
     margin-top: 1rem; overflow: hidden;
 }
 .rot-sec-hd {
-    background: var(--bg); padding: 7px 12px;
-    font-size: .72rem; font-weight: 800;
+    background: var(--bg); padding: 8px 12px;
+    font-size: .73rem; font-weight: 800;
     text-transform: uppercase; letter-spacing: .05em;
     color: var(--subtext); border-bottom: 1px solid var(--border);
 }
-.rot-field { display: flex; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: .82rem; }
-.rot-field:last-child { border-bottom: none; }
-.rot-field-lbl { width: 40%; color: var(--subtext); font-weight: 600; font-size: .77rem; padding-right: 6px; }
-.rot-field-val { width: 60%; color: var(--text); font-weight: 600; word-break: break-word; }
-.rot-id-bar {
-    background: rgba(88,101,242,.06); border: 1px solid rgba(88,101,242,.2);
-    border-radius: 10px; padding: 10px 14px; margin-bottom: 1.25rem;
-    display: flex; align-items: center; justify-content: space-between;
+.rot-field {
+    display: flex; padding: 8px 12px;
+    border-bottom: 1px solid var(--border); font-size: .82rem;
 }
-.rot-id-num { font-size: 1.1rem; font-weight: 800; color: var(--primary,#5865F2); }
-.rot-id-lbl { font-size: .7rem; font-weight: 700; color: var(--primary,#5865F2); text-transform: uppercase; }
+.rot-field:last-child { border-bottom: none; }
+.rot-field-lbl { width: 42%; color: var(--subtext); font-weight: 600; font-size: .78rem; padding-right: 8px; }
+.rot-field-val { width: 58%; color: var(--text); font-weight: 600; word-break: break-word; }
+
 /* Sub-drawers */
 .rot-sub-drawer {
-    position: fixed; top: auto; bottom: -100vh; right: 0; left: 0; margin: 0 auto;
-    width: 650px; max-width: 100vw; height: 85vh;
-    border-radius: 16px 16px 0 0;
-    background: var(--surface); border: 1px solid var(--border); border-bottom: none;
-    box-shadow: 0 -8px 40px rgba(0,0,0,.22);
-    transition: bottom .25s ease;
+    position: fixed; top: 0; bottom: 0; right: -650px; left: auto; margin: 0;
+    width: 540px; max-width: 95vw; height: 100vh;
+    border-radius: 0;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -8px 0 35px rgba(0,0,0,.25);
+    transition: right .25s ease;
     z-index: 1062; display: flex; flex-direction: column;
     visibility: hidden;
 }
-.rot-sub-drawer.open { bottom: 0; visibility: visible; }
+.rot-sub-drawer.open { right: 0; visibility: visible; }
 
 
 /* ── Responsive móvil ─────────────────────────────────────────── */
