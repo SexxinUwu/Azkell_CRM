@@ -2397,9 +2397,9 @@ app.put('/api/integraciones', (req, res) => {
 
 // ============================================================
 // 🚀 EL PUENTE DE LECTURA A MYSQL (Legacy)
-// Debe ir DESPUÉS de todas las rutas específicas de /api/ 
-// para que el wildcard /:metodo no intercepte los POSTs correctos.
-// ============================================================
+// Módulo Directorio de Clientes (Fase 1 - ERP)
+app.use('/api/clientes', require('./routes/clientes'));
+
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
 app.use('/api', legacyRoutes);

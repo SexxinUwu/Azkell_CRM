@@ -113,6 +113,35 @@ window.abrirModalNuevoCliente = function(targetSelectId, targetRucId) {
     if (modalEl) new bootstrap.Modal(modalEl).show();
 };
 
+// ── Consulta SUNAT / RENIEC para Nuevo Cliente ──────────────────────────────
+window.consultarDocNuevoCliente = async function() {
+    let numInput = document.getElementById('nc_ruc');
+    let razonInput = document.getElementById('nc_nombre');
+    if (!numInput || !razonInput) return;
+
+    let num = numInput.value.trim();
+    if (!num) return;
+
+    let tipo = num.length === 11 ? 'RUC' : (num.length === 8 ? 'DNI' : 'RUC');
+    let btnIcon = document.getElementById('nc_btn_search_icon');
+    if (btnIcon) btnIcon.className = "spinner-border spinner-border-sm";
+
+    try {
+        let res = await fetch('/api/proxy/documento?tipo=' + tipo + '&numero=' + num);
+        if (!res.ok) throw new Error("Documento no encontrado");
+        let data = await res.json();
+        if (data && (data.nombre || data.razon_social)) {
+            razonInput.value = (data.nombre || data.razon_social).toUpperCase();
+            if (typeof window.rotToast === 'function') window.rotToast("Datos SUNAT/RENIEC obtenidos", "bg-success");
+        }
+    } catch (err) {
+        console.warn('Consulta doc nuevo cliente:', err);
+        if (typeof window.rotToast === 'function') window.rotToast("No se encontró RUC/DNI en SUNAT/RENIEC", "bg-warning");
+    } finally {
+        if (btnIcon) btnIcon.className = "bi bi-search";
+    }
+};
+
 // ── Guarda el nuevo cliente desde el modal y lo inyecta en el select ─────────
 window.guardarNuevoCliente = function() {
     const nombre = (document.getElementById('nc_nombre')?.value || '').trim().toUpperCase();

@@ -1,0 +1,338 @@
+<!-- Módulo Directorio / Clientes — Azkell ERP -->
+<style>
+#moduloClientes .cli-kpi-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+#moduloClientes .cli-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+#moduloClientes .cli-table-wrap {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    overflow: hidden;
+}
+#moduloClientes table th {
+    background: var(--bg, #f8fafc);
+    color: var(--subtext, #64748b);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+}
+#moduloClientes table td {
+    padding: 12px 16px;
+    font-size: 0.83rem;
+    color: var(--text, #0f172a);
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+#moduloClientes tbody tr:hover {
+    background: rgba(241, 245, 249, 0.6);
+    cursor: pointer;
+}
+
+/* Modales centrados anclados abajo (700px max-width, 92vh height) */
+#cliBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35) !important;
+    z-index: 1059;
+}
+#cliBackdrop.open { display: block !important; }
+
+#modalCliente,
+#drawerDetalleCliente {
+    position: fixed;
+    bottom: 0 !important;
+    left: 50% !important;
+    top: auto !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(100%);
+    width: 100% !important;
+    max-width: 700px !important;
+    height: 92vh !important;
+    max-height: 92vh !important;
+    background: var(--surface, #fff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-bottom: none !important;
+    border-radius: 28px 28px 0 0 !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,.18) !important;
+    transition: transform .25s ease !important;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    visibility: hidden;
+    margin: 0 !important;
+}
+#modalCliente.open,
+#drawerDetalleCliente.open {
+    transform: translateX(-50%) translateY(0) !important;
+    visibility: visible !important;
+}
+
+@media (max-width: 767.98px) {
+    #modalCliente,
+    #drawerDetalleCliente {
+        max-width: 100% !important;
+        left: 0 !important;
+        transform: translateY(100%) !important;
+        border-radius: 28px 28px 0 0 !important;
+    }
+    #modalCliente.open,
+    #drawerDetalleCliente.open {
+        transform: translateY(0) !important;
+    }
+}
+</style>
+
+<div id="cliBackdrop" onclick="window.cliCerrarTodo()"></div>
+
+<div id="moduloClientes" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1 p-3">
+
+    <!-- Header + Controles -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h5 class="fw-extrabold m-0 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-building-fill text-primary"></i> Directiorio de Clientes
+            </h5>
+            <div class="text-muted small">Gestión comercial y resumen de flota atendida</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search text-secondary"></i></span>
+                <input type="text" id="cliBuscador" class="form-control border-start-0 ps-0" placeholder="Buscar por cliente, RUC..." oninput="window.cliFiltrar()">
+            </div>
+            <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="window.cliCargar()" title="Actualizar">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-success fw-bold" onclick="window.cliExportarExcel()">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            </button>
+            <button class="btn btn-sm btn-primary fw-bold text-white" onclick="window.cliAbrirNuevo()">
+                <i class="bi bi-building-add me-1"></i>Nuevo Cliente
+            </button>
+        </div>
+    </div>
+
+    <!-- Cards KPI -->
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-4">
+            <div class="cli-kpi-card">
+                <div class="cli-kpi-icon" style="background:#e0f2fe; color:#0284c7;">
+                    <i class="bi bi-buildings"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Total Clientes</div>
+                    <div id="cli-kpi-total" class="fs-4 fw-extrabold text-dark">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div class="cli-kpi-card">
+                <div class="cli-kpi-icon" style="background:#dcfce7; color:#16a34a;">
+                    <i class="bi bi-patch-check-fill"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Clientes Activos</div>
+                    <div id="cli-kpi-activos" class="fs-4 fw-extrabold text-dark">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div class="cli-kpi-card">
+                <div class="cli-kpi-icon" style="background:#fef3c7; color:#d97706;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Total Flota Atendida</div>
+                    <div id="cli-kpi-flota" class="fs-4 fw-extrabold text-dark">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="cli-table-wrap flex-grow-1 d-flex flex-column overflow-hidden">
+        <div class="table-responsive flex-grow-1 overflow-auto">
+            <table class="table table-borderless m-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>Razón Social / Nombre</th>
+                        <th>RUC / DNI</th>
+                        <th>Teléfono</th>
+                        <th>Correo</th>
+                        <th>Dirección</th>
+                        <th class="text-center">Flota Vinculada</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="cli-tbody">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Cargando clientes...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="cli-paginacion" class="d-flex align-items-center justify-content-between p-2 border-top bg-light"></div>
+    </div>
+</div>
+
+<!-- ═══ MODAL REGISTRAR / EDITAR CLIENTE ═════════════════════════ -->
+<div id="modalCliente">
+    <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--surface);">
+        <div class="d-flex align-items-center gap-2">
+            <div style="width:36px;height:36px;border-radius:12px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;" class="fs-5">
+                <i class="bi bi-building"></i>
+            </div>
+            <div>
+                <div id="cli-modal-titulo" class="fw-bold fs-6 text-dark">Nuevo Cliente</div>
+                <div class="text-muted" style="font-size:0.7rem;">ERP Directiorio Comercial</div>
+            </div>
+        </div>
+        <button class="btn btn-sm text-secondary" onclick="window.cliCerrarTodo()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <form id="formCliente" onsubmit="window.cliGuardar(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
+        <input type="hidden" id="cli-f-id">
+        <div class="p-3 flex-grow-1 overflow-auto">
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">RUC / DNI *</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="cli-f-ruc" placeholder="Ingrese RUC o DNI" maxlength="11" onkeydown="if(event.key==='Enter'){event.preventDefault();window.cliConsultarSUNAT();}">
+                    <button type="button" class="btn btn-primary fw-bold" onclick="window.cliConsultarSUNAT()" title="Consultar SUNAT / RENIEC">
+                        <i id="cli-btn-sunat-icon" class="bi bi-search me-1"></i>Buscar SUNAT/RENIEC
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Razón Social / Nombre Completo *</label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="cli-f-razon" placeholder="Ej: TRANSPORTES S.A.C." required>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Teléfono / Celular</label>
+                    <input type="text" class="form-control form-control-sm" id="cli-f-telefono" placeholder="Ej: 987654321">
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Correo Electrónico</label>
+                    <input type="email" class="form-control form-control-sm" id="cli-f-email" placeholder="cliente@empresa.com">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Dirección Fiscal / Comercial</label>
+                <input type="text" class="form-control form-control-sm" id="cli-f-direccion" placeholder="Av. Principal 123, Lima">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Estado Comercial</label>
+                <select class="form-select form-select-sm" id="cli-f-estado">
+                    <option value="Activo" selected>Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Notas / Observaciones</label>
+                <textarea class="form-control form-control-sm" id="cli-f-notas" rows="3" placeholder="Información adicional del cliente..."></textarea>
+            </div>
+
+        </div>
+        <div class="p-3 border-top bg-light d-flex gap-2 justify-content-end flex-shrink-0">
+            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="window.cliCerrarTodo()">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="bi bi-save me-1"></i>Guardar Cliente</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═══ DRAWER FICHA 360° DEL CLIENTE ═════════════════════════════ -->
+<div id="drawerDetalleCliente">
+    <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--surface);">
+        <div class="d-flex align-items-center gap-2">
+            <div style="width:36px;height:36px;border-radius:12px;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;" class="fs-5">
+                <i class="bi bi-building-check"></i>
+            </div>
+            <div>
+                <div id="cli-det-nombre" class="fw-bold fs-6 text-dark">Cliente</div>
+                <div id="cli-det-subt" class="text-muted" style="font-size:0.7rem;">Ficha 360° del Cliente</div>
+            </div>
+        </div>
+        <button class="btn btn-sm text-secondary" onclick="window.cliCerrarTodo()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <!-- Pestañas Ficha 360 -->
+    <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-info">
+                <i class="bi bi-info-circle me-1"></i>General
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-flota" onclick="window.cliCargarFlotaDetalle()">
+                <i class="bi bi-truck me-1"></i>Flota Vinculada (<span id="cli-det-count-flota">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-ots" onclick="window.cliCargarOTsDetalle()">
+                <i class="bi bi-tools me-1"></i>Historial OTs (<span id="cli-det-count-ots">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-cli-backlog" onclick="window.cliCargarBacklogDetalle()">
+                <i class="bi bi-clock-history me-1"></i>Backlog (<span id="cli-det-count-backlog">0</span>)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content flex-grow-1 overflow-auto p-3">
+        <!-- Pestaña 1: General -->
+        <div class="tab-pane fade show active" id="tab-cli-info">
+            <div class="card border-0 bg-light p-3 mb-3 rounded-4">
+                <div class="row g-2">
+                    <div class="col-6"><span class="text-muted small fw-bold">RUC / DNI:</span> <div id="cli-det-ruc" class="fw-bold text-dark">-</div></div>
+                    <div class="col-6"><span class="text-muted small fw-bold">Estado:</span> <div id="cli-det-estado" class="fw-bold">-</div></div>
+                    <div class="col-6"><span class="text-muted small fw-bold">Teléfono:</span> <div id="cli-det-telefono" class="fw-bold text-dark">-</div></div>
+                    <div class="col-6"><span class="text-muted small fw-bold">Correo:</span> <div id="cli-det-email" class="fw-bold text-dark">-</div></div>
+                    <div class="col-12"><span class="text-muted small fw-bold">Dirección:</span> <div id="cli-det-direccion" class="fw-bold text-dark">-</div></div>
+                    <div class="col-12"><span class="text-muted small fw-bold">Notas:</span> <div id="cli-det-notas" class="text-secondary small">-</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña 2: Flota Vinculada -->
+        <div class="tab-pane fade" id="tab-cli-flota">
+            <div id="cli-det-flota-list">Cargando flota asociada...</div>
+        </div>
+
+        <!-- Pestaña 3: Historial OTs -->
+        <div class="tab-pane fade" id="tab-cli-ots">
+            <div id="cli-det-ots-list">Cargando órdenes de trabajo...</div>
+        </div>
+
+        <!-- Pestaña 4: Backlog -->
+        <div class="tab-pane fade" id="tab-cli-backlog">
+            <div id="cli-det-backlog-list">Cargando tareas pendientes...</div>
+        </div>
+    </div>
+</div>
