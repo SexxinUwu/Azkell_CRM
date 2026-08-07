@@ -680,28 +680,45 @@
     </div>
 </div>
 
-<!-- ── MODAL: NUEVO CLIENTE (auxiliar con consulta SUNAT/RENIEC y Z-Index elevado) ── -->
+<!-- ── MODAL: NUEVO CLIENTE (formulario completo homologado con consulta SUNAT/RENIEC) ── -->
 <div class="modal fade" id="modalNuevoCliente" tabindex="-1" style="z-index: 1080 !important;">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
         <div class="modal-content shadow-lg" style="border: 2px solid #2563eb; border-radius: 20px; box-shadow: 0 25px 80px rgba(0,0,0,0.5) !important; background: var(--surface, #fff); overflow: hidden;">
             <div class="modal-header text-white" style="background: #0f172a; padding: 14px 20px;">
                 <h6 class="modal-title fw-bold m-0"><i class="bi bi-building-add me-2 text-primary"></i><span data-i18n="plates.modal.newclient">Nuevo Cliente</span></h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-secondary" data-i18n="plates.form.ruc">RUC / DNI *</label>
                     <div class="input-group">
-                        <input type="text" class="form-control form-control-sm" id="nc_ruc" placeholder="Ingrese RUC o DNI" maxlength="11" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocNuevoCliente();}" oninput="if(this.value.length===8||this.value.length===11) window.consultarDocNuevoCliente()">
+                        <input type="text" class="form-control form-control-sm" id="nc_ruc" placeholder="Ingrese RUC o DNI" maxlength="11" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocNuevoCliente();}">
                         <button class="btn btn-primary btn-sm fw-bold" type="button" onclick="window.consultarDocNuevoCliente()" title="Buscar en SUNAT / RENIEC">
-                            <i id="nc_btn_search_icon" class="bi bi-search"></i>
+                            <i id="nc_btn_search_icon" class="bi bi-search me-1"></i>Buscar SUNAT/RENIEC
                         </button>
                     </div>
-                    <div class="form-text" style="font-size:0.72rem;">Búsqueda automática en SUNAT / RENIEC</div>
                 </div>
-                <div class="mb-2">
+                <div class="mb-3">
                     <label class="form-label fw-bold small text-secondary" data-i18n="plates.form.razon">Razón Social / Nombre *</label>
                     <input type="text" class="form-control form-control-sm text-uppercase" id="nc_nombre" placeholder="Ej: TRANSPORTES S.A.C.">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fw-bold small text-secondary">Teléfono / Celular</label>
+                        <input type="text" class="form-control form-control-sm" id="nc_telefono" placeholder="Ej: 987654321">
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fw-bold small text-secondary">Correo Electrónico</label>
+                        <input type="email" class="form-control form-control-sm" id="nc_email" placeholder="cliente@empresa.com">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Dirección Fiscal / Comercial</label>
+                    <input type="text" class="form-control form-control-sm" id="nc_direccion" placeholder="Av. Principal 123, Lima">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold small text-secondary">Notas / Observaciones</label>
+                    <textarea class="form-control form-control-sm" id="nc_notas" rows="2" placeholder="Información adicional..."></textarea>
                 </div>
                 <input type="hidden" id="nc_target_select">
                 <input type="hidden" id="nc_target_ruc">

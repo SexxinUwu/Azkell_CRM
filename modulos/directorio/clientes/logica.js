@@ -129,8 +129,6 @@ window.cliAbrirNuevo = function() {
 
 window.cliAbrirEditar = function(id) {
     var c = window.cliData.find(function(x) { return x.id === id; });
-    if (!b) c = window.cliData[0];
-    c = window.cliData.find(function(x) { return x.id === id; });
     if (!c) return;
 
     window.cliLimpiarForm();
