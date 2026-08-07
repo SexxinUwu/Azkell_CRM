@@ -167,6 +167,8 @@ window.cliCerrarTodo = function() {
 window.cliConsultarSUNAT = async function() {
     var rucInput = document.getElementById('cli-f-ruc');
     var razonInput = document.getElementById('cli-f-razon');
+    var dirInput = document.getElementById('cli-f-direccion');
+    var notasInput = document.getElementById('cli-f-notas');
     if (!rucInput || !razonInput) return;
 
     var num = rucInput.value.trim();
@@ -182,6 +184,13 @@ window.cliConsultarSUNAT = async function() {
         var data = await res.json();
         if (data && (data.nombre || data.razon_social)) {
             razonInput.value = (data.nombre || data.razon_social).toUpperCase();
+            if (dirInput && data.direccion) dirInput.value = data.direccion.toUpperCase();
+            if (notasInput) {
+                var infoSunat = [];
+                if (data.estado) infoSunat.push("ESTADO SUNAT: " + data.estado);
+                if (data.condicion) infoSunat.push("CONDICIÓN: " + data.condicion);
+                if (infoSunat.length) notasInput.value = infoSunat.join(" | ");
+            }
             if (typeof window.rotToast === 'function') window.rotToast("Datos SUNAT/RENIEC obtenidos", "bg-success");
         }
     } catch (err) {
