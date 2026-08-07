@@ -488,6 +488,8 @@ window._invSwitchTab = function(tab) {
     var btnServicios = document.getElementById('inv-tab-servicios');
     if (!btnFisicos || !btnServicios) return;
     
+    var elFam = document.getElementById('inv-fil-familia');
+    var elSis = document.getElementById('inv-fil-sistema');
     if (tab === 'fisicos') {
         btnFisicos.className = 'inv-tab-btn active';
         btnFisicos.style.background = '#0ea5e9';
@@ -495,8 +497,8 @@ window._invSwitchTab = function(tab) {
         btnServicios.className = 'inv-tab-btn';
         btnServicios.style.background = 'transparent';
         btnServicios.style.color = '#0ea5e9';
-        document.getElementById('inv-fil-familia').style.display = 'inline-block';
-        document.getElementById('inv-fil-sistema').style.display = 'inline-block';
+        if (elFam) elFam.style.display = 'inline-block';
+        if (elSis) elSis.style.display = 'inline-block';
     } else {
         btnServicios.className = 'inv-tab-btn active';
         btnServicios.style.background = '#0ea5e9';
@@ -504,8 +506,8 @@ window._invSwitchTab = function(tab) {
         btnFisicos.className = 'inv-tab-btn';
         btnFisicos.style.background = 'transparent';
         btnFisicos.style.color = '#0ea5e9';
-        document.getElementById('inv-fil-familia').style.display = 'none';
-        document.getElementById('inv-fil-sistema').style.display = 'none';
+        if (elFam) elFam.style.display = 'none';
+        if (elSis) elSis.style.display = 'none';
     }
     window.filtrarInventario();
 };
