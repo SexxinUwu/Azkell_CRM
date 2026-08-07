@@ -467,7 +467,12 @@
                         <div class="row">
                             <div class="col-md-3 mb-3">
                                 <label class="form-label placas-form-label" data-i18n="plates.form.plate">Placa *</label>
-                                <input type="text" class="form-control placas-form-control text-uppercase" name="p_placa" placeholder="ABC-123" maxlength="100" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control placas-form-control text-uppercase" id="p_placa" name="p_placa" placeholder="ABC-123" maxlength="100" required onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDatosPlaca('p_placa');}">
+                                    <button class="btn btn-primary btn-sm fw-bold" type="button" onclick="window.consultarDatosPlaca('p_placa')" title="Buscar Ficha Técnica">
+                                        <i id="p_btn_search_placa_icon" class="bi bi-search"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-5 mb-3">
                                 <label class="form-label placas-form-label" data-i18n="plates.form.client">Cliente *</label>

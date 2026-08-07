@@ -179,6 +179,50 @@ app.get('/api/proxy/documento', async (req, res) => {
     }
 });
 
+app.get('/api/proxy/placa', async (req, res) => {
+    let numero = (req.query.numero || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!numero) return res.status(400).json({ error: "Número de placa requerido" });
+
+    try {
+        let fetchCall = global.fetch || require('node-fetch');
+        let url = 'https://api.apis.net.pe/v1/vehiculo?numero=' + numero;
+        let response = await fetchCall(url);
+        if (response.ok) {
+            let data = await response.json();
+            return res.json(data);
+        }
+    } catch(err) {
+        console.warn('API vehicular proxy error:', err.message);
+    }
+
+    db.query("SELECT * FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? LIMIT 1", [numero], (err, rows) => {
+        if (!err && rows && rows.length > 0) {
+            const p = rows[0];
+            return res.json({
+                placa: p.placa,
+                cliente: p.cliente,
+                ruc_dni: p.ruc_dni,
+                marca: p.marca,
+                modelo: p.modelo,
+                tipo: p.tipo,
+                sub_tipo: p.sub_tipo,
+                color: p.color,
+                nro_motor: p.nro_motor,
+                nro_caja: p.nro_caja,
+                nro_corona: p.nro_corona,
+                nro_vin: p.nro_vin,
+                configuracion: p.configuracion,
+                anio: p.anio,
+                combustible: p.combustible,
+                carga_util: p.carga_util,
+                peso_neto: p.peso_neto,
+                peso_bruto: p.peso_bruto
+            });
+        }
+        res.status(404).json({ error: "Placa no encontrada" });
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
