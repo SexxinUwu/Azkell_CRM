@@ -206,11 +206,15 @@ window.bktAbrirDetalle = function(id) {
             + '<i class="bi bi-trash me-1"></i>Eliminar</button>';
     }
     panel.classList.add('open');
+    var bd = document.getElementById('bktDrawerBackdrop');
+    if (bd) bd.classList.add('open');
 };
 
 window.bktCerrarDetalle = function() {
     var panel = document.getElementById('bkt-panel-detalle');
     if (panel) panel.classList.remove('open');
+    var bd = document.getElementById('bktDrawerBackdrop');
+    if (bd) bd.classList.remove('open');
     window.bktDetalleId = null;
     bktRenderTabla();
 };
