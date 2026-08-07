@@ -106,21 +106,44 @@ function totGetFiltros() {
     };
 }
 
+// ── Estado global de paginación ────────────────────────────────────
+window.totPaginaActual   = window.totPaginaActual   || 1;
+window.totFilasPorPagina = 30;
+
+window.totCambiarPagina = function(delta) {
+    var total = (window.totDatosFil || []).length;
+    var totalPaginas = Math.ceil(total / window.totFilasPorPagina) || 1;
+    var nueva = window.totPaginaActual + delta;
+    if (nueva >= 1 && nueva <= totalPaginas) {
+        window.totPaginaActual = nueva;
+        totRenderTablaRows();
+    }
+};
+
 // ── Render tabla ──────────────────────────────────────────────────
 window.totRenderTabla = function() {
     var tbody = document.getElementById('tot-tbody');
     if (!tbody) return;
 
+    // Ordenar por fecha y hora de inicio descendente (más recientes arriba)
+    window.totData.sort(function(a, b) {
+        var fA = a.fecha_trabajo ? new Date(a.fecha_trabajo).getTime() : 0;
+        var fB = b.fecha_trabajo ? new Date(b.fecha_trabajo).getTime() : 0;
+        if (fA !== fB) return fB - fA;
+        return (b.id || 0) - (a.id || 0);
+    });
+
     var f = totGetFiltros();
 
     var datos = window.totData.filter(function(t) {
         var det = totParseDetalles(t);
+        var placaVal = t.placa || (det && det.placa) || '';
         // Filtro estado
         if (f.estado && t.estado !== f.estado) return false;
         // Filtro N° OT
-        if (f.ot && String(t.id_ot || '').toLowerCase().indexOf(f.ot) === -1) return false;
+        if (f.ot && String(t.ot_id || t.id_ot || t.ticket_visita || '').toLowerCase().indexOf(f.ot) === -1) return false;
         // Filtro placa
-        if (f.placa && String(t.placa || '').toUpperCase().indexOf(f.placa) === -1) return false;
+        if (f.placa && String(placaVal).toUpperCase().indexOf(f.placa) === -1) return false;
         // Filtro mes
         if (f.mes) {
             var fechaStr = t.fecha_trabajo ? String(t.fecha_trabajo).split('T')[0] : '';
@@ -134,22 +157,57 @@ window.totRenderTabla = function() {
         }
         // Buscador libre
         if (f.search) {
-            var s = [t.ticket_visita, t.id_ot, det.personal || t.tecnico, t.placa, t.trabajo_realizado].join(' ').toLowerCase();
+            var s = [t.ticket_visita, t.id_ot, t.ot_id, det.personal || t.tecnico, placaVal, t.trabajo_realizado].join(' ').toLowerCase();
             if (s.indexOf(f.search) === -1) return false;
         }
         return true;
     });
 
     window.totDatosFil = datos;
+    window.totPaginaActual = 1;
 
-    if (datos.length === 0) {
+    totRenderTablaRows();
+};
+
+function totRenderTablaRows() {
+    var tbody = document.getElementById('tot-tbody');
+    if (!tbody) return;
+
+    var datos = window.totDatosFil || [];
+    var total = datos.length;
+
+    var infoEl  = document.getElementById('tot-paginacion-info');
+    var indEl   = document.getElementById('tot-pag-indicador');
+    var prevBtn = document.getElementById('tot-pag-prev');
+    var nextBtn = document.getElementById('tot-pag-next');
+
+    if (total === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="td-placeholder"><i class="bi bi-tools" style="font-size:1.5rem; opacity:0.3"></i><br>Sin trabajos encontrados</td></tr>';
+        if (infoEl)  infoEl.textContent = 'Mostrando 0 - 0 de 0 trabajos';
+        if (indEl)   indEl.textContent = 'Página 1 de 1';
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
         return;
     }
 
+    var totalPaginas = Math.ceil(total / window.totFilasPorPagina) || 1;
+    if (window.totPaginaActual > totalPaginas) window.totPaginaActual = totalPaginas;
+    if (window.totPaginaActual < 1)            window.totPaginaActual = 1;
+
+    var inicio    = (window.totPaginaActual - 1) * window.totFilasPorPagina;
+    var fin       = Math.min(inicio + window.totFilasPorPagina, total);
+    var paginados = datos.slice(inicio, fin);
+
+    if (infoEl)  infoEl.textContent = 'Mostrando ' + (inicio + 1) + ' - ' + fin + ' de ' + total + ' trabajos';
+    if (indEl)   indEl.textContent = 'Página ' + window.totPaginaActual + ' de ' + totalPaginas;
+    if (prevBtn) prevBtn.disabled = (window.totPaginaActual <= 1);
+    if (nextBtn) nextBtn.disabled = (window.totPaginaActual >= totalPaginas);
+
     tbody.innerHTML = '';
-    datos.forEach(function(t) {
+    paginados.forEach(function(t) {
         var det = totParseDetalles(t);
+        var placaVal = t.placa || (det && det.placa) || '—';
+        var otVal = t.ot_id || t.id_ot || t.ticket_visita || '—';
         // Calcular horas de trabajo
         var tiempoHrs = '—';
         if (t.fecha_trabajo && t.fecha_salida) {
@@ -164,8 +222,8 @@ window.totRenderTabla = function() {
         if (totGetId(t) === window.totDetalleId) tr.classList.add('tot-row-active');
         tr.innerHTML =
             '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + totEsc(totGetId(t) || '—') + '</span></td>'
-            + '<td><strong>' + totEsc(t.ot_id || '—') + '</strong></td>'
-            + '<td><strong>' + totEsc(t.placa || '—') + '</strong></td>'
+            + '<td><strong>' + totEsc(otVal) + '</strong></td>'
+            + '<td><strong>' + totEsc(placaVal) + '</strong></td>'
             + '<td style="font-size:0.79rem;">' + totFmtDateTime(t.fecha_trabajo) + '</td>'
             + '<td style="max-width:200px;white-space:normal;font-size:0.81rem;">' + totEsc(t.trabajo_realizado || '—') + '</td>'
             + '<td>' + totEsc(det.personal || t.tecnico || '—') + '</td>'
@@ -770,4 +828,24 @@ window.totImportarExcel = function(event) {
         }
     };
     reader.readAsArrayBuffer(file);
+};
+
+// ── Limpiar Importación Masiva Anterior ───────────────────────────
+window.totLimpiarImportados = function() {
+    if (!confirm('⚠️ ¿Estás seguro de que deseas eliminar los trabajos importados anteriormente? Esto te permitirá volver a subir tu archivo Excel con las placas y datos completos.')) {
+        return;
+    }
+    fetch('/api/ot-trabajos/limpiar-importados', { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.ok) {
+                alert('🗑️ Se eliminaron ' + res.eliminados + ' trabajo(s) importado(s). Ahora puedes volver a importar tu Excel.');
+                window.totCargar();
+            } else {
+                alert('Error al limpiar: ' + (res.error || 'Error desconocido'));
+            }
+        })
+        .catch(function(err) {
+            alert('Error al intentar eliminar registros: ' + err.message);
+        });
 };
