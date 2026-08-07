@@ -612,7 +612,7 @@ window.initSSE = function() {
     // onerror: EventSource reconecta automáticamente, no se necesita ninguna acción
 };
 
-window.sincronizarPermisosSesion = function(autoReload) {
+window.sincronizarPermisosSesion = function(forceReloadIfChanged) {
     var guardadoToken = localStorage.getItem('fleet_token');
     if (!guardadoToken) return;
     fetch('/api/perfil/me', { headers: { 'Authorization': 'Bearer ' + guardadoToken } })
@@ -626,6 +626,7 @@ window.sincronizarPermisosSesion = function(autoReload) {
                 localStorage.setItem('fleet_permisos', newPermsStr);
                 if (data.rol) localStorage.setItem('fleet_rol', data.rol);
                 window._permCache = null;
+                try { permisosUsuario = data.permisos; } catch(e) {}
                 
                 if (data.avatar_url !== undefined) localStorage.setItem('fleet_avatar', data.avatar_url || '');
                 if (data.preferencias) {
@@ -637,7 +638,7 @@ window.sincronizarPermisosSesion = function(autoReload) {
                     }
                 }
                 
-                if (permsChanged && autoReload) {
+                if (permsChanged) {
                     var rutaActual = sessionStorage.getItem('fleet_rutaActual') || '';
                     if (rutaActual && typeof cargarModuloAislado === 'function') {
                         cargarModuloAislado(rutaActual);
