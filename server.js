@@ -1637,6 +1637,8 @@ app.post('/api/roles', (req, res) => {
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             broadcast('usuarios', 'crear_rol');
+            const actor = req.user ? req.user.correo : (req.body.creado_por || 'admin');
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'CREÓ ROL', `${nombre}`);
             res.json({ data: 'Éxito', id: result.insertId });
         }
     );
@@ -1651,6 +1653,8 @@ app.put('/api/roles/:id', (req, res) => {
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             broadcast('usuarios', 'actualizar_rol');
+            const actor = req.user ? req.user.correo : (req.body.editado_por || 'admin');
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'MODIFICÓ ROL', `${nombre} (ID: ${id})`);
             res.json({ data: 'Éxito' });
         }
     );
@@ -1664,6 +1668,8 @@ app.delete('/api/roles/:id', (req, res) => {
         db.query('DELETE FROM roles WHERE id=?', [id], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
             broadcast('usuarios', 'eliminar_rol');
+            const actor = req.user ? req.user.correo : 'admin';
+            if (typeof logAudit === 'function') logAudit(actor, 'roles', 'ELIMINÓ ROL', `ID Rol: ${id}`);
             res.json({ data: 'Éxito' });
         });
     });
@@ -1693,7 +1699,7 @@ app.post('/api/usuarios-v2', async (req, res) => {
         const newId = `USR-${maxId + 1}`;
         db.query(
             'INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            [newId, nombre || '', cargo || '', correo, hashedPassword, password || '', rol, estado || 'Activo', '{}', rolId],
+            [newId, nombre || '', cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 broadcast('usuarios', 'crear');
@@ -1716,7 +1722,7 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
     if (password && password.trim() !== '') {
         const hashedPassword = await bcrypt.hash(password.trim(), 10);
         fields.push('password=?'); values.push(hashedPassword);
-        fields.push('password_visible=?'); values.push(password.trim());
+        fields.push('password_visible=?'); values.push('');
     }
     values.push(id);
     db.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {

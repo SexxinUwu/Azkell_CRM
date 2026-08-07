@@ -12,8 +12,7 @@ module.exports = function globalRBAC(req, res, next) {
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
-    // TEMPORARY GLOBAL ADMIN BYPASS
-    return next();
+    // Desactivar bypass global: activar validación estricta de permisos RBAC
 
     // Datos de referencia globales ampliados: Listas desplegables permitidas para cualquier usuario autenticado
     const globalReferenceGets = [
@@ -66,7 +65,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/seguridad/unidades')) mod = 'unid';
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     
-    // ALMACEN
+    // ALMACEN & CONFIGURACION
+    else if (path.startsWith('/perfil')) return next();
     else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
     else if (path.startsWith('/almacen/salidas')) mod = ['sal_inv'];
@@ -76,9 +76,11 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/placas') || path.startsWith('/almacen/marcas-placas')) mod = ['placas'];
     else if (path.startsWith('/almacen/kardex')) mod = ['kardex'];
     else if (path.startsWith('/almacen/costos')) mod = ['costos_inv'];
-    else if (path.startsWith('/almacen/familias') || path.startsWith('/almacen/marcas') || path.startsWith('/almacen/sistemas')) mod = ['cfg_almacen', 'inv'];
+    else if (path.startsWith('/almacen/familias')) mod = ['cfg_familias', 'cfg_almacen', 'inv'];
+    else if (path.startsWith('/almacen/marcas')) mod = ['cfg_marcas', 'cfg_almacen', 'inv'];
+    else if (path.startsWith('/almacen/sistemas')) mod = ['cfg_sistemas', 'cfg_almacen', 'inv'];
+    else if (path.startsWith('/almacen/unidades')) mod = ['cfg_unidades', 'inv', 'ent_inv', 'sal_inv'];
     else if (path.startsWith('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen'];
-    else if (path.startsWith('/almacen/unidades')) mod = ['inv', 'ent_inv', 'sal_inv'];
     else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO
