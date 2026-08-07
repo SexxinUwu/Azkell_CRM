@@ -1271,12 +1271,27 @@ window.checkPerm = function(modKey, action) {
             'pers_mant': 'cfg_personal',
             'cfg_personal': 'pers_mant',
             'cond': 'conductores',
-            'conductores': 'cond'
+            'conductores': 'cond',
+            'cfg_mant': ['cfg_mant', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion'],
+            'cfg_frec': ['cfg_frec', 'cfg_mant'],
+            'cfg_kits': ['cfg_kits', 'cfg_mant'],
+            'cfg_tipos_mp': ['cfg_tipos_mp', 'cfg_mant'],
+            'cfg_metrica': ['cfg_metrica', 'cfg_mant'],
+            'cfg_situacion': ['cfg_situacion', 'cfg_mant'],
+            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa'],
+            'reportes_ot': ['reportes_ot', 'ot'],
+            'trabajos_ot': ['trabajos_ot', 'ot']
         };
 
         var m = p[modKey];
         if ((m === undefined || m === null) && keyAliases[modKey]) {
-            m = p[keyAliases[modKey]];
+            var targets = Array.isArray(keyAliases[modKey]) ? keyAliases[modKey] : [keyAliases[modKey]];
+            for (var tIdx = 0; tIdx < targets.length; tIdx++) {
+                if (p[targets[tIdx]] !== undefined && p[targets[tIdx]] !== null) {
+                    m = p[targets[tIdx]];
+                    break;
+                }
+            }
         }
         if (m === undefined || m === null) return false;
         if (typeof m === 'boolean') return action === 'l' ? m : false;
