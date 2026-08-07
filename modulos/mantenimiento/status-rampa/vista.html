@@ -335,10 +335,12 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.35);
+    background: rgba(15, 23, 42, 0.65) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
     z-index: 1059;
 }
-#srDrawerBackdrop.open { display: block; }
+#srDrawerBackdrop.open { display: block !important; }
 #moduloStatusRampa .sr-drawer,
 .sr-drawer-global {
     position: fixed;
