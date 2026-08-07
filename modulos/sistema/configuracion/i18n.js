@@ -24,6 +24,7 @@ window.FLEET_I18N = {
     'nav.status':         'Status Flota',
     'nav.directorio':     'Directorio',
     'nav.conductores':    'Personal',
+    'nav.clientes':       'Clientes',
 
     'nav.reportes_ot':       'Reportes OT',
     'nav.trabajos_ot':       'Historial de Trabajos',

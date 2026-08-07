@@ -3168,6 +3168,7 @@ const MENU_IDS = {
     'flota/documentos':            'nav-documentos-flota',
     'flota/ubicacion':             'nav-ubicacion',
     'directorio/conductores':      'nav-conductores',
+    'directorio/clientes':         'nav-clientes',
     'sistema/usuarios':            'nav-usuarios',
     'sistema/auditoria':           'nav-auditoria',
     'seguridad/unidades':          'nav-seg-unidades',
@@ -3175,6 +3176,8 @@ const MENU_IDS = {
 };
 
 const MENU_SECTION = {
+    'directorio/conductores':     'directorio',
+    'directorio/clientes':        'directorio',
     'mantenimiento/inspecciones': 'mantenimiento',
     'flota/placas':       'flota',
     'mantenimiento/fleetrun':     'mantenimiento',

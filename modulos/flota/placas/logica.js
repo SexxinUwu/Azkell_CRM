@@ -101,14 +101,12 @@ window.autocompletarRucSelect = function(clienteNombre, rucFieldId) {
 
 // ── Abre modal para agregar nuevo cliente ────────────────────────────────────
 window.abrirModalNuevoCliente = function(targetSelectId, targetRucId) {
-    const nc_nombre = document.getElementById('nc_nombre');
-    const nc_ruc    = document.getElementById('nc_ruc');
-    const nc_ts     = document.getElementById('nc_target_select');
-    const nc_tr     = document.getElementById('nc_target_ruc');
-    if (nc_nombre) nc_nombre.value = '';
-    if (nc_ruc)    nc_ruc.value    = '';
-    if (nc_ts)     nc_ts.value     = targetSelectId || '';
-    if (nc_tr)     nc_tr.value     = targetRucId    || '';
+    const fields = ['nc_nombre', 'nc_ruc', 'nc_telefono', 'nc_email', 'nc_direccion', 'nc_notas'];
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const nc_ts = document.getElementById('nc_target_select');
+    const nc_tr = document.getElementById('nc_target_ruc');
+    if (nc_ts) nc_ts.value = targetSelectId || '';
+    if (nc_tr) nc_tr.value = targetRucId    || '';
     const modalEl = document.getElementById('modalNuevoCliente');
     if (modalEl) new bootstrap.Modal(modalEl).show();
 };
@@ -124,7 +122,7 @@ window.consultarDocNuevoCliente = async function() {
 
     let tipo = num.length === 11 ? 'RUC' : (num.length === 8 ? 'DNI' : 'RUC');
     let btnIcon = document.getElementById('nc_btn_search_icon');
-    if (btnIcon) btnIcon.className = "spinner-border spinner-border-sm";
+    if (btnIcon) btnIcon.className = "spinner-border spinner-border-sm me-1";
 
     try {
         let res = await fetch('/api/proxy/documento?tipo=' + tipo + '&numero=' + num);
@@ -138,14 +136,19 @@ window.consultarDocNuevoCliente = async function() {
         console.warn('Consulta doc nuevo cliente:', err);
         if (typeof window.rotToast === 'function') window.rotToast("No se encontró RUC/DNI en SUNAT/RENIEC", "bg-warning");
     } finally {
-        if (btnIcon) btnIcon.className = "bi bi-search";
+        if (btnIcon) btnIcon.className = "bi bi-search me-1";
     }
 };
 
 // ── Guarda el nuevo cliente desde el modal y lo inyecta en el select ─────────
 window.guardarNuevoCliente = function() {
-    const nombre = (document.getElementById('nc_nombre')?.value || '').trim().toUpperCase();
-    const ruc    = (document.getElementById('nc_ruc')?.value    || '').trim();
+    const nombre    = (document.getElementById('nc_nombre')?.value    || '').trim().toUpperCase();
+    const ruc       = (document.getElementById('nc_ruc')?.value       || '').trim();
+    const telefono  = (document.getElementById('nc_telefono')?.value  || '').trim();
+    const email     = (document.getElementById('nc_email')?.value     || '').trim();
+    const direccion = (document.getElementById('nc_direccion')?.value || '').trim();
+    const notas     = (document.getElementById('nc_notas')?.value     || '').trim();
+
     if (!nombre) { alert('Ingresa la Razón Social del cliente.'); return; }
 
     const targetSelectId = document.getElementById('nc_target_select')?.value || '';
@@ -1439,7 +1442,7 @@ window.descargarQRPlaca = function() {
 window.placasFiltros = {}; // { colIndex: Set(val1, val2...) }
 window._columnaActivaFiltro = -1;
 
-const PLACAS_COLUMNAS = [
+var PLACAS_COLUMNAS = [
     "Placa", "Cliente", "RUC/DNI", "Marca", "Modelo", "Tipo", "Sub Tipo", "Color",
     "Nro Motor", "Nro Caja", "Nro Corona", "Nro VIN", "Configuración", "Año",
     "Combustible", "Carga Útil", "Peso Neto", "Peso Bruto", "Estado", "UTS",
@@ -1447,7 +1450,7 @@ const PLACAS_COLUMNAS = [
 ];
 
 // Ocultar las columnas que no tengan sentido filtrar o que sean IDs
-const COLUMNAS_IGNORADAS = [2]; // Ignoramos RUC/DNI para filtros
+var COLUMNAS_IGNORADAS = [2]; // Ignoramos RUC/DNI para filtros
 
 window.abrirFiltrosPlacas = function() {
     // Generar la lista principal
