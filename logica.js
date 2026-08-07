@@ -330,9 +330,12 @@ window.verificarSesionGuardada = function() {
     // DIRECTORIO
     var showDirectorioHub = _cHub('hub_directorio');
     var vCond = showDirectorioHub && _cL('cond');
+    var vClientes = showDirectorioHub && _cL('clientes');
     safe('nav-conductores',  vCond);
     safe('mbnav-conductores', vCond);
-    safe('wrap-directorio', vCond);
+    safe('nav-clientes',      vClientes);
+    safe('mbnav-clientes',    vClientes);
+    safe('wrap-directorio', vCond || vClientes);
 
     // SEGURIDAD
     var showSeguridadHub = _cHub('hub_seguridad');
