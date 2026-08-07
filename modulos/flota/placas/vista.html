@@ -115,7 +115,8 @@
 
 <!-- ── OFFCANVAS: DETALLE DE PLACA (Estilo Entradas: al centro, desde abajo) ── -->
 <style>
-#offcanvasDetallePlaca {
+#offcanvasDetallePlaca,
+#modalPlaca .modal-dialog {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
@@ -126,36 +127,56 @@
     max-width: 700px !important;
     height: 92vh !important;
     max-height: 92vh !important;
+    margin: 0 !important;
+    transition: transform .25s ease !important;
+    z-index: 1060 !important;
+}
+#offcanvasDetallePlaca {
     background: var(--surface) !important;
     border: 1px solid var(--border) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
     box-shadow: 0 -12px 48px rgba(0,0,0,.18) !important;
-    transition: transform .25s ease !important;
-    z-index: 1060 !important;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin: 0 !important;
+}
+#modalPlaca .modal-content {
+    height: 100% !important;
+    border-radius: 28px 28px 0 0 !important;
+    border: 1px solid var(--border) !important;
+    border-bottom: none !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,.18) !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#modalPlaca .modal-body {
+    flex: 1 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
 }
 #offcanvasDetallePlaca.show,
-#offcanvasDetallePlaca.open {
+#offcanvasDetallePlaca.open,
+#modalPlaca.show .modal-dialog {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
 }
 @media (max-width: 767.98px) {
-    #offcanvasDetallePlaca {
+    #offcanvasDetallePlaca,
+    #modalPlaca .modal-dialog {
         max-width: 100% !important;
         left: 0 !important;
         transform: translateY(100%) !important;
-        border-radius: 28px 28px 0 0 !important;
     }
     #offcanvasDetallePlaca.show,
-    #offcanvasDetallePlaca.open {
+    #offcanvasDetallePlaca.open,
+    #modalPlaca.show .modal-dialog {
         transform: translateY(0) !important;
     }
 }
-.offcanvas-backdrop.show {
+.offcanvas-backdrop.show,
+.modal-backdrop.show {
     opacity: 0.35 !important;
 }
 </style>
