@@ -288,14 +288,31 @@ window.rotRenderTabla = function(lista) {
 }
 
 window.rotAbrirDetalle = function(idOT) {
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-    if (!ot) return;
+    if (!idOT) return;
+    var ot = (window.rotData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    if (!ot) {
+        fetch('/api/ordenes-trabajo')
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                window.rotData = Array.isArray(data) ? data : [];
+                var found = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+                if (found) {
+                    window.rotAbrirDetalle(idOT);
+                } else if (typeof window.mostrarAlerta === 'function') {
+                    window.mostrarAlerta('No se encontró la Orden de Trabajo ' + idOT, 'warning');
+                }
+            })
+            .catch(function(err){ console.error('Error al cargar OT:', err); });
+        return;
+    }
     
     window.rotCurrentOt = ot;
 
     window.rotDetalleId  = idOT;
     window.rotOtActivaId = idOT;
-    window.rotRenderTabla(window.rotDatosFiltrados);
+    if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
+        window.rotRenderTabla(window.rotDatosFiltrados);
+    }
 
     var det    = rotDetalles(ot);
     var estado = ot.estado || 'Pendiente';

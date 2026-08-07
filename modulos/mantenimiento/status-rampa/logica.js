@@ -1288,146 +1288,54 @@ window.srEnviarOT = function() {
 
 // ── Detalle OT ───────────────────────────────────────────────────
 window.srAbrirDetalleOT = function(idOt) {
-    var ot = window.srOtData.find(function(o) { return (o.id_ot || o.ticket_entrada) === idOt; });
-    if (!ot) return;
-    var det = {};
-    try { det = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(ex) {}
+    if (!idOt) return;
 
-    var scroll = document.getElementById('sr-ot-det-scroll');
-    var footer = document.getElementById('sr-ot-det-footer');
-    if (!scroll || !footer) return;
+    var abrir = function() {
+        if (typeof window.rotAbrirDetalle === 'function') {
+            window.rotAbrirDetalle(idOt);
+        } else {
+            console.error('rotAbrirDetalle no disponible');
+        }
+    };
 
-    // Helpers locales (no dependen del módulo Reportes OT)
-    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    function fld(lbl, val) {
-        return '<div class="rot-field"><span class="rot-field-lbl">' + esc(lbl) + '</span><span class="rot-field-val">' + val + '</span></div>';
+    if (!document.getElementById('rot-drawer-detalle')) {
+        fetch('/modulos/mantenimiento/reportes-ot/vista.html')
+            .then(function(r) { return r.text(); })
+            .then(function(htmlStr) {
+                if (!document.getElementById('rot-drawer-detalle')) {
+                    var container = document.createElement('div');
+                    container.id = 'rot-shared-drawers-container';
+                    container.innerHTML = htmlStr;
+                    document.body.appendChild(container);
+                }
+                if (typeof window.rotAbrirDetalle === 'function') {
+                    abrir();
+                } else {
+                    var s = document.createElement('script');
+                    s.src = 'modulos/mantenimiento/reportes-ot/logica.js?v=' + Date.now();
+                    s.onload = function() {
+                        if (typeof window.rotCargarSituaciones === 'function') window.rotCargarSituaciones();
+                        abrir();
+                    };
+                    document.body.appendChild(s);
+                }
+            })
+            .catch(function(err) {
+                console.error('Error al cargar drawers compartidos de OT:', err);
+            });
+    } else {
+        if (typeof window.rotAbrirDetalle === 'function') {
+            abrir();
+        } else {
+            var s = document.createElement('script');
+            s.src = 'modulos/mantenimiento/reportes-ot/logica.js?v=' + Date.now();
+            s.onload = function() {
+                if (typeof window.rotCargarSituaciones === 'function') window.rotCargarSituaciones();
+                abrir();
+            };
+            document.body.appendChild(s);
+        }
     }
-    function badge(e) {
-        var map = { 'Pendiente':['rot-b-pendiente','Pendiente'], 'Aprobada':['rot-b-aprobada','Aprobada'], 'Cerrada':['rot-b-cerrada','Cerrada'], 'Anulado':['rot-b-anulado','Anulado'] };
-        var v = map[e] || ['rot-b-pendiente', e || '—'];
-        return '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>';
-    }
-    function fmtF(iso) {
-        if (!iso) return '—';
-        var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
-        var p = s.split('-'); if (p.length !== 3) return iso;
-        var m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-        return p[2] + ' ' + m[parseInt(p[1],10)-1] + ' ' + p[0].slice(2);
-    }
-    function cap(str) { return str.replace(/_/g,' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
-
-    var estado = ot.estado || 'Pendiente';
-    var html = '';
-
-    // ── ID Hero bar ──
-    html += '<div class="rot-id-bar">';
-    html += '<div><div class="rot-id-lbl">N° Orden de Trabajo</div><div class="rot-id-num">' + esc(idOt) + '</div></div>';
-    html += '<div style="text-align:right;">' + badge(estado)
-          + '<div style="font-size:0.72rem;color:var(--subtext);margin-top:4px;">' + fmtF(ot.fecha_ingreso) + '</div></div>';
-    html += '</div>';
-
-    // ── Datos Generales ──
-    html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Generales</div>';
-    html += fld('Placa',      esc(ot.placa || '—'));
-    html += fld('Rampa',      esc(det.rampa_origen || '—'));
-    html += fld('Tipo OT',    esc(det.tipo_ot || ot.tipo || '—'));
-    html += fld('Sub Tipo',   esc(det.sub_tipo || '—'));
-    html += fld('Supervisor', esc(det.supervisor || ot.supervisor || '—'));
-    html += fld('Situación',  esc(det.situacion_inicial || ot.situacion || '—'));
-    html += fld('Aprobación', badge(estado));
-    html += fld('Costo Total','<span id="sr-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total || 0).toFixed(2) + '</span>');
-    html += '</div>';
-
-    // ── Fechas y Tiempos ──
-    html += '<div class="rot-sec"><div class="rot-sec-hd">Fechas y Tiempos</div>';
-    html += fld('Fecha Creación', fmtF(ot.creado_en || ot.fecha_ingreso));
-    if (det.km) html += fld('Kilometraje', esc(Number(det.km).toLocaleString('es-PE') + ' km'));
-    html += '</div>';
-
-    // ── Motivo / Observaciones ──
-    if (det.motivo || ot.observaciones) {
-        html += '<div class="rot-sec"><div class="rot-sec-hd">Motivo / Observaciones</div>';
-        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);">' + esc(det.motivo || ot.observaciones || '') + '</div>';
-        html += '</div>';
-    }
-
-    // ── Datos Adicionales (campos extra del JSON no mapeados) ──
-    var CAMPOS_STD = ['tipo_ot','sub_tipo','motivo','obs_cierre','km','situacion_inicial','supervisor','tecnico','rampa_origen','aprobacion'];
-    var extras = Object.keys(det).filter(function(k) { return CAMPOS_STD.indexOf(k) === -1 && det[k]; });
-    if (extras.length) {
-        html += '<div class="rot-sec"><div class="rot-sec-hd">Datos Adicionales</div>';
-        extras.forEach(function(k) { html += fld(cap(k), esc(String(det[k]))); });
-        html += '</div>';
-    }
-
-    var esAprobada = (estado === 'Aprobada');
-
-    // ── Trabajos (placeholder — se rellena con fetch) ──
-    html += '<div class="rot-sec" id="sr-sec-trabajos">'
-          + '<div class="rot-sec-hd">Trabajos <span id="sr-tr-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
-          + '<div id="sr-tr-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
-
-    // ── Salidas de Almacén (placeholder — se rellena con fetch) ──
-    html += '<div class="rot-sec" id="sr-sec-materiales">'
-          + '<div class="rot-sec-hd">Salidas de Almacén <span id="sr-mat-count" style="background:rgba(88,101,242,0.12);color:var(--primary,#5865F2);border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span></div>'
-          + '<div id="sr-mat-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-          + '</div>';
-
-    // ── Backlog pendiente de la unidad ──
-    if (ot.placa) {
-        html += '<div class="rot-sec" id="sr-sec-backlog">'
-              + '<div class="rot-sec-hd" style="display:flex;align-items:center;justify-content:space-between;color:#d97706;">Mantenimientos Pendientes <span id="sr-bkg-count" style="background:rgba(217,119,6,0.12);color:#d97706;border-radius:9px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">…</span>'
-              + '<button class="btn btn-sm" style="padding:1px 8px;font-size:0.7rem;background:rgba(217,119,6,0.1);color:#d97706;font-weight:700;border-radius:12px;margin-left:auto;" onclick="event.stopPropagation();window.srAbrirAgregarBacklog(\'' + ot.placa + '\')"><i class="bi bi-plus"></i> Agregar</button></div>'
-              + '<div id="sr-bkg-body"><div style="padding:1rem;text-align:center;color:var(--subtext);font-size:0.82rem;"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div>'
-              + '</div>';
-    }
-
-    scroll.innerHTML = html;
-
-    var titulo = document.getElementById('sr-ot-det-titulo'); if (titulo) titulo.textContent = idOt;
-    var sub    = document.getElementById('sr-ot-det-placa');  if (sub)    sub.textContent    = ot.placa || '';
-
-    var ftHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="window.srEditarOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-pencil me-1"></i>Editar OT</button>'
-               + '<button class="btn btn-sm btn-outline-danger" onclick="window.srEliminarOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-trash me-1"></i>Eliminar</button>'
-               + '<div class="ms-auto d-flex gap-2">'
-               + '<button class="btn btn-sm btn-outline-secondary" onclick="window.srPDFOT(\'' + esc(idOt) + '\')">'
-               + '<i class="bi bi-filetype-pdf me-1"></i>PDF</button>'
-               + '</div>';
-    footer.innerHTML = ftHtml;
-
-    window.srOtActiva = idOt;
-    srAbrirDrawer('sr-drawer-ot-det');
-
-    // ── Fetch trabajos + materiales + backlog en paralelo ──
-    window.srOtTrabajosActivos   = [];
-    window.srOtMaterialesActivos = [];
-    Promise.all([
-        fetch('/api/ot-trabajos?id_ot='   + encodeURIComponent(idOt)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        fetch('/api/ot-materiales?ticket_ot=' + encodeURIComponent(idOt)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-        ot.placa ? fetch('/api/ot-backlog?placa=' + encodeURIComponent(ot.placa) + '&estado=Pendiente').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }) : Promise.resolve([])
-    ]).then(function(res) {
-        window.srOtTrabajosActivos   = Array.isArray(res[0]) ? res[0] : [];
-        window.srOtMaterialesActivos = Array.isArray(res[1]) ? res[1] : [];
-        var backlogItems             = Array.isArray(res[2]) ? res[2] : [];
-        srRenderSecTrabajos(idOt, esAprobada);
-        srRenderSecMateriales(idOt, esAprobada);
-        srRenderSecBacklog(backlogItems);
-        // Actualizar Costo Total dinámico (trabajos Aprobado + materiales Despachado)
-        var costoTr = window.srOtTrabajosActivos
-            .filter(function(t) { return t.estado === 'Aprobado'; })
-            .reduce(function(s, t) {
-                var d2 = {}; try { d2 = typeof t.detalles_json === 'string' ? JSON.parse(t.detalles_json) : (t.detalles_json || {}); } catch(e) {}
-                return s + parseFloat(d2.costo || 0);
-            }, 0);
-        var costoMat = window.srOtMaterialesActivos
-            .filter(function(m) { return m.estado === 'Despachado'; })
-            .reduce(function(s, m) { return s + parseFloat(m.total_pen || 0); }, 0);
-        var elCosto = document.getElementById('sr-ot-costo-total');
-        if (elCosto) elCosto.textContent = 'S/' + (costoTr + costoMat).toFixed(2);
-    });
 };
 
 window.srEliminarOT = function(idOt) {
