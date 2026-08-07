@@ -8,19 +8,40 @@ module.exports = (db, logAudit) => {
         if (!req.user || !req.user.correo) return res.status(401).json({ error: 'No autenticado' });
         
         db.query(
-            'SELECT nombre, correo, cargo, telefono, avatar_url, banner_url, firma_digital, preferencias_json FROM usuarios WHERE correo = ?',
+            `SELECT u.nombre, u.correo, u.cargo, u.telefono, u.avatar_url, u.banner_url, u.firma_digital, u.preferencias_json, u.rol, u.rol_id, u.permisos_json, r.nombre AS rol_nombre, r.permisos_json AS r_permisos_json, r.es_admin AS rol_es_admin
+             FROM usuarios u
+             LEFT JOIN roles r ON u.rol_id = r.id
+             WHERE u.correo = ?`,
             [req.user.correo],
             (err, results) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (results.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
                 
                 const user = results[0];
+                let permisosFinales = {};
+                let correoMin = (user.correo || '').trim().toLowerCase();
+                let rolLabel = user.rol_nombre || user.rol || 'Personalizado';
+                if (correoMin === 'admin@azkell.com') {
+                    permisosFinales = { admin: true };
+                    rolLabel = 'Fundador';
+                } else if (user.rol_id && user.rol_es_admin) {
+                    permisosFinales = { admin: true };
+                } else {
+                    try {
+                        let raw = user.r_permisos_json || user.permisos_json || '{}';
+                        permisosFinales = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                        if (typeof permisosFinales === 'string') permisosFinales = JSON.parse(permisosFinales);
+                    } catch (e) { permisosFinales = {}; }
+                }
+                user.rol = rolLabel;
+                user.permisos = permisosFinales;
                 try {
                     user.preferencias = user.preferencias_json ? JSON.parse(user.preferencias_json) : {};
                 } catch(e) {
                     user.preferencias = {};
                 }
                 delete user.preferencias_json;
+                delete user.r_permisos_json;
                 res.json(user);
             }
         );
