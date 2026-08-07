@@ -851,6 +851,8 @@ window.abrirDetalleInv = function(id) {
     var bd     = document.getElementById('inv-det-backdrop');
     if (!drawer) return;
 
+    var isService = item.tipo === 'Servicio' || (item.id || '').toUpperCase().startsWith('SERV');
+
     // Header
     var elCod  = document.getElementById('inv-det-codigo');
     var elNom  = document.getElementById('inv-det-nombre');
@@ -864,10 +866,17 @@ window.abrirDetalleInv = function(id) {
         window._invCerrarDetalle();
         setTimeout(function() { window.abrirModalInventario(id); }, 320);
     };
-    if (btnReg) btnReg.onclick = function() {
-        window._invCerrarDetalle();
-        setTimeout(function() { window.abrirRegularizarStock(id); }, 320);
-    };
+    if (btnReg) {
+        if (isService) {
+            btnReg.style.display = 'none';
+        } else {
+            btnReg.style.display = '';
+            btnReg.onclick = function() {
+                window._invCerrarDetalle();
+                setTimeout(function() { window.abrirRegularizarStock(id); }, 320);
+            };
+        }
+    }
 
     // Datos
     var hasImg  = item.imagen_url && item.imagen_url.length > 0;
@@ -918,21 +927,33 @@ window.abrirDetalleInv = function(id) {
         return 'S/ ' + costoSoles.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     })();
 
+    var topCardHtml = '';
+    if (!isService) {
+        topCardHtml =
+            '<div style="background:' + stockBg + ';border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid ' + stockColor + '20;">' +
+                '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:' + stockColor + ';margin-bottom:.4rem;">Stock Actual</div>' +
+                '<div style="font-size:2.4rem;font-weight:900;color:' + stockColor + ';line-height:1;">' +
+                    stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) +
+                    '<span style="font-size:.9rem;font-weight:700;margin-left:.4rem;opacity:.75;">' + _invEsc(item.unidad || '') + '</span>' +
+                '</div>' +
+                (stockMax > 0 ? '<div style="height:6px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:.65rem;">' +
+                    '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;"></div>' +
+                '</div>' +
+                '<div style="font-size:.65rem;font-weight:700;color:' + stockColor + ';opacity:.8;margin-top:.3rem;">' + pct + '% de capacidad</div>' : '') +
+            '</div>';
+    } else {
+        topCardHtml =
+            '<div style="background:#fffbeb;border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid #f59e0b30;">' +
+                '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#b45309;margin-bottom:.4rem;">Tarifario / Costo Referencial</div>' +
+                '<div style="font-size:1.8rem;font-weight:900;color:#b45309;line-height:1;">' +
+                    costoHtml +
+                '</div>' +
+            '</div>';
+    }
+
     body.innerHTML =
         imgHtml +
-
-        // Stock — bloque prominente
-        '<div style="background:' + stockBg + ';border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:1.1rem;border:1.5px solid ' + stockColor + '20;">' +
-            '<div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:' + stockColor + ';margin-bottom:.4rem;">Stock Actual</div>' +
-            '<div style="font-size:2.4rem;font-weight:900;color:' + stockColor + ';line-height:1;">' +
-                stock.toLocaleString('es-PE', {minimumFractionDigits: 2}) +
-                '<span style="font-size:.9rem;font-weight:700;margin-left:.4rem;opacity:.75;">' + _invEsc(item.unidad || '') + '</span>' +
-            '</div>' +
-            (stockMax > 0 ? '<div style="height:6px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:.65rem;">' +
-                '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:99px;"></div>' +
-            '</div>' +
-            '<div style="font-size:.65rem;font-weight:700;color:' + stockColor + ';opacity:.8;margin-top:.3rem;">' + pct + '% de capacidad</div>' : '') +
-        '</div>' +
+        topCardHtml +
 
         // Filas de datos
         '<div style="margin-bottom:.5rem;">' +
@@ -940,9 +961,9 @@ window.abrirDetalleInv = function(id) {
             row('Familia', item.familia) +
             row('Almacén', item.almacen) +
             row('Ubicación', item.ubicacion) +
-            row('Unidad', item.unidad) +
+            (!isService ? row('Unidad', item.unidad) : '') +
             row('Costo', costoHtml) +
-            row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) +
+            (!isService ? row('Stock Min / Max', stockMin + ' / ' + stockMax + (item.unidad ? ' ' + _invEsc(item.unidad) : '')) : '') +
             row('Estado', '<span style="background:' + (item.estado_art === 'Inactivo' ? '#fee2e2' : '#dcfce7') + ';color:' + (item.estado_art === 'Inactivo' ? '#dc2626' : '#16a34a') + ';font-size:.7rem;font-weight:800;padding:.2rem .65rem;border-radius:99px;">' + _invEsc(item.estado_art || 'Activo') + '</span>') +
             (function() {
                 if (!item.observaciones) return '';
