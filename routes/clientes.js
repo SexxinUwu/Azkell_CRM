@@ -156,31 +156,59 @@ module.exports = function (db, logAudit) {
         });
     });
 
-    // ── PUT /api/clientes/:id (Editar cliente) ───────────────────────────
+    // ── POST /api/clientes/sincronizar-todo (Vincular y homologar todas las placas con la tabla de clientes) ─
+    router.post('/sincronizar-todo', (req, res) => {
+        const sql = `
+        UPDATE placas p
+        JOIN clientes c ON (p.ruc_dni IS NOT NULL AND p.ruc_dni != '' AND p.ruc_dni = c.ruc_dni)
+                        OR (TRIM(LOWER(p.cliente)) = TRIM(LOWER(c.razon_social)))
+        SET p.cliente = c.razon_social, p.ruc_dni = c.ruc_dni;
+        `;
+        db.query(sql, (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, afectadas: result ? result.affectedRows : 0 });
+        });
+    });
+
+    // ── PUT /api/clientes/:id (Editar cliente y cascadear a todas sus placas en vivo) ──
     router.put('/:id', (req, res) => {
         const id = req.params.id;
         const { ruc_dni, razon_social, direccion, telefono, email, estado, notas } = req.body;
         if (!razon_social) return res.status(400).json({ error: 'La Razón Social es requerida' });
 
-        const sql = `
-        UPDATE clientes 
-        SET ruc_dni = ?, razon_social = ?, direccion = ?, telefono = ?, email = ?, estado = ?, notas = ?
-        WHERE id = ?;
-        `;
-        const values = [
-            (ruc_dni || '').trim(),
-            razon_social.trim().toUpperCase(),
-            (direccion || '').trim(),
-            (telefono || '').trim(),
-            (email || '').trim().toLowerCase(),
-            estado || 'Activo',
-            (notas || '').trim(),
-            id
-        ];
+        const newRuc = (ruc_dni || '').trim();
+        const newRazon = razon_social.trim().toUpperCase();
 
-        db.query(sql, values, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
+        // 1. Obtener la Razón Social y RUC anteriores del cliente
+        db.query('SELECT ruc_dni, razon_social FROM clientes WHERE id = ?', [id], (errOld, oldRows) => {
+            const oldRuc = oldRows && oldRows.length ? oldRows[0].ruc_dni : '';
+            const oldRazon = oldRows && oldRows.length ? oldRows[0].razon_social : '';
+
+            // 2. Actualizar la tabla clientes
+            const sqlUpdateClient = `
+            UPDATE clientes 
+            SET ruc_dni = ?, razon_social = ?, direccion = ?, telefono = ?, email = ?, estado = ?, notas = ?
+            WHERE id = ?;
+            `;
+            const values = [newRuc, newRazon, (direccion || '').trim(), (telefono || '').trim(), (email || '').trim().toLowerCase(), estado || 'Activo', (notas || '').trim(), id];
+
+            db.query(sqlUpdateClient, values, (errUp) => {
+                if (errUp) return res.status(500).json({ error: errUp.message });
+
+                // 3. Cascadear actualización a TODAS las placas vinculadas por RUC o Razón Social previa
+                const sqlCascadePlacas = `
+                UPDATE placas 
+                SET cliente = ?, ruc_dni = ?
+                WHERE (ruc_dni IS NOT NULL AND ruc_dni != '' AND ruc_dni = ?)
+                   OR (ruc_dni IS NOT NULL AND ruc_dni != '' AND ruc_dni = ?)
+                   OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)))
+                   OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)));
+                `;
+                db.query(sqlCascadePlacas, [newRazon, newRuc, newRuc, oldRuc, newRazon, oldRazon], (errPlacas, resPlacas) => {
+                    if (errPlacas) console.warn('Error en cascada de placas:', errPlacas.message);
+                    res.json({ ok: true, placasActualizadas: resPlacas ? resPlacas.affectedRows : 0 });
+                });
+            });
         });
     });
 
