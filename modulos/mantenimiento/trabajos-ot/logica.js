@@ -130,7 +130,7 @@ window.totRenderTabla = function() {
         var fA = a.fecha_trabajo ? new Date(a.fecha_trabajo).getTime() : 0;
         var fB = b.fecha_trabajo ? new Date(b.fecha_trabajo).getTime() : 0;
         if (fA !== fB) return fB - fA;
-        return (b.id || 0) - (a.id || 0);
+        return String(b.id_ot || '').localeCompare(String(a.id_ot || ''));
     });
 
     var f = totGetFiltros();
