@@ -353,9 +353,16 @@ window.guardarProveedor = function(event) {
             if (!r.ok) return r.json().catch(function(){ return {}; }).then(function(body) { throw new Error('HTTP '+r.status+(body.error ? ': '+body.error : '')); });
             return r.json();
         })
-        .then(function() {
+        .then(function(res) {
             window._provCerrarModal();
-            window.cargarProveedores();
+            if (typeof window.cargarProveedores === 'function') window.cargarProveedores();
+            if (typeof window._onProveedorCreado === 'function') {
+                var cb = window._onProveedorCreado;
+                window._onProveedorCreado = null;
+                var newId = (res && res.id) ? res.id : id;
+                var nombreProv = payload.razon_social || payload.nombre;
+                cb(newId, nombreProv, payload.numero_documento);
+            }
         })
         .catch(function(err) { alert('Error: '+err.message); });
 };
