@@ -680,29 +680,35 @@
     </div>
 </div>
 
-<!-- ── MODAL: NUEVO CLIENTE (auxiliar desde formularios de Placas) ── -->
-<div class="modal fade" id="modalNuevoCliente" tabindex="-1" style="z-index: 1060;">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-primary shadow-lg">
-            <div class="modal-header bg-primary text-white">
-                <h6 class="modal-title fw-bold"><i class="bi bi-building-add me-2"></i><span data-i18n="plates.modal.newclient">Nuevo Cliente</span></h6>
+<!-- ── MODAL: NUEVO CLIENTE (auxiliar con consulta SUNAT/RENIEC y Z-Index elevado) ── -->
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1" style="z-index: 1080 !important;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content shadow-lg" style="border: 2px solid #2563eb; border-radius: 20px; box-shadow: 0 25px 80px rgba(0,0,0,0.5) !important; background: var(--surface, #fff); overflow: hidden;">
+            <div class="modal-header text-white" style="background: #0f172a; padding: 14px 20px;">
+                <h6 class="modal-title fw-bold m-0"><i class="bi bi-building-add me-2 text-primary"></i><span data-i18n="plates.modal.newclient">Nuevo Cliente</span></h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small" data-i18n="plates.form.razon">Razón Social *</label>
-                    <input type="text" class="form-control form-control-sm text-uppercase" id="nc_nombre" placeholder="Ej: TRANSPORTES S.A.C.">
+                    <label class="form-label fw-bold small text-secondary" data-i18n="plates.form.ruc">RUC / DNI *</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm" id="nc_ruc" placeholder="Ingrese RUC o DNI" maxlength="11" onkeydown="if(event.key==='Enter'){event.preventDefault();window.consultarDocNuevoCliente();}" oninput="if(this.value.length===8||this.value.length===11) window.consultarDocNuevoCliente()">
+                        <button class="btn btn-primary btn-sm fw-bold" type="button" onclick="window.consultarDocNuevoCliente()" title="Buscar en SUNAT / RENIEC">
+                            <i id="nc_btn_search_icon" class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <div class="form-text" style="font-size:0.72rem;">Búsqueda automática en SUNAT / RENIEC</div>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label fw-bold small" data-i18n="plates.form.ruc">RUC / DNI *</label>
-                    <input type="number" class="form-control form-control-sm" id="nc_ruc" placeholder="20123456789">
+                    <label class="form-label fw-bold small text-secondary" data-i18n="plates.form.razon">Razón Social / Nombre *</label>
+                    <input type="text" class="form-control form-control-sm text-uppercase" id="nc_nombre" placeholder="Ej: TRANSPORTES S.A.C.">
                 </div>
                 <input type="hidden" id="nc_target_select">
                 <input type="hidden" id="nc_target_ruc">
             </div>
-            <div class="modal-footer p-2">
-                <button type="button" class="btn btn-sm btn-secondary w-100 mb-1" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-primary fw-bold w-100" onclick="guardarNuevoCliente()"><i class="bi bi-check2"></i> <span data-i18n="common.add">Agregar</span></button>
+            <div class="modal-footer p-3 border-top gap-2 bg-light">
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1 fw-bold" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary flex-grow-1 fw-bold" onclick="guardarNuevoCliente()"><i class="bi bi-check2 me-1"></i> <span data-i18n="common.add">Agregar Cliente</span></button>
             </div>
         </div>
     </div>
