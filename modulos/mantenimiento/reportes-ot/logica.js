@@ -584,15 +584,19 @@ window.rotAbrirDetalle = function(idOT) {
 
 // ── Cerrar drawer ─────────────────────────────────────────────────
 window.rotCerrarDetalle = function() {
-    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion'].forEach(function(id) {
+    ['rot-drawer-trabajo', 'rot-drawer-material', 'drawerInspeccion', 'rot-drawer-backlog', 'rot-drawer-editar-ot', 'rot-drawer-editar-fechas'].forEach(function(id) {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
     });
-    var back   = document.getElementById('rotDrawerBackdrop');
+    var back1  = document.getElementById('rotDrawerBackdrop');
+    var back2  = document.getElementById('srDrawerBackdrop');
     var drawer = document.getElementById('rot-drawer-detalle');
-    if (back)   back.classList.remove('open');
+    if (back1)  back1.classList.remove('open');
+    if (back2)  back2.classList.remove('open');
     if (drawer) drawer.classList.remove('open');
     window.rotDetalleId = null;
-    window.rotRenderTabla(window.rotDatosFiltrados);
+    if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
+        window.rotRenderTabla(window.rotDatosFiltrados);
+    }
 };
 
 // ── Modal de comentario (pausar / cerrar) ─────────────────────────
