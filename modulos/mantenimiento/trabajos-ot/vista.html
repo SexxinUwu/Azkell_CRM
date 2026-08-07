@@ -153,12 +153,36 @@
         </button>
     </div>
 
-    <!-- FILA 2: Exportar -->
-    <div class="tot-filters">
+    <!-- FILA 2: Importar / Exportar -->
+    <div class="tot-filters d-flex align-items-center justify-content-between">
         <div style="flex:1"></div>
-        <button class="btn btn-sm btn-success" onclick="window.totExportar()">
-            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Dropdown Importar -->
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-light border dropdown-toggle fw-bold text-info shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:10px; min-height:36px; padding:0.4rem 0.9rem;">
+                    <i class="bi bi-upload me-1 text-info"></i>Importar
+                </button>
+                <ul class="dropdown-menu shadow border-0 dropdown-menu-end" style="border-radius:14px; font-size:0.85rem; padding:6px; min-width:200px; z-index:1050;">
+                    <li>
+                        <button class="dropdown-item py-2 fw-bold text-dark d-flex align-items-center gap-2 rounded-2" type="button" onclick="window.totDescargarPlantilla()">
+                            <i class="bi bi-file-earmark-excel text-secondary fs-6"></i> 1. Descargar Plantilla
+                        </button>
+                    </li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                        <button class="dropdown-item py-2 fw-bold text-primary d-flex align-items-center gap-2 rounded-2" type="button" onclick="document.getElementById('tot-file-import').click()">
+                            <i class="bi bi-cloud-arrow-up text-primary fs-6"></i> 2. Subir Excel Lleno
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <input type="file" id="tot-file-import" accept=".xlsx, .xls, .csv" style="display:none" onchange="window.totImportarExcel(event)">
+
+            <!-- Botón Exportar -->
+            <button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.totExportar()" style="border-radius:10px; min-height:36px; padding:0.4rem 0.9rem;">
+                <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+            </button>
+        </div>
     </div>
 
     <!-- CONTENEDOR PRINCIPAL (tabla + detalle) -->

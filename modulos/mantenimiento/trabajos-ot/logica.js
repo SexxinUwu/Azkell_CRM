@@ -596,3 +596,178 @@ window.totExportar = function() {
     a.href = url; a.download = 'Trabajos_OT.csv'; a.click();
     URL.revokeObjectURL(url);
 };
+
+// ── Descargar Plantilla Excel ─────────────────────────────────────
+window.totDescargarPlantilla = function() {
+    if (typeof XLSX === 'undefined') {
+        alert('La librería XLSX no está disponible.');
+        return;
+    }
+    var wb = XLSX.utils.book_new();
+    var filas = [
+        ['N° OT', 'Placa', 'F/H Inicio', 'Trabajo Realizado', 'Personal', 'F/H Salida', 'Costo'],
+        ['OT-2026-0250', 'ATO970', '2026-07-31 12:30', 'CAMBIO DE ZAPATAS 2° Y 3° EJE', 'WILSON CHIQUIAN CASTILLO', '2026-07-31 15:00', '0.00'],
+        ['OT-2026-0252', 'CFC738', '2026-07-31 11:00', 'CAMBIO DE BATERIAS ORIGINAL', 'JUNIOR GUSTAVO CHIQUIAN CASTILLO', '2026-07-31 11:30', '0.00']
+    ];
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!cols'] = [{wch:15}, {wch:12}, {wch:18}, {wch:35}, {wch:32}, {wch:18}, {wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla_Trabajos');
+    XLSX.writeFile(wb, 'Plantilla_Importacion_Trabajos.xlsx');
+};
+
+function totParseFechaExcel(val) {
+    if (!val) return null;
+    var s = String(val).trim();
+    if (!s) return null;
+
+    if (!isNaN(s) && !s.includes('-') && !s.includes('/')) {
+        var num = parseFloat(s);
+        var date = new Date((num - (25567 + 2)) * 86400 * 1000);
+        if (!isNaN(date.getTime())) {
+            return date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0') + ' ' +
+                String(date.getHours()).padStart(2, '0') + ':' +
+                String(date.getMinutes()).padStart(2, '0') + ':' +
+                String(date.getSeconds()).padStart(2, '0');
+        }
+    }
+
+    var mSlash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (mSlash) {
+        var day = String(mSlash[1]).padStart(2, '0');
+        var month = String(mSlash[2]).padStart(2, '0');
+        var year = mSlash[3];
+        var hh = mSlash[4] ? String(mSlash[4]).padStart(2, '0') : '00';
+        var mm = mSlash[5] ? String(mSlash[5]).padStart(2, '0') : '00';
+        var ss = mSlash[6] ? String(mSlash[6]).padStart(2, '0') : '00';
+        return year + '-' + month + '-' + day + ' ' + hh + ':' + mm + ':' + ss;
+    }
+
+    var mDash = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (mDash) {
+        var year = mDash[1];
+        var month = String(mDash[2]).padStart(2, '0');
+        var day = String(mDash[3]).padStart(2, '0');
+        var hh = mDash[4] ? String(mDash[4]).padStart(2, '0') : '00';
+        var mm = mDash[5] ? String(mDash[5]).padStart(2, '0') : '00';
+        var ss = mDash[6] ? String(mDash[6]).padStart(2, '0') : '00';
+        return year + '-' + month + '-' + day + ' ' + hh + ':' + mm + ':' + ss;
+    }
+
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0') + ' ' +
+            String(d.getHours()).padStart(2, '0') + ':' +
+            String(d.getMinutes()).padStart(2, '0') + ':' +
+            String(d.getSeconds()).padStart(2, '0');
+    }
+
+    return s;
+}
+
+// ── Importar Excel Masivo ──────────────────────────────────────────
+window.totImportarExcel = function(event) {
+    var input = event.target;
+    var file = input.files && input.files[0];
+    if (!file) return;
+
+    if (typeof XLSX === 'undefined') {
+        alert('La librería SheetJS (XLSX) no está disponible.');
+        input.value = '';
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var firstSheet = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheet];
+            var jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (!jsonRows || !jsonRows.length) {
+                alert('El archivo Excel está vacío o no tiene el formato correcto.');
+                input.value = '';
+                return;
+            }
+
+            var itemsToImport = [];
+            for (var i = 0; i < jsonRows.length; i++) {
+                var row = jsonRows[i];
+                var keys = Object.keys(row);
+                var norm = {};
+                keys.forEach(function(k) {
+                    var cleanKey = k.toString().trim().toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    norm[cleanKey] = row[k];
+                });
+
+                var ot = norm['n° ot'] || norm['n ot'] || norm['no ot'] || norm['ot'] || norm['ticket_visita'] || norm['ticket'] || '';
+                var placa = norm['placa'] || norm['vehiculo'] || '';
+                var fechaInicio = norm['f/h inicio'] || norm['fh inicio'] || norm['fecha inicio'] || norm['fecha_trabajo'] || norm['fecha'] || '';
+                var trabajo = norm['trabajo realizado'] || norm['trabajo'] || norm['descripcion'] || '';
+                var personal = norm['personal'] || norm['tecnico'] || norm['trabajador'] || '';
+                var fechaSalida = norm['f/h salida'] || norm['fh salida'] || norm['fecha salida'] || norm['fecha_salida'] || '';
+                var costo = parseFloat(norm['costo'] || norm['monto'] || 0) || 0;
+
+                if (ot || trabajo || personal) {
+                    itemsToImport.push({
+                        ticket_visita: String(ot).trim(),
+                        placa: String(placa).trim(),
+                        fecha_trabajo: totParseFechaExcel(fechaInicio) || new Date().toISOString().slice(0, 19).replace('T', ' '),
+                        trabajo_realizado: String(trabajo).trim(),
+                        personal: String(personal).trim(),
+                        fecha_salida: totParseFechaExcel(fechaSalida),
+                        costo: costo,
+                        usuario: (window.usuarioLogueado || 'Importación Masiva')
+                    });
+                }
+            }
+
+            if (!itemsToImport.length) {
+                alert('No se encontraron registros válidos para importar en el Excel.');
+                input.value = '';
+                return;
+            }
+
+            if (!confirm('Se importarán ' + itemsToImport.length + ' trabajo(s). ¿Deseas continuar?')) {
+                input.value = '';
+                return;
+            }
+
+            fetch('/api/ot-trabajos/bulk-import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: itemsToImport, usuario: window.usuarioLogueado })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.ok) {
+                    if (typeof window.rotToast === 'function') {
+                        window.rotToast('Se importaron ' + res.creados + ' trabajo(s) exitosamente.', 'bg-success');
+                    } else {
+                        alert('✅ Se importaron ' + res.creados + ' trabajo(s) exitosamente.');
+                    }
+                    window.totCargar();
+                } else {
+                    alert('Error al importar: ' + (res.error || 'Error desconocido'));
+                }
+            })
+            .catch(function(err) {
+                alert('Error en la importación: ' + err.message);
+            })
+            .finally(function() {
+                input.value = '';
+            });
+
+        } catch (err) {
+            alert('Error leyendo el archivo Excel: ' + err.message);
+            input.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};

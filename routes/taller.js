@@ -342,10 +342,61 @@ router.post('/ot-trabajos', (req, res) => {
             [nuevoId, ticketEntrada || '', trabajo_realizado || '', personal, fecha_trabajo || null, fecha_salida || null, creado_por || '', detJson],
             (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
-                if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
+                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                res.json({ ok: true, id: result.insertId, id_ot: nuevoId, ticket_visita: ticketEntrada });
             }
         );
     });
+});
+
+router.post('/ot-trabajos/bulk-import', async (req, res) => {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'No se enviaron registros para importar.' });
+    }
+
+    const anio = new Date().getFullYear();
+    let creados = 0;
+    let errores = 0;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const ticketEntrada = item.ticket_visita || item.ot || item.id_ot || '';
+        const trabajoRealizado = item.trabajo_realizado || item.descripcion || '';
+        const fechaTrabajo = item.fecha_trabajo || null;
+        const fechaSalida = item.fecha_salida || null;
+        const creadoPor = item.creado_por || (req.body && req.body.usuario) || 'Importación Masiva';
+        
+        let personal = item.personal || item.tecnico || '';
+        let costo = parseFloat(item.costo || 0) || 0;
+        let detObj = item.detalles_json ? (typeof item.detalles_json === 'object' ? item.detalles_json : JSON.parse(item.detalles_json)) : { personal, costo };
+        if (!detObj.personal) detObj.personal = personal;
+        if (detObj.costo == null) detObj.costo = costo;
+
+        const detJson = JSON.stringify(detObj);
+
+        try {
+            await new Promise((resolve, reject) => {
+                generarId('trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
+                    db.query(
+                        `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
+                         VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
+                        [nuevoId, ticketEntrada, trabajoRealizado, personal, fechaTrabajo, fechaSalida, creadoPor, detJson],
+                        (err, result) => {
+                            if (err) reject(err);
+                            else resolve(result);
+                        }
+                    );
+                });
+            });
+            creados++;
+        } catch (e) {
+            console.error('Error insertando trabajo masivo:', e);
+            errores++;
+        }
+    }
+
+    res.json({ ok: true, creados, errores, total: items.length });
 });
 
 router.put('/ot-trabajos/:id', (req, res) => {
