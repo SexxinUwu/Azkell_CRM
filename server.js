@@ -2398,7 +2398,7 @@ app.put('/api/integraciones', (req, res) => {
 // ============================================================
 // 🚀 EL PUENTE DE LECTURA A MYSQL (Legacy)
 // Módulo Directorio de Clientes (Fase 1 - ERP)
-app.use('/api/clientes', require('./routes/clientes'));
+app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);
