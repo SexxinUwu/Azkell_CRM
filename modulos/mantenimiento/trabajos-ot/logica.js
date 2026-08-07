@@ -764,13 +764,14 @@ window.totImportarExcel = function(event) {
                     norm[cleanKey] = row[k];
                 });
 
-                var ot = norm['n° ot'] || norm['n ot'] || norm['no ot'] || norm['ot'] || norm['ticket_visita'] || norm['ticket'] || '';
-                var placa = norm['placa'] || norm['vehiculo'] || '';
-                var fechaInicio = norm['f/h inicio'] || norm['fh inicio'] || norm['fecha inicio'] || norm['fecha_trabajo'] || norm['fecha'] || '';
-                var trabajo = norm['trabajo realizado'] || norm['trabajo'] || norm['descripcion'] || '';
-                var personal = norm['personal'] || norm['tecnico'] || norm['trabajador'] || '';
-                var fechaSalida = norm['f/h salida'] || norm['fh salida'] || norm['fecha salida'] || norm['fecha_salida'] || '';
-                var costo = parseFloat(norm['costo'] || norm['monto'] || 0) || 0;
+                // Encabezados exactos de la plantilla descargable
+                var ot          = norm['n° ot'] || norm['n ot'] || norm['no ot'] || norm['ot'] || '';
+                var placa       = norm['placa'] || '';
+                var fechaInicio = norm['f/h inicio'] || norm['fh inicio'] || norm['fecha inicio'] || '';
+                var trabajo     = norm['trabajo realizado'] || norm['trabajo'] || '';
+                var personal    = norm['personal'] || '';
+                var fechaSalida = norm['f/h salida'] || norm['fh salida'] || norm['fecha salida'] || '';
+                var costo       = parseFloat(norm['costo'] || 0) || 0;
 
                 if (ot || trabajo || personal) {
                     itemsToImport.push({
