@@ -164,8 +164,20 @@ window.consultarDatosPlaca = async function(inputId) {
 
     try {
         let res = await fetch('/api/proxy/placa?numero=' + num);
-        if (!res.ok) throw new Error("No se encontraron datos para esta placa");
+        if (!res.ok) {
+            if (typeof window.rotToast === 'function') window.rotToast("Placa no encontrada en BD previa. Ingrese los datos.", "bg-warning");
+            return;
+        }
         let d = await res.json();
+
+        if (d.placa) {
+            placaEl.value = d.placa;
+        }
+
+        if (d.encontrado === false) {
+            if (typeof window.rotToast === 'function') window.rotToast("Placa formateada como " + (d.placa || num) + ". Lista para registrar.", "bg-info");
+            return;
+        }
 
         // 1. Datos Generales
         if (d.cliente) {

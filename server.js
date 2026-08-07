@@ -180,19 +180,48 @@ app.get('/api/proxy/documento', async (req, res) => {
 });
 
 app.get('/api/proxy/placa', async (req, res) => {
-    let numero = (req.query.numero || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let rawNum = (req.query.numero || '').trim().toUpperCase();
+    let numero = rawNum.replace(/[^A-Z0-9]/g, '');
     if (!numero) return res.status(400).json({ error: "Número de placa requerido" });
 
-    try {
-        let fetchCall = global.fetch || require('node-fetch');
-        let url = 'https://api.apis.net.pe/v1/vehiculo?numero=' + numero;
-        let response = await fetchCall(url);
-        if (response.ok) {
-            let data = await response.json();
-            return res.json(data);
-        }
-    } catch(err) {
-        console.warn('API vehicular proxy error:', err.message);
+    let placaFormatted = numero.length === 6 ? (numero.substring(0, 3) + '-' + numero.substring(3)) : rawNum;
+    let fetchCall = global.fetch || require('node-fetch');
+
+    // Proveedores de consulta vehicular en Perú (SUNARP / MTC / SOAT)
+    let endpoints = [
+        'https://api.apis.net.pe/v1/soat?numero=' + numero,
+        'https://api.apis.net.pe/v2/sunarp/vehiculo?placa=' + numero,
+        'https://apiperu.dev/api/soat?placa=' + numero,
+        'https://api.perudevs.com/api/v1/vehiculo/soat?numero=' + numero
+    ];
+
+    for (let url of endpoints) {
+        try {
+            let response = await fetchCall(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' } }).catch(() => null);
+            if (response && response.ok) {
+                let data = await response.json();
+                let v = data.data || data;
+                if (v && (v.marca || v.modelo || v.vin || v.serie || v.propietario || v.nombre_propietario)) {
+                    return res.json({
+                        placa: placaFormatted,
+                        marca: (v.marca || '').toUpperCase(),
+                        modelo: (v.modelo || '').toUpperCase(),
+                        nro_motor: (v.motor || v.nro_motor || '').toUpperCase(),
+                        nro_vin: (v.vin || v.serie || v.nro_serie || '').toUpperCase(),
+                        tipo: (v.tipo || v.clase || v.categoria || 'CAMION').toUpperCase(),
+                        sub_tipo: (v.sub_tipo || v.subtipo || '').toUpperCase(),
+                        color: (v.color || '').toUpperCase(),
+                        combustible: (v.combustible || 'DIESEL').toUpperCase(),
+                        propietario: (v.propietario || v.nombre_propietario || v.razon_social || '').toUpperCase(),
+                        ruc_dni: v.ruc || v.dni || v.ruc_propietario || '',
+                        anio: v.anio || v.anio_fabricacion || v.modelo_anio || '',
+                        carga_util: v.carga_util || '',
+                        peso_neto: v.peso_neto || '',
+                        peso_bruto: v.peso_bruto || ''
+                    });
+                }
+            }
+        } catch(e) {}
     }
 
     db.query("SELECT * FROM placas WHERE UPPER(REPLACE(placa, '-', '')) = ? LIMIT 1", [numero], (err, rows) => {
@@ -219,7 +248,8 @@ app.get('/api/proxy/placa', async (req, res) => {
                 peso_bruto: p.peso_bruto
             });
         }
-        res.status(404).json({ error: "Placa no encontrada" });
+
+        return res.status(404).json({ error: "No se encontraron datos vehiculares en SUNARP/MTC para la placa " + placaFormatted });
     });
 });
 
