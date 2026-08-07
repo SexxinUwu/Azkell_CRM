@@ -1644,6 +1644,10 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
         }
     };
 
+    document.querySelectorAll('#prov-injected-container, body > #mod-proveedores').forEach(function(el) {
+        el.remove();
+    });
+
     if (document.getElementById('modal-proveedor')) {
         openForm();
     } else {
@@ -1651,10 +1655,21 @@ window.asegurarModalProveedorYAbrir = function(rucTyped) {
             .then(function(r) { return r.text(); })
             .then(function(htmlText) {
                 if (!document.getElementById('modal-proveedor')) {
-                    var containerDiv = document.createElement('div');
-                    containerDiv.id = 'prov-injected-container';
-                    containerDiv.innerHTML = htmlText;
-                    document.body.appendChild(containerDiv);
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = htmlText;
+                    
+                    var styleEl = tempDiv.querySelector('style');
+                    if (styleEl) {
+                        document.head.appendChild(styleEl.cloneNode(true));
+                    }
+                    var backdropEl = tempDiv.querySelector('#prov-backdrop');
+                    if (backdropEl && !document.getElementById('prov-backdrop')) {
+                        document.body.appendChild(backdropEl.cloneNode(true));
+                    }
+                    var modalEl = tempDiv.querySelector('#modal-proveedor');
+                    if (modalEl && !document.getElementById('modal-proveedor')) {
+                        document.body.appendChild(modalEl.cloneNode(true));
+                    }
                 }
 
                 if (typeof window.abrirModalProveedor === 'function') {
