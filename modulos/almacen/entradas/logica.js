@@ -563,9 +563,13 @@ window.guardarEntrada = function() {
       }
       
       if (!fecha)  { alert('Falta la fecha.'); return; }
-    if (!provId) { alert('Selecciona un proveedor.'); return; }
-    if (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; })) {
-        alert('El proveedor ingresado no existe en la lista. Por favor, regístrelo primero.');
+    if (!provId || (window._entProvItems && !window._entProvItems.find(function(p) { return p.value === provId; }))) {
+        var typedProv = provNombre || window._cbGetText('ent-f-proveedor');
+        if (typedProv) {
+            window._entConfirmarNuevoProveedor(typedProv);
+        } else {
+            alert('Por favor selecciona o ingresa un proveedor.');
+        }
         return;
     }
 
@@ -1549,4 +1553,121 @@ window._entSyncServiceCost = function(idx, val) {
     if (vuEl) vuEl.value = vu.toFixed(4);
     if (igvEl) igvEl.value = (pu - vu).toFixed(2);
     window._entCalcTotales();
+};
+
+window._entConfirmarNuevoProveedor = function(typedText) {
+    if (!typedText) return;
+    var cleanRuc = typedText.replace(/\D/g, '');
+    var rucToPass = cleanRuc.length >= 8 ? cleanRuc : typedText.trim();
+    
+    var modalId = 'entModalConfirmarProveedor';
+    var el = document.getElementById(modalId);
+    if (!el) {
+        var div = document.createElement('div');
+        div.id = modalId;
+        div.className = 'modal fade';
+        div.tabIndex = -1;
+        div.style.zIndex = '1065';
+        div.innerHTML = 
+            '<div class="modal-dialog modal-dialog-centered" style="max-width:440px;">' +
+            '<div class="modal-content border-0 shadow-lg" style="border-radius:16px; overflow:hidden;">' +
+            '<div class="modal-header border-0 bg-light p-3">' +
+            '<h5 class="modal-title fs-6 fw-bold text-dark d-flex align-items-center gap-2">' +
+            '<i class="bi bi-building-add text-primary fs-5"></i> Registrar Nuevo Proveedor' +
+            '</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+            '</div>' +
+            '<div class="modal-body p-4 text-center">' +
+            '<div class="mb-3"><span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2 fs-6" style="border-radius:12px;">' + _entEsc(rucToPass) + '</span></div>' +
+            '<p class="mb-1 text-secondary font-medium">El RUC / Proveedor no se encuentra registrado en el catálogo.</p>' +
+            '<p class="fw-bold text-dark mb-0">¿Deseas registrar este nuevo proveedor ahora?</p>' +
+            '</div>' +
+            '<div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2">' +
+            '<button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal" style="border-radius:10px;">No</button>' +
+            '<button type="button" id="btnConfirmRegProvYes" class="btn btn-primary fw-bold px-4" style="border-radius:10px;">Sí, Registrar</button>' +
+            '</div>' +
+            '</div></div>';
+        document.body.appendChild(div);
+        el = div;
+    } else {
+        var badge = el.querySelector('.badge');
+        if (badge) badge.textContent = rucToPass;
+    }
+    
+    var btnYes = el.querySelector('#btnConfirmRegProvYes');
+    if (btnYes) {
+        btnYes.onclick = function() {
+            var bsModal = bootstrap.Modal.getInstance(el);
+            if (bsModal) bsModal.hide();
+            window.asegurarModalProveedorYAbrir(rucToPass);
+        };
+    }
+    
+    var bsM = bootstrap.Modal.getOrCreateInstance(el);
+    bsM.show();
+};
+
+window.asegurarModalProveedorYAbrir = function(rucTyped) {
+    var cleanRuc = (rucTyped || '').replace(/\D/g, '');
+    var docNum = cleanRuc.length >= 8 ? cleanRuc : (rucTyped || '').trim();
+
+    var openForm = function() {
+        if (typeof window.abrirModalProveedor === 'function') {
+            window._onProveedorCreado = function(newId, provNombre, provRuc) {
+                if (typeof window._entCargarProveedores === 'function') {
+                    window._entCargarProveedores();
+                }
+                setTimeout(function() {
+                    var displayTxt = provNombre + (provRuc ? ' (' + provRuc + ')' : '');
+                    if (typeof window._cbSet === 'function') {
+                        window._cbSet('ent-f-proveedor', newId, displayTxt);
+                    }
+                    if (typeof window.rotToast === 'function') {
+                        window.rotToast('Proveedor "' + provNombre + '" registrado y seleccionado.', 'bg-success');
+                    }
+                }, 300);
+            };
+
+            window.abrirModalProveedor();
+
+            setTimeout(function() {
+                var docEl = document.getElementById('prov-f-num-doc');
+                var tipoEl = document.getElementById('prov-f-tipo-doc');
+                if (tipoEl && docNum.length >= 8) tipoEl.value = 'RUC';
+                if (docEl && docNum) {
+                    docEl.value = docNum;
+                    if (typeof window.consultarDocProveedor === 'function') {
+                        window.consultarDocProveedor();
+                    }
+                }
+            }, 150);
+        }
+    };
+
+    if (document.getElementById('modal-proveedor')) {
+        openForm();
+    } else {
+        fetch('/modulos/almacen/proveedores/vista.html')
+            .then(function(r) { return r.text(); })
+            .then(function(htmlText) {
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlText;
+                var modalEl = tempDiv.querySelector('#modal-proveedor');
+                var backdropEl = tempDiv.querySelector('#prov-backdrop');
+                if (modalEl && !document.getElementById('modal-proveedor')) document.body.appendChild(modalEl);
+                if (backdropEl && !document.getElementById('prov-backdrop')) document.body.appendChild(backdropEl);
+
+                if (typeof window.abrirModalProveedor === 'function') {
+                    openForm();
+                } else {
+                    var script = document.createElement('script');
+                    script.src = '/modulos/almacen/proveedores/logica.js?v=' + Date.now();
+                    script.onload = openForm;
+                    document.body.appendChild(script);
+                }
+            })
+            .catch(function(err) {
+                alert('No se pudo cargar el formulario de Proveedores: ' + err.message);
+            });
+    }
 };

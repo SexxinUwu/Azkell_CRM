@@ -1928,21 +1928,42 @@ window._cbOnSelect = function(id, fn) {
 };
 
 window._cbFiltrar = function(id) {
-    var q  = ((document.getElementById(id + '-txt') || {}).value || '').toLowerCase().trim();
+    var rawText = ((document.getElementById(id + '-txt') || {}).value || '').trim();
+    var q  = rawText.toLowerCase();
     var dd = document.getElementById(id + '-dd');
     if (!dd) return;
     var lista = (window._cbData[id] || []).filter(function(it) {
         return !q || it.label.toLowerCase().includes(q);
     });
-    if (!lista.length) { dd.style.display = 'none'; return; }
+    
+    if (!lista.length) {
+        if (id === 'ent-f-proveedor' && q) {
+            dd.style.display = 'block';
+            dd.innerHTML = '<div class="p-3 text-center text-muted small" style="background:#f8fafc;">' +
+                '<div class="mb-1 fw-bold text-dark"><i class="bi bi-search me-1"></i>No se encontró "' + _escCbH(rawText) + '"</div>' +
+                '<button type="button" class="btn btn-sm btn-primary fw-bold mt-1 px-3" style="border-radius:8px;" onmousedown="window._entConfirmarNuevoProveedor(\'' + _escCbA(rawText) + '\')">' +
+                '<i class="bi bi-building-add me-1"></i>Registrar Nuevo Proveedor' +
+                '</button></div>';
+            return;
+        }
+        dd.style.display = 'none';
+        return;
+    }
+    
     dd.style.display = 'block';
-    dd.innerHTML = lista.map(function(it) {
+    var htmlOpts = lista.map(function(it) {
         var vs = _escCbA(it.value), ls = _escCbA(it.label);
         return '<div class="cb-opt" data-cb="' + id + '" data-v="' + vs + '" data-l="' + ls + '"' +
             ' onmouseover="this.style.background=\'var(--hover,#e8eeff)\'"' +
             ' onmouseout="this.style.background=\'\'"' +
             ' onmousedown="window._cbPick(this)">' + _escCbH(it.label) + '</div>';
     }).join('');
+
+    if (id === 'ent-f-proveedor' && q) {
+        htmlOpts += '<div class="cb-opt text-primary fw-bold border-top mt-1 pt-2" style="background:#eff6ff;" onmousedown="window._entConfirmarNuevoProveedor(\'' + _escCbA(rawText) + '\')">' +
+            '<i class="bi bi-plus-circle-fill me-1"></i>+ Registrar nuevo proveedor "' + _escCbH(rawText) + '"</div>';
+    }
+    dd.innerHTML = htmlOpts;
 };
 
 window._cbPick = function(el) {
