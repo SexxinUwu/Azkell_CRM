@@ -95,13 +95,13 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
-    else if (path.startsWith('/fleetrun')) mod = ['fleet'];
-    else if (path.startsWith('/vehiculos-flota')) mod = ['fleet', 'placas', 'status'];
+    else if (path.startsWith('/fleetrun') || path.startsWith('/script/obtenerDatosFleetrun')) mod = ['fleet', 'fleetrun'];
+    else if (path.startsWith('/vehiculos-flota')) mod = ['fleet', 'fleetrun', 'placas', 'status'];
     else if (path.startsWith('/taller-rampas')) mod = ['status_rampa', 'ot', 'trabajos_ot'];
     else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
     
     // Legacy /api/script endpoints that use req.body.coleccion
-    else if (path.startsWith('/script/guardarStatusFlota') || path.startsWith('/script/obtenerDatosStatusFlota')) mod = ['status_rampa', 'fleet', 'ot', 'status'];
+    else if (path.startsWith('/script/guardarStatusFlota') || path.startsWith('/script/obtenerDatosStatusFlota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
     else if (path.startsWith('/script/guardarInspeccion') || path.startsWith('/script/obtenerDatosInspecciones')) mod = ['insp'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
