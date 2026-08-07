@@ -273,24 +273,42 @@
 /* ── Drawer lateral de detalle ────────────────────────────────── */
 #rotDrawerBackdrop {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.35); z-index: 1059;
+    background: rgba(0,0,0,.45); z-index: 1059;
+    backdrop-filter: blur(2px);
 }
 #rotDrawerBackdrop.open { display: block; }
 .rot-drawer {
-    position: fixed; top: 0; bottom: 0; right: -650px; left: auto; margin: 0;
-    width: 540px; max-width: 95vw; height: 100vh;
-    border-radius: 0;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 30px rgba(0,0,0,.18);
-    transition: right .28s ease;
-    z-index: 1060; display: flex; flex-direction: column;
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 680px !important;
+    max-width: 92vw !important;
+    height: 88vh !important;
+    max-height: 88vh !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.25s ease !important;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
     visibility: hidden;
+    opacity: 0;
+    margin: 0 !important;
 }
-.rot-drawer.open { right: 0; visibility: visible; }
+.rot-drawer.open {
+    transform: translate(-50%, -50%) scale(1) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
 .rot-drawer-hd {
     display: flex; align-items: center;
     justify-content: space-between;
-    padding: 0 1.25rem; height: 48px;
+    padding: 0 1.25rem; height: 50px;
     border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .rot-drawer-title { font-size: .95rem; font-weight: 800; color: var(--text); }
@@ -320,34 +338,45 @@
 
 /* Sub-drawers */
 .rot-sub-drawer {
-    position: fixed; top: 0; bottom: 0; right: -650px; left: auto; margin: 0;
-    width: 540px; max-width: 95vw; height: 100vh;
-    border-radius: 0;
-    background: var(--surface); border-left: 1px solid var(--border);
-    box-shadow: -8px 0 35px rgba(0,0,0,.25);
-    transition: right .25s ease;
-    z-index: 1062; display: flex; flex-direction: column;
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 680px !important;
+    max-width: 92vw !important;
+    height: 88vh !important;
+    max-height: 88vh !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.3) !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.25s ease !important;
+    z-index: 1065 !important;
+    display: flex;
+    flex-direction: column;
     visibility: hidden;
+    opacity: 0;
+    margin: 0 !important;
 }
-.rot-sub-drawer.open { right: 0; visibility: visible; }
+.rot-sub-drawer.open {
+    transform: translate(-50%, -50%) scale(1) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
 
 
 /* ── Responsive móvil ─────────────────────────────────────────── */
 @media (max-width: 767px) {
     .rot-drawer,
     .rot-sub-drawer {
-        top: auto !important; bottom: -100vh !important; right: 0 !important;
-        width: 100vw !important; height: 92vh !important;
-        max-width: none !important;
-        border-radius: 22px 22px 0 0 !important;
-        border-left: none !important;
-        transition: bottom .35s cubic-bezier(.4,0,.2,1) !important;
-        box-shadow: 0 -12px 48px rgba(0,0,0,.2) !important;
-        visibility: visible !important;
-    }
-    .rot-drawer.open,
-    .rot-sub-drawer.open {
-        bottom: 0 !important; right: 0 !important;
+        top: 50% !important;
+        left: 50% !important;
+        width: 95vw !important;
+        height: 90vh !important;
+        max-height: 90vh !important;
+        border-radius: 18px !important;
     }
 }
 </style>
