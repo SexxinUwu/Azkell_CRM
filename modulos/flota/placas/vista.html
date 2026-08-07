@@ -116,7 +116,14 @@
 <!-- ── OFFCANVAS: DETALLE DE PLACA (Estilo Entradas: al centro, desde abajo) ── -->
 <style>
 #offcanvasDetallePlaca,
-#modalPlaca .modal-dialog {
+#modalPlaca.modal,
+#modalEditarPlaca.modal {
+    padding: 0 !important;
+}
+
+#offcanvasDetallePlaca,
+#modalPlaca .modal-dialog,
+#modalEditarPlaca .modal-dialog {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
@@ -141,8 +148,10 @@
     flex-direction: column;
     overflow: hidden;
 }
-#modalPlaca .modal-content {
+#modalPlaca .modal-content,
+#modalEditarPlaca .modal-content {
     height: 100% !important;
+    max-height: 92vh !important;
     border-radius: 28px 28px 0 0 !important;
     border: 1px solid var(--border) !important;
     border-bottom: none !important;
@@ -151,27 +160,39 @@
     flex-direction: column;
     overflow: hidden;
 }
-#modalPlaca .modal-body {
+#modalPlaca form#formPlaca,
+#modalEditarPlaca form#formEditarPlaca {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+#modalPlaca .modal-body,
+#modalEditarPlaca .modal-body {
     flex: 1 !important;
     max-height: none !important;
     overflow-y: auto !important;
 }
 #offcanvasDetallePlaca.show,
 #offcanvasDetallePlaca.open,
-#modalPlaca.show .modal-dialog {
+#modalPlaca.show .modal-dialog,
+#modalEditarPlaca.show .modal-dialog {
     transform: translateX(-50%) translateY(0) !important;
     visibility: visible !important;
 }
 @media (max-width: 767.98px) {
     #offcanvasDetallePlaca,
-    #modalPlaca .modal-dialog {
+    #modalPlaca .modal-dialog,
+    #modalEditarPlaca .modal-dialog {
         max-width: 100% !important;
         left: 0 !important;
         transform: translateY(100%) !important;
     }
     #offcanvasDetallePlaca.show,
     #offcanvasDetallePlaca.open,
-    #modalPlaca.show .modal-dialog {
+    #modalPlaca.show .modal-dialog,
+    #modalEditarPlaca.show .modal-dialog {
         transform: translateY(0) !important;
     }
 }
