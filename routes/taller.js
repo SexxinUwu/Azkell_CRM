@@ -329,7 +329,7 @@ router.get('/ot-trabajos', (req, res) => {
         sql += ' WHERE (t.ticket_visita = ? OR t.id_ot = ?)'; 
         params.push(id_ot, id_ot); 
     }
-    sql += ' ORDER BY COALESCE(t.fecha_trabajo, t.fecha_creacion, t.id) DESC';
+    sql += ' ORDER BY COALESCE(t.fecha_trabajo, t.fecha_creacion) DESC, t.id_ot DESC';
     db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
