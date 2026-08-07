@@ -281,7 +281,8 @@ function cargarDatosVehiculos() {
         }
     }).catch(e => {
         console.error(e);
-        document.getElementById('vehicle-list').innerHTML = '<div class="text-center" style="margin-top:2rem;color:#ef4444;">Error al cargar</div>';
+        var vl = document.getElementById('vehicle-list');
+        if (vl) vl.innerHTML = '<div class="text-center" style="margin-top:2rem;color:#ef4444;">Error al cargar</div>';
     });
 }
 
@@ -311,10 +312,11 @@ function actualizarKPIs() {
         else if(v._meta.peorEstado.score === 0) ven++;
     });
 
-    document.getElementById('kpi-total').innerText = t;
-    document.getElementById('kpi-vigente').innerText = vig;
-    document.getElementById('kpi-alerta').innerText = ale;
-    document.getElementById('kpi-vencido').innerText = ven;
+    var setTxt = function(id, val) { var e = document.getElementById(id); if (e) e.innerText = val; };
+    setTxt('kpi-total', t);
+    setTxt('kpi-vigente', vig);
+    setTxt('kpi-alerta', ale);
+    setTxt('kpi-vencido', ven);
 }
 
 function filtrarKPI(tipo, element) {
