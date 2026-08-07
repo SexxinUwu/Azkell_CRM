@@ -24,7 +24,8 @@ function _calcularTotalPen(items, tc) {
     'tecnico VARCHAR(150) NULL DEFAULT \'\'',
     'fecha_trabajo DATETIME NULL',
     'fecha_salida DATETIME NULL',
-    'costo DECIMAL(10,2) NULL DEFAULT 0'
+    'costo DECIMAL(10,2) NULL DEFAULT 0',
+    'placa VARCHAR(50) NULL'
 ].forEach(function(colDef) {
     var colName = colDef.split(' ')[0];
     db.query('ALTER TABLE trabajos_ot ADD COLUMN ' + colDef, function(e) {
@@ -317,11 +318,18 @@ router.get('/inspecciones-por-ot', (req, res) => {
 
 router.get('/ot-trabajos', (req, res) => {
     const { id_ot } = req.query;
-    // ticket_visita = FK a ordenes_trabajo.ticket_entrada | id_ot = ID único del trabajo (TR-YYYY-NNN)
-    let sql = 'SELECT t.*, ot.placa, ot.id_ot as ot_id FROM trabajos_ot t LEFT JOIN ordenes_trabajo ot ON ot.ticket_entrada = t.ticket_visita';
+    let sql = `SELECT t.*, 
+                      COALESCE(NULLIF(t.placa, ''), ot.placa, JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.placa')), '') as placa, 
+                      COALESCE(ot.id_ot, t.ticket_visita) as ot_id 
+               FROM trabajos_ot t 
+               LEFT JOIN ordenes_trabajo ot 
+                 ON (ot.ticket_entrada = t.ticket_visita OR ot.id_ot = t.ticket_visita)`;
     const params = [];
-    if (id_ot) { sql += ' WHERE t.ticket_visita = ?'; params.push(id_ot); }
-    sql += ' ORDER BY t.fecha_creacion DESC';
+    if (id_ot) { 
+        sql += ' WHERE (t.ticket_visita = ? OR t.id_ot = ?)'; 
+        params.push(id_ot, id_ot); 
+    }
+    sql += ' ORDER BY COALESCE(t.fecha_trabajo, t.fecha_creacion, t.id) DESC';
     db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
@@ -362,6 +370,7 @@ router.post('/ot-trabajos/bulk-import', async (req, res) => {
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const ticketEntrada = item.ticket_visita || item.ot || item.id_ot || '';
+        const placa = item.placa || item.vehiculo || '';
         const trabajoRealizado = item.trabajo_realizado || item.descripcion || '';
         const fechaTrabajo = item.fecha_trabajo || null;
         const fechaSalida = item.fecha_salida || null;
@@ -369,9 +378,10 @@ router.post('/ot-trabajos/bulk-import', async (req, res) => {
         
         let personal = item.personal || item.tecnico || '';
         let costo = parseFloat(item.costo || 0) || 0;
-        let detObj = item.detalles_json ? (typeof item.detalles_json === 'object' ? item.detalles_json : JSON.parse(item.detalles_json)) : { personal, costo };
+        let detObj = item.detalles_json ? (typeof item.detalles_json === 'object' ? item.detalles_json : JSON.parse(item.detalles_json)) : { personal, costo, placa };
         if (!detObj.personal) detObj.personal = personal;
         if (detObj.costo == null) detObj.costo = costo;
+        if (!detObj.placa) detObj.placa = placa;
 
         const detJson = JSON.stringify(detObj);
 
@@ -379,9 +389,9 @@ router.post('/ot-trabajos/bulk-import', async (req, res) => {
             await new Promise((resolve, reject) => {
                 generarId('trabajos_ot', 'id_ot', 'TR', anio, (nuevoId) => {
                     db.query(
-                        `INSERT INTO trabajos_ot (id_ot, ticket_visita, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
-                         VALUES (?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
-                        [nuevoId, ticketEntrada, trabajoRealizado, personal, fechaTrabajo, fechaSalida, creadoPor, detJson],
+                        `INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, estado, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, creado_por, detalles_json)
+                         VALUES (?, ?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?)`,
+                        [nuevoId, ticketEntrada, placa, trabajoRealizado, personal, fechaTrabajo, fechaSalida, creadoPor, detJson],
                         (err, result) => {
                             if (err) reject(err);
                             else resolve(result);
@@ -425,6 +435,16 @@ router.put('/ot-trabajos/:id', (req, res) => {
         return;
     }
     res.status(400).json({ error: 'Acción desconocida' });
+});
+
+router.delete('/ot-trabajos/limpiar-importados', (req, res) => {
+    db.query(
+        "DELETE FROM trabajos_ot WHERE creado_por = 'Importación Masiva'",
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, eliminados: result.affectedRows });
+        }
+    );
 });
 
 router.delete('/ot-trabajos/:id', (req, res) => {
