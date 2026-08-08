@@ -52,8 +52,8 @@ app.use(cors({
         // Permitimos llamadas sin origin (como apps móviles o curl)
         if (!origin) return cb(null, true);
         
-        // Permitimos dominios de Railway, Render, Localhost y el VPS actual
-        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('sslip.io')) {
+        // Permitimos dominios de Railway, Render, Localhost, azkell.com y subdominios
+        if (ALLOWED_ORIGINS.includes(origin) || origin.includes('azkell.com') || origin.includes('sslip.io')) {
             return cb(null, true);
         }
         
@@ -67,6 +67,11 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
+
+// ── Multi-Tenant SaaS Middleware ─────────────────────────────────
+const { resolveTenantMiddleware } = require('./services/tenant_master');
+app.use(resolveTenantMiddleware);
+app.use('/api/superadmin', require('./routes/superadmin')());
 
 // Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
 app.use('/libs', express.static(path.join(__dirname, 'libs'), {
