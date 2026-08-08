@@ -499,7 +499,66 @@ window._guToggleAdmin = function(chk) {
               input.checked = true;
           }
       });
-  };
+};
+
+window._guToggleHub = function(chk, hubKey) {
+    var isEnabled = chk.checked;
+    var lbl = document.getElementById('pt-' + hubKey + '-lbl');
+    if (lbl) lbl.innerText = isEnabled ? 'Habilitado' : 'Deshabilitado';
+
+    var expandBtn = document.getElementById('gu-hub-btn-' + hubKey);
+    if (expandBtn) expandBtn.style.display = isEnabled ? '' : 'none';
+
+    document.querySelectorAll('[data-parent="' + hubKey + '"]').forEach(function(row) {
+        row.style.display = isEnabled ? '' : 'none';
+        if (!isEnabled) {
+            row.querySelectorAll('input[type="checkbox"]').forEach(function(c) {
+                c.checked = false;
+            });
+        }
+    });
+};
+
+window._guExpandHub = function(hubKey) {
+    var icon = document.getElementById('gu-hub-icon-' + hubKey);
+    var isExpanded = icon ? icon.classList.contains('bi-chevron-up') : false;
+
+    if (icon) {
+        icon.classList.toggle('bi-chevron-up', !isExpanded);
+        icon.classList.toggle('bi-chevron-down', isExpanded);
+    }
+
+    document.querySelectorAll('[data-parent="' + hubKey + '"]').forEach(function(row) {
+        row.style.display = !isExpanded ? '' : 'none';
+    });
+};
+
+window._guCheckCascade = function(chk, key, action) {
+    var isChecked = chk.checked;
+
+    if (isChecked && (action === 'c' || action === 'e' || action === 'd')) {
+        var rEl = document.getElementById('pt-' + key + '-l');
+        if (rEl) rEl.checked = true;
+    }
+
+    if (!isChecked && action === 'l') {
+        ['c', 'e', 'd'].forEach(function(a) {
+            var el = document.getElementById('pt-' + key + '-' + a);
+            if (el) el.checked = false;
+        });
+    }
+
+    if (isChecked) {
+        var modInfo = (window._GU_MODULOS || []).find(function(m){ return m.key === key; });
+        if (modInfo && modInfo.parent) {
+            var hubChk = document.getElementById('pt-' + modInfo.parent + '-enabled');
+            if (hubChk && !hubChk.checked) {
+                hubChk.checked = true;
+                window._guToggleHub(hubChk, modInfo.parent);
+            }
+        }
+    }
+};
 
 function _guCollectPermisos() {
     var pObj = {};

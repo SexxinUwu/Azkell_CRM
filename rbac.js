@@ -62,7 +62,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/auditoria')) mod = 'mod_auditoria';
     else if (path.startsWith('/seguridad/asistencia')) mod = 'asist';
-    else if (path.startsWith('/seguridad/unidades')) mod = 'unid';
+    else if (path.startsWith('/seguridad/unidades')) mod = ['checklist', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     
     // ALMACEN & CONFIGURACION
