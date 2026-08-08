@@ -373,7 +373,7 @@ window.verificarSesionGuardada = function() {
     var showAdm = vCfgFamilias || vCfgUnidades || vCfgSistemas || vCfgMarcas || vCfgFrec || vCfgKits || vCfgTiposMp || vCfgMetrica || vCfgSituacion || vCfgPersonal || vCfgFleetrun || vCfgInteg;
 
     var isSuperAdminDomain = window.location.hostname.includes('admin.azkell.com') || window.location.hostname.startsWith('admin.');
-    var isMasterRole = u && (u.rol === 'Fundador' || u.rol === 'SuperAdmin');
+    var isMasterRole = (guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com') || (rolLogueado === 'Fundador' || rolLogueado === 'SuperAdmin');
     var vSuperAdmin = isSuperAdminDomain || isMasterRole;
 
     safe('nav-usuarios',  vUsuarios);
