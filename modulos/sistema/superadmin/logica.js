@@ -82,12 +82,15 @@ function saasRenderizarTabla() {
             <td>${badgeEstado}</td>
             <td class="text-end">
                 <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="window.saasAbrirModalEditar(${e.id})" title="Editar Plan / Vehículos">
+                        <i class="bi bi-pencil-fill me-1"></i>Editar
+                    </button>
                     <a href="${subUrl}" target="_blank" class="btn btn-outline-primary" title="Visitar Aplicación de la Empresa">
                         <i class="bi bi-box-arrow-up-right me-1"></i>Ingresar
                     </a>
                     ${esActivo 
-                        ? `<button class="btn btn-outline-danger" onclick="window.saasCambiarEstado(${e.id}, 'suspendido')" title="Suspender Acceso"><i class="bi bi-pause-circle"></i></button>`
-                        : `<button class="btn btn-outline-success" onclick="window.saasCambiarEstado(${e.id}, 'activo')" title="Activar Acceso"><i class="bi bi-play-circle"></i></button>`
+                        ? `<button class="btn btn-danger" onclick="window.saasCambiarEstado(${e.id}, 'suspendido')" title="Suspender Acceso"><i class="bi bi-pause-circle"></i> Suspender</button>`
+                        : `<button class="btn btn-success" onclick="window.saasCambiarEstado(${e.id}, 'activo')" title="Activar Acceso"><i class="bi bi-play-circle"></i> Activar</button>`
                     }
                 </div>
             </td>
@@ -108,6 +111,61 @@ function saasAbrirModalNueva() {
 function saasCerrarModal() {
     document.getElementById('saasBackdrop').classList.remove('open');
     document.getElementById('modalNuevaEmpresa').classList.remove('open');
+}
+
+function saasAbrirModalEditar(id) {
+    var emp = saasEmpresasLista.find(x => Number(x.id) === Number(id));
+    if (!emp) return;
+
+    document.getElementById('saas_edit_id').value = emp.id;
+    document.getElementById('saas_edit_nombre').value = emp.nombre_empresa || '';
+    document.getElementById('saas_edit_ruc').value = emp.ruc || '';
+    document.getElementById('saas_edit_email').value = emp.admin_email || '';
+    document.getElementById('saas_edit_plan').value = emp.plan || 'Profesional';
+    document.getElementById('saas_edit_max_unidades').value = emp.max_unidades || 100;
+    document.getElementById('saas_edit_estado').value = emp.estado || 'activo';
+
+    document.getElementById('saasBackdrop').classList.add('open');
+    var m = document.getElementById('modalEditarEmpresa');
+    if (m) m.style.transform = 'translateX(-50%) translateY(0)';
+}
+
+function saasCerrarModalEditar() {
+    document.getElementById('saasBackdrop').classList.remove('open');
+    var m = document.getElementById('modalEditarEmpresa');
+    if (m) m.style.transform = 'translateX(-50%) translateY(100%)';
+}
+
+function saasGuardarEdicion(e) {
+    e.preventDefault();
+    var id = document.getElementById('saas_edit_id').value;
+    var nombre_empresa = document.getElementById('saas_edit_nombre').value.trim();
+    var ruc = document.getElementById('saas_edit_ruc').value.trim();
+    var admin_email = document.getElementById('saas_edit_email').value.trim();
+    var plan = document.getElementById('saas_edit_plan').value;
+    var max_unidades = document.getElementById('saas_edit_max_unidades').value;
+    var estado = document.getElementById('saas_edit_estado').value;
+
+    fetch(`/api/superadmin/empresas/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': 'azkell_saas_secret_2026'
+        },
+        body: JSON.stringify({ nombre_empresa, ruc, admin_email, plan, max_unidades, estado })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        saasCerrarModalEditar();
+        if (window.Toast) window.Toast.fire({ icon: 'success', title: 'Empresa actualizada correctamente' });
+        else alert('Empresa actualizada correctamente');
+        saasCargarEmpresas();
+    })
+    .catch(err => {
+        if (window.Toast) window.Toast.fire({ icon: 'error', title: err.message });
+        else alert(err.message);
+    });
 }
 
 function saasGenerarSlugAuto() {
@@ -179,7 +237,10 @@ function saasGuardarEmpresa(e) {
 
     fetch('/api/superadmin/empresas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': 'azkell_saas_secret_2026'
+        },
         body: JSON.stringify({
             slug,
             nombre_empresa,
@@ -199,6 +260,7 @@ function saasGuardarEmpresa(e) {
 
         if (res.error) {
             if (window.Swal) Swal.fire('Error', res.error, 'error');
+            else alert('Error: ' + res.error);
             return;
         }
 
@@ -218,6 +280,8 @@ function saasGuardarEmpresa(e) {
                 `,
                 confirmButtonText: 'Genial, Entendido'
             });
+        } else {
+            alert(`Empresa ${nombre_empresa} provisionada con exito en https://${slug}.azkell.com`);
         }
         saasCargarEmpresas();
     })
@@ -227,11 +291,35 @@ function saasGuardarEmpresa(e) {
             btn.innerHTML = '<i class="bi bi-database-add me-1"></i> Crear Empresa y Provisionar BD';
         }
         if (window.Swal) Swal.fire('Error', err.message, 'error');
+        else alert('Error: ' + err.message);
     });
 }
 
 function saasCambiarEstado(id, nuevoEstado) {
     var accion = nuevoEstado === 'activo' ? 'activar' : 'suspender';
+
+    var ejecutar = function() {
+        fetch(`/api/superadmin/empresas/${id}/estado`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': 'azkell_saas_secret_2026'
+            },
+            body: JSON.stringify({ estado: nuevoEstado })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            if (window.Toast) window.Toast.fire({ icon: 'success', title: `Empresa ${accion}da con éxito` });
+            else alert(`Empresa ${accion}da con éxito`);
+            saasCargarEmpresas();
+        })
+        .catch(err => {
+            if (window.Toast) window.Toast.fire({ icon: 'error', title: err.message });
+            else alert('Error: ' + err.message);
+        });
+    };
+
     if (window.Swal) {
         Swal.fire({
             title: `¿Desea ${accion} la empresa?`,
@@ -241,23 +329,12 @@ function saasCambiarEstado(id, nuevoEstado) {
             confirmButtonText: `Sí, ${accion}`,
             cancelButtonText: 'Cancelar'
         }).then(res => {
-            if (res.isConfirmed) {
-                fetch(`/api/superadmin/empresas/${id}/estado`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estado: nuevoEstado })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.error) throw new Error(data.error);
-                    if (window.Toast) window.Toast.fire({ icon: 'success', title: `Empresa ${accion}da con éxito` });
-                    saasCargarEmpresas();
-                })
-                .catch(err => {
-                    if (window.Toast) window.Toast.fire({ icon: 'error', title: err.message });
-                });
-            }
+            if (res.isConfirmed) ejecutar();
         });
+    } else {
+        if (confirm(`¿Está seguro de ${accion} el acceso a esta empresa?`)) {
+            ejecutar();
+        }
     }
 }
 
@@ -266,6 +343,9 @@ window.init_superadmin = init_superadmin;
 window.saasCargarEmpresas = saasCargarEmpresas;
 window.saasAbrirModalNueva = saasAbrirModalNueva;
 window.saasCerrarModal = saasCerrarModal;
+window.saasAbrirModalEditar = saasAbrirModalEditar;
+window.saasCerrarModalEditar = saasCerrarModalEditar;
+window.saasGuardarEdicion = saasGuardarEdicion;
 window.saasGenerarSlugAuto = saasGenerarSlugAuto;
 window.saasGenerarPassSec = saasGenerarPassSec;
 window.saasConsultarRUC = saasConsultarRUC;
