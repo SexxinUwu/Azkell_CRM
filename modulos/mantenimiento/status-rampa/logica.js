@@ -2262,13 +2262,14 @@ window.srEliminarRegistroGeneral = function(idRampa) {
         function() {
             fetch('/api/taller-rampas/' + idRampa, { method: 'DELETE' })
             .then(function(r){ return r.json(); })
-            .then(function() {
+            .then(function(data) {
+                if (data.error) throw new Error(data.error);
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Registro y OTs vinculadas eliminados', 'success');
                 srCerrarDrawers();
                 srCargarEntradas();
                 srCargarHistorial();
             }).catch(function(err) {
-                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al eliminar', 'danger');
+                if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta(err.message || 'Error al eliminar', 'danger');
                 console.error(err);
             });
         }
