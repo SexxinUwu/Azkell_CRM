@@ -123,8 +123,8 @@ async function resolveTenantMiddleware(req, res, next) {
     }
 
     if (!tenantSlug) {
-        req.tenantSlug = 'default';
-        req.db = getTenantPool(process.env.DB_NAME || 'azkell_fleet');
+        req.tenantSlug = 'marsisa';
+        req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
         return next();
     }
 
@@ -132,7 +132,7 @@ async function resolveTenantMiddleware(req, res, next) {
     master.query('SELECT * FROM empresas WHERE slug = ? OR db_name = ? LIMIT 1', [tenantSlug, tenantSlug], (err, rows) => {
         if (err || !rows || rows.length === 0) {
             req.tenantSlug = tenantSlug;
-            req.db = getTenantPool(process.env.DB_NAME || 'azkell_fleet');
+            req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
             return next();
         }
 
