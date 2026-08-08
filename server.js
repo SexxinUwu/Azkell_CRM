@@ -1004,37 +1004,28 @@ function verifyToken(req, res, next) {
         req.user = decoded;
 
         const dbConn = req.db || db;
-        
-        // Verificar que la sesión exista en la base de datos (no fue revocada)
-        dbConn.query('SELECT usuario_correo FROM sesiones_activas WHERE token = ?', [token], (err, results) => {
-            if (err || !results || results.length === 0) return res.status(401).json({ error: 'Sesión revocada o cerrada' });
-            
-            // Cargar permisos actualizados en tiempo real del usuario
-            const sqlUser = `
-                SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
-                       r.es_admin AS rol_es_admin
-                FROM usuarios u
-                LEFT JOIN roles r ON u.rol_id = r.id
-                WHERE u.correo = ? LIMIT 1`;
+        const sqlUser = `
+            SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
+                   r.es_admin AS rol_es_admin
+            FROM usuarios u
+            LEFT JOIN roles r ON u.rol_id = r.id
+            WHERE u.correo = ? LIMIT 1`;
 
-            dbConn.query(sqlUser, [decoded.correo], (err2, uRows) => {
-                if (!err2 && uRows && uRows.length > 0) {
-                    const uObj = uRows[0];
-                    if (uObj.correo.toLowerCase() === 'admin@azkell.com' || (uObj.rol_id && uObj.rol_es_admin)) {
-                        req.user.permisos = JSON.stringify({ admin: true });
-                        req.user.rol = uObj.correo.toLowerCase() === 'admin@azkell.com' ? 'Fundador' : (uObj.rol_nombre || 'Administrador');
-                    } else if (uObj.rol_id && uObj.rol_permisos) {
-                        req.user.permisos = uObj.rol_permisos;
-                        req.user.rol = uObj.rol_nombre || uObj.rol || 'Personalizado';
-                    } else if (uObj.permisos_json) {
-                        req.user.permisos = uObj.permisos_json;
-                        req.user.rol = uObj.rol || 'Personalizado';
-                    }
+        dbConn.query(sqlUser, [decoded.correo], (err2, uRows) => {
+            if (!err2 && uRows && uRows.length > 0) {
+                const uObj = uRows[0];
+                if (uObj.correo.toLowerCase() === 'admin@azkell.com' || (uObj.rol_id && uObj.rol_es_admin)) {
+                    req.user.permisos = JSON.stringify({ admin: true });
+                    req.user.rol = uObj.correo.toLowerCase() === 'admin@azkell.com' ? 'Fundador' : (uObj.rol_nombre || 'Administrador');
+                } else if (uObj.rol_id && uObj.rol_permisos) {
+                    req.user.permisos = uObj.rol_permisos;
+                    req.user.rol = uObj.rol_nombre || uObj.rol || 'Personalizado';
+                } else if (uObj.permisos_json) {
+                    req.user.permisos = uObj.permisos_json;
+                    req.user.rol = uObj.rol || 'Personalizado';
                 }
-                
-                dbConn.query('UPDATE sesiones_activas SET ultima_actividad = NOW() WHERE token = ?', [token], () => {});
-                next();
-            });
+            }
+            next();
         });
     } catch(e) {
         return res.status(401).json({ error: 'Token inválido o expirado' });
