@@ -116,15 +116,16 @@ async function resolveTenantMiddleware(req, res, next) {
 
         if (parts.length >= 3 || (host.includes('localhost') && parts.length >= 2)) {
             const sub = parts[0];
-            if (sub !== 'www' && sub !== 'app' && sub !== 'admin' && sub !== 'azkell') {
+            if (sub !== 'www' && sub !== 'app' && sub !== 'azkell') {
                 tenantSlug = sub;
             }
         }
     }
 
-    if (!tenantSlug) {
-        req.tenantSlug = 'marsisa';
-        req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
+    // Si se accede desde admin.azkell.com o no se especifica tenant, usar la Base de Datos Maestra
+    if (!tenantSlug || tenantSlug === 'admin' || tenantSlug === 'master') {
+        req.tenantSlug = 'master';
+        req.db = getMasterPool();
         return next();
     }
 

@@ -392,6 +392,18 @@ window.verificarSesionGuardada = function() {
     safe('nav-administracion',  showAdm);
     safe('mbnav-administracion', showAdm);
     safe('mbnav-configuracion', showAdm || vCfgEmpresa || vUsuarios || vAuditoria);
+
+    // ── AISLAMIENTO TOTAL DEL PORTAL SUPERADMIN (admin.azkell.com) ──────
+    if (isSuperAdminDomain) {
+        safe('wrap-flota', false);
+        safe('wrap-mantenimiento', false);
+        safe('wrap-almacen', false);
+        safe('wrap-directorio', false);
+        safe('wrap-seguridad', false);
+        safe('wrap-usuarios', false);
+        safe('wrap-auditoria', false);
+        safe('nav-cfg-empresa', false);
+    }
     // ─────────────────────────────────────────────────────────────────
 
     // --- Mostrar app y cargar módulo guardado o por defecto ---
@@ -402,7 +414,9 @@ window.verificarSesionGuardada = function() {
     if (appCrmEl) appCrmEl.style.display = 'flex';
 
     let rutaGuardada = sessionStorage.getItem('fleet_rutaActual');
-    if (rutaGuardada && rutaGuardada !== 'login') {
+    if (isSuperAdminDomain) {
+        cargarModuloAislado('sistema/superadmin');
+    } else if (rutaGuardada && rutaGuardada !== 'login') {
         cargarModuloAislado(rutaGuardada);
     } else {
         cargarModuloAislado('dashboard');
