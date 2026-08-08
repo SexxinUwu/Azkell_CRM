@@ -15,10 +15,10 @@ module.exports = function () {
         const masterKey = req.headers['x-master-key'] || req.query.master_key;
         const SECRET_MASTER_KEY = process.env.MASTER_KEY || 'azkell_saas_secret_2026';
 
-        // Permitir peticiones si cuenta con la clave master, si viene del subdominio admin o localhost, o si req.user es admin
+        // Permitir peticiones ÚNICAMENTE si viene del subdominio admin, localhost, o tiene rol Fundador/SuperAdmin
         if (masterKey === SECRET_MASTER_KEY || 
             (req.headers.host && (req.headers.host.includes('admin.azkell.com') || req.headers.host.includes('localhost'))) || 
-            (req.user && (req.user.rol === 'Fundador' || req.user.rol === 'SuperAdmin' || req.user.rol === 'Administrador'))) {
+            (req.user && (req.user.rol === 'Fundador' || req.user.rol === 'SuperAdmin'))) {
             return next();
         }
 

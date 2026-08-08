@@ -372,12 +372,18 @@ window.verificarSesionGuardada = function() {
     
     var showAdm = vCfgFamilias || vCfgUnidades || vCfgSistemas || vCfgMarcas || vCfgFrec || vCfgKits || vCfgTiposMp || vCfgMetrica || vCfgSituacion || vCfgPersonal || vCfgFleetrun || vCfgInteg;
 
+    var isSuperAdminDomain = window.location.hostname.includes('admin.azkell.com') || window.location.hostname.startsWith('admin.');
+    var isMasterRole = u && (u.rol === 'Fundador' || u.rol === 'SuperAdmin');
+    var vSuperAdmin = isSuperAdminDomain || isMasterRole;
+
     safe('nav-usuarios',  vUsuarios);
     safe('mbnav-usuarios', vUsuarios);
     safe('nav-auditoria', vAuditoria);
     safe('mbnav-auditoria', vAuditoria);
     safe('wrap-usuarios',  vUsuarios);
     safe('wrap-auditoria', vAuditoria);
+    safe('wrap-superadmin', vSuperAdmin);
+    safe('nav-superadmin',  vSuperAdmin);
     
     safe('nav-cfg-empresa', vCfgEmpresa);
     safe('mbnav-cfg-empresa', vCfgEmpresa);
