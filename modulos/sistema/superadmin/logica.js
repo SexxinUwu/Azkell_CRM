@@ -16,7 +16,9 @@ function saasCargarEmpresas() {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary"><div class="spinner-border spinner-border-sm me-2 text-primary"></div>Cargando empresas registradas...</td></tr>';
     }
 
-    fetch('/api/superadmin/empresas')
+    fetch('/api/superadmin/empresas', {
+        headers: { 'X-Master-Key': 'azkell_saas_secret_2026' }
+    })
         .then(r => {
             if (!r.ok) throw new Error('No autorizado o error del servidor');
             return r.json();
