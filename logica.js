@@ -395,6 +395,7 @@ window.verificarSesionGuardada = function() {
 
     // ── AISLAMIENTO TOTAL DEL PORTAL SUPERADMIN (admin.azkell.com) ──────
     if (isSuperAdminDomain) {
+        safe('wrap-dashboard', false);
         safe('wrap-flota', false);
         safe('wrap-mantenimiento', false);
         safe('wrap-almacen', false);
@@ -402,6 +403,7 @@ window.verificarSesionGuardada = function() {
         safe('wrap-seguridad', false);
         safe('wrap-usuarios', false);
         safe('wrap-auditoria', false);
+        safe('wrap-administracion', false);
         safe('nav-cfg-empresa', false);
     }
     // ─────────────────────────────────────────────────────────────────
