@@ -1,0 +1,273 @@
+<!-- ── MÓDULO SUPERADMIN: GESTIÓN DE EMPRESAS SAAS ── -->
+<style>
+#moduloSuperadmin .saas-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 20px;
+    color: #fff;
+    padding: 24px 28px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    margin-bottom: 24px;
+}
+#moduloSuperadmin .saas-kpi-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#moduloSuperadmin .saas-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+#moduloSuperadmin .saas-table-wrap {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+#moduloSuperadmin table th {
+    background: var(--bg, #f8fafc);
+    color: var(--subtext, #64748b);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+#moduloSuperadmin table td {
+    padding: 16px 18px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+.subdomain-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-family: monospace;
+}
+.db-badge {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-family: monospace;
+}
+
+/* Modal Bottom-Anchored */
+#saasBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4) !important;
+    z-index: 1059;
+}
+#saasBackdrop.open { display: block !important; }
+
+#modalNuevaEmpresa {
+    position: fixed;
+    bottom: 0 !important;
+    left: 50% !important;
+    top: auto !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(100%);
+    width: 100% !important;
+    max-width: 700px !important;
+    height: 92vh !important;
+    max-height: 92vh !important;
+    background: var(--surface, #fff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-bottom: none !important;
+    border-radius: 28px 28px 0 0 !important;
+    box-shadow: 0 -12px 48px rgba(0,0,0,.25) !important;
+    transition: transform .25s ease !important;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#modalNuevaEmpresa.open {
+    transform: translateX(-50%) translateY(0) !important;
+}
+</style>
+
+<div id="saasBackdrop" onclick="window.saasCerrarModal()"></div>
+
+<div id="moduloSuperadmin" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1 p-3">
+
+    <!-- Hero Banner -->
+    <div class="saas-hero d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary px-2.5 py-1 text-white fw-bold">AZKELL SAAS MASTER</span>
+                <span class="text-white-50 small"><i class="bi bi-hdd-network me-1"></i>VPS Azkell (82.39.109.226)</span>
+            </div>
+            <h4 class="fw-bold m-0">Panel SuperAdmin & Gestión Multi-Tenant</h4>
+            <p class="m-0 text-white-50 small mt-1">Crea y autoprovisiona bases de datos aisladas por empresa en 1 solo clic</p>
+        </div>
+        <button class="btn btn-primary btn-lg fw-bold shadow-lg" onclick="window.saasAbrirModalNueva()">
+            <i class="bi bi-plus-circle-fill me-2"></i>Nueva Empresa SaaS
+        </button>
+    </div>
+
+    <!-- KPI Cards Bento Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="saas-kpi-card d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center" style="width:52px; height:52px;">
+                    <i class="bi bi-building-gear fs-4"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-bold">Empresas Activas</div>
+                    <div class="fs-3 fw-extrabold text-dark" id="saas_kpi_empresas">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="saas-kpi-card d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-success-subtle text-success p-3 d-flex align-items-center justify-content-center" style="width:52px; height:52px;">
+                    <i class="bi bi-database-check fs-4"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-bold">Bases de Datos Isoladas</div>
+                    <div class="fs-3 fw-extrabold text-dark" id="saas_kpi_bds">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="saas-kpi-card d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-info-subtle text-info p-3 d-flex align-items-center justify-content-center" style="width:52px; height:52px;">
+                    <i class="bi bi-truck fs-4"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-bold">Flota Atendida SaaS</div>
+                    <div class="fs-3 fw-extrabold text-dark" id="saas_kpi_flota">94 veh.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="saas-kpi-card d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-warning-subtle text-warning p-3 d-flex align-items-center justify-content-center" style="width:52px; height:52px;">
+                    <i class="bi bi-shield-check fs-4"></i>
+                </div>
+                <div>
+                    <div class="text-secondary small fw-bold">Estado del Servidor</div>
+                    <div class="fs-6 fw-bold text-success"><i class="bi bi-circle-fill me-1" style="font-size:0.6rem;"></i>100% Operativo</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Empresas -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="fw-bold m-0 text-dark"><i class="bi bi-table me-2 text-primary"></i>Directorio de Empresas Suscritas al SaaS</h6>
+        <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="window.saasCargarEmpresas()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar Lista
+        </button>
+    </div>
+
+    <div class="saas-table-wrap flex-grow-1 table-responsive">
+        <table class="table table-hover align-middle m-0">
+            <thead>
+                <tr>
+                    <th>Empresa / RUC</th>
+                    <th>Subdominio de Acceso</th>
+                    <th>Base de Datos Asignada</th>
+                    <th>Plan / Límite</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="saas_tabla_empresas">
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-secondary">
+                        <div class="spinner-border spinner-border-sm me-2 text-primary"></div>Cargando empresas registradas...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- ── MODAL: NUEVA EMPRESA SAAS (AUTOPROVISIONAMIENTO) ── -->
+<div id="modalNuevaEmpresa">
+    <div class="p-3 bg-dark text-white border-bottom d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold m-0"><i class="bi bi-rocket-takeoff text-primary me-2"></i>Nueva Empresa SaaS & Autoprovisionamiento BD</h6>
+        <button type="button" class="btn-close btn-close-white" onclick="window.saasCerrarModal()"></button>
+    </div>
+    <form id="formNuevaEmpresa" onsubmit="window.saasGuardarEmpresa(event)" class="d-flex flex-column flex-grow-1 overflow-hidden">
+        <div class="p-4 flex-grow-1 overflow-y-auto">
+            
+            <div class="alert alert-info py-2 px-3 small border-0 mb-3" style="background:#e0f2fe; color:#0369a1;">
+                <i class="bi bi-info-circle-fill me-1"></i> Al crear la empresa, el sistema creará automáticamente su **base de datos MySQL aislada** y le asignará su subdominio exclusivo.
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-sm-7">
+                    <label class="form-label fw-bold small text-secondary">Nombre / Razón Social de la Empresa *</label>
+                    <input type="text" class="form-control form-control-sm text-uppercase" id="saas_f_nombre" placeholder="Ej: ROSYMAR PERÚ S.A.C." required oninput="window.saasGenerarSlugAuto()">
+                </div>
+                <div class="col-12 col-sm-5">
+                    <label class="form-label fw-bold small text-secondary">RUC de la Empresa</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="saas_f_ruc" placeholder="Ingrese RUC" maxlength="11" onkeydown="if(event.key==='Enter'){event.preventDefault();window.saasConsultarRUC();}">
+                        <button class="btn btn-primary fw-bold" type="button" onclick="window.saasConsultarRUC()"><i class="bi bi-search"></i> Buscar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-secondary">Subdominio de Acceso Deseado *</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted fw-bold">https://</span>
+                    <input type="text" class="form-control text-lowercase fw-bold" id="saas_f_slug" placeholder="rosymar" required style="color:#0284c7;">
+                    <span class="input-group-text bg-light text-muted fw-bold">.azkell.com</span>
+                </div>
+                <div class="form-text" style="font-size:0.75rem;">Este será el link con el que la empresa y sus empleados trabajarán.</div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Correo del Administrador de la Empresa *</label>
+                    <input type="email" class="form-control form-control-sm" id="saas_f_email" placeholder="admin@empresa.com" required>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Contraseña Inicial del Administrador *</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="saas_f_password" placeholder="Mínimo 8 caracteres" required>
+                        <button class="btn btn-outline-secondary" type="button" onclick="window.saasGenerarPassSec()" title="Generar Contraseña Segura"><i class="bi bi-key-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-2">
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Plan SaaS Contratado</label>
+                    <select class="form-select form-select-sm" id="saas_f_plan">
+                        <option value="Básico">Básico (Hasta 20 Unidades)</option>
+                        <option value="Profesional" selected>Profesional (Hasta 100 Unidades)</option>
+                        <option value="Empresarial">Empresarial (Ilimitado)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-bold small text-secondary">Límite de Vehículos / Unidades</label>
+                    <input type="number" class="form-control form-control-sm" id="saas_f_max_unidades" value="100">
+                </div>
+            </div>
+
+        </div>
+        <div class="p-3 bg-light border-top d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1 fw-bold" onclick="window.saasCerrarModal()">Cancelar</button>
+            <button type="submit" id="btnGuardarSaas" class="btn btn-sm btn-primary flex-grow-1 fw-bold">
+                <i class="bi bi-database-add me-1"></i> Crear Empresa y Provisionar BD
+            </button>
+        </div>
+    </form>
+</div>
