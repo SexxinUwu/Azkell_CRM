@@ -1017,12 +1017,22 @@ function verifyToken(req, res, next) {
                 if (uObj.correo.toLowerCase() === 'admin@azkell.com' || (uObj.rol_id && uObj.rol_es_admin)) {
                     req.user.permisos = JSON.stringify({ admin: true });
                     req.user.rol = uObj.correo.toLowerCase() === 'admin@azkell.com' ? 'Fundador' : (uObj.rol_nombre || 'Administrador');
-                } else if (uObj.rol_id && uObj.rol_permisos) {
-                    req.user.permisos = uObj.rol_permisos;
+                } else {
+                    let rP = {}, uP = {};
+                    try { rP = typeof uObj.rol_permisos === 'string' ? JSON.parse(uObj.rol_permisos || '{}') : (uObj.rol_permisos || {}); } catch(e){}
+                    try { uP = typeof uObj.permisos_json === 'string' ? JSON.parse(uObj.permisos_json || '{}') : (uObj.permisos_json || {}); } catch(e){}
+
+                    let merged = { ...rP };
+                    for (let key in uP) {
+                        if (!merged[key]) {
+                            merged[key] = uP[key];
+                        } else if (typeof uP[key] === 'object' && typeof merged[key] === 'object') {
+                            merged[key] = { ...merged[key], ...uP[key] };
+                        }
+                    }
+
+                    req.user.permisos = JSON.stringify(merged);
                     req.user.rol = uObj.rol_nombre || uObj.rol || 'Personalizado';
-                } else if (uObj.permisos_json) {
-                    req.user.permisos = uObj.permisos_json;
-                    req.user.rol = uObj.rol || 'Personalizado';
                 }
             }
             next();
@@ -1742,11 +1752,20 @@ app.post('/api/roles', (req, res) => {
 app.put('/api/roles/:id', (req, res) => {
     const { nombre, color, permisos_json, es_admin, orden } = req.body;
     const { id } = req.params;
-    db.query(
+    const targetDb = req.db || db;
+    targetDb.query(
         'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
         [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
+
+            // Sincronizar permisos_json en todos los usuarios asignados a este rol
+            targetDb.query(
+                'UPDATE usuarios SET permisos_json=? WHERE rol_id=?',
+                [permisos_json || '{}', id],
+                () => {}
+            );
+
             broadcast('usuarios', 'actualizar_rol');
             const actor = req.user ? req.user.correo : (req.body.editado_por || 'admin');
             if (typeof logAudit === 'function') logAudit(actor, 'roles', 'MODIFICÓ ROL', `${nombre} (ID: ${id})`);
