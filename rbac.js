@@ -85,7 +85,9 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO
-    else if (path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) mod = ['status_rampa'];
+    else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) {
+        mod = ['status_rampa', 'ot', 'trabajos_ot', 'fleetrun', 'plan', 'cfg_mant'];
+    }
     else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) {
         mod = (req.method === 'GET') ? ['ot', 'status_rampa', 'trabajos_ot', 'reportes_ot', 'sal_inv'] : ['ot', 'status_rampa', 'trabajos_ot'];
     }
