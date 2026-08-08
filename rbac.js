@@ -96,14 +96,16 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
-    else if (path.startsWith('/fleetrun') || path.startsWith('/script/obtenerDatosFleetrun') || path.startsWith('/script/guardarFleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
-    else if (path.startsWith('/vehiculos-flota')) mod = ['fleet', 'fleetrun', 'placas', 'status'];
-    else if (path.startsWith('/taller-rampas')) mod = ['status_rampa', 'ot', 'trabajos_ot'];
-    else if (path.startsWith('/catalogos_taller')) mod = ['status_rampa', 'ot', 'trabajos_ot', 'reportes_ot'];
-    
-    // Legacy /api/script endpoints that use req.body.coleccion
-    else if (path.startsWith('/script/guardarStatusFlota') || path.startsWith('/script/obtenerDatosStatusFlota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
-    else if (path.startsWith('/script/guardarInspeccion') || path.startsWith('/script/obtenerDatosInspecciones')) mod = ['insp'];
+    // Legacy /api/script endpoints
+    else if (path.includes('Fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
+    else if (path.includes('StatusFlota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
+    else if (path.includes('Inspeccion')) mod = ['insp'];
+    else if (path.includes('Placas') || path.includes('Placa')) mod = ['placas', 'fleet'];
+    else if (path.includes('Conductor')) mod = ['cond', 'conductores'];
+    else if (path.includes('Wialon')) mod = ['gps', 'fleet'];
+    else if (path.includes('Usuario')) mod = ['usuarios'];
+    else if (path.includes('Documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
+    else if (path.includes('TiposMantenimiento') || path.includes('TPMP')) mod = ['cfg_mant', 'fleetrun', 'ot', 'plan'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
@@ -113,8 +115,9 @@ module.exports = function globalRBAC(req, res, next) {
         else if (col === 'entradas_almacen') mod = ['ent_inv'];
         else if (col === 'salidas_almacen') mod = ['sal_inv'];
         else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', 'status_rampa', 'trabajos_ot'];
-        else if (col === 'mantenimiento_preventivo') mod = ['cfg_mant'];
+        else if (col === 'mantenimiento_preventivo') mod = ['cfg_mant', 'fleetrun', 'plan'];
         else if (col === 'planificacion_mps') mod = ['plan'];
+        else mod = ['fleetrun', 'ot', 'status_rampa', 'inv', 'placas'];
     }
 
     if (mod) {
