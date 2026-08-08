@@ -59,6 +59,28 @@ module.exports = function () {
         }
     });
 
+    // ── PUT /api/superadmin/empresas/:id (Editar plan, límite de unidades, datos y estado) ─
+    router.put('/empresas/:id', (req, res) => {
+        const id = req.params.id;
+        const { nombre_empresa, ruc, plan, max_unidades, estado, admin_email } = req.body;
+
+        const masterPool = getMasterPool();
+        const sql = `
+        UPDATE empresas 
+        SET nombre_empresa = COALESCE(?, nombre_empresa),
+            ruc = COALESCE(?, ruc),
+            plan = COALESCE(?, plan),
+            max_unidades = COALESCE(?, max_unidades),
+            estado = COALESCE(?, estado),
+            admin_email = COALESCE(?, admin_email)
+        WHERE id = ?;
+        `;
+        masterPool.query(sql, [nombre_empresa, ruc, plan, max_unidades, estado, admin_email, id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id });
+        });
+    });
+
     // ── PUT /api/superadmin/empresas/:id/estado (Activar / Suspender empresa) ─
     router.put('/empresas/:id/estado', (req, res) => {
         const id = req.params.id;
