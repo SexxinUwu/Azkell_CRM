@@ -153,10 +153,7 @@ function mostrarFleetrun(datos) {
           // Race condition F5: si placas no cargaron aún, mostrar todo; root re-renderizará cuando lleguen
           const placasListas = dataGlobalPlacas && dataGlobalPlacas.length > 0;
           let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
-          let enUsoPlaca  = normalizeStr((infoPlaca && infoPlaca[20]) ? infoPlaca[20] : ((infoPlaca && infoPlaca[9]) ? infoPlaca[9] : ''));
-          let esActivaEnUso = infoPlaca && estadoPlaca === 'ACTIVA' && (enUsoPlaca === 'SI' || enUsoPlaca === '' || enUsoPlaca === '1' || enUsoPlaca === 'EN USO');
-
-          if (!mapa.has(key) && (!placasListas || esActivaEnUso)) {
+          if (!mapa.has(key) && (!placasListas || (infoPlaca && (estadoPlaca === 'ACTIVA' || estadoPlaca === '')))) {
               mapa.set(key, row);
           }
       });
