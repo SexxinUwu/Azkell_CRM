@@ -318,7 +318,12 @@ function mostrarFleetrun(datos) {
   if (window._fleetrunDirQueue.length > 0) window._procesarGeocodificacionFleetrun();
 
   if (!isHistorialFleetrun) { 
-      updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placaEstadoMap.size); 
+      updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placaEstadoMap.size);
+      // Guardar en globales para que el Dashboard los lea sin recalcular
+      window._fleetrun_kpi_venc = cntVencido;
+      window._fleetrun_kpi_prox = cntProximo;
+      window._fleetrun_kpi_vig  = cntVigente;
+      if (typeof window.procesarFleetrunParaDashboard === 'function') window.procesarFleetrunParaDashboard();
   }
   if (typeof window.initColPicker === 'function') {
       window.initColPicker('col-picker-fleet', 'tablaFleetrun', [
@@ -552,6 +557,11 @@ window.filtrarFleetrunAvanzado = function() {
         header.style.display = hasVisibleChild ? '' : 'none';
     });
     updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placasMostradas.size);
+    // Guardar en globales para que el Dashboard los lea sin recalcular
+    window._fleetrun_kpi_venc = cntVencido;
+    window._fleetrun_kpi_prox = cntProximo;
+    window._fleetrun_kpi_vig  = cntVigente;
+    if (typeof window.procesarFleetrunParaDashboard === 'function') window.procesarFleetrunParaDashboard();
 
     // En móvil: re-renderizar cards con datos filtrados
     if (window.innerWidth < 768 && window._fleetrunDatosAMostrar) {
