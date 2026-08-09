@@ -309,7 +309,20 @@ function mostrarStatusInspecciones(inspecciones) {
         }
         return parseInt(parts[1]) || 0;
     };
-    let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => numId(b.id) - numId(a.id));
+    let parseFechaVal = (i) => {
+        if (!i || !i.fecha_ingreso) return 0;
+        if (i.fecha_ingreso.includes('/')) {
+            let p = i.fecha_ingreso.split('/');
+            return new Date(p[2], p[1]-1, p[0]).getTime() || 0;
+        }
+        return new Date(i.fecha_ingreso).getTime() || 0;
+    };
+
+    let inspeccionesOrdenadas = [...inspecciones].sort((a, b) => {
+        let fa = parseFechaVal(a), fb = parseFechaVal(b);
+        if (fb !== fa) return fb - fa;
+        return numId(b.id) - numId(a.id);
+    });
     inspeccionesOrdenadas = inspeccionesOrdenadas.filter(i => i.estado !== 'Eliminada');
     
     let inspeccionesGeneral = inspeccionesOrdenadas.filter(i => i.tipo_inspeccion !== 'Solo Frenos');
@@ -319,7 +332,6 @@ function mostrarStatusInspecciones(inspecciones) {
         if ((p[0] || '').toUpperCase() === 'PLACA') return false;
         let estado = normalizeStr(p[18] || p[8] || '');
         let enUso = normalizeStr(p[22] || p[13] || '');
-        // Incluir todas las ACTIVAS excepto las explícitamente marcadas como NO en uso
         return estado === "ACTIVA" && enUso !== "NO";
     });
 
@@ -337,7 +349,6 @@ function mostrarStatusInspecciones(inspecciones) {
             let p = (window.dataGlobalPlacas || []).find(pl => cleanPlaca(pl[0]) === iClean) || [insp.placa, "-", "-", "-", "-", (insp.tipo_vehiculo || "SIN TIPO"), "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
             dataFinal.push({ infoPlaca: p, insp: insp });
         });
-        // Incluir también las placas activas sin inspección registrada aún
         placasActivasEnUso.forEach(p => {
             let pClean = cleanPlaca(p[0]);
             let tieneInsp = inspeccionesGeneral.some(i => cleanPlaca(i.placa) === pClean);
@@ -392,6 +403,18 @@ function mostrarStatusInspecciones(inspecciones) {
 
                 if (cli !== "-") setClis.add(cli); if (mar !== "-") setMarcas.add(mar);
 
+                // Determinar si es la última inspección (la más reciente) de esta placa
+                let esUltimaInsp = false;
+                if (insp && insp.id) {
+                    let pClean = cleanPlaca(placa);
+                    let ultimaInspPlaca = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
+                    if (ultimaInspPlaca && ultimaInspPlaca.id === insp.id) {
+                        esUltimaInsp = true;
+                    }
+                } else if (!insp) {
+                    esUltimaInsp = true;
+                }
+
                 let fIngresoBonita = "-"; let diasRestantes = -9999; let tecnico = "-"; let colorFalta = ""; let txtEstado = ""; let estadoVigente2 = "";
 
                 if (insp && insp.fecha_ingreso) {
@@ -400,7 +423,6 @@ function mostrarStatusInspecciones(inspecciones) {
                     if (insp.fecha_ingreso.includes('/')) {
                         let px = insp.fecha_ingreso.split('/'); fIngreso = new Date(px[2], px[1] - 1, px[0]);
                     } else {
-                        // ISO "2026-02-20" o "2026-02-20T00:00:00.000Z" — tomar solo la parte de fecha
                         let ds = insp.fecha_ingreso.split('T')[0].split('-');
                         fIngreso = ds.length === 3 ? new Date(parseInt(ds[0]), parseInt(ds[1]) - 1, parseInt(ds[2])) : new Date(insp.fecha_ingreso);
                     }
@@ -426,8 +448,16 @@ function mostrarStatusInspecciones(inspecciones) {
 
                 if (estadoVigente2 !== "") setEstadosStatus.add(estadoVigente2);
 
-                let badgeProx = diasRestantes === -9999 ? `<span class="badge bg-danger shadow-sm">Sin Registro</span>` : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`;
-                let badgeEst = `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
+                let badgeProx = (diasRestantes === -9999)
+                    ? `<span class="badge bg-secondary shadow-sm">Sin Registro</span>`
+                    : ((isHistorialStatus && !esUltimaInsp)
+                        ? `<span class="badge bg-light text-secondary border shadow-2xs">REGISTRADO</span>`
+                        : `<span class="badge p-1 px-2 shadow-sm text-white" style="background-color: ${colorFalta};">${textoBadgeProx}</span>`);
+
+                let badgeEst = (isHistorialStatus && !esUltimaInsp)
+                    ? `<span style="color: #64748b; font-weight: bold; font-size: 0.8rem;">REGISTRADO</span>`
+                    : `<span style="color: ${colorFalta}; font-weight: bold; font-size: 0.8rem;">${txtEstado}</span>`;
+
                 let subCli = `<br><span class="text-muted" style="font-size: 0.75rem;">${cli}</span>`;
 
                 let checkHtml = (window.modoSeleccion && window.modoSeleccion['statusMant'] && insp && insp.id)
@@ -476,18 +506,31 @@ function mostrarStatusInspecciones(inspecciones) {
                 }
 
                 let daysOverdueHTML = '';
-                if (diasRestantes < 0 && diasRestantes !== -9999) {
-                    let cantD = Math.abs(diasRestantes);
-                    let lblD = cantD === 1 ? 'Venció hace 1 día' : `Venció hace ${cantD} días`;
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> ${lblD}</span>`;
-                } else if (diasRestantes >= 0 && diasRestantes <= 7 && diasRestantes !== -9999) {
-                    let cantD = diasRestantes;
-                    let lblD = cantD === 1 ? 'Falta 1 día' : (cantD === 0 ? 'Vence hoy' : `Faltan ${cantD} días`);
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> ${lblD}</span>`;
-                } else if (diasRestantes > 7) {
-                    let cantD = diasRestantes;
-                    let lblD = cantD === 1 ? 'Falta 1 día' : `Faltan ${cantD} días`;
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> ${lblD}</span>`;
+                let colorBanda = '#94a3b8';
+
+                if (!insp || !insp.id) {
+                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 9999px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-dash-circle"></i> SIN REGISTRO</span>`;
+                    colorBanda = '#94a3b8';
+                } else if (isHistorialStatus && !esUltimaInsp) {
+                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 9999px; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 4px;"><i class="bi bi-archive-fill"></i> REGISTRADO</span>`;
+                    colorBanda = '#94a3b8';
+                } else {
+                    if (diasRestantes < 0 && diasRestantes !== -9999) {
+                        let cantD = Math.abs(diasRestantes);
+                        let lblD = cantD === 1 ? 'Venció hace 1 día' : `Venció hace ${cantD} días`;
+                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> ${lblD}</span>`;
+                        colorBanda = '#dc2626';
+                    } else if (diasRestantes >= 0 && diasRestantes <= 7 && diasRestantes !== -9999) {
+                        let cantD = diasRestantes;
+                        let lblD = cantD === 1 ? 'Falta 1 día' : (cantD === 0 ? 'Vence hoy' : `Faltan ${cantD} días`);
+                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> ${lblD}</span>`;
+                        colorBanda = '#f59e0b';
+                    } else if (diasRestantes > 7) {
+                        let cantD = diasRestantes;
+                        let lblD = cantD === 1 ? 'Falta 1 día' : `Faltan ${cantD} días`;
+                        daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> ${lblD}</span>`;
+                        colorBanda = '#10b981';
+                    }
                 }
 
                 html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">
@@ -496,7 +539,7 @@ function mostrarStatusInspecciones(inspecciones) {
               <td class="d-none d-md-table-cell" data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
               <td class="d-block d-md-none p-2 border-0 bg-transparent">
-                  <div class="insp-mob-card p-3 rounded-4 shadow-sm border bg-white mb-2" style="position: relative; overflow: hidden; border-left: 5px solid ${diasRestantes < 0 && diasRestantes !== -9999 ? '#dc2626' : (diasRestantes <= 7 ? '#f59e0b' : '#10b981')} !important;">
+                  <div class="insp-mob-card p-3 rounded-4 shadow-sm border bg-white mb-2" style="position: relative; overflow: hidden; border-left: 5px solid ${colorBanda} !important;">
                       <div class="d-flex justify-content-between align-items-center mb-2">
                           <div class="d-flex align-items-center gap-2 flex-wrap">
                               <span class="bg-light border text-dark font-monospace fw-bold px-2 py-1 rounded shadow-2xs" style="font-size: 13px; letter-spacing: 1px;">${placa}</span>
