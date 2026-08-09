@@ -98,16 +98,16 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
-    // Legacy /api/script endpoints
-    else if (path.includes('Fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
-    else if (path.includes('StatusFlota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
-    else if (path.includes('Inspeccion')) mod = ['insp'];
-    else if (path.includes('Placas') || path.includes('Placa')) mod = ['placas', 'fleet'];
-    else if (path.includes('Conductor')) mod = ['cond', 'conductores'];
-    else if (path.includes('Wialon')) mod = ['gps', 'fleet'];
-    else if (path.includes('Usuario')) mod = ['usuarios'];
-    else if (path.includes('Documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
-    else if (path.includes('TiposMantenimiento') || path.includes('TPMP')) mod = ['cfg_mant', 'fleetrun', 'ot', 'plan'];
+    // Legacy & API Endpoints
+    else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];
+    else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond', 'conductores'];
+    else if (path.startsWith('/usuarios') || path.startsWith('/usuario') || path.toLowerCase().includes('usuario')) mod = ['usuarios'];
+    else if (path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
+    else if (path.startsWith('/inspecciones') || path.toLowerCase().includes('inspeccion')) mod = ['insp'];
+    else if (path.toLowerCase().includes('fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
+    else if (path.toLowerCase().includes('statusflota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
+    else if (path.toLowerCase().includes('wialon')) mod = ['gps', 'fleet'];
+    else if (path.toLowerCase().includes('tiposmantenimiento') || path.toLowerCase().includes('tpmp')) mod = ['cfg_mant', 'fleetrun', 'ot', 'plan'];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
