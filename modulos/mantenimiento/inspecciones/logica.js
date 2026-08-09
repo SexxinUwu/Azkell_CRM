@@ -264,7 +264,35 @@ window.toggleGraficosStatus = function() {
     window.graficosStatusAbiertos = !window.graficosStatusAbiertos; 
     window.actualizarVistaGraficos();
 };
-function toggleVistaStatus() { isHistorialStatus = !isHistorialStatus; let textBtn = document.getElementById('text-toggle-status'); if (textBtn) { textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; } expandAllStatusState = false; expandStatusMap = {}; mostrarStatusInspecciones(dataGlobalInspecciones); }
+function toggleVistaStatus() { 
+    isHistorialStatus = !isHistorialStatus; 
+    window.inspPaginaActual = 1; 
+    let textBtn = document.getElementById('text-toggle-status'); 
+    if (textBtn) { 
+        textBtn.innerText = isHistorialStatus ? "Ver Últimos Registros" : "Ver Historial"; 
+    } 
+    var btnMob = document.getElementById('btnMobileHistorial');
+    if (btnMob) {
+        if (isHistorialStatus) {
+            btnMob.classList.add('active-historial');
+            btnMob.innerHTML = '<i class="bi bi-clock-history me-1"></i><span style="font-weight: 700; font-size: 0.78rem;">Historial</span>';
+        } else {
+            btnMob.classList.remove('active-historial');
+            btnMob.innerHTML = '<i class="bi bi-clock-history" style="font-size: 17px;"></i>';
+        }
+    }
+    var mobBannerLbl = document.getElementById('insp-mob-mode-label');
+    if (mobBannerLbl) {
+        if (isHistorialStatus) {
+            mobBannerLbl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#818cf8;display:inline-block;box-shadow:0 0 8px #818cf8;"></span><span>Modo: Historial Completo</span>';
+        } else {
+            mobBannerLbl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 8px #10b981;"></span><span>Modo: Últimas Inspecciones (Vigentes)</span>';
+        }
+    }
+    expandAllStatusState = false; 
+    expandStatusMap = {}; 
+    mostrarStatusInspecciones(dataGlobalInspecciones); 
+}
 function toggleGroupRowStatus(classTipo) { expandStatusMap[classTipo] = !expandStatusMap[classTipo]; filtrarStatusAvanzado(); }
 function toggleAllStatusGroups() { expandAllStatusState = !expandAllStatusState; for (let key in expandStatusMap) { expandStatusMap[key] = expandAllStatusState; } const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header'); headers.forEach(header => { let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/); if (matchIcon) expandStatusMap[matchIcon[1]] = expandAllStatusState; }); filtrarStatusAvanzado(); }
 
@@ -462,59 +490,41 @@ function mostrarStatusInspecciones(inspecciones) {
               <td class="d-none d-md-table-cell text-truncate" style="max-width: 100px;">${tecnico}</td><td class="d-none d-md-table-cell">${fIngresoBonita}</td><td class="d-none d-md-table-cell" data-value="${diasRestantes}">${badgeProx}</td>
               <td class="d-none d-md-table-cell" data-value="${txtEstado}">${badgeEst}</td><td class="d-none" data-value="${estadoVigente2}">${estadoVigente2}</td>
               <td class="d-none d-md-table-cell">${ubicacionHtml}</td><td class="d-none d-md-table-cell">${menuAcciones}</td>
-              <td class="d-block d-md-none p-0 border-0 bg-white">
-                  ${isHistorialStatus ? `
-                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc; cursor: pointer;" onclick="verDetalleInspeccion('${insp.id}', false)">
-                      <div class="d-flex justify-content-between align-items-center w-100">
-                          <div class="d-flex align-items-center gap-2">
-                              <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
-                              <span style="font-size: 9px; font-weight: bold; background-color: ${diasRestantes < 0 && diasRestantes !== -9999 ? '#fee2e2' : '#d1fae5'}; color: ${diasRestantes < 0 && diasRestantes !== -9999 ? '#b91c1c' : '#047857'}; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">${txtEstado}</span>
-                          </div>
-                          <span style="font-size: 11px; font-weight: bold; background-color: #10b981; color: white; padding: 4px 10px; border-radius: 6px;">
-                              ${diasRestantes === -9999 ? 'Sin Registro' : (diasRestantes < 0 ? `Vencido hace ${Math.abs(diasRestantes)}d` : `Faltan ${diasRestantes} días`)}
-                          </span>
-                      </div>
-                      <div class="d-flex align-items-center gap-3 w-100 mt-1" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px;">
-                          <div class="d-flex align-items-center gap-1" style="color: #64748b; font-size: 12px; font-weight: 600;">
-                              <i class="bi bi-person text-secondary"></i> <span class="text-truncate" style="max-width:100px;">${tecnico}</span>
-                          </div>
-                          <span style="color: #cbd5e1;">•</span>
-                          <div class="d-flex align-items-center gap-1" style="color: #64748b; font-size: 12px; font-weight: 600;">
-                              <i class="bi bi-calendar text-secondary"></i> ${fIngresoBonita}
-                          </div>
-                      </div>
-                      <div class="d-flex justify-content-between align-items-end w-100 mt-1">
-                          <div class="d-flex flex-column gap-1" style="font-size: 13px; color: #64748b; font-weight: 500;">
-                              <span class="text-dark">${cli} <span class="mx-1" style="color: #cbd5e1;">•</span> ${mod}</span>
-                          </div>
-                          <div class="d-flex align-items-center gap-1 bg-light border px-2 py-1 rounded-pill shadow-sm" style="font-size: 11px; color: #475569; font-weight: 600;">
-                              <i class="bi bi-geo-alt text-primary"></i> ${txtKmReact}
-                          </div>
-                      </div>
-                  </div>
-                  ` : `
-                  <div class="p-3 border-bottom d-flex flex-column gap-2" style="background-color: #f8fafc;">
-                      <div class="d-flex justify-content-between align-items-start w-100">
+              <td class="d-block d-md-none p-2 border-0 bg-transparent">
+                  <div class="insp-mob-card p-3 rounded-4 shadow-sm border bg-white mb-2" style="position: relative; overflow: hidden; border-left: 5px solid ${diasRestantes < 0 && diasRestantes !== -9999 ? '#dc2626' : (diasRestantes <= 7 ? '#f59e0b' : '#10b981')} !important;">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
                           <div class="d-flex align-items-center gap-2 flex-wrap">
-                              <span class="bg-white border text-dark font-monospace fw-bold shadow-sm" style="font-size: 14px; letter-spacing: 2px; padding: 2px 10px; border-radius: 6px; border-color: #e5e7eb;">${placa}</span>
+                              <span class="bg-light border text-dark font-monospace fw-bold px-2 py-1 rounded shadow-2xs" style="font-size: 13px; letter-spacing: 1px;">${placa}</span>
                               ${daysOverdueHTML}
                           </div>
-                          ${btnRegistrar}
+                          ${insp && insp.id ? `
+                              <button class="btn btn-sm btn-light border fw-bold text-primary px-3 shadow-2xs rounded-pill" onclick="event.stopPropagation(); verDetalleInspeccion('${insp.id}', false)">
+                                  <i class="bi bi-eye-fill"></i> Ver
+                              </button>
+                          ` : btnRegistrar}
                       </div>
-                      <div class="d-flex justify-content-between align-items-end w-100 mt-1">
-                          <div class="d-flex flex-column gap-1" style="font-size: 13px; color: #64748b; font-weight: 500;">
-                              <span class="text-dark">${cli} <span class="mx-1" style="color: #cbd5e1;">•</span> ${mod}</span>
-                              <div class="d-flex align-items-center gap-1">
-                                  <i class="bi bi-geo-alt text-primary" style="font-size: 13px;"></i>
-                                  ${txtKmReact}
-                              </div>
+
+                      <div class="d-flex justify-content-between align-items-center py-2 px-2 my-2 rounded-3" style="background: rgba(0,0,0,0.025); font-size: 0.8rem;">
+                          <div class="d-flex align-items-center gap-2 text-muted fw-semibold">
+                              <i class="bi bi-building text-secondary"></i>
+                              <span class="text-dark text-truncate" style="max-width: 140px;">${cli}</span>
+                              <span>•</span>
+                              <span>${mod}</span>
                           </div>
-                          <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; ${diasRestantes === -9999 ? 'background-color: #e2e8f0; color: #475569;' : 'background-color: #d1fae5; color: #047857;'}">
-                              ${txtBadgeReact}
-                          </span>
+                          ${insp && insp.id ? `<span class="badge bg-secondary text-white font-monospace" style="font-size: 0.7rem;">${insp.id}</span>` : ''}
+                      </div>
+
+                      <div class="d-flex justify-content-between align-items-center mt-2 pt-1" style="font-size: 0.78rem; color: var(--subtext);">
+                          <div class="d-flex align-items-center gap-2">
+                              <span class="fw-semibold"><i class="bi bi-person text-secondary me-1"></i>${tecnico}</span>
+                              <span>•</span>
+                              <span><i class="bi bi-calendar text-secondary me-1"></i>${fIngresoBonita}</span>
+                          </div>
+                          <div class="d-flex align-items-center gap-1 font-monospace fw-bold text-dark">
+                              <i class="bi bi-speedometer text-primary"></i> ${txtKmReact}
+                          </div>
                       </div>
                   </div>
-                  `}
               </td></tr>`;
             });
         });
@@ -610,6 +620,7 @@ function filtrarStatusAvanzado() {
     let cntNoMotVig = 0, cntNoMotNoVig = 0;
 
     const headers = document.querySelectorAll('#cuerpoTablaStatus tr.group-header');
+    let totalVisiblesMob = 0;
     headers.forEach(header => {
         let matchIcon = header.querySelector('i').className.match(/toggle-icon-(\w+)/);
         if (!matchIcon) return;
@@ -652,6 +663,7 @@ function filtrarStatusAvanzado() {
 
         let icon = header.querySelector('i'); let spanConteo = header.querySelector(`.span-conteo-${classTipo}`);
         if (visibleCount > 0) {
+            totalVisiblesMob += visibleCount;
             header.style.display = '';
             if (spanConteo) spanConteo.innerText = visibleCount + " Unidades";
             if (icon) icon.className = (isFiltering || expandStatusMap[classTipo]) ? `bi bi-chevron-down ms-1 me-2 text-warning toggle-icon-${classTipo}` : `bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classTipo}`;
@@ -659,6 +671,9 @@ function filtrarStatusAvanzado() {
             header.style.display = 'none';
         }
     });
+
+    var mobCnt = document.getElementById('insp-mob-mode-count');
+    if (mobCnt) mobCnt.textContent = totalVisiblesMob + (totalVisiblesMob === 1 ? ' registro' : ' registros');
 
     if (!isHistorialStatus) {
         try { updateGraficosEnVivo(cntTotalVig, cntTotalNoVig, cntMotVig, cntMotNoVig, cntNoMotVig, cntNoMotNoVig); } catch(e) { }
