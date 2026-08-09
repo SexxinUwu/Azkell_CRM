@@ -1309,41 +1309,47 @@ window.checkPerm = function(modKey, action) {
             }
         }
         var p = window._permCache;
-        if (p.admin === true) return true;
-        
-        // Aliases para sincronizar las claves del Editor de Roles (_GU_MODULOS) con la lógica de los módulos
+        if (p && p.admin === true) return true;
         var keyAliases = {
-            'fleet': 'fleetrun',
-            'fleetrun': 'fleet',
-            'pers_mant': 'cfg_personal',
-            'cfg_personal': 'pers_mant',
-            'cond': 'conductores',
-            'conductores': 'cond',
+            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa'],
+            'reportes_ot': ['reportes_ot', 'ot', 'trabajos_ot'],
+            'trabajos_ot': ['trabajos_ot', 'ot', 'reportes_ot'],
+            'fleet': ['fleetrun', 'fleet', 'cfg_mant'],
+            'fleetrun': ['fleetrun', 'fleet', 'cfg_mant'],
+            'pers_mant': ['cfg_personal', 'pers_mant'],
+            'cfg_personal': ['cfg_personal', 'pers_mant'],
+            'cond': ['cond', 'conductores'],
+            'conductores': ['conductores', 'cond'],
+            'checklist': ['checklist', 'unid'],
+            'unid': ['unid', 'checklist'],
             'cfg_mant': ['cfg_mant', 'cfg_frec', 'cfg_kits', 'cfg_tipos_mp', 'cfg_metrica', 'cfg_situacion'],
             'cfg_frec': ['cfg_frec', 'cfg_mant'],
             'cfg_kits': ['cfg_kits', 'cfg_mant'],
             'cfg_tipos_mp': ['cfg_tipos_mp', 'cfg_mant'],
             'cfg_metrica': ['cfg_metrica', 'cfg_mant'],
-            'cfg_situacion': ['cfg_situacion', 'cfg_mant'],
-            'ot': ['ot', 'reportes_ot', 'trabajos_ot', 'status_rampa'],
-            'reportes_ot': ['reportes_ot', 'ot'],
-            'trabajos_ot': ['trabajos_ot', 'ot']
+            'cfg_situacion': ['cfg_situacion', 'cfg_mant']
         };
 
-        var m = p[modKey];
-        if ((m === undefined || m === null) && keyAliases[modKey]) {
-            var targets = Array.isArray(keyAliases[modKey]) ? keyAliases[modKey] : [keyAliases[modKey]];
-            for (var tIdx = 0; tIdx < targets.length; tIdx++) {
-                if (p[targets[tIdx]] !== undefined && p[targets[tIdx]] !== null) {
-                    m = p[targets[tIdx]];
-                    break;
+        var keysToCheck = [modKey];
+        if (keyAliases[modKey]) {
+            var aliases = Array.isArray(keyAliases[modKey]) ? keyAliases[modKey] : [keyAliases[modKey]];
+            aliases.forEach(function(k) { if (!keysToCheck.includes(k)) keysToCheck.push(k); });
+        }
+
+        for (var i = 0; i < keysToCheck.length; i++) {
+            var k = keysToCheck[i];
+            var m = p[k];
+            if (m !== undefined && m !== null) {
+                if (typeof m === 'boolean' && m === true) return true;
+                if (typeof m === 'object') {
+                    if (action === 'l' && (m.l === 1 || m.l === true || m.enabled === 1 || m.enabled === true)) return true;
+                    if (action === 'c' && (m.c === 1 || m.c === true)) return true;
+                    if (action === 'e' && (m.e === 1 || m.e === true)) return true;
+                    if (action === 'd' && (m.d === 1 || m.d === true)) return true;
                 }
             }
         }
-        if (m === undefined || m === null) return false;
-        if (typeof m === 'boolean') return action === 'l' ? m : false;
-        if (action === 'l') return m.l === 1 || m.l === true;
-        return m[action] === 1 || m[action] === true;
+        return false;
     } catch(e) { return false; }
 };
 
