@@ -164,10 +164,15 @@ app.post('/api/configuracion', async (req, res) => {
     }
 });
 
-app.get('/api/proxy/documento', async (req, res) => {
+app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
+    let numero = (req.query.numero || req.query.doc || '').trim();
+    if (!numero) return res.status(400).json({error: "Número de documento (RUC o DNI) requerido"});
+    
     let tipo = req.query.tipo;
-    let numero = req.query.numero;
-    if (!tipo || !numero) return res.status(400).json({error: "Faltan parametros"});
+    if (!tipo) {
+        tipo = numero.length === 8 ? 'DNI' : 'RUC';
+    }
+
     let url = '';
     if (tipo === 'RUC') url = 'https://api.apis.net.pe/v1/ruc?numero=' + numero;
     else if (tipo === 'DNI') url = 'https://api.apis.net.pe/v1/dni?numero=' + numero;
@@ -176,7 +181,7 @@ app.get('/api/proxy/documento', async (req, res) => {
     try {
         let fetchCall = global.fetch || require('node-fetch');
         let response = await fetchCall(url);
-        if (!response.ok) return res.status(response.status).json({error: "Error en API externa"});
+        if (!response.ok) return res.status(response.status).json({error: "Error en API externa SUNAT/RENIEC"});
         let data = await response.json();
         res.json(data);
     } catch(err) {
