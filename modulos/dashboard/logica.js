@@ -140,6 +140,18 @@ window.procesarFleetrunParaDashboard = async function() {
         } catch(e) { window._fleetrun_umbrales_uts = {}; }
     }
 
+    // Cargar mapa de métricas (km vs horas) si no está cargado
+    if (!window._metricaMap || Object.keys(window._metricaMap).length === 0) {
+        try {
+            var resM = await fetch('/api/config-metrica');
+            var metricaData = resM.ok ? await resM.json() : [];
+            window._metricaMap = window._metricaMap || {};
+            (metricaData || []).forEach(function(row) {
+                if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
+            });
+        } catch(e) {}
+    }
+
     // Calcular KPIs con la MISMA lógica que mostrarFleetrun:
     // ordenar descendente por fecha, tomar último por placa+tipo, solo placas ACTIVAS
     var parseFecha = function(str) {
