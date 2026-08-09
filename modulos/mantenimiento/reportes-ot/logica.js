@@ -150,10 +150,14 @@ window.rotFiltrar = function() {
 
 // ── Permiso edición OT (lectura directa, sin depender de checkPerm global) ───
 function rotPuedeEditar() {
+    if (typeof window.checkPerm === 'function') {
+        return window.checkPerm('ot', 'e') || window.checkPerm('reportes_ot', 'e');
+    }
     try {
         var p = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
         if (p.admin === true) return true;
-        return !!(p.ot && (p.ot.e === 1 || p.ot.e === true));
+        var r = p.reportes_ot || p.ot || {};
+        return !!(r.e === 1 || r.e === true);
     } catch(e) { return false; }
 }
 
