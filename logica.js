@@ -446,13 +446,19 @@ window.verificarSesionGuardada = function() {
     fetch('/api/script/obtenerTiposMantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { dataTiposMant = r.data || []; window.dataTiposMant = dataTiposMant; });
     fetch('/api/script/obtenerTPMP', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { rellenarDatalist('dl-tpmp', new Set(r.data || [])); });
 
-    // Precarga Fleetrun: llenar window.dataGlobalFleetrun y disparar re-render si el usuario ya está en ese módulo
+    // Precarga Fleetrun: llenar window.dataGlobalFleetrun, umbrales y mapa de métricas (km vs horas)
     Promise.all([
         fetch('/api/configuracion').then(r => r.json()).catch(() => ({})),
+        fetch('/api/config-metrica').then(r => r.json()).catch(() => ([])),
         fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
-    ]).then(([configData, r]) => {
+    ]).then(([configData, metricaData, r]) => {
         let confStr = configData['fleetrun_uts_umbrales'] || '{}';
         try { window._fleetrun_umbrales_uts = JSON.parse(confStr); } catch(e) { window._fleetrun_umbrales_uts = {}; }
+
+        window._metricaMap = window._metricaMap || {};
+        (metricaData || []).forEach(function(row) {
+            if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
+        });
 
         let d = r.data || [];
         window.dataGlobalFleetrun = d;

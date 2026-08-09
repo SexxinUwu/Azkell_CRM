@@ -1823,41 +1823,32 @@ window.init_fleetrun = function() {
         window.chartFleetrunInst = null;
     }
 
-    // Cargar mapa de métricas (km vs horas motor) por placa
-    fetch('/api/config-metrica')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            window._metricaMap = {};
-            (data || []).forEach(function(row) {
-                if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
-            });
-        })
-        .catch(function() {});
+    Promise.all([
+        fetch('/api/config-metrica').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+        fetch('/api/km-historico').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+    ]).then(function([metricaData, kmData]) {
+        window._metricaMap = {};
+        (metricaData || []).forEach(function(row) {
+            if (row.placa) window._metricaMap[row.placa.toUpperCase()] = row.metrica || 'km';
+        });
 
-    // Cargar mapa de km/día (histórico GPS últimos 30 días)
-    fetch('/api/km-historico')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(data) {
-            window._kmDiaMap = {};
-            (data || []).forEach(function(row) {
-                if (row.placa) window._kmDiaMap[row.placa.toUpperCase()] = {
-                    km_dia:    row.km_dia,
-                    horas_dia: row.horas_dia
-                };
-            });
-        })
-        .catch(function() {});
+        window._kmDiaMap = {};
+        (kmData || []).forEach(function(row) {
+            if (row.placa) window._kmDiaMap[row.placa.toUpperCase()] = {
+                km_dia:    row.km_dia,
+                horas_dia: row.horas_dia
+            };
+        });
 
-    // Si hay datos en memoria → mostrar inmediatamente para UX rápido
-    // Luego SIEMPRE hacer fetch fresco (puede haber registros nuevos desde la última visita)
-    const datosEnMemoria = (window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0)
-        ? window.dataGlobalFleetrun
-        : null;
+        const datosEnMemoria = (window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0)
+            ? window.dataGlobalFleetrun
+            : null;
 
-    if (datosEnMemoria) {
-        mostrarFleetrun(datosEnMemoria); // render inmediato con caché
-    }
-    cargarTablaFleetrun(true); // fetch fresco en paralelo (actualiza la tabla al llegar)
+        if (datosEnMemoria) {
+            mostrarFleetrun(datosEnMemoria);
+        }
+        cargarTablaFleetrun(true);
+    });
 };
 // NOTA: cargarTablaFleetrun es function declaration — va a window automáticamente al cargar el script.
 
