@@ -79,55 +79,66 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
     window.chartDashFleetrunInst.update();
 };
 
-window.procesarFleetrunParaDashboard = function() {
-    // Si el módulo Fleetrun ya calculó los KPIs, usarlos directamente
-    if (window._fleetrun_kpi_venc !== undefined) {
-        var cntV = window._fleetrun_kpi_venc;
-        var cntP = window._fleetrun_kpi_prox;
-        var cntG = window._fleetrun_kpi_vig;
-        updateGraficoDashFleetrun(cntG, cntP, cntV);
-        var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
-        var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
-        if (dMobFV) dMobFV.textContent = cntV;
-        if (dMobFP) dMobFP.textContent = cntP;
-        return;
-    }
-
-    // Si el módulo Fleetrun no ha corrido aún, calcular con la misma lógica
-    var datos = window.dataGlobalFleetrun || [];
+window.procesarFleetrunParaDashboard = async function() {
     var placas = window.dataGlobalPlacas || [];
-    if (!datos.length || !placas.length) {
-        setTimeout(procesarFleetrunParaDashboard, 500);
+    if (!placas.length) { setTimeout(procesarFleetrunParaDashboard, 500); return; }
+
+    // Si el módulo Fleetrun ya calculó y tiene datos frescos, usarlos
+    if (window._fleetrun_kpi_venc !== undefined && window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0) {
+        _aplicarKpisFleetrunDashboard(window._fleetrun_kpi_venc, window._fleetrun_kpi_prox, window._fleetrun_kpi_vig);
         return;
     }
 
+    // Si no hay datos en caché, consultar la API directamente (igual que inspecciones)
+    var datos = window.dataGlobalFleetrun;
+    if (!datos || datos.length === 0) {
+        try {
+            var res = await fetch('/api/script/obtenerDatosFleetrun', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ args: [] })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var json = await res.json();
+            datos = json.data || [];
+            window.dataGlobalFleetrun = datos;
+        } catch(e) {
+            console.warn('Dashboard: error cargando fleetrun', e);
+            return;
+        }
+    }
+
+    // Cargar umbrales si no están
+    if (window._fleetrun_umbrales_uts === undefined || window._fleetrun_umbrales_uts === null) {
+        try {
+            var resCfg = await fetch('/api/configuracion');
+            var cfg = resCfg.ok ? await resCfg.json() : {};
+            try { window._fleetrun_umbrales_uts = JSON.parse(cfg['fleetrun_uts_umbrales'] || '{}'); } catch(e) { window._fleetrun_umbrales_uts = {}; }
+        } catch(e) { window._fleetrun_umbrales_uts = {}; }
+    }
+
+    // Calcular KPIs con la MISMA lógica que mostrarFleetrun:
+    // ordenar descendente por fecha, tomar último por placa+tipo, solo placas ACTIVAS
     var parseFecha = function(str) {
         if (!str) return 0;
         var p = str.split('/');
         if (p.length === 3) return new Date(p[2], p[1]-1, p[0]).getTime();
         return new Date(str).getTime() || 0;
     };
-
     var _hoy = Date.now();
-    var datosOrdenados = datos.slice().sort(function(a, b) {
+    var datosOrd = datos.slice().sort(function(a, b) {
         var ta = parseFecha(a[3]), tb = parseFecha(b[3]);
-        var aFuturo = ta > _hoy + 86400000;
-        var bFuturo = tb > _hoy + 86400000;
-        if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
+        var aF = ta > _hoy + 86400000, bF = tb > _hoy + 86400000;
+        if (aF !== bF) return aF ? 1 : -1;
         if (tb !== ta) return tb - ta;
-        var idA = parseInt((String(a[0]).match(/\d+$/) || [0])[0], 10);
-        var idB = parseInt((String(b[0]).match(/\d+$/) || [0])[0], 10);
-        return idB - idA;
+        return parseInt((String(b[0]).match(/\d+$/) || [0])[0], 10) - parseInt((String(a[0]).match(/\d+$/) || [0])[0], 10);
     });
 
-    // Igual que mostrarFleetrun: último registro por placa+tipo de placas ACTIVAS
     var mapa = new Map();
-    datosOrdenados.forEach(function(row) {
-        var placaRaw = row[4];
-        if (!placaRaw) return;
+    datosOrd.forEach(function(row) {
+        var placaRaw = row[4]; if (!placaRaw) return;
         var placa = normalizeStr(placaRaw);
-        var tipo = normalizeStr(row[8]);
-        var key = placa + '_' + tipo;
+        var key = placa + '_' + normalizeStr(row[8]);
         var infoPlaca = placas.find(function(p) { return normalizeStr(p[0]) === placa; });
         var estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
         if (!mapa.has(key) && infoPlaca && estadoPlaca === 'ACTIVA') {
@@ -137,58 +148,43 @@ window.procesarFleetrunParaDashboard = function() {
 
     var placaEstadoMap = new Map();
     var estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
-
     mapa.forEach(function(item) {
-        var row = item.row;
-        var placaRaw = item.placaRaw;
-        var infoPlaca = item.infoPlaca;
-
-        var km_cambio = parseFloat(row[9]) || 0;
-        var km_prox   = parseFloat(row[11]) || 0;
-        var km_gps    = parseFloat(row[14]) || 0;
-        var esHoras   = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
-
-        var wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
-        if (wialonData) km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
+        var row = item.row, placaRaw = item.placaRaw, infoP = item.infoPlaca;
+        var km_prox = parseFloat(row[11]) || 0;
+        var km_gps  = parseFloat(row[14]) || 0;
+        var esHoras = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
+        var wd = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
+        if (wd) km_gps = esHoras ? (wd.horas || 0) : wd.km;
 
         var km_restante = km_prox - km_gps;
-
-        var utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || '-');
+        var utsDisplay = (infoP && infoP[19] && String(infoP[19]).trim() !== '') ? infoP[19] : (row[7] || '-');
         var utsUmbral = 2000;
-        var combinedKey = utsDisplay.toUpperCase() + (esHoras ? '_HORAS' : '_KM');
-
-        if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
-            if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
-            else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+        var ck = utsDisplay.toUpperCase() + (esHoras ? '_HORAS' : '_KM');
+        var u = window._fleetrun_umbrales_uts;
+        if (u && Object.keys(u).length) {
+            if (u[ck] !== undefined) utsUmbral = parseFloat(u[ck]);
+            else if (u[utsDisplay.toUpperCase()] !== undefined) utsUmbral = parseFloat(u[utsDisplay.toUpperCase()]);
             else { if (normalizeStr(utsDisplay) === 'NACIONAL') utsUmbral = 1500; else if (normalizeStr(utsDisplay) === 'LOCAL') utsUmbral = 100; }
-        } else {
-            if (normalizeStr(utsDisplay) === 'NACIONAL') utsUmbral = 1500; else if (normalizeStr(utsDisplay) === 'LOCAL') utsUmbral = 100;
-        }
+        } else { if (normalizeStr(utsDisplay) === 'NACIONAL') utsUmbral = 1500; else if (normalizeStr(utsDisplay) === 'LOCAL') utsUmbral = 100; }
 
         var estadoKpi = km_restante <= 0 ? 'VENCIDO' : (km_restante <= utsUmbral ? 'PROXIMO' : 'VIGENTE');
         var prev = placaEstadoMap.get(placaRaw);
         if (prev === undefined || estadoPrio[estadoKpi] > estadoPrio[prev]) placaEstadoMap.set(placaRaw, estadoKpi);
     });
 
-    var cntTotalVenc = 0, cntTotalPV = 0, cntTotalVig = 0;
-    placaEstadoMap.forEach(function(estado) {
-        if (estado === 'VENCIDO') cntTotalVenc++;
-        else if (estado === 'PROXIMO') cntTotalPV++;
-        else cntTotalVig++;
-    });
+    var venc = 0, prox = 0, vig = 0;
+    placaEstadoMap.forEach(function(e) { if (e === 'VENCIDO') venc++; else if (e === 'PROXIMO') prox++; else vig++; });
 
-    // Guardar para acceso futuro
-    window._fleetrun_kpi_venc = cntTotalVenc;
-    window._fleetrun_kpi_prox = cntTotalPV;
-    window._fleetrun_kpi_vig  = cntTotalVig;
-
-    updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
-
-    var dMobFV2 = document.getElementById('dash-mob-fleet-vencidos');
-    var dMobFP2 = document.getElementById('dash-mob-fleet-porvencer');
-    if (dMobFV2) dMobFV2.textContent = cntTotalVenc;
-    if (dMobFP2) dMobFP2.textContent = cntTotalPV;
+    _aplicarKpisFleetrunDashboard(venc, prox, vig);
 };
+
+function _aplicarKpisFleetrunDashboard(venc, prox, vig) {
+    updateGraficoDashFleetrun(vig, prox, venc);
+    var fv = document.getElementById('dash-mob-fleet-vencidos');
+    var fp = document.getElementById('dash-mob-fleet-porvencer');
+    if (fv) fv.textContent = venc;
+    if (fp) fp.textContent = prox;
+}
 
 // ============================================================
 // 📊 GRÁFICO INSPECCIONES (Estado General del Mes)
