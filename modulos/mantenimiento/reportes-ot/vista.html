@@ -328,13 +328,46 @@
     text-transform: uppercase; letter-spacing: .05em;
     color: var(--subtext); border-bottom: 1px solid var(--border);
 }
-.rot-field {
-    display: flex; padding: 8px 12px;
-    border-bottom: 1px solid var(--border); font-size: .82rem;
+/* Card cabecera N° OT */
+.rot-id-bar {
+    background: rgba(88,101,242,0.06);
+    border: 1px solid rgba(88,101,242,0.18);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.rot-field:last-child { border-bottom: none; }
-.rot-field-lbl { width: 42%; color: var(--subtext); font-weight: 600; font-size: .78rem; padding-right: 8px; }
-.rot-field-val { width: 58%; color: var(--text); font-weight: 600; word-break: break-word; }
+.rot-id-num {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary, #5865F2);
+    line-height: 1.2;
+}
+.rot-id-lbl {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary, #5865F2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+.rot-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.rot-b-pendiente  { background: rgba(217,119,6,0.12);  color: #d97706; }
+.rot-b-en-proceso { background: rgba(14,165,233,0.12); color: #0ea5e9; }
+.rot-b-pausada    { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.rot-b-aprobada   { background: rgba(22,163,74,0.12);  color: #16a34a; }
+.rot-b-finalizado { background: rgba(16,185,129,0.12); color: #10b981; }
+.rot-b-cerrada    { background: rgba(88,101,242,0.12); color: var(--primary, #5865F2); }
+.rot-b-anulado    { background: rgba(220,38,38,0.12);  color: #dc2626; }
 
 /* Sub-drawers */
 .rot-sub-drawer {
