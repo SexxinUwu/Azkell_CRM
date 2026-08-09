@@ -319,10 +319,11 @@ function mostrarFleetrun(datos) {
 
   if (!isHistorialFleetrun) { 
       updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placaEstadoMap.size);
-      // Actualizar dashboard directamente con los valores calculados
+      // Guardar KPIs reales con flag para que el Dashboard los use directamente
       window._fleetrun_kpi_venc = cntVencido;
       window._fleetrun_kpi_prox = cntProximo;
       window._fleetrun_kpi_vig  = cntVigente;
+      window._fleetrun_kpi_desde_modulo = true;
       if (typeof window._aplicarKpisFleetrunDashboard === 'function') window._aplicarKpisFleetrunDashboard(cntVencido, cntProximo, cntVigente);
   }
   if (typeof window.initColPicker === 'function') {
@@ -557,10 +558,11 @@ window.filtrarFleetrunAvanzado = function() {
         header.style.display = hasVisibleChild ? '' : 'none';
     });
     updateGraficoFleetrun(cntVencido, cntProximo, cntVigente, placasMostradas.size);
-    // Actualizar dashboard directamente con los valores calculados
+    // Guardar KPIs reales con flag para que el Dashboard los use directamente
     window._fleetrun_kpi_venc = cntVencido;
     window._fleetrun_kpi_prox = cntProximo;
     window._fleetrun_kpi_vig  = cntVigente;
+    window._fleetrun_kpi_desde_modulo = true;
     if (typeof window._aplicarKpisFleetrunDashboard === 'function') window._aplicarKpisFleetrunDashboard(cntVencido, cntProximo, cntVigente);
 
     // En móvil: re-renderizar cards con datos filtrados

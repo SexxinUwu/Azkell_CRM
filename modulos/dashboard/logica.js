@@ -83,11 +83,14 @@ window.procesarFleetrunParaDashboard = async function() {
     var placas = window.dataGlobalPlacas || [];
     if (!placas.length) { setTimeout(procesarFleetrunParaDashboard, 500); return; }
 
-    // Si el módulo Fleetrun ya calculó y tiene datos frescos, usarlos
-    if (window._fleetrun_kpi_venc !== undefined && window.dataGlobalFleetrun && window.dataGlobalFleetrun.length > 0) {
+    // Si el módulo Fleetrun ya está activo y tiene los valores reales con GPS live, usarlos
+    if (window._fleetrun_kpi_venc !== undefined && window._fleetrun_kpi_desde_modulo) {
         _aplicarKpisFleetrunDashboard(window._fleetrun_kpi_venc, window._fleetrun_kpi_prox, window._fleetrun_kpi_vig);
         return;
     }
+
+    // Si Wialon está activo pero aún cargando, esperar (evita calcular con km_gps viejo)
+    if (window._wialonCargando) { setTimeout(procesarFleetrunParaDashboard, 800); return; }
 
     // Si no hay datos en caché, consultar la API directamente (igual que inspecciones)
     var datos = window.dataGlobalFleetrun;
@@ -378,6 +381,8 @@ window.initMapaDashboard = function(datos) {
 window.cargarMapaWialonDash = async function() {
     // Skip mapa en móvil — pesado e innecesario en pantallas pequeñas
     if (window.innerWidth < 768) return;
+    window._wialonCargando = true;
+    window._wialonListo = false;
     try {
         const res = await fetch('/api/script/obtenerDatosWialon', {
             method: 'POST',
@@ -394,14 +399,20 @@ window.cargarMapaWialonDash = async function() {
         if (!Array.isArray(datos) || datos.error) {
             console.warn('Wialon sin datos:', datos);
             initMapaDashboard([]);
+            window._wialonCargando = false;
+            window._wialonListo = false;
             return;
         }
         initMapaDashboard(datos);
-        // Re-calcular fleetrun con km GPS real (antes podía tener km_gps=0 si Wialon no had cargado)
+        window._wialonCargando = false;
+        window._wialonListo = true;
+        // Re-calcular fleetrun con km GPS real
         if (typeof procesarFleetrunParaDashboard === 'function') procesarFleetrunParaDashboard();
     } catch (err) {
         console.error('Error cargando Wialon para dashboard:', err);
         initMapaDashboard([]);
+        window._wialonCargando = false;
+        window._wialonListo = false;
     }
 };
 
@@ -706,6 +717,8 @@ window.recargarDashboard = function() {
     if (typeof procesarFleetrunParaDashboard === 'function') procesarFleetrunParaDashboard();
     if (typeof procesarInspeccionesParaDashboard === 'function') procesarInspeccionesParaDashboard();
     if (typeof window.renderKpiMetrics === 'function') window.renderKpiMetrics();
+    // Cargar Wialon (desktop) — al terminar recalcula fleetrun con GPS real
+    if (typeof window.cargarMapaWialonDash === 'function') window.cargarMapaWialonDash();
 };
 
 // ============================================================
@@ -753,6 +766,12 @@ window._initDashboardReal = function(retries) {
         window.chartPrediccion90dInst.destroy();
         window.chartPrediccion90dInst = null;
     }
+
+    // Resetear flag para que el cálculo de Fleetrun siempre sea fresco (con GPS live)
+    window._fleetrun_kpi_desde_modulo = false;
+    window._fleetrun_kpi_venc = undefined;
+    window._fleetrun_kpi_prox = undefined;
+    window._fleetrun_kpi_vig  = undefined;
 
     // Inicializar gráficos
     if (!window.chartDashFleetrunInst) window.chartDashFleetrunInst = initGraficoDashFleetrun();
