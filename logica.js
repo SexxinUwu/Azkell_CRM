@@ -447,13 +447,22 @@ window.verificarSesionGuardada = function() {
     fetch('/api/script/obtenerTPMP', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).then(r => { rellenarDatalist('dl-tpmp', new Set(r.data || [])); });
 
     // Precarga Fleetrun: llenar window.dataGlobalFleetrun y disparar re-render si el usuario ya está en ese módulo
-    fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
-        .then(r => r.json()).then(r => {
+    Promise.all([
+        fetch('/api/configuracion').then(r => r.json()).catch(() => ({})),
+        fetch('/api/script/obtenerDatosFleetrun', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) }).then(r => r.json()).catch(() => ({ data: [] }))
+    ]).then(([configData, r]) => {
+        let confStr = configData['fleetrun_uts_umbrales'] || '{}';
+        try { window._fleetrun_umbrales_uts = JSON.parse(confStr); } catch(e) { window._fleetrun_umbrales_uts = {}; }
+
         let d = r.data || [];
         window.dataGlobalFleetrun = d;
         dataGlobalFleetrun = d;
         if (sessionStorage.getItem('fleet_rutaActual') === 'mantenimiento/fleetrun') {
             if (typeof window.init_fleetrun === 'function') window.init_fleetrun();
+        }
+        // Calcular KPIs para el Dashboard usando la misma lógica del módulo
+        if (typeof window.procesarFleetrunParaDashboard === 'function') {
+            window.procesarFleetrunParaDashboard();
         }
     });
 }

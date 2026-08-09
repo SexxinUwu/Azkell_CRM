@@ -80,86 +80,114 @@ window.updateGraficoDashFleetrun = function(vigentes, porVencer, vencidos) {
 };
 
 window.procesarFleetrunParaDashboard = function() {
-    if (!window.dataGlobalFleetrun || window.dataGlobalFleetrun.length === 0 ||
-        !window.dataGlobalPlacas    || window.dataGlobalPlacas.length === 0) {
+    // Si el módulo Fleetrun ya calculó los KPIs, usarlos directamente
+    if (window._fleetrun_kpi_venc !== undefined) {
+        var cntV = window._fleetrun_kpi_venc;
+        var cntP = window._fleetrun_kpi_prox;
+        var cntG = window._fleetrun_kpi_vig;
+        updateGraficoDashFleetrun(cntG, cntP, cntV);
+        var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
+        var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
+        if (dMobFV) dMobFV.textContent = cntV;
+        if (dMobFP) dMobFP.textContent = cntP;
+        return;
+    }
+
+    // Si el módulo Fleetrun no ha corrido aún, calcular con la misma lógica
+    var datos = window.dataGlobalFleetrun || [];
+    var placas = window.dataGlobalPlacas || [];
+    if (!datos.length || !placas.length) {
         setTimeout(procesarFleetrunParaDashboard, 500);
         return;
     }
-    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
-    let placaEstadoMap = new Map();
-    let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
+    var parseFecha = function(str) {
+        if (!str) return 0;
+        var p = str.split('/');
+        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]).getTime();
+        return new Date(str).getTime() || 0;
+    };
 
-    (window.dataGlobalFleetrun || []).forEach(row => {
-        let placaRaw = row[4];
+    var _hoy = Date.now();
+    var datosOrdenados = datos.slice().sort(function(a, b) {
+        var ta = parseFecha(a[3]), tb = parseFecha(b[3]);
+        var aFuturo = ta > _hoy + 86400000;
+        var bFuturo = tb > _hoy + 86400000;
+        if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
+        if (tb !== ta) return tb - ta;
+        var idA = parseInt((String(a[0]).match(/\d+$/) || [0])[0], 10);
+        var idB = parseInt((String(b[0]).match(/\d+$/) || [0])[0], 10);
+        return idB - idA;
+    });
+
+    // Igual que mostrarFleetrun: último registro por placa+tipo de placas ACTIVAS
+    var mapa = new Map();
+    datosOrdenados.forEach(function(row) {
+        var placaRaw = row[4];
         if (!placaRaw) return;
-        let pClean = cleanPlaca(placaRaw);
-        let infoPlaca = (window.dataGlobalPlacas || []).find(p => cleanPlaca(p[0]) === pClean);
-        
-        let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : 'ACTIVA'));
-        if (estadoPlaca !== 'INACTIVA' && estadoPlaca !== 'BAJA' && estadoPlaca !== 'ELIMINADA') {
-            let km_cambio = parseFloat(row[9]) || 0;
-            let frecuencia = parseFloat(row[10]) || 0;
-            let km_prox = parseFloat(row[11]) || 0;
-            
-            let km_gps = parseFloat(row[14]) || 0;
-            let wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
-            let esHoras = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
-            if (wialonData) {
-                km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
-            }
-            
-            let km_restante = km_prox - km_gps;
-            
-            let utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || "-");
-            let utsUmbral = 2000;
-            let metricSuffix = esHoras ? '_HORAS' : '_KM';
-            let combinedKey = utsDisplay.toUpperCase() + metricSuffix;
-            
-            if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
-                if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) {
-                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
-                } else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) {
-                    utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
-                } else {
-                    if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
-                    else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
-                }
-            } else {
-                if (normalizeStr(utsDisplay) === "NACIONAL") utsUmbral = 1500;
-                else if (normalizeStr(utsDisplay) === "LOCAL") utsUmbral = 100;
-            }
-            
-            let estadoKpi = 'VIGENTE';
-            if (km_restante <= 0) estadoKpi = 'VENCIDO';
-            else if (km_restante <= utsUmbral) estadoKpi = 'PROXIMO';
-            
-            let prevKpi = placaEstadoMap.get(pClean);
-            if (prevKpi === undefined || estadoPrio[estadoKpi] > estadoPrio[prevKpi]) {
-                placaEstadoMap.set(pClean, estadoKpi);
-            }
+        var placa = normalizeStr(placaRaw);
+        var tipo = normalizeStr(row[8]);
+        var key = placa + '_' + tipo;
+        var infoPlaca = placas.find(function(p) { return normalizeStr(p[0]) === placa; });
+        var estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
+        if (!mapa.has(key) && infoPlaca && estadoPlaca === 'ACTIVA') {
+            mapa.set(key, { row: row, placaRaw: placaRaw, infoPlaca: infoPlaca });
         }
     });
 
-    placaEstadoMap.forEach(estado => {
+    var placaEstadoMap = new Map();
+    var estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
+
+    mapa.forEach(function(item) {
+        var row = item.row;
+        var placaRaw = item.placaRaw;
+        var infoPlaca = item.infoPlaca;
+
+        var km_cambio = parseFloat(row[9]) || 0;
+        var km_prox   = parseFloat(row[11]) || 0;
+        var km_gps    = parseFloat(row[14]) || 0;
+        var esHoras   = window._metricaMap && window._metricaMap[placaRaw.toUpperCase()] === 'horas';
+
+        var wialonData = typeof buscarWialonPorPlaca === 'function' ? buscarWialonPorPlaca(placaRaw) : null;
+        if (wialonData) km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
+
+        var km_restante = km_prox - km_gps;
+
+        var utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || '-');
+        var utsUmbral = 2000;
+        var combinedKey = utsDisplay.toUpperCase() + (esHoras ? '_HORAS' : '_KM');
+
+        if (window._fleetrun_umbrales_uts && Object.keys(window._fleetrun_umbrales_uts).length > 0) {
+            if (window._fleetrun_umbrales_uts[combinedKey] !== undefined) utsUmbral = parseFloat(window._fleetrun_umbrales_uts[combinedKey]);
+            else if (window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()] !== undefined) utsUmbral = parseFloat(window._fleetrun_umbrales_uts[utsDisplay.toUpperCase()]);
+            else { if (normalizeStr(utsDisplay) === 'NACIONAL') utsUmbral = 1500; else if (normalizeStr(utsDisplay) === 'LOCAL') utsUmbral = 100; }
+        } else {
+            if (normalizeStr(utsDisplay) === 'NACIONAL') utsUmbral = 1500; else if (normalizeStr(utsDisplay) === 'LOCAL') utsUmbral = 100;
+        }
+
+        var estadoKpi = km_restante <= 0 ? 'VENCIDO' : (km_restante <= utsUmbral ? 'PROXIMO' : 'VIGENTE');
+        var prev = placaEstadoMap.get(placaRaw);
+        if (prev === undefined || estadoPrio[estadoKpi] > estadoPrio[prev]) placaEstadoMap.set(placaRaw, estadoKpi);
+    });
+
+    var cntTotalVenc = 0, cntTotalPV = 0, cntTotalVig = 0;
+    placaEstadoMap.forEach(function(estado) {
         if (estado === 'VENCIDO') cntTotalVenc++;
         else if (estado === 'PROXIMO') cntTotalPV++;
         else cntTotalVig++;
     });
 
+    // Guardar para acceso futuro
+    window._fleetrun_kpi_venc = cntTotalVenc;
+    window._fleetrun_kpi_prox = cntTotalPV;
+    window._fleetrun_kpi_vig  = cntTotalVig;
+
     updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
 
-    // Actualizar contadores móvil y global Fleetrun
-    var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
-    var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
-    if (dMobFV) dMobFV.textContent = cntTotalVenc;
-    if (dMobFP) dMobFP.textContent = cntTotalPV;
-
-    var kpiFlV = document.getElementById('kpi-fleet-vencidos');
-    var kpiFlP = document.getElementById('kpi-fleet-porvencer');
-    if (kpiFlV) kpiFlV.textContent = cntTotalVenc;
-    if (kpiFlP) kpiFlP.textContent = cntTotalPV;
+    var dMobFV2 = document.getElementById('dash-mob-fleet-vencidos');
+    var dMobFP2 = document.getElementById('dash-mob-fleet-porvencer');
+    if (dMobFV2) dMobFV2.textContent = cntTotalVenc;
+    if (dMobFP2) dMobFP2.textContent = cntTotalPV;
 };
 
 // ============================================================
