@@ -21,11 +21,13 @@ module.exports = (db, logAudit) => {
                 let permisosFinales = {};
                 let correoMin = (user.correo || '').trim().toLowerCase();
                 let rolLabel = user.rol_nombre || user.rol || 'Personalizado';
+                let esAdmin = (user.rol && user.rol.toLowerCase().includes('admin')) || user.rol_es_admin;
                 if (correoMin === 'admin@azkell.com') {
                     permisosFinales = { admin: true };
                     rolLabel = 'Fundador';
-                } else if (user.rol_id && user.rol_es_admin) {
+                } else if (esAdmin) {
                     permisosFinales = { admin: true };
+                    rolLabel = user.rol || user.rol_nombre || 'Administrador';
                 } else {
                     try {
                         let raw = user.r_permisos_json || user.permisos_json || '{}';

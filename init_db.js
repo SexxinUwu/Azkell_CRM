@@ -26,6 +26,11 @@ const TABLAS = [
             estado             VARCHAR(20)  NOT NULL DEFAULT 'Activo',
             permisos_json      JSON         NULL,
             rol_id             INT          NULL,
+            telefono           VARCHAR(50)  NULL,
+            avatar_url         TEXT         NULL,
+            banner_url         TEXT         NULL,
+            firma_digital      LONGTEXT     NULL,
+            preferencias_json  LONGTEXT     NULL,
             ultimo_acceso      DATETIME     NULL,
             ultimo_ip          VARCHAR(80)  NULL,
             ultimo_dispositivo VARCHAR(200) NULL,
@@ -373,7 +378,14 @@ async function initDB(db) {
     try {
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_nombre', 'Azkell Fleet')");
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
-        console.log(`✅ Default configurations seeded`);
+        await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
+        
+        // Migraciones de columnas en usuarios para instalaciones existentes
+        const colsUsuarios = ['telefono VARCHAR(50) NULL', 'avatar_url TEXT NULL', 'banner_url TEXT NULL', 'firma_digital LONGTEXT NULL', 'preferencias_json LONGTEXT NULL'];
+        for (const colDef of colsUsuarios) {
+            try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
+        }
+        console.log(`✅ Default configurations and roles seeded`);
     } catch (err) {
         console.error(`❌ Error seeding configurations:`, err.message);
     }
