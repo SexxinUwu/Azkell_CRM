@@ -150,11 +150,16 @@ window.procesarFleetrunParaDashboard = function() {
 
     updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
 
-    // Actualizar contadores móvil Fleetrun
+    // Actualizar contadores móvil y global Fleetrun
     var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
     var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
     if (dMobFV) dMobFV.textContent = cntTotalVenc;
     if (dMobFP) dMobFP.textContent = cntTotalPV;
+
+    var kpiFlV = document.getElementById('kpi-fleet-vencidos');
+    var kpiFlP = document.getElementById('kpi-fleet-porvencer');
+    if (kpiFlV) kpiFlV.textContent = cntTotalVenc;
+    if (kpiFlP) kpiFlP.textContent = cntTotalPV;
 };
 
 // ============================================================
@@ -478,11 +483,9 @@ window.renderKpiMetrics = async function() {
     var dMobP = document.getElementById('dash-mob-porvencer');
     if (dMobV) dMobV.textContent = vencidas;
     if (dMobP) dMobP.textContent = porVencer;
-    // kpi-fleet-vencidos lo actualiza el módulo fleetrun; intentamos leerlo si ya está
-    var dMobF = document.getElementById('dash-mob-fleet-vencidos');
-    if (dMobF) {
-        var kpiFlV = document.getElementById('kpi-fleet-vencidos');
-        if (kpiFlV) dMobF.textContent = kpiFlV.textContent || '—';
+
+    if (typeof window.procesarFleetrunParaDashboard === 'function') {
+        window.procesarFleetrunParaDashboard();
     }
 
     // PWA Badge
