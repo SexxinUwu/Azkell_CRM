@@ -107,6 +107,34 @@
                     <button class="d-flex align-items-center justify-content-center text-white border btn-mobile-filtros" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="event.stopPropagation(); window.toggleMobileFiltrosSheet();" title="Filtros">
                         <i class="bi bi-funnel" style="font-size: 17px;"></i>
                     </button>
+                    <script>
+                        window.toggleMobileFiltrosSheet = function() {
+                            var b = document.querySelector('#btnFiltrosInsp');
+                            var m = b ? b.nextElementSibling : null;
+                            var ov = document.getElementById('mobFiltOverlay');
+                            if (!ov) {
+                                ov = document.createElement('div');
+                                ov.id = 'mobFiltOverlay';
+                                ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9999;display:none;backdrop-filter:blur(4px);transition:opacity 0.25s ease;';
+                                ov.onclick = function() {
+                                    if (m) m.classList.remove('show');
+                                    ov.style.display = 'none';
+                                };
+                                document.body.appendChild(ov);
+                            }
+                            window._mobFiltOverlay = ov;
+                            if (m) {
+                                var isShown = m.classList.contains('show');
+                                if (isShown) {
+                                    m.classList.remove('show');
+                                    ov.style.display = 'none';
+                                } else {
+                                    m.classList.add('show');
+                                    ov.style.display = 'block';
+                                }
+                            }
+                        };
+                    </script>
                     <button class="d-flex align-items-center justify-content-center text-white border" style="width: 42px; height: 42px; border-radius: 0.75rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1) !important; transition: background-color 0.2s;" onclick="recargarModulo('statusMant')">
                         <i class="bi bi-arrow-clockwise" style="font-size: 17px;"></i>
                     </button>
