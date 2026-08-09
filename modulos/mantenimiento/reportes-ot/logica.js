@@ -592,12 +592,18 @@ window.rotCerrarDetalle = function() {
         var d = document.getElementById(id); if (d) d.classList.remove('open');
     });
     var back1  = document.getElementById('rotDrawerBackdrop');
-    var back2  = document.getElementById('srDrawerBackdrop');
     var drawer = document.getElementById('rot-drawer-detalle');
     if (back1)  back1.classList.remove('open');
-    if (back2)  back2.classList.remove('open');
     if (drawer) drawer.classList.remove('open');
     window.rotDetalleId = null;
+
+    // Preservar backdrop de Status Rampa si el panel de rampa sigue abierto
+    var srAbierto = document.querySelector('.sr-panel-detalle.open, .sr-drawer.open, #sr-panel-detalle.open, #sr-drawer-registro.open, [id^="sr-panel"].open');
+    var srBack = document.getElementById('srDrawerBackdrop');
+    if (srAbierto && srBack) {
+        srBack.classList.add('open');
+    }
+
     if (typeof window.rotRenderTabla === 'function' && document.getElementById('rot-tbody')) {
         window.rotRenderTabla(window.rotDatosFiltrados);
     }
