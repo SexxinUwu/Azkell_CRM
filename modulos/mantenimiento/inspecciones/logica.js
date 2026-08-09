@@ -613,6 +613,32 @@ function mostrarStatusInspecciones(inspecciones) {
         renderTablaFrenos(dataGlobalInspecciones);
     }
 }
+window.toggleMobileFiltrosSheet = function() {
+    var b = document.querySelector('#btnFiltrosInsp');
+    var m = b ? b.nextElementSibling : null;
+    var ov = document.getElementById('mobFiltOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'mobFiltOverlay';
+        ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:9999;display:none;backdrop-filter:blur(4px);transition:opacity 0.25s ease;';
+        ov.onclick = function() {
+            if (m) m.classList.remove('show');
+            ov.style.display = 'none';
+        };
+        document.body.appendChild(ov);
+    }
+    window._mobFiltOverlay = ov;
+    if (m) {
+        var isShown = m.classList.contains('show');
+        if (isShown) {
+            m.classList.remove('show');
+            ov.style.display = 'none';
+        } else {
+            m.classList.add('show');
+            ov.style.display = 'block';
+        }
+    }
+};
 
 function _renderInspPaginacion(total) {
     var info = document.getElementById('insp-info-paginacion');
