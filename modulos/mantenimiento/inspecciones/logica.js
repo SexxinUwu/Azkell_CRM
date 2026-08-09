@@ -323,17 +323,27 @@ function mostrarStatusInspecciones(inspecciones) {
         return estado === "ACTIVA" && enUso !== "NO";
     });
 
+    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
     if (!isHistorialStatus) {
         placasActivasEnUso.forEach(p => {
-            let placaStr = normalizeStr(p[0]);
-            let insp = inspeccionesGeneral.find(i => normalizeStr(i.placa) === placaStr);
+            let pClean = cleanPlaca(p[0]);
+            let insp = inspeccionesGeneral.find(i => cleanPlaca(i.placa) === pClean);
             dataFinal.push({ infoPlaca: p, insp: insp });
         });
     } else {
         inspeccionesGeneral.forEach(insp => {
-            let placaStr = normalizeStr(insp.placa);
-            let p = (window.dataGlobalPlacas || []).find(pl => normalizeStr(pl[0]) === placaStr) || [insp.placa, "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
+            let iClean = cleanPlaca(insp.placa);
+            let p = (window.dataGlobalPlacas || []).find(pl => cleanPlaca(pl[0]) === iClean) || [insp.placa, "-", "-", "-", "-", (insp.tipo_vehiculo || "SIN TIPO"), "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
             dataFinal.push({ infoPlaca: p, insp: insp });
+        });
+        // Incluir también las placas activas sin inspección registrada aún
+        placasActivasEnUso.forEach(p => {
+            let pClean = cleanPlaca(p[0]);
+            let tieneInsp = inspeccionesGeneral.some(i => cleanPlaca(i.placa) === pClean);
+            if (!tieneInsp) {
+                dataFinal.push({ infoPlaca: p, insp: null });
+            }
         });
     }
 
