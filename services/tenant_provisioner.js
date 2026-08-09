@@ -48,7 +48,7 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     // 2. Obtener pool de la nueva base de datos e inicializar todas las tablas del ERP
     const tenantPool = getTenantPool(dbName);
-    initDB(tenantPool);
+    await initDB(tenantPool);
 
     // 3. Crear el rol Administrador y el Usuario Admin Inicial en la nueva base de datos
     const hashPassword = await bcrypt.hash(admin_password, 10);
