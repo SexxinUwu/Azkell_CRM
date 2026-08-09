@@ -444,9 +444,17 @@ function mostrarStatusInspecciones(inspecciones) {
 
                 let daysOverdueHTML = '';
                 if (diasRestantes < 0 && diasRestantes !== -9999) {
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> NO VIGENTE (-${Math.abs(diasRestantes)}d)</span>`;
-                } else if (diasRestantes >= 0 && diasRestantes !== -9999) {
-                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> VIGENTE (${diasRestantes}d)</span>`;
+                    let cantD = Math.abs(diasRestantes);
+                    let lblD = cantD === 1 ? 'Venció hace 1 día' : `Venció hace ${cantD} días`;
+                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-circle-fill"></i> ${lblD}</span>`;
+                } else if (diasRestantes >= 0 && diasRestantes <= 7 && diasRestantes !== -9999) {
+                    let cantD = diasRestantes;
+                    let lblD = cantD === 1 ? 'Falta 1 día' : (cantD === 0 ? 'Vence hoy' : `Faltan ${cantD} días`);
+                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 9999px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> ${lblD}</span>`;
+                } else if (diasRestantes > 7) {
+                    let cantD = diasRestantes;
+                    let lblD = cantD === 1 ? 'Falta 1 día' : `Faltan ${cantD} días`;
+                    daysOverdueHTML = `<span style="font-size: 10px; font-weight: bold; background-color: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 9999px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> ${lblD}</span>`;
                 }
 
                 html += `<tr class="child-st-${classTipo} clickable-row data-row-status child-row-status" style="display:none;" data-cliente="${cli}" data-marca="${mar}" data-estado-v2="${estadoVigente2}" data-motor="${motora}" data-dias="${diasRestantes}" onclick="seleccionarFilaInspeccion(event, this)">

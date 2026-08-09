@@ -351,6 +351,18 @@ function mostrarFleetrun(datos) {
 
   // PWA Badge
   if (typeof window.actualizarPWABadge === 'function') window.actualizarPWABadge();
+
+  // ── Auto-filtrar si se proviene de navegación desde Dashboard ──────────────
+  var navFilter = localStorage.getItem('fleet_fleetrun_nav_filter');
+  if (navFilter) {
+      localStorage.removeItem('fleet_fleetrun_nav_filter');
+      var targetKpi = (navFilter === 'POR VENCER' || navFilter === 'PROXIMO') ? 'PROXIMO' : (navFilter === 'VENCIDO' ? 'VENCIDO' : 'VIGENTE');
+      setTimeout(function() {
+          if (typeof window.filtrarDesdeKpiFleetrun === 'function') {
+              window.filtrarDesdeKpiFleetrun(targetKpi);
+          }
+      }, 150);
+  }
 }
 
 function mostrarFleetrunCards(datosAMostrar) {
