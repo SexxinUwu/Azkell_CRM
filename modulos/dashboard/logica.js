@@ -85,44 +85,20 @@ window.procesarFleetrunParaDashboard = function() {
         setTimeout(procesarFleetrunParaDashboard, 500);
         return;
     }
-    let parseFecha = (str) => {
-        if (!str) return 0;
-        if (str.includes('/')) { let p = str.split('/'); return new Date(p[2], p[1]-1, p[0]).getTime(); }
-        return new Date(str).getTime() || 0;
-    };
+    let cleanPlaca = (str) => (str || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
     let cntTotalVig = 0, cntTotalPV = 0, cntTotalVenc = 0;
     let placaEstadoMap = new Map();
     let estadoPrio = { 'VIGENTE': 0, 'PROXIMO': 1, 'VENCIDO': 2 };
 
-    let _hoy = Date.now();
-    let datosOrdenados = [...(window.dataGlobalFleetrun || [])].sort((a, b) => {
-        let ta = parseFecha(a[3]), tb = parseFecha(b[3]);
-        let aFuturo = ta > _hoy + 86400000;
-        let bFuturo = tb > _hoy + 86400000;
-        if (aFuturo !== bFuturo) return aFuturo ? 1 : -1;
-        if (tb !== ta) return tb - ta;
-        let idA = parseInt((String(a[0]).match(/\d+$/) || [0])[0], 10);
-        let idB = parseInt((String(b[0]).match(/\d+$/) || [0])[0], 10);
-        return idB - idA;
-    });
-
-    let mapaFiltrado = new Map();
-    datosOrdenados.forEach(row => {
-        let placa = normalizeStr(row[4]);
-        let tipo = normalizeStr(row[8]);
-        let key = placa + "_" + tipo;
-        if (!mapaFiltrado.has(key)) {
-            mapaFiltrado.set(key, row);
-        }
-    });
-
-    Array.from(mapaFiltrado.values()).forEach(row => {
+    (window.dataGlobalFleetrun || []).forEach(row => {
         let placaRaw = row[4];
-        let placa = normalizeStr(placaRaw);
-        let infoPlaca = (window.dataGlobalPlacas || []).find(p => normalizeStr(p[0]) === placa);
+        if (!placaRaw) return;
+        let pClean = cleanPlaca(placaRaw);
+        let infoPlaca = (window.dataGlobalPlacas || []).find(p => cleanPlaca(p[0]) === pClean);
         
-        let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
-        if (infoPlaca && estadoPlaca === 'ACTIVA') {
+        let estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : 'ACTIVA'));
+        if (estadoPlaca !== 'INACTIVA' && estadoPlaca !== 'BAJA' && estadoPlaca !== 'ELIMINADA') {
             let km_cambio = parseFloat(row[9]) || 0;
             let frecuencia = parseFloat(row[10]) || 0;
             let km_prox = parseFloat(row[11]) || 0;
@@ -134,7 +110,6 @@ window.procesarFleetrunParaDashboard = function() {
                 km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
             }
             
-            let km_desde = km_gps - km_cambio;
             let km_restante = km_prox - km_gps;
             
             let utsDisplay = (infoPlaca && infoPlaca[19] && String(infoPlaca[19]).trim() !== '') ? infoPlaca[19] : (row[7] || "-");
@@ -160,9 +135,9 @@ window.procesarFleetrunParaDashboard = function() {
             if (km_restante <= 0) estadoKpi = 'VENCIDO';
             else if (km_restante <= utsUmbral) estadoKpi = 'PROXIMO';
             
-            let prevKpi = placaEstadoMap.get(placa);
+            let prevKpi = placaEstadoMap.get(pClean);
             if (prevKpi === undefined || estadoPrio[estadoKpi] > estadoPrio[prevKpi]) {
-                placaEstadoMap.set(placa, estadoKpi);
+                placaEstadoMap.set(pClean, estadoKpi);
             }
         }
     });
@@ -172,12 +147,14 @@ window.procesarFleetrunParaDashboard = function() {
         else if (estado === 'PROXIMO') cntTotalPV++;
         else cntTotalVig++;
     });
+
     updateGraficoDashFleetrun(cntTotalVig, cntTotalPV, cntTotalVenc);
+
     // Actualizar contadores móvil Fleetrun
     var dMobFV = document.getElementById('dash-mob-fleet-vencidos');
     var dMobFP = document.getElementById('dash-mob-fleet-porvencer');
-    if (dMobFV) dMobFV.textContent = cntTotalVenc || '0';
-    if (dMobFP) dMobFP.textContent = cntTotalPV   || '0';
+    if (dMobFV) dMobFV.textContent = cntTotalVenc;
+    if (dMobFP) dMobFP.textContent = cntTotalPV;
 };
 
 // ============================================================
