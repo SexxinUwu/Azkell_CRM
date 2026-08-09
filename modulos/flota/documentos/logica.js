@@ -351,7 +351,8 @@ function actualizarFiltroEmpresas() {
 
 function renderizarListaLateral() {
     const listDiv = document.getElementById('vehicle-list');
-    const term = (document.getElementById('fleet-search').value || '').toLowerCase();
+    const searchEl = document.getElementById('fleet-search');
+    const term = searchEl ? (searchEl.value || '').toLowerCase() : '';
     
     let html = '';
     

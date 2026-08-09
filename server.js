@@ -12,6 +12,8 @@ const fs = require('fs');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
+const { AsyncLocalStorage } = require('async_hooks');
+const tenantStorage = new AsyncLocalStorage();
 
 const app = express();
 
@@ -70,7 +72,11 @@ app.use(express.json({ limit: '50mb' }));
 
 // ── Multi-Tenant SaaS Middleware ─────────────────────────────────
 const { resolveTenantMiddleware } = require('./services/tenant_master');
-app.use(resolveTenantMiddleware);
+app.use((req, res, next) => {
+    resolveTenantMiddleware(req, res, () => {
+        tenantStorage.run(req.db, next);
+    });
+});
 app.use('/api/superadmin', require('./routes/superadmin')());
 
 // Archivos en /libs/ son librerías estáticas → cachear agresivamente (30 días)
@@ -268,13 +274,13 @@ app.get('/', (req, res) => {
 });
 
 // ============================================================
-// 🔥 CONEXIÓN A LA BASE DE DATOS (100% SEGURA POR VARIABLES)
+// 🔥 CONEXIÓN A LA BASE DE DATOS MULTI-TENANT (PROXY DINÁMICO POR SUBDOMINIO)
 // ============================================================
-const db = mysql.createPool({
+const defaultDbPool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    database: process.env.DB_NAME || 'azkell_tenant_marsisa',
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     ssl: process.env.DB_HOST && (process.env.DB_HOST.includes('railway') || process.env.DB_HOST.includes('aiven') || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : undefined,
     charset: 'utf8mb4',
@@ -285,8 +291,18 @@ const db = mysql.createPool({
     keepAliveInitialDelay: 0
 });
 
+// Proxy global 'db' que delega automáticamente las peticiones al pool de la empresa según el subdominio activo
+const db = new Proxy({}, {
+    get(target, prop) {
+        const tenantPool = tenantStorage.getStore();
+        const activePool = tenantPool || defaultDbPool;
+        const val = activePool[prop];
+        return typeof val === 'function' ? val.bind(activePool) : val;
+    }
+});
+
 // ── Crear tablas faltantes al arrancar ───────────────────────────
-initDB(db);
+initDB(defaultDbPool);
 
 db.getConnection((err, connection) => {
     if (err) {
