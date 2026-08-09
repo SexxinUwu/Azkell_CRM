@@ -1167,12 +1167,14 @@ app.post('/api/login', (req, res) => {
                 let permisosFinales;
                 let rolFinal = usuario.rol || "Personalizado";
 
+                let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
+
                 if (correo.toLowerCase() === 'admin@azkell.com') {
                     permisosFinales = JSON.stringify({ admin: true });
                     rolFinal = "Fundador";
-                } else if (usuario.rol_id && usuario.rol_es_admin) {
+                } else if (esAdminRol) {
                     permisosFinales = JSON.stringify({ admin: true });
-                    rolFinal = usuario.rol_nombre || "Administrador";
+                    rolFinal = usuario.rol || usuario.rol_nombre || "Administrador";
                 } else if (usuario.rol_id && usuario.rol_permisos) {
                     permisosFinales = usuario.rol_permisos;
                     rolFinal = usuario.rol_nombre || "Personalizado";
