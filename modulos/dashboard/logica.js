@@ -164,7 +164,10 @@ window.procesarFleetrunParaDashboard = async function() {
         var key = placa + '_' + normalizeStr(row[8]);
         var infoPlaca = placas.find(function(p) { return normalizeStr(p[0]) === placa || normalizeStr(p[0]).replace(/[^A-Z0-9]/g,'') === placa.replace(/[^A-Z0-9]/g,''); });
         var estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
-        if (!mapa.has(key) && infoPlaca && estadoPlaca === 'ACTIVA') {
+        var enUsoPlaca  = normalizeStr((infoPlaca && infoPlaca[20]) ? infoPlaca[20] : ((infoPlaca && infoPlaca[9]) ? infoPlaca[9] : ''));
+        var esActivaEnUso = infoPlaca && estadoPlaca === 'ACTIVA' && (enUsoPlaca === 'SI' || enUsoPlaca === '' || enUsoPlaca === '1' || enUsoPlaca === 'EN USO');
+
+        if (!mapa.has(key) && esActivaEnUso) {
             mapa.set(key, { row: row, placaRaw: placaRaw, infoPlaca: infoPlaca });
         }
     });
