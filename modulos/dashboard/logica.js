@@ -89,10 +89,30 @@ window.procesarFleetrunParaDashboard = async function() {
         return;
     }
 
-    // Si Wialon está activo pero aún cargando, esperar (evita calcular con km_gps viejo)
+    // Si Wialon está en proceso de carga, esperar
     if (window._wialonCargando) { setTimeout(procesarFleetrunParaDashboard, 800); return; }
 
-    // Si no hay datos en caché, consultar la API directamente (igual que inspecciones)
+    // Cargar datos de Wialon (GPS) en CACHE si aún no han cargado (indispensable en móvil)
+    if (typeof CACHE !== 'undefined' && (!CACHE.wialon || !Array.isArray(CACHE.wialon) || CACHE.wialon.length === 0)) {
+        window._wialonCargando = true;
+        try {
+            var resW = await fetch('/api/script/obtenerDatosWialon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (resW.ok) {
+                var jsonW = await resW.json();
+                var datosW = jsonW.data || [];
+                if (Array.isArray(datosW)) {
+                    CACHE['wialon'] = datosW;
+                }
+            }
+        } catch(e) {}
+        window._wialonCargando = false;
+    }
+
+    // Si no hay datos de fleetrun en caché, consultar la API directamente (igual que inspecciones)
     var datos = window.dataGlobalFleetrun;
     if (!datos || datos.length === 0) {
         try {
@@ -142,9 +162,9 @@ window.procesarFleetrunParaDashboard = async function() {
         var placaRaw = row[4]; if (!placaRaw) return;
         var placa = normalizeStr(placaRaw);
         var key = placa + '_' + normalizeStr(row[8]);
-        var infoPlaca = placas.find(function(p) { return normalizeStr(p[0]) === placa; });
+        var infoPlaca = placas.find(function(p) { return normalizeStr(p[0]) === placa || normalizeStr(p[0]).replace(/[^A-Z0-9]/g,'') === placa.replace(/[^A-Z0-9]/g,''); });
         var estadoPlaca = normalizeStr((infoPlaca && infoPlaca[18]) ? infoPlaca[18] : ((infoPlaca && infoPlaca[8]) ? infoPlaca[8] : ''));
-        if (!mapa.has(key) && infoPlaca && estadoPlaca === 'ACTIVA') {
+        if (!mapa.has(key) && (!infoPlaca || estadoPlaca === 'ACTIVA')) {
             mapa.set(key, { row: row, placaRaw: placaRaw, infoPlaca: infoPlaca });
         }
     });
