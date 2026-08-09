@@ -347,13 +347,8 @@ function mostrarStatusInspecciones(inspecciones) {
         });
     }
 
-    // — Paginación — guardar total y cortar dataFinal
+    // — Guardar referencia global de todos los registros para filtrado y paginación
     window.dataFinalInspGlobal = dataFinal;
-    if (isHistorialStatus && window.inspPorPagina > 0) {
-        let _ini = (window.inspPaginaActual - 1) * window.inspPorPagina;
-        if (_ini >= dataFinal.length && dataFinal.length > 0) { window.inspPaginaActual = 1; _ini = 0; }
-        dataFinal = dataFinal.slice(_ini, _ini + window.inspPorPagina);
-    }
 
     let mapTipos = new Map(); let setClis = new Set(), setMarcas = new Set(), setEstadosStatus = new Set();
     dataFinal.forEach(item => {
