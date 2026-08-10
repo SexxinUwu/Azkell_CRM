@@ -170,12 +170,25 @@ function salFmtMoney(val) {
     return 'S/.' + parseFloat(val || 0).toFixed(2);
 }
 
-function salFmtDate(iso) {
-    if (!iso) return '—';
-    var s = typeof iso === 'string' ? iso.split('T')[0] : String(iso);
-    var d = new Date(s + 'T00:00:00');
-    if (isNaN(d.getTime())) return s || '—';
-    return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: '2-digit' });
+function salFmtDate(iso, createdAt) {
+    var raw = createdAt || iso;
+    if (!raw) return '—';
+    try {
+        var s = String(raw);
+        var d;
+        if (s.includes('T') || s.includes(' ')) {
+            d = new Date(s.replace(' ', 'T'));
+        } else {
+            d = new Date(s + 'T00:00:00');
+        }
+        if (isNaN(d.getTime())) return String(raw);
+        var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
+            return dateStr;
+        }
+        return dateStr + ' ' + timeStr;
+    } catch(e) { return String(raw); }
 }
 
 function salBadge(estado) {
@@ -224,11 +237,11 @@ function salSincronizarTabs() {
 
 // ── Filtrar ───────────────────────────────────────────────────
 function _salTipoOrdenBadge(t) {
-    var val = t || 'Orden de Salida';
-    if (val === 'Ajuste de Inventario (Resta)') {
-        return '<span class="badge bg-warning text-dark" style="font-size:0.68rem;padding:3px 8px;border-radius:6px;font-weight:700;"><i class="bi bi-sliders me-1"></i>Ajuste (Resta)</span>';
+    var val = (t || 'Orden de Salida').trim();
+    if (val === 'Ajuste de Inventario (Resta)' || val.toLowerCase().includes('ajuste')) {
+        return '<span class="badge bg-warning text-dark" style="font-size:0.62rem;letter-spacing:0.04em;font-weight:800;border-radius:99px;padding:5px 12px;text-transform:uppercase;">AJUSTE (RESTA)</span>';
     }
-    return '<span class="badge bg-primary" style="font-size:0.68rem;padding:3px 8px;border-radius:6px;font-weight:700;">Orden de Salida</span>';
+    return '<span class="badge bg-primary" style="font-size:0.62rem;letter-spacing:0.04em;font-weight:800;border-radius:99px;padding:5px 12px;text-transform:uppercase;">ORDEN DE SALIDA</span>';
 }
 
 window.salFiltrar = function() { salRenderTabla(); };
@@ -319,7 +332,7 @@ window.salRenderTabla = function() {
             if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
             tr.innerHTML =
                 '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
-                + '<td>' + salFmtDate(m.fecha) + '</td>'
+                + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
                 + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
@@ -345,7 +358,7 @@ window.salRenderTabla = function() {
             var cu     = parseFloat(it.costo_unitario || 0);
             tr.innerHTML =
                 '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
-                + '<td style="white-space:nowrap;">' + salFmtDate(m.fecha) + '</td>'
+                + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
                 + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
@@ -705,9 +718,11 @@ window.salAbrirNuevo = function() {
     window._cbReset('sal-f-placa');
     window._cbReset('sal-f-responsable');
     var fechaEl = document.getElementById('sal-f-fecha');
-    if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
+    var tipoOrdEl = document.getElementById('sal-f-tipo-orden');
+    if (tipoOrdEl) tipoOrdEl.value = 'Orden de Salida';
     var tipoEl = document.getElementById('sal-f-tipo');
     if (tipoEl) tipoEl.value = 'Vehiculo';
+    salToggleTipoOrden();
     var tbody = document.getElementById('sal-items-tbody');
     if (tbody) tbody.innerHTML = '';
     window._salItemIdx = 0;
@@ -1023,8 +1038,36 @@ window.salGuardarNuevo = function() {
 
 
 
-// ── Toggle tipo destino ───────────────────────────────────────
+// ── Dynamic UI Toggle por Tipo de Orden y Tipo Destino ───────
+window.salToggleTipoOrden = function() {
+    var tipoOrden = (document.getElementById('sal-f-tipo-orden') || {}).value || 'Orden de Salida';
+    var isAjuste = tipoOrden === 'Ajuste de Inventario (Resta)';
+    
+    var colOt = document.getElementById('sal-col-ot');
+    var colTipoDest = document.getElementById('sal-col-tipo-destino');
+    var rowPlaca = document.getElementById('sal-row-placa');
+
+    if (colOt) colOt.style.display = isAjuste ? 'none' : '';
+    if (colTipoDest) colTipoDest.style.display = isAjuste ? 'none' : '';
+    
+    if (isAjuste) {
+        if (rowPlaca) rowPlaca.style.display = 'none';
+        if (typeof window._cbReset === 'function') {
+            window._cbReset('sal-f-ot');
+            window._cbReset('sal-f-placa');
+        }
+    } else {
+        salToggleTipo();
+    }
+};
+
 window.salToggleTipo = function() {
+    var tipoOrden = (document.getElementById('sal-f-tipo-orden') || {}).value || 'Orden de Salida';
+    if (tipoOrden === 'Ajuste de Inventario (Resta)') {
+        var rowPlaca = document.getElementById('sal-row-placa');
+        if (rowPlaca) rowPlaca.style.display = 'none';
+        return;
+    }
     var tipo = (document.getElementById('sal-f-tipo') || {}).value || '';
     var rowPlaca = document.getElementById('sal-row-placa');
     if (rowPlaca) rowPlaca.style.display = tipo === 'Vehiculo' ? '' : 'none';
