@@ -121,28 +121,27 @@
 
 /* Tabla */
 #moduloSalidas .sal-table-wrap { flex: 1 1 0; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--surface); }
-#moduloSalidas table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: .83rem; }
+#moduloSalidas table { width: 100%; min-width: 1400px; border-collapse: collapse; font-size: 0.80rem; }
 #moduloSalidas th.col-articulo,
 #moduloSalidas td.col-articulo {
-    min-width: 250px;
+    min-width: 260px;
     white-space: normal;
     word-break: break-word;
 }
 #moduloSalidas thead th {
     background: var(--bg); color: var(--subtext);
-    font-size: .68rem; font-weight: 800; text-transform: uppercase;
-    letter-spacing: .06em; padding: 10px 12px;
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 6px 10px;
     border-bottom: 2px solid var(--border);
     position: sticky; top: 0; z-index: 2; white-space: nowrap;
 }
 #moduloSalidas tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; }
 #moduloSalidas tbody tr:hover { background: var(--bg); }
 #moduloSalidas tbody tr.sal-row-active { background: rgba(88,101,242,.06); border-left: 3px solid #5865F2; }
-#moduloSalidas tbody td { padding: 10px 12px; color: var(--text); }
+#moduloSalidas tbody td { padding: 6px 10px; color: var(--text); white-space: nowrap; }
 #moduloSalidas tbody tr.sal-item-sub { border-bottom: 1px dashed var(--border); }
 #moduloSalidas tbody tr.sal-item-sub td { padding-top: 6px; padding-bottom: 6px; background: rgba(0,0,0,.012); }
 #moduloSalidas tbody tr.sal-item-last { border-bottom: 2px solid var(--border); }
-#moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
 #moduloSalidas .td-placeholder { text-align:center; color:var(--subtext); font-size:.82rem; padding:2rem; }
 
 /* Wrapper Desktop para bordes redondeados */
@@ -441,18 +440,18 @@
       <table>
         <thead>
           <tr>
-            <th>ID Solicitud</th>
-            <th>Fecha</th>
-            <th class="col-hide-mob">Tipo Orden</th>
-            <th class="col-hide-mob">N° OT</th>
-            <th>Placa</th>
-            <th class="col-hide-mob">Responsable</th>
-            <th class="col-hide-mob">Código</th>
+            <th style="min-width:140px;">ID Solicitud</th>
+            <th style="min-width:160px;">Fecha</th>
+            <th class="col-hide-mob" style="min-width:150px;">Tipo Orden</th>
+            <th class="col-hide-mob" style="min-width:110px;">N° OT</th>
+            <th style="min-width:130px;">Placa</th>
+            <th class="col-hide-mob" style="min-width:190px;">Responsable</th>
+            <th class="col-hide-mob" style="min-width:90px;font-size:0.65rem;">Cód. Art.</th>
             <th class="col-articulo">Artículo</th>
-            <th class="text-end">Cant.</th>
-            <th class="text-end col-hide-mob">Costo Unit.</th>
-            <th class="text-end col-hide-mob">Total</th>
-            <th>Estado</th>
+            <th class="text-end" style="min-width:70px;">Cant.</th>
+            <th class="text-end col-hide-mob" style="min-width:95px;">Costo Unit.</th>
+            <th class="text-end col-hide-mob" style="min-width:100px;">Total</th>
+            <th class="text-center" style="min-width:110px;">Estado</th>
           </tr>
         </thead>
         <tbody id="sal-tbody"></tbody>
