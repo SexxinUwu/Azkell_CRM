@@ -86,7 +86,8 @@ router.post('/importarPlacasMasivo', async (req, res) => {
 
             try {
                 await new Promise((resolve, reject) => {
-                    db.query(query, [vals], (err) => {
+                    const targetDb = req.db || db;
+                    targetDb.query(query, [vals], (err) => {
                         if (err) return reject(err);
                         ok += lote.length;
                         resolve();
