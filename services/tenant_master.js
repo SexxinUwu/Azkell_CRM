@@ -122,10 +122,10 @@ async function resolveTenantMiddleware(req, res, next) {
         }
     }
 
-    // Si se accede desde admin.azkell.com o no se especifica tenant, usar la Base de Datos Maestra
+    // Si se accede desde admin.azkell.com o no se especifica tenant, usar la Base de Datos por defecto para autenticación/configuración y masterPool para gestión de empresas
     if (!tenantSlug || tenantSlug === 'admin' || tenantSlug === 'master') {
         req.tenantSlug = 'master';
-        req.db = getMasterPool();
+        req.db = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
         return next();
     }
 
