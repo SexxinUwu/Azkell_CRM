@@ -8,7 +8,28 @@
       </h2>
       <p class="text-muted small mb-0">Gestión de Placas</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
+      <!-- Botón Importar Excel -->
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-info dropdown-toggle fw-bold text-info shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Importar datos desde Excel">
+          <i class="bi bi-upload me-1"></i>Importar
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius: 12px; border: 1px solid var(--border);">
+          <li>
+            <button class="dropdown-item fw-bold py-2" type="button" onclick="window.descargarPlantillaPlacas()">
+              <i class="bi bi-file-earmark-excel me-2 text-success"></i>📄 1. Descargar Plantilla
+            </button>
+          </li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li>
+            <button class="dropdown-item fw-bold text-primary py-2" type="button" onclick="document.getElementById('input-importar-placas-excel').click()">
+              <i class="bi bi-cloud-arrow-up me-2"></i>☁️ 2. Subir Excel Lleno
+            </button>
+          </li>
+        </ul>
+      </div>
+      <input type="file" id="input-importar-placas-excel" accept=".xlsx, .xls" style="display:none;" onchange="window.importarExcelPlacas(event)">
+
       <button class="btn btn-sm btn-success fw-bold text-white shadow-sm" onclick="window.exportarPlacasExcel()" title="Exportar a Excel">
         <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Exportar</span>
       </button>
