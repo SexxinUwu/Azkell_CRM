@@ -1347,12 +1347,22 @@ app.put('/api/cat-rampas/:id', (req, res) => {
 });
 
 app.delete('/api/cat-rampas/:id', (req, res) => {
-    db.query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND estado="Activo"', [req.params.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (rows[0].cnt > 0) return res.status(400).json({ error: 'La rampa tiene unidades activas. Libéralas primero.' });
-        db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            res.json({ ok: true });
+    db.query('ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT "Activo"', () => {
+        db.query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND (estado IS NULL OR estado="Activo")', [req.params.id], (err, rows) => {
+            if (err) {
+                db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    return res.json({ ok: true });
+                });
+                return;
+            }
+            if (rows && rows[0] && rows[0].cnt > 0) {
+                return res.status(400).json({ error: 'La rampa tiene unidades activas. Libéralas primero.' });
+            }
+            db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ ok: true });
+            });
         });
     });
 });

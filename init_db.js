@@ -273,9 +273,204 @@ const TABLAS = [
             personal_solicitante VARCHAR(100)  NOT NULL DEFAULT '',
             observacion          TEXT          NULL,
             estado               VARCHAR(20)   NOT NULL DEFAULT 'Pendiente',
+            tipo          VARCHAR(50)  NOT NULL DEFAULT '',
+            sub_tipo      VARCHAR(50)  NOT NULL DEFAULT '',
+            color         VARCHAR(30)  NOT NULL DEFAULT '',
+            nro_motor     VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_caja      VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_corona    VARCHAR(50)  NOT NULL DEFAULT '',
+            nro_vin       VARCHAR(50)  NOT NULL DEFAULT '',
+            configuracion VARCHAR(50)  NOT NULL DEFAULT '',
+            anio          VARCHAR(10)  NOT NULL DEFAULT '',
+            combustible   VARCHAR(30)  NOT NULL DEFAULT '',
+            carga_util    VARCHAR(20)  NOT NULL DEFAULT '',
+            peso_neto     VARCHAR(20)  NOT NULL DEFAULT '',
+            peso_bruto    VARCHAR(20)  NOT NULL DEFAULT '',
+            estado        VARCHAR(20)  NOT NULL DEFAULT 'Activa',
+            uts           VARCHAR(20)  NOT NULL DEFAULT '',
+            motora        VARCHAR(10)  NOT NULL DEFAULT '',
+            llantas       VARCHAR(10)  NOT NULL DEFAULT '',
+            en_uso        VARCHAR(10)  NOT NULL DEFAULT '',
+            metrica       VARCHAR(10)  NOT NULL DEFAULT 'km'
+        )`
+    },
+    {
+        nombre: 'placa_auditoria',
+        sql: `CREATE TABLE IF NOT EXISTS placa_auditoria (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            placa       VARCHAR(20)  NOT NULL,
+            campo       VARCHAR(50)  NOT NULL,
+            valor_ant   TEXT,
+            valor_nuevo TEXT,
+            usuario     VARCHAR(150) NOT NULL DEFAULT '',
+            ip          VARCHAR(80),
+            fecha       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa)
+        )`
+    },
+    {
+        nombre: 'status_flota',
+        sql: `CREATE TABLE IF NOT EXISTS status_flota (
+            idRegistro       VARCHAR(50)  NOT NULL PRIMARY KEY,
+            fecha            DATE,
+            corte            VARCHAR(30)  NOT NULL DEFAULT '',
+            unidad_motora    VARCHAR(20)  NOT NULL DEFAULT '',
+            unidad_no_motora VARCHAR(20)  NOT NULL DEFAULT '',
+            cliente_motora   VARCHAR(100) NOT NULL DEFAULT '',
+            cliente_nomotora VARCHAR(100) NOT NULL DEFAULT '',
+            zona             VARCHAR(50)  NOT NULL DEFAULT '',
+            conductor        VARCHAR(100) NOT NULL DEFAULT '',
+            estado           VARCHAR(30)  NOT NULL DEFAULT '',
+            observaciones    TEXT,
+            usuario          VARCHAR(150) NOT NULL DEFAULT '',
+            INDEX idx_fecha    (fecha),
+            INDEX idx_motora   (unidad_motora),
+            INDEX idx_nomotora (unidad_no_motora)
+        )`
+    },
+    {
+        nombre: 'inspecciones',
+        sql: `CREATE TABLE IF NOT EXISTS inspecciones (
+            id              VARCHAR(50)  NOT NULL PRIMARY KEY,
+            placa           VARCHAR(20)  NOT NULL DEFAULT '',
+            fecha_ingreso   DATE,
+            cliente         VARCHAR(100) NOT NULL DEFAULT '',
+            tecnico         VARCHAR(100) NOT NULL DEFAULT '',
+            km_tablero      INT          NOT NULL DEFAULT 0,
+            dias_propuestos INT          NOT NULL DEFAULT 0,
+            detalles_json   LONGTEXT,
+            url_firma       TEXT,
+            INDEX idx_placa (placa),
+            INDEX idx_fecha (fecha_ingreso)
+        )`
+    },
+    {
+        nombre: 'conductores',
+        sql: `CREATE TABLE IF NOT EXISTS conductores (
+            idConductor  INT AUTO_INCREMENT PRIMARY KEY,
+            nombre       VARCHAR(100) NOT NULL DEFAULT '',
+            empresa      VARCHAR(100) NOT NULL DEFAULT '',
+            telefono     VARCHAR(20)  NOT NULL DEFAULT '',
+            dni          VARCHAR(20)  NOT NULL DEFAULT '',
+            licencia     VARCHAR(50)  NOT NULL DEFAULT '',
+            estado       VARCHAR(20)  NOT NULL DEFAULT 'Activo',
+            foto         TEXT
+        )`
+    },
+    {
+        nombre: 'tipos_mantenimiento',
+        sql: `CREATE TABLE IF NOT EXISTS tipos_mantenimiento (
+            id               INT AUTO_INCREMENT PRIMARY KEY,
+            marca            VARCHAR(50)   NOT NULL DEFAULT '',
+            tipo_mp          VARCHAR(60)   NOT NULL DEFAULT '',
+            uts              VARCHAR(20)   NOT NULL DEFAULT '',
+            frecuencia_km    INT           NULL,
+            frecuencia_horas DECIMAL(10,2) NULL,
+            frecuencia_dias  INT           NULL,
+            tipo             VARCHAR(50)   NOT NULL DEFAULT '',
+            sistema          VARCHAR(100)  NOT NULL DEFAULT '',
+            descripcion      VARCHAR(255)  NOT NULL DEFAULT ''
+        )`
+    },
+    {
+        nombre: 'tp_mp',
+        sql: `CREATE TABLE IF NOT EXISTS tp_mp (
+            id                    INT AUTO_INCREMENT PRIMARY KEY,
+            tipo_mantenimiento_id INT NOT NULL,
+            marca_vehiculo        VARCHAR(50) NOT NULL,
+            modelo_vehiculo       VARCHAR(50),
+            repuestos_json        JSON
+        )`
+    },
+    {
+        nombre: 'fleetrun',
+        sql: `CREATE TABLE IF NOT EXISTS fleetrun (
+            idRegistro    VARCHAR(50)  NOT NULL PRIMARY KEY,
+            fecha         DATE         NOT NULL,
+            mes           INT          NULL,
+            anio          INT          NULL,
+            placa         VARCHAR(20)  NOT NULL,
+            marca         VARCHAR(50)  NOT NULL DEFAULT '',
+            dueno         VARCHAR(100) NOT NULL DEFAULT '',
+            uts           VARCHAR(20)  NOT NULL DEFAULT '',
+            tipo_mp       VARCHAR(60)  NOT NULL DEFAULT '',
+            km_actual     INT          NOT NULL DEFAULT 0,
+            frecuencia_km INT          NULL,
+            km_proximo    INT          NULL,
+            observacion   TEXT,
+            tecnico       VARCHAR(100) NOT NULL DEFAULT '',
+            km_gps        INT          NULL,
+            creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_placa (placa),
+            modulo        VARCHAR(50) UNIQUE NOT NULL,
+            prefijo       VARCHAR(10) NOT NULL,
+            ultimo_numero INT DEFAULT 0
+        )`
+    },
+    {
+        nombre: 'ordenes_trabajo',
+        sql: `CREATE TABLE IF NOT EXISTS ordenes_trabajo (
+            ticket_entrada    VARCHAR(50)  NOT NULL PRIMARY KEY,
+            id_ot             VARCHAR(50)  NOT NULL,
+            placa             VARCHAR(20)  NOT NULL,
+            estado            VARCHAR(30)  NOT NULL DEFAULT 'Recepción',
+            id_situacion      INT          NULL,
+            id_rampa          INT          NULL,
+            detalles_json     JSON         NULL,
+            creado_por        VARCHAR(100) NOT NULL DEFAULT '',
+            fecha_ingreso     DATETIME     NOT NULL,
+            fecha_hora_salida DATETIME     NULL,
+            INDEX idx_placa  (placa),
+            INDEX idx_estado (estado)
+        )`
+    },
+    {
+        nombre: 'trabajos_ot',
+        sql: `CREATE TABLE IF NOT EXISTS trabajos_ot (
+            id_ot             VARCHAR(50)  NOT NULL PRIMARY KEY,
+            ticket_visita     VARCHAR(50)  NOT NULL,
+            tipo_ot           VARCHAR(50)  NOT NULL DEFAULT '',
+            sub_tipo          VARCHAR(50)  NOT NULL DEFAULT '',
+            estado            VARCHAR(30)  NOT NULL DEFAULT 'Recepción',
+            detalles_json     JSON         NULL,
+            creado_por        VARCHAR(100) NOT NULL DEFAULT '',
+            trabajo_realizado TEXT         NULL,
+            tecnico           VARCHAR(100) NULL,
+            fecha_trabajo     DATE         NULL,
+            fecha_salida      DATETIME     NULL,
+            fecha_creacion    TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_ticket (ticket_visita)
+        )`
+    },
+    {
+        nombre: 'trabajos_ot_repuestos',
+        sql: `CREATE TABLE IF NOT EXISTS trabajos_ot_repuestos (
+            id              INT AUTO_INCREMENT PRIMARY KEY,
+            id_ot           VARCHAR(50)   NOT NULL,
+            item            VARCHAR(200)  NOT NULL,
+            cantidad        DECIMAL(10,2) NOT NULL DEFAULT 1,
+            precio_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,
+            total           DECIMAL(10,2) NOT NULL DEFAULT 0,
+            INDEX idx_id_ot (id_ot)
+        )`
+    },
+    {
+        nombre: 'ot_materiales',
+        sql: `CREATE TABLE IF NOT EXISTS ot_materiales (
+            id                   INT AUTO_INCREMENT PRIMARY KEY,
+            id_solicitud         VARCHAR(30)   NOT NULL UNIQUE,
+            ticket_ot            VARCHAR(50)   NOT NULL,
+            producto             VARCHAR(200)  NOT NULL,
+            cantidad             DECIMAL(10,3) NOT NULL DEFAULT 1,
+            unidad_medida        VARCHAR(20)   NOT NULL DEFAULT 'Pza',
+            costo_unit           DECIMAL(10,2) NOT NULL DEFAULT 0,
+            costo_total          DECIMAL(10,2) NOT NULL DEFAULT 0,
+            personal_solicitante VARCHAR(100)  NOT NULL DEFAULT '',
+            observacion          TEXT          NULL,
+            estado               VARCHAR(20)   NOT NULL DEFAULT 'Pendiente',
             creado_por           VARCHAR(100)  NOT NULL DEFAULT '',
             creado_en            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_ticket_ot (ticket_ot)
+            INDEX idx_estado (estado)
         )`
     },
     {
@@ -299,23 +494,26 @@ const TABLAS = [
     {
         nombre: 'taller_rampas',
         sql: `CREATE TABLE IF NOT EXISTS taller_rampas (
-            id            INT AUTO_INCREMENT PRIMARY KEY,
-            rampa         INT          NOT NULL,
-            placa         VARCHAR(20)  NOT NULL,
-            km            VARCHAR(20)  NULL,
-            fecha_ingreso DATE         NULL,
-            hora_ingreso  TIME         NULL,
-            fecha_salida  DATE         NULL,
-            hora_salida   TIME         NULL,
-            situacion     VARCHAR(80)  NOT NULL DEFAULT '',
-            obs           TEXT         NULL,
-            creado_por    VARCHAR(100) NOT NULL DEFAULT '',
-            creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            id               INT AUTO_INCREMENT PRIMARY KEY,
+            rampa            INT          NOT NULL,
+            placa            VARCHAR(20)  NOT NULL,
+            km               VARCHAR(20)  NULL,
+            fecha_ingreso    DATE         NULL,
+            hora_ingreso     TIME         NULL,
+            fecha_salida     DATE         NULL,
+            hora_salida      TIME         NULL,
+            situacion        VARCHAR(80)  NOT NULL DEFAULT '',
+            obs              TEXT         NULL,
+            creado_por       VARCHAR(100) NOT NULL DEFAULT '',
+            estado           VARCHAR(20)  NOT NULL DEFAULT 'Activo',
+            fecha_liberado   DATETIME     NULL,
+            liberado_por     VARCHAR(100) NULL,
+            evidencia_url    VARCHAR(255) NULL,
+            creado_en        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_rampa (rampa),
             INDEX idx_placa (placa)
         )`
-    }
-,
+    },
     {
         nombre: "almacen_familias",
         sql: "CREATE TABLE IF NOT EXISTS `almacen_familias` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `descripcion` varchar(200) DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"

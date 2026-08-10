@@ -365,15 +365,6 @@ db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) =
     if (!e) db.query(`UPDATE cat_rampas SET orden=id WHERE orden=0`);
 });
 
-// Auto-seed: si la tabla está vacía, insertar 12 rampas por defecto
-function _seedRampasIfEmpty(cb) {
-    db.query('SELECT COUNT(*) AS cnt FROM cat_rampas', (err, rows) => {
-        if (err || rows[0].cnt > 0) return cb();
-        const vals = Array.from({length:12}, (_,i) => [i+1, `Rampa ${i+1}`, 'Principal', 'Disponible', i+1]);
-        db.query('INSERT INTO cat_rampas (id, nombre_rampa, sede, estado, orden) VALUES ?', [vals], cb);
-    });
-}
-
 
 
     
