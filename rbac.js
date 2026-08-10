@@ -39,7 +39,7 @@ module.exports = function globalRBAC(req, res, next) {
         return next();
     }
 
-    if (req.user.rol === 'Fundador') return next();
+    if (req.user.rol === 'Fundador' || req.user.rol === 'Administrador' || (req.user.rol && req.user.rol.toLowerCase().includes('admin'))) return next();
 
     let p = {};
     try {

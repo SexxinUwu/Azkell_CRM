@@ -380,12 +380,17 @@ async function initDB(db) {
         await promisePool.query("INSERT IGNORE INTO configuracion_erp (clave, valor) VALUES ('empresa_logo', '')");
         await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
         
+        // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
+        await promisePool.query("INSERT IGNORE INTO cat_rampas (id, nombre_rampa, sede, estado) VALUES (1, 'Rampa 1', 'Principal', 'Disponible'), (2, 'Rampa 2', 'Principal', 'Disponible')");
+        await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
+        await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
+
         // Migraciones de columnas en usuarios para instalaciones existentes
         const colsUsuarios = ['telefono VARCHAR(50) NULL', 'avatar_url TEXT NULL', 'banner_url TEXT NULL', 'firma_digital LONGTEXT NULL', 'preferencias_json LONGTEXT NULL'];
         for (const colDef of colsUsuarios) {
             try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
         }
-        console.log(`✅ Default configurations and roles seeded`);
+        console.log(`✅ Default configurations, catalogs and roles seeded`);
     } catch (err) {
         console.error(`❌ Error seeding configurations:`, err.message);
     }
