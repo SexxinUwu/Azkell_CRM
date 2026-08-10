@@ -493,10 +493,11 @@ router.post('/ot-materiales', (req, res) => {
     _generarCodigoAlmacen('SA', anio, (err, id) => {
         if (err) return res.status(500).json({ error: String(err) });
         const total_pen = _calcularTotalPen(items || [], tc);
+        const solicitanteVal = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
         db.query(
             'INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [id, fecha, tipo_destino || 'Vehiculo', placa || null, responsable || null, responsable_id || null,
-             moneda || 'PEN', tc, total_pen, observaciones || null, creado_por || null, ticket_ot, 'Pendiente'],
+             moneda || 'PEN', tc, total_pen, observaciones || null, solicitanteVal, ticket_ot, 'Pendiente'],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }

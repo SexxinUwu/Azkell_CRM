@@ -337,6 +337,7 @@ window.salRenderTabla = function() {
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
+                + '<td class="col-hide-mob"><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(m.creado_por || '—') + '</span></td>'
                 + '<td colspan="3" style="color:var(--subtext);font-size:0.78rem;">Sin artículos</td>'
                 + '<td class="col-hide-mob"></td>'
                 + '<td class="col-hide-mob"></td>'
@@ -363,6 +364,7 @@ window.salRenderTabla = function() {
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
+                + '<td class="col-hide-mob"><span style="font-size:0.78rem;font-weight:600;color:var(--text);">' + salEsc(m.creado_por || '—') + '</span></td>'
                 + '<td class="col-hide-mob" style="font-size:0.75rem;color:var(--subtext);font-family:monospace;white-space:nowrap;">' + salEsc(it.inventario_id || '—') + '</td>'
                 + '<td class="col-articulo" style="font-size:0.82rem;">' + salEsc(nombre) + '</td>'
                 + '<td class="text-end" style="font-size:0.82rem;">' + cant.toLocaleString('es-PE', {maximumFractionDigits:3}) + '</td>'
@@ -401,9 +403,10 @@ function salAbrirDetalle(m) {
     html += '<div class="sal-sec">';
     html += '<div class="sal-sec-hd">Cabecera</div>';
     html += '<div class="sal-field"><div class="sal-field-lbl">Estado</div><div class="sal-field-val">' + salBadge(m.estado) + '</div></div>';
-    html += '<div class="sal-field"><div class="sal-field-lbl">Fecha</div><div class="sal-field-val">' + salFmtDate(m.fecha) + '</div></div>';
+    html += '<div class="sal-field"><div class="sal-field-lbl">Fecha</div><div class="sal-field-val">' + salFmtDate(m.fecha, m.created_at) + '</div></div>';
     html += '<div class="sal-field"><div class="sal-field-lbl">Placa</div><div class="sal-field-val"><strong>' + salEsc(m.placa || '—') + '</strong></div></div>';
     html += '<div class="sal-field"><div class="sal-field-lbl">Responsable</div><div class="sal-field-val">' + salEsc(m.responsable || '—') + '</div></div>';
+    html += '<div class="sal-field"><div class="sal-field-lbl">Solicitante</div><div class="sal-field-val"><strong>' + salEsc(m.creado_por || '—') + '</strong></div></div>';
     if (m.observaciones) html += '<div class="sal-field"><div class="sal-field-lbl">Observaciones</div><div class="sal-field-val" style="white-space:normal;font-size:0.78rem;">' + salEsc(m.observaciones) + '</div></div>';
     if (m.estado === 'Anulado' && m.motivo_anulacion) {
         html += '<div class="sal-field" style="background:rgba(220,38,38,0.04);"><div class="sal-field-lbl" style="color:#dc2626;">Motivo anulación</div><div class="sal-field-val" style="color:#dc2626;white-space:normal;font-size:0.78rem;">' + salEsc(m.motivo_anulacion) + '</div></div>';

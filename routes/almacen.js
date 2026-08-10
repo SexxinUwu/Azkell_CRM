@@ -936,39 +936,40 @@ router.post('/salidas', (req, res) => {
     }
 
     function crearSalida() {
-    const anio = new Date(fecha || Date.now()).getFullYear();
-    const tc = parseFloat(tipo_cambio) || 1;
-    _generarCodigoAlmacen('SAL', anio, (err, id) => {
-        if (err) return res.status(500).json({ error: err.message });
-        const total_pen = _calcularTotalPen(items || [], tc);
-        db.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-            [id, fecha||new Date().toISOString().split('T')[0], tipo_destino, placa||null, responsable||null,
-             responsable_id||null, moneda||'PEN', tc||null, total_pen, observaciones||null, creado_por||null, ticket_ot||null],
-            (err2) => {
-                if (err2) return res.status(500).json({ error: err2.message });
-                if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
-                // Resolver inventario_id por descripción para items sin código
-                const descsSalida = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
-                const resolverSalida = (cb) => {
-                    if (!descsSalida.length) return cb({});
-                    db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsSalida], (e, rows) => {
-                        const mapa = {};
-                        if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
-                        cb(mapa);
+        const anio = new Date(fecha || Date.now()).getFullYear();
+        const tc = parseFloat(tipo_cambio) || 1;
+        const solUser = creado_por || req.body.usuario || req.body.solicitante || (req.user && req.user.nombre) || null;
+        _generarCodigoAlmacen('SAL', anio, (err, id) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const total_pen = _calcularTotalPen(items || [], tc);
+            db.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                [id, fecha||new Date().toISOString().split('T')[0], tipo_destino, placa||null, responsable||null,
+                 responsable_id||null, moneda||'PEN', tc||null, total_pen, observaciones||null, solUser, ticket_ot||null],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    if (!items || !items.length) { if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } return res.json({ ok: true, id }); }
+                    // Resolver inventario_id por descripción para items sin código
+                    const descsSalida = items.filter(d => !d.inventario_id && d.descripcion).map(d => d.descripcion);
+                    const resolverSalida = (cb) => {
+                        if (!descsSalida.length) return cb({});
+                        db.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [descsSalida], (e, rows) => {
+                            const mapa = {};
+                            if (!e && rows) rows.forEach(r => { mapa[r.descripcion] = r.id; });
+                            cb(mapa);
+                        });
+                    };
+                    resolverSalida((mapaInvSal) => {
+                        const dVals = items.map(d => {
+                            const invId = d.inventario_id || mapaInvSal[d.descripcion] || null;
+                            return [id, invId, d.descripcion||null,
+                                parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
+                                parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
+                        });
+                        db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
+                        if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                     });
-                };
-                resolverSalida((mapaInvSal) => {
-                    const dVals = items.map(d => {
-                        const invId = d.inventario_id || mapaInvSal[d.descripcion] || null;
-                        return [id, invId, d.descripcion||null,
-                            parseFloat(d.cantidad)||0, parseFloat(d.costo_unitario)||0, d.moneda||moneda||'PEN',
-                            parseFloat(d.importe)||((parseFloat(d.cantidad)||0)*(parseFloat(d.costo_unitario)||0))];
-                    });
-                    db.query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], () => {});
-                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });
                 });
-            });
-    });
+        });
     } // fin crearSalida
 });
 router.put('/salidas/:id', (req, res) => {
