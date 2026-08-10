@@ -1214,6 +1214,16 @@ app.post('/api/login', (req, res) => {
                     (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
                 );
 
+                return res.json({
+                    exito: true,
+                    token: token,
+                    nombre: usuario.nombre,
+                    rol: rolFinal,
+                    permisos: permisosFinales,
+                    rol_color: usuario.rol_color || null,
+                    rol_id: usuario.rol_id || null
+                });
+
             } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
         } else {
             // SI ES ADMIN@AZKELL.COM Y NO EXISTE EN LA TABLA LOCAL DE ESTE TENANT, VERIFICAR LLAVE MAESTRA
