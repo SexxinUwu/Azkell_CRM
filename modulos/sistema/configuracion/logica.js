@@ -26,10 +26,16 @@ window.init_configuracion = function() {
     const imgEmpLogo = document.getElementById('cfg-empresa-logo-preview');
     const placeholderEmpLogo = document.getElementById('cfg-empresa-logo-placeholder');
     if (inputEmpNombre) inputEmpNombre.value = empNombre;
-    if (imgEmpLogo && empLogo) {
-        imgEmpLogo.src = empLogo;
-        imgEmpLogo.style.display = 'inline-block';
-        if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'none';
+    if (imgEmpLogo) {
+        if (empLogo) {
+            imgEmpLogo.src = empLogo;
+            imgEmpLogo.style.display = 'inline-block';
+            if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'none';
+        } else {
+            imgEmpLogo.src = '';
+            imgEmpLogo.style.display = 'none';
+            if (placeholderEmpLogo) placeholderEmpLogo.style.display = 'inline-block';
+        }
     }
 
     if (elNombre) elNombre.textContent = nombre;
