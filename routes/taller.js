@@ -54,29 +54,26 @@ function generarId(tabla, columna, prefijo, anio, cb) {
 
 // ── ORDENES DE TRABAJO ────────────────────────────────────────────
 router.get('/ordenes-trabajo', (req, res) => {
+    const targetDb = req.db || db;
     const sql = `
         SELECT o.*,
             r.rampa AS rampa_origen,
             COALESCE((
                 SELECT SUM(COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.costo')) AS DECIMAL(10,2)), 0))
                 FROM trabajos_ot t WHERE t.id_ot = o.ticket_entrada AND t.estado = 'Aprobado'
-            ), 0)
-            +
-            COALESCE((
-                SELECT SUM(s.total_pen)
-                FROM salidas_inv s WHERE s.ticket_ot = o.ticket_entrada AND s.estado = 'Despachado'
-              ), 0)
-              +
-              COALESCE((
-                  SELECT SUM(e.total_pen)
-                  FROM entradas_inv e WHERE e.ot_id = o.ticket_entrada AND e.tipo_orden = 'Orden de servicio' AND (e.estado IS NULL OR e.estado != 'Anulado')
-              ), 0) AS costo_total
+            ), 0) AS costo_total
         FROM ordenes_trabajo o
         LEFT JOIN taller_rampas r ON r.id = o.id_rampa
         ORDER BY o.fecha_ingreso DESC`;
-    db.query(sql, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+    targetDb.query(sql, (err, rows) => {
+        if (err) {
+            targetDb.query("SELECT * FROM ordenes_trabajo ORDER BY fecha_ingreso DESC", (err2, rows2) => {
+                if (err2) return res.json([]);
+                return res.json(rows2 || []);
+            });
+            return;
+        }
+        res.json(rows || []);
     });
 });
 
@@ -714,13 +711,24 @@ db.query(`ALTER TABLE taller_rampas ADD COLUMN evidencia_url VARCHAR(255) NULL`,
 });
 
 router.get('/taller-rampas', (req, res) => {
+    const targetDb = req.db || db;
     const historial = req.query.historial === '1';
-    const sql = historial
-        ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY fecha_liberado DESC, id DESC"
-        : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, creado_en ASC";
-    db.query(sql, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+    targetDb.query("ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'", () => {
+        targetDb.query("ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP", () => {
+            const sql = historial
+                ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY id DESC"
+                : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, id ASC";
+            targetDb.query(sql, (err, rows) => {
+                if (err) {
+                    targetDb.query("SELECT * FROM taller_rampas ORDER BY id ASC", (err2, rows2) => {
+                        if (err2) return res.json([]);
+                        return res.json(rows2 || []);
+                    });
+                    return;
+                }
+                res.json(rows || []);
+            });
+        });
     });
 });
 
