@@ -240,35 +240,36 @@ window._kdxRenderKardex = function(res, item) {
         '<span style="font-size:.7rem;color:#94a3b8;font-weight:600">' + totalMovDisplay + ' movimiento' + (totalMovDisplay !== 1 ? 's' : '') + '</span>' +
     '</div>';
 
-    // ── Movimientos PRE-regularización (histórico atenuado) ────────
+    // ── Movimientos PRE-regularización (alta legibilidad) ────────
     var preRegHtml = '';
     if (movsPreReg.length) {
         var saldoPre = 0;
-        preRegHtml = '<div style="padding:.45rem 1.25rem;background:#fafafa;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:.5rem;">' +
-            '<i class="bi bi-clock-history" style="font-size:.75rem;color:#94a3b8;"></i>' +
-            '<span style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;">Histórico pre-regularización</span>' +
+        preRegHtml = '<div style="padding:.6rem 1.25rem;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.5rem;">' +
+            '<i class="bi bi-clock-history" style="font-size:.85rem;color:#0f172a;font-weight:800;"></i>' +
+            '<span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#0f172a;">Histórico pre-regularización</span>' +
         '</div>';
         preRegHtml += movsPreReg.map(function(m) {
             var esEntrada = m.tipo === 'Entrada';
             var cant = parseFloat(m.cantidad || 0);
             saldoPre += esEntrada ? cant : -cant;
-            var fecha = _kdxFmtFecha(m.fecha);
-            return '<div class="kdx-item" style="opacity:.5;">' +
+            var fecha = _kdxFmtFecha(m.fecha || m.created_at);
+            var titulo = esEntrada ? 'Entrada por Compra' : (m.contraparte && m.contraparte.includes('Ajuste') ? 'Ajuste de Inventario (Resta)' : 'Salida a Taller');
+            return '<div class="kdx-item" style="border-bottom:1px solid #e2e8f0;background:#ffffff;">' +
                 '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
                     '<i class="bi ' + (esEntrada ? 'bi-file-arrow-down' : 'bi-wrench-adjustable') + '"></i>' +
                 '</div>' +
                 '<div style="flex:1;min-width:0">' +
                     '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                        '<span style="font-size:.85rem;font-weight:700">' + (esEntrada ? 'Entrada por Compra' : 'Salida a Taller') + '</span>' +
-                        '<span style="background:#f1f5f9;color:#64748b;font-size:.62rem;font-weight:700;padding:.12rem .5rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
+                        '<span style="font-size:.88rem;font-weight:800;color:#0f172a;">' + _kdxEsc(titulo) + '</span>' +
+                        '<span style="background:#e2e8f0;color:#0f172a;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
                     '</div>' +
-                    '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-top:.15rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
+                    '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e293b;margin-top:.2rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
                 '</div>' +
-                '<div style="text-align:center;min-width:80px">' +
-                    '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#16a34a' : '#ef4444') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                    '<div style="font-size:.6rem;color:#94a3b8">' + fecha + '</div>' +
+                '<div style="text-align:center;min-width:120px">' +
+                    '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#15803d' : '#dc2626') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                    '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
                 '</div>' +
-                '<div class="kdx-saldo" style="color:#94a3b8;">' + saldoPre.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + saldoPre.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
             '</div>';
         }).join('');
     }
@@ -278,22 +279,22 @@ window._kdxRenderKardex = function(res, item) {
     if (fechaReg) {
         var fechaRegFmt = _kdxFmtFecha(fechaReg);
         regHtml =
-            '<div class="kdx-item" style="background:linear-gradient(90deg,rgba(99,102,241,0.07),transparent);border-left:3px solid #6366f1;">' +
-                '<div class="kdx-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">' +
-                    '<i class="bi bi-clipboard2-check"></i>' +
+            '<div class="kdx-item" style="background:#f0fdf4;border-left:5px solid #16a34a;border-bottom:1px solid #bbf7d0;">' +
+                '<div class="kdx-icon" style="background:#dcfce7;color:#15803d;">' +
+                    '<i class="bi bi-clipboard2-check-fill" style="font-size:1.2rem;"></i>' +
                 '</div>' +
                 '<div style="flex:1;min-width:0">' +
                     '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                        '<span style="font-size:.85rem;font-weight:700;color:#6366f1">Regularización de Inventario</span>' +
-                        '<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:.62rem;font-weight:700;padding:.12rem .5rem;border-radius:6px">REG</span>' +
+                        '<span style="font-size:.9rem;font-weight:800;color:#14532d">Regularización de Inventario</span>' +
+                        '<span style="background:#bbf7d0;color:#14532d;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">REG</span>' +
                     '</div>' +
-                    '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-top:.15rem">Saldo de apertura — stock físico verificado</div>' +
+                    '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#166534;margin-top:.2rem">Saldo de apertura — stock físico verificado</div>' +
                 '</div>' +
-                '<div style="text-align:center;min-width:80px">' +
-                    '<div style="font-size:1.2rem;font-weight:900;color:#6366f1;">⊙ ' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                    '<div style="font-size:.6rem;color:#94a3b8">' + fechaRegFmt + '</div>' +
+                '<div style="text-align:center;min-width:120px">' +
+                    '<div style="font-size:1.2rem;font-weight:900;color:#15803d;">⊙ ' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                    '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fechaRegFmt + '</div>' +
                 '</div>' +
-                '<div class="kdx-saldo" style="color:#6366f1;">' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                '<div class="kdx-saldo" style="color:#14532d;font-weight:900;">' + stockBase.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
             '</div>';
     }
 
@@ -303,23 +304,24 @@ window._kdxRenderKardex = function(res, item) {
         var esEntrada = m.tipo === 'Entrada';
         var cant = parseFloat(m.cantidad || 0);
         saldoAcum += esEntrada ? cant : -cant;
-        var fecha = _kdxFmtFecha(m.fecha);
-        return '<div class="kdx-item">' +
+        var fecha = _kdxFmtFecha(m.fecha || m.created_at);
+        var titulo = esEntrada ? 'Entrada por Compra' : (m.contraparte && m.contraparte.includes('Ajuste') ? 'Ajuste de Inventario (Resta)' : 'Salida a Taller');
+        return '<div class="kdx-item" style="border-bottom:1px solid #f1f5f9;">' +
             '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
                 '<i class="bi ' + (esEntrada ? 'bi-file-arrow-down' : 'bi-wrench-adjustable') + '"></i>' +
             '</div>' +
             '<div style="flex:1;min-width:0">' +
                 '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
-                    '<span style="font-size:.85rem;font-weight:700">' + (esEntrada ? 'Entrada por Compra' : 'Salida a Taller') + '</span>' +
-                    '<span style="background:#f1f5f9;color:#64748b;font-size:.62rem;font-weight:700;padding:.12rem .5rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
+                    '<span style="font-size:.88rem;font-weight:800;color:#0f172a;">' + _kdxEsc(titulo) + '</span>' +
+                    '<span style="background:#f1f5f9;color:#0f172a;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">' + _kdxEsc(m.doc_id || '—') + '</span>' +
                 '</div>' +
-                '<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-top:.15rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
+                '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1e293b;margin-top:.2rem">' + _kdxEsc(m.contraparte || '—') + '</div>' +
             '</div>' +
-            '<div style="text-align:center;min-width:80px">' +
-                '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#16a34a' : '#ef4444') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
-                '<div style="font-size:.6rem;color:#94a3b8">' + fecha + '</div>' +
+            '<div style="text-align:center;min-width:120px">' +
+                '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#15803d' : '#dc2626') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
             '</div>' +
-            '<div class="kdx-saldo">' + saldoAcum.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+            '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + saldoAcum.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
         '</div>';
     }).join('');
 
@@ -391,8 +393,22 @@ function _kdxFmtISO(f) {
 
 function _kdxFmtFecha(f) {
     if (!f) return '';
-    try { return new Date(String(f).split('T')[0] + 'T00:00').toLocaleDateString('es-PE', {day:'2-digit', month:'short', year:'numeric'}); }
-    catch(e) { return String(f).split('T')[0]; }
+    try {
+        var s = String(f);
+        var d;
+        if (s.includes('T') || s.includes(' ')) {
+            d = new Date(s.replace(' ', 'T'));
+        } else {
+            d = new Date(s + 'T00:00:00');
+        }
+        if (isNaN(d.getTime())) return String(f);
+        var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
+            return dateStr;
+        }
+        return dateStr + ' • ' + timeStr;
+    } catch(e) { return String(f); }
 }
 
 function _kdxEsc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
