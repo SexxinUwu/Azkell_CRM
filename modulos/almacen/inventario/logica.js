@@ -579,6 +579,33 @@ window.filtrarInventario = function() {
 };
 
 // ── Helpers de stock badge ────────────────────────────────────────
+function _invAlmacenBadge(almacenStr, ubicacionStr, anaquelVal) {
+    var alm = (almacenStr || '').trim();
+    var ubi = (ubicacionStr || '').trim();
+    var anaq = (anaquelVal != null && anaquelVal !== '') ? String(anaquelVal).trim() : '';
+    
+    var locParts = [];
+    if (ubi) locParts.push(ubi);
+    if (anaq) locParts.push('Anaquel ' + anaq);
+    var locText = locParts.join(' - ');
+
+    var icon = '🏭';
+    var bg = '#e0f2fe';
+    var color = '#0369a1';
+
+    if (alm.toLowerCase().includes('neumá') || alm.toLowerCase().includes('llanta')) {
+        icon = '🛞'; bg = '#fef3c7'; color = '#b45309';
+    } else if (alm.toLowerCase().includes('lubric') || alm.toLowerCase().includes('aceit')) {
+        icon = '🛢️'; bg = '#f3e8ff'; color = '#6b21a8';
+    }
+
+    var almHtml = alm ? '<span style="background:' + bg + '; color:' + color + '; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;">' + icon + ' ' + _invEsc(alm) + '</span>' : '';
+    var ubiHtml = locText ? '<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:600; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;">📍 ' + _invEsc(locText) + '</span>' : '';
+
+    if (!almHtml && !ubiHtml) return '<span style="color:#9ca3af; font-size:0.68rem; font-style:italic;">Sin almacén asignado</span>';
+    return almHtml + ubiHtml;
+}
+
 function _invStockBadge(d) {
     var stock   = parseFloat(d.stock_actual != null ? d.stock_actual : 0);
     var stockMin = parseFloat(d.stock_min || 0);
@@ -722,6 +749,8 @@ function _invRenderCard(d) {
     var costo  = parseFloat(d.costo_soles != null ? d.costo_soles : d.costo_referencial || 0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     var stockFmt = stockActual.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
     
+    var almBadge = _invAlmacenBadge(d.almacen, d.ubicacion, d.anaquel);
+
     var imageOrIcon = (d.imagen_url && d.imagen_url.length > 0)
         ? '<img src="' + _invEsc(d.imagen_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:0.75rem;">'
         : '<i class="bi ' + iconClass + '" style="font-size:1.5rem;"></i>';
@@ -735,9 +764,12 @@ function _invRenderCard(d) {
 
         '<div style="flex:1; min-width:0;">' +
             '<h3 style="font-weight:600; font-size:0.9375rem; color:#111827; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + desc + '</h3>' +
-            '<p style="font-size:0.6875rem; font-weight:500; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0.125rem 0 0.5rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
+            '<p style="font-size:0.6875rem; font-weight:500; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin:0.125rem 0 0.25rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
                 familia + ' • ' + id +
             '</p>' +
+            '<div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:0.4rem;">' +
+                almBadge +
+            '</div>' +
             '<span style="display:inline-flex; padding:0.125rem 0.5rem; border-radius:0.375rem; font-size:0.625rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; ' + badgeClass + '">' +
                 badgeTxt +
             '</span>' +

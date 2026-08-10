@@ -351,6 +351,119 @@ const TABLAS = [
             INDEX idx_placa (placa)
         )`
     }
+,
+    {
+        nombre: "almacen_familias",
+        sql: "CREATE TABLE IF NOT EXISTS `almacen_familias` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `descripcion` varchar(200) DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "almacen_marcas",
+        sql: "CREATE TABLE IF NOT EXISTS `almacen_marcas` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `descripcion` varchar(200) DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "almacen_sistemas",
+        sql: "CREATE TABLE IF NOT EXISTS `almacen_sistemas` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `sub_sistemas` json DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "almacen_unidades",
+        sql: "CREATE TABLE IF NOT EXISTS `almacen_unidades` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(20) NOT NULL,\n  `descripcion` varchar(200) DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "configuracion_almacen",
+        sql: "CREATE TABLE IF NOT EXISTS `configuracion_almacen` (\n  `clave` varchar(50) NOT NULL,\n  `valor` varchar(500) NOT NULL DEFAULT '',\n  `descripcion` varchar(200) DEFAULT NULL,\n  PRIMARY KEY (`clave`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "configuracion_flota",
+        sql: "CREATE TABLE IF NOT EXISTS `configuracion_flota` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `marca` varchar(50) NOT NULL,\n  `uts_categoria` varchar(20) NOT NULL,\n  `km_mensuales` int NOT NULL DEFAULT '0',\n  `dias_operativos` int NOT NULL DEFAULT '26',\n  `mp1_intervalo_km` int NOT NULL DEFAULT '5000',\n  `mp2_intervalo_km` int NOT NULL DEFAULT '10000',\n  `mp3_intervalo_km` int NOT NULL DEFAULT '20000',\n  `activa` tinyint(1) NOT NULL DEFAULT '1',\n  `observaciones` text,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_marca_uts` (`marca`,`uts_categoria`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "destinatarios_alertas",
+        sql: "CREATE TABLE IF NOT EXISTS `destinatarios_alertas` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `correo` varchar(150) NOT NULL,\n  `cargo` varchar(80) DEFAULT NULL,\n  `notif_1d` tinyint(1) NOT NULL DEFAULT '1' COMMENT '+1 día retraso',\n  `notif_3d` tinyint(1) NOT NULL DEFAULT '1' COMMENT '+3 días retraso',\n  `notif_7d` tinyint(1) NOT NULL DEFAULT '1' COMMENT '+7 días retraso',\n  `notif_completada` tinyint(1) NOT NULL DEFAULT '0',\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_correo` (`correo`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Destinatarios de alertas del módulo Planificación'"
+    },
+    {
+        nombre: "detalle_entradas_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `detalle_entradas_inv` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `entrada_id` varchar(20) NOT NULL,\n  `inventario_id` varchar(20) NOT NULL,\n  `descripcion` varchar(400) DEFAULT NULL,\n  `cantidad` decimal(14,4) NOT NULL,\n  `costo_unitario` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `moneda` enum('PEN','USD') NOT NULL DEFAULT 'PEN',\n  `importe` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_entrada` (`entrada_id`),\n  KEY `idx_item` (`inventario_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=358 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "detalle_salidas_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `detalle_salidas_inv` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `salida_id` varchar(20) NOT NULL,\n  `inventario_id` varchar(20) DEFAULT NULL,\n  `descripcion` varchar(400) DEFAULT NULL,\n  `cantidad` decimal(14,4) NOT NULL,\n  `costo_unitario` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `moneda` enum('PEN','USD') NOT NULL DEFAULT 'PEN',\n  `importe` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_salida` (`salida_id`),\n  KEY `idx_item` (`inventario_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=1213 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "documentos_flota",
+        sql: "CREATE TABLE IF NOT EXISTS `documentos_flota` (\n  `id` varchar(50) NOT NULL,\n  `placa` varchar(50) NOT NULL,\n  `tipo_documento` varchar(100) NOT NULL,\n  `entidad` varchar(100) DEFAULT NULL,\n  `nro_constancia` varchar(100) DEFAULT NULL,\n  `fecha_emision` date DEFAULT NULL,\n  `fecha_vencimiento` date DEFAULT NULL,\n  `pago` varchar(50) DEFAULT NULL,\n  `asesor` varchar(100) DEFAULT NULL,\n  `observaciones` text,\n  `usuario` varchar(100) DEFAULT NULL,\n  `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "entradas_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `entradas_inv` (\n  `id` varchar(20) NOT NULL,\n  `fecha` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `proveedor_id` varchar(20) DEFAULT NULL,\n  `proveedor_nombre` varchar(200) DEFAULT NULL,\n  `documento_referencia` varchar(100) DEFAULT NULL,\n  `moneda` enum('PEN','USD') NOT NULL DEFAULT 'PEN',\n  `tipo_cambio` decimal(8,4) DEFAULT NULL,\n  `total_pen` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `observaciones` text,\n  `tipo_igv` varchar(20) DEFAULT 'sin_igv',\n  `creado_por` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `estado` varchar(50) DEFAULT NULL,\n  `motivo_anulacion` varchar(255) DEFAULT NULL,\n  `url_voucher` text,\n  `url_cotizacion` text,\n  `url_factura` text,\n  `motivo_entrada` varchar(255) DEFAULT NULL,\n  `placa` varchar(50) DEFAULT NULL,\n  `tipo_orden` varchar(50) DEFAULT 'Orden de compra',\n  `condicion_pago` varchar(50) DEFAULT 'Al contado',\n  `dias_credito` int DEFAULT '30',\n  `ot_id` varchar(50) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_fecha` (`fecha`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "integraciones_api",
+        sql: "CREATE TABLE IF NOT EXISTS `integraciones_api` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `clave` varchar(100) NOT NULL,\n  `valor` text,\n  `descripcion` varchar(255) DEFAULT NULL,\n  `actualizado_por` varchar(100) DEFAULT NULL,\n  `actualizado_en` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  `creado_en` datetime DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `clave` (`clave`)\n) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Credenciales y tokens de integraciones externas (Wialon, Gemini, etc.)'"
+    },
+    {
+        nombre: "inventario",
+        sql: "CREATE TABLE IF NOT EXISTS `inventario` (\n  `id` varchar(20) NOT NULL,\n  `descripcion` varchar(400) NOT NULL,\n  `familia` varchar(100) DEFAULT NULL,\n  `sub_familia` varchar(100) DEFAULT NULL,\n  `almacen` varchar(100) DEFAULT NULL,\n  `unidad` varchar(30) DEFAULT NULL,\n  `moneda` enum('PEN','USD') NOT NULL DEFAULT 'PEN',\n  `costo_referencial` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `costo_soles` decimal(14,4) DEFAULT NULL,\n  `tipo_cambio` decimal(10,4) DEFAULT NULL,\n  `stock_regularizado` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `fecha_regularizacion` date DEFAULT NULL,\n  `proveedor_id` varchar(20) DEFAULT NULL,\n  `marca` varchar(100) DEFAULT NULL,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `observaciones` text,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  `codigo_item` varchar(100) DEFAULT NULL,\n  `marca_unidad` text,\n  `sistema` varchar(100) DEFAULT NULL,\n  `sub_sistema` varchar(100) DEFAULT NULL,\n  `tipo` varchar(50) DEFAULT NULL,\n  `sub_tipo` enum('Nuevo','Reparado') DEFAULT NULL,\n  `ubicacion` varchar(150) DEFAULT NULL,\n  `anaquel` decimal(6,2) DEFAULT NULL,\n  `stock_min` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `stock_max` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `estado_art` varchar(50) DEFAULT 'Activo',\n  `codigo_barras` varchar(100) DEFAULT NULL,\n  `imagen_url` text,\n  `articulo` varchar(300) DEFAULT NULL,\n  `codigo_articulo` varchar(100) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_familia` (`familia`),\n  KEY `idx_almacen` (`almacen`),\n  KEY `idx_activo` (`activo`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "km_snapshots",
+        sql: "CREATE TABLE IF NOT EXISTS `km_snapshots` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `placa` varchar(100) DEFAULT NULL,\n  `fecha` date NOT NULL,\n  `km_gps` int NOT NULL DEFAULT '0',\n  `horas_motor` decimal(10,1) NOT NULL DEFAULT '0.0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_placa_fecha` (`placa`,`fecha`),\n  KEY `idx_placa` (`placa`),\n  KEY `idx_fecha` (`fecha`)\n) ENGINE=InnoDB AUTO_INCREMENT=135780 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Snapshot diario de KM GPS y horas motor por placa (Wialon)'"
+    },
+    {
+        nombre: "mant_insp_templates",
+        sql: "CREATE TABLE IF NOT EXISTS `mant_insp_templates` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `template_id` varchar(30) NOT NULL COMMENT 'ID único de la categoría (ej: cat_1)',\n  `titulo` varchar(150) NOT NULL COMMENT 'Nombre de la categoría',\n  `items_json` json NOT NULL COMMENT 'Array de ítems: [{id, label, type}]',\n  `orden` int NOT NULL DEFAULT '0',\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_template_id` (`template_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Plantilla global del checklist de inspecciones de mantenimiento'"
+    },
+    {
+        nombre: "mantenimiento_kits",
+        sql: "CREATE TABLE IF NOT EXISTS `mantenimiento_kits` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `marca_vehiculo` varchar(50) NOT NULL,\n  `modelo_vehiculo` varchar(100) DEFAULT 'TODOS LOS MODELOS',\n  `tipo_mp` varchar(60) NOT NULL,\n  `nombre_kit` varchar(150) DEFAULT NULL,\n  `item_codigo` varchar(30) NOT NULL,\n  `item_nombre` varchar(200) NOT NULL,\n  `cantidad` decimal(10,2) NOT NULL,\n  `unidad_medida` varchar(10) NOT NULL,\n  `costo_unitario` decimal(10,2) NOT NULL DEFAULT '0.00',\n  `costo_total` decimal(10,2) NOT NULL DEFAULT '0.00',\n  `orden` int NOT NULL DEFAULT '1',\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_marca_mp` (`marca_vehiculo`,`tipo_mp`)\n) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "planificacion",
+        sql: "CREATE TABLE IF NOT EXISTS `planificacion` (\n  `id` varchar(50) NOT NULL,\n  `placa` varchar(100) DEFAULT NULL,\n  `configuracion_flota_id` int DEFAULT NULL,\n  `tipo_mp` varchar(60) NOT NULL,\n  `fecha_inicio_ventana` date NOT NULL,\n  `fecha_fin_ventana` date NOT NULL,\n  `mes_ejecucion` int NOT NULL,\n  `anio_ejecucion` int NOT NULL,\n  `km_estimado` int NOT NULL DEFAULT '0',\n  `km_minimo` int DEFAULT NULL,\n  `km_maximo` int DEFAULT NULL,\n  `tecnico_asignado` varchar(100) DEFAULT NULL,\n  `prioridad` enum('Baja','Normal','Alta','Crítica') NOT NULL DEFAULT 'Normal',\n  `observaciones_plan` text,\n  `estado` enum('Programada','Confirmada','En Progreso','Completada','Cancelada','Diferida') NOT NULL DEFAULT 'Programada',\n  `motivo_cancelacion` text,\n  `fleetrun_id_ejecutado` varchar(50) DEFAULT NULL,\n  `fecha_real_ejecucion` date DEFAULT NULL,\n  `km_real_ejecucion` int DEFAULT NULL,\n  `desviacion_km` int DEFAULT NULL,\n  `desviacion_dias` int DEFAULT NULL,\n  `fecha_primer_retraso` date DEFAULT NULL,\n  `alertas_enviadas` tinyint NOT NULL DEFAULT '0',\n  `source` enum('manual_excel','auto_generada') NOT NULL DEFAULT 'manual_excel',\n  `created_by` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_estado` (`estado`),\n  KEY `idx_placa` (`placa`),\n  KEY `idx_mes_anio` (`mes_ejecucion`,`anio_ejecucion`),\n  KEY `idx_fecha_ventana` (`fecha_fin_ventana`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "proveedor_marcas_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `proveedor_marcas_inv` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `proveedor_id` varchar(20) NOT NULL,\n  `marca` varchar(100) NOT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_prov` (`proveedor_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "proveedores_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `proveedores_inv` (\n  `id` varchar(20) NOT NULL,\n  `nombre` varchar(200) NOT NULL,\n  `razon_social` varchar(200) DEFAULT NULL,\n  `tipo_documento` enum('RUC','DNI','CE','Otro') DEFAULT 'RUC',\n  `numero_documento` varchar(20) DEFAULT NULL,\n  `telefono` varchar(30) DEFAULT NULL,\n  `email` varchar(150) DEFAULT NULL,\n  `direccion` text,\n  `estado` enum('Activo','Inactivo') DEFAULT 'Activo',\n  `observaciones` text,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "requerimientos_planificacion",
+        sql: "CREATE TABLE IF NOT EXISTS `requerimientos_planificacion` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `plan_id` varchar(50) NOT NULL,\n  `mes_ejecucion` int NOT NULL,\n  `anio_ejecucion` int NOT NULL,\n  `item_codigo` varchar(30) DEFAULT NULL,\n  `item_nombre` varchar(200) NOT NULL,\n  `cantidad_requerida` decimal(10,2) NOT NULL,\n  `unidad_medida` varchar(10) NOT NULL,\n  `costo_unitario` decimal(10,2) NOT NULL DEFAULT '0.00',\n  `costo_total` decimal(10,2) NOT NULL DEFAULT '0.00',\n  `estado_req` enum('Pendiente','Solicitado','Recibido','Entregado al Taller','Cancelado') NOT NULL DEFAULT 'Pendiente',\n  `fecha_solicitud` date DEFAULT NULL,\n  `fecha_entrega` date DEFAULT NULL,\n  `responsable_almacen` varchar(100) DEFAULT NULL,\n  `observaciones` text,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_plan` (`plan_id`),\n  KEY `idx_mes_req` (`mes_ejecucion`,`anio_ejecucion`),\n  KEY `idx_estado_req` (`estado_req`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "salidas_inv",
+        sql: "CREATE TABLE IF NOT EXISTS `salidas_inv` (\n  `id` varchar(20) NOT NULL,\n  `fecha` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `tipo_destino` enum('Vehiculo','Personal') NOT NULL,\n  `placa` varchar(100) DEFAULT NULL,\n  `responsable` varchar(150) DEFAULT NULL,\n  `responsable_id` int DEFAULT NULL,\n  `moneda` enum('PEN','USD') NOT NULL DEFAULT 'PEN',\n  `tipo_cambio` decimal(8,4) DEFAULT NULL,\n  `total_pen` decimal(14,4) NOT NULL DEFAULT '0.0000',\n  `observaciones` text,\n  `creado_por` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `ticket_ot` varchar(30) DEFAULT NULL,\n  `estado` varchar(20) NOT NULL DEFAULT 'Despachado',\n  `motivo_anulacion` varchar(255) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_fecha` (`fecha`),\n  KEY `idx_placa` (`placa`),\n  KEY `idx_ticket_ot` (`ticket_ot`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "seg_asistencia",
+        sql: "CREATE TABLE IF NOT EXISTS `seg_asistencia` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `dni` varchar(12) NOT NULL,\n  `nombre` varchar(150) NOT NULL,\n  `cargo` varchar(100) DEFAULT NULL,\n  `fecha_ingreso` varchar(10) NOT NULL,\n  `hora_ingreso` varchar(8) NOT NULL,\n  `fecha_salida` varchar(10) DEFAULT NULL,\n  `hora_salida` varchar(8) DEFAULT NULL,\n  `registrado_por` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_dni` (`dni`),\n  KEY `idx_fecha_ingreso` (`fecha_ingreso`),\n  KEY `idx_estado` (`hora_salida`)\n) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "seg_checklist_templates",
+        sql: "CREATE TABLE IF NOT EXISTS `seg_checklist_templates` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `template_id` varchar(30) NOT NULL,\n  `titulo` varchar(150) NOT NULL,\n  `items_json` json NOT NULL,\n  `orden` int NOT NULL DEFAULT '0',\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_template_id` (`template_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "seg_unidades_fotos",
+        sql: "CREATE TABLE IF NOT EXISTS `seg_unidades_fotos` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `registro_id` varchar(50) DEFAULT NULL,\n  `tipo` enum('salida','retorno') NOT NULL,\n  `url` varchar(500) DEFAULT NULL,\n  `orden` int NOT NULL DEFAULT '0',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_registro` (`registro_id`),\n  KEY `idx_tipo` (`tipo`)\n) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "seg_unidades_registros",
+        sql: "CREATE TABLE IF NOT EXISTS `seg_unidades_registros` (\n  `id` varchar(50) NOT NULL,\n  `placa_tracto` varchar(20) NOT NULL,\n  `placa_carreta` varchar(20) DEFAULT NULL,\n  `conductor` varchar(100) NOT NULL,\n  `destino` varchar(150) DEFAULT NULL,\n  `estado` enum('en_ruta','completado') NOT NULL DEFAULT 'en_ruta',\n  `salida_fecha` varchar(10) DEFAULT NULL,\n  `salida_hora` varchar(5) DEFAULT NULL,\n  `salida_km` varchar(20) DEFAULT NULL,\n  `salida_template_json` json DEFAULT NULL,\n  `salida_checklist_json` json DEFAULT NULL,\n  `salida_has_alert` tinyint(1) NOT NULL DEFAULT '0',\n  `retorno_fecha` varchar(10) DEFAULT NULL,\n  `retorno_hora` varchar(5) DEFAULT NULL,\n  `retorno_km` varchar(20) DEFAULT NULL,\n  `retorno_template_json` json DEFAULT NULL,\n  `retorno_checklist_json` json DEFAULT NULL,\n  `retorno_has_alert` tinyint(1) NOT NULL DEFAULT '0',\n  `creado_por` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_placa_tracto` (`placa_tracto`),\n  KEY `idx_estado` (`estado`),\n  KEY `idx_salida_fecha` (`salida_fecha`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "taller_personal",
+        sql: "CREATE TABLE IF NOT EXISTS `taller_personal` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `sueldo_mensual` decimal(10,2) DEFAULT '0.00',\n  `costo_hora` decimal(10,2) DEFAULT '0.00',\n  `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "tipos_preventivo",
+        sql: "CREATE TABLE IF NOT EXISTS `tipos_preventivo` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nombre` varchar(100) NOT NULL,\n  `descripcion` text,\n  `activo` tinyint(1) NOT NULL DEFAULT '1',\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `nombre` (`nombre`)\n) ENGINE=InnoDB AUTO_INCREMENT=113 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "clientes",
+        sql: "CREATE TABLE IF NOT EXISTS `clientes` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `ruc_dni` varchar(50) DEFAULT NULL,\n  `razon_social` varchar(255) NOT NULL,\n  `direccion` text,\n  `telefono` varchar(50) DEFAULT NULL,\n  `email` varchar(100) DEFAULT NULL,\n  `estado` varchar(20) DEFAULT 'Activo',\n  `notas` text,\n  `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_razon` (`razon_social`)\n) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    }
 ];
 
 /**
