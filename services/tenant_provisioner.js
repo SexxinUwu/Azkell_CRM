@@ -56,12 +56,15 @@ async function provisionNewTenant({ slug, nombre_empresa, ruc, admin_email, admi
 
     await new Promise((resolve, reject) => {
         const sqlUser = `
-        INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado)
-        VALUES (?, ?, ?, ?, ?, ?, 'Administrador', 'Activo')
-        ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), password = VALUES(password);
+        INSERT INTO usuarios (idUsuario, nombre, cargo, correo, password, password_visible, rol, estado, rol_id, permisos_json)
+        VALUES (?, ?, ?, ?, ?, ?, 'Administrador', 'Activo', 1, '{"admin":true}')
+        ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), password = VALUES(password), password_visible = VALUES(password_visible), rol_id = 1, permisos_json = '{"admin":true}';
         `;
         tenantPool.query(sqlUser, [userId, 'Administrador ' + nombre_empresa, 'Gerente General', admin_email.trim().toLowerCase(), hashPassword, admin_password], (err) => {
-            if (err) console.warn('[Multi-Tenant] Advertencia creando admin inicial:', err.message);
+            if (err) {
+                console.error('[Multi-Tenant] Error creando admin inicial:', err.message);
+                return reject(new Error('Error creando usuario Administrador inicial: ' + err.message));
+            }
             resolve();
         });
     });
