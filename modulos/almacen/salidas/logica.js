@@ -223,6 +223,14 @@ function salSincronizarTabs() {
 }
 
 // ── Filtrar ───────────────────────────────────────────────────
+function _salTipoOrdenBadge(t) {
+    var val = t || 'Orden de Salida';
+    if (val === 'Ajuste de Inventario (Resta)') {
+        return '<span class="badge bg-warning text-dark" style="font-size:0.68rem;padding:3px 8px;border-radius:6px;font-weight:700;"><i class="bi bi-sliders me-1"></i>Ajuste (Resta)</span>';
+    }
+    return '<span class="badge bg-primary" style="font-size:0.68rem;padding:3px 8px;border-radius:6px;font-weight:700;">Orden de Salida</span>';
+}
+
 window.salFiltrar = function() { salRenderTabla(); };
 
 function salGetFiltros() {
@@ -312,6 +320,7 @@ window.salRenderTabla = function() {
             tr.innerHTML =
                 '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
                 + '<td>' + salFmtDate(m.fecha) + '</td>'
+                + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
@@ -337,6 +346,7 @@ window.salRenderTabla = function() {
             tr.innerHTML =
                 '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
                 + '<td style="white-space:nowrap;">' + salFmtDate(m.fecha) + '</td>'
+                + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'

@@ -443,6 +443,7 @@
           <tr>
             <th>ID Solicitud</th>
             <th>Fecha</th>
+            <th class="col-hide-mob">Tipo Orden</th>
             <th class="col-hide-mob">N° OT</th>
             <th>Placa</th>
             <th class="col-hide-mob">Responsable</th>
@@ -502,6 +503,14 @@
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
           <input type="date" class="form-control form-control-sm" id="sal-f-fecha"
                  style="border-radius:12px;min-height:44px;">
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo de Orden *</label>
+          <select class="form-select form-select-sm" id="sal-f-tipo-orden"
+                  style="border-radius:12px;min-height:44px;font-weight:700;">
+            <option value="Orden de Salida">Orden de Salida (Normal)</option>
+            <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
+          </select>
         </div>
         <div class="col-6">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
