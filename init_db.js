@@ -207,42 +207,6 @@ const TABLAS = [
             km_gps        INT          NULL,
             creado_en     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_placa (placa),
-            INDEX idx_fecha (fecha)
-        )`
-    },
-    {
-        nombre: 'backlog_mantenimiento',
-        sql: `CREATE TABLE IF NOT EXISTS backlog_mantenimiento (
-            id                INT AUTO_INCREMENT PRIMARY KEY,
-            placa             VARCHAR(20) NOT NULL,
-            descripcion_falla TEXT        NOT NULL,
-            prioridad         ENUM('Baja','Media','Alta','Crítica') DEFAULT 'Media',
-            estado            ENUM('Pendiente','En Proceso','Resuelto') DEFAULT 'Pendiente',
-            reportado_por     VARCHAR(100),
-            fecha_reporte     TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
-        )`
-    },
-    {
-        nombre: 'cat_rampas',
-        sql: `CREATE TABLE IF NOT EXISTS cat_rampas (
-            id           INT AUTO_INCREMENT PRIMARY KEY,
-            nombre_rampa VARCHAR(50) NOT NULL,
-            sede         VARCHAR(50) NOT NULL,
-            estado       VARCHAR(20) DEFAULT 'Disponible'
-        )`
-    },
-    {
-        nombre: 'cat_situaciones',
-        sql: `CREATE TABLE IF NOT EXISTS cat_situaciones (
-            id          INT AUTO_INCREMENT PRIMARY KEY,
-            codigo      VARCHAR(20) UNIQUE NOT NULL,
-            descripcion VARCHAR(100) NOT NULL
-        )`
-    },
-    {
-        nombre: 'secuencias',
-        sql: `CREATE TABLE IF NOT EXISTS secuencias (
-            id            INT AUTO_INCREMENT PRIMARY KEY,
             modulo        VARCHAR(50) UNIQUE NOT NULL,
             prefijo       VARCHAR(10) NOT NULL,
             ultimo_numero INT DEFAULT 0
@@ -472,7 +436,6 @@ const TABLAS = [
 async function initDB(db) {
     const promisePool = db.promise();
     const resultados = [];
-
     for (const tabla of TABLAS) {
         try {
             await promisePool.query(tabla.sql);
@@ -494,11 +457,13 @@ async function initDB(db) {
         await promisePool.query("INSERT IGNORE INTO roles (id, nombre, color, permisos_json, es_admin, orden) VALUES (1, 'Administrador', '#5865F2', '{\"admin\":true}', 1, 1)");
         
         // Catálogos semillas predeterminados (INSERT IGNORE garantiza no alterar Marsisa ni datos existentes)
-        await promisePool.query("INSERT IGNORE INTO cat_rampas (id, nombre_rampa, sede, estado) VALUES (1, 'Rampa 1', 'Principal', 'Disponible'), (2, 'Rampa 2', 'Principal', 'Disponible')");
         await promisePool.query("INSERT IGNORE INTO cat_situaciones (id, codigo, descripcion) VALUES (1, 'S01', 'En Espera'), (2, 'S02', 'En Diagnóstico'), (3, 'S03', 'En Reparación'), (4, 'S04', 'Finalizada')");
         await promisePool.query("INSERT IGNORE INTO tipos_mantenimiento (id, tipo_mp, marca, descripcion) VALUES (1, 'MP1', 'TODOS', 'Mantenimiento Preventivo 1'), (2, 'MP2', 'TODOS', 'Mantenimiento Preventivo 2'), (3, 'MP3', 'TODOS', 'Mantenimiento Preventivo 3')");
 
-        // Migraciones de columnas en usuarios para instalaciones existentes
+        // Migraciones de columnas en cat_rampas y usuarios para instalaciones existentes
+        try { await promisePool.query("ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0"); } catch(e) {}
+        try { await promisePool.query("UPDATE cat_rampas SET orden=id WHERE orden=0"); } catch(e) {}
+
         const colsUsuarios = ['telefono VARCHAR(50) NULL', 'avatar_url TEXT NULL', 'banner_url TEXT NULL', 'firma_digital LONGTEXT NULL', 'preferencias_json LONGTEXT NULL'];
         for (const colDef of colsUsuarios) {
             try { await promisePool.query(`ALTER TABLE usuarios ADD COLUMN ${colDef}`); } catch(e) {}
