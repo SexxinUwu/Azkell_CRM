@@ -85,8 +85,8 @@ function saasRenderizarTabla() {
                     <button class="btn btn-outline-secondary" onclick="window.saasAbrirModalEditar(${e.id})" title="Editar Plan / Vehículos">
                         <i class="bi bi-pencil-fill me-1"></i>Editar
                     </button>
-                    <a href="${subUrl}" target="_blank" class="btn btn-outline-primary" title="Visitar Aplicación de la Empresa">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>Ingresar
+                    <a href="${subUrl}" target="_blank" class="btn btn-primary fw-bold text-white shadow-sm" title="Entrar a esta Empresa como SuperAdmin">
+                        <i class="bi bi-rocket-takeoff-fill me-1"></i>Entrar a Empresa
                     </a>
                     ${esActivo 
                         ? `<button class="btn btn-danger" onclick="window.saasCambiarEstado(${e.id}, 'suspendido')" title="Suspender Acceso"><i class="bi bi-pause-circle"></i> Suspender</button>`

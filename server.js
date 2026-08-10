@@ -1214,17 +1214,43 @@ app.post('/api/login', (req, res) => {
                     (err) => { if (err) console.warn('INSERT sesiones_activas:', err.message); }
                 );
 
-                return res.json({
-                    exito: true,
-                    token: token,
-                    nombre: usuario.nombre,
-                    rol: rolFinal,
-                    permisos: permisosFinales,
-                    rol_color: usuario.rol_color || null,
-                    rol_id: usuario.rol_id || null
-                });
             } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
-        } else { return res.json({ exito: false, mensaje: "El correo no está registrado." }); }
+        } else {
+            // SI ES ADMIN@AZKELL.COM Y NO EXISTE EN LA TABLA LOCAL DE ESTE TENANT, VERIFICAR LLAVE MAESTRA
+            if (correo && correo.toLowerCase() === 'admin@azkell.com') {
+                const { getTenantPool } = require('./services/tenant_master');
+                const mainPool = getTenantPool(process.env.DB_NAME || 'azkell_tenant_marsisa');
+                mainPool.query('SELECT * FROM usuarios WHERE LOWER(correo) = "admin@azkell.com" LIMIT 1', async (errM, resM) => {
+                    if (!errM && resM && resM.length > 0) {
+                        const mUser = resM[0];
+                        const esHash = mUser.password && (mUser.password.startsWith('$2b$') || mUser.password.startsWith('$2a$'));
+                        let pwdOk = false;
+                        if (esHash) pwdOk = await bcrypt.compare(password, mUser.password);
+                        else pwdOk = (mUser.password === password);
+
+                        if (pwdOk) {
+                            const token = jwt.sign(
+                                { id: mUser.idUsuario || 1, correo: 'Admin@azkell.com', rol: 'Fundador', permisos: JSON.stringify({ admin: true }) },
+                                process.env.JWT_SECRET,
+                                { expiresIn: '12h' }
+                            );
+                            return res.json({
+                                exito: true,
+                                token: token,
+                                nombre: mUser.nombre || 'Fundador',
+                                rol: 'Fundador',
+                                permisos: JSON.stringify({ admin: true }),
+                                rol_color: '#3b82f6',
+                                rol_id: 1
+                            });
+                        }
+                    }
+                    return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
+                });
+                return;
+            }
+            return res.json({ exito: false, mensaje: "El correo no está registrado." });
+        }
     });
 });
 
