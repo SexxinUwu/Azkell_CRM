@@ -1052,12 +1052,13 @@ router.delete('/salidas/:id', (req, res) => {
 router.get('/kardex/:inventario_id', (req, res) => {
     const id = req.params.inventario_id;
 
-    db.query('SELECT stock_inicial, stock_regularizado, fecha_regularizacion, created_at FROM inventario WHERE id=?', [id], (e2, inv) => {
+    db.query('SELECT * FROM inventario WHERE id=?', [id], (e2, inv) => {
         if (e2) return res.status(500).json({ error: e2.message });
-        const stockInicial = parseFloat(inv[0]?.stock_inicial || 0);
-        const base         = parseFloat(inv[0]?.stock_regularizado || 0);
-        const regDate      = inv[0]?.fecha_regularizacion || null;
-        const createdAt    = inv[0]?.created_at || null;
+        const itemObj      = inv[0] || {};
+        const stockInicial = parseFloat(itemObj.stock_inicial || itemObj.stock_regularizado || itemObj.stock || 0);
+        const base         = parseFloat(itemObj.stock_regularizado || 0);
+        const regDate      = itemObj.fecha_regularizacion || null;
+        const createdAt    = itemObj.created_at || null;
 
         db.query(`
             SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
