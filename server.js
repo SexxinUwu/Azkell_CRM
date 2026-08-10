@@ -1266,6 +1266,7 @@ app.post('/api/login', (req, res) => {
 
 const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
+
 // ============================================================
 // 🚀 RUTAS TALLER Y MANTENIMIENTO (deben ir ANTES del legacy wildcard)
 // ============================================================
@@ -1281,22 +1282,36 @@ app.use('/api', seguridadRoutes);
 const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);
 
-// (legacyRoutes se movió más abajo para no interceptar los endpoints que siguen)
+function getCatRampasSafe(targetDb, cb) {
+    targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+        if (err) {
+            targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+                targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
+                    cb(err2, rows2 || []);
+                });
+            });
+        } else {
+            cb(null, rows || []);
+        }
+    });
+}
 
 app.get('/api/cat-rampas', (req, res) => {
-    db.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+    getCatRampasSafe(db, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        res.json(rows || []);
     });
 });
 
 app.post('/api/cat-rampas', (req, res) => {
     const { nombre_rampa, sede } = req.body;
     if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
-    db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado) VALUES (?,?,?)',
-        [nombre_rampa.trim(), sede || 'Principal', 'Disponible'], (err, r) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true, id: r.insertId });
+    db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+        db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado) VALUES (?,?,?)',
+            [nombre_rampa.trim(), sede || 'Principal', 'Disponible'], (err, r) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, id: r.insertId });
+        });
     });
 });
 
@@ -1304,15 +1319,17 @@ app.post('/api/cat-rampas', (req, res) => {
 app.put('/api/cat-rampas/reorder', (req, res) => {
     const items = req.body;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
-    const updates = items.map(item =>
-        new Promise((resolve, reject) =>
-            db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
-                (err) => err ? reject(err) : resolve())
-        )
-    );
-    Promise.all(updates)
-        .then(() => res.json({ ok: true }))
-        .catch(err => res.status(500).json({ error: err.message }));
+    db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+        const updates = items.map(item =>
+            new Promise((resolve, reject) =>
+                db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
+                    (err) => err ? reject(err) : resolve())
+            )
+        );
+        Promise.all(updates)
+            .then(() => res.json({ ok: true }))
+            .catch(err => res.status(500).json({ error: err.message }));
+    });
 });
 
 app.put('/api/cat-rampas/:id', (req, res) => {
@@ -1342,13 +1359,11 @@ app.delete('/api/cat-rampas/:id', (req, res) => {
 
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
 app.get('/api/catalogos_taller', (req, res) => {
-    const sqlRampas = "SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC";
-    const sqlSituaciones = "SELECT * FROM cat_situaciones ORDER BY id ASC";
-    db.query(sqlRampas, (err1, rampas) => {
+    getCatRampasSafe(db, (err1, rampas) => {
         if (err1) return res.status(500).json({ error: err1.message });
-        db.query(sqlSituaciones, (err2, situaciones) => {
+        db.query("SELECT * FROM cat_situaciones ORDER BY id ASC", (err2, situaciones) => {
             if (err2) return res.status(500).json({ error: err2.message });
-            res.json({ rampas, situaciones });
+            res.json({ rampas: rampas || [], situaciones: situaciones || [] });
         });
     });
 });

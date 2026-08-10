@@ -357,9 +357,14 @@ function srRenderTabla() {
     var html  = '';
     var htmlMobile = '';
 
-    var rampas = window.srCatRampas.length
-        ? window.srCatRampas
-        : Array.from({length:12}, function(_,i) { return { id: i+1, nombre_rampa: 'Rampa '+(i+1) }; });
+    var rampas = window.srCatRampas || [];
+
+    if (!rampas.length) {
+        var emptyHtml = '<tr><td colspan="10" class="text-center py-5 text-muted" style="background:var(--card-bg);"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> (arriba a la derecha) para agregar tus rampas o espacios de trabajo.</span></td></tr>';
+        if (tbody) tbody.innerHTML = emptyHtml;
+        if (gridMobile) gridMobile.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-gear fs-1 d-block mb-2 text-primary"></i><span class="fw-bold">No hay rampas configuradas aún.</span><br><span class="small">Haz clic en <strong>⚙️ Configurar</strong> para agregar rampas.</span></div>';
+        return;
+    }
 
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
