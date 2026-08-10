@@ -486,8 +486,8 @@
     </div>
     <div class="sal-drawer-body">
       <div class="row g-2 mb-3">
-        <div class="col-6">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT *</label>
+        <div class="col-6" id="sal-col-ot">
+          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT</label>
           <div class="position-relative">
             <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm"
                    placeholder="Buscar N° OT o placa…" autocomplete="off"
@@ -506,13 +506,13 @@
         </div>
         <div class="col-6">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo de Orden *</label>
-          <select class="form-select form-select-sm" id="sal-f-tipo-orden"
+          <select class="form-select form-select-sm" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
                   style="border-radius:12px;min-height:44px;font-weight:700;">
             <option value="Orden de Salida">Orden de Salida (Normal)</option>
             <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
           </select>
         </div>
-        <div class="col-6">
+        <div class="col-6" id="sal-col-tipo-destino">
           <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
           <select class="form-select form-select-sm" id="sal-f-tipo" onchange="window.salToggleTipo()"
                   style="border-radius:12px;min-height:44px;">

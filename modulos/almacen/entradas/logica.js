@@ -934,9 +934,30 @@ window._entRender = function() {
         return;
     }
 
+function _entFmtFechaHora(iso, createdAt) {
+    var raw = createdAt || iso;
+    if (!raw) return '—';
+    try {
+        var s = String(raw);
+        var d;
+        if (s.includes('T') || s.includes(' ')) {
+            d = new Date(s.replace(' ', 'T'));
+        } else {
+            d = new Date(s + 'T00:00:00');
+        }
+        if (isNaN(d.getTime())) return String(raw);
+        var dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+        var timeStr = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) {
+            return dateStr;
+        }
+        return dateStr + ' ' + timeStr;
+    } catch(e) { return String(raw); }
+}
+
     tbody.innerHTML = '';
     pagina.forEach(function(d) {
-        var fecha = d.fecha ? String(d.fecha).split('T')[0] : '—';
+        var fecha = _entFmtFechaHora(d.fecha, d.created_at);
         var isAnulado = d.estado === 'Anulado';
         var dCreated = d.created_at ? String(d.created_at).split('T')[0] : fecha;
         var canEditRow = canEdit && !isAnulado && (isAdmin || dCreated === todayStr);
