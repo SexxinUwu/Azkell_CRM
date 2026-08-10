@@ -906,10 +906,16 @@ router.get('/salidas', (req, res) => {
               FROM salidas_inv s
               LEFT JOIN detalle_salidas_inv d ON d.salida_id=s.id
               LEFT JOIN inventario i ON d.inventario_id = i.id
+              LEFT JOIN usuarios u ON (s.creado_por = u.correo OR s.creado_por = u.idUsuario)
               ${whereClause}
               GROUP BY s.id ORDER BY s.fecha DESC, s.id DESC ${limit}`, queryParams, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         rows.forEach(r => {
+            if (r.solicitante_nombre && r.solicitante_nombre.includes('@')) {
+                let uName = r.solicitante_nombre.split('@')[0].replace(/[._-]/g, ' ');
+                r.solicitante_nombre = uName.charAt(0).toUpperCase() + uName.slice(1);
+            }
+            if (r.solicitante_nombre) r.creado_por = r.solicitante_nombre;
             r.items = r.items_raw ? r.items_raw.split(SEP_ROW).map(seg => {
                 const [invId, desc, cant, cu, mon, imp] = seg.split(SEP_FIELD);
                 return { inventario_id: invId||null, descripcion: desc||null, cantidad: parseFloat(cant)||0, costo_unitario: parseFloat(cu)||0, moneda: mon||'PEN', importe: parseFloat(imp)||0 };
