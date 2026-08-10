@@ -1052,10 +1052,12 @@ router.delete('/salidas/:id', (req, res) => {
 router.get('/kardex/:inventario_id', (req, res) => {
     const id = req.params.inventario_id;
 
-    db.query('SELECT stock_regularizado, fecha_regularizacion FROM inventario WHERE id=?', [id], (e2, inv) => {
+    db.query('SELECT stock_inicial, stock_regularizado, fecha_regularizacion, created_at FROM inventario WHERE id=?', [id], (e2, inv) => {
         if (e2) return res.status(500).json({ error: e2.message });
-        const base    = parseFloat(inv[0]?.stock_regularizado || 0);
-        const regDate = inv[0]?.fecha_regularizacion || null;
+        const stockInicial = parseFloat(inv[0]?.stock_inicial || 0);
+        const base         = parseFloat(inv[0]?.stock_regularizado || 0);
+        const regDate      = inv[0]?.fecha_regularizacion || null;
+        const createdAt    = inv[0]?.created_at || null;
 
         db.query(`
             SELECT 'Entrada' AS tipo, e.fecha, e.created_at, e.id AS doc_id, e.proveedor_nombre AS contraparte, d.cantidad, d.costo_unitario, d.moneda, d.importe
@@ -1068,14 +1070,40 @@ router.get('/kardex/:inventario_id', (req, res) => {
             ORDER BY fecha ASC, created_at ASC, doc_id ASC
         `, [id, id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Saldo inicial = stock_regularizado (base post-regularización)
-            let saldo = base;
-            rows.forEach(r => {
-                if (r.tipo === 'Entrada') saldo += parseFloat(r.cantidad);
-                else saldo -= parseFloat(r.cantidad);
+            
+            let allMovs = [];
+            if (stockInicial > 0 || (createdAt && !regDate)) {
+                allMovs.push({
+                    tipo: 'Carga Inicial',
+                    fecha: createdAt || '2026-01-01 00:00:00',
+                    created_at: createdAt || '2026-01-01 00:00:00',
+                    doc_id: 'APERTURA',
+                    contraparte: 'CARGA MASIVA — SALDO INICIAL MAESTRO',
+                    cantidad: stockInicial,
+                    costo_unitario: 0,
+                    moneda: 'PEN',
+                    importe: 0
+                });
+            }
+            allMovs = allMovs.concat(rows);
+
+            allMovs.sort((a, b) => {
+                let dA = new Date(a.fecha || a.created_at).getTime() || 0;
+                let dB = new Date(b.fecha || b.created_at).getTime() || 0;
+                if (dA !== dB) return dA - dB;
+                if (a.tipo === 'Carga Inicial') return -1;
+                if (b.tipo === 'Carga Inicial') return 1;
+                return 0;
+            });
+
+            let saldo = 0;
+            allMovs.forEach(r => {
+                if (r.tipo === 'Carga Inicial' || r.tipo === 'Entrada') saldo += parseFloat(r.cantidad || 0);
+                else if (r.tipo === 'Salida') saldo -= parseFloat(r.cantidad || 0);
                 r.saldo = parseFloat(saldo.toFixed(4));
             });
-            res.json({ stock_base: base, fecha_regularizacion: regDate, movimientos: rows });
+
+            res.json({ stock_base: base, stock_inicial: stockInicial, fecha_regularizacion: regDate, movimientos: allMovs });
         });
     });
 });

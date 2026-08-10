@@ -301,10 +301,31 @@ window._kdxRenderKardex = function(res, item) {
     // ── Movimientos POST-regularización (o todos si no hay reg) ───
     var saldoAcum = stockBase;
     var postRegHtml = movsPostReg.map(function(m) {
-        var esEntrada = m.tipo === 'Entrada';
+        var esEntrada = m.tipo === 'Entrada' || m.tipo === 'Carga Inicial';
         var cant = parseFloat(m.cantidad || 0);
-        saldoAcum += esEntrada ? cant : -cant;
         var fecha = _kdxFmtFecha(m.fecha || m.created_at);
+
+        if (m.tipo === 'Carga Inicial') {
+            return '<div class="kdx-item" style="background:#eff6ff;border-left:5px solid #2563eb;border-bottom:1px solid #bfdbfe;">' +
+                '<div class="kdx-icon" style="background:#dbeafe;color:#1d4ed8;">' +
+                    '<i class="bi bi-box-seam-fill" style="font-size:1.2rem;"></i>' +
+                '</div>' +
+                '<div style="flex:1;min-width:0">' +
+                    '<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">' +
+                        '<span style="font-size:.9rem;font-weight:800;color:#1e3a8a">Carga Masiva de Inventario</span>' +
+                        '<span style="background:#bfdbfe;color:#1e3a8a;font-size:.68rem;font-weight:800;padding:.15rem .55rem;border-radius:6px">APERTURA / EXCEL</span>' +
+                    '</div>' +
+                    '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#1d4ed8;margin-top:.2rem">Stock Inicial de Importación — Registro Maestro</div>' +
+                '</div>' +
+                '<div style="text-align:center;min-width:120px">' +
+                    '<div style="font-size:1.2rem;font-weight:900;color:#1d4ed8;">+ ' + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+                    '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
+                '</div>' +
+                '<div class="kdx-saldo" style="color:#1e3a8a;font-weight:900;">' + (m.saldo !== undefined ? m.saldo : cant).toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+            '</div>';
+        }
+
+        saldoAcum += m.tipo === 'Entrada' ? cant : -cant;
         var titulo = esEntrada ? 'Entrada por Compra' : (m.contraparte && m.contraparte.includes('Ajuste') ? 'Ajuste de Inventario (Resta)' : 'Salida a Taller');
         return '<div class="kdx-item" style="border-bottom:1px solid #f1f5f9;">' +
             '<div class="kdx-icon ' + (esEntrada ? 'entrada' : 'salida') + '">' +
@@ -321,7 +342,7 @@ window._kdxRenderKardex = function(res, item) {
                 '<div style="font-size:1.2rem;font-weight:900;color:' + (esEntrada ? '#15803d' : '#dc2626') + '">' + (esEntrada ? '+' : '−') + cant.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
                 '<div style="font-size:.68rem;font-weight:700;color:#0f172a;">' + fecha + '</div>' +
             '</div>' +
-            '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + saldoAcum.toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
+            '<div class="kdx-saldo" style="color:#0f172a;font-weight:900;">' + (m.saldo !== undefined ? m.saldo : saldoAcum).toLocaleString('es-PE', {minimumFractionDigits:2, maximumFractionDigits:4}) + '</div>' +
         '</div>';
     }).join('');
 
