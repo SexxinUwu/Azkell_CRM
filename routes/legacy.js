@@ -372,6 +372,7 @@ db.query(`ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0`, (e) =
 // --- RUTA COMODIN MOVIDA AL FINAL ---
 router.post('/:metodo', async (req, res) => {
     const metodo = req.params.metodo;
+    const reqDb = req.db || db;
     console.log(`📡 El sistema solicitó: ${metodo}`);
 
     if (metodo === 'obtenerDatosPlacas') {
@@ -382,7 +383,7 @@ router.post('/:metodo', async (req, res) => {
                 combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name
             FROM placas
         `;
-        db.query(sql, (err, results) => {
+        reqDb.query(sql, (err, results) => {
             if (err) { console.error("Error leyendo placas:", err); return res.json({ data: [] }); }
             console.log(`✅ Se encontraron ${results.length} placas en MySQL`);
 
@@ -418,7 +419,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosFleetrun') {
-        db.query('SELECT * FROM fleetrun', (err, results) => {
+        reqDb.query('SELECT * FROM fleetrun', (err, results) => {
             if (err) return res.json({ data: [] });
             // fila[3] debe ser fecha DD/MM/YYYY — el módulo fleetrun la usa para ordenar y mostrar
             const _fmtFecha = (f) => {
@@ -458,7 +459,7 @@ router.post('/:metodo', async (req, res) => {
                    r.nombre AS rol_nombre, r.color AS rol_color, r.es_admin AS rol_es_admin
             FROM usuarios u
             LEFT JOIN roles r ON u.rol_id = r.id`;
-        db.query(query, (err, results) => {
+        reqDb.query(query, (err, results) => {
             if (err) return res.status(500).json({ data: "Error BD: " + err.message });
             const filas = results.map(r => {
                 let permisosFinales = {};
@@ -490,7 +491,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosInspecciones') {
-        db.query('SELECT * FROM inspecciones', (err, results) => {
+        reqDb.query('SELECT * FROM inspecciones', (err, results) => {
             if (err) return res.json({ data: [] });
             const _fmtFechaInsp = (f) => {
                 if (!f) return '';
@@ -509,7 +510,7 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosStatusFlota') {
-        db.query('SELECT * FROM status_flota', (err, results) => {
+        reqDb.query('SELECT * FROM status_flota', (err, results) => {
             if (err) return res.json({ data: [] });
             const data = results.map(r => [
                 r.idRegistro || '', r.fecha || '', r.corte || '',
@@ -548,7 +549,7 @@ router.post('/:metodo', async (req, res) => {
         `;
         const values = [id, fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario,
                         fecha, corte, motora, nomotora, cliMotora, cliNoMotora, zona, conductor, estado, obs, km, usuario];
-        db.query(query, values, (err) => {
+        reqDb.query(query, values, (err) => {
             if (err) { console.error("❌ Error BD Status Flota:", err); return res.json({ data: "Error al guardar en Base de Datos" }); }
             console.log("✅ Status Flota guardado correctamente");
             broadcast('status', metodo);
