@@ -331,9 +331,9 @@ window.salRenderTabla = function() {
             var tr = document.createElement('tr');
             if (m.id === window.salDetalleId) tr.classList.add('sal-row-active');
             tr.innerHTML =
-                '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
+                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + salEsc(m.id || '—') + '</span></td>'
                 + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
-                + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
+                + '<td class="col-hide-mob" style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
@@ -357,9 +357,9 @@ window.salRenderTabla = function() {
             var cant   = parseFloat(it.cantidad || 0);
             var cu     = parseFloat(it.costo_unitario || 0);
             tr.innerHTML =
-                '<td><span class="fw-bold" style="color:var(--primary,#5865F2);">' + salEsc(m.id || '—') + '</span></td>'
+                '<td class="text-center"><span class="badge bg-secondary fw-normal" style="font-size:0.72rem;">' + salEsc(m.id || '—') + '</span></td>'
                 + '<td style="white-space:nowrap;font-weight:600;">' + salFmtDate(m.fecha, m.created_at) + '</td>'
-                + '<td class="col-hide-mob">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
+                + '<td class="col-hide-mob" style="vertical-align:middle;">' + _salTipoOrdenBadge(m.tipo_orden) + '</td>'
                 + '<td class="col-hide-mob"><strong>' + salEsc(m.ticket_ot || '—') + '</strong></td>'
                 + '<td>' + salEsc(m.placa || '—') + '</td>'
                 + '<td class="col-hide-mob">' + salEsc(m.responsable || '—') + '</td>'
