@@ -206,7 +206,8 @@ window.verificarSesionGuardada = function() {
     window.checkPerm('init', 'l'); // Asegura que window._permCache esté inicializado
     let pActive = window._permCache || {};
     let isSimulating = !!localStorage.getItem('fleet_simulated_role');
-    let isAdm = pActive.admin === true || (!isSimulating && guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
+    let isRoleAdmin = (rolLogueado || '').toLowerCase().includes('admin') || (rolLogueado || '').toLowerCase() === 'fundador' || (rolLogueado || '').toLowerCase() === 'gerente general';
+    let isAdm = pActive.admin === true || isRoleAdmin || (!isSimulating && guardadoCorreo && guardadoCorreo.toLowerCase() === 'admin@azkell.com');
 
     let rolStr = isSimulating ? (JSON.parse(localStorage.getItem('fleet_simulated_role')).nombre || rolLogueado) : rolLogueado;
 
@@ -1303,7 +1304,9 @@ window.checkPerm = function(modKey, action) {
     try {
         if (!window._permCache) {
             var realPerms = JSON.parse(localStorage.getItem('fleet_permisos') || '{}');
-            var isRealAdmin = realPerms.admin === true || localStorage.getItem('fleet_usuario_rol') === 'Fundador';
+            var userRol = (localStorage.getItem('fleet_rol') || localStorage.getItem('fleet_usuario_rol') || '').toLowerCase();
+            var isRealAdmin = realPerms.admin === true || userRol.includes('admin') || userRol === 'fundador' || userRol === 'gerente general';
+            if (isRealAdmin) realPerms.admin = true;
             var simRoleStr = isRealAdmin ? localStorage.getItem('fleet_simulated_role') : null;
             if (simRoleStr) {
                 var simRole = JSON.parse(simRoleStr);
