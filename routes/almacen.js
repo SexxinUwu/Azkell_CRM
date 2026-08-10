@@ -895,7 +895,7 @@ router.get('/salidas', (req, res) => {
     const limit = q ? '' : 'LIMIT 2000';
 
     db.query(`SELECT s.*,
-              COALESCE(NULLIF(TRIM(u.nombre),''), s.creado_por) AS solicitante_nombre,
+              COALESCE(MAX(NULLIF(TRIM(u.nombre),'')), MAX(s.creado_por)) AS solicitante_nombre,
               GROUP_CONCAT(CONCAT_WS('\x1F',
                 COALESCE(d.inventario_id,''),
                 COALESCE(i.descripcion, d.descripcion,''),
