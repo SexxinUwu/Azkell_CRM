@@ -1604,14 +1604,19 @@ function rotBadgeAprobacion(estado) {
 
 function rotBadgeSituacion(sit) {
     if (!sit) return '—';
+    var sitClean = String(sit).trim();
+    var sitLower = sitClean.toLowerCase();
     var map = {
-        'En atención':            ['rot-b-en-atencion', 'En Atención'],
-        'Espera de repuesto':     ['rot-b-espera',      'Espera Repuesto'],
-        'Espera de autorización': ['rot-b-espera',      'Espera Autor.'],
-        'Finalizado':             ['rot-b-cerrada',     'Finalizado']
+        'en atención':            ['rot-b-en-atencion', 'En Atención'],
+        'en atencion':            ['rot-b-en-atencion', 'En Atención'],
+        'espera de repuesto':     ['rot-b-espera',      'Espera Repuesto'],
+        'espera repuesto':        ['rot-b-espera',      'Espera Repuesto'],
+        'espera de autorización': ['rot-b-espera',      'Espera Autor.'],
+        'espera de autorizacion': ['rot-b-espera',      'Espera Autor.'],
+        'finalizado':             ['rot-b-cerrada',     'Finalizado']
     };
-    var v = map[sit] || [null, sit];
-    return v[0] ? '<span class="rot-badge ' + v[0] + '">' + v[1] + '</span>' : rotEscHtml(sit);
+    var v = map[sitLower] || ['rot-b-en-atencion', sitClean];
+    return '<span class="rot-badge ' + v[0] + '"><i class="bi bi-circle-fill me-1" style="font-size:0.45rem;"></i>' + v[1] + '</span>';
 }
 
 function rotBadgeTipo(tipo) {

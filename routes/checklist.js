@@ -317,25 +317,32 @@ module.exports = function (db, broadcast, logAudit) {
                         let fSalDate = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[0] : null;
                         let fSalTime = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[1].substring(0, 5) : null;
 
-                        const obsRampa = `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`;
+                        let targetRampaVal = id_rampa;
+                        try {
+                            const [cMatch] = await tdb.promise().query(
+                                "SELECT id FROM cat_rampas WHERE LOWER(nombre_rampa) = LOWER(?) OR id = ? LIMIT 1",
+                                [id_rampa, id_rampa]
+                            );
+                            if (cMatch && cMatch.length) targetRampaVal = cMatch[0].id;
+                        } catch(eCat) {}
 
                         try {
                             const [existingRampa] = await tdb.promise().query(
-                                "SELECT id FROM taller_rampas WHERE (rampa = ? OR placa = ?) AND estado != 'Liberado' LIMIT 1",
-                                [id_rampa, placa]
+                                "SELECT id FROM taller_rampas WHERE (rampa = ? OR rampa = ? OR placa = ?) AND estado != 'Liberado' LIMIT 1",
+                                [targetRampaVal, id_rampa, placa]
                             );
 
                             if (existingRampa && existingRampa.length > 0) {
                                 const rId = existingRampa[0].id;
                                 await tdb.promise().query(
                                     `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion='En atención', obs=?, creado_por=?, estado='Activo' WHERE id=?`,
-                                    [id_rampa, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema', rId]
+                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema', rId]
                                 );
                             } else {
                                 await tdb.promise().query(
                                     `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, estado)
                                      VALUES (?, ?, ?, ?, ?, ?, ?, 'En atención', ?, ?, 'Activo')`,
-                                    [id_rampa, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema']
+                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema']
                                 );
                             }
                         } catch(eRampa) {
