@@ -429,17 +429,33 @@ function srRenderTabla() {
                   }).join('') + (otsPlaca.length > 3 ? '<span style="font-size:0.72rem;color:var(--subtext)">+' + (otsPlaca.length - 3) + '</span>' : '')
                 : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
+            var obsTextoCol = e.obs || '';
+            if (otsPlaca && otsPlaca.length > 0) {
+                var obsOTList = [];
+                otsPlaca.forEach(function(o) {
+                    var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
+                    var mot = (det.motivo || o.observaciones || '').trim();
+                    mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
+                    if (mot) {
+                        obsOTList.push(mot);
+                    }
+                });
+                if (obsOTList.length > 0) {
+                    obsTextoCol = Array.from(new Set(obsOTList)).join('\n');
+                }
+            }
+            obsTextoCol = (obsTextoCol || '—')
+                .replace(/^\[Reporte\s+[^\]]+\]\s*(OT\s+OT-[^:]+:\s*)?/gim, '')
+                .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+                .trim();
+
             html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" data-id="' + e._id + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
             html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
             html += '<td>' + (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '') + '</td>';
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            var obsLimpiaTabla = (e.obs || '—')
-                .replace(/^\[Reporte\s+[^\]]+\]\s*(OT\s+OT-[^:]+:\s*)?/gim, '')
-                .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
-                .trim();
-            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (obsLimpiaTabla || '').replace(/"/g,'&quot;') + '">' + _srEsc(obsLimpiaTabla || '—') + '</div></td>';
+            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (obsTextoCol || '').replace(/"/g,'&quot;') + '">' + _srEsc(obsTextoCol || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
