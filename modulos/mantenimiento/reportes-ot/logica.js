@@ -249,6 +249,19 @@ function rotCalcularTiempos(ot) {
     };
 }
 
+function rotFmtKmCol(det) {
+    if (!det) return '0 km';
+    if (det.horas_motor) {
+        var numH = Number(det.horas_motor);
+        return (!isNaN(numH) ? numH.toLocaleString('es-PE') : det.horas_motor) + ' hrs';
+    }
+    var kmVal = det.km !== undefined && det.km !== null ? det.km : (det.km_tablero !== undefined ? det.km_tablero : null);
+    if (kmVal === null || kmVal === '' || kmVal === undefined) return '0 km';
+    var num = Number(kmVal);
+    if (isNaN(num)) return rotEscHtml(String(kmVal));
+    return num.toLocaleString('es-PE') + ' km';
+}
+
 // ── Render tabla ─────────────────────────────────────────────────
 window.rotRenderTabla = function(lista) {
     var tbody = document.getElementById('rot-tbody');
@@ -277,7 +290,7 @@ window.rotRenderTabla = function(lista) {
         html += '<td onclick="event.stopPropagation();" style="white-space:nowrap;padding:8px 10px;">' + rotBotonesAccion(ot) + '</td>';
         html += '<td style="font-weight:800;color:var(--primary,#5865F2);white-space:nowrap;">' + rotEscHtml(String(idOT)) + '</td>';
         html += '<td style="font-weight:700;">' + rotEscHtml(ot.placa || '?') + '</td>';
-        html += '<td style="font-size:0.85rem;color:var(--text);">' + rotEscHtml(det.km ? Number(det.km).toLocaleString('es-PE') + ' km' : '?') + '</td>';
+        html += '<td style="font-size:0.85rem;color:var(--text);">' + rotFmtKmCol(det) + '</td>';
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '?') + '</td>';
         html += '<td>' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>';
@@ -370,15 +383,12 @@ window.rotAbrirDetalle = function(idOT) {
     var t = rotCalcularTiempos(ot);
     html += '<div class="rot-sec"><div class="rot-sec-hd">Tiempos de la Orden</div>';
     html += fld('Ingreso a Taller', rotFmtFecha(ot.fecha_ingreso || ot.creado_en));
-    if (det.km !== undefined) {
-        var kmHtml = '<div style="display:flex;align-items:center;gap:10px;">'
-                   + '<span id="rot-ot-km-txt">' + Number(det.km).toLocaleString('es-PE') + ' km</span>'
-                   + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', ' + det.km + ')" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-pencil"></i></button>' : '')
-                   + '</div>';
-        html += fld('Kilometraje', kmHtml);
-    } else if (puedeEditar) {
-        html += fld('Kilometraje', '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', 0)" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-plus"></i> Agregar KM</button>');
-    }
+    var labelKm = det.horas_motor ? 'Horas Motor' : 'Kilometraje';
+    var kmHtml = '<div style="display:flex;align-items:center;gap:10px;">'
+               + '<span id="rot-ot-km-txt">' + rotFmtKmCol(det) + '</span>'
+               + (puedeEditar ? '<button class="btn btn-sm rot-btn-agregar" onclick="window.rotEditarKm(\'' + esc(idOT) + '\', ' + (det.km || det.horas_motor || 0) + ')" style="padding:1px 6px;font-size:0.7rem;background:rgba(14,165,233,0.1);color:#0ea5e9;border-radius:12px;"><i class="bi bi-pencil"></i></button>' : '')
+               + '</div>';
+    html += fld(labelKm, kmHtml);
     html += fld('Estado OT', rotBadgeEstado(ot.estado));
     if (t.inicio) {
         html += fld('Inicio OT', rotFmtFechaHora(t.inicio) + (ot.iniciado_por ? '<span style="color:var(--subtext);font-size:0.75rem;margin-left:6px;">por ' + esc(rotGetNombreUsuario(ot.iniciado_por)) + '</span>' : ''));
