@@ -769,7 +769,25 @@ window.agregarOTCardAdicional = function(unidad, placa) {
                 </div>
             `;
         }).join('');
-    } else {
+    }
+
+    const repActual = window.cacheGenReporteActual ? window.cacheGenReporteActual.rep : null;
+    if (repActual && repActual.fallas_libres_text) {
+        const libreVal = `[REPORTE LIBRE] ${repActual.fallas_libres_text}`;
+        const yaUsada = fallasYaSeleccionadas.has(libreVal);
+        const isChecked = !yaUsada ? 'checked' : '';
+        fallasHtml += `
+            <div class="form-check py-1">
+                <input class="form-check-input chk-falla-ot" type="checkbox" value="${libreVal}" id="${cardId}_falla_libre" ${isChecked}>
+                <label class="form-check-label small text-danger fw-bold" for="${cardId}_falla_libre">
+                    [REPORTE LIBRE]: ${repActual.fallas_libres_text}
+                    ${yaUsada ? '<span class="badge bg-secondary ms-1">Asignada en otra OT</span>' : ''}
+                </label>
+            </div>
+        `;
+    }
+
+    if (!fallasHtml) {
         fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
     }
 
@@ -905,16 +923,21 @@ window.abrirModalGenerarOTs = function(idReporte) {
                                     </label>
                                 </div>
                             `).join('');
-                        } else if (rep.fallas_libres_text) {
-                            fallasHtml = `
+                        }
+                        
+                        if (rep.fallas_libres_text) {
+                            const isCheckedLibre = (window.genOtCardCounter === 1 && fallas.length === 0) ? 'checked' : '';
+                            fallasHtml += `
                                 <div class="form-check py-1">
-                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[REPORTE LIBRE] ${rep.fallas_libres_text}" id="${cardId}_falla_libre" checked>
+                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[REPORTE LIBRE] ${rep.fallas_libres_text}" id="${cardId}_falla_libre" ${isCheckedLibre}>
                                     <label class="form-check-label small text-danger fw-bold" for="${cardId}_falla_libre">
                                         [REPORTE LIBRE]: ${rep.fallas_libres_text}
                                     </label>
                                 </div>
                             `;
-                        } else {
+                        }
+                        
+                        if (!fallasHtml) {
                             fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
                         }
 
