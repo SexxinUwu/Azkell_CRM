@@ -1028,6 +1028,7 @@ router.post('/tipos-mantenimiento/bulk-delete', (req, res) => {
 
 // POST /api/tipos-mantenimiento/importar — importación masiva (upsert por marca+tipo_mp+uts)
 router.post('/tipos-mantenimiento/importar', async (req, res) => {
+    const tdb = req.db || db;
     const { registros } = req.body;
     if (!Array.isArray(registros) || !registros.length)
         return res.status(400).json({ error: 'Sin registros' });
@@ -1043,27 +1044,27 @@ router.post('/tipos-mantenimiento/importar', async (req, res) => {
             const combustible = (r.combustible || '').toUpperCase().trim();
             const modelo = (r.modelo || '').toUpperCase().trim();
 
-            const [existing] = await db.promise().query(
+            const [existing] = await tdb.promise().query(
                 'SELECT id FROM tipos_mantenimiento WHERE UPPER(marca)=? AND UPPER(tipo_mp)=? AND UPPER(uts)=? AND UPPER(IFNULL(combustible,""))=? AND UPPER(IFNULL(modelo,""))=? LIMIT 1',
                 [marca, tipo_mp, uts, combustible, modelo]
             );
             if (existing.length) {
-                await db.promise().query(
+                await tdb.promise().query(
                     `UPDATE tipos_mantenimiento SET
                         frecuencia_km=?, frecuencia_horas=?, frecuencia_dias=?,
                         tipo=?, sistema=?, descripcion=?
                      WHERE id=?`,
                     [r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
-                     r.tipo||null, r.sistema||null, r.descripcion||null, existing[0].id]
+                     r.tipo||'', r.sistema||'', r.descripcion||'', existing[0].id]
                 );
                 actualizados++;
             } else {
-                await db.promise().query(
+                await tdb.promise().query(
                     `INSERT INTO tipos_mantenimiento
                         (marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-                    [marca, tipo_mp, uts, r.combustible||null, r.modelo||null, r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
-                     r.tipo||null, r.sistema||null, r.descripcion||null]
+                    [marca, tipo_mp, uts, r.combustible||'', r.modelo||'', r.frecuencia_km||null, r.frecuencia_horas||null, r.frecuencia_dias||null,
+                     r.tipo||'', r.sistema||'', r.descripcion||'']
                 );
                 insertados++;
             }
