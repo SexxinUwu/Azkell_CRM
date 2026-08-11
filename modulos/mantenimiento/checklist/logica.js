@@ -657,6 +657,42 @@ window.limpiarTecnicosDropdown = function(cardId) {
     window.actualizarLabelTecnicos(cardId);
 };
 
+window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
+    const container = document.getElementById(cardId + '_tecnicos_container');
+    if (!container) return;
+
+    let html = `
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white shadow-2xs" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+            <span class="text-truncate sel-tec-label">Selecciona técnico(s)...</span>
+            <i class="bi bi-chevron-down ms-1"></i>
+        </button>
+        <div class="dropdown-menu p-2 shadow-lg w-100" style="max-height: 230px; overflow-y: auto;">
+            <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
+            <div class="list-tecnicos-items">
+    `;
+
+    (listTecnicos || []).forEach((tName, i) => {
+        html += `
+        <div class="form-check py-1 px-2 rounded" style="font-size:0.82rem;">
+            <input class="form-check-input chk-tecnico" type="checkbox" value="${tName}" id="${cardId}_tec_${i}" onchange="window.actualizarLabelTecnicos('${cardId}')">
+            <label class="form-check-label w-100 cursor-pointer small text-uppercase fw-semibold" for="${cardId}_tec_${i}">${tName}</label>
+        </div>
+        `;
+    });
+
+    html += `
+            </div>
+            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                <small class="text-muted cnt-tec-sel">0 seleccionados</small>
+                <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none fw-bold" onclick="window.limpiarTecnicosDropdown('${cardId}')">Limpiar todo</button>
+            </div>
+        </div>
+    </div>
+    `;
+    container.innerHTML = html;
+};
+
 // ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
 window.abrirModalGenerarOTs = function(idReporte) {
     fetch('/api/checklist/' + idReporte)
