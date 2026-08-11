@@ -76,16 +76,8 @@ window.init_checklist = function() {
     }
 
     // Renderizar grupos del checklist
-    window.renderizarGruposChecklist('group-motor', SISTEMAS_TRACTO.motor, 'Tracto', 'Motor');
-    window.renderizarGruposChecklist('group-caja', SISTEMAS_TRACTO.caja, 'Tracto', 'Caja/Coronas');
-    window.renderizarGruposChecklist('group-refri', SISTEMAS_TRACTO.refri, 'Tracto', 'Refrigeración');
-    window.renderizarGruposChecklist('group-direccion', SISTEMAS_TRACTO.direccion, 'Tracto', 'Dirección');
-    window.renderizarGruposChecklist('group-cabina', SISTEMAS_TRACTO.cabina, 'Tracto', 'Cabina/Chasis');
-
-    window.renderizarGruposChecklist('group-frenos', SISTEMAS_REMOLQUE.frenos, 'Remolque', 'Frenos');
-    window.renderizarGruposChecklist('group-electrico', SISTEMAS_REMOLQUE.electrico, 'Remolque', 'Sistema Eléctrico');
-    window.renderizarGruposChecklist('group-suspension', SISTEMAS_REMOLQUE.suspension, 'Remolque', 'Suspensión');
-    window.renderizarGruposChecklist('group-llantas', SISTEMAS_REMOLQUE.llantas, 'Remolque', 'Llantas');
+    window.asegurarGruposChecklist(true);
+    setTimeout(() => window.asegurarGruposChecklist(false), 150);
 
     // Inicializar firma digital
     window.initCanvasFirmaChecklist();
@@ -139,6 +131,29 @@ window.poblarConductoresChecklist = function() {
             window._cbInit('ck_conductor', items, 'Buscar conductor de lista…');
         })
         .catch(err => console.warn('Error poblando conductores:', err.message));
+};
+
+window.asegurarGruposChecklist = function(forzar = false) {
+    if (typeof SISTEMAS_TRACTO === 'undefined' || typeof SISTEMAS_REMOLQUE === 'undefined') return;
+
+    const containers = [
+        ['group-motor', SISTEMAS_TRACTO.motor, 'Tracto', 'Motor'],
+        ['group-caja', SISTEMAS_TRACTO.caja, 'Tracto', 'Caja/Coronas'],
+        ['group-refri', SISTEMAS_TRACTO.refri, 'Tracto', 'Refrigeración'],
+        ['group-direccion', SISTEMAS_TRACTO.direccion, 'Tracto', 'Dirección'],
+        ['group-cabina', SISTEMAS_TRACTO.cabina, 'Tracto', 'Cabina/Chasis'],
+        ['group-frenos', SISTEMAS_REMOLQUE.frenos, 'Remolque', 'Frenos'],
+        ['group-electrico', SISTEMAS_REMOLQUE.electrico, 'Remolque', 'Sistema Eléctrico'],
+        ['group-suspension', SISTEMAS_REMOLQUE.suspension, 'Remolque', 'Suspensión'],
+        ['group-llantas', SISTEMAS_REMOLQUE.llantas, 'Remolque', 'Llantas']
+    ];
+
+    containers.forEach(([id, items, unidad, sistema]) => {
+        const el = document.getElementById(id);
+        if (el && (forzar || el.children.length === 0)) {
+            window.renderizarGruposChecklist(id, items, unidad, sistema);
+        }
+    });
 };
 
 // ── RENDERIZAR FILAS DE CHECKLIST DINÁMICAS (MOBILE FIRST) ──────
@@ -504,6 +519,19 @@ window.consultarGpsChecklist = function(placaManual) {
 window.abrirModalNuevoChecklist = function() {
     const form = document.getElementById('formNuevoChecklist');
     if (form) form.reset();
+
+    // Re-renderizar y verificar que todos los grupos de acordeón contengan sus ítems
+    window.asegurarGruposChecklist(true);
+
+    // Restablecer estilos e insumos visuales de tarjetas de fallas
+    document.querySelectorAll('#formNuevoChecklist .ck-obs-box').forEach(b => b.classList.add('d-none'));
+    document.querySelectorAll('#formNuevoChecklist .ck-obs-box input').forEach(inp => inp.value = '');
+    document.querySelectorAll('#formNuevoChecklist .ck-item-card').forEach(c => {
+        c.style.borderColor = 'var(--bs-border-color, #e2e8f0)';
+        c.style.background = '#ffffff';
+    });
+    document.querySelectorAll('#formNuevoChecklist .btn-check[id^="ok_"]').forEach(r => r.checked = true);
+    document.querySelectorAll('#formNuevoChecklist .btn-check[id^="obs_"]').forEach(r => r.checked = false);
 
     fotosChecklistBase64 = [];
     const wrapFotos = document.getElementById('ck_preview_fotos');
