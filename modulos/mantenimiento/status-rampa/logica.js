@@ -599,9 +599,25 @@ window.srAbrirDetalle = function(id) {
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b;">Kilometraje de Ingreso</div>';
     html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
     html += '  </div>';
+    var obsTextoCompleto = e.obs || '';
+    if (otsPlaca && otsPlaca.length > 0) {
+        var obsOTList = [];
+        otsPlaca.forEach(function(o) {
+            var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
+            var ticket = o.ticket_entrada || o.id_ot || '';
+            var mot = (det.motivo || o.observaciones || '').trim();
+            if (mot) {
+                obsOTList.push('📌 OT ' + ticket + ':\n' + mot);
+            }
+        });
+        if (obsOTList.length > 0) {
+            obsTextoCompleto = obsOTList.join('\n\n');
+        }
+    }
+
     html += '  <div class="card-body p-3">';
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
-    html += '    <div class="p-3" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem; color:#334155; line-height:1.5;">' + _srEsc(e.obs || 'Sin tareas registradas.') + '</div>';
+    html += '    <div class="p-3" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem; color:#334155; line-height:1.5; white-space:pre-line; word-break:break-word;">' + _srEsc(obsTextoCompleto || 'Sin tareas registradas.') + '</div>';
     if (e.evidencia_url) {
         html += '    <div class="mt-3"><a href="#" onclick="event.preventDefault(); window.srAbrirEvidencia(' + (e._id || e.id) + ')" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
     }

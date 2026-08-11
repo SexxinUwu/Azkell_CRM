@@ -549,12 +549,14 @@ window.guardarChecklist = function(event) {
     const placaRemolque = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
     const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
     const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
+    const horasMotorVal = (document.getElementById('ck_horas_motor') || {}).value || '';
 
     const payload = {
         placa_tracto: placaTracto,
         placa_remolque: placaRemolque,
         km_inicial: kilometrajeVal,
         km_final: kilometrajeVal,
+        horas_motor: horasMotorVal,
         conductor: conductorNombre,
         procedencia: (document.getElementById('ck_procedencia') || {}).value || '',
         ubicacion_gps: (document.getElementById('ck_ubicacion_gps') || {}).value || '',
@@ -838,6 +840,12 @@ window.agregarOTCardAdicional = function(unidad, placa) {
                     <label class="form-label fw-bold small text-dark"><i class="bi bi-people text-info me-1"></i> Personal / Técnico(s) Asignados *</label>
                     <div id="${cardId}_tecnicos_container"></div>
                 </div>
+                ${(unidad === 'Remolque' || unidad === 'Carreta') ? `
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-success"><i class="bi bi-clock-history me-1"></i> Horas Motor / Thermoking (Hrs)</label>
+                    <input type="number" class="form-control form-control-sm ot-horas-motor fw-bold text-success" value="${(window.cacheGenReporteActual && window.cacheGenReporteActual.rep ? window.cacheGenReporteActual.rep.horas_motor : '') || ''}" placeholder="Ej: 1250">
+                </div>
+                ` : ''}
             </div>
 
             <!-- Selección de Fallas para esta OT -->
@@ -1054,6 +1062,7 @@ window.enviarGeneracionOTs = function(event) {
         const subtipo_ot = card.querySelector('.ot-subtipo').value;
         const supervisor = (card.querySelector('.ot-supervisor') || {}).value || '';
         const trabajo_custom = (card.querySelector('.ot-trabajo-custom') || {}).value || '';
+        const horas_motor = (card.querySelector('.ot-horas-motor') || {}).value || '';
 
         // Recolectar fallas seleccionadas
         const fallasSeleccionadas = [];
@@ -1075,7 +1084,8 @@ window.enviarGeneracionOTs = function(event) {
             supervisor,
             tecnicos,
             fallas_seleccionadas: fallasSeleccionadas,
-            trabajo_custom
+            trabajo_custom,
+            horas_motor
         });
     });
 
