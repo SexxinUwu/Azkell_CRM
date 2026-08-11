@@ -258,7 +258,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 let kmact = Number(r.kmact) || 0;
                 let freckm = (r.freckm === '' || r.freckm == null) ? null : (Number(r.freckm) || 0);
                 let kmprox = (r.kmprox === '' || r.kmprox == null) ? null : (Number(r.kmprox) || 0);
-                // Fecha: si viene vacía, guardar como null
+                // Fecha: si viene vacía, usar la fecha de hoy como respaldo
                 let fecha = r.fecha && String(r.fecha).trim() !== '' ? String(r.fecha).trim() : null;
                 if (fecha) {
                     // Si viene como DD/MM/YYYY convertir a YYYY-MM-DD
@@ -267,9 +267,18 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                         fecha = `${partes[2]}-${partes[1]}-${partes[0]}`;
                     } else if (fecha.includes('T')) {
                         fecha = fecha.split('T')[0];
+                    } else if (/^\d{5}$/.test(fecha)) {
+                        // Número serial de Excel: días desde 1900-01-01
+                        const excelEpoch = new Date(1899, 11, 30);
+                        const jsDate = new Date(excelEpoch.getTime() + parseInt(fecha) * 86400000);
+                        fecha = jsDate.toISOString().split('T')[0];
                     } else if (!/^\d{4}-\d{2}-\d{2}/.test(fecha)) {
                         fecha = null;
                     }
+                }
+                // Si fecha sigue null, usar fecha de hoy
+                if (!fecha) {
+                    fecha = new Date().toISOString().split('T')[0];
                 }
                 return [idRegistro, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
             });
