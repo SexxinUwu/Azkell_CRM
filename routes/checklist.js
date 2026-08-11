@@ -249,7 +249,7 @@ module.exports = function (db, broadcast, logAudit) {
                 let seqOt = 1;
                 try {
                     const [rowsSeq] = await tdb.promise().query(
-                        'SELECT id_ot FROM ordenes_trabajo WHERE id_ot LIKE ? ORDER BY id DESC LIMIT 1',
+                        'SELECT id_ot FROM ordenes_trabajo WHERE id_ot LIKE ? ORDER BY ticket_entrada DESC LIMIT 1',
                         [`${prefijoOt}%`]
                     );
                     if (rowsSeq && rowsSeq.length) {
@@ -260,29 +260,34 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const idOt = `${prefijoOt}${String(seqOt).padStart(4, '0')}`;
 
-                // Insertar OT en ordenes_trabajo con relación Padre-Hijo
+                const detallesObj = {
+                    cliente: clienteNombre,
+                    ruc_dni: rucDni,
+                    km_tablero: item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0,
+                    motivo: motivoCompleto,
+                    tipo_mantenimiento: item.tipo_ot || 'Correctivo',
+                    subtipo_ot: item.subtipo_ot || 'Mecánica General',
+                    tecnico_lider: tecnicosStr,
+                    rampa: id_rampa || rep.id_rampa || 'En Espera',
+                    sistema_afectado: item.subtipo_ot || 'Mecánica',
+                    id_reporte_falla: rep.id,
+                    folio_reporte: rep.folio
+                };
+
+                // Insertar OT en ordenes_trabajo con relación Padre-Hijo y detalles_json
                 const sqlOt = `
                     INSERT INTO ordenes_trabajo (
-                        id_ot, fecha, fecha_ingreso, placa, cliente, ruc_dni, km_tablero,
-                        motivo, tipo_mantenimiento, subtipo_ot, tecnico_lider, estado, rampa,
-                        creado_por, sistema_afectado
-                    ) VALUES (?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?, 'Abierto', ?, ?, ?);
+                        ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso
+                    ) VALUES (?, ?, ?, 'Abierto', ?, ?, NOW());
                 `;
 
                 try {
                     const [resOt] = await tdb.promise().query(sqlOt, [
                         idOt,
+                        idOt,
                         placa,
-                        clienteNombre,
-                        rucDni,
-                        item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0,
-                        motivoCompleto,
-                        item.tipo_ot || 'Correctivo',
-                        item.subtipo_ot || 'Mecánica General',
-                        tecnicosStr,
-                        id_rampa || rep.id_rampa || 'En Espera',
-                        creado_por || 'Sistema',
-                        item.subtipo_ot || 'Mecánica'
+                        JSON.stringify(detallesObj),
+                        creado_por || 'Sistema'
                     ]);
 
                     otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, tecnicos: tecnicosStr, id: resOt.insertId });
