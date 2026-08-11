@@ -626,11 +626,32 @@ window.ckCambiarTipoOT = function(selectEl) {
 
 window.filtrarTecnicosDropdown = function(inputEl) {
     const q = inputEl.value.toLowerCase().trim();
-    const items = inputEl.closest('.dropdown-menu').querySelectorAll('.list-tecnicos-items .form-check');
+    const items = inputEl.closest('.tecnicos-dropdown-panel').querySelectorAll('.list-tecnicos-items .form-check');
     items.forEach(item => {
         const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(q) ? 'block' : 'none';
+        item.style.display = text.includes(q) ? 'flex' : 'none';
     });
+};
+
+window.toggleTecnicosDropdown = function(cardId) {
+    const panel = document.getElementById(cardId + '_dropdown_panel');
+    if (!panel) return;
+    const isHidden = panel.style.display === 'none' || !panel.style.display;
+    
+    // Cerrar cualquier otro panel abierto para mantener UI impecable
+    document.querySelectorAll('.tecnicos-dropdown-panel').forEach(p => {
+        if (p !== panel) p.style.display = 'none';
+    });
+
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        const searchInput = panel.querySelector('.search-tec-input');
+        if (searchInput) {
+            searchInput.value = '';
+            window.filtrarTecnicosDropdown(searchInput);
+            setTimeout(() => searchInput.focus(), 50);
+        }
+    }
 };
 
 window.actualizarLabelTecnicos = function(cardId) {
@@ -644,6 +665,7 @@ window.actualizarLabelTecnicos = function(cardId) {
     const selected = Array.from(chks).map(c => c.value);
     if (label) {
         label.textContent = selected.length > 0 ? selected.join(', ') : 'Selecciona técnico(s)...';
+        label.className = selected.length > 0 ? 'text-truncate sel-tec-label fw-bold text-primary small' : 'text-truncate sel-tec-label text-muted small';
     }
     if (cnt) {
         cnt.textContent = `${selected.length} seleccionados`;
@@ -661,33 +683,34 @@ window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
     const container = document.getElementById(cardId + '_tecnicos_container');
     if (!container) return;
 
-    let html = `
-    <div class="dropdown position-relative">
-        <button class="btn btn-outline-secondary btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white shadow-2xs py-2 px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-            <span class="text-truncate sel-tec-label fw-semibold text-dark">Selecciona técnico(s)...</span>
-            <i class="bi bi-chevron-down ms-1"></i>
-        </button>
-        <div class="dropdown-menu p-2 shadow-lg w-100 border" style="z-index: 1080; border-radius: 12px; margin-top: 4px;">
-            <div class="p-1 mb-1">
-                <input type="text" class="form-control form-control-sm" placeholder="🔍 Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
-            </div>
-            <div class="list-tecnicos-items custom-scrollbar" style="max-height: 160px; overflow-y: auto;">
-    `;
-
+    let itemsHtml = '';
     (listTecnicos || []).forEach((tName, i) => {
-        html += `
-        <div class="form-check py-1 px-2 rounded hover-bg-light" style="font-size:0.82rem;">
-            <input class="form-check-input chk-tecnico" type="checkbox" value="${tName}" id="${cardId}_tec_${i}" onchange="window.actualizarLabelTecnicos('${cardId}')">
-            <label class="form-check-label w-100 cursor-pointer small text-uppercase fw-semibold" for="${cardId}_tec_${i}">${tName}</label>
+        itemsHtml += `
+        <div class="form-check py-1 px-2 rounded d-flex align-items-center gap-2 hover-bg-light" style="font-size:0.83rem;">
+            <input class="form-check-input chk-tecnico m-0 cursor-pointer" type="checkbox" value="${tName}" id="${cardId}_tec_${i}" onchange="window.actualizarLabelTecnicos('${cardId}')">
+            <label class="form-check-label w-100 cursor-pointer text-uppercase fw-semibold text-dark m-0" for="${cardId}_tec_${i}">${tName}</label>
         </div>
         `;
     });
 
-    html += `
+    let html = `
+    <div class="position-relative w-100">
+        <div class="form-control form-control-sm d-flex justify-content-between align-items-center bg-white cursor-pointer py-2 px-3 shadow-2xs border rounded-3" 
+             onclick="window.toggleTecnicosDropdown('${cardId}')" style="min-height: 38px;">
+            <span class="text-truncate sel-tec-label text-muted small">Selecciona técnico(s)...</span>
+            <i class="bi bi-caret-down-fill text-secondary small ms-1"></i>
+        </div>
+        
+        <div id="${cardId}_dropdown_panel" class="tecnicos-dropdown-panel border rounded-3 shadow-lg bg-white p-2 mt-1" style="display: none; border-color: #cbd5e1 !important; margin-bottom: 10px;">
+            <div class="p-1 mb-1">
+                <input type="text" class="form-control form-control-sm search-tec-input bg-light border-0" placeholder="🔍 Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
             </div>
-            <div class="d-flex justify-content-between align-items-center border-top pt-2 px-1 mt-1 bg-white">
-                <small class="text-muted cnt-tec-sel fw-bold">0 seleccionados</small>
-                <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none fw-bold" onclick="window.limpiarTecnicosDropdown('${cardId}')">Limpiar todo</button>
+            <div class="list-tecnicos-items custom-scrollbar pe-1" style="max-height: 180px; overflow-y: auto;">
+                ${itemsHtml || '<div class="text-muted small p-2 text-center">No hay técnicos disponibles</div>'}
+            </div>
+            <div class="d-flex justify-content-between align-items-center border-top pt-2 px-1 mt-2 bg-white">
+                <small class="text-muted cnt-tec-sel fw-bold" style="font-size: 0.78rem;">0 seleccionados</small>
+                <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none fw-bold small" onclick="window.limpiarTecnicosDropdown('${cardId}')">Limpiar todo</button>
             </div>
         </div>
     </div>
