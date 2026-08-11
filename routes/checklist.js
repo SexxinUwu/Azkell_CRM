@@ -311,6 +311,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                     // Registrar en Módulo Status Rampa (tabla taller_rampas)
                     if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
+                        const obsRampa = `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`;
                         let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
                         let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
 
