@@ -206,10 +206,12 @@ function mostrarFleetrun(datos) {
               }
 
               // Si es plan inicial (sin fecha), recalcular km_prox a partir del GPS actual + frecuencia
-              // para que muestre cuanto falta desde ahora y no aparezca como VENCIDO
-              if (esPlanInicial && km_gps > 0 && frecuencia > 0) {
-                  km_prox = km_gps + frecuencia;
-                  km_cambio = km_gps; // el baseline es el km GPS actual
+              // pero mantener km_cambio en 0 (o su valor registrado) para no afectar el historial visual
+              if (esPlanInicial) {
+                  km_cambio = parseFloat(fila[9]) || 0;
+                  if (km_gps > 0 && frecuencia > 0) {
+                      km_prox = km_gps + frecuencia;
+                  }
               }
 
               let km_desde = km_gps - km_cambio;
