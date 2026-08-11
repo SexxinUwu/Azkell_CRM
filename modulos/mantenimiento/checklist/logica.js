@@ -64,8 +64,16 @@ window.init_checklist = function() {
         return;
     }
 
-    // Inicializar comboboxes de placas
+    // Inicializar comboboxes de placas y conductores
     window.poblarPlacasChecklist();
+    window.poblarConductoresChecklist();
+
+    // Callback de auto-consulta Wialon al seleccionar Placa Tracto
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('ck_placa_tracto', function(val) {
+            window.consultarGpsChecklist(val);
+        });
+    }
 
     // Renderizar grupos del checklist
     window.renderizarGruposChecklist('group-motor', SISTEMAS_TRACTO.motor, 'Tracto', 'Motor');
@@ -107,6 +115,30 @@ window.poblarPlacasChecklist = function() {
 
     window._cbInit('ck_placa_tracto', tractos, 'Buscar placa tracto…');
     window._cbInit('ck_placa_remolque', carretas, 'Buscar placa carreta…');
+};
+
+// ── POBLAR CONDUCTORES DESDE API ─────────────────────────────────
+window.poblarConductoresChecklist = function() {
+    if (typeof window._cbInit !== 'function') return;
+
+    fetch('/api/conductores')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+            const list = Array.isArray(data) ? data : (data.data || []);
+            const itemsMap = new Map();
+
+            list.forEach(c => {
+                let nombre = typeof c === 'string' ? c : (c.nombres_apellidos || c.nombre || c.conductor || c.nombre_conductor || '');
+                nombre = String(nombre).trim();
+                if (nombre && !itemsMap.has(nombre.toUpperCase())) {
+                    itemsMap.set(nombre.toUpperCase(), nombre);
+                }
+            });
+
+            const items = [...itemsMap.values()].sort().map(n => ({ value: n, label: n }));
+            window._cbInit('ck_conductor', items, 'Buscar conductor de lista…');
+        })
+        .catch(err => console.warn('Error poblando conductores:', err.message));
 };
 
 // ── RENDERIZAR FILAS DE CHECKLIST DINÁMICAS (MOBILE FIRST) ──────
@@ -402,21 +434,53 @@ window.procesarFotosChecklist = function(input) {
     });
 };
 
-// ── CONSULTAR GPS DESDE WIALON ──────────────────────────────────
-window.consultarGpsChecklist = function() {
-    const placa = (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
-    if (!placa) { alert('Ingresa primero la placa del Tracto.'); return; }
+// ── CONSULTAR GPS DESDE WIALON (KILOMETRAJE + UBICACIÓN AUTOMÁTICA) ──
+window.consultarGpsChecklist = function(placaManual) {
+    const placaTxt = (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+    const placaCb = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
+    const placa = (placaManual || placaCb || placaTxt).toString().trim().toUpperCase();
+
+    if (!placa) return;
 
     const inputGps = document.getElementById('ck_ubicacion_gps');
+    const inputKm = document.getElementById('ck_kilometraje');
+
     if (inputGps) inputGps.value = 'Consultando GPS Wialon...';
 
+    // 1. Intentar obtener datos Wialon directamente desde caché o buscarWialonPorPlaca
+    const wD = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
+    if (wD) {
+        if (inputKm && wD.km > 0) {
+            inputKm.value = Math.round(wD.km);
+        }
+
+        if (wD.lat && wD.lng && inputGps) {
+            (async () => {
+                let dirTxt = `${wD.lat.toFixed(5)}, ${wD.lng.toFixed(5)}`;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${wD.lat}&lon=${wD.lng}`);
+                    const data = await res.json();
+                    const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || '';
+                    const ciudad = data.address?.city || data.address?.town || data.address?.county || '';
+                    if (calle || ciudad) {
+                        dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+                    }
+                } catch(e) {}
+                if (inputGps) inputGps.value = dirTxt || 'Ubicación actual en ruta';
+            })();
+            return;
+        }
+    }
+
+    // 2. Fallback a obtenerDatosStatusFlota
     fetch('/api/script/obtenerDatosStatusFlota', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
         .then(r => r.json())
         .then(j => {
             const rows = j.data || [];
-            const match = rows.find(r => (r[3] || '').toString().trim().toUpperCase() === placa.trim().toUpperCase());
-            if (match && match[7]) {
-                if (inputGps) inputGps.value = match[7]; // Ubicación / Zona GPS
+            const match = rows.find(r => (r[3] || '').toString().trim().toUpperCase() === placa);
+            if (match) {
+                if (match[7] && inputGps) inputGps.value = match[7];
+                if (match[11] && inputKm && !inputKm.value) inputKm.value = match[11];
             } else {
                 if (inputGps) inputGps.value = 'Ubicación actual en ruta';
             }
@@ -437,6 +501,7 @@ window.abrirModalNuevoChecklist = function() {
 
     window.limpiarFirmaChecklist();
     window.poblarPlacasChecklist();
+    window.poblarConductoresChecklist();
 
     const modalEl = document.getElementById('modalNuevoChecklist');
     if (modalEl) new bootstrap.Modal(modalEl).show();
@@ -476,14 +541,19 @@ window.guardarChecklist = function(event) {
         firmaData = canvasFirmaChecklist.toDataURL();
     }
 
+    const placaTracto = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+    const placaRemolque = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
+    const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
+    const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
+
     const payload = {
-        placa_tracto: (document.getElementById('ck_placa_tracto-txt') || {}).value || '',
-        placa_remolque: (document.getElementById('ck_placa_remolque-txt') || {}).value || '',
-        km_inicial: document.getElementById('ck_km_inicial').value || 0,
-        km_final: document.getElementById('ck_km_final').value || 0,
-        conductor: document.getElementById('ck_conductor').value || '',
-        procedencia: document.getElementById('ck_procedencia').value || '',
-        ubicacion_gps: document.getElementById('ck_ubicacion_gps').value || '',
+        placa_tracto: placaTracto,
+        placa_remolque: placaRemolque,
+        km_inicial: kilometrajeVal,
+        km_final: kilometrajeVal,
+        conductor: conductorNombre,
+        procedencia: (document.getElementById('ck_procedencia') || {}).value || '',
+        ubicacion_gps: (document.getElementById('ck_ubicacion_gps') || {}).value || '',
         fallas_tracto: fallasTracto,
         fallas_remolque: fallasRemolque,
         fallas_libres_text: (document.getElementById('ck_fallas_libres') || {}).value || '',
