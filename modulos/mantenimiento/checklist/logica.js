@@ -782,7 +782,7 @@ window.abrirModalGenerarOTs = function(idReporte) {
 
                     // Renderizar los dropdowns de multi-técnicos
                     for (let i = 1; i <= cardCounter; i++) {
-                        window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecnicos);
+                        window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecs);
                     }
 
                     new bootstrap.Modal(document.getElementById('modalGenerarOTsFromChecklist')).show();
