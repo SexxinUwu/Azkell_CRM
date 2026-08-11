@@ -293,9 +293,30 @@ router.delete('/ordenes-trabajo/:id', (req, res) => {
     db.query('DELETE FROM trabajos_ot WHERE ticket_visita = ?', [ticketId], (err1) => {
         db.query('DELETE FROM salidas_inv WHERE ticket_ot = ?', [ticketId], (err2) => {
             db.query('DELETE FROM inspecciones WHERE id_ot = ?', [ticketId], (err3) => {
-                db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err4) => {
+                db.query('DELETE FROM ordenes_trabajo WHERE ticket_entrada = ? OR id_ot = ?', [ticketId, ticketId], (err4) => {
                     if (err4) return res.status(500).json({ error: err4.message });
-                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
+
+                    // Desvincular OT eliminada de reportes_fallas
+                    db.query("SELECT id, ots_generadas_json FROM reportes_fallas WHERE ots_generadas_json IS NOT NULL", (errRf, rowsRf) => {
+                        if (!errRf && rowsRf && rowsRf.length) {
+                            rowsRf.forEach(rf => {
+                                try {
+                                    let otsArr = JSON.parse(rf.ots_generadas_json || '[]');
+                                    if (Array.isArray(otsArr) && otsArr.length) {
+                                        const lenAntes = otsArr.length;
+                                        otsArr = otsArr.filter(o => o.idOt !== ticketId && o.id_ot !== ticketId && o.ticket_entrada !== ticketId);
+                                        if (otsArr.length !== lenAntes) {
+                                            const nuevoEstado = otsArr.length === 0 ? 'Pendiente' : 'En Proceso';
+                                            db.query("UPDATE reportes_fallas SET ots_generadas_json = ?, estado = ? WHERE id = ?", [JSON.stringify(otsArr), nuevoEstado, rf.id]);
+                                        }
+                                    }
+                                } catch(e) {}
+                            });
+                        }
+                    });
+
+                    if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } 
+                    res.json({ ok: true });
                 });
             });
         });
