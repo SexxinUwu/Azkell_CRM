@@ -249,6 +249,14 @@ function rotCalcularTiempos(ot) {
     };
 }
 
+function rotCleanObsText(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
+        .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+        .trim();
+}
+
 function rotFmtKmCol(det) {
     if (!det) return '0 km';
     if (det.horas_motor) {
@@ -283,7 +291,8 @@ window.rotRenderTabla = function(lista) {
         var det = rotDetalles(ot);
         var esActiva = (window.rotDetalleId !== null && String(window.rotDetalleId) === String(ot.ticket_entrada || ot.id_ot));
         var idOT = ot.ticket_entrada || ot.id_ot || '?';
-        var obs  = rotEscHtml((det.motivo || ot.observaciones || '').substring(0, 80)) + ((det.motivo || ot.observaciones || '').length > 80 ? '...' : '');
+        var rawObs = rotCleanObsText(det.motivo || ot.observaciones || '');
+        var obs  = rotEscHtml(rawObs.substring(0, 80)) + (rawObs.length > 80 ? '...' : '');
 
         // --- DESKTOP ROW ---
         html += '<tr class="' + (esActiva ? 'rot-row-activa' : '') + '" onclick="window.rotAbrirDetalle(\'' + rotEscHtml(String(idOT)) + '\')">';
@@ -294,7 +303,7 @@ window.rotRenderTabla = function(lista) {
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '?') + '</td>';
         html += '<td>' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>';
-        html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(det.motivo || ot.observaciones || '') + '">' + (obs || '?') + '</td>';
+        html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(rawObs) + '">' + (obs || '?') + '</td>';
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
         html += '<td style="text-align:center;"><button class="btn btn-sm" style="background:#f1f5f9;border:1px solid #e2e8f0;color:#3b82f6;border-radius:6px;padding:3px 8px;" onclick="event.stopPropagation(); window.rotVerFormatoOT(\'' + rotEscHtml(String(idOT)) + '\')"><i class="bi bi-eye-fill"></i></button></td>';
@@ -427,7 +436,7 @@ window.rotAbrirDetalle = function(idOT) {
     // Motivo
     if (det.motivo || ot.observaciones) {
         html += '<div class="rot-sec"><div class="rot-sec-hd">Motivo / Observaciones</div>';
-        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);white-space:pre-line;line-height:1.5;">' + esc(det.motivo || ot.observaciones || '') + '</div>';
+        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);white-space:pre-line;line-height:1.5;">' + esc(rotCleanObsText(det.motivo || ot.observaciones || '')) + '</div>';
         html += '</div>';
     }
 
@@ -1206,7 +1215,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
 
     var htmlMotivos = '';
     if (det.motivo) {
-        htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(det.motivo) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
+        htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(det.motivo)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
     } else {
         htmlMotivos = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay motivos de ingreso registrados.</td></tr>';
     }
