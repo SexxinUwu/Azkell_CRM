@@ -376,13 +376,10 @@ router.post('/:metodo', async (req, res) => {
     console.log(`📡 El sistema solicitó: ${metodo}`);
 
     if (metodo === 'obtenerDatosPlacas') {
-        const sql = `
-            SELECT
-                placa, cliente, ruc_dni, marca, modelo_uts, tipo, sub_tipo, color,
-                nro_motor, nro_caja, nro_corona, nro_vin, configuracion, anio,
-                combustible, carga_util, peso_neto, peso_bruto, estado, uts, motora, llantas, en_uso, wialon_name
-            FROM placas
-        `;
+        // Auto-migrate: add wialon_name if missing
+        reqDb.query("ALTER TABLE placas ADD COLUMN wialon_name VARCHAR(100) DEFAULT NULL", () => {});
+
+        const sql = `SELECT * FROM placas`;
         reqDb.query(sql, (err, results) => {
             if (err) { console.error("Error leyendo placas:", err); return res.json({ data: [] }); }
             console.log(`✅ Se encontraron ${results.length} placas en MySQL`);
