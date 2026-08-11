@@ -274,6 +274,7 @@ window.verificarSesionGuardada = function() {
     // MANTENIMIENTO
     var showMantHub  = _cHub('hub_mant');
     var vStatusRampa = showMantHub && _cL('status_rampa');
+    var vChecklist   = showMantHub && _cL('checklist');
     var vInsp        = showMantHub && _cL('insp');
     var vFleetrun    = showMantHub && _cL('fleetrun');
     var vReportesOT  = showMantHub && _cL('reportes_ot');
@@ -289,6 +290,8 @@ window.verificarSesionGuardada = function() {
 
     safe('nav-status-rampa',    vStatusRampa);
     safe('mbnav-status-rampa',  vStatusRampa);
+    safe('nav-checklist',       vChecklist);
+    safe('mbnav-checklist',     vChecklist);
     safe('nav-inspecciones',    vInsp);
     safe('mbnav-inspecciones',  vInsp);
     safe('nav-fleetrun',        vFleetrun);
@@ -3192,6 +3195,7 @@ const MENU_IDS = {
     'mantenimiento/tipos-mp':          'nav-administracion',
     'mantenimiento/config-metrica':    'nav-administracion',
     'mantenimiento/ordenes':           'nav-ordenes',
+    'mantenimiento/checklist':         'nav-checklist',
     'mantenimiento/status-rampa':      'nav-status-rampa',
     'mantenimiento/reportes-ot':       'nav-reportes-ot',
     'mantenimiento/trabajos-ot':       'nav-trabajos-ot',
@@ -3247,6 +3251,7 @@ const MENU_SECTION = {
     'mantenimiento/kits-mp':          'administracion',
     'mantenimiento/tipos-mp':         'administracion',
     'mantenimiento/config-metrica':   'administracion',
+    'mantenimiento/checklist':        'mantenimiento',
     'mantenimiento/status-rampa':     'mantenimiento',
     'mantenimiento/reportes-ot':      'mantenimiento',
     'mantenimiento/trabajos-ot':      'mantenimiento',
@@ -3283,6 +3288,7 @@ const BREADCRUMB_MAP = {
     'mantenimiento/tipos-mp':         ['Administración','Tipos MP'],
     'mantenimiento/config-metrica':   ['Preferencias','Config. Métrica'],
     'mantenimiento/ordenes':          ['Mantenimiento','Órdenes de Mto.'],
+    'mantenimiento/checklist':        ['Mantenimiento','Reporte de Fallas'],
     'mantenimiento/status-rampa':     ['Mantenimiento','Status Rampa'],
     'mantenimiento/reportes-ot':      ['Mantenimiento','Reportes OT'],
     'mantenimiento/trabajos-ot':      ['Mantenimiento','Trabajos Anexos'],

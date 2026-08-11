@@ -1,0 +1,452 @@
+<div class="d-flex flex-column h-100 p-2 p-md-3" id="checklist-app" style="background:var(--bg-body, #f8fafc);">
+
+  <!-- Encabezado y Acciones Principal -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h4 class="fw-bolder m-0 d-flex align-items-center gap-2" style="color:var(--text, #0f172a); font-size: 1.35rem;">
+        <i class="bi bi-clipboard2-check text-primary"></i> <span data-i18n="nav.checklist">Reportes de Falla (Checklist)</span>
+      </h4>
+      <p class="text-muted small m-0">Inspección de flota en ruta o taller y generación automática de OTs (Formato F-MAN-001)</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.cargarTablaChecklist(true)" title="Recargar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-primary btn-sm fw-bold shadow-sm px-3 d-flex align-items-center gap-2" onclick="window.abrirModalNuevoChecklist()" style="border-radius: 10px;">
+        <i class="bi bi-plus-circle-fill fs-6"></i> <span>Nuevo Reporte (F-MAN-001)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center p-2 rounded-3 border bg-white shadow-sm" style="background:var(--surface, #ffffff);">
+    <div class="position-relative flex-grow-1" style="max-width: 320px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+      <input type="text" id="buscadorChecklist" class="form-control form-control-sm ps-5" placeholder="Buscar folio, placa, conductor..." oninput="window.filtrarChecklist()">
+    </div>
+    <div class="d-flex align-items-center gap-1 ms-auto">
+      <div class="btn-group btn-group-sm" role="group" id="btn-group-estados-checklist">
+        <button type="button" class="btn btn-outline-primary active fw-bold" onclick="window.filtrarEstadoChecklist('TODOS', this)">Todos</button>
+        <button type="button" class="btn btn-outline-warning fw-bold" onclick="window.filtrarEstadoChecklist('Pendiente', this)">Pendientes</button>
+        <button type="button" class="btn btn-outline-info fw-bold" onclick="window.filtrarEstadoChecklist('En Proceso', this)">En Proceso</button>
+        <button type="button" class="btn btn-outline-success fw-bold" onclick="window.filtrarEstadoChecklist('Finalizado', this)">Finalizados</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bento KPI Row -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between" style="background:var(--surface, #fff);">
+        <div>
+          <span class="text-muted small fw-bold text-uppercase d-block mb-1">Total Reportes</span>
+          <h3 id="kpi-ck-total" class="fw-bolder m-0" style="color:var(--text,#0f172a);">0</h3>
+        </div>
+        <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary"><i class="bi bi-file-earmark-text fs-4"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between" style="background:var(--surface, #fff);">
+        <div>
+          <span class="text-muted small fw-bold text-uppercase d-block mb-1">Pendientes</span>
+          <h3 id="kpi-ck-pendientes" class="fw-bolder m-0 text-warning">0</h3>
+        </div>
+        <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning"><i class="bi bi-clock-history fs-4"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between" style="background:var(--surface, #fff);">
+        <div>
+          <span class="text-muted small fw-bold text-uppercase d-block mb-1">En Taller / OTs</span>
+          <h3 id="kpi-ck-proceso" class="fw-bolder m-0 text-info">0</h3>
+        </div>
+        <div class="rounded-circle p-3 bg-info bg-opacity-10 text-info"><i class="bi bi-tools fs-4"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between" style="background:var(--surface, #fff);">
+        <div>
+          <span class="text-muted small fw-bold text-uppercase d-block mb-1">Finalizados</span>
+          <h3 id="kpi-ck-finalizados" class="fw-bolder m-0 text-success">0</h3>
+        </div>
+        <div class="rounded-circle p-3 bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill fs-4"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal: Tabla y Tarjetas Móviles -->
+  <div class="flex-grow-1 overflow-hidden border rounded-3 bg-white shadow-sm d-flex flex-column" style="background:var(--surface, #fff);">
+    <div class="custom-scrollbar overflow-auto h-100">
+      <table class="table table-hover align-middle m-0" id="tablaChecklist" style="font-size: 0.85rem;">
+        <thead class="table-light sticky-top shadow-sm border-bottom">
+          <tr>
+            <th class="ps-3 py-3">FOLIO</th>
+            <th class="py-3">FECHA</th>
+            <th class="py-3">TRACTO</th>
+            <th class="py-3">REMOLQUE</th>
+            <th class="py-3">CONDUCTOR / RUTA</th>
+            <th class="py-3 text-center">ESTADO</th>
+            <th class="py-3 text-center">OTs GENERADAS</th>
+            <th class="pe-3 py-3 text-end">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="contenedorChecklistDinamico">
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando reportes de falla...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 📱 MODAL FULL-SCREEN / WIZARD: NUEVO REPORTE DE FALLAS (F-MAN-001) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalNuevoChecklist" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-fullscreen-md-down modal-xl modal-dialog-scrollable">
+    <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
+      
+      <!-- Modal Header Wizard -->
+      <div class="modal-header border-bottom bg-light px-3 py-3 d-flex flex-column align-items-stretch gap-2">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-medical"></i> <span>Reporte de Fallas Flota Pesada (F-MAN-001)</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <!-- Indicador de Pasos Móvil / Tab -->
+        <ul class="nav nav-pills nav-justified small fw-bold modern-ck-tabs" id="ckWizardTabs" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" id="ck-step1-tab" data-bs-toggle="tab" data-bs-target="#ck-step1" type="button">
+              1. Unidad & Ruta
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="ck-step2-tab" data-bs-toggle="tab" data-bs-target="#ck-step2" type="button">
+              2. Fallas Tracto
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="ck-step3-tab" data-bs-toggle="tab" data-bs-target="#ck-step3" type="button">
+              3. Fallas Carreta
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="ck-step4-tab" data-bs-toggle="tab" data-bs-target="#ck-step4" type="button">
+              4. Fotos & Firma
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="modal-body p-3 p-md-4 custom-scrollbar bg-light bg-opacity-50">
+        <form id="formNuevoChecklist" onsubmit="window.guardarChecklist(event)">
+          <div class="tab-content" id="ckWizardContent">
+
+            <!-- ── PASO 1: DATOS UNIDAD Y RUTA ────────────────────────── -->
+            <div class="tab-pane fade show active" id="ck-step1" role="tabpanel">
+              <div class="card border-0 shadow-sm rounded-3 p-3 mb-3 bg-white">
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-truck me-2"></i>Identificación del Vehículo</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small">Placa Tracto *</label>
+                    <div class="position-relative">
+                      <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-lg text-uppercase fw-bold" placeholder="Buscar placa tracto…" autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto')" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
+                      <input type="hidden" id="ck_placa_tracto" name="placa_tracto" required>
+                      <div id="ck_placa_tracto-dd" class="cb-dropdown"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small">Placa Carreta / Semirremolque</label>
+                    <div class="position-relative">
+                      <input type="text" id="ck_placa_remolque-txt" class="form-control form-control-lg text-uppercase fw-bold" placeholder="Buscar placa carreta…" autocomplete="off" oninput="window._cbFiltrar('ck_placa_remolque')" onfocus="window._cbFiltrar('ck_placa_remolque')" onblur="window._cbHide('ck_placa_remolque')">
+                      <input type="hidden" id="ck_placa_remolque" name="placa_remolque">
+                      <div id="ck_placa_remolque-dd" class="cb-dropdown"></div>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold small">KM Inicial</label>
+                    <input type="number" class="form-control" id="ck_km_inicial" name="km_inicial" placeholder="Ej: 120500">
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold small">KM Final</label>
+                    <input type="number" class="form-control" id="ck_km_final" name="km_final" placeholder="Ej: 120850">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small">Nombre del Conductor</label>
+                    <input type="text" class="form-control" id="ck_conductor" name="conductor" placeholder="Nombre y Apellidos">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small">Procedencia / Ruta Actual</label>
+                    <input type="text" class="form-control" id="ck_procedencia" name="procedencia" placeholder="Ej: Lima - Arequipa / Km 45 Panamericana">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small"><i class="bi bi-geo-alt text-danger me-1"></i>Ubicación GPS (Automática)</label>
+                    <div class="input-group input-group-sm">
+                      <input type="text" class="form-control bg-light" id="ck_ubicacion_gps" name="ubicacion_gps" placeholder="Consultando GPS Wialon..." readonly>
+                      <button class="btn btn-outline-primary" type="button" onclick="window.consultarGpsChecklist()"><i class="bi bi-crosshair"></i> GPS</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── PASO 2: FALLAS TRACTO (ACORDEONES MÓVILES) ────────────── -->
+            <div class="tab-pane fade" id="ck-step2" role="tabpanel">
+              <div class="alert alert-info py-2 small mb-3">
+                <i class="bi bi-info-circle me-1"></i> Marca con <strong>⚠️ Observado</strong> los ítems con fallas y dicta o escribe la observación.
+              </div>
+
+              <!-- Acordeón Tracto -->
+              <div class="accordion accordion-flush shadow-sm rounded-3 overflow-hidden bg-white" id="accTracto">
+                
+                <!-- 1. MOTOR -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-motor">
+                      <i class="bi bi-cpu text-primary me-2 fs-5"></i> Motor & Periféricos
+                    </button>
+                  </h2>
+                  <div id="acc-motor" class="accordion-collapse collapse show" data-bs-parent="#accTracto">
+                    <div class="accordion-body p-2" id="group-motor">
+                      <!-- Render dinámico desde JS -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2. CAJA Y CORONAS -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-caja">
+                      <i class="bi bi-gear-wide-connected text-success me-2 fs-5"></i> Caja de Cambios & Coronas
+                    </button>
+                  </h2>
+                  <div id="acc-caja" class="accordion-collapse collapse" data-bs-parent="#accTracto">
+                    <div class="accordion-body p-2" id="group-caja"></div>
+                  </div>
+                </div>
+
+                <!-- 3. REFRIGERACIÓN -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-refri">
+                      <i class="bi bi-thermometer-half text-info me-2 fs-5"></i> Sistema de Refrigeración
+                    </button>
+                  </h2>
+                  <div id="acc-refri" class="accordion-collapse collapse" data-bs-parent="#accTracto">
+                    <div class="accordion-body p-2" id="group-refri"></div>
+                  </div>
+                </div>
+
+                <!-- 4. DIRECCIÓN -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-direccion">
+                      <i class="bi bi-steering-wheel text-warning me-2 fs-5"></i> Sistema de Dirección
+                    </button>
+                  </h2>
+                  <div id="acc-direccion" class="accordion-collapse collapse" data-bs-parent="#accTracto">
+                    <div class="accordion-body p-2" id="group-direccion"></div>
+                  </div>
+                </div>
+
+                <!-- 5. CABINA Y CHASIS -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-cabina">
+                      <i class="bi bi-truck-front text-secondary me-2 fs-5"></i> Cabina & Chasis
+                    </button>
+                  </h2>
+                  <div id="acc-cabina" class="accordion-collapse collapse" data-bs-parent="#accTracto">
+                    <div class="accordion-body p-2" id="group-cabina"></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── PASO 3: FALLAS CARRETA / REMOLQUE ──────────────────── -->
+            <div class="tab-pane fade" id="ck-step3" role="tabpanel">
+              <div class="alert alert-info py-2 small mb-3">
+                <i class="bi bi-info-circle me-1"></i> Inspección del Sistema de Remolque / Semirremolque.
+              </div>
+
+              <!-- Acordeón Remolque -->
+              <div class="accordion accordion-flush shadow-sm rounded-3 overflow-hidden bg-white" id="accRemolque">
+                
+                <!-- 1. FRENOS -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-frenos">
+                      <i class="bi bi-stop-circle text-danger me-2 fs-5"></i> Sistema de Frenos
+                    </button>
+                  </h2>
+                  <div id="acc-frenos" class="accordion-collapse collapse show" data-bs-parent="#accRemolque">
+                    <div class="accordion-body p-2" id="group-frenos"></div>
+                  </div>
+                </div>
+
+                <!-- 2. SISTEMA ELÉCTRICO -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-electrico">
+                      <i class="bi bi-lightning-charge text-warning me-2 fs-5"></i> Sistema Eléctrico & Luces
+                    </button>
+                  </h2>
+                  <div id="acc-electrico" class="accordion-collapse collapse" data-bs-parent="#accRemolque">
+                    <div class="accordion-body p-2" id="group-electrico"></div>
+                  </div>
+                </div>
+
+                <!-- 3. SUSPENSIÓN -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-suspension">
+                      <i class="bi bi-arrows-expand text-primary me-2 fs-5"></i> Suspensión & Ejes
+                    </button>
+                  </h2>
+                  <div id="acc-suspension" class="accordion-collapse collapse" data-bs-parent="#accRemolque">
+                    <div class="accordion-body p-2" id="group-suspension"></div>
+                  </div>
+                </div>
+
+                <!-- 4. LLANTAS -->
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#acc-llantas">
+                      <i class="bi bi-vinyl text-dark me-2 fs-5"></i> Llantas & Neumáticos
+                    </button>
+                  </h2>
+                  <div id="acc-llantas" class="accordion-collapse collapse" data-bs-parent="#accRemolque">
+                    <div class="accordion-body p-2" id="group-llantas"></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── PASO 4: FALLAS LIBRES, FOTOS S3 Y FIRMA ────────────── -->
+            <div class="tab-pane fade" id="ck-step4" role="tabpanel">
+              
+              <!-- Falla Libre ("No sé a qué sistema pertenece") -->
+              <div class="card border-0 shadow-sm rounded-3 p-3 mb-3 bg-white">
+                <h6 class="fw-bold text-primary mb-2 d-flex align-items-center justify-content-between">
+                  <span><i class="bi bi-chat-square-dots me-2"></i>¿Falla no clasificada? / Observaciones Generales</span>
+                  <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="window.dictarVoz('ck_fallas_libres')">
+                    <i class="bi bi-mic-fill me-1 text-danger"></i> Dictar por Voz
+                  </button>
+                </h6>
+                <textarea class="form-control" id="ck_fallas_libres" name="fallas_libres_text" rows="3" placeholder="Si no sabes a qué sistema pertenece la falla, escríbela o díctala aquí directamente..."></textarea>
+              </div>
+
+              <!-- Subida de Fotos Opcionales AWS S3 -->
+              <div class="card border-0 shadow-sm rounded-3 p-3 mb-3 bg-white">
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-camera me-2"></i>Evidencia Fotográfica (Opcional - AWS S3)</h6>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <input type="file" id="ck_fotos_input" class="d-none" accept="image/*" multiple capture="environment" onchange="window.procesarFotosChecklist(this)">
+                  <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 d-flex align-items-center gap-2" onclick="document.getElementById('ck_fotos_input').click()">
+                    <i class="bi bi-camera-fill fs-6"></i> <span>Tomar / Subir Fotos</span>
+                  </button>
+                  <span class="text-muted small">Puedes adjuntar fotos de la falla.</span>
+                </div>
+                <div id="ck_preview_fotos" class="d-flex flex-wrap gap-2 mt-2"></div>
+              </div>
+
+              <!-- Firma Digital -->
+              <div class="card border-0 shadow-sm rounded-3 p-3 mb-3 bg-white">
+                <h6 class="fw-bold text-primary mb-2 d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-pencil-fill me-2"></i>Firma Digital del Conductor</span>
+                  <button type="button" class="btn btn-link btn-sm text-decoration-none" onclick="window.limpiarFirmaChecklist()">Limpiar</button>
+                </h6>
+                <div class="border rounded-3 p-1 bg-light text-center">
+                  <canvas id="ck_canvas_firma" width="400" height="150" style="touch-action: none; width:100%; max-width:400px; height:150px; background:#fff; cursor:crosshair;"></canvas>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Footer Botones de Navegación Wizard -->
+          <div class="d-flex align-items-center justify-content-between border-top pt-3 mt-3">
+            <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarChecklist">
+              <i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- ⚡ BOTTOM SHEET MODAL: GENERAR ÓRDENES DE TRABAJO (OTs) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalGenerarOTsFromChecklist" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0" style="border-radius: 20px;">
+      <div class="modal-header border-bottom bg-primary bg-opacity-10 py-3">
+        <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2">
+          <i class="bi bi-lightning-charge-fill text-warning fs-4"></i> Generación Inteligente de Órdenes de Trabajo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formGenerarOTs" onsubmit="window.enviarGeneracionOTs(event)">
+        <input type="hidden" id="gen_reporte_id">
+        <div class="modal-body p-3 p-md-4 custom-scrollbar" style="max-height: 75vh;">
+          
+          <div class="alert alert-warning py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i> El sistema detectó fallas reportadas. Asigna la rampa y los parámetros para cada unidad.
+          </div>
+
+          <!-- Asignar Rampa -->
+          <div class="card border-0 shadow-sm p-3 mb-3 bg-light">
+            <label class="form-label fw-bold small text-dark"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Ubicación / Rampa de Taller *</label>
+            <select class="form-select fw-bold" id="gen_id_rampa" required>
+              <option value="En Espera">-- Rampa de Espera / En Ruta --</option>
+              <option value="Rampa 1">Rampa 1</option>
+              <option value="Rampa 2">Rampa 2</option>
+              <option value="Rampa 3">Rampa 3</option>
+              <option value="Rampa 4">Rampa 4</option>
+              <option value="Rampa 5">Rampa 5</option>
+              <option value="Rampa 6">Rampa 6</option>
+              <option value="Zona de Espera">Zona de Espera</option>
+              <option value="Auxilio Mecanico">Auxilio Mecánico</option>
+            </select>
+          </div>
+
+          <!-- Tarjetas Dinámicas de OT a Crear (Tracto / Carreta) -->
+          <div id="contenedorTarjetasOTsGen"></div>
+
+        </div>
+        <div class="modal-footer border-top bg-white py-3">
+          <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success fw-bold px-4" id="btnConfirmarGenerarOTs">
+            <i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🔍 OFFCANVAS / DETALLE DIGITAL DEL REPORTE (F-MAN-001) -->
+<!-- ================================================================= -->
+<div class="offcanvas offcanvas-end shadow-lg border-0" tabindex="-1" id="offcanvasDetalleChecklist" style="width: 100%; max-width: 650px; background:var(--surface,#fff);">
+  <div class="offcanvas-header border-bottom bg-light">
+    <h5 class="offcanvas-title fw-bolder text-primary d-flex align-items-center gap-2">
+      <i class="bi bi-file-earmark-medical"></i> <span id="det-ck-folio">F-2026-0001</span>
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body custom-scrollbar p-3 p-md-4" id="det-ck-body">
+    <!-- Detalle renderizado desde JS -->
+  </div>
+</div>
