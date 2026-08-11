@@ -98,6 +98,14 @@ router.post('/importarPlacasMasivo', async (req, res) => {
                 errores += lote.length;
             }
         }
+        // Auto-poblar tabla de clientes con los nuevos clientes del Excel importado
+        const targetDb = req.db || db;
+        targetDb.query(`
+            INSERT IGNORE INTO clientes (razon_social, ruc_dni)
+            SELECT DISTINCT cliente, ruc_dni 
+            FROM placas 
+            WHERE cliente IS NOT NULL AND TRIM(cliente) <> '';
+        `, () => {});
     }
     broadcast('placas', 'importar');
     res.json({ ok, errores });
