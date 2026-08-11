@@ -466,12 +466,14 @@ window.consultarGpsChecklist = function(placaManual) {
             (async () => {
                 let dirTxt = `${wD.lat.toFixed(5)}, ${wD.lng.toFixed(5)}`;
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${wD.lat}&lon=${wD.lng}`);
+                    const res = await fetch(`/api/proxy/geocode?lat=${wD.lat}&lon=${wD.lng}`);
                     const data = await res.json();
                     const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || '';
                     const ciudad = data.address?.city || data.address?.town || data.address?.county || '';
                     if (calle || ciudad) {
                         dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+                    } else if (data.display_name) {
+                        dirTxt = data.display_name;
                     }
                 } catch(e) {}
                 if (inputGps) inputGps.value = dirTxt || 'Ubicación actual en ruta';

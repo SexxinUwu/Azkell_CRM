@@ -5,7 +5,7 @@ module.exports = function globalRBAC(req, res, next) {
     const ignoredPaths = [
         '/login', '/ping', '/eventos', '/test-s3', '/seguridad/limpiar-plantillas', 
         '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', 
-        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/notificaciones',
+        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller'
     ];
     if (ignoredPaths.some(ip => path === ip || path.startsWith(ip))) return next();

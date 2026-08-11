@@ -195,6 +195,47 @@ app.get(['/api/proxy/documento', '/api/proxy/sunat'], async (req, res) => {
     }
 });
 
+const _geoCacheMap = new Map();
+app.get('/api/proxy/geocode', async (req, res) => {
+    let lat = parseFloat(req.query.lat);
+    let lon = parseFloat(req.query.lon || req.query.lng);
+    if (isNaN(lat) || isNaN(lon)) {
+        return res.json({ display_name: '', address: {} });
+    }
+
+    let cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+    if (_geoCacheMap.has(cacheKey)) {
+        return res.json(_geoCacheMap.get(cacheKey));
+    }
+
+    try {
+        let fetchCall = global.fetch || require('node-fetch');
+        let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+            headers: {
+                'User-Agent': 'AzkellERP/1.0 (contact@azkell.com)',
+                'Accept-Language': 'es'
+            }
+        });
+        if (!response.ok) {
+            let fallback = { display_name: `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} };
+            return res.json(fallback);
+        }
+        let data = await response.json();
+        let result = {
+            display_name: data.display_name || data.name || `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
+            address: data.address || {}
+        };
+        _geoCacheMap.set(cacheKey, result);
+        if (_geoCacheMap.size > 1000) {
+            let firstKey = _geoCacheMap.keys().next().value;
+            _geoCacheMap.delete(firstKey);
+        }
+        res.json(result);
+    } catch(err) {
+        res.json({ display_name: `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} });
+    }
+});
+
 app.get('/api/proxy/placa', async (req, res) => {
     let rawNum = (req.query.numero || '').trim().toUpperCase();
     let numero = rawNum.replace(/[^A-Z0-9]/g, '');

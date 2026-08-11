@@ -21,24 +21,19 @@ window._procesarGeocodificacionFleetrun = async function() {
             continue;
         }
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${req.lat}&lon=${req.lng}`);
-            if (res.status === 429) {
-                await new Promise(r => setTimeout(r, 4000));
-                window._fleetrunDirQueue.unshift(req);
-                continue;
-            }
+            const res = await fetch(`/api/proxy/geocode?lat=${req.lat}&lon=${req.lng}`);
             if (!res.ok) throw new Error('HTTP error ' + res.status);
             const data = await res.json();
             const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || 'Sin nombre';
             const ciudad = data.address?.city  || data.address?.town  || data.address?.county || '';
-            let dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+            let dirTxt = (calle !== 'Sin nombre' || ciudad) ? (ciudad ? `${calle}, ${ciudad}` : calle) : (data.display_name || 'Ubicación GPS');
             window._fleetrunDirCache[key] = dirTxt;
             try { localStorage.setItem('_fr_geo_cache', JSON.stringify(window._fleetrunDirCache)); } catch(err) {}
             els.forEach(el => { el.textContent = dirTxt; el.classList.remove('fleet-loc-loader'); });
         } catch(e) {
             els.forEach(el => { el.textContent = 'Ubicación GPS'; el.classList.remove('fleet-loc-loader'); });
         }
-        await new Promise(r => setTimeout(r, 1200)); // Rate limit respetuoso de Nominatim
+        await new Promise(r => setTimeout(r, 150));
     }
     window._fleetrunDirProcessing = false;
 };

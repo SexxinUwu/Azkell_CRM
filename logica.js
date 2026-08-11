@@ -4016,11 +4016,12 @@ function enviarEdicionFleetrun(event, formObj) { event.preventDefault(); const b
 window.obtenerDireccion = async function(lat, lng, btn) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
     try {
-        let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        let res = await fetch(`/api/proxy/geocode?lat=${lat}&lon=${lng}`);
         let data = await res.json();
-        let calle = data.address.road || data.address.suburb || "Zona sin nombre";
-        let ciudad = data.address.city || data.address.town || "";
-        btn.parentElement.innerHTML = `<span class="text-success fw-bold" style="font-size: 0.85rem;"><i class="bi bi-geo-alt-fill"></i> ${calle}, ${ciudad}</span>`;
+        let calle = data.address?.road || data.address?.suburb || "Zona sin nombre";
+        let ciudad = data.address?.city || data.address?.town || "";
+        let texto = (calle !== "Zona sin nombre" || ciudad) ? `${calle}, ${ciudad}` : (data.display_name || "Ubicación GPS");
+        btn.parentElement.innerHTML = `<span class="text-success fw-bold" style="font-size: 0.85rem;"><i class="bi bi-geo-alt-fill"></i> ${texto}</span>`;
     } catch(e) {
         btn.innerHTML = 'Error de conexión';
     }
