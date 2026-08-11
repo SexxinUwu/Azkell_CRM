@@ -80,13 +80,16 @@ window.poblarSelectsFormularios = function(datos) {
 
 // ── Carga principal ──────────────────────────────────────────────
 function cargarTablaPlacas(forzarRefresh = false) {
-    if (!forzarRefresh && dataGlobalPlacas.length > 0) { mostrarPlacas(dataGlobalPlacas); return; }
+    if (!forzarRefresh && window.dataGlobalPlacas && window.dataGlobalPlacas.length > 0) { mostrarPlacas(window.dataGlobalPlacas); return; }
     const c = document.getElementById('contenedorPlacasDinamico');
     if (c) c.innerHTML = '<tr><td colspan="25" class="text-center py-5" style="color:#94a3b8;"><span class="spinner-border text-warning spinner-border-sm me-2"></span> Cargando...</td></tr>';
     
     fetch('/api/script/obtenerDatosPlacas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ args: [] }) })
         .then(function(r) { return r.json(); })
-        .then(function(r) { mostrarPlacas(r.data || []); })
+        .then(function(r) {
+            window.dataGlobalPlacas = r.data || [];
+            mostrarPlacas(window.dataGlobalPlacas);
+        })
         .catch(function() { mostrarPlacas([]); });
 }
 
@@ -1427,7 +1430,7 @@ window.init_placas = function() {
     ITEMS_POR_PAGINA = 50;
 
     // Precargar inspecciones si aún no están disponibles (para KPIs de cliente)
-    var _arrancarPlacas = function() { cargarTablaPlacas(); };
+    var _arrancarPlacas = function() { cargarTablaPlacas(true); };
     if (!window.dataGlobalInspecciones || window.dataGlobalInspecciones.length === 0) {
         fetch('/api/script/obtenerDatosInspecciones', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(function(r) { return r.ok ? r.json() : { data: [] }; })
