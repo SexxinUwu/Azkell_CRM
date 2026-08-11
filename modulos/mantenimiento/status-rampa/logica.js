@@ -369,6 +369,7 @@ function srRenderTabla() {
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
+        var color     = SR_COLORES[idx % SR_COLORES.length];
         var entradas  = window.srEntradas.filter(function(e) { 
             var rStr = String(e.rampa || '').trim().toLowerCase();
             var nomLower = String(rampaNom || '').trim().toLowerCase();
