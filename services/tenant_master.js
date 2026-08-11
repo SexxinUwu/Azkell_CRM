@@ -72,7 +72,96 @@ function initMasterDatabase() {
         `;
         masterPool.query(sqlEmpresas, (err2) => {
             if (err2) console.warn('[MasterDB] Error al verificar tabla empresas:', err2.message);
-            else console.log(`✅ Base de datos Maestra SaaS [${MASTER_DB_NAME}] lista.`);
+            else {
+                console.log(`✅ Base de datos Maestra SaaS [${MASTER_DB_NAME}] lista.`);
+                sincronizarEsquemasGlobalesTenants();
+            }
+        });
+    });
+}
+
+/**
+ * Sincroniza automáticamente las estructuras y columnas faltantes de todas las BDs tenant
+ * con la BD de referencia (azkell_tenant_marsisa) al iniciar el servidor.
+ */
+function sincronizarEsquemasGlobalesTenants() {
+    const rootConn = mysql.createConnection({
+        host: DB_HOST,
+        user: DB_USER,
+        password: DB_PASSWORD,
+        port: DB_PORT,
+        ssl: DB_SSL
+    });
+
+    const refDb = process.env.DB_NAME || 'azkell_tenant_marsisa';
+
+    rootConn.query("SHOW DATABASES LIKE 'azkell_tenant_%'", (err, dbs) => {
+        if (err || !dbs || !dbs.length) {
+            rootConn.end();
+            return;
+        }
+
+        const tenantDbs = dbs.map(d => Object.values(d)[0]);
+
+        rootConn.query(`SHOW TABLES FROM \`${refDb}\``, (errTab, refTables) => {
+            if (errTab || !refTables || !refTables.length) {
+                rootConn.end();
+                return;
+            }
+
+            const tableList = refTables.map(t => Object.values(t)[0]);
+
+            let pendingTasks = 0;
+            tenantDbs.forEach(tDb => {
+                if (tDb === refDb) return;
+
+                tableList.forEach(table => {
+                    pendingTasks++;
+                    rootConn.query(`SHOW TABLES FROM \`${tDb}\` LIKE ?`, [table], (errChk, checkTab) => {
+                        if (errChk) { pendingTasks--; return; }
+
+                        if (!checkTab.length) {
+                            rootConn.query(`SHOW CREATE TABLE \`${refDb}\`.\`${table}\``, (errC, createRes) => {
+                                if (!errC && createRes && createRes.length) {
+                                    let createSql = createRes[0]['Create Table'];
+                                    rootConn.query(`USE \`${tDb}\``, () => {
+                                        rootConn.query(createSql, (errCr) => {
+                                            if (!errCr) console.log(`✅ Auto-sync: Tabla [${table}] creada en [${tDb}]`);
+                                            pendingTasks--;
+                                        });
+                                    });
+                                } else { pendingTasks--; }
+                            });
+                        } else {
+                            rootConn.query(`SHOW COLUMNS FROM \`${refDb}\`.\`${table}\``, (errC1, colsRef) => {
+                                if (errC1 || !colsRef) { pendingTasks--; return; }
+                                rootConn.query(`SHOW COLUMNS FROM \`${tDb}\`.\`${table}\``, (errC2, colsTar) => {
+                                    if (errC2 || !colsTar) { pendingTasks--; return; }
+                                    const tarColNames = colsTar.map(x => x.Field);
+                                    colsRef.forEach(col => {
+                                        if (!tarColNames.includes(col.Field)) {
+                                            let colDef = col.Type;
+                                            if (col.Null === 'NO') colDef += ' NOT NULL';
+                                            else colDef += ' NULL';
+                                            if (col.Default !== null) {
+                                                if (col.Default === 'CURRENT_TIMESTAMP') colDef += ' DEFAULT CURRENT_TIMESTAMP';
+                                                else colDef += ` DEFAULT '${col.Default}'`;
+                                            }
+                                            const alterSql = `ALTER TABLE \`${tDb}\`.\`${table}\` ADD COLUMN \`${col.Field}\` ${colDef}`;
+                                            rootConn.query(alterSql, (errAlt) => {
+                                                if (!errAlt) console.log(`✅ Auto-sync: Columna [${table}.${col.Field}] agregada a [${tDb}]`);
+                                            });
+                                        }
+                                    });
+                                    pendingTasks--;
+                                });
+                            });
+                        }
+                    });
+                });
+            });
+
+            setTimeout(() => { try { rootConn.end(); } catch(e){} }, 5000);
         });
     });
 }
