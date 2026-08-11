@@ -276,10 +276,7 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                         fecha = null;
                     }
                 }
-                // Si fecha sigue null, usar fecha de hoy
-                if (!fecha) {
-                    fecha = new Date().toISOString().split('T')[0];
-                }
+                // Si fecha es null, se guarda como NULL en BD (es un plan inicial sin ejecución registrada)
                 return [idRegistro, mes, anio, fecha, r.placa, marca, dueno, uts, r.tipomp || '', kmact, freckm, kmprox, wkm, r.tec || '', r.obs || '', comb, mod];
             });
 

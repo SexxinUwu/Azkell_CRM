@@ -188,6 +188,11 @@ function mostrarFleetrun(datos) {
               <td colspan="12" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span>${kmDiaBadge}<span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[12] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
+              // Detectar si es un registro de plan inicial (sin fecha de ejecución)
+              let esPlanInicial = !fechaStr || String(fechaStr).trim() === '' || fechaStr === null;
+              if (esPlanInicial) {
+                  fechaLimpia = '<span class="badge bg-secondary" title="Plan inicial sin ejecución registrada"><i class="bi bi-calendar-plus me-1"></i>Plan Inicial</span>';
+              }
 
               let km_gps = parseFloat(fila[14]) || 0;
               let isLive = false;
@@ -196,6 +201,13 @@ function mostrarFleetrun(datos) {
               if (wialonData) {
                   km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
                   isLive = true;
+              }
+
+              // Si es plan inicial (sin fecha), recalcular km_prox a partir del GPS actual + frecuencia
+              // para que muestre cuanto falta desde ahora y no aparezca como VENCIDO
+              if (esPlanInicial && km_gps > 0 && frecuencia > 0) {
+                  km_prox = km_gps + frecuencia;
+                  km_cambio = km_gps; // el baseline es el km GPS actual
               }
 
               let km_desde = km_gps - km_cambio;
