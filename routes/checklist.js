@@ -191,11 +191,11 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const sql = `
                 INSERT INTO reportes_fallas (
-                    folio, placa_tracto, placa_remolque, km_inicial, km_final,
+                    folio, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
                     conductor, procedencia, ubicacion_gps,
                     fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
                     fotos_json, firma_conductor, estado, creado_por
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
                 `;
 
                 const values = [
@@ -204,6 +204,7 @@ module.exports = function (db, broadcast, logAudit) {
                     (placa_remolque || '').trim().toUpperCase(),
                     parseInt(km_inicial, 10) || 0,
                     parseInt(km_final, 10) || 0,
+                    (req.body.horas_motor || '').trim() || null,
                     (conductor || '').trim(),
                     (procedencia || '').trim(),
                     (ubicacion_gps || '').trim(),
@@ -305,12 +306,14 @@ module.exports = function (db, broadcast, logAudit) {
                 } catch(ePl) {}
 
                 const kmVal = item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0;
+                const horasMotorVal = item.horas_motor || ((item.unidad === 'Remolque' || item.unidad === 'Carreta') ? rep.horas_motor : null) || null;
 
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
                     km: kmVal,
                     km_tablero: kmVal,
+                    horas_motor: horasMotorVal,
                     motivo: motivoLimpio,
                     observaciones: motivoLimpio,
                     tipo_ot: item.tipo_ot || 'Correctivo',
