@@ -799,8 +799,14 @@ window.agregarOTCardAdicional = function(unidad, placa) {
                         <option value="Oportuno">Oportuno</option>
                     </select>
                 </div>
-                <div class="col-12 position-relative">
-                    <label class="form-label fw-bold small">Personal / Técnico(s) Asignados *</label>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark"><i class="bi bi-person-badge text-primary me-1"></i> Supervisor *</label>
+                    <select class="form-select form-select-sm ot-supervisor" required>
+                        ${renderSupervisorOptions(listTecs)}
+                    </select>
+                </div>
+                <div class="col-md-6 position-relative">
+                    <label class="form-label fw-bold small text-dark"><i class="bi bi-people text-info me-1"></i> Personal / Técnico(s) Asignados *</label>
                     <div id="${cardId}_tecnicos_container"></div>
                 </div>
             </div>
@@ -820,7 +826,7 @@ window.agregarOTCardAdicional = function(unidad, placa) {
         </div>
     `;
 
-    const buttonsWrapper = document.getElementById('botonesAgregarOTsWrap');
+    const buttonsWrapper = document.getElementById('wrapperBotonesAdicionales');
     if (buttonsWrapper) {
         container.insertBefore(cardDiv, buttonsWrapper);
     } else {
@@ -839,6 +845,12 @@ window.abrirModalGenerarOTs = function(idReporte) {
             const wrap = document.getElementById('contenedorTarjetasOTsGen');
             if (!wrap) return;
 
+            // Establecer fecha/hora actual por defecto
+            const now = new Date();
+            const nowIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            const inFing = document.getElementById('gen_fecha_ingreso');
+            if (inFing) inFing.value = nowIso;
+
             let fallasTracto = rep.fallas_tracto_json || [];
             let fallasRemolque = rep.fallas_remolque_json || [];
 
@@ -854,6 +866,14 @@ window.abrirModalGenerarOTs = function(idReporte) {
                         if (name && !listTecs.includes(name)) listTecs.push(name);
                     });
                     listTecs.sort();
+
+                    const renderSupervisorOptions = (listTecs) => {
+                        let opts = '<option value="">-- Selecciona Supervisor --</option>';
+                        (listTecs || []).forEach(t => {
+                            opts += `<option value="${t}">${t}</option>`;
+                        });
+                        return opts;
+                    };
 
                     window.cacheGenReporteActual = { rep, listTecs };
                     window.genOtCardCounter = 0;
@@ -922,8 +942,14 @@ window.abrirModalGenerarOTs = function(idReporte) {
                                             <option value="Mala Operación">Mala Operación</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 position-relative">
-                                        <label class="form-label fw-bold small">Personal / Técnico(s) Asignados *</label>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-dark"><i class="bi bi-person-badge text-primary me-1"></i> Supervisor *</label>
+                                        <select class="form-select form-select-sm ot-supervisor" required>
+                                            ${renderSupervisorOptions(listTecs)}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 position-relative">
+                                        <label class="form-label fw-bold small text-dark"><i class="bi bi-people text-info me-1"></i> Personal / Técnico(s) Asignados *</label>
                                         <div id="${cardId}_tecnicos_container"></div>
                                     </div>
                                 </div>
@@ -980,6 +1006,8 @@ window.enviarGeneracionOTs = function(event) {
     event.preventDefault();
     const idReporte = document.getElementById('gen_reporte_id').value;
     const rampa = document.getElementById('gen_id_rampa').value;
+    const fecha_ingreso = (document.getElementById('gen_fecha_ingreso') || {}).value || '';
+    const fecha_salida = (document.getElementById('gen_fecha_salida') || {}).value || '';
 
     const ots = [];
     document.querySelectorAll('#contenedorTarjetasOTsGen .card-ot-gen').forEach(card => {
@@ -987,6 +1015,7 @@ window.enviarGeneracionOTs = function(event) {
         const placa = card.querySelector('.ot-placa').value;
         const tipo_ot = card.querySelector('.ot-tipo').value;
         const subtipo_ot = card.querySelector('.ot-subtipo').value;
+        const supervisor = (card.querySelector('.ot-supervisor') || {}).value || '';
         const trabajo_custom = (card.querySelector('.ot-trabajo-custom') || {}).value || '';
 
         // Recolectar fallas seleccionadas
@@ -1006,6 +1035,7 @@ window.enviarGeneracionOTs = function(event) {
             placa,
             tipo_ot,
             subtipo_ot,
+            supervisor,
             tecnicos,
             fallas_seleccionadas: fallasSeleccionadas,
             trabajo_custom
@@ -1024,6 +1054,8 @@ window.enviarGeneracionOTs = function(event) {
         body: JSON.stringify({
             ots,
             id_rampa: rampa,
+            fecha_ingreso,
+            fecha_salida,
             creado_por: window.usuarioLogueado || 'Sistema'
         })
     })

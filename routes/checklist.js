@@ -187,8 +187,8 @@ module.exports = function (db, broadcast, logAudit) {
     router.post('/:id/generar-ots', (req, res) => {
         const tdb = getDb(req);
         const idReporte = req.params.id;
-        const { ots, id_rampa, observaciones_generales, creado_por } = req.body;
-        // ots es un array: [{ unidad: 'Tracto', placa: 'ABC-123', tipo_ot: 'Correctivo', subtipo_ot: 'Motor', tecnico: 'Juan Pérez' }]
+        const { ots, id_rampa, fecha_ingreso, fecha_salida, observaciones_generales, creado_por } = req.body;
+        // ots es un array: [{ unidad: 'Tracto', placa: 'ABC-123', tipo_ot: 'Correctivo', subtipo_ot: 'Motor', supervisor: 'HECTOR', tecnicos: ['Juan'] }]
 
         if (!Array.isArray(ots) || ots.length === 0) {
             return res.status(400).json({ error: 'Debes proporcionar al menos una OT para generar' });
@@ -248,6 +248,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
 
                 const motivoLimpio = `[Reporte ${rep.folio}]\n${descFallasClean}`;
+                const supervisorStr = (item.supervisor || '').trim() || (Array.isArray(item.tecnicos) && item.tecnicos.length ? item.tecnicos[0] : 'Por Asignar');
                 const tecnicosStr = Array.isArray(item.tecnicos) ? item.tecnicos.join(', ') : (item.tecnico || 'Por Asignar');
 
                 // Obtener datos del cliente de esa placa
@@ -274,15 +275,19 @@ module.exports = function (db, broadcast, logAudit) {
                     tipo_mantenimiento: item.tipo_ot || 'Correctivo',
                     sub_tipo: item.subtipo_ot || 'Mecánica General',
                     subtipo_ot: item.subtipo_ot || 'Mecánica General',
-                    supervisor: tecnicosStr,
-                    tecnico_lider: tecnicosStr,
+                    supervisor: supervisorStr,
+                    tecnico_lider: supervisorStr,
                     tecnicos: Array.isArray(item.tecnicos) ? item.tecnicos : [tecnicosStr],
+                    tecnicos_str: tecnicosStr,
                     rampa: id_rampa || rep.id_rampa || 'En Espera',
+                    situacion_inicial: id_rampa || rep.id_rampa || 'En Espera',
                     id_rampa: id_rampa || rep.id_rampa || 'En Espera',
                     sistema: item.subtipo_ot || 'Mecánica',
                     sistema_afectado: item.subtipo_ot || 'Mecánica',
                     id_reporte_falla: rep.id,
-                    folio_reporte: rep.folio
+                    folio_reporte: rep.folio,
+                    fecha_ingreso_rampa: fecha_ingreso || new Date(),
+                    fecha_salida_estimada: fecha_salida || null
                 };
 
                 // Insertar OT en ordenes_trabajo con relación Padre-Hijo y detalles_json
@@ -301,24 +306,26 @@ module.exports = function (db, broadcast, logAudit) {
                         creado_por || 'Sistema'
                     ]);
 
-                    otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, tecnicos: tecnicosStr, id: resOt.insertId });
+                    otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, supervisor: supervisorStr, tecnicos: tecnicosStr, id: resOt.insertId });
 
                     // Registrar en Status Rampa / status_flota
-                    if (id_rampa && id_rampa !== 'En Ruta') {
+                    if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
                         const sqlRampa = `
                             INSERT INTO status_flota
                             (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
-                            VALUES (?, CURDATE(), ?, ?, ?, ?, ?, 'Taller', ?, 'En Reparación', ?, ?, ?)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, 'Taller', ?, 'En Reparación', ?, ?, ?)
                             ON DUPLICATE KEY UPDATE
-                            fecha=CURDATE(), corte=VALUES(corte), unidad_motora=VALUES(unidad_motora), unidad_no_motora=VALUES(unidad_no_motora),
+                            fecha=?, corte=VALUES(corte), unidad_motora=VALUES(unidad_motora), unidad_no_motora=VALUES(unidad_no_motora),
                             cliente_motora=VALUES(cliente_motora), cliente_nomotora=VALUES(cliente_nomotora), conductor=VALUES(conductor),
                             estado='En Reparación', observaciones=VALUES(observaciones), kilometraje=VALUES(kilometraje), usuario=VALUES(usuario);
                         `;
+                        const fechaStatus = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
                         const motoraVal = item.unidad === 'Tracto' ? placa : (rep.placa_tracto || '');
                         const nomotoraVal = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? placa : (rep.placa_remolque || '');
 
                         await tdb.promise().query(sqlRampa, [
                             `SF-${idOt}`,
+                            fechaStatus,
                             id_rampa,
                             motoraVal,
                             nomotoraVal,
@@ -327,7 +334,8 @@ module.exports = function (db, broadcast, logAudit) {
                             rep.conductor || '',
                             `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`,
                             kmVal,
-                            creado_por || 'Sistema'
+                            creado_por || 'Sistema',
+                            fechaStatus
                         ]).catch(e => console.warn('Warning Status Rampa auto-sync:', e.message));
                     }
 
