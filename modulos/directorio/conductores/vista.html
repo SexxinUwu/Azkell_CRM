@@ -358,39 +358,41 @@
                         <div style="font-size:.68rem;color:var(--subtext);margin-top:.3rem;">Toca la foto para cambiarla</div>
                     </div>
 
-                    <!-- Sección: Identidad -->
+                    <!-- Sección: Identidad y Documentos -->
                     <div class="cond-msec" style="border-left:4px solid #2563eb;">
-                        <div class="cond-msec-title" style="color:#2563eb;"><i class="bi bi-person-fill"></i> Identidad</div>
-                        <label class="cond-mlabel">Nombre Completo *</label>
-                        <input type="text" class="form-control form-control-sm cond-mfield" name="c_nombre" id="c_nombre" required style="font-weight:700;">
+                        <div class="cond-msec-title" style="color:#2563eb;"><i class="bi bi-person-badge-fill"></i> Identidad y Documentos</div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-7">
+                                <label class="cond-mlabel">DNI / Documento</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control cond-mfield fw-bold" name="c_dni" id="c_dni" placeholder="Ej: 71234567" maxlength="12" oninput="window.consultarDniPersonalAuto(this.value)">
+                                    <button type="button" class="btn btn-primary" onclick="window.consultarDniPersonal(document.getElementById('c_dni').value)" title="Consultar RENIEC">
+                                        <i class="bi bi-search" id="c_dni_search_icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <label class="cond-mlabel">Licencia</label>
+                                <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_licencia" id="c_licencia" placeholder="Ej: Q71234567">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="cond-mlabel">Nombre Completo *</label>
+                            <input type="text" class="form-control form-control-sm cond-mfield" name="c_nombre" id="c_nombre" required style="font-weight:700;" placeholder="Escribe o consulta por DNI...">
+                        </div>
                     </div>
 
                     <!-- Sección: Empresa y Contacto -->
                     <div class="cond-msec" style="border-left:4px solid #7c3aed;">
                         <div class="cond-msec-title" style="color:#7c3aed;"><i class="bi bi-building"></i> Empresa y Contacto</div>
                         <div class="mb-2">
-                            <label class="cond-mlabel">Empresa</label>
-                            <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Ej: ROSYMAR PERU SAC">
+                            <label class="cond-mlabel">Empresa / Cliente</label>
+                            <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_empresa" id="c_empresa" list="dl-clientes" placeholder="Selecciona o escribe empresa...">
                             <datalist id="dl-clientes"></datalist>
                         </div>
                         <div>
                             <label class="cond-mlabel">Teléfono</label>
-                            <input type="text" class="form-control form-control-sm cond-mfield" name="c_telefono" id="c_telefono">
-                        </div>
-                    </div>
-
-                    <!-- Sección: Documentos -->
-                    <div class="cond-msec" style="border-left:4px solid #0891b2;">
-                        <div class="cond-msec-title" style="color:#0891b2;"><i class="bi bi-card-text"></i> Documentos</div>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="cond-mlabel">DNI</label>
-                                <input type="text" class="form-control form-control-sm cond-mfield" name="c_dni" id="c_dni">
-                            </div>
-                            <div class="col-6">
-                                <label class="cond-mlabel">Licencia</label>
-                                <input type="text" class="form-control form-control-sm cond-mfield text-uppercase" name="c_licencia" id="c_licencia">
-                            </div>
+                            <input type="text" class="form-control form-control-sm cond-mfield" name="c_telefono" id="c_telefono" placeholder="Ej: 987654321">
                         </div>
                     </div>
 

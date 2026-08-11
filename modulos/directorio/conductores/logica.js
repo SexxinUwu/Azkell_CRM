@@ -367,6 +367,57 @@ function guardarConductor(event, formObj) {
 // ================================================================
 window.dataGlobalConductores = dataGlobalConductores;
 
+var _dniLastConsulted = '';
+
+window.consultarDniPersonalAuto = function(val) {
+    var clean = (val || '').replace(/[^0-9]/g, '').trim();
+    if (clean.length === 8 && clean !== _dniLastConsulted) {
+        window.consultarDniPersonal(clean);
+    }
+};
+
+window.consultarDniPersonal = async function(val) {
+    var dni = (val || (document.getElementById('c_dni') || {}).value || '').replace(/[^0-9]/g, '').trim();
+    if (!dni || dni.length !== 8) {
+        if (typeof window.rotToast === 'function') window.rotToast("Ingrese un DNI válido de 8 dígitos", "bg-warning");
+        return;
+    }
+
+    _dniLastConsulted = dni;
+    var btnIcon = document.getElementById('c_dni_search_icon');
+    if (btnIcon) btnIcon.className = "spinner-border spinner-border-sm";
+
+    try {
+        var res = await fetch('/api/proxy/documento?tipo=DNI&numero=' + dni);
+        if (!res.ok) throw new Error('DNI no encontrado');
+        var data = await res.json();
+        
+        var nombreEncontrado = '';
+        if (data.nombres && (data.apellidoPaterno || data.apellido_paterno)) {
+            var aPaterno = data.apellidoPaterno || data.apellido_paterno || '';
+            var aMaterno = data.apellidoMaterno || data.apellido_materno || '';
+            nombreEncontrado = (data.nombres + ' ' + aPaterno + ' ' + aMaterno).trim();
+        } else if (data.nombre) {
+            nombreEncontrado = data.nombre.trim();
+        } else if (data.razon_social) {
+            nombreEncontrado = data.razon_social.trim();
+        }
+
+        if (nombreEncontrado) {
+            var nombreInput = document.getElementById('c_nombre');
+            if (nombreInput) nombreInput.value = nombreEncontrado.toUpperCase();
+            if (typeof window.rotToast === 'function') window.rotToast("✨ Nombre obtenido de RENIEC", "bg-success");
+        } else {
+            if (typeof window.rotToast === 'function') window.rotToast("No se hallaron nombres en RENIEC", "bg-warning");
+        }
+    } catch(err) {
+        console.warn('Error consulta DNI RENIEC:', err);
+        if (typeof window.rotToast === 'function') window.rotToast("No se pudo obtener datos de RENIEC", "bg-warning");
+    } finally {
+        if (btnIcon) btnIcon.className = "bi bi-search";
+    }
+};
+
 function _cargarClientesCond() {
     fetch('/api/almacen/clientes-placas')
         .then(function(r) { return r.json(); })

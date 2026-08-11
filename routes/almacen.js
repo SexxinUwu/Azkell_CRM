@@ -524,7 +524,15 @@ router.post('/inventario/importar', async (req, res) => {
 
 // ── Clientes de placas (para Empresa en conductores) ──────────────────────
 router.get('/clientes-placas', (req, res) => {
-    db.query(`SELECT DISTINCT cliente FROM placas WHERE cliente IS NOT NULL AND cliente <> '' ORDER BY cliente`, (err, rows) => {
+    const tdb = req.db || db;
+    const sql = `
+        SELECT DISTINCT TRIM(empresa) as cliente FROM (
+            SELECT cliente as empresa FROM placas WHERE cliente IS NOT NULL AND TRIM(cliente) <> ''
+            UNION
+            SELECT razon_social as empresa FROM clientes WHERE razon_social IS NOT NULL AND TRIM(razon_social) <> ''
+        ) AS t ORDER BY cliente
+    `;
+    tdb.query(sql, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows.map(r => r.cliente));
     });
