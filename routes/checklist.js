@@ -230,22 +230,24 @@ module.exports = function (db, broadcast, logAudit) {
                 maxNumOt++;
                 const idOt = `OT-${anioOt}-${String(maxNumOt).padStart(4, '0')}`;
 
-                // Construir descripción de fallas específica para esta OT
-                let descFallas = '';
+                // Descripción de fallas limpia y concisa para impresión y detalle
+                let descFallasClean = '';
                 if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
-                    descFallas = item.fallas_seleccionadas.map(f => `• ${f}`).join('\n');
+                    descFallasClean = item.fallas_seleccionadas.map(f => {
+                        return `• ` + f.replace(/^\[[^\]]+\]\s*/, '');
+                    }).join('\n');
                 } else {
                     let itemsFalla = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? fallasRemolque : fallasTracto;
-                    descFallas = itemsFalla.map(f => `• [${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs || 'Observado'}`).join('\n');
+                    descFallasClean = itemsFalla.map(f => `• ${f.item}: ${f.obs || 'Observado'}`).join('\n');
                 }
 
                 if (item.trabajo_custom) {
-                    descFallas += (descFallas ? '\n\n' : '') + `• [OBS. TÉCNICO]: ${item.trabajo_custom}`;
+                    descFallasClean += (descFallasClean ? '\n' : '') + `• ${item.trabajo_custom}`;
                 } else if (rep.fallas_libres_text && !item.fallas_seleccionadas) {
-                    descFallas += `\n\n• [REPORTE LIBRE]: ${rep.fallas_libres_text}`;
+                    descFallasClean += (descFallasClean ? '\n' : '') + `• ${rep.fallas_libres_text}`;
                 }
 
-                const motivoCompleto = `[Desde Reporte ${rep.folio}] ${descFallas}`;
+                const motivoLimpio = `[Reporte ${rep.folio}]\n${descFallasClean}`;
                 const tecnicosStr = Array.isArray(item.tecnicos) ? item.tecnicos.join(', ') : (item.tecnico || 'Por Asignar');
 
                 // Obtener datos del cliente de esa placa
@@ -259,15 +261,25 @@ module.exports = function (db, broadcast, logAudit) {
                     }
                 } catch(ePl) {}
 
+                const kmVal = item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0;
+
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
-                    km_tablero: item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0,
-                    motivo: motivoCompleto,
+                    km: kmVal,
+                    km_tablero: kmVal,
+                    motivo: motivoLimpio,
+                    observaciones: motivoLimpio,
+                    tipo_ot: item.tipo_ot || 'Correctivo',
                     tipo_mantenimiento: item.tipo_ot || 'Correctivo',
+                    sub_tipo: item.subtipo_ot || 'Mecánica General',
                     subtipo_ot: item.subtipo_ot || 'Mecánica General',
+                    supervisor: tecnicosStr,
                     tecnico_lider: tecnicosStr,
+                    tecnicos: Array.isArray(item.tecnicos) ? item.tecnicos : [tecnicosStr],
                     rampa: id_rampa || rep.id_rampa || 'En Espera',
+                    id_rampa: id_rampa || rep.id_rampa || 'En Espera',
+                    sistema: item.subtipo_ot || 'Mecánica',
                     sistema_afectado: item.subtipo_ot || 'Mecánica',
                     id_reporte_falla: rep.id,
                     folio_reporte: rep.folio
@@ -294,10 +306,13 @@ module.exports = function (db, broadcast, logAudit) {
                     // Registrar en Status Rampa / status_flota
                     if (id_rampa && id_rampa !== 'En Ruta') {
                         const sqlRampa = `
-                            INSERT INTO status_flota (idRegistro, rampa, fecha, hora, motora, nomotora, cliMotora, cliNoMotora, estado, obs, conductor, km, usuario)
-                            VALUES (?, ?, CURDATE(), CURTIME(), ?, ?, ?, ?, 'En Reparación', ?, ?, ?, ?)
+                            INSERT INTO status_flota
+                            (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
+                            VALUES (?, CURDATE(), ?, ?, ?, ?, ?, 'Taller', ?, 'En Reparación', ?, ?, ?)
                             ON DUPLICATE KEY UPDATE
-                                rampa = VALUES(rampa), estado = 'En Reparación', obs = VALUES(obs), usuario = VALUES(usuario);
+                            fecha=CURDATE(), corte=VALUES(corte), unidad_motora=VALUES(unidad_motora), unidad_no_motora=VALUES(unidad_no_motora),
+                            cliente_motora=VALUES(cliente_motora), cliente_nomotora=VALUES(cliente_nomotora), conductor=VALUES(conductor),
+                            estado='En Reparación', observaciones=VALUES(observaciones), kilometraje=VALUES(kilometraje), usuario=VALUES(usuario);
                         `;
                         const motoraVal = item.unidad === 'Tracto' ? placa : (rep.placa_tracto || '');
                         const nomotoraVal = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? placa : (rep.placa_remolque || '');
@@ -309,9 +324,9 @@ module.exports = function (db, broadcast, logAudit) {
                             nomotoraVal,
                             clienteNombre,
                             clienteNombre,
-                            `[Reporte ${rep.folio}] OT: ${idOt} - ${item.subtipo_ot || ''}`,
                             rep.conductor || '',
-                            rep.km_inicial || 0,
+                            `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`,
+                            kmVal,
                             creado_por || 'Sistema'
                         ]).catch(e => console.warn('Warning Status Rampa auto-sync:', e.message));
                     }
