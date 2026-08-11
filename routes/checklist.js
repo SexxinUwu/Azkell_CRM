@@ -371,8 +371,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                         try {
                             const [existingRampa] = await tdb.promise().query(
-                                "SELECT id FROM taller_rampas WHERE (rampa = ? OR rampa = ? OR placa = ?) AND estado != 'Liberado' LIMIT 1",
-                                [targetRampaVal, id_rampa, placa]
+                                "SELECT id FROM taller_rampas WHERE placa = ? AND estado != 'Liberado' LIMIT 1",
+                                [placa]
                             );
 
                             if (existingRampa && existingRampa.length > 0) {
