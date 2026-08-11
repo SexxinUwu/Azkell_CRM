@@ -3,39 +3,35 @@ const express = require('express');
 module.exports = function (db, logAudit) {
     const router = express.Router();
 
-    // Crear tabla de clientes si no existe
-    const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS clientes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        ruc_dni VARCHAR(50),
-        razon_social VARCHAR(255) NOT NULL,
-        direccion TEXT,
-        telefono VARCHAR(50),
-        email VARCHAR(100),
-        estado VARCHAR(20) DEFAULT 'Activo',
-        notas TEXT,
-        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_razon (razon_social)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `;
-    db.query(createTableQuery, (err) => {
-        if (err) console.warn('Error inicializando tabla clientes:', err.message);
-        else {
-            // Auto-poblar clientes existentes desde la tabla de placas
-            const populateQuery = `
-            INSERT IGNORE INTO clientes (razon_social, ruc_dni)
-            SELECT DISTINCT cliente, ruc_dni 
-            FROM placas 
-            WHERE cliente IS NOT NULL AND TRIM(cliente) <> '';
-            `;
-            db.query(populateQuery, (errPop) => {
-                if (errPop) console.warn('Error poblando clientes desde placas:', errPop.message);
-            });
-        }
+    // ── Función helper para obtener la conexión correcta (multi-tenant) ──
+    function getDb(req) { return req.db || db; }
+
+    // ── Middleware: asegurar tabla clientes existe en el tenant actual ────
+    router.use((req, res, next) => {
+        const tdb = getDb(req);
+        const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ruc_dni VARCHAR(50),
+            razon_social VARCHAR(255) NOT NULL,
+            direccion TEXT,
+            telefono VARCHAR(50),
+            email VARCHAR(100),
+            estado VARCHAR(20) DEFAULT 'Activo',
+            notas TEXT,
+            fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_razon (razon_social)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `;
+        tdb.query(createTableQuery, (err) => {
+            if (err) console.warn('Error inicializando tabla clientes:', err.message);
+            next();
+        });
     });
 
     // ── GET /api/clientes (lista general con conteo de vehículos) ─────────
     router.get('/', (req, res) => {
+        const tdb = getDb(req);
         const sql = `
         SELECT 
             c.id,
@@ -53,7 +49,7 @@ module.exports = function (db, logAudit) {
         GROUP BY c.id, c.ruc_dni, c.razon_social, c.direccion, c.telefono, c.email, c.estado, c.notas, c.fecha_creacion
         ORDER BY c.razon_social ASC;
         `;
-        db.query(sql, (err, rows) => {
+        tdb.query(sql, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -61,8 +57,9 @@ module.exports = function (db, logAudit) {
 
     // ── GET /api/clientes/:id (detalle de cliente) ───────────────────────
     router.get('/:id', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        db.query('SELECT * FROM clientes WHERE id = ?', [id], (err, rows) => {
+        tdb.query('SELECT * FROM clientes WHERE id = ?', [id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
             res.json(rows[0]);
@@ -71,12 +68,13 @@ module.exports = function (db, logAudit) {
 
     // ── GET /api/clientes/:id/flota (vehículos/placas del cliente) ───────
     router.get('/:id/flota', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        db.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
+        tdb.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
             if (err || !rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
             const razonSocial = rows[0].razon_social;
             const sql = `SELECT * FROM placas WHERE TRIM(LOWER(cliente)) = TRIM(LOWER(?)) ORDER BY placa ASC`;
-            db.query(sql, [razonSocial], (errP, placas) => {
+            tdb.query(sql, [razonSocial], (errP, placas) => {
                 if (errP) return res.status(500).json({ error: errP.message });
                 res.json(placas);
             });
@@ -85,8 +83,9 @@ module.exports = function (db, logAudit) {
 
     // ── GET /api/clientes/:id/ots (Órdenes de Trabajo del cliente) ───────
     router.get('/:id/ots', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        db.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
+        tdb.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
             if (err || !rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
             const razonSocial = rows[0].razon_social;
             const sql = `
@@ -97,7 +96,7 @@ module.exports = function (db, logAudit) {
             ORDER BY ot.id_ot DESC
             LIMIT 100;
             `;
-            db.query(sql, [razonSocial], (errOT, ots) => {
+            tdb.query(sql, [razonSocial], (errOT, ots) => {
                 if (errOT) return res.status(500).json({ error: errOT.message });
                 res.json(ots);
             });
@@ -106,8 +105,9 @@ module.exports = function (db, logAudit) {
 
     // ── GET /api/clientes/:id/backlog (Backlogs del cliente) ─────────────
     router.get('/:id/backlog', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        db.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
+        tdb.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
             if (err || !rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
             const razonSocial = rows[0].razon_social;
             const sql = `
@@ -117,7 +117,7 @@ module.exports = function (db, logAudit) {
             WHERE TRIM(LOWER(p.cliente)) = TRIM(LOWER(?))
             ORDER BY b.id DESC;
             `;
-            db.query(sql, [razonSocial], (errB, backlogs) => {
+            tdb.query(sql, [razonSocial], (errB, backlogs) => {
                 if (errB) return res.status(500).json({ error: errB.message });
                 res.json(backlogs);
             });
@@ -126,6 +126,7 @@ module.exports = function (db, logAudit) {
 
     // ── POST /api/clientes (Crear nuevo cliente) ─────────────────────────
     router.post('/', (req, res) => {
+        const tdb = getDb(req);
         const { ruc_dni, razon_social, direccion, telefono, email, estado, notas } = req.body;
         if (!razon_social) return res.status(400).json({ error: 'La Razón Social es requerida' });
 
@@ -150,7 +151,7 @@ module.exports = function (db, logAudit) {
             (notas || '').trim()
         ];
 
-        db.query(sql, values, (err, result) => {
+        tdb.query(sql, values, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, id: result.insertId || result.id });
         });
@@ -158,13 +159,14 @@ module.exports = function (db, logAudit) {
 
     // ── POST /api/clientes/sincronizar-todo (Vincular y homologar todas las placas con la tabla de clientes) ─
     router.post('/sincronizar-todo', (req, res) => {
+        const tdb = getDb(req);
         const sql = `
         UPDATE placas p
         JOIN clientes c ON (p.ruc_dni IS NOT NULL AND p.ruc_dni != '' AND p.ruc_dni = c.ruc_dni)
                         OR (TRIM(LOWER(p.cliente)) = TRIM(LOWER(c.razon_social)))
         SET p.cliente = c.razon_social, p.ruc_dni = c.ruc_dni;
         `;
-        db.query(sql, (err, result) => {
+        tdb.query(sql, (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true, afectadas: result ? result.affectedRows : 0 });
         });
@@ -172,6 +174,7 @@ module.exports = function (db, logAudit) {
 
     // ── PUT /api/clientes/:id (Editar cliente y cascadear a todas sus placas en vivo) ──
     router.put('/:id', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
         const { ruc_dni, razon_social, direccion, telefono, email, estado, notas } = req.body;
         if (!razon_social) return res.status(400).json({ error: 'La Razón Social es requerida' });
@@ -180,7 +183,7 @@ module.exports = function (db, logAudit) {
         const newRazon = razon_social.trim().toUpperCase();
 
         // 1. Obtener la Razón Social y RUC anteriores del cliente
-        db.query('SELECT ruc_dni, razon_social FROM clientes WHERE id = ?', [id], (errOld, oldRows) => {
+        tdb.query('SELECT ruc_dni, razon_social FROM clientes WHERE id = ?', [id], (errOld, oldRows) => {
             const oldRuc = oldRows && oldRows.length ? oldRows[0].ruc_dni : '';
             const oldRazon = oldRows && oldRows.length ? oldRows[0].razon_social : '';
 
@@ -192,7 +195,7 @@ module.exports = function (db, logAudit) {
             `;
             const values = [newRuc, newRazon, (direccion || '').trim(), (telefono || '').trim(), (email || '').trim().toLowerCase(), estado || 'Activo', (notas || '').trim(), id];
 
-            db.query(sqlUpdateClient, values, (errUp) => {
+            tdb.query(sqlUpdateClient, values, (errUp) => {
                 if (errUp) return res.status(500).json({ error: errUp.message });
 
                 // 3. Cascadear actualización a TODAS las placas vinculadas por RUC o Razón Social previa
@@ -204,7 +207,7 @@ module.exports = function (db, logAudit) {
                    OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)))
                    OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)));
                 `;
-                db.query(sqlCascadePlacas, [newRazon, newRuc, newRuc, oldRuc, newRazon, oldRazon], (errPlacas, resPlacas) => {
+                tdb.query(sqlCascadePlacas, [newRazon, newRuc, newRuc, oldRuc, newRazon, oldRazon], (errPlacas, resPlacas) => {
                     if (errPlacas) console.warn('Error en cascada de placas:', errPlacas.message);
                     res.json({ ok: true, placasActualizadas: resPlacas ? resPlacas.affectedRows : 0 });
                 });
@@ -214,8 +217,9 @@ module.exports = function (db, logAudit) {
 
     // ── DELETE /api/clientes/:id ──────────────────────────────────────────
     router.delete('/:id', (req, res) => {
+        const tdb = getDb(req);
         const id = req.params.id;
-        db.query('DELETE FROM clientes WHERE id = ?', [id], (err) => {
+        tdb.query('DELETE FROM clientes WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ ok: true });
         });
