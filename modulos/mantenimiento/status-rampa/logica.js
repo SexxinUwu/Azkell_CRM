@@ -369,8 +369,14 @@ function srRenderTabla() {
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
-        var color     = SR_COLORES[idx % SR_COLORES.length];
-        var entradas  = window.srEntradas.filter(function(e) { return e.rampa == rampaId; });
+        var entradas  = window.srEntradas.filter(function(e) { 
+            var rStr = String(e.rampa || '').trim().toLowerCase();
+            var nomLower = String(rampaNom || '').trim().toLowerCase();
+            return String(e.rampa) === String(rampaId) || 
+                   rStr === nomLower ||
+                   (rStr.indexOf(nomLower) !== -1) ||
+                   (nomLower.indexOf(rStr) !== -1 && rStr.length > 0);
+        });
 
         if (!entradas.length) {
             if (!busq || rampaNom.toLowerCase().indexOf(busq) !== -1 || String(rampaId).indexOf(busq) !== -1) {
