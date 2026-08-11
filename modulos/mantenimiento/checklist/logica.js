@@ -948,7 +948,10 @@ window.abrirModalGenerarOTs = function(idReporte) {
                         <div class="card border mb-3 shadow-sm rounded-3 card-ot-gen position-relative" id="${cardId}">
                             <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
                                 <span><i class="bi ${titleIcon} me-1"></i> OT para ${unidad} (${placa})</span>
-                                <span class="badge ${badgeBg} rounded-pill">${fallas.length} trabajos reportados</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge ${badgeBg} rounded-pill">${fallas.length} trabajos reportados</span>
+                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-bold" onclick="this.closest('.card-ot-gen').remove()"><i class="bi bi-trash me-1"></i>Eliminar OT</button>
+                                </div>
                             </div>
                             <div class="card-body p-3 overflow-visible">
                                 <input type="hidden" class="ot-unidad" value="${unidad}">
