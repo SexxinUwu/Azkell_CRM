@@ -190,8 +190,10 @@ function mostrarFleetrun(datos) {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[12] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
               // Detectar si es un registro de plan inicial (sin fecha de ejecución)
               let esPlanInicial = !fechaStr || String(fechaStr).trim() === '' || fechaStr === null;
+              let fechaDataAttr = fechaLimpia; // Para data-fecha (solo texto plano)
               if (esPlanInicial) {
                   fechaLimpia = '<span class="badge bg-secondary" title="Plan inicial sin ejecución registrada"><i class="bi bi-calendar-plus me-1"></i>Plan Inicial</span>';
+                  fechaDataAttr = 'Plan Inicial';
               }
 
               let km_gps = parseFloat(fila[14]) || 0;
@@ -254,7 +256,7 @@ function mostrarFleetrun(datos) {
               let modelo = infoP ? (infoP[4] || "-") : "-";
               let obsBadgeHtml = `<span class="badge ${badgeClass} w-100 mt-1">${estadoKpi}</span>`;
               
-              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun fleet-page fleet-page-${pageNum}" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaLimpia}" data-estado-kpi="${estadoKpi}">
+              html += `<tr class="child-${classPlaca} clickable-row data-row-fleetrun child-row-fleetrun fleet-page fleet-page-${pageNum}" style="display:none;" onclick="if(window.modoSeleccion&&window.modoSeleccion['fleetrun']){seleccionarFilaFleetrun(event,this)}else if(!event.target.closest('.dropdown')&&!event.target.closest('.dropstart')&&!event.target.closest('.btn-icon-dropdown')){mostrarDetalleFleetrun(${originalIndex})}" data-cliente="${cli}" data-uts="${utsDisplay}" data-placa="${placaRaw}" data-fecha="${fechaDataAttr}" data-estado-kpi="${estadoKpi}">
                   <td class="text-start" style="font-size: 0.85rem;" data-value="${placaRaw}">${chkHtml}∟ <b>${placaRaw}</b></td>
                   <td>${fechaLimpia}</td>
                   <td>${modelo}</td>
