@@ -27,6 +27,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
     // ── MANTENIMIENTO ────────────────────────────────────────────────
     { grupo:'MANTENIMIENTO', key:'hub_mant',         nombre:'Mantenimiento',               desc:'Habilitar o deshabilitar acceso al módulo Mantenimiento completo', type:'hub' },
     { grupo:'MANTENIMIENTO', key:'status_rampa',     nombre:'Status Rampa',                desc:'Gestión visual del estado en taller',           type:'child', parent:'hub_mant' },
+    { grupo:'MANTENIMIENTO', key:'checklist',        nombre:'Reporte de Fallas',           desc:'Checklist de fallas mecánicas en ruta o taller (F-MAN-001)', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'insp',             nombre:'Análisis de Inspecciones',    desc:'Registro y análisis de inspecciones de unidades', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'fleetrun',         nombre:'Fleetrun',                    desc:'Gestión de Mantenimientos Preventivos Fleetrun', type:'child', parent:'hub_mant' },
     { grupo:'MANTENIMIENTO', key:'reportes_ot',      nombre:'Reportes OT',                 desc:'Órdenes de trabajo y métricas de mantenimiento', type:'child', parent:'hub_mant' },

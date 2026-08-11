@@ -14,6 +14,7 @@ window.FLEET_I18N = {
     'nav.placas':         'Placas',
     'nav.fleetrun': 'Mantenimiento Preventivo',
     'nav.status_rampa':   'Status Rampa',
+    'nav.checklist':      'Reporte de Fallas',
     'nav.movimientos':    'Movimientos',
     'nav.seguridad':      'Seguridad',
     'nav.unidades':       'CheckList de Ingreso/Salidas de Unidades',

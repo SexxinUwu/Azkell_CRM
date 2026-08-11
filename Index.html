@@ -99,6 +99,10 @@
                         <i class="bi bi-chevron-down section-chevron"></i>
                     </button>
                     <div class="nav-section-items nav-section-collapsed" id="section-items-mantenimiento">
+                        <a id="nav-checklist" class="nav-item" onclick="cargarModuloAislado('mantenimiento/checklist')">
+                            <i class="bi bi-clipboard2-check nav-icon"></i>
+                            <span class="link-text" data-i18n="nav.checklist">Reporte de Fallas</span>
+                        </a>
                         <a id="nav-status-rampa" class="nav-item" onclick="cargarModuloAislado('mantenimiento/status-rampa')">
                             <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
                             <span class="link-text" data-i18n="nav.status_rampa">Status Rampa</span>
@@ -673,6 +677,10 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body px-4 pb-4">
+            <div id="mbnav-checklist" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/checklist'); setBottomNavActive('bnav-mantenimiento');">
+                <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-clipboard2-check"></i></div>
+                <div><p class="bnav-card-title" data-i18n="nav.checklist">Reporte de Fallas</p><p class="bnav-card-desc">Checklist F-MAN-001</p></div>
+            </div>
             <div id="mbnav-status-rampa" class="bnav-card" onclick="bootstrap.Offcanvas.getInstance(document.getElementById('bnavSheetMantenimiento')).hide(); cargarModuloAislado('mantenimiento/status-rampa'); setBottomNavActive('bnav-mantenimiento');">
                 <div class="bnav-card-icon" style="background: rgba(245,158,11,.1); color: #f59e0b;"><i class="bi bi-grid-3x3-gap-fill"></i></div>
                 <div><p class="bnav-card-title" data-i18n="nav.status_rampa">Status Rampa</p><p class="bnav-card-desc">Estado de ocupación</p></div>
