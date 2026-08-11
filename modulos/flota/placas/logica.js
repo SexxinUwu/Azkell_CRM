@@ -323,9 +323,13 @@ function mostrarPlacas(datos) {
     rellenarFiltroCheck('filtroEstado', setEstados, 'filtrarPlacasAvanzado');
     rellenarDatalist('dl-placas', setFormPlacas); rellenarDatalist('i_placa', setFormPlacas); rellenarDatalist('dl-clientes', setFormClientes); rellenarDatalist('dl-tipos', setFormTipos); rellenarDatalist('dl-marcas', setFormMarcas); rellenarDatalist('dl-modelos', setFormModelos); rellenarDatalist('dl-confs', setFormConfs); rellenarDatalist('dl-combs', setFormCombs); rellenarDatalist('dl-uts', setFormUts);
     paginaActualPlacas = 1;
-    renderizarPaginaPlacas();
-    if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
     _restaurarFiltrosPlacas();
+    if (datosFiltradosPlacas.length === 0 && datosUtiles.length > 0) {
+        if (typeof window.limpiarFiltrosPlacas === 'function') window.limpiarFiltrosPlacas();
+    } else {
+        renderizarPaginaPlacas();
+    }
+    if (typeof window.actualizarBadgesSidebar === 'function') window.actualizarBadgesSidebar();
 }
 
 // ── Filtro avanzado ──────────────────────────────────────────────
@@ -1363,7 +1367,8 @@ function _guardarFiltrosPlacas() {
             marcas:   Array.from(document.querySelectorAll('#filtroMarca input:checked')).map(function(e){ return e.value; }),
             estados:  Array.from(document.querySelectorAll('#filtroEstado input:checked')).map(function(e){ return e.value; })
         };
-        localStorage.setItem('fleet_filtros_placas', JSON.stringify(state));
+        var key = 'fleet_filtros_placas_' + location.hostname;
+        localStorage.setItem(key, JSON.stringify(state));
         var btn = document.getElementById('btn-limpiar-filtros-placas');
         var activo = state.clientes.length || state.tipos.length || state.marcas.length || state.estados.length;
         if (btn) btn.classList.toggle('d-none', !activo);
@@ -1372,7 +1377,9 @@ function _guardarFiltrosPlacas() {
 
 function _restaurarFiltrosPlacas() {
     try {
-        var saved = JSON.parse(localStorage.getItem('fleet_filtros_placas') || 'null');
+        localStorage.removeItem('fleet_filtros_placas'); // Limpiar clave legacy global
+        var key = 'fleet_filtros_placas_' + location.hostname;
+        var saved = JSON.parse(localStorage.getItem(key) || 'null');
         if (!saved) return;
         function restoreGroup(gid, vals) {
             if (!vals || !vals.length) return;
@@ -1385,7 +1392,7 @@ function _restaurarFiltrosPlacas() {
         restoreGroup('filtroTipo',    saved.tipos);
         restoreGroup('filtroMarca',   saved.marcas);
         restoreGroup('filtroEstado',  saved.estados);
-        var activo = saved.clientes.length || saved.tipos.length || saved.marcas.length || saved.estados.length;
+        var activo = (saved.clientes && saved.clientes.length) || (saved.tipos && saved.tipos.length) || (saved.marcas && saved.marcas.length) || (saved.estados && saved.estados.length);
         if (activo) filtrarPlacasAvanzado();
         var btn = document.getElementById('btn-limpiar-filtros-placas');
         if (btn) btn.classList.toggle('d-none', !activo);
@@ -1397,6 +1404,8 @@ window.limpiarFiltrosPlacas = function() {
     if (txtEl) txtEl.value = '';
     document.querySelectorAll('#filtroCliente input, #filtroTipo input, #filtroMarca input, #filtroEstado input').forEach(function(i) { i.checked = false; });
     localStorage.removeItem('fleet_filtros_placas');
+    localStorage.removeItem('fleet_filtros_placas_' + location.hostname);
+    window._kpiFiltroActivo = null;
     var btn = document.getElementById('btn-limpiar-filtros-placas');
     if (btn) btn.classList.add('d-none');
     filtrarPlacasAvanzado();
