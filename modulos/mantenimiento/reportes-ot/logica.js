@@ -417,7 +417,7 @@ window.rotAbrirDetalle = function(idOT) {
     // Motivo
     if (det.motivo || ot.observaciones) {
         html += '<div class="rot-sec"><div class="rot-sec-hd">Motivo / Observaciones</div>';
-        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);">' + esc(det.motivo || ot.observaciones || '') + '</div>';
+        html += '<div style="padding:10px 12px;font-size:0.82rem;color:var(--text);white-space:pre-line;line-height:1.5;">' + esc(det.motivo || ot.observaciones || '') + '</div>';
         html += '</div>';
     }
 
