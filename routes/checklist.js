@@ -206,10 +206,29 @@ module.exports = function (db, broadcast, logAudit) {
             let otsCreadas = [];
             let errorCreacion = null;
 
+            const anioOt = new Date().getFullYear();
+            const regexOt = `^OT-${anioOt}-[0-9]{4}$`;
+
+            let maxNumOt = 0;
+            try {
+                const [rowsMax] = await tdb.promise().query(
+                    `SELECT ticket_entrada, id_ot FROM ordenes_trabajo WHERE ticket_entrada REGEXP ? OR id_ot REGEXP ?`,
+                    [regexOt, regexOt]
+                );
+                (rowsMax || []).forEach(r => {
+                    const str = r.id_ot || r.ticket_entrada || '';
+                    const num = parseInt(str.split('-').pop(), 10);
+                    if (!isNaN(num) && num > maxNumOt) maxNumOt = num;
+                });
+            } catch(eOtSeq) {}
+
             for (let i = 0; i < ots.length; i++) {
                 const item = ots[i];
                 const placa = (item.placa || '').trim().toUpperCase();
                 if (!placa) continue;
+
+                maxNumOt++;
+                const idOt = `OT-${anioOt}-${String(maxNumOt).padStart(4, '0')}`;
 
                 // Construir descripción de fallas específica para esta OT
                 let descFallas = '';
@@ -239,26 +258,6 @@ module.exports = function (db, broadcast, logAudit) {
                         rucDni = pRows[0].ruc_dni || '';
                     }
                 } catch(ePl) {}
-
-                // Generar ID_OT en ordenes_trabajo
-                const fechaHoy = new Date();
-                const anioOt = fechaHoy.getFullYear();
-                const mesOt = String(fechaHoy.getMonth() + 1).padStart(2, '0');
-                const prefijoOt = `OT-${anioOt}${mesOt}-`;
-
-                let seqOt = 1;
-                try {
-                    const [rowsSeq] = await tdb.promise().query(
-                        'SELECT id_ot FROM ordenes_trabajo WHERE id_ot LIKE ? ORDER BY ticket_entrada DESC LIMIT 1',
-                        [`${prefijoOt}%`]
-                    );
-                    if (rowsSeq && rowsSeq.length) {
-                        const lastSeq = parseInt(rowsSeq[0].id_ot.split('-').pop(), 10);
-                        if (!isNaN(lastSeq)) seqOt = lastSeq + 1;
-                    }
-                } catch(eSeq) {}
-
-                const idOt = `${prefijoOt}${String(seqOt).padStart(4, '0')}`;
 
                 const detallesObj = {
                     cliente: clienteNombre,
