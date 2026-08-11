@@ -272,6 +272,7 @@ function abrirModalConductor(f = null) {
         if (avatarEditN) avatarEditN.style.display = 'block';
 
         document.getElementById('c_id').value = "";
+        _dniLastConsulted = '';
         camposText.forEach(id => document.getElementById(id).readOnly = false);
         camposSelect.forEach(id => document.getElementById(id).disabled = false);
         document.getElementById('c_foto_preview').style.pointerEvents = 'auto';
@@ -349,7 +350,11 @@ function guardarConductor(event, formObj) {
     .then(r => {
         if (r.data === 'Éxito') {
             bootstrap.Modal.getInstance(document.getElementById('modalConductor')).hide();
-            recargarModulo('conductores');
+            if (typeof window.init_conductores === 'function') {
+                window.init_conductores();
+            } else {
+                recargarModulo('conductores');
+            }
         } else {
             alert("Error: " + r.data);
         }
@@ -371,6 +376,9 @@ var _dniLastConsulted = '';
 
 window.consultarDniPersonalAuto = function(val) {
     var clean = (val || '').replace(/[^0-9]/g, '').trim();
+    if (clean.length < 8) {
+        _dniLastConsulted = '';
+    }
     if (clean.length === 8 && clean !== _dniLastConsulted) {
         window.consultarDniPersonal(clean);
     }
