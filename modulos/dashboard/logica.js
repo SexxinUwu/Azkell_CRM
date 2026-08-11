@@ -853,9 +853,7 @@ function cargarWidgetClima() {
             var lat = pos.coords.latitude.toFixed(4);
             var lon = pos.coords.longitude.toFixed(4);
             // Obtener nombre de ciudad con Nominatim
-            fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json', {
-                headers: { 'Accept-Language': 'es' }
-            })
+            fetch('/api/proxy/geocode?lat=' + lat + '&lon=' + lon)
             .then(function(r) { return r.ok ? r.json() : {}; })
             .then(function(geo) {
                 var addr = geo.address || {};

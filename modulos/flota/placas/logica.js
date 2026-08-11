@@ -808,11 +808,11 @@ window.abrirDetallePlaca = function(event, index) {
             (async () => {
                 let dirTxt = `${wialonData.lat.toFixed(5)}, ${wialonData.lng.toFixed(5)}`; // fallback coords
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${wialonData.lat}&lon=${wialonData.lng}`);
+                    const res = await fetch(`/api/proxy/geocode?lat=${wialonData.lat}&lon=${wialonData.lng}`);
                     const data = await res.json();
                     const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || 'Sin nombre';
                     const ciudad = data.address?.city || data.address?.town || data.address?.county || '';
-                    dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
+                    dirTxt = (calle !== 'Sin nombre' || ciudad) ? (ciudad ? `${calle}, ${ciudad}` : calle) : (data.display_name || dirTxt);
                 } catch(e) { /* usa las coordenadas de fallback */ }
 
                 if (!elGpsUbic || !document.contains(elGpsUbic)) return;
