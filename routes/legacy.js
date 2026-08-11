@@ -895,9 +895,9 @@ router.post('/:metodo', async (req, res) => {
         const _ejecutarGuardado = (idFinal) => {
             const values = [
                 idFinal,
-                isEdit ? form.editF_fecha : form.f_fecha,
-                isEdit ? form.editF_mes   : form.f_mes,
-                isEdit ? form.editF_anio  : form.f_anio,
+                (isEdit ? form.editF_fecha : form.f_fecha) || null,
+                (isEdit ? form.editF_mes   : form.f_mes)   || null,
+                (isEdit ? form.editF_anio  : form.f_anio)  || null,
                 ((isEdit ? form.editF_placa : form.f_placa) || '').toUpperCase(),
                 isEdit ? form.editF_marca   : form.f_marca,
                 isEdit ? form.editF_dueno   : form.f_dueno,
