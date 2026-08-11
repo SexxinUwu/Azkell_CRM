@@ -94,6 +94,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos')) mod = ['trabajos_ot', 'ot', 'status_rampa'];
     else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
     else if (path.startsWith('/taller/historial')) mod = ['ot'];
+    else if (path.startsWith('/checklist')) mod = ['checklist', 'ot', 'insp', 'status_rampa'];
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica')) mod = ['cfg_mant'];

@@ -231,14 +231,18 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
     if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando reportes...</td></tr>';
 
     fetch('/api/checklist')
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(data => {
-            window.dataGlobalChecklist = data || [];
+            window.dataGlobalChecklist = Array.isArray(data) ? data : [];
             window.filtrarChecklist();
         })
         .catch(err => {
             console.error('Error cargando checklist:', err);
-            if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar reportes.</td></tr>';
+            window.dataGlobalChecklist = [];
+            if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar reportes (Verifica permisos de usuario).</td></tr>';
         });
 };
 
@@ -256,7 +260,7 @@ window.filtrarChecklist = function() {
     const q = (document.getElementById('buscadorChecklist') || {}).value || '';
     const query = q.toLowerCase().trim();
 
-    let list = window.dataGlobalChecklist || [];
+    let list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
 
     if (estadoFiltroActualChecklist !== 'TODOS') {
         list = list.filter(r => (r.estado || 'Pendiente').toUpperCase() === estadoFiltroActualChecklist.toUpperCase());
@@ -280,7 +284,7 @@ window.renderizarTablaChecklist = function(datos) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (!c) return;
 
-    if (!datos || datos.length === 0) {
+    if (!Array.isArray(datos) || datos.length === 0) {
         c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron reportes de falla.</td></tr>';
         return;
     }
