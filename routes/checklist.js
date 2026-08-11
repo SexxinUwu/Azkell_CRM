@@ -49,8 +49,50 @@ module.exports = function (db, broadcast, logAudit) {
             FROM reportes_fallas
             ORDER BY id DESC;
         `;
-        tdb.query(sql, (err, rows) => {
+        tdb.query(sql, async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (!rows || !rows.length) return res.json([]);
+
+            try {
+                const [otRows] = await tdb.promise().query("SELECT ticket_entrada, id_ot, estado, detalles_json FROM ordenes_trabajo");
+                
+                rows.forEach(r => {
+                    let otsArr = [];
+                    try { otsArr = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : (r.ots_generadas_json || []); } catch(e){}
+                    if (!Array.isArray(otsArr)) otsArr = [];
+
+                    const otsActivasEnBd = (otRows || []).filter(o => {
+                        let d = {};
+                        try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch(e){}
+                        const oId = String(o.ticket_entrada || o.id_ot || '').trim();
+                        const isMatchOt = otsArr.some(otItem => String(otItem.idOt || otItem.ticket_entrada || '').trim() === oId);
+                        const isMatchRep = (d.id_reporte_falla && String(d.id_reporte_falla) === String(r.id)) || 
+                                           (d.folio_reporte && String(d.folio_reporte) === String(r.folio));
+                        return isMatchOt || isMatchRep;
+                    });
+
+                    if (otsActivasEnBd.length === 0) {
+                        if (r.estado !== 'Pendiente') {
+                            r.estado = 'Pendiente';
+                            tdb.query("UPDATE reportes_fallas SET estado = 'Pendiente' WHERE id = ?", [r.id]);
+                        }
+                    } else {
+                        const todasFinalizadas = otsActivasEnBd.every(o => {
+                            const st = String(o.estado || '').toLowerCase();
+                            return st === 'finalizado' || st === 'cerrada' || st === 'anulado';
+                        });
+
+                        const nuevoEstado = todasFinalizadas ? 'Finalizado' : 'En Proceso';
+                        if (r.estado !== nuevoEstado) {
+                            r.estado = nuevoEstado;
+                            tdb.query("UPDATE reportes_fallas SET estado = ? WHERE id = ?", [nuevoEstado, r.id]);
+                        }
+                    }
+                });
+            } catch(eSync) {
+                console.warn('Sync reportes_fallas state warning:', eSync.message);
+            }
+
             res.json(rows);
         });
     });
