@@ -679,6 +679,17 @@ window.limpiarTecnicosDropdown = function(cardId) {
     window.actualizarLabelTecnicos(cardId);
 };
 
+window.renderSupervisorOptions = function(listTecs) {
+    let opts = '<option value="">-- Selecciona Supervisor --</option>';
+    (listTecs || []).forEach(t => {
+        opts += `<option value="${t}">${t}</option>`;
+    });
+    return opts;
+};
+function renderSupervisorOptions(listTecs) {
+    return window.renderSupervisorOptions(listTecs);
+}
+
 window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
     const container = document.getElementById(cardId + '_tecnicos_container');
     if (!container) return;
