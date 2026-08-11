@@ -1200,7 +1200,7 @@ window.abrirDetalleChecklist = function(idReporte) {
                 <div class="p-3 mb-3 bg-white border rounded-3 text-danger fw-bold small">${rep.fallas_libres_text}</div>
                 ` : ''}
 
-                <h6 class="fw-bold text-dark border-bottom pb-2">📷 Evidencia Fotográfica (AWS S3)</h6>
+                <h6 class="fw-bold text-dark border-bottom pb-2">📷 Evidencia Fotográfica</h6>
                 <div class="mb-3">${htmlFotos}</div>
 
                 ${rep.firma_conductor ? `
