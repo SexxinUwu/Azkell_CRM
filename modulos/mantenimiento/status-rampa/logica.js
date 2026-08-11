@@ -435,7 +435,11 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (e.obs || '').replace(/"/g,'&quot;') + '">' + (e.obs || '—') + '</div></td>';
+            var obsLimpiaTabla = (e.obs || '—')
+                .replace(/^\[Reporte\s+[^\]]+\]\s*(OT\s+OT-[^:]+:\s*)?/gim, '')
+                .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+                .trim();
+            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (obsLimpiaTabla || '').replace(/"/g,'&quot;') + '">' + _srEsc(obsLimpiaTabla || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
@@ -604,16 +608,21 @@ window.srAbrirDetalle = function(id) {
         var obsOTList = [];
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
-            var ticket = o.ticket_entrada || o.id_ot || '';
             var mot = (det.motivo || o.observaciones || '').trim();
+            // Limpiar cabeceras [Reporte F-...] o prefijos "OT OT-..."
+            mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
             if (mot) {
-                obsOTList.push('📌 OT ' + ticket + ':\n' + mot);
+                obsOTList.push(mot);
             }
         });
         if (obsOTList.length > 0) {
-            obsTextoCompleto = obsOTList.join('\n\n');
+            obsTextoCompleto = Array.from(new Set(obsOTList)).join('\n');
         }
     }
+    obsTextoCompleto = (obsTextoCompleto || '')
+        .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
+        .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+        .trim();
 
     html += '  <div class="card-body p-3">';
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';

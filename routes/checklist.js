@@ -356,7 +356,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                     // Registrar en Módulo Status Rampa (tabla taller_rampas)
                     if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
-                        const obsRampa = `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`;
+                        const obsRampa = descFallasClean || (item.subtipo_ot || 'Mecánica General');
                         let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
                         let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
 
@@ -374,15 +374,24 @@ module.exports = function (db, broadcast, logAudit) {
 
                         try {
                             const [existingRampa] = await tdb.promise().query(
-                                "SELECT id FROM taller_rampas WHERE placa = ? AND estado != 'Liberado' LIMIT 1",
+                                "SELECT id, obs FROM taller_rampas WHERE placa = ? AND estado != 'Liberado' LIMIT 1",
                                 [placa]
                             );
 
                             if (existingRampa && existingRampa.length > 0) {
                                 const rId = existingRampa[0].id;
+                                const oldObs = (existingRampa[0].obs || '').trim();
+                                let newObs = obsRampa;
+                                if (oldObs) {
+                                    if (!oldObs.includes(obsRampa)) {
+                                        newObs = oldObs + '\n' + obsRampa;
+                                    } else {
+                                        newObs = oldObs;
+                                    }
+                                }
                                 await tdb.promise().query(
                                     `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion='En atención', obs=?, creado_por=?, estado='Activo' WHERE id=?`,
-                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema', rId]
+                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, newObs, creado_por || 'Sistema', rId]
                                 );
                             } else {
                                 await tdb.promise().query(
