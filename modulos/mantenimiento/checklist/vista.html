@@ -155,7 +155,7 @@
                   <div class="col-md-6">
                     <label class="form-label fw-bold small">Placa Tracto *</label>
                     <div class="position-relative">
-                      <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-lg text-uppercase fw-bold" placeholder="Buscar placa tracto…" autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto')" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
+                      <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-lg text-uppercase fw-bold" placeholder="Buscar placa tracto…" autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto'); if(window.consultarGpsChecklist) window.consultarGpsChecklist();" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
                       <input type="hidden" id="ck_placa_tracto" name="placa_tracto" required>
                       <div id="ck_placa_tracto-dd" class="cb-dropdown"></div>
                     </div>
@@ -168,17 +168,17 @@
                       <div id="ck_placa_remolque-dd" class="cb-dropdown"></div>
                     </div>
                   </div>
-                  <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold small">KM Inicial</label>
-                    <input type="number" class="form-control" id="ck_km_inicial" name="km_inicial" placeholder="Ej: 120500">
-                  </div>
-                  <div class="col-6 col-md-3">
-                    <label class="form-label fw-bold small">KM Final</label>
-                    <input type="number" class="form-control" id="ck_km_final" name="km_final" placeholder="Ej: 120850">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small">Kilometraje (Odómetro GPS) *</label>
+                    <input type="number" class="form-control form-control-lg fw-bold text-primary" id="ck_kilometraje" name="km_inicial" placeholder="Ej: 120500">
                   </div>
                   <div class="col-md-6">
-                    <label class="form-label fw-bold small">Nombre del Conductor</label>
-                    <input type="text" class="form-control" id="ck_conductor" name="conductor" placeholder="Nombre y Apellidos">
+                    <label class="form-label fw-bold small">Nombre del Conductor (Personal) *</label>
+                    <div class="position-relative">
+                      <input type="text" id="ck_conductor-txt" class="form-control form-control-lg text-uppercase fw-bold" placeholder="Buscar conductor de lista…" autocomplete="off" oninput="window._cbFiltrar('ck_conductor')" onfocus="window._cbFiltrar('ck_conductor')" onblur="window._cbHide('ck_conductor')">
+                      <input type="hidden" id="ck_conductor" name="conductor">
+                      <div id="ck_conductor-dd" class="cb-dropdown"></div>
+                    </div>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small">Procedencia / Ruta Actual</label>
@@ -186,9 +186,9 @@
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small"><i class="bi bi-geo-alt text-danger me-1"></i>Ubicación GPS (Automática)</label>
-                    <div class="input-group input-group-sm">
-                      <input type="text" class="form-control bg-light" id="ck_ubicacion_gps" name="ubicacion_gps" placeholder="Consultando GPS Wialon..." readonly>
-                      <button class="btn btn-outline-primary" type="button" onclick="window.consultarGpsChecklist()"><i class="bi bi-crosshair"></i> GPS</button>
+                    <div class="input-group">
+                      <input type="text" class="form-control bg-light fw-bold text-dark" id="ck_ubicacion_gps" name="ubicacion_gps" placeholder="Selecciona placa para consultar Wialon..." readonly>
+                      <button class="btn btn-outline-primary" type="button" onclick="window.consultarGpsChecklist()"><i class="bi bi-arrow-repeat"></i> Actualizar GPS</button>
                     </div>
                   </div>
                 </div>
