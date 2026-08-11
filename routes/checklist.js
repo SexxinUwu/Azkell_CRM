@@ -280,7 +280,8 @@ module.exports = function (db, broadcast, logAudit) {
                     tecnicos: Array.isArray(item.tecnicos) ? item.tecnicos : [tecnicosStr],
                     tecnicos_str: tecnicosStr,
                     rampa: id_rampa || rep.id_rampa || 'En Espera',
-                    situacion_inicial: id_rampa || rep.id_rampa || 'En Espera',
+                    situacion_inicial: 'En Atención',
+                    situacion: 'En Atención',
                     id_rampa: id_rampa || rep.id_rampa || 'En Espera',
                     sistema: item.subtipo_ot || 'Mecánica',
                     sistema_afectado: item.subtipo_ot || 'Mecánica',
@@ -308,8 +309,40 @@ module.exports = function (db, broadcast, logAudit) {
 
                     otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, supervisor: supervisorStr, tecnicos: tecnicosStr, id: resOt.insertId });
 
-                    // Registrar en Status Rampa / status_flota
+                    // Registrar en Módulo Status Rampa (tabla taller_rampas)
                     if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
+                        let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
+                        let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
+
+                        let fSalDate = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[0] : null;
+                        let fSalTime = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[1].substring(0, 5) : null;
+
+                        const obsRampa = `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`;
+
+                        try {
+                            const [existingRampa] = await tdb.promise().query(
+                                "SELECT id FROM taller_rampas WHERE (rampa = ? OR placa = ?) AND estado != 'Liberado' LIMIT 1",
+                                [id_rampa, placa]
+                            );
+
+                            if (existingRampa && existingRampa.length > 0) {
+                                const rId = existingRampa[0].id;
+                                await tdb.promise().query(
+                                    `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion='En atención', obs=?, creado_por=?, estado='Activo' WHERE id=?`,
+                                    [id_rampa, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema', rId]
+                                );
+                            } else {
+                                await tdb.promise().query(
+                                    `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, estado)
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, 'En atención', ?, ?, 'Activo')`,
+                                    [id_rampa, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema']
+                                );
+                            }
+                        } catch(eRampa) {
+                            console.warn('Warning taller_rampas auto-sync:', eRampa.message);
+                        }
+
+                        // También sincronizar status_flota
                         const sqlRampa = `
                             INSERT INTO status_flota
                             (idRegistro, fecha, corte, unidad_motora, unidad_no_motora, cliente_motora, cliente_nomotora, zona, conductor, estado, observaciones, kilometraje, usuario)
@@ -319,7 +352,7 @@ module.exports = function (db, broadcast, logAudit) {
                             cliente_motora=VALUES(cliente_motora), cliente_nomotora=VALUES(cliente_nomotora), conductor=VALUES(conductor),
                             estado='En Reparación', observaciones=VALUES(observaciones), kilometraje=VALUES(kilometraje), usuario=VALUES(usuario);
                         `;
-                        const fechaStatus = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
+                        const fechaStatus = fIngDate;
                         const motoraVal = item.unidad === 'Tracto' ? placa : (rep.placa_tracto || '');
                         const nomotoraVal = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? placa : (rep.placa_remolque || '');
 
@@ -332,7 +365,7 @@ module.exports = function (db, broadcast, logAudit) {
                             clienteNombre,
                             clienteNombre,
                             rep.conductor || '',
-                            `[Reporte ${rep.folio}] OT ${idOt}: ${item.subtipo_ot || ''}`,
+                            obsRampa,
                             kmVal,
                             creado_por || 'Sistema',
                             fechaStatus

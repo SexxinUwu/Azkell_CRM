@@ -280,7 +280,7 @@ window.rotRenderTabla = function(lista) {
         html += '<td style="font-size:0.85rem;color:var(--text);">' + rotEscHtml(det.km ? Number(det.km).toLocaleString('es-PE') + ' km' : '?') + '</td>';
         html += '<td>' + rotBadgeTipo(det.tipo_ot || ot.tipo || '') + (det.sub_tipo ? '<span style="color:var(--subtext);font-size:0.78rem;margin-left:5px;">' + rotEscHtml(det.sub_tipo) + '</span>' : '') + '</td>';
         html += '<td style="font-size:0.8rem;">' + rotEscHtml(det.supervisor || ot.supervisor || '?') + '</td>';
-        html += '<td>' + rotBadgeSituacion(det.situacion_inicial || det.rampa || ot.id_rampa || ot.situacion) + '</td>';
+        html += '<td>' + rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención') + '</td>';
         html += '<td style="font-size:0.78rem;color:var(--subtext);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + rotEscHtml(det.motivo || ot.observaciones || '') + '">' + (obs || '?') + '</td>';
         html += '<td style="font-weight:700;color:#16a34a;">' + rotFmtMoney(ot.costo_total) + '</td>';
         html += '<td style="font-size:0.78rem;color:var(--subtext);white-space:nowrap;">' + rotFmtFecha(ot.fecha_ingreso || ot.creado_en) + '</td>';
@@ -362,7 +362,7 @@ window.rotAbrirDetalle = function(idOT) {
     html += fld('Supervisor', esc(det.supervisor || ot.supervisor|| '—'));
     var tecsStr = det.tecnicos ? (Array.isArray(det.tecnicos) ? det.tecnicos.join(', ') : det.tecnicos) : (det.tecnicos_str || det.tecnico_lider || '—');
     html += fld('Técnicos Asignados', esc(tecsStr));
-    html += fld('Status Rampa',  esc(det.situacion_inicial || det.rampa || ot.situacion || '—'));
+    html += fld('Status Rampa',  rotBadgeSituacion(det.situacion || det.situacion_inicial || 'En Atención'));
     html += fld('Costo Total','<span id="rot-ot-costo-total" style="font-weight:800;color:#16a34a;">S/' + parseFloat(ot.costo_total||0).toFixed(2) + '</span>');
     html += '</div>';
 
