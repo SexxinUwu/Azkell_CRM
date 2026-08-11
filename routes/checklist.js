@@ -211,45 +211,25 @@ module.exports = function (db, broadcast, logAudit) {
                 const placa = (item.placa || '').trim().toUpperCase();
                 if (!placa) continue;
 
-                // Construir descripción de fallas según unidad (Tracto o Remolque)
-                let itemsFalla = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? fallasRemolque : fallasTracto;
-                let descFallas = itemsFalla.map(f => `• [${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs || 'Observado'}`).join('\n');
-                if (rep.fallas_libres_text) {
+                // Construir descripción de fallas específica para esta OT
+                let descFallas = '';
+                if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
+                    descFallas = item.fallas_seleccionadas.map(f => `• ${f}`).join('\n');
+                } else {
+                    let itemsFalla = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? fallasRemolque : fallasTracto;
+                    descFallas = itemsFalla.map(f => `• [${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs || 'Observado'}`).join('\n');
+                }
+
+                if (item.trabajo_custom) {
+                    descFallas += (descFallas ? '\n\n' : '') + `• [OBS. TÉCNICO]: ${item.trabajo_custom}`;
+                } else if (rep.fallas_libres_text && !item.fallas_seleccionadas) {
                     descFallas += `\n\n• [REPORTE LIBRE]: ${rep.fallas_libres_text}`;
                 }
 
-                // Obtener datos del cliente de esa placa
-                let clienteNombre = '';
-                let rucDni = '';
-                try {
-                    const [pRows] = await tdb.promise().query('SELECT cliente, ruc_dni FROM placas WHERE placa = ? LIMIT 1', [placa]);
-                    if (pRows && pRows.length) {
-                        clienteNombre = pRows[0].cliente || '';
-                        rucDni = pRows[0].ruc_dni || '';
-                    }
-                } catch(ePl) {}
+                const motivoCompleto = `[Desde Reporte ${rep.folio}] ${descFallas}`;
+                const tecnicosStr = Array.isArray(item.tecnicos) ? item.tecnicos.join(', ') : (item.tecnico || 'Por Asignar');
 
-                // Generar ID_OT en ordenes_trabajo
-                const fechaHoy = new Date();
-                const anioOt = fechaHoy.getFullYear();
-                const mesOt = String(fechaHoy.getMonth() + 1).padStart(2, '0');
-                const prefijoOt = `OT-${anioOt}${mesOt}-`;
-
-                let seqOt = 1;
-                try {
-                    const [rowsSeq] = await tdb.promise().query(
-                        'SELECT id_ot FROM ordenes_trabajo WHERE id_ot LIKE ? ORDER BY id DESC LIMIT 1',
-                        [`${prefijoOt}%`]
-                    );
-                    if (rowsSeq && rowsSeq.length) {
-                        const lastSeq = parseInt(rowsSeq[0].id_ot.split('-').pop(), 10);
-                        if (!isNaN(lastSeq)) seqOt = lastSeq + 1;
-                    }
-                } catch(eSeq) {}
-
-                const idOt = `${prefijoOt}${String(seqOt).padStart(4, '0')}`;
-
-                // Insertar OT en ordenes_trabajo
+                // Insertar OT en ordenes_trabajo con relación Padre-Hijo
                 const sqlOt = `
                     INSERT INTO ordenes_trabajo (
                         id_ot, fecha, fecha_ingreso, placa, cliente, ruc_dni, km_tablero,
@@ -265,16 +245,16 @@ module.exports = function (db, broadcast, logAudit) {
                         clienteNombre,
                         rucDni,
                         item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0,
-                        `[Desde Reporte ${rep.folio}] ${descFallas}`,
+                        motivoCompleto,
                         item.tipo_ot || 'Correctivo',
                         item.subtipo_ot || 'Mecánica General',
-                        item.tecnico || 'Por Asignar',
+                        tecnicosStr,
                         id_rampa || rep.id_rampa || 'En Espera',
                         creado_por || 'Sistema',
                         item.subtipo_ot || 'Mecánica'
                     ]);
 
-                    otsCreadas.push({ idOt, placa, unidad: item.unidad, id: resOt.insertId });
+                    otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, tecnicos: tecnicosStr, id: resOt.insertId });
 
                     // Registrar en Status Rampa / status_flota
                     if (id_rampa && id_rampa !== 'En Ruta') {

@@ -305,20 +305,24 @@ window.renderizarTablaChecklist = function(datos) {
 
         html += `
         <tr>
-            <td class="ps-3 fw-bold text-primary">${r.folio}</td>
-            <td><small class="text-muted">${fechaFmt}</small></td>
-            <td><span class="badge bg-light text-dark border fw-bold fs-6">${r.placa_tracto || '—'}</span></td>
-            <td><span class="badge bg-light text-dark border fw-bold fs-6">${r.placa_remolque || '—'}</span></td>
-            <td>
-                <div class="fw-bold text-dark">${r.conductor || 'Sin Conductor'}</div>
-                <div class="text-muted small">${r.procedencia || 'En Ruta'}</div>
+            <td class="ps-3 fw-bold text-primary" style="min-width: 110px;">${r.folio}</td>
+            <td style="min-width: 140px;"><small class="text-muted fw-semibold">${fechaFmt}</small></td>
+            <td style="min-width: 110px;">
+                ${r.placa_tracto ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 85px; font-size: 0.82rem; border-radius: 6px; letter-spacing: 0.5px;">${r.placa_tracto}</span>` : '<span class="text-muted small">—</span>'}
             </td>
-            <td class="text-center">${badgeEstado}</td>
-            <td class="text-center">${otsHtml}</td>
-            <td class="pe-3 text-end">
-                <div class="btn-group btn-group-sm">
+            <td style="min-width: 110px;">
+                ${r.placa_remolque ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 85px; font-size: 0.82rem; border-radius: 6px; letter-spacing: 0.5px;">${r.placa_remolque}</span>` : '<span class="text-muted small">—</span>'}
+            </td>
+            <td>
+                <div class="fw-bold text-dark" style="font-size: 0.85rem;">${r.conductor || 'Sin Conductor'}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;"><i class="bi bi-geo-alt me-1"></i>${r.procedencia || 'En Ruta'}</div>
+            </td>
+            <td class="text-center" style="min-width: 110px;">${badgeEstado}</td>
+            <td class="text-center" style="min-width: 140px;">${otsHtml}</td>
+            <td class="pe-3 text-end" style="min-width: 180px;">
+                <div class="btn-group btn-group-sm shadow-2xs">
                     <button class="btn btn-outline-primary fw-bold" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Reporte F-MAN-001">
-                        <i class="bi bi-eye"></i> Detalle
+                        <i class="bi bi-eye-fill"></i> Detalle
                     </button>
                     ${r.estado !== 'Finalizado' ? `
                     <button class="btn btn-warning fw-bold text-dark" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs e Integrar Taller">
@@ -603,98 +607,191 @@ window.abrirModalGenerarOTs = function(idReporte) {
         .then(r => r.json())
         .then(rep => {
             document.getElementById('gen_reporte_id').value = rep.id;
+// ── MAPA DE SUBTIPOS POR TIPO DE OT ──────────────────────────────
+const CK_OT_SUBTIPOS = {
+    'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
+    'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
+    'Predictivo': ['Por condición','Prueba'],
+    'Proactivo':  ['Mejora'],
+    'Servicio':   ['Stock','Taller']
+};
+
+window.ckCambiarTipoOT = function(selectEl) {
+    const tipo = selectEl.value;
+    const card = selectEl.closest('.card-body');
+    if (!card) return;
+    const subSel = card.querySelector('.ot-subtipo');
+    if (!subSel) return;
+
+    const opts = CK_OT_SUBTIPOS[tipo] || [];
+    subSel.innerHTML = '<option value="">-- Seleccionar Subtipo --</option>' + opts.map(s => `<option value="${s}">${s}</option>`).join('');
+    subSel.disabled = !opts.length;
+    if (opts.length > 0) subSel.value = opts[0];
+};
+
+window.filtrarTecnicosDropdown = function(inputEl) {
+    const q = inputEl.value.toLowerCase().trim();
+    const items = inputEl.closest('.dropdown-menu').querySelectorAll('.list-tecnicos-items .form-check');
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(q) ? 'block' : 'none';
+    });
+};
+
+window.actualizarLabelTecnicos = function(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    const chks = card.querySelectorAll('.chk-tecnico:checked');
+    const label = card.querySelector('.sel-tec-label');
+    const cnt = card.querySelector('.cnt-tec-sel');
+
+    const selected = Array.from(chks).map(c => c.value);
+    if (label) {
+        label.textContent = selected.length > 0 ? selected.join(', ') : 'Selecciona técnico(s)...';
+    }
+    if (cnt) {
+        cnt.textContent = `${selected.length} seleccionados`;
+    }
+};
+
+window.limpiarTecnicosDropdown = function(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    card.querySelectorAll('.chk-tecnico').forEach(c => c.checked = false);
+    window.actualizarLabelTecnicos(cardId);
+};
+
+// ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
+window.abrirModalGenerarOTs = function(idReporte) {
+    fetch('/api/checklist/' + idReporte)
+        .then(r => r.json())
+        .then(rep => {
+            document.getElementById('gen_reporte_id').value = rep.id;
             const wrap = document.getElementById('contenedorTarjetasOTsGen');
             if (!wrap) return;
 
             let fallasTracto = rep.fallas_tracto_json || [];
             let fallasRemolque = rep.fallas_remolque_json || [];
 
-            let html = '';
+            // Obtener lista de personal / técnicos
+            fetch('/api/conductores')
+                .then(r => r.ok ? r.json() : [])
+                .then(conductoresData => {
+                    const listTecs = [];
+                    const listRaw = Array.isArray(conductoresData) ? conductoresData : (conductoresData.data || []);
+                    listRaw.forEach(c => {
+                        let name = typeof c === 'string' ? c : (c.nombres_apellidos || c.nombre || c.conductor || '');
+                        name = String(name).trim();
+                        if (name && !listTecs.includes(name)) listTecs.push(name);
+                    });
+                    listTecs.sort();
 
-            // Tarjeta OT Tracto
-            if (rep.placa_tracto) {
-                const countT = fallasTracto.length;
-                html += `
-                <div class="card border mb-3 shadow-sm rounded-3">
-                    <div class="card-header bg-primary bg-opacity-10 fw-bold text-primary d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-truck me-1"></i> OT 1: Tracto (${rep.placa_tracto})</span>
-                        <span class="badge bg-primary rounded-pill">${countT} fallas reportadas</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <input type="hidden" class="ot-unidad" value="Tracto">
-                        <input type="hidden" class="ot-placa" value="${rep.placa_tracto}">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Tipo de OT *</label>
-                                <select class="form-select form-select-sm ot-tipo" required>
-                                    <option value="Correctivo" selected>Correctivo</option>
-                                    <option value="Preventivo">Preventivo</option>
-                                    <option value="Auxilio Mecanico">Auxilio Mecánico</option>
-                                </select>
+                    let html = '';
+                    let cardCounter = 0;
+
+                    const renderOtCard = (unidad, placa, fallas, esSegunda = false) => {
+                        cardCounter++;
+                        const cardId = `ot_card_${cardCounter}`;
+
+                        let fallasHtml = '';
+                        if (fallas.length > 0) {
+                            fallasHtml = fallas.map((f, idx) => `
+                                <div class="form-check py-1">
+                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs}" id="${cardId}_falla_${idx}" checked>
+                                    <label class="form-check-label small text-dark fw-semibold" for="${cardId}_falla_${idx}">
+                                        <strong>[${f.sistema || 'SISTEMA'}]</strong> ${f.item}: <span class="text-danger">${f.obs}</span>
+                                    </label>
+                                </div>
+                            `).join('');
+                        } else if (rep.fallas_libres_text) {
+                            fallasHtml = `
+                                <div class="form-check py-1">
+                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[REPORTE LIBRE] ${rep.fallas_libres_text}" id="${cardId}_falla_libre" checked>
+                                    <label class="form-check-label small text-danger fw-bold" for="${cardId}_falla_libre">
+                                        [REPORTE LIBRE]: ${rep.fallas_libres_text}
+                                    </label>
+                                </div>
+                            `;
+                        } else {
+                            fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
+                        }
+
+                        const badgeBg = unidad === 'Tracto' ? 'bg-primary' : 'bg-success';
+                        const titleIcon = unidad === 'Tracto' ? 'bi-truck' : 'bi-truck-flatbed';
+
+                        return `
+                        <div class="card border mb-3 shadow-sm rounded-3 card-ot-gen" id="${cardId}">
+                            <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
+                                <span><i class="bi ${titleIcon} me-1"></i> OT para ${unidad} (${placa})</span>
+                                <span class="badge ${badgeBg} rounded-pill">${fallas.length} trabajos reportados</span>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Subtipo de OT *</label>
-                                <select class="form-select form-select-sm ot-subtipo" required>
-                                    <option value="Mecánica General" selected>Mecánica General</option>
-                                    <option value="Motor">Motor</option>
-                                    <option value="Electricidad">Electricidad</option>
-                                    <option value="Frenos / Suspensión">Frenos / Suspensión</option>
-                                    <option value="Neumáticos">Neumáticos</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Técnico Líder</label>
-                                <input type="text" class="form-control form-control-sm ot-tecnico" placeholder="Ej: Juan Pérez">
+                            <div class="card-body p-3">
+                                <input type="hidden" class="ot-unidad" value="${unidad}">
+                                <input type="hidden" class="ot-placa" value="${placa}">
+                                
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small">Tipo de OT *</label>
+                                        <select class="form-select form-select-sm ot-tipo" onchange="window.ckCambiarTipoOT(this)" required>
+                                            <option value="Correctivo" selected>Correctivo</option>
+                                            <option value="Preventivo">Preventivo</option>
+                                            <option value="Predictivo">Predictivo</option>
+                                            <option value="Proactivo">Proactivo</option>
+                                            <option value="Servicio">Servicio</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small">Subtipo de OT *</label>
+                                        <select class="form-select form-select-sm ot-subtipo" required>
+                                            <option value="Falla" selected>Falla</option>
+                                            <option value="Varado">Varado</option>
+                                            <option value="Programado">Programado</option>
+                                            <option value="Garantía">Garantía</option>
+                                            <option value="Accidentabilidad">Accidentabilidad</option>
+                                            <option value="Mala Operación">Mala Operación</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold small">Personal / Técnico(s) Asignados *</label>
+                                        <div id="${cardId}_tecnicos_container"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Selección de Fallas para esta OT -->
+                                <div class="p-2 border rounded-3 bg-light mb-2">
+                                    <label class="form-label fw-bold small text-dark d-block mb-1">
+                                        <i class="bi bi-check2-square text-primary me-1"></i> Selecciona los trabajos / fallas a incluir en esta OT:
+                                    </label>
+                                    <div class="list-fallas-ot-container bg-white p-2 rounded border" style="max-height: 140px; overflow-y: auto;">
+                                        ${fallasHtml}
+                                    </div>
+                                    <div class="mt-2">
+                                        <input type="text" class="form-control form-control-sm ot-trabajo-custom" placeholder="✍️ Agregar otra falla o nota adicional manual para esta OT...">
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                `;
-            }
+                        `;
+                    };
 
-            // Tarjeta OT Remolque
-            if (rep.placa_remolque && (fallasRemolque.length > 0 || !rep.placa_tracto)) {
-                const countR = fallasRemolque.length;
-                html += `
-                <div class="card border mb-3 shadow-sm rounded-3">
-                    <div class="card-header bg-success bg-opacity-10 fw-bold text-success d-flex justify-content-between align-items-center py-2">
-                        <span><i class="bi bi-truck-flatbed me-1"></i> OT 2: Remolque (${rep.placa_remolque})</span>
-                        <span class="badge bg-success rounded-pill">${countR} fallas reportadas</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <input type="hidden" class="ot-unidad" value="Remolque">
-                        <input type="hidden" class="ot-placa" value="${rep.placa_remolque}">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Tipo de OT *</label>
-                                <select class="form-select form-select-sm ot-tipo" required>
-                                    <option value="Correctivo" selected>Correctivo</option>
-                                    <option value="Preventivo">Preventivo</option>
-                                    <option value="Auxilio Mecanico">Auxilio Mecánico</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Subtipo de OT *</label>
-                                <select class="form-select form-select-sm ot-subtipo" required>
-                                    <option value="Mecánica General" selected>Mecánica General</option>
-                                    <option value="Frenos / Suspensión">Frenos / Suspensión</option>
-                                    <option value="Electricidad">Electricidad</option>
-                                    <option value="Chasis / Carrocería">Chasis / Carrocería</option>
-                                    <option value="Neumáticos">Neumáticos</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small">Técnico Líder</label>
-                                <input type="text" class="form-control form-control-sm ot-tecnico" placeholder="Ej: Carlos Silva">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                `;
-            }
+                    if (rep.placa_tracto) {
+                        html += renderOtCard('Tracto', rep.placa_tracto, fallasTracto);
+                    }
 
-            wrap.innerHTML = html;
-            new bootstrap.Modal(document.getElementById('modalGenerarOTsFromChecklist')).show();
+                    if (rep.placa_remolque && (fallasRemolque.length > 0 || !rep.placa_tracto)) {
+                        html += renderOtCard('Remolque', rep.placa_remolque, fallasRemolque);
+                    }
+
+                    wrap.innerHTML = html;
+
+                    // Renderizar los dropdowns de multi-técnicos
+                    for (let i = 1; i <= cardCounter; i++) {
+                        window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecnicos);
+                    }
+
+                    new bootstrap.Modal(document.getElementById('modalGenerarOTsFromChecklist')).show();
+                });
         })
         .catch(err => alert('Error obteniendo reporte: ' + err.message));
 };
@@ -705,14 +802,34 @@ window.enviarGeneracionOTs = function(event) {
     const rampa = document.getElementById('gen_id_rampa').value;
 
     const ots = [];
-    document.querySelectorAll('#contenedorTarjetasOTsGen .card').forEach(card => {
+    document.querySelectorAll('#contenedorTarjetasOTsGen .card-ot-gen').forEach(card => {
         const unidad = card.querySelector('.ot-unidad').value;
         const placa = card.querySelector('.ot-placa').value;
         const tipo_ot = card.querySelector('.ot-tipo').value;
         const subtipo_ot = card.querySelector('.ot-subtipo').value;
-        const tecnico = card.querySelector('.ot-tecnico').value;
+        const trabajo_custom = (card.querySelector('.ot-trabajo-custom') || {}).value || '';
 
-        ots.push({ unidad, placa, tipo_ot, subtipo_ot, tecnico });
+        // Recolectar fallas seleccionadas
+        const fallasSeleccionadas = [];
+        card.querySelectorAll('.chk-falla-ot:checked').forEach(chk => {
+            fallasSeleccionadas.push(chk.value);
+        });
+
+        // Recolectar técnicos seleccionados
+        const tecnicos = [];
+        card.querySelectorAll('.chk-tecnico:checked').forEach(chk => {
+            tecnicos.push(chk.value);
+        });
+
+        ots.push({
+            unidad,
+            placa,
+            tipo_ot,
+            subtipo_ot,
+            tecnicos,
+            fallas_seleccionadas: fallasSeleccionadas,
+            trabajo_custom
+        });
     });
 
     if (ots.length === 0) { alert('No hay OTs para generar.'); return; }
@@ -734,6 +851,21 @@ window.enviarGeneracionOTs = function(event) {
     .then(res => {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
+
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalGenerarOTsFromChecklist')).hide();
+            window.cargarTablaChecklist(true);
+            alert(`🚀 Se generaron exitosamente ${res.total} Órdenes de Trabajo (OT) e integró con Status Rampa.`);
+        } else {
+            alert('❌ Error al generar OTs: ' + (res.error || 'Desconocido'));
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
+        alert('❌ Error de conexión: ' + err.message);
+    });
+};
 
         if (res.ok) {
             bootstrap.Modal.getInstance(document.getElementById('modalGenerarOTsFromChecklist')).hide();
