@@ -6,7 +6,7 @@ module.exports = function (db, logAudit) {
     // ── Función helper para obtener la conexión correcta (multi-tenant) ──
     function getDb(req) { return req.db || db; }
 
-    // ── Middleware: asegurar tabla clientes existe en el tenant actual ────
+    // ── Middleware: asegurar tabla clientes existe y uniformizar collation ──
     router.use((req, res, next) => {
         const tdb = getDb(req);
         const createTableQuery = `
@@ -21,10 +21,13 @@ module.exports = function (db, logAudit) {
             notas TEXT,
             fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_razon (razon_social)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `;
         tdb.query(createTableQuery, (err) => {
             if (err) console.warn('Error inicializando tabla clientes:', err.message);
+            // Intentar normalizar collation para evitar "Illegal mix of collations"
+            tdb.query("ALTER TABLE clientes CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
+            tdb.query("ALTER TABLE placas CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
             next();
         });
     });
@@ -45,7 +48,7 @@ module.exports = function (db, logAudit) {
             c.fecha_creacion,
             COUNT(DISTINCT p.placa) AS total_flota
         FROM clientes c
-        LEFT JOIN placas p ON TRIM(LOWER(p.cliente)) = TRIM(LOWER(c.razon_social))
+        LEFT JOIN placas p ON TRIM(LOWER(p.cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(c.razon_social)) COLLATE utf8mb4_general_ci
         GROUP BY c.id, c.ruc_dni, c.razon_social, c.direccion, c.telefono, c.email, c.estado, c.notas, c.fecha_creacion
         ORDER BY c.razon_social ASC;
         `;
@@ -73,7 +76,7 @@ module.exports = function (db, logAudit) {
         tdb.query('SELECT razon_social FROM clientes WHERE id = ?', [id], (err, rows) => {
             if (err || !rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
             const razonSocial = rows[0].razon_social;
-            const sql = `SELECT * FROM placas WHERE TRIM(LOWER(cliente)) = TRIM(LOWER(?)) ORDER BY placa ASC`;
+            const sql = `SELECT * FROM placas WHERE TRIM(LOWER(cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(?)) COLLATE utf8mb4_general_ci ORDER BY placa ASC`;
             tdb.query(sql, [razonSocial], (errP, placas) => {
                 if (errP) return res.status(500).json({ error: errP.message });
                 res.json(placas);
@@ -92,7 +95,7 @@ module.exports = function (db, logAudit) {
             SELECT ot.* 
             FROM ordenes_trabajo ot
             JOIN placas p ON UPPER(p.placa) = UPPER(ot.placa)
-            WHERE TRIM(LOWER(p.cliente)) = TRIM(LOWER(?))
+            WHERE TRIM(LOWER(p.cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(?)) COLLATE utf8mb4_general_ci
             ORDER BY ot.id_ot DESC
             LIMIT 100;
             `;
@@ -114,7 +117,7 @@ module.exports = function (db, logAudit) {
             SELECT b.* 
             FROM ot_backlog b
             JOIN placas p ON UPPER(p.placa) = UPPER(b.placa)
-            WHERE TRIM(LOWER(p.cliente)) = TRIM(LOWER(?))
+            WHERE TRIM(LOWER(p.cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(?)) COLLATE utf8mb4_general_ci
             ORDER BY b.id DESC;
             `;
             tdb.query(sql, [razonSocial], (errB, backlogs) => {
@@ -163,7 +166,7 @@ module.exports = function (db, logAudit) {
         const sql = `
         UPDATE placas p
         JOIN clientes c ON (p.ruc_dni IS NOT NULL AND p.ruc_dni != '' AND p.ruc_dni = c.ruc_dni)
-                        OR (TRIM(LOWER(p.cliente)) = TRIM(LOWER(c.razon_social)))
+                        OR (TRIM(LOWER(p.cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(c.razon_social)) COLLATE utf8mb4_general_ci)
         SET p.cliente = c.razon_social, p.ruc_dni = c.ruc_dni;
         `;
         tdb.query(sql, (err, result) => {
@@ -204,8 +207,8 @@ module.exports = function (db, logAudit) {
                 SET cliente = ?, ruc_dni = ?
                 WHERE (ruc_dni IS NOT NULL AND ruc_dni != '' AND ruc_dni = ?)
                    OR (ruc_dni IS NOT NULL AND ruc_dni != '' AND ruc_dni = ?)
-                   OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)))
-                   OR (TRIM(LOWER(cliente)) = TRIM(LOWER(?)));
+                   OR (TRIM(LOWER(cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(?)) COLLATE utf8mb4_general_ci)
+                   OR (TRIM(LOWER(cliente)) COLLATE utf8mb4_general_ci = TRIM(LOWER(?)) COLLATE utf8mb4_general_ci);
                 `;
                 tdb.query(sqlCascadePlacas, [newRazon, newRuc, newRuc, oldRuc, newRazon, oldRazon], (errPlacas, resPlacas) => {
                     if (errPlacas) console.warn('Error en cascada de placas:', errPlacas.message);
