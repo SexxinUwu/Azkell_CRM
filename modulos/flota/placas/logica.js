@@ -40,6 +40,7 @@ window.poblarSelectsFormularios = function(datos) {
     }
 
     const marcas   = unicos(3);
+    const modelos  = unicos(4);
     const tipos    = unicos(5);
     const subTipos = unicos(6);
     const colores  = unicos(7);
@@ -47,6 +48,7 @@ window.poblarSelectsFormularios = function(datos) {
 
     poblarClientes('p_cliente');
     poblar('p_marca',    marcas);
+    poblar('p_modelo',   modelos);
     poblar('p_tipo',     tipos);
     poblar('p_sub_tipo', subTipos);
     poblar('p_color',    colores);
@@ -54,10 +56,34 @@ window.poblarSelectsFormularios = function(datos) {
 
     poblarClientes('e_cliente');
     poblar('e_marca',    marcas);
+    poblar('e_modelo',   modelos);
     poblar('e_tipo',     tipos);
     poblar('e_sub_tipo', subTipos);
     poblar('e_color',    colores);
     poblar('e_conf',     confs);
+
+    // Dynamic filtering of Modelos based on selected Marca
+    window._actualizarModelosPorMarca = function(marcaId, modeloId) {
+        const marcaTxtEl = document.getElementById(marcaId + '-txt');
+        const selectedMarca = ((marcaTxtEl || {}).value || '').toString().trim().toUpperCase();
+
+        let listModelos;
+        if (!selectedMarca) {
+            listModelos = unicos(4);
+        } else {
+            const seen = new Map();
+            filas.forEach(f => {
+                const mVal = (f[3] || '').toString().trim().toUpperCase();
+                if (mVal === selectedMarca) {
+                    const mod = (f[4] || '').toString().trim();
+                    if (mod) { const key = mod.toUpperCase(); if (!seen.has(key)) seen.set(key, mod); }
+                }
+            });
+            listModelos = [...seen.values()].sort((a, b) => a.localeCompare(b, 'es'));
+            if (listModelos.length === 0) listModelos = unicos(4);
+        }
+        poblar(modeloId, listModelos);
+    };
 
     // Poblar dropdowns de Wialon
     function poblarWialon(id) {
@@ -1007,7 +1033,7 @@ window.abrirModalEditarPlaca = function(index) {
     ];
 
     var _editTc = function(s) { return s ? String(s).trim().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }) : s; };
-    var _editTcIds = ['e_marca','e_tipo','e_sub_tipo','e_color','e_conf'];
+    var _editTcIds = ['e_marca','e_modelo','e_tipo','e_sub_tipo','e_color','e_conf'];
 
     ids.forEach((id, i) => {
         const valorLimpio = p[i] ? p[i].toString().trim() : '';
@@ -1421,10 +1447,16 @@ window.init_placas = function() {
         return;
     }
     window._placasActiveTab = 'lista';
-    // Registrar callbacks de autocompletado RUC al seleccionar cliente
+    // Registrar callbacks de autocompletado RUC y filtrado Marca->Modelo
     if (typeof window._cbOnSelect === 'function') {
         window._cbOnSelect('p_cliente', function(val) { window.autocompletarRucSelect(val, 'p_ruc'); });
         window._cbOnSelect('e_cliente', function(val) { window.autocompletarRucSelect(val, 'e_ruc'); });
+        window._cbOnSelect('p_marca', function(val) {
+            if (typeof window._actualizarModelosPorMarca === 'function') window._actualizarModelosPorMarca('p_marca', 'p_modelo');
+        });
+        window._cbOnSelect('e_marca', function(val) {
+            if (typeof window._actualizarModelosPorMarca === 'function') window._actualizarModelosPorMarca('e_marca', 'e_modelo');
+        });
     }
 
     // Restaurar preferencia de columnas guardada
