@@ -12,7 +12,7 @@ var ctxFirmaChecklist = null;
 var estaFirmandoChecklist = false;
 
 // ── DEFINICIÓN DE ÍTEMS F-MAN-001 POR SISTEMA ───────────────────
-const SISTEMAS_TRACTO = {
+var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO || {
     motor: [
         '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
         '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
@@ -36,7 +36,7 @@ const SISTEMAS_TRACTO = {
     ]
 };
 
-const SISTEMAS_REMOLQUE = {
+var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE || {
     frenos: [
         '40 Revisar Zapatos', '41 Pulpo de Freno', '42 Tanque de Aire, líneas', '43 Fugas de aire',
         '44 Secador de aire', '45 Rachet de Freno'
@@ -602,13 +602,8 @@ window.guardarChecklist = function(event) {
 };
 
 // ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
-window.abrirModalGenerarOTs = function(idReporte) {
-    fetch('/api/checklist/' + idReporte)
-        .then(r => r.json())
-        .then(rep => {
-            document.getElementById('gen_reporte_id').value = rep.id;
 // ── MAPA DE SUBTIPOS POR TIPO DE OT ──────────────────────────────
-const CK_OT_SUBTIPOS = {
+var CK_OT_SUBTIPOS = window.CK_OT_SUBTIPOS || {
     'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
     'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
     'Predictivo': ['Por condición','Prueba'],
@@ -851,21 +846,6 @@ window.enviarGeneracionOTs = function(event) {
     .then(res => {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
-
-        if (res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('modalGenerarOTsFromChecklist')).hide();
-            window.cargarTablaChecklist(true);
-            alert(`🚀 Se generaron exitosamente ${res.total} Órdenes de Trabajo (OT) e integró con Status Rampa.`);
-        } else {
-            alert('❌ Error al generar OTs: ' + (res.error || 'Desconocido'));
-        }
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
-        alert('❌ Error de conexión: ' + err.message);
-    });
-};
 
         if (res.ok) {
             bootstrap.Modal.getInstance(document.getElementById('modalGenerarOTsFromChecklist')).hide();
