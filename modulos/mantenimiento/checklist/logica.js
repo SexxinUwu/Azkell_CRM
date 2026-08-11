@@ -662,19 +662,21 @@ window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
     if (!container) return;
 
     let html = `
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white shadow-2xs" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-            <span class="text-truncate sel-tec-label">Selecciona técnico(s)...</span>
+    <div class="dropdown position-relative">
+        <button class="btn btn-outline-secondary btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white shadow-2xs py-2 px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+            <span class="text-truncate sel-tec-label fw-semibold text-dark">Selecciona técnico(s)...</span>
             <i class="bi bi-chevron-down ms-1"></i>
         </button>
-        <div class="dropdown-menu p-2 shadow-lg w-100" style="max-height: 230px; overflow-y: auto;">
-            <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
-            <div class="list-tecnicos-items">
+        <div class="dropdown-menu p-2 shadow-lg w-100 border" style="z-index: 1080; border-radius: 12px; margin-top: 4px;">
+            <div class="p-1 mb-1">
+                <input type="text" class="form-control form-control-sm" placeholder="🔍 Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
+            </div>
+            <div class="list-tecnicos-items custom-scrollbar" style="max-height: 160px; overflow-y: auto;">
     `;
 
     (listTecnicos || []).forEach((tName, i) => {
         html += `
-        <div class="form-check py-1 px-2 rounded" style="font-size:0.82rem;">
+        <div class="form-check py-1 px-2 rounded hover-bg-light" style="font-size:0.82rem;">
             <input class="form-check-input chk-tecnico" type="checkbox" value="${tName}" id="${cardId}_tec_${i}" onchange="window.actualizarLabelTecnicos('${cardId}')">
             <label class="form-check-label w-100 cursor-pointer small text-uppercase fw-semibold" for="${cardId}_tec_${i}">${tName}</label>
         </div>
@@ -683,14 +685,126 @@ window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
 
     html += `
             </div>
-            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
-                <small class="text-muted cnt-tec-sel">0 seleccionados</small>
+            <div class="d-flex justify-content-between align-items-center border-top pt-2 px-1 mt-1 bg-white">
+                <small class="text-muted cnt-tec-sel fw-bold">0 seleccionados</small>
                 <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none fw-bold" onclick="window.limpiarTecnicosDropdown('${cardId}')">Limpiar todo</button>
             </div>
         </div>
     </div>
     `;
     container.innerHTML = html;
+};
+
+window.genOtCardCounter = 0;
+window.cacheGenReporteActual = null;
+
+// ── AGREGAR OTRAS OTS ADICIONALES PARA LA MISMA UNIDAD ───────────────
+window.agregarOTCardAdicional = function(unidad, placa) {
+    if (!window.cacheGenReporteActual) return;
+    const rep = window.cacheGenReporteActual.rep;
+    const fallas = (unidad === 'Remolque' || unidad === 'Carreta') ? (rep.fallas_remolque_json || []) : (rep.fallas_tracto_json || []);
+    const listTecs = window.cacheGenReporteActual.listTecs || [];
+
+    const container = document.getElementById('contenedorTarjetasOTsGen');
+    if (!container) return;
+
+    window.genOtCardCounter++;
+    const cardId = `ot_card_${window.genOtCardCounter}`;
+
+    // Identificar fallas ya seleccionadas en tarjetas anteriores de la misma unidad
+    const fallasYaSeleccionadas = new Set();
+    document.querySelectorAll(`#contenedorTarjetasOTsGen .card-ot-gen`).forEach(card => {
+        if (card.querySelector('.ot-unidad').value === unidad) {
+            card.querySelectorAll('.chk-falla-ot:checked').forEach(c => fallasYaSeleccionadas.add(c.value));
+        }
+    });
+
+    let fallasHtml = '';
+    if (fallas.length > 0) {
+        fallasHtml = fallas.map((f, idx) => {
+            const valStr = `[${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs}`;
+            const yaUsada = fallasYaSeleccionadas.has(valStr);
+            const isChecked = !yaUsada ? 'checked' : '';
+            return `
+                <div class="form-check py-1">
+                    <input class="form-check-input chk-falla-ot" type="checkbox" value="${valStr}" id="${cardId}_falla_${idx}" ${isChecked}>
+                    <label class="form-check-label small text-dark fw-semibold" for="${cardId}_falla_${idx}">
+                        <strong>[${f.sistema || 'SISTEMA'}]</strong> ${f.item}: <span class="text-danger">${f.obs}</span>
+                        ${yaUsada ? '<span class="badge bg-secondary ms-1">Asignada en otra OT</span>' : ''}
+                    </label>
+                </div>
+            `;
+        }).join('');
+    } else {
+        fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
+    }
+
+    const badgeBg = unidad === 'Tracto' ? 'bg-primary' : 'bg-success';
+    const titleIcon = unidad === 'Tracto' ? 'bi-truck' : 'bi-truck-flatbed';
+
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'card border mb-3 shadow-sm rounded-3 card-ot-gen position-relative';
+    cardDiv.id = cardId;
+    cardDiv.innerHTML = `
+        <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
+            <span><i class="bi ${titleIcon} me-1"></i> OT Adicional para ${unidad} (${placa})</span>
+            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-bold" onclick="this.closest('.card-ot-gen').remove()"><i class="bi bi-trash me-1"></i>Eliminar OT</button>
+        </div>
+        <div class="card-body p-3 overflow-visible">
+            <input type="hidden" class="ot-unidad" value="${unidad}">
+            <input type="hidden" class="ot-placa" value="${placa}">
+            
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small">Tipo de OT *</label>
+                    <select class="form-select form-select-sm ot-tipo" onchange="window.ckCambiarTipoOT(this)" required>
+                        <option value="Preventivo" selected>Preventivo</option>
+                        <option value="Correctivo">Correctivo</option>
+                        <option value="Predictivo">Predictivo</option>
+                        <option value="Proactivo">Proactivo</option>
+                        <option value="Servicio">Servicio</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small">Subtipo de OT *</label>
+                    <select class="form-select form-select-sm ot-subtipo" required>
+                        <option value="Inspección Pre-PM" selected>Inspección Pre-PM</option>
+                        <option value="Campaña">Campaña</option>
+                        <option value="Limpieza Integral">Limpieza Integral</option>
+                        <option value="Rutina">Rutina</option>
+                        <option value="Programado">Programado</option>
+                        <option value="Oportuno">Oportuno</option>
+                    </select>
+                </div>
+                <div class="col-12 position-relative">
+                    <label class="form-label fw-bold small">Personal / Técnico(s) Asignados *</label>
+                    <div id="${cardId}_tecnicos_container"></div>
+                </div>
+            </div>
+
+            <!-- Selección de Fallas para esta OT -->
+            <div class="p-2 border rounded-3 bg-light mb-2">
+                <label class="form-label fw-bold small text-dark d-block mb-1">
+                    <i class="bi bi-check2-square text-primary me-1"></i> Selecciona los trabajos / fallas a incluir en esta OT:
+                </label>
+                <div class="list-fallas-ot-container bg-white p-2 rounded border" style="max-height: 140px; overflow-y: auto;">
+                    ${fallasHtml}
+                </div>
+                <div class="mt-2">
+                    <input type="text" class="form-control form-control-sm ot-trabajo-custom" placeholder="✍️ Agregar otra falla o nota adicional manual para esta OT...">
+                </div>
+            </div>
+        </div>
+    `;
+
+    const buttonsWrapper = document.getElementById('botonesAgregarOTsWrap');
+    if (buttonsWrapper) {
+        container.insertBefore(cardDiv, buttonsWrapper);
+    } else {
+        container.appendChild(cardDiv);
+    }
+
+    window.renderMultiTecnicosOptions(cardId, listTecs);
 };
 
 // ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
@@ -718,12 +832,14 @@ window.abrirModalGenerarOTs = function(idReporte) {
                     });
                     listTecs.sort();
 
-                    let html = '';
-                    let cardCounter = 0;
+                    window.cacheGenReporteActual = { rep, listTecs };
+                    window.genOtCardCounter = 0;
 
-                    const renderOtCard = (unidad, placa, fallas, esSegunda = false) => {
-                        cardCounter++;
-                        const cardId = `ot_card_${cardCounter}`;
+                    let html = '';
+
+                    const renderOtCard = (unidad, placa, fallas) => {
+                        window.genOtCardCounter++;
+                        const cardId = `ot_card_${window.genOtCardCounter}`;
 
                         let fallasHtml = '';
                         if (fallas.length > 0) {
@@ -752,12 +868,12 @@ window.abrirModalGenerarOTs = function(idReporte) {
                         const titleIcon = unidad === 'Tracto' ? 'bi-truck' : 'bi-truck-flatbed';
 
                         return `
-                        <div class="card border mb-3 shadow-sm rounded-3 card-ot-gen" id="${cardId}">
+                        <div class="card border mb-3 shadow-sm rounded-3 card-ot-gen position-relative" id="${cardId}">
                             <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
                                 <span><i class="bi ${titleIcon} me-1"></i> OT para ${unidad} (${placa})</span>
                                 <span class="badge ${badgeBg} rounded-pill">${fallas.length} trabajos reportados</span>
                             </div>
-                            <div class="card-body p-3">
+                            <div class="card-body p-3 overflow-visible">
                                 <input type="hidden" class="ot-unidad" value="${unidad}">
                                 <input type="hidden" class="ot-placa" value="${placa}">
                                 
@@ -783,7 +899,7 @@ window.abrirModalGenerarOTs = function(idReporte) {
                                             <option value="Mala Operación">Mala Operación</option>
                                         </select>
                                     </div>
-                                    <div class="col-12">
+                                    <div class="col-12 position-relative">
                                         <label class="form-label fw-bold small">Personal / Técnico(s) Asignados *</label>
                                         <div id="${cardId}_tecnicos_container"></div>
                                     </div>
@@ -814,10 +930,20 @@ window.abrirModalGenerarOTs = function(idReporte) {
                         html += renderOtCard('Remolque', rep.placa_remolque, fallasRemolque);
                     }
 
+                    // Botones para agregar OTs adicionales por unidad
+                    html += `<div class="d-flex flex-wrap gap-2 mb-3" id="botonesAgregarOTsWrap">`;
+                    if (rep.placa_tracto) {
+                        html += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill" onclick="window.agregarOTCardAdicional('Tracto', '${rep.placa_tracto}')"><i class="bi bi-plus-circle-fill me-1"></i> Agregar otra OT para Tracto (${rep.placa_tracto})</button>`;
+                    }
+                    if (rep.placa_remolque) {
+                        html += `<button type="button" class="btn btn-outline-success btn-sm fw-bold rounded-pill" onclick="window.agregarOTCardAdicional('Remolque', '${rep.placa_remolque}')"><i class="bi bi-plus-circle-fill me-1"></i> Agregar otra OT para Remolque (${rep.placa_remolque})</button>`;
+                    }
+                    html += `</div>`;
+
                     wrap.innerHTML = html;
 
                     // Renderizar los dropdowns de multi-técnicos
-                    for (let i = 1; i <= cardCounter; i++) {
+                    for (let i = 1; i <= window.genOtCardCounter; i++) {
                         window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecs);
                     }
 
