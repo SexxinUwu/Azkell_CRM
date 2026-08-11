@@ -335,6 +335,7 @@ router.get('/inspecciones-por-ot', (req, res) => {
 });
 
 router.get('/ot-trabajos', (req, res) => {
+    const tdb = req.db || db;
     const { id_ot } = req.query;
     let sql = `SELECT t.*, 
                       COALESCE(NULLIF(t.placa, ''), ot.placa, JSON_UNQUOTE(JSON_EXTRACT(t.detalles_json, '$.placa')), '') as placa, 
@@ -348,7 +349,7 @@ router.get('/ot-trabajos', (req, res) => {
         params.push(id_ot, id_ot); 
     }
     sql += ' ORDER BY COALESCE(t.fecha_trabajo, t.fecha_creacion) DESC, t.id_ot DESC';
-    db.query(sql, params, (err, rows) => {
+    tdb.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });

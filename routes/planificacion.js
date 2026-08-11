@@ -964,6 +964,7 @@ router.put('/config-metrica/:placa', (req, res) => {
 // CRUD TIPOS MANTENIMIENTO
 // ============================================================
 router.get('/tipos-mantenimiento', (req, res) => {
+    const tdb = req.db || db;
     const { marca, uts } = req.query;
     let sql = `SELECT id, marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias,
                       tipo, sistema, descripcion
@@ -972,7 +973,7 @@ router.get('/tipos-mantenimiento', (req, res) => {
     if (marca) { sql += ' AND UPPER(marca)=?'; params.push(marca.toUpperCase()); }
     if (uts)   { sql += ' AND UPPER(uts)=?';   params.push(uts.toUpperCase()); }
     sql += ' ORDER BY marca, tipo_mp, uts';
-    db.query(sql, params, (err, rows) => {
+    tdb.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ data: rows });
     });
