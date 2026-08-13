@@ -30,10 +30,7 @@ window.srHistPageSize         = window.srHistPageSize         || 20;
 // srEntradas se carga desde BD — no se persiste en localStorage
 window.srEntradas             = [];
 
-var SR_COLORES = [
-    '#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6',
-    '#14b8a6','#f97316','#ec4899','#84cc16','#06b6d4','#a855f7'
-];
+var SR_COLORES = ['#ef4444'];
 
 // ── Entry point ──────────────────────────────────────────────────
 window.init_status_rampa = function() {
@@ -373,10 +370,7 @@ function srRenderTabla() {
         var entradas  = window.srEntradas.filter(function(e) { 
             var rStr = String(e.rampa || '').trim().toLowerCase();
             var nomLower = String(rampaNom || '').trim().toLowerCase();
-            return String(e.rampa) === String(rampaId) || 
-                   rStr === nomLower ||
-                   (rStr.indexOf(nomLower) !== -1) ||
-                   (nomLower.indexOf(rStr) !== -1 && rStr.length > 0);
+            return String(e.rampa) === String(rampaId) || rStr === nomLower;
         });
 
         if (!entradas.length) {

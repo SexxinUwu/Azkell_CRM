@@ -1066,6 +1066,12 @@ function generarPDFInspeccion() {
     var insp = window._lastInspDetalle;
     if (!insp) { alert('No hay datos de inspección cargados.'); return; }
 
+    var logoEl = document.getElementById('pdf_inspeccion_vista_logo');
+    if (logoEl) {
+        var empLogo = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64;
+        if (empLogo) logoEl.src = empLogo;
+    }
+
     var fIng = parseDateToDDMMYYYY(insp.fecha_ingreso);
     var detallesArr = [];
     try { detallesArr = typeof insp.detalles_json === 'string' ? JSON.parse(insp.detalles_json) : (insp.detalles_json || []); } catch(e){}
@@ -1159,7 +1165,7 @@ function generarPDFInspeccion() {
         });
 
         var inspUrlFirma = (insp.url_firma && signedMap[insp.url_firma]) ? signedMap[insp.url_firma] : (insp.url_firma || '');
-        var logoUrl = window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+        var logoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
 
         var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Inspección - ' + (insp.placa||'') + '</title>'
             + '<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">'

@@ -922,6 +922,24 @@ window.abrirModalGenerarOTs = function(idReporte) {
             const inFing = document.getElementById('gen_fecha_ingreso');
             if (inFing) inFing.value = nowIso;
 
+            // Poblar selector de rampas dinámicamente desde el catálogo de la empresa activa
+            fetch('/api/cat-rampas')
+                .then(r => r.ok ? r.json() : [])
+                .then(rampas => {
+                    const selRampa = document.getElementById('gen_id_rampa');
+                    if (selRampa) {
+                        let opts = '<option value="En Espera">-- Rampa de Espera / En Ruta --</option>';
+                        if (Array.isArray(rampas) && rampas.length) {
+                            rampas.forEach(r => {
+                                const nom = r.nombre_rampa || ('Rampa ' + r.id);
+                                opts += `<option value="${r.id}">${nom}</option>`;
+                            });
+                        }
+                        selRampa.innerHTML = opts;
+                    }
+                })
+                .catch(e => console.warn('Error cargando rampas:', e));
+
             let fallasTracto = rep.fallas_tracto_json || [];
             let fallasRemolque = rep.fallas_remolque_json || [];
 
