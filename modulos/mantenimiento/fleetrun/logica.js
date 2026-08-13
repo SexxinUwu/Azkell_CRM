@@ -188,6 +188,9 @@ function mostrarFleetrun(datos) {
               <td colspan="12" class="fw-bold text-start" style="background-color: rgba(128,128,128,0.1) !important; color: var(--text) !important;"><i class="bi bi-chevron-right ms-1 me-2 text-warning toggle-icon-${classPlaca}"></i> <span style="display:inline-block; min-width:80px;">${placaRaw}</span><i class="bi bi-info-circle-fill text-info ms-1" style="cursor:pointer;font-size:0.82rem;" title="Ver Detalle Placa" onclick="event.stopPropagation();if(typeof window.abrirDetallePlacaGlobal==='function')window.abrirDetallePlacaGlobal('${placaRaw}')"></i><span class="badge bg-secondary ms-2">${cli}</span><span class="badge bg-info text-dark ms-2">${utsDisplay}</span>${kmDiaBadge}<span class="badge bg-warning text-dark float-end">${mantenimientos.length} Registros</span></td></tr>`;
           mantenimientos.forEach((fila) => {
               let id = fila[0]; let fechaStr = fila[3]; let tipo_mp = fila[8]; let obs = fila[12] || ''; let km_cambio = parseFloat(fila[9]) || 0; let frecuencia = parseFloat(fila[10]) || 0; let km_prox = parseFloat(fila[11]) || 0; let fechaLimpia = parseDateToDDMMYYYY(fechaStr);
+              if ((!km_prox || km_prox === 0) && frecuencia > 0) {
+                  km_prox = km_cambio + frecuencia;
+              }
               // Detectar si es un registro de plan inicial (sin fecha de ejecución)
               let esPlanInicial = !fechaStr || String(fechaStr).trim() === '' || fechaStr === null;
               let fechaDataAttr = fechaLimpia; // Para data-fecha (solo texto plano)
@@ -203,15 +206,6 @@ function mostrarFleetrun(datos) {
               if (wialonData) {
                   km_gps = esHoras ? (wialonData.horas || 0) : wialonData.km;
                   isLive = true;
-              }
-
-              // Si es plan inicial (sin fecha), recalcular km_prox a partir del GPS actual + frecuencia
-              // pero mantener km_cambio en 0 (o su valor registrado) para no afectar el historial visual
-              if (esPlanInicial) {
-                  km_cambio = parseFloat(fila[9]) || 0;
-                  if (km_gps > 0 && frecuencia > 0) {
-                      km_prox = km_gps + frecuencia;
-                  }
               }
 
               let km_desde = km_gps - km_cambio;
