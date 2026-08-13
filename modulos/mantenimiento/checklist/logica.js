@@ -161,8 +161,9 @@ window.renderizarGruposChecklist = function(containerId, items, unidad, sistema)
     const wrap = document.getElementById(containerId);
     if (!wrap) return;
 
+    const listArr = Array.isArray(items) ? items : [];
     let html = '';
-    items.forEach((itemText, idx) => {
+    listArr.forEach((itemText, idx) => {
         const itemId = `${unidad}_${sistema}_${idx}`.replace(/[^a-zA-Z0-9_]/g, '_');
         html += `
         <div class="ck-item-card p-2 mb-2 rounded-3 border bg-white" id="card_${itemId}">
@@ -520,6 +521,12 @@ window.abrirModalNuevoChecklist = function() {
     const form = document.getElementById('formNuevoChecklist');
     if (form) form.reset();
 
+    // Resetear Wizard al Paso 1
+    const tab1 = document.getElementById('ck-step1-tab');
+    if (tab1 && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+        try { bootstrap.Tab.getOrCreateInstance(tab1).show(); } catch(e){}
+    }
+
     // Re-renderizar y verificar que todos los grupos de acordeón contengan sus ítems
     window.asegurarGruposChecklist(true);
 
@@ -542,7 +549,7 @@ window.abrirModalNuevoChecklist = function() {
     window.poblarConductoresChecklist();
 
     const modalEl = document.getElementById('modalNuevoChecklist');
-    if (modalEl) new bootstrap.Modal(modalEl).show();
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
 // ── GUARDAR NUEVO REPORTE ────────────────────────────────────────
@@ -614,7 +621,12 @@ window.guardarChecklist = function(event) {
 
         if (res.ok) {
             const modalEl = document.getElementById('modalNuevoChecklist');
-            if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+            if (modalEl) {
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
 
             window.cargarTablaChecklist(true);
 
@@ -1093,7 +1105,8 @@ window.abrirModalGenerarOTs = function(idReporte) {
                         window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecs);
                     }
 
-                    new bootstrap.Modal(document.getElementById('modalGenerarOTsFromChecklist')).show();
+                    const modalGenEl = document.getElementById('modalGenerarOTsFromChecklist');
+                    if (modalGenEl) bootstrap.Modal.getOrCreateInstance(modalGenEl).show();
                 });
         })
         .catch(err => alert('Error obteniendo reporte: ' + err.message));
@@ -1164,7 +1177,13 @@ window.enviarGeneracionOTs = function(event) {
         btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
 
         if (res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('modalGenerarOTsFromChecklist')).hide();
+            const modalGenEl = document.getElementById('modalGenerarOTsFromChecklist');
+            if (modalGenEl) {
+                const inst = bootstrap.Modal.getInstance(modalGenEl);
+                if (inst) inst.hide();
+            }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
             window.cargarTablaChecklist(true);
             alert(`🚀 Se generaron exitosamente ${res.total} Órdenes de Trabajo (OT) e integró con Status Rampa.`);
         } else {
