@@ -2835,6 +2835,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
                 }
             });
 
+            var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
             var html = `<!DOCTYPE html>
 <html lang="es">
 <head>
