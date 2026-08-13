@@ -1365,6 +1365,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
     container.style.left = '-9999px';
     container.style.top = '-9999px';
     
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
     container.innerHTML = `
     <div class="page-container" style="width: 210mm; min-height: 296mm; background: white; padding: 6mm 10mm; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden; font-family: 'Oswald', sans-serif; color: #000;">
         <style>
@@ -1403,7 +1404,7 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
         <table class="iso-header">
             <tr>
                 <td class="logo-cell" rowspan="3">
-                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                    <img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
                 </td>
                 <td class="title-cell" rowspan="3">
                     ORDEN DE TRABAJO<br>
@@ -3022,7 +3023,7 @@ window.descargarPlantillaVaciaOT = function(idOt, placa, fechaIng, km, rampa) {
         <table class="iso-header">
             <tr>
                 <td class="logo-cell" rowspan="3">
-                    <img src="https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                    <img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
                 </td>
                 <td class="title-cell" rowspan="3">
                     INSPECCIÓN DE PRE USO DE UNIDAD<br>
