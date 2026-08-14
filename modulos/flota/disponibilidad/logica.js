@@ -9,6 +9,21 @@ window.dispGpsMap = {};
 
 // ── Cargar Datos del Servidor ─────────────────────────────────────
 window.dispCargarDatos = async function () {
+    if (typeof window.checkPerm === 'function' && !window.checkPerm('disponibilidad', 'l')) {
+        const tbody = document.getElementById('disp-table-body');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="13" class="text-center py-5 text-danger">
+                        <i class="bi bi-shield-lock-fill fs-2 d-block mb-2"></i>
+                        No tiene permisos asignados para acceder a Disponibilidad de Flota.
+                    </td>
+                </tr>
+            `;
+        }
+        return;
+    }
+
     const tbody = document.getElementById('disp-table-body');
     if (tbody) {
         tbody.innerHTML = `

@@ -57,8 +57,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/script/actualizar') || path.startsWith('/script/editar')) accion = 'e';
     else if (path.startsWith('/script/eliminar')) accion = 'd';
 
-    // SISTEMA
-    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['fleet', 'placas', 'status_rampa', 'fleetrun', 'status'];
+    // FLOTA Y MÓDULOS
+    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['disponibilidad', 'fleet', 'placas'];
     else if (path.startsWith('/roles')) mod = 'roles';
     else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
     else if (path.startsWith('/integraciones')) mod = 'integraciones';

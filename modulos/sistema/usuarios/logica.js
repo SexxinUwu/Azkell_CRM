@@ -19,6 +19,7 @@ window._GU_MODULOS = window._GU_MODULOS || [
 
     // ── FLOTA (hub) ──────────────────────────────────────────────────
     { grupo:'FLOTA',         key:'hub_flota',        nombre:'Flota',                       desc:'Habilitar o deshabilitar acceso al módulo Flota completo', type:'hub' },
+    { grupo:'FLOTA',         key:'disponibilidad',   nombre:'Disponibilidad',             desc:'Gestión de asignación de tractos, carretas, conductores y estados en tiempo real', type:'child', parent:'hub_flota' },
     { grupo:'FLOTA',         key:'gps',              nombre:'GPS / Ubicación',             desc:'Rastreo en tiempo real de unidades',            type:'child', parent:'hub_flota' },
     { grupo:'FLOTA',         key:'status',           nombre:'Status Flota',                desc:'Estado y agrupación de unidades',               type:'child', parent:'hub_flota' },
     { grupo:'FLOTA',         key:'placas',           nombre:'Placas',                      desc:'Registro y gestión de unidades de la flota',   type:'child', parent:'hub_flota' },
