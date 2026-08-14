@@ -308,9 +308,10 @@ window.abrirDetalleGPS = function(placa) {
             try {
                 const res  = await fetch(`/api/proxy/geocode?lat=${w.lat}&lon=${w.lng}`);
                 const data = await res.json();
-                const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || 'Sin nombre';
-                const ciudad = data.address?.city  || data.address?.town  || data.address?.county || '';
-                dirTxt = (calle !== 'Sin nombre' || ciudad) ? (ciudad ? `${calle}, ${ciudad}` : calle) : (data.display_name || dirTxt);
+                if (data && data.display_name) {
+                    let d = data.display_name.replace(/^Sin nombre,\s*/i, '');
+                    dirTxt = d || dirTxt;
+                }
             } catch(e) {}
 
             if (dirEl) dirEl.textContent = dirTxt;
