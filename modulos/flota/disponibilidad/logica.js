@@ -60,6 +60,23 @@ window.dispCargarDatos = async function () {
     }
 };
 
+// ── Helper Geocoding / Reverse Geocode GPS ─────────────────────────
+window._dispGeoCache = window._dispGeoCache || {};
+window.dispObtenerDireccionGeocode = async function (lat, lng) {
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return '';
+    const key = `${Number(lat).toFixed(3)},${Number(lng).toFixed(3)}`;
+    if (window._dispGeoCache[key]) return window._dispGeoCache[key];
+
+    try {
+        const res = await fetch(`/api/proxy/geocode?lat=${lat}&lon=${lng}`).then(r => r.json()).catch(() => null);
+        if (res && res.display_name) {
+            window._dispGeoCache[key] = res.display_name;
+            return res.display_name;
+        }
+    } catch (e) {}
+    return `Coordenadas (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
+};
+
 // ── Cargar Mapa GPS / Wialon ───────────────────────────────────────
 window.dispCargarGpsMap = async function () {
     try {
@@ -82,14 +99,32 @@ window.dispCargarGpsMap = async function () {
 
         if (datos && typeof datos === 'object') {
             const lista = Array.isArray(datos) ? datos : Object.values(datos);
+            const geocodePromises = [];
+
             lista.forEach(item => {
                 if (!item) return;
                 const pl = (item.placa || item.nm || item.nombre || item.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                const ubi = item.direccion || item.pos_texto || item.ubicacion || item.posicion || item.address || '';
-                if (pl && ubi) {
+                if (!pl) return;
+
+                let ubi = item.direccion || item.pos_texto || item.ubicacion || item.posicion || item.address || '';
+                const lat = item.lat || item.latitude || (item.pos ? item.pos.y : null);
+                const lng = item.lng || item.lon || item.longitude || (item.pos ? item.pos.x : null);
+
+                if (ubi) {
                     window.dispGpsMap[pl] = ubi;
+                } else if (lat && lng) {
+                    geocodePromises.push(
+                        window.dispObtenerDireccionGeocode(lat, lng).then(dir => {
+                            if (dir) window.dispGpsMap[pl] = dir;
+                        })
+                    );
                 }
             });
+
+            if (geocodePromises.length > 0) {
+                await Promise.all(geocodePromises);
+            }
+
             window.dispFiltrar();
         }
     } catch (e) {
