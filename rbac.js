@@ -16,6 +16,7 @@ module.exports = function globalRBAC(req, res, next) {
 
     // Datos de referencia globales ampliados: Listas desplegables permitidas para cualquier usuario autenticado
     const globalReferenceGets = [
+        '/disponibilidad-flota',
         '/config-metrica',
         '/km-historico',
         '/almacen/marcas-placas',
@@ -57,7 +58,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/script/eliminar')) accion = 'd';
 
     // SISTEMA
-    if (path.startsWith('/roles')) mod = 'roles';
+    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['fleet', 'placas', 'status_rampa', 'fleetrun', 'status'];
+    else if (path.startsWith('/roles')) mod = 'roles';
     else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/auditoria')) mod = 'mod_auditoria';
