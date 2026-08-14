@@ -283,7 +283,7 @@ router.get('/marcas-placas', (req, res) => {
 
 router.post('/inventario', (req, res) => {
     const { articulo, codigo_articulo, descripcion, familia, almacen, unidad, moneda, costo_referencial,
-            tipo_cambio,
+            tipo_cambio, cantidad_inicial,
             proveedor_id, marca, observaciones,
             codigo_item, marca_unidad, sistema, sub_sistema, tipo, sub_tipo,
             ubicacion, anaquel, stock_min, stock_max, estado_art, codigo_barras } = req.body;
@@ -292,6 +292,9 @@ router.post('/inventario', (req, res) => {
     const tc         = parseFloat(tipo_cambio) || null;
     const monedaVal  = moneda || 'PEN';
     const costoSoles = (monedaVal === 'USD' && tc) ? costoRef * tc : costoRef;
+    const cantInicial = parseFloat(cantidad_inicial) || 0;
+    const stockReg    = cantInicial > 0 ? cantInicial : 0;
+    const fechaReg    = cantInicial > 0 ? new Date().toISOString().split('T')[0] : null;
 
     // Generar descripcion concatenada desde los campos individuales
     let marcasArr = [];
@@ -309,15 +312,17 @@ router.post('/inventario', (req, res) => {
             (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,costo_soles,tipo_cambio,
              proveedor_id,marca,observaciones,
              codigo_item,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
-             ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             ubicacion,anaquel,stock_min,stock_max,estado_art,codigo_barras,
+             stock_regularizado,fecha_regularizacion)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [id, descFinal, articulo||null, codigo_articulo||null, familia||null, almacen||null, unidad||null, monedaVal,
              costoRef, costoSoles, tc,
              proveedor_id||null, marca||null, observaciones||null,
              codigo_item||null, marca_unidad||null, sistema||null, sub_sistema||null,
              tipo||null, sub_tipo||null, ubicacion||null,
              anaquel!=null?parseFloat(anaquel):null, parseFloat(stock_min)||0, parseFloat(stock_max)||0,
-             estado_art||'Activo', codigo_barras||null],
+             estado_art||'Activo', codigo_barras||null,
+             stockReg, fechaReg],
             (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id });

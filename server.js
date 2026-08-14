@@ -347,9 +347,9 @@ initDB(defaultDbPool);
 
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('🚨 Error al conectar con Aiven:', err.message);
+        console.error('🚨 Error al conectar con la base de datos MySQL:', err.message);
     } else {
-        console.log('✅ Base de datos conectada con éxito (Pool Activo)');
+        console.log('✅ Base de datos MySQL conectada con éxito (Pool Activo)');
         // Migraciones de esquema al arrancar
         connection.query(
             `ALTER TABLE auditoria ADD COLUMN modulo VARCHAR(50) DEFAULT NULL`,
@@ -738,7 +738,10 @@ db.query(
     });
 });
 // ── Fix: fleetrun — permitir NULL en columnas legacy NOT NULL ─────────────
-['ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\''
+['ALTER TABLE fleetrun MODIFY COLUMN placa VARCHAR(20) NULL DEFAULT \'\'',
+ 'ALTER TABLE fleetrun MODIFY COLUMN fecha DATE NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN km_actual INT NULL DEFAULT NULL',
+ 'ALTER TABLE fleetrun MODIFY COLUMN mes INT NULL DEFAULT NULL'
 ].forEach(function(sql) {
     db.query(sql, function(e) {
         if (!e) console.log('✅ fleetrun nullable fix: ' + sql.substring(0,60));
@@ -1154,15 +1157,15 @@ function broadcast(modulo, accion, detalle) {
 }
 
 // ============================================================
-// ⏰ RUTA DESPERTADOR (MANTIENE VIVO A RENDER Y AIVEN)
+// ⏰ RUTA DESPERTADOR (MANTIENE VIVO EL SERVIDOR Y LA BD)
 // ============================================================
 app.get('/api/ping', (req, res) => {
     db.query("SELECT 1", (err) => {
         if (err) {
             console.error("Error en el Ping a la BD:", err.message);
-            return res.status(500).send("Render está despierto, pero Aiven falló.");
+            return res.status(500).send("Servidor despierto, pero la BD falló.");
         }
-        res.status(200).send("¡Pong! Render y Aiven están 100% despiertos.");
+        res.status(200).send("¡Pong! Servidor y Base de Datos están 100% activos.");
     });
 });
 

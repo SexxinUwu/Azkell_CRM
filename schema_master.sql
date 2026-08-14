@@ -334,7 +334,7 @@ DROP TABLE IF EXISTS `fleetrun`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fleetrun` (
   `idRegistro` varchar(50) NOT NULL,
-  `fecha` date NOT NULL,
+  `fecha` date DEFAULT NULL,
   `mes` int DEFAULT NULL,
   `anio` int DEFAULT NULL,
   `placa` varchar(20) DEFAULT '',
@@ -342,7 +342,7 @@ CREATE TABLE `fleetrun` (
   `dueno` varchar(100) NOT NULL DEFAULT '',
   `uts` varchar(20) NOT NULL DEFAULT '',
   `tipo_mp` varchar(60) NOT NULL DEFAULT '',
-  `km_actual` int NOT NULL DEFAULT '0',
+  `km_actual` int DEFAULT NULL,
   `frecuencia_km` int DEFAULT NULL,
   `km_proximo` int DEFAULT NULL,
   `observacion` text,

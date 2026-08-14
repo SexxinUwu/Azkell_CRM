@@ -386,7 +386,7 @@ const TABLAS = [
         nombre: 'fleetrun',
         sql: `CREATE TABLE IF NOT EXISTS fleetrun (
             idRegistro    VARCHAR(50)  NOT NULL PRIMARY KEY,
-            fecha         DATE         NOT NULL,
+            fecha         DATE         NULL DEFAULT NULL,
             mes           INT          NULL,
             anio          INT          NULL,
             placa         VARCHAR(20)  NOT NULL,
@@ -394,7 +394,7 @@ const TABLAS = [
             dueno         VARCHAR(100) NOT NULL DEFAULT '',
             uts           VARCHAR(20)  NOT NULL DEFAULT '',
             tipo_mp       VARCHAR(60)  NOT NULL DEFAULT '',
-            km_actual     INT          NOT NULL DEFAULT 0,
+            km_actual     INT          NULL DEFAULT NULL,
             frecuencia_km INT          NULL,
             km_proximo    INT          NULL,
             observacion   TEXT,
