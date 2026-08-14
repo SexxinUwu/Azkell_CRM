@@ -63,24 +63,29 @@ window.dispCargarDatos = async function () {
 // ── Cargar Mapa GPS / Wialon ───────────────────────────────────────
 window.dispCargarGpsMap = async function () {
     try {
-        let datos = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
-            ? CACHE.wialon : (window._datosWialonGPS || []);
+        let datos = (typeof CACHE !== 'undefined' && CACHE['wialon'])
+            ? CACHE['wialon']
+            : (window._datosWialonGPS || []);
 
-        if (!datos.length) {
-            const res = await fetch('/api/script', {
+        if (!datos || (Array.isArray(datos) && datos.length === 0) || (typeof datos === 'object' && Object.keys(datos).length === 0)) {
+            const res = await fetch('/api/script/obtenerDatosWialon', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accion: 'obtenerDatosWialon' })
+                body: JSON.stringify({ args: [] })
             }).then(r => r.json()).catch(() => null);
-            if (res && res.data && Array.isArray(res.data)) {
+
+            if (res && res.data && !res.data.error) {
                 datos = res.data;
+                if (typeof CACHE !== 'undefined') CACHE['wialon'] = datos;
             }
         }
 
-        if (Array.isArray(datos)) {
-            datos.forEach(item => {
-                const pl = (item.placa || item.nm || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                const ubi = item.direccion || item.pos_texto || item.ubicacion || item.posicion || '';
+        if (datos && typeof datos === 'object') {
+            const lista = Array.isArray(datos) ? datos : Object.values(datos);
+            lista.forEach(item => {
+                if (!item) return;
+                const pl = (item.placa || item.nm || item.nombre || item.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const ubi = item.direccion || item.pos_texto || item.ubicacion || item.posicion || item.address || '';
                 if (pl && ubi) {
                     window.dispGpsMap[pl] = ubi;
                 }
@@ -88,7 +93,7 @@ window.dispCargarGpsMap = async function () {
             window.dispFiltrar();
         }
     } catch (e) {
-        // GPS opcional
+        console.warn('[Disponibilidad] GPS opcional:', e);
     }
 };
 
