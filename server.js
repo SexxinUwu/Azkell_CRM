@@ -211,7 +211,7 @@ app.get('/api/proxy/geocode', async (req, res) => {
     try {
         let fetchCall = global.fetch || require('node-fetch');
         
-        // 1. Intentar con OpenStreetMap Nominatim (Detalle completo de avenidas, calles y carreteras)
+        // 1. Intentar con OpenStreetMap Nominatim (Detalle completo de avenida, número, distrito y ciudad)
         try {
             let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
                 headers: {
@@ -221,11 +221,30 @@ app.get('/api/proxy/geocode', async (req, res) => {
             });
             if (response.ok) {
                 let data = await response.json();
-                if (data.display_name) {
-                    let cleanName = data.display_name.replace(/^Sin nombre,\s*/i, '');
-                    let resultN = { display_name: cleanName, address: data.address || {} };
-                    _geoCacheMap.set(cacheKey, resultN);
-                    return res.json(resultN);
+                if (data && data.address) {
+                    const addr = data.address;
+                    const via = addr.road || addr.pedestrian || addr.highway || addr.path || addr.street || '';
+                    const num = addr.house_number || addr.building || addr.house || '';
+                    const barrio = addr.suburb || addr.neighbourhood || addr.residential || addr.quarter || addr.district || addr.hamlet || addr.village || '';
+                    const ciudad = addr.city || addr.town || addr.municipality || addr.county || addr.state || '';
+
+                    let partes = [];
+                    if (via && !via.toLowerCase().includes('sin nombre')) {
+                        partes.push(via + (num ? ' ' + num : ''));
+                    }
+                    if (barrio && barrio !== via) {
+                        partes.push(barrio);
+                    }
+                    if (ciudad && ciudad !== barrio) {
+                        partes.push(ciudad);
+                    }
+
+                    let cleanName = partes.length > 0 ? partes.join(', ') : (data.display_name || '').replace(/^Sin nombre,\s*/i, '');
+                    if (cleanName) {
+                        let resultN = { display_name: cleanName, address: addr };
+                        _geoCacheMap.set(cacheKey, resultN);
+                        return res.json(resultN);
+                    }
                 }
             }
         } catch (eN) {}
