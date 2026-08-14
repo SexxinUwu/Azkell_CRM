@@ -423,8 +423,8 @@ function srRenderTabla() {
                   }).join('') + (otsPlaca.length > 3 ? '<span style="font-size:0.72rem;color:var(--subtext)">+' + (otsPlaca.length - 3) + '</span>' : '')
                 : '<span style="color:var(--subtext);font-size:0.8rem;">—</span>';
 
-            var obsTextoCol = e.obs || '';
-            if (otsPlaca && otsPlaca.length > 0) {
+            var obsTextoCol = (e.obs || '').trim();
+            if (!obsTextoCol && otsPlaca && otsPlaca.length > 0) {
                 var obsOTList = [];
                 otsPlaca.forEach(function(o) {
                     var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
@@ -613,8 +613,8 @@ window.srAbrirDetalle = function(id) {
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b;">Kilometraje de Ingreso</div>';
     html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
     html += '  </div>';
-    var obsTextoCompleto = e.obs || '';
-    if (otsPlaca && otsPlaca.length > 0) {
+    var obsTextoCompleto = (e.obs || '').trim();
+    if (!obsTextoCompleto && otsPlaca && otsPlaca.length > 0) {
         var obsOTList = [];
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};

@@ -251,10 +251,12 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
 
     if (accion === 'editar') {
         const { tipo_ot, sub_tipo, supervisor, situacion_inicial, motivo, km } = req.body;
-        db.query('SELECT detalles_json FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
+        db.query('SELECT detalles_json, id_rampa, placa FROM ordenes_trabajo WHERE ticket_entrada = ?', [ticketId], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!rows.length) return res.status(404).json({ error: 'OT no encontrada' });
             const raw = rows[0].detalles_json;
+            const idRampa = rows[0].id_rampa;
+            const placaOT = rows[0].placa;
             let det = {};
             try { det = typeof raw === 'string' ? JSON.parse(raw) : (raw || {}); } catch(e) { det = {}; }
             if (tipo_ot !== undefined)           det.tipo_ot           = tipo_ot;
@@ -266,6 +268,13 @@ router.put('/ordenes-trabajo/:id', (req, res) => {
             db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?',
                 [JSON.stringify(det), ticketId], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
+                    if (motivo !== undefined) {
+                        if (idRampa) {
+                            db.query('UPDATE taller_rampas SET obs = ? WHERE id = ?', [motivo, idRampa]);
+                        } else if (placaOT) {
+                            db.query('UPDATE taller_rampas SET obs = ? WHERE UPPER(placa) = UPPER(?) AND (situacion != "Finalizado" OR situacion IS NULL) ORDER BY id DESC LIMIT 1', [motivo, placaOT]);
+                        }
+                    }
                     if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
@@ -837,6 +846,18 @@ router.put('/taller-rampas/:id', (req, res) => {
         [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (obs !== undefined) {
+                db.query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ? OR (UPPER(placa) = UPPER(?) AND estado != "Finalizado")', [req.params.id, placa], (errOTs, rowsOTs) => {
+                    if (!errOTs && rowsOTs && rowsOTs.length) {
+                        rowsOTs.forEach(row => {
+                            let det = {};
+                            try { det = typeof row.detalles_json === 'string' ? JSON.parse(row.detalles_json) : (row.detalles_json || {}); } catch(e) {}
+                            det.motivo = obs;
+                            db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?', [JSON.stringify(det), row.ticket_entrada]);
+                        });
+                    }
+                });
+            }
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
         }
     );
