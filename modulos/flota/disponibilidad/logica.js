@@ -7,11 +7,6 @@ window.dispPlacas = [];
 window.dispConductores = [];
 window.dispGpsMap = {};
 
-// ── Iniciar Módulo ───────────────────────────────────────────────
-(function () {
-    window.dispCargarDatos();
-})();
-
 // ── Cargar Datos del Servidor ─────────────────────────────────────
 window.dispCargarDatos = async function () {
     const tbody = document.getElementById('disp-table-body');
@@ -693,3 +688,7 @@ function _dispEsc(txt) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+// ── Iniciar Carga Inmediata al Montar Módulo ───────────────────────
+window.dispCargarDatos();
+
