@@ -4,6 +4,18 @@ const router = express.Router();
 
 module.exports = (db, broadcast, logAudit) => {
 
+function parseMesInt(val) {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'number') return isNaN(val) ? null : val;
+    let n = parseInt(val, 10);
+    if (!isNaN(n)) return n;
+    const str = String(val).trim().toLowerCase();
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const idx = meses.indexOf(str);
+    if (idx !== -1) return idx + 1;
+    return null;
+}
+
 function generarIdFleetrunUnico(placa, tipoMp, fecha, cb) {
     const anio = new Date().getFullYear();
     const prefix = `Prev-${anio}-`;
@@ -253,9 +265,10 @@ router.post('/importarFleetrunMasivo', async (req, res) => {
                 let comb = r.combustible || '';
                 let mod = r.modelo || '';
                 let wkm = (r.km_gps === '' || r.km_gps == null) ? null : (Number(r.km_gps) || null);
-                let mes = Number(r.mes) || null;
+                let mes = parseMesInt(r.mes || r.MES);
                 let anio = Number(r.anio) || null;
-                let kmact = Number(r.kmact) || 0;
+                let kmact = (r.kmact === '' || r.kmact == null || r.KM_ACTUAL === '' || r.KM_ACTUAL == null) ? null : Number(r.kmact || r.KM_ACTUAL);
+                if (isNaN(kmact)) kmact = null;
                 let freckm = (r.freckm === '' || r.freckm == null) ? null : (Number(r.freckm) || 0);
                 let kmprox = (r.kmprox === '' || r.kmprox == null) ? null : (Number(r.kmprox) || 0);
                 // Fecha: si viene vacía, usar la fecha de hoy como respaldo
@@ -893,22 +906,39 @@ router.post('/:metodo', async (req, res) => {
         const isEdit = metodo === 'actualizarFleetrun';
 
         const _ejecutarGuardado = (idFinal) => {
+            const rawFecha = isEdit ? form.editF_fecha : form.f_fecha;
+            const fechaVal = rawFecha && String(rawFecha).trim() !== '' ? String(rawFecha).trim() : null;
+
+            const rawKmAct = isEdit ? form.editF_kmact : form.f_kmact;
+            let kmactVal = null;
+            if (rawKmAct !== undefined && rawKmAct !== null && String(rawKmAct).trim() !== '') {
+                kmactVal = parseFloat(rawKmAct);
+                if (isNaN(kmactVal)) kmactVal = null;
+            }
+
+            const rawMes = isEdit ? form.editF_mes : form.f_mes;
+            const mesVal = parseMesInt(rawMes);
+
+            const rawAnio = isEdit ? form.editF_anio : form.f_anio;
+            let anioVal = parseInt(rawAnio, 10);
+            if (isNaN(anioVal)) anioVal = null;
+
             const values = [
                 idFinal,
-                (isEdit ? form.editF_fecha : form.f_fecha) || null,
-                (isEdit ? form.editF_mes   : form.f_mes)   || null,
-                (isEdit ? form.editF_anio  : form.f_anio)  || null,
+                fechaVal,
+                mesVal,
+                anioVal,
                 ((isEdit ? form.editF_placa : form.f_placa) || '').toUpperCase(),
                 isEdit ? form.editF_marca   : form.f_marca,
                 isEdit ? form.editF_dueno   : form.f_dueno,
                 isEdit ? form.editF_uts     : form.f_uts,
                 isEdit ? form.editF_tipomp  : form.f_tipomp,
-                (isEdit ? form.editF_kmact   : form.f_kmact) === '' ? null : (isEdit ? form.editF_kmact   : form.f_kmact),
-                (isEdit ? form.editF_freckm  : form.f_freckm) === '' ? null : (isEdit ? form.editF_freckm  : form.f_freckm),
-                (isEdit ? form.editF_kmprox  : form.f_kmprox) === '' ? null : (isEdit ? form.editF_kmprox  : form.f_kmprox),
+                kmactVal,
+                (isEdit ? form.editF_freckm  : form.f_freckm) === '' || (isEdit ? form.editF_freckm : form.f_freckm) == null ? null : parseFloat(isEdit ? form.editF_freckm : form.f_freckm),
+                (isEdit ? form.editF_kmprox  : form.f_kmprox) === '' || (isEdit ? form.editF_kmprox : form.f_kmprox) == null ? null : parseFloat(isEdit ? form.editF_kmprox : form.f_kmprox),
                 isEdit ? form.editF_obs     : form.f_obs,
                 isEdit ? form.editF_tec     : form.f_tec,
-                (isEdit ? form.editF_kmgps   : form.f_kmgps) === '' ? null : (isEdit ? form.editF_kmgps   : form.f_kmgps),
+                (isEdit ? form.editF_kmgps   : form.f_kmgps) === '' || (isEdit ? form.editF_kmgps : form.f_kmgps) == null ? null : parseFloat(isEdit ? form.editF_kmgps : form.f_kmgps),
                 isEdit ? form.editF_combustible : form.f_combustible,
                 isEdit ? form.editF_modelo      : form.f_modelo
             ];

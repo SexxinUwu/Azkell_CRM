@@ -1127,6 +1127,10 @@ window.abrirModalInventario = function(id) {
         _invSetField('inv-f-stock-max',     item.stock_max);
         _invSetField('inv-f-codigo-barras', item.codigo_barras);
 
+        // Ocultar Stock Inicial en modo edición
+        var cantWrapE = document.getElementById('inv-f-cant-inicial-wrapper');
+        if (cantWrapE) cantWrapE.style.display = 'none';
+
         // Tab Imagen + QR
         _invResetImageUI(item);
     } else {
@@ -1134,6 +1138,11 @@ window.abrirModalInventario = function(id) {
         
         var btnEliminar = document.getElementById('inv-btn-eliminar-art');
         if (btnEliminar) btnEliminar.style.display = 'none';
+
+        // Mostrar Stock Inicial en modo creación y resetearlo
+        var cantWrapN = document.getElementById('inv-f-cant-inicial-wrapper');
+        if (cantWrapN) cantWrapN.style.display = 'block';
+        _invSetField('inv-f-cantidad-inicial', '');
 
         // Default: moneda PEN → ocultar T/C
         window._cbSet('inv-f-moneda', 'PEN', 'PEN (S/)');
@@ -1391,6 +1400,7 @@ window.guardarArticuloInv = function(event) {
         anaquel:       g('inv-f-anaquel') ? gN('inv-f-anaquel') : null,
         stock_min:     gN('inv-f-stock-min'),
         stock_max:     gN('inv-f-stock-max'),
+        cantidad_inicial: gN('inv-f-cantidad-inicial'),
         codigo_barras: g('inv-f-codigo-barras') || null
     };
 

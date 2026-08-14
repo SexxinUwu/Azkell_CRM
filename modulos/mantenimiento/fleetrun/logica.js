@@ -679,13 +679,15 @@ window._buscarFrecuenciaTipo = function(tipoMP) {
 };
 
 // ── Agregar tipo con cálculo inteligente ─────────────────────────
+// ── Agregar tipo con cálculo inteligente ─────────────────────────
 window.agregarTipoMulti = function(val) {
     if (!val) return;
     val = val.toUpperCase().trim();
     if (window.fleetrunTiposMulti.find(function(t) { return t.tipo === val; })) return;
     
     var frec = window._buscarFrecuenciaTipo(val);
-    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    var kmActVal = (document.getElementById('f_kmact') || {}).value;
+    var kmAct = (kmActVal === '' || kmActVal === undefined || isNaN(parseFloat(kmActVal))) ? 0 : parseFloat(kmActVal);
     var kmProx = frec > 0 ? (kmAct + frec) : 0;
     
     window.fleetrunTiposMulti.push({ tipo: val, frecuencia: frec, kmProximo: kmProx });
@@ -700,7 +702,8 @@ window.eliminarTipoMulti = function(val) {
 
 // ── Recalcular todos los tipos cuando cambia KM Actual ──────────
 window.recalcularTodosMulti = function() {
-    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    var kmActVal = (document.getElementById('f_kmact') || {}).value;
+    var kmAct = (kmActVal === '' || kmActVal === undefined || isNaN(parseFloat(kmActVal))) ? 0 : parseFloat(kmActVal);
     window.fleetrunTiposMulti.forEach(function(item) {
         if (item.frecuencia > 0) {
             item.kmProximo = kmAct + item.frecuencia;
@@ -734,7 +737,8 @@ window.renderTiposMulti = function() {
                 'title="Editar frecuencia para este registro">' +
                 '<span style="color:#64748b; font-size:0.78rem;"> ' + unidad + '</span>';
             // KM Próximo editable inline
-            var proxInput = item.kmProximo > 0
+            var isProxValid = (item.kmProximo !== undefined && item.kmProximo !== null && item.kmProximo !== '' && !isNaN(item.kmProximo) && item.frecuencia > 0);
+            var proxInput = isProxValid
                 ? '<input type="number" class="form-control form-control-sm text-center border-0 fw-bold" ' +
                   'style="width:90px; display:inline-block; color:#059669; background:#f0fdf4; border-radius:6px;" ' +
                   'value="' + item.kmProximo + '" min="0" ' +
@@ -780,7 +784,8 @@ window._cbOnSelect('eF_tipomp', function() { window.calcularFrecuenciaFleetrun('
 
 // When placa changes, recalculate all existing types with the new vehicle data
 window.recalcularTodosMultiDesdeAutocompletar = function() {
-    var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
+    var kmActVal = (document.getElementById('f_kmact') || {}).value;
+    var kmAct = (kmActVal === '' || kmActVal === undefined || isNaN(parseFloat(kmActVal))) ? 0 : parseFloat(kmActVal);
     window.fleetrunTiposMulti.forEach(function(item) {
         var frec = window._buscarFrecuenciaTipo(item.tipo);
         item.frecuencia = frec;
@@ -1062,7 +1067,13 @@ function enviarFleetrun(event, formObj) {
         if (!isNaN(dDate.getTime())) {
             data.f_mes = (dDate.getMonth() + 1).toString();
             data.f_anio = dDate.getFullYear().toString();
+        } else {
+            data.f_mes = '';
+            data.f_anio = '';
         }
+    } else {
+        data.f_mes = '';
+        data.f_anio = '';
     }
 
     // Use the pre-calculated multi-tipo objects
@@ -1084,7 +1095,7 @@ function enviarFleetrun(event, formObj) {
             
             // Use pre-calculated values from the intelligent table
             recData.f_freckm = item.frecuencia || 0;
-            recData.f_kmprox = item.kmProximo || '';
+            recData.f_kmprox = (item.kmProximo !== undefined && item.kmProximo !== null && item.kmProximo !== '') ? item.kmProximo : '';
 
             return fetch('/api/script/guardarFleetrun', { 
                 method: 'POST', 
@@ -1930,9 +1941,10 @@ window._editarFrecTipo = function(idx, newVal) {
     var v = parseFloat(newVal) || 0;
     if (window.fleetrunTiposMulti[idx]) {
         window.fleetrunTiposMulti[idx].frecuencia = v;
-        // Recalcular próximo automáticamente si hay un km actual
-        var kmAct = parseFloat(document.getElementById('f_kmact').value) || 0;
-        if (v > 0 && kmAct > 0) {
+        // Recalcular próximo automáticamente
+        var kmActVal = (document.getElementById('f_kmact') || {}).value;
+        var kmAct = (kmActVal === '' || kmActVal === undefined || isNaN(parseFloat(kmActVal))) ? 0 : parseFloat(kmActVal);
+        if (v > 0) {
             window.fleetrunTiposMulti[idx].kmProximo = kmAct + v;
         }
         window.renderTiposMulti();

@@ -3801,7 +3801,23 @@ function abrirModalNuevoFleetrun() {
         }, 0);
     }
 }
-function autocompletarFecha(prefix) { let dateInput = document.getElementById(prefix + '_fecha').value; if(dateInput) { let d = new Date(dateInput + "T00:00:00"); const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; document.getElementById(prefix + '_mes').value = meses[d.getMonth()]; document.getElementById(prefix + '_anio').value = d.getFullYear(); } }
+function autocompletarFecha(prefix) {
+    let dateEl = document.getElementById(prefix + '_fecha');
+    let mesEl = document.getElementById(prefix + '_mes');
+    let anioEl = document.getElementById(prefix + '_anio');
+    if (!dateEl || !mesEl || !anioEl) return;
+    let dateInput = dateEl.value;
+    if (dateInput) {
+        let d = new Date(dateInput + "T00:00:00");
+        if (!isNaN(d.getTime())) {
+            mesEl.value = (d.getMonth() + 1).toString();
+            anioEl.value = d.getFullYear().toString();
+        }
+    } else {
+        mesEl.value = '';
+        anioEl.value = '';
+    }
+}
 
 window.autocompletarFleetrun = function(prefix) {
     let placaInput = normalizeStr(document.getElementById(prefix + '_placa').value);
@@ -3875,12 +3891,17 @@ function calcularFrecuencia(prefix) {
 }
 
 function calcularProximo(prefix) {
-    let kmAct = parseFloat(document.getElementById(prefix + '_kmact').value) || 0;
-    let frec = parseFloat(document.getElementById(prefix + '_freckm').value) || 0;
-    if (kmAct > 0 && frec > 0) {
-        document.getElementById(prefix + '_kmprox').value = kmAct + frec;
+    let kmActEl = document.getElementById(prefix + '_kmact');
+    let frecEl = document.getElementById(prefix + '_freckm');
+    let proxEl = document.getElementById(prefix + '_kmprox');
+    if (!kmActEl || !frecEl || !proxEl) return;
+    let kmActVal = kmActEl.value;
+    let kmAct = (kmActVal === '' || isNaN(parseFloat(kmActVal))) ? 0 : parseFloat(kmActVal);
+    let frec = parseFloat(frecEl.value) || 0;
+    if (frec > 0) {
+        proxEl.value = kmAct + frec;
     } else {
-        document.getElementById(prefix + '_kmprox').value = '';
+        proxEl.value = '';
     }
 }
 window.mostrarDetalleFleetrun = function(index) {
