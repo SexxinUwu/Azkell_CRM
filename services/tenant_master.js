@@ -193,14 +193,141 @@ function getTenantPool(dbName) {
     return pool;
 }
 
-/**
- * Middleware para resolver el Tenant según Subdominio o Header.
- */
 async function resolveTenantMiddleware(req, res, next) {
     let tenantSlug = req.headers['x-tenant-id'] || req.headers['x-tenant-slug'] || req.query.tenant_slug;
 
+    const host = (req.headers.host || '').toLowerCase().split(':')[0];
+    const isRootDomain = host === 'azkell.com' || host === 'www.azkell.com';
+
+    if (isRootDomain && !tenantSlug && !req.path.startsWith('/api') && !req.path.startsWith('/libs')) {
+        if ((req.headers.accept && req.headers.accept.includes('text/html')) || req.path === '/' || req.path === '/Index.html') {
+            return res.status(200).send(`
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azkell ERP — Portal Corporativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            background: #090d16;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .bg-glow {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(37,99,235,0.15) 0%, rgba(15,23,42,0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .portal-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 48px 36px;
+            max-width: 540px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+        }
+        .logo-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 20px;
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px rgba(37,99,235,0.35);
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+        p {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+        .domain-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 28px;
+            text-align: left;
+        }
+        .domain-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .domain-url {
+            font-family: monospace;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+        .footer-text {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="portal-card">
+        <div class="logo-box">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <h1>Portal de Acceso Corporativo</h1>
+        <p>Para ingresar al sistema ERP, debe hacerlo a través del subdominio exclusivo asignado a su empresa.</p>
+        
+        <div class="domain-box">
+            <div class="domain-title"><i class="bi bi-link-45deg me-1"></i>Formato de acceso:</div>
+            <div class="domain-url">https://tu-empresa.azkell.com</div>
+        </div>
+
+        <div class="footer-text">
+            &copy; 2026 Azkell ERP — Plataforma de Gestión de Flota y Mantenimiento.
+        </div>
+    </div>
+</body>
+</html>
+            `);
+        }
+    }
+
     if (!tenantSlug && req.headers.host) {
-        const host = req.headers.host.toLowerCase().split(':')[0];
         const parts = host.split('.');
 
         if (parts.length >= 3 || (host.includes('localhost') && parts.length >= 2)) {
