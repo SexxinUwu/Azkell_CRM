@@ -643,6 +643,26 @@ window.srAbrirDetalle = function(id) {
     html += '  </div>';
     html += '</div>';
 
+    // Acciones Rápidas (Formatos de Control / Plantillas)
+    html += '<div class="sr-modal-card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem; display:flex; flex-direction:column;">';
+    html += '  <div class="card-body p-3">';
+    html += '    <div class="fw-bold mb-2" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Formatos de Control</div>';
+    html += '    <div class="d-flex align-items-center gap-3">';
+    html += '      <button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);padding:0;" onclick="event.stopPropagation(); window.srDescargarPlantillaParabrisas(' + id + ')">';
+    html += '        <div style="width:42px;height:42px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.15rem;box-shadow:0 4px 10px rgba(245,158,11,0.3);"><i class="bi bi-file-earmark-ruled"></i></div>';
+    html += '        <span style="font-size:0.7rem;font-weight:700;line-height:1.1;text-align:center;">OT<br>Parabrisa</span>';
+    html += '      </button>';
+    var primerOtId = otsPlaca && otsPlaca.length > 0 ? (otsPlaca[0].id_ot || otsPlaca[0].ticket_entrada || '') : '';
+    if (primerOtId && typeof window.descargarPlantillaVaciaOT === 'function') {
+        html += '      <button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);padding:0;" onclick="event.stopPropagation(); window.descargarPlantillaVaciaOT(\'' + _srEsc(primerOtId) + '\', \'' + _srEsc(e.placa) + '\', \'' + _srEsc(e.fechaIngreso || '') + '\', \'' + (e.km || '') + '\', \'' + _srEsc(rampaNomDet || '') + '\')">';
+        html += '        <div style="width:42px;height:42px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.15rem;box-shadow:0 4px 10px rgba(22,163,74,0.3);"><i class="bi bi-card-checklist"></i></div>';
+        html += '        <span style="font-size:0.7rem;font-weight:700;line-height:1.1;text-align:center;">Plantilla<br>Inspecciones</span>';
+        html += '      </button>';
+    }
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
+
     // OTs
     html += '<div class="mb-4">';
     html += '  <div class="d-flex justify-content-between align-items-center mb-3">';
@@ -744,6 +764,7 @@ window.srEditarRampa = function(id) {
     set('sr-f-fecha-sal', e.fechaSalida);
     set('sr-f-hora-sal',  e.horaSalida);
     set('sr-f-obs',       e.obs);
+    window.srCargarFilasTrabajos(e.obs);
     var esi = document.getElementById('sr-f-situacion');
     if (esi) esi.value = e.situacion || '';
     
@@ -1158,6 +1179,9 @@ window.srGuardarRegistro = function() {
     }
     if (!rampaNum) { alert('Selecciona una rampa.'); return; }
 
+    var obsCompilada = window.srObtenerTextoObsFormulario();
+    if (sObs) sObs.value = obsCompilada;
+
     var payload = {
         rampa:        rampaNum,
         placa:        placa,
@@ -1167,7 +1191,7 @@ window.srGuardarRegistro = function() {
         fecha_salida:  sFecSal ? (sFecSal.value || null) : null,
         hora_salida:   sHorSal ? (sHorSal.value || null) : null,
         situacion:    sSit    ? (sSit.value     || '') : '',
-        obs:          sObs    ? (sObs.value     || '') : '',
+        obs:          obsCompilada || '',
         creado_por:   localStorage.getItem('fleet_user') || '',
         evidencia_url: sEvidUrl ? sEvidUrl.value : ''
     };
@@ -2292,7 +2316,7 @@ window.srGuardarEdicionOT = function() {
 
 function srLimpiarFormRegistro() {
     ['sr-f-idx','sr-f-km','sr-f-fecha-ing','sr-f-hora-ing',
-     'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs','sr-f-rampa-id'].forEach(function(id) {
+     'sr-f-fecha-sal','sr-f-hora-sal','sr-f-obs','sr-f-obs-extra','sr-f-rampa-id'].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.value = '';
     });
     if (typeof window._cbReset === 'function') window._cbReset('sr-f-placa');
@@ -2300,6 +2324,7 @@ function srLimpiarFormRegistro() {
     if (sSit) sSit.value = sSit.options[0] ? sSit.options[0].value : '';
     var sR = document.getElementById('sr-f-rampa');
     if (sR) { sR.value = ''; sR.disabled = false; }
+    window.srResetTrabajosFormulario();
 }
 
 window.srEliminarRegistroGeneral = function(idRampa) {
@@ -2440,4 +2465,703 @@ window.srNavegarDetalle = function(direccion) {
         }
     }, {passive: true});
 })();
+
+// ── GESTIÓN DE FILAS DE TRABAJOS DINÁMICOS EN FORMULARIO ────────────────
+window.srAgregarFilaTrabajo = function(valor) {
+    var container = document.getElementById('sr-f-trabajos-container');
+    if (!container) return;
+    var idx = container.children.length + 1;
+    var row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-2 sr-f-trabajo-row';
+    row.innerHTML = 
+        '<div class="d-flex align-items-center justify-content-center fw-bold text-muted" style="width:24px; font-size:0.75rem; flex-shrink:0;">' + idx + '.</div>' +
+        '<input type="text" class="form-control form-control-sm sr-f-trabajo-item" placeholder="Descripción del trabajo..." value="' + _srEsc(valor || '') + '" style="border-radius:8px; background:var(--bg); border-color:var(--border); color:var(--text); font-size:0.8rem;">' +
+        '<button type="button" class="btn btn-sm btn-outline-danger border-0 p-1 d-flex align-items-center justify-content-center" style="width:28px; height:28px; border-radius:6px;" onclick="window.srEliminarFilaTrabajo(this)" title="Eliminar fila">' +
+        '  <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>' +
+        '</button>';
+    container.appendChild(row);
+    window.srReindexarFilasTrabajos();
+};
+
+window.srEliminarFilaTrabajo = function(btn) {
+    var row = btn.closest('.sr-f-trabajo-row');
+    if (row) {
+        row.remove();
+        window.srReindexarFilasTrabajos();
+    }
+};
+
+window.srReindexarFilasTrabajos = function() {
+    var container = document.getElementById('sr-f-trabajos-container');
+    if (!container) return;
+    var rows = container.querySelectorAll('.sr-f-trabajo-row');
+    rows.forEach(function(r, idx) {
+        var numEl = r.querySelector('div');
+        if (numEl) numEl.textContent = (idx + 1) + '.';
+    });
+    if (rows.length === 0) {
+        window.srAgregarFilaTrabajo();
+    }
+};
+
+window.srResetTrabajosFormulario = function() {
+    var container = document.getElementById('sr-f-trabajos-container');
+    if (container) container.innerHTML = '';
+    var extraEl = document.getElementById('sr-f-obs-extra');
+    if (extraEl) extraEl.value = '';
+    window.srAgregarFilaTrabajo();
+};
+
+window.srCargarFilasTrabajos = function(textoObs) {
+    var container = document.getElementById('sr-f-trabajos-container');
+    if (!container) return;
+    container.innerHTML = '';
+    var extraEl = document.getElementById('sr-f-obs-extra');
+    if (extraEl) extraEl.value = '';
+
+    if (!textoObs || !String(textoObs).trim()) {
+        window.srAgregarFilaTrabajo();
+        return;
+    }
+
+    var lines = String(textoObs).split('\n');
+    var extraNotes = [];
+    var tareas = [];
+
+    lines.forEach(function(l) {
+        var trimmed = l.trim();
+        if (!trimmed) return;
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+[\.\)]\s*/.test(trimmed)) {
+            tareas.push(trimmed.replace(/^[-*]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim());
+        } else if (trimmed.toLowerCase().startsWith('nota:') || trimmed.toLowerCase().startsWith('obs:')) {
+            extraNotes.push(trimmed.replace(/^(nota|obs):\s*/i, '').trim());
+        } else {
+            tareas.push(trimmed);
+        }
+    });
+
+    if (tareas.length > 0) {
+        tareas.forEach(function(t) {
+            window.srAgregarFilaTrabajo(t);
+        });
+    } else {
+        window.srAgregarFilaTrabajo();
+    }
+
+    if (extraEl && extraNotes.length > 0) {
+        extraEl.value = extraNotes.join('\n');
+    }
+};
+
+window.srObtenerTextoObsFormulario = function() {
+    var container = document.getElementById('sr-f-trabajos-container');
+    var extraEl = document.getElementById('sr-f-obs-extra');
+    var tareas = [];
+    if (container) {
+        var inputs = container.querySelectorAll('.sr-f-trabajo-item');
+        inputs.forEach(function(inp) {
+            var val = (inp.value || '').trim();
+            if (val) tareas.push('- ' + val);
+        });
+    }
+    var extra = extraEl ? (extraEl.value || '').trim() : '';
+    if (extra) {
+        tareas.push('Nota: ' + extra);
+    }
+    return tareas.join('\n');
+};
+
+// ── DESCARGAR PLANTILLA: ORDEN EN PARABRISAS (FORMATO CONTROL TALLER) ──
+window.srDescargarPlantillaParabrisas = function(id) {
+    if (typeof window.rotToast === 'function') window.rotToast('Generando Orden en Parabrisas...', 'bg-info');
+    else if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Generando Orden en Parabrisas...', 'info');
+
+    var e = (window.srEntradas || []).find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
+    if (!e && window.srData) {
+        e = window.srData.find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
+    }
+    if (!e) {
+        alert('No se encontraron los datos del registro.');
+        return;
+    }
+
+    // Buscar OT vinculada
+    var otsPlaca = (window.srOtData || []).filter(function(o) {
+        if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
+        return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+    });
+    var linkedOt = otsPlaca && otsPlaca.length > 0 ? otsPlaca[0] : null;
+    var otNumero = linkedOt ? (linkedOt.id_ot || linkedOt.ticket_entrada || '') : (e.ticket_entrada || e.id_ot || '');
+    var otCodigoStr = otNumero ? window.srFormatID(otNumero) : 'SIN OT';
+
+    // Formatear Fecha y Hora
+    var dtStr = '____/____/______';
+    if (e.fechaIngreso) {
+        var parts = e.fechaIngreso.split('T')[0].split('-');
+        if (parts.length === 3) dtStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+    var horaStr = e.horaIngreso ? e.horaIngreso : '____:____';
+    var kmStr = e.km ? Number(e.km).toLocaleString('es-PE') + ' KM' : '________________';
+
+    // Buscar conductor / chofer
+    var chofer = e.conductor || e.chofer || e.reportado_por || '';
+    if (!chofer && window.dataGlobalPlacas) {
+        var pMatch = window.dataGlobalPlacas.find(function(p) {
+            var pl = Array.isArray(p) ? (p[0]||'') : (p.placa||'');
+            return pl.toUpperCase() === (e.placa||'').toUpperCase();
+        });
+        if (pMatch) {
+            chofer = Array.isArray(pMatch) ? (pMatch[1] || pMatch[3] || '') : (pMatch.cliente || pMatch.dueno || '');
+        }
+    }
+
+    // Desglosar trabajos
+    var obsTexto = (e.obs || '').trim();
+    if (linkedOt && !obsTexto) {
+        var det = linkedOt.detalles_json ? (typeof linkedOt.detalles_json === 'string' ? JSON.parse(linkedOt.detalles_json) : linkedOt.detalles_json) : {};
+        obsTexto = (det.motivo || linkedOt.observaciones || '').trim();
+    }
+    obsTexto = obsTexto.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
+
+    var lineas = obsTexto ? obsTexto.split('\n') : [];
+    var tareasArr = [];
+    var notasArr = [];
+    lineas.forEach(function(l) {
+        var t = l.trim();
+        if (!t) return;
+        if (t.toLowerCase().startsWith('nota:') || t.toLowerCase().startsWith('obs:')) {
+            notasArr.push(t.replace(/^(nota|obs):\s*/i, '').trim());
+        } else {
+            tareasArr.push(t.replace(/^[-*]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim());
+        }
+    });
+
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var empNombre = localStorage.getItem('fleet_empresa_nombre') || window._EMPRESA_NOMBRE || 'AZKELL FLEET';
+    var plannerNombre = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || window.usuarioActual || 'Planner de Mantenimiento';
+
+    // Generar filas de trabajos (mínimo 5 filas)
+    var numRows = Math.max(5, tareasArr.length);
+    var trabajosRowsHtml = '';
+    for (var i = 0; i < numRows; i++) {
+        var num = i + 1;
+        var tareaDesc = tareasArr[i] || '';
+        trabajosRowsHtml += 
+            '<tr>' +
+            '  <td class="col-num">' + num + '</td>' +
+            '  <td class="col-desc">' +
+            '    <div class="job-line">' +
+            '      <span class="job-text">' + _srEsc(tareaDesc) + '</span>' +
+            '      <span class="dotted-fill"></span>' +
+            '    </div>' +
+            '  </td>' +
+            '  <td class="col-chk">' +
+            '    <div class="chk-box"></div>' +
+            '  </td>' +
+            '</tr>';
+    }
+
+    var notasTexto = notasArr.length > 0 ? notasArr.join(' · ') : '';
+
+    var html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orden en Parabrisas - ${_srEsc(e.placa || 'Unidad')}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Oswald:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f1f5f9;
+            font-family: 'Montserrat', sans-serif;
+            color: #000;
+            display: flex;
+            justify-content: center;
+        }
+        .sheet-container {
+            width: 210mm;
+            min-height: 295mm;
+            padding: 12mm 14mm;
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 2.5px solid #000;
+        }
+        
+        /* Franja Industrial de Advertencia */
+        .stripe-bar {
+            height: 14px;
+            background: repeating-linear-gradient(
+                -45deg,
+                #facc15,
+                #facc15 12px,
+                #000000 12px,
+                #000000 24px
+            );
+            border: 1px solid #000;
+            width: 100%;
+        }
+
+        /* Encabezado */
+        .header-section {
+            margin-top: 10px;
+            margin-bottom: 12px;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .company-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .company-logo {
+            max-height: 38px;
+            max-width: 140px;
+            object-fit: contain;
+        }
+        .company-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .sub-header-left {
+            font-size: 11px;
+            font-weight: 800;
+            color: #64748b;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .sub-header-right {
+            text-align: right;
+        }
+        .doc-title-right {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #000;
+            margin-bottom: 2px;
+        }
+        .doc-code-right {
+            font-size: 14px;
+            font-weight: 900;
+            color: #000;
+            letter-spacing: 0.5px;
+        }
+        .main-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+            margin-bottom: 0;
+            text-transform: uppercase;
+            color: #000;
+        }
+
+        /* Cuadrícula de Datos de Unidad */
+        .grid-data-top {
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr 1fr;
+            border: 2px solid #000;
+            margin-bottom: 6px;
+        }
+        .grid-cell {
+            padding: 6px 10px;
+            border-right: 2px solid #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 52px;
+        }
+        .grid-cell:last-child {
+            border-right: none;
+        }
+        .cell-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .cell-value-line {
+            display: flex;
+            align-items: flex-end;
+            min-height: 20px;
+            border-bottom: 1.5px dotted #000;
+            font-weight: 800;
+            font-size: 14px;
+            color: #000;
+            padding-bottom: 1px;
+        }
+
+        /* Conductor / Chofer */
+        .driver-box {
+            border: 2px solid #000;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+        .driver-line {
+            display: flex;
+            align-items: flex-end;
+            min-height: 20px;
+            border-bottom: 1.5px dotted #000;
+            font-weight: 700;
+            font-size: 12px;
+            color: #000;
+            padding-bottom: 1px;
+        }
+
+        /* Tipo de Servicio Checkboxes */
+        .service-type-bar {
+            border: 2px solid #000;
+            padding: 6px 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .chk-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .chk-square {
+            width: 13px;
+            height: 13px;
+            border: 1.5px solid #000;
+            display: inline-block;
+            background: #fff;
+        }
+
+        /* Tabla de Trabajos */
+        .section-label {
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            color: #000;
+        }
+        .jobs-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2.5px solid #000;
+            margin-bottom: 12px;
+        }
+        .jobs-table th {
+            border: 2px solid #000;
+            padding: 5px 8px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: #f8fafc;
+            color: #000;
+        }
+        .jobs-table td {
+            border: 1.5px solid #000;
+            padding: 8px 10px;
+            vertical-align: middle;
+        }
+        .col-num {
+            width: 32px;
+            text-align: center;
+            font-weight: 900;
+            font-size: 13px;
+        }
+        .col-desc {
+            padding: 6px 10px !important;
+        }
+        .col-chk {
+            width: 50px;
+            text-align: center;
+        }
+        .chk-box {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #000;
+            margin: 0 auto;
+            background: #fff;
+        }
+        .job-line {
+            display: flex;
+            align-items: flex-end;
+            position: relative;
+            min-height: 22px;
+            border-bottom: 1.5px dotted #000;
+        }
+        .job-text {
+            font-weight: 700;
+            font-size: 12px;
+            color: #000;
+            padding-right: 6px;
+            background: #fff;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Observaciones / Aviso Clave */
+        .obs-container {
+            border: 2px solid #000;
+            padding: 8px 10px;
+            min-height: 75px;
+            margin-bottom: 14px;
+            position: relative;
+        }
+        .obs-line-guide {
+            border-bottom: 1.5px dotted #000;
+            height: 22px;
+            width: 100%;
+        }
+        .obs-content-text {
+            font-size: 11px;
+            font-weight: 700;
+            color: #000;
+            line-height: 22px;
+        }
+
+        /* Firmas */
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 10px;
+            margin-bottom: 12px;
+            padding: 0 10px;
+        }
+        .sign-col {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sign-divider {
+            width: 100%;
+            border-top: 2.5px solid #000;
+            margin-bottom: 4px;
+        }
+        .sign-main-name {
+            font-size: 10.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #000;
+            margin-bottom: 1px;
+        }
+        .sign-sub-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: #334155;
+            font-style: italic;
+        }
+
+        /* Footer Note */
+        .footer-note {
+            text-align: center;
+            font-size: 8.5px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #000;
+            margin-top: 4px;
+        }
+
+        /* Print Controls */
+        #btnPrintFloating {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(37,99,235,0.4);
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+            body {
+                background: none;
+                padding: 0;
+                margin: 0;
+            }
+            #btnPrintFloating {
+                display: none;
+            }
+            .sheet-container {
+                width: 210mm;
+                height: 297mm;
+                min-height: 297mm;
+                padding: 10mm 12mm;
+                box-shadow: none;
+                border: 2px solid #000;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="btnPrintFloating" onclick="window.print()">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+        Imprimir Ficha A4
+    </button>
+
+    <div class="sheet-container">
+        <div>
+            <!-- Franja Superior de Advertencia -->
+            <div class="stripe-bar"></div>
+
+            <!-- Encabezado -->
+            <div class="header-section">
+                <div class="header-top">
+                    <div>
+                        <div class="company-badge">
+                            <img src="${empLogoUrl}" alt="Logo" class="company-logo">
+                            <span class="company-name">${_srEsc(empNombre)}</span>
+                        </div>
+                        <div class="sub-header-left">ORDEN EN PARABRISAS</div>
+                    </div>
+                    <div class="sub-header-right">
+                        <div class="doc-title-right">FORMATO DE CONTROL DE TALLER</div>
+                        <div class="doc-code-right">CÓDIGO: OT-FAST &nbsp;|&nbsp; OT: ${_srEsc(otCodigoStr)}</div>
+                    </div>
+                </div>
+                <h1 class="main-title">TRABAJOS A REALIZAR</h1>
+            </div>
+
+            <!-- Grid de Datos Principales -->
+            <div class="grid-data-top">
+                <div class="grid-cell">
+                    <span class="cell-label">PLACA UNIDAD</span>
+                    <span class="cell-value-line" style="font-size:16px;">${_srEsc(e.placa || '')}</span>
+                </div>
+                <div class="grid-cell">
+                    <span class="cell-label">KILOMETRAJE ACTUAL</span>
+                    <span class="cell-value-line">${_srEsc(kmStr)}</span>
+                </div>
+                <div class="grid-cell">
+                    <span class="cell-label">FECHA</span>
+                    <span class="cell-value-line">${_srEsc(dtStr)}</span>
+                </div>
+                <div class="grid-cell">
+                    <span class="cell-label">HORA</span>
+                    <span class="cell-value-line">${_srEsc(horaStr)}</span>
+                </div>
+            </div>
+
+            <!-- Chofer / Reportado Por -->
+            <div class="driver-box">
+                <span class="cell-label">CHOFER / REPORTADO POR:</span>
+                <span class="driver-line">${_srEsc(chofer)}</span>
+            </div>
+
+            <!-- Checkboxes de Tipo de Servicio -->
+            <div class="service-type-bar">
+                <div class="chk-item">
+                    <span class="chk-square"></span> PREVENTIVO / INSPECCIÓN:
+                    &nbsp; <span class="chk-square"></span> Mec.
+                    &nbsp; <span class="chk-square"></span> Eléc.
+                    &nbsp; <span class="chk-square"></span> Carro.
+                    &nbsp; <span class="chk-square"></span> Neum.
+                </div>
+                <div class="chk-item">
+                    <span class="chk-square"></span> CORRECTIVO / FALLA
+                </div>
+                <div class="chk-item">
+                    <span class="chk-square"></span> AUXILIO MECÁNICO
+                </div>
+            </div>
+
+            <!-- Tabla de Trabajos Asignados -->
+            <div class="section-label">TRABAJOS ASIGNADOS A REALIZAR:</div>
+            <table class="jobs-table">
+                <thead>
+                    <tr>
+                        <th style="width:34px; text-align:center;">N°</th>
+                        <th>DESCRIPCIÓN DEL TRABAJO TÉCNICO</th>
+                        <th style="width:50px; text-align:center;">✓ / X</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trabajosRowsHtml}
+                </tbody>
+            </table>
+
+            <!-- Observaciones y Mantenimientos Pendientes -->
+            <div class="section-label">OBSERVACIONES Y MANTENIMIENTOS PENDIENTES (AVISO CLAVE):</div>
+            <div class="obs-container">
+                ${notasTexto ? '<div class="obs-content-text">' + _srEsc(notasTexto) + '</div>' : ''}
+                <div class="obs-line-guide"></div>
+                <div class="obs-line-guide"></div>
+                <div class="obs-line-guide"></div>
+            </div>
+        </div>
+
+        <!-- Parte Inferior: Firmas y Advertencia -->
+        <div>
+            <div class="signatures-grid">
+                <div class="sign-col">
+                    <div class="sign-divider"></div>
+                    <div class="sign-main-name">FIRMA / NOMBRE DEL PLANNER: ${_srEsc(plannerNombre)}</div>
+                    <div class="sign-sub-label">Autoriza ingreso y trabajos</div>
+                </div>
+                <div class="sign-col">
+                    <div class="sign-divider"></div>
+                    <div class="sign-main-name">FIRMA DEL TÉCNICO ASIGNADO</div>
+                    <div class="sign-sub-label">Conformidad de finalización</div>
+                </div>
+            </div>
+
+            <!-- Franja Inferior de Advertencia -->
+            <div class="stripe-bar"></div>
+            <div class="footer-note">MANTENER ESTA FICHA VISIBLE EN EL PARABRISAS HASTA LA ENTREGA FORMAL DE LA UNIDAD.</div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    var win = window.open('', '_blank');
+    if (!win) {
+        alert('Por favor, permite ventanas emergentes para imprimir la orden.');
+        return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = function() {
+        setTimeout(function() {
+            win.print();
+        }, 400);
+    };
+};
 
