@@ -239,7 +239,7 @@ module.exports = function (db, logAudit) {
                 const sqlInsert = `
                     INSERT IGNORE INTO flota_disponibilidad (
                         placa_camion, marca, categoria_conductor, tipo_unidad, capacidad_tanque, estado_conductor, estado_unidad, creado_por
-                    ) VALUES (?, ?, ?, ?, ?, 'Disponible', 'Disponible', ?)
+                    ) VALUES (?, ?, ?, ?, '0', 'Disponible', 'Disponible', ?)
                 `;
 
                 tdb.query(sqlInsert, [
@@ -247,7 +247,6 @@ module.exports = function (db, logAudit) {
                     p.marca || '',
                     catConductor,
                     p.tipo || '',
-                    capStr,
                     usuario || 'Sincronizador'
                 ], (errIns, resIns) => {
                     procesados++;

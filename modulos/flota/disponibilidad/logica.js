@@ -41,6 +41,9 @@ window.dispCargarDatos = async function () {
             return;
         }
 
+        // Cargar datos de GPS/Wialon para autocompletar ubicaciones
+        window.dispCargarGpsMap();
+
         window.dispActualizarKPIs();
         window.dispFiltrar();
     } catch (err) {
@@ -48,7 +51,7 @@ window.dispCargarDatos = async function () {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="14" class="text-center py-4 text-danger">
+                    <td colspan="13" class="text-center py-4 text-danger">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> Error al cargar datos: ${err.message}
                     </td>
                 </tr>
@@ -60,19 +63,53 @@ window.dispCargarDatos = async function () {
 // ── Cargar Mapa GPS / Wialon ───────────────────────────────────────
 window.dispCargarGpsMap = async function () {
     try {
-        // Intenta obtener telemetría GPS si existe Wialon o GPS local
-        const resGps = await fetch('/api/wialon/unidades').then(r => r.json()).catch(() => null);
-        if (resGps && Array.isArray(resGps)) {
-            resGps.forEach(item => {
+        let datos = (typeof CACHE !== 'undefined' && Array.isArray(CACHE.wialon) && CACHE.wialon.length > 0)
+            ? CACHE.wialon : (window._datosWialonGPS || []);
+
+        if (!datos.length) {
+            const res = await fetch('/api/script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'obtenerDatosWialon' })
+            }).then(r => r.json()).catch(() => null);
+            if (res && res.data && Array.isArray(res.data)) {
+                datos = res.data;
+            }
+        }
+
+        if (Array.isArray(datos)) {
+            datos.forEach(item => {
                 const pl = (item.placa || item.nm || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (pl) {
-                    window.dispGpsMap[pl] = item.direccion || item.pos_texto || item.ubicacion || '';
+                const ubi = item.direccion || item.pos_texto || item.ubicacion || item.posicion || '';
+                if (pl && ubi) {
+                    window.dispGpsMap[pl] = ubi;
                 }
             });
             window.dispFiltrar();
         }
     } catch (e) {
         // GPS opcional
+    }
+};
+
+// ── Toggle Columna Conductor Eventual ─────────────────────────────
+window.dispMostrarEventual = false;
+window.dispToggleColumnaEventual = function () {
+    window.dispMostrarEventual = !window.dispMostrarEventual;
+    const btn = document.getElementById('btn-toggle-eventual');
+    const th = document.getElementById('th-cond-eventual');
+
+    if (th) th.style.display = window.dispMostrarEventual ? '' : 'none';
+    document.querySelectorAll('.td-cond-eventual').forEach(td => {
+        td.style.display = window.dispMostrarEventual ? '' : 'none';
+    });
+
+    if (btn) {
+        btn.innerHTML = window.dispMostrarEventual
+            ? '<i class="bi bi-eye text-primary me-1"></i>Cond. Eventual'
+            : '<i class="bi bi-eye-slash me-1"></i>Cond. Eventual';
+        btn.classList.toggle('btn-outline-primary', window.dispMostrarEventual);
+        btn.classList.toggle('btn-outline-secondary', !window.dispMostrarEventual);
     }
 };
 
@@ -128,24 +165,28 @@ window.dispRenderTabla = function (lista) {
     lista.forEach((item, index) => {
         const num = index + 1;
         const cleanPlaca = (item.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const gpsUbicacion = window.dispGpsMap[cleanPlaca] || item.ubicacion_manual || 'Sin ubicación GPS';
+        const gpsUbicacion = window.dispGpsMap[cleanPlaca] || item.ubicacion_manual || item.ubicacion_manual || 'Sin ubicación GPS';
 
         // Badge de Estado Conductor
         const estConBadge = window.dispObtenerBadgeEstadoConductor(item.estado_conductor);
         // Badge de Estado Unidad
         const estUniBadge = window.dispObtenerBadgeEstadoUnidad(item.estado_unidad);
 
+        // Capacidad Tanque Formateada (0 por defecto)
+        let capTxt = item.capacidad_tanque || '0';
+        if (capTxt === '0' || capTxt === 'Gln' || capTxt === 'm³' || !capTxt) capTxt = '0';
+
         html += `
             <tr data-disp-id="${item.id}">
                 <td class="text-center fw-bold text-muted" style="font-size:0.75rem;">${num}</td>
                 <td>
                     <div class="fw-semibold text-dark" style="font-size:0.82rem;">
-                        ${item.conductor_eventual ? `<i class="bi bi-person me-1 text-primary"></i>${_dispEsc(item.conductor_eventual)}` : '<span class="text-muted">—</span>'}
+                        ${item.conductor_asignado ? `<i class="bi bi-person-badge me-1 text-success"></i>${_dispEsc(item.conductor_asignado)}` : '<span class="text-muted">—</span>'}
                     </div>
                 </td>
-                <td>
+                <td class="td-cond-eventual" style="${window.dispMostrarEventual ? '' : 'display:none;'}">
                     <div class="fw-semibold text-dark" style="font-size:0.82rem;">
-                        ${item.conductor_asignado ? `<i class="bi bi-person-badge me-1 text-success"></i>${_dispEsc(item.conductor_asignado)}` : '<span class="text-muted">—</span>'}
+                        ${item.conductor_eventual ? `<i class="bi bi-person me-1 text-primary"></i>${_dispEsc(item.conductor_eventual)}` : '<span class="text-muted">—</span>'}
                     </div>
                 </td>
                 <td>
@@ -162,7 +203,7 @@ window.dispRenderTabla = function (lista) {
                 </td>
                 <td>
                     <span class="fw-bold" style="font-size:0.8rem; color:#0369a1;">
-                        ${_dispEsc(item.capacidad_tanque || '—')}
+                        ${_dispEsc(capTxt)}
                     </span>
                 </td>
                 <td>
@@ -331,24 +372,17 @@ window.dispSeleccionarPlacaCamion = function (placa) {
     if (pObj) {
         const marca = pObj.marca || (Array.isArray(pObj) ? pObj[3] : '') || '';
         const combustible = pObj.combustible || (Array.isArray(pObj) ? pObj[14] : '') || '';
-        const cargaUtil = pObj.carga_util || (Array.isArray(pObj) ? pObj[15] : '') || '';
         const uts = pObj.uts || (Array.isArray(pObj) ? pObj[19] : '') || '';
-        const cliente = pObj.cliente || (Array.isArray(pObj) ? pObj[1] : '') || '';
 
         // Marca
         const marcaEl = document.getElementById('disp-f-marca');
         if (marcaEl) marcaEl.value = marca.toUpperCase();
 
-        // Capacidad Tanque (Galones si Diésel, m³ si Gas)
-        const capEl = document.getElementById('disp-f-capacidad');
-        if (capEl) {
-            const combUpper = combustible.toUpperCase();
-            if (combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP')) {
-                capEl.value = cargaUtil ? `${cargaUtil} m³` : 'm³';
-            } else {
-                capEl.value = cargaUtil ? `${cargaUtil} Gln` : 'Gln';
-            }
-        }
+        // Capacidad Tanque (Unidad según combustible: Gln si Diésel, m³ si Gas)
+        const combUpper = combustible.toUpperCase();
+        const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
+        const unitSpan = document.getElementById('disp-f-capacidad-unit');
+        if (unitSpan) unitSpan.innerText = isGas ? '(m³ - Gas)' : '(Gln - Diésel)';
 
         // Categoría Conductor (Local o Nacional según UTS)
         const catEl = document.getElementById('disp-f-categoria');
@@ -357,21 +391,15 @@ window.dispSeleccionarPlacaCamion = function (placa) {
             catEl.value = utsUpper.includes('LOCAL') ? 'Local' : 'Nacional';
         }
 
-        // Flota si está vacío
-        const flotaEl = document.getElementById('disp-f-flota');
-        if (flotaEl && !flotaEl.value && cliente) {
-            flotaEl.value = cliente;
-        }
-
         // Recalcular Tipo de Unidad Concatenado
         window.dispCalcularTipoUnidad();
 
-        // Ubicación GPS si existe
+        // Ubicación GPS si existe en tiempo real
         const cleanPlaca = placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
         const gpsDir = window.dispGpsMap[cleanPlaca];
         const ubiEl = document.getElementById('disp-f-ubicacion');
-        if (ubiEl && gpsDir && !ubiEl.value) {
-            ubiEl.value = gpsDir;
+        if (ubiEl) {
+            ubiEl.value = gpsDir || ubiEl.value || '';
         }
     }
 };
@@ -512,21 +540,38 @@ window.dispEditar = function (id) {
     const item = (window.dispDatos || []).find(x => Number(x.id) === Number(id));
     if (!item) return;
 
+    const plCamion = item.placa_camion || '';
+    const cleanPlaca = plCamion.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
     document.getElementById('disp-f-id').value = item.id;
-    document.getElementById('disp-f-placa-camion').value = item.placa_camion || '';
+    document.getElementById('disp-f-placa-camion').value = plCamion;
     document.getElementById('disp-f-placa-carreta').value = item.placa_carreta || '';
     document.getElementById('disp-f-marca').value = item.marca || '';
-    document.getElementById('disp-f-capacidad').value = item.capacidad_tanque || '';
+
+    // Extraer sólo el número para el campo de capacidad
+    const capNum = String(item.capacidad_tanque || '').replace(/[^0-9.]/g, '');
+    document.getElementById('disp-f-capacidad').value = capNum || '0';
+
+    // Detectar unidad de combustible
+    const pObj = (window.dispPlacas || []).find(p => (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase() === cleanPlaca);
+    const combUpper = (pObj?.combustible || '').toUpperCase();
+    const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
+    const unitSpan = document.getElementById('disp-f-capacidad-unit');
+    if (unitSpan) unitSpan.innerText = isGas ? '(m³ - Gas)' : '(Gln - Diésel)';
+
     document.getElementById('disp-f-categoria').value = item.categoria_conductor || 'Nacional';
     document.getElementById('disp-f-tipo-unidad').value = item.tipo_unidad || '';
     document.getElementById('disp-f-conductor-asignado').value = item.conductor_asignado || '';
     document.getElementById('disp-f-conductor-eventual').value = item.conductor_eventual || '';
     document.getElementById('disp-f-estado-conductor').value = item.estado_conductor || 'Disponible';
     document.getElementById('disp-f-estado-unidad').value = item.estado_unidad || 'Disponible';
-    document.getElementById('disp-f-ubicacion').value = item.ubicacion_manual || '';
+    
+    // Ubicación GPS en tiempo real o manual
+    const gpsDir = window.dispGpsMap[cleanPlaca];
+    document.getElementById('disp-f-ubicacion').value = gpsDir || item.ubicacion_manual || '';
     document.getElementById('disp-f-observaciones').value = item.observaciones || '';
 
-    document.getElementById('disp-modal-title').innerText = `Editar Disponibilidad (${item.placa_camion})`;
+    document.getElementById('disp-modal-title').innerText = `Editar Disponibilidad (${plCamion})`;
 
     const offcanvasEl = document.getElementById('offcanvasDisponibilidad');
     if (offcanvasEl) {
@@ -542,11 +587,22 @@ window.dispGuardarFormulario = async function (e) {
     if (btn) btn.disabled = true;
 
     const id = document.getElementById('disp-f-id')?.value;
+    const plCamion = (document.getElementById('disp-f-placa-camion')?.value || '').trim();
+    const cleanPlaca = plCamion.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const pObj = (window.dispPlacas || []).find(p => (p.placa || (Array.isArray(p) ? p[0] : '')).toUpperCase() === cleanPlaca);
+    const combUpper = (pObj?.combustible || '').toUpperCase();
+    const isGas = combUpper.includes('GAS') || combUpper.includes('GNV') || combUpper.includes('GLP');
+    
+    const rawCap = document.getElementById('disp-f-capacidad')?.value || '0';
+    const cleanCapNum = rawCap.replace(/[^0-9.]/g, '');
+    const capTanque = (!cleanCapNum || Number(cleanCapNum) === 0) ? '0' : `${cleanCapNum} ${isGas ? 'm³' : 'Gln'}`;
+
     const payload = {
-        placa_camion: document.getElementById('disp-f-placa-camion')?.value || '',
+        placa_camion: plCamion,
         placa_carreta: document.getElementById('disp-f-placa-carreta')?.value || '',
         marca: document.getElementById('disp-f-marca')?.value || '',
-        capacidad_tanque: document.getElementById('disp-f-capacidad')?.value || '',
+        capacidad_tanque: capTanque,
         categoria_conductor: document.getElementById('disp-f-categoria')?.value || 'Nacional',
         tipo_unidad: document.getElementById('disp-f-tipo-unidad')?.value || '',
         conductor_asignado: document.getElementById('disp-f-conductor-asignado')?.value || '',
