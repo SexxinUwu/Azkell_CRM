@@ -13,34 +13,67 @@ module.exports = function (db, logAudit) {
         }
     }
 
-    // ── GET /api/disponibilidad-flota (Listado general con datos enriquecidos) ─────────
-    router.get('/', async (req, res) => {
+    // Middleware: asegurar que la tabla flota_disponibilidad existe en el tenant actual
+    router.use((req, res, next) => {
         const tdb = getDb(req);
-        try {
-            const sql = `
-                SELECT 
-                    d.*,
-                    p.combustible AS placa_combustible,
-                    p.modelo_uts AS placa_modelo_uts,
-                    p.tipo AS placa_tipo_camion,
-                    p.uts AS placa_uts
-                FROM flota_disponibilidad d
-                LEFT JOIN placas p ON p.placa = d.placa_camion
-                ORDER BY d.flota ASC, d.placa_camion ASC
-            `;
-            const [rows] = await tdb.promise().query(sql);
-            res.json(rows);
-        } catch (error) {
-            console.error('Error al obtener disponibilidad de flota:', error);
-            res.status(500).json({ error: 'Error al consultar disponibilidad de flota', detalle: error.message });
-        }
+        const sqlCreateTable = `
+            CREATE TABLE IF NOT EXISTS flota_disponibilidad (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                flota VARCHAR(100) NULL DEFAULT '',
+                conductor_eventual VARCHAR(150) NULL DEFAULT '',
+                conductor_asignado VARCHAR(150) NULL DEFAULT '',
+                placa_camion VARCHAR(20) NOT NULL,
+                placa_carreta VARCHAR(20) NULL DEFAULT '',
+                capacidad_tanque VARCHAR(50) NULL DEFAULT '',
+                marca VARCHAR(50) NULL DEFAULT '',
+                categoria_conductor VARCHAR(50) NULL DEFAULT '',
+                tipo_unidad VARCHAR(100) NULL DEFAULT '',
+                estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+                estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+                ubicacion_manual TEXT NULL,
+                observaciones TEXT NULL,
+                creado_por VARCHAR(100) NULL DEFAULT '',
+                actualizado_por VARCHAR(100) NULL DEFAULT '',
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_placa_camion (placa_camion),
+                INDEX idx_estado_con (estado_conductor),
+                INDEX idx_estado_uni (estado_unidad)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `;
+        tdb.query(sqlCreateTable, (err) => {
+            if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
+            next();
+        });
     });
 
-    // ── POST /api/disponibilidad-flota (Crear registro de unidad) ────────────────────
-    router.post('/', async (req, res) => {
+    // ── GET /api/disponibilidad-flota (Listado general) ────────────────────────
+    router.get('/', (req, res) => {
+        const tdb = getDb(req);
+        const sql = `
+            SELECT 
+                d.*,
+                p.combustible AS placa_combustible,
+                p.modelo_uts AS placa_modelo_uts,
+                p.tipo AS placa_tipo_camion,
+                p.uts AS placa_uts
+            FROM flota_disponibilidad d
+            LEFT JOIN placas p ON p.placa = d.placa_camion
+            ORDER BY d.placa_camion ASC
+        `;
+        tdb.query(sql, (err, rows) => {
+            if (err) {
+                console.error('Error al obtener disponibilidad de flota:', err);
+                return res.status(500).json({ error: 'Error al consultar disponibilidad de flota', detalle: err.message });
+            }
+            res.json(rows || []);
+        });
+    });
+
+    // ── POST /api/disponibilidad-flota (Crear / Guardar registro) ───────────────
+    router.post('/', (req, res) => {
         const tdb = getDb(req);
         const {
-            flota,
             conductor_eventual,
             conductor_asignado,
             placa_camion,
@@ -60,159 +93,135 @@ module.exports = function (db, logAudit) {
             return res.status(400).json({ error: 'La placa del camión es obligatoria' });
         }
 
-        try {
-            const sql = `
-                INSERT INTO flota_disponibilidad (
-                    flota,
-                    conductor_eventual,
-                    conductor_asignado,
-                    placa_camion,
-                    placa_carreta,
-                    capacidad_tanque,
-                    marca,
-                    categoria_conductor,
-                    tipo_unidad,
-                    estado_conductor,
-                    estado_unidad,
-                    ubicacion_manual,
-                    observaciones,
-                    creado_por,
-                    actualizado_por
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    flota = VALUES(flota),
-                    conductor_eventual = VALUES(conductor_eventual),
-                    conductor_asignado = VALUES(conductor_asignado),
-                    placa_carreta = VALUES(placa_carreta),
-                    capacidad_tanque = VALUES(capacidad_tanque),
-                    marca = VALUES(marca),
-                    categoria_conductor = VALUES(categoria_conductor),
-                    tipo_unidad = VALUES(tipo_unidad),
-                    estado_conductor = VALUES(estado_conductor),
-                    estado_unidad = VALUES(estado_unidad),
-                    ubicacion_manual = VALUES(ubicacion_manual),
-                    observaciones = VALUES(observaciones),
-                    actualizado_por = VALUES(actualizado_por),
-                    fecha_actualizacion = CURRENT_TIMESTAMP
-            `;
+        const sql = `
+            INSERT INTO flota_disponibilidad (
+                conductor_eventual, conductor_asignado, placa_camion, placa_carreta,
+                capacidad_tanque, marca, categoria_conductor, tipo_unidad, estado_conductor,
+                estado_unidad, ubicacion_manual, observaciones, creado_por, actualizado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                conductor_eventual = VALUES(conductor_eventual),
+                conductor_asignado = VALUES(conductor_asignado),
+                placa_carreta = VALUES(placa_carreta),
+                capacidad_tanque = VALUES(capacidad_tanque),
+                marca = VALUES(marca),
+                categoria_conductor = VALUES(categoria_conductor),
+                tipo_unidad = VALUES(tipo_unidad),
+                estado_conductor = VALUES(estado_conductor),
+                estado_unidad = VALUES(estado_unidad),
+                ubicacion_manual = VALUES(ubicacion_manual),
+                observaciones = VALUES(observaciones),
+                actualizado_por = VALUES(actualizado_por),
+                fecha_actualizacion = CURRENT_TIMESTAMP
+        `;
 
-            const [result] = await tdb.promise().query(sql, [
-                (flota || '').trim(),
-                (conductor_eventual || '').trim(),
-                (conductor_asignado || '').trim(),
-                placa_camion.trim().toUpperCase(),
-                (placa_carreta || '').trim().toUpperCase(),
-                (capacidad_tanque || '').trim(),
-                (marca || '').trim().toUpperCase(),
-                (categoria_conductor || '').trim(),
-                (tipo_unidad || '').trim(),
-                (estado_conductor || 'Disponible').trim(),
-                (estado_unidad || 'Disponible').trim(),
-                (ubicacion_manual || '').trim(),
-                (observaciones || '').trim(),
-                (creado_por || '').trim(),
-                (creado_por || '').trim()
-            ]);
+        const params = [
+            (conductor_eventual || '').trim(),
+            (conductor_asignado || '').trim(),
+            placa_camion.trim().toUpperCase(),
+            (placa_carreta || '').trim().toUpperCase(),
+            (capacidad_tanque || '').trim(),
+            (marca || '').trim().toUpperCase(),
+            (categoria_conductor || '').trim(),
+            (tipo_unidad || '').trim(),
+            (estado_conductor || 'Disponible').trim(),
+            (estado_unidad || 'Disponible').trim(),
+            (ubicacion_manual || '').trim(),
+            (observaciones || '').trim(),
+            (creado_por || '').trim(),
+            (creado_por || '').trim()
+        ];
 
-            auditar(req, 'CREAR/GUARDAR', `Registro disponibilidad placa: ${placa_camion.toUpperCase()} (ID: ${result.insertId || 'Update'})`);
-
-            res.json({
-                success: true,
-                message: 'Registro de disponibilidad guardado correctamente',
-                id: result.insertId
-            });
-        } catch (error) {
-            console.error('Error al guardar disponibilidad:', error);
-            res.status(500).json({ error: 'Error al guardar disponibilidad', detalle: error.message });
-        }
+        tdb.query(sql, params, (err, result) => {
+            if (err) {
+                console.error('Error al guardar disponibilidad:', err);
+                return res.status(500).json({ error: 'Error al guardar disponibilidad', detalle: err.message });
+            }
+            auditar(req, 'CREAR/GUARDAR', `Registro disponibilidad placa: ${placa_camion.toUpperCase()}`);
+            res.json({ success: true, message: 'Registro de disponibilidad guardado correctamente', id: result.insertId });
+        });
     });
 
-    // ── PUT /api/disponibilidad-flota/:id (Actualizar registro) ──────────────────────
-    router.put('/:id', async (req, res) => {
+    // ── PUT /api/disponibilidad-flota/:id (Actualizar registro) ─────────────────
+    router.put('/:id', (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const payload = req.body;
 
-        try {
-            const fields = [];
-            const values = [];
+        const fields = [];
+        const values = [];
 
-            const allowedFields = [
-                'flota',
-                'conductor_eventual',
-                'conductor_asignado',
-                'placa_camion',
-                'placa_carreta',
-                'capacidad_tanque',
-                'marca',
-                'categoria_conductor',
-                'tipo_unidad',
-                'estado_conductor',
-                'estado_unidad',
-                'ubicacion_manual',
-                'observaciones',
-                'actualizado_por'
-            ];
+        const allowedFields = [
+            'conductor_eventual', 'conductor_asignado', 'placa_camion',
+            'placa_carreta', 'capacidad_tanque', 'marca', 'categoria_conductor',
+            'tipo_unidad', 'estado_conductor', 'estado_unidad', 'ubicacion_manual',
+            'observaciones', 'actualizado_por'
+        ];
 
-            for (const key of allowedFields) {
-                if (payload[key] !== undefined) {
-                    fields.push(`\`${key}\` = ?`);
-                    values.push(typeof payload[key] === 'string' ? payload[key].trim() : payload[key]);
-                }
+        for (const key of allowedFields) {
+            if (payload[key] !== undefined) {
+                fields.push(`\`${key}\` = ?`);
+                values.push(typeof payload[key] === 'string' ? payload[key].trim() : payload[key]);
             }
-
-            if (fields.length === 0) {
-                return res.status(400).json({ error: 'No se enviaron campos válidos para actualizar' });
-            }
-
-            values.push(id);
-            const sql = `UPDATE flota_disponibilidad SET ${fields.join(', ')}, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?`;
-            await tdb.promise().query(sql, values);
-
-            auditar(req, 'ACTUALIZAR', `Actualizada disponibilidad ID: ${id}`);
-
-            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente' });
-        } catch (error) {
-            console.error('Error al actualizar disponibilidad:', error);
-            res.status(500).json({ error: 'Error al actualizar disponibilidad', detalle: error.message });
         }
+
+        if (fields.length === 0) {
+            return res.status(400).json({ error: 'No se enviaron campos válidos para actualizar' });
+        }
+
+        values.push(id);
+        const sql = `UPDATE flota_disponibilidad SET ${fields.join(', ')}, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?`;
+
+        tdb.query(sql, values, (err) => {
+            if (err) {
+                console.error('Error al actualizar disponibilidad:', err);
+                return res.status(500).json({ error: 'Error al actualizar disponibilidad', detalle: err.message });
+            }
+            auditar(req, 'ACTUALIZAR', `Actualizada disponibilidad ID: ${id}`);
+            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente' });
+        });
     });
 
-    // ── DELETE /api/disponibilidad-flota/:id (Eliminar registro) ────────────────────
-    router.delete('/:id', async (req, res) => {
+    // ── DELETE /api/disponibilidad-flota/:id (Eliminar registro) ───────────────
+    router.delete('/:id', (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
 
-        try {
-            const [rows] = await tdb.promise().query('SELECT placa_camion FROM flota_disponibilidad WHERE id = ?', [id]);
-            const placa = rows[0]?.placa_camion || id;
-
-            await tdb.promise().query('DELETE FROM flota_disponibilidad WHERE id = ?', [id]);
-            auditar(req, 'ELIMINAR', `Eliminada disponibilidad ID: ${id} (${placa})`);
-
+        tdb.query('DELETE FROM flota_disponibilidad WHERE id = ?', [id], (err) => {
+            if (err) {
+                console.error('Error al eliminar disponibilidad:', err);
+                return res.status(500).json({ error: 'Error al eliminar registro', detalle: err.message });
+            }
+            auditar(req, 'ELIMINAR', `Eliminada disponibilidad ID: ${id}`);
             res.json({ success: true, message: 'Registro eliminado correctamente' });
-        } catch (error) {
-            console.error('Error al eliminar disponibilidad:', error);
-            res.status(500).json({ error: 'Error al eliminar registro', detalle: error.message });
-        }
+        });
     });
 
-    // ── POST /api/disponibilidad-flota/sincronizar (Poblar desde placas activas) ─────
-    router.post('/sincronizar', async (req, res) => {
+    // ── POST /api/disponibilidad-flota/sincronizar (Poblar desde placas activas) ──
+    router.post('/sincronizar', (req, res) => {
         const tdb = getDb(req);
         const { usuario } = req.body;
 
-        try {
-            // Obtener todas las placas activas que sean motora o camiones/tractos
-            const [placas] = await tdb.promise().query(`
-                SELECT placa, cliente, marca, tipo, combustible, uts, carga_util
-                FROM placas 
-                WHERE estado = 'Activa' AND (motora = '1' OR tipo IN ('Camion', 'Tracto', 'Volquete', 'Furgon', 'Cisterna', 'Camioneta', 'Tractocamion'))
-            `);
+        const sqlPlacas = `
+            SELECT placa, cliente, marca, tipo, combustible, uts, carga_util
+            FROM placas 
+            WHERE estado = 'Activa' AND (motora = '1' OR tipo IN ('Camion', 'Tracto', 'Volquete', 'Furgon', 'Cisterna', 'Camioneta', 'Tractocamion'))
+        `;
+
+        tdb.query(sqlPlacas, (err, placas) => {
+            if (err || !placas) {
+                console.error('Error obteniendo placas para sincronizar:', err);
+                return res.status(500).json({ error: 'Error al obtener placas para sincronización' });
+            }
+
+            if (placas.length === 0) {
+                return res.json({ success: true, message: 'No se encontraron placas activas para sincronizar', insertados: 0 });
+            }
 
             let insertados = 0;
-            for (const p of placas) {
-                // Calcular capacidad inicial
+            let procesados = 0;
+
+            placas.forEach(p => {
                 let capStr = '';
                 if (p.combustible) {
                     const combUpper = p.combustible.toUpperCase();
@@ -223,48 +232,37 @@ module.exports = function (db, logAudit) {
                     }
                 }
 
-                // Categoría conductor según UTS
                 const utsUpper = (p.uts || '').toUpperCase();
                 const catConductor = utsUpper.includes('LOCAL') ? 'Local' : (utsUpper.includes('NACIONAL') ? 'Nacional' : (utsUpper || 'Nacional'));
 
                 const sqlInsert = `
                     INSERT IGNORE INTO flota_disponibilidad (
-                        flota,
-                        placa_camion,
-                        marca,
-                        categoria_conductor,
-                        tipo_unidad,
-                        capacidad_tanque,
-                        estado_conductor,
-                        estado_unidad,
-                        creado_por
-                    ) VALUES (?, ?, ?, ?, ?, ?, 'Disponible', 'Disponible', ?)
+                        placa_camion, marca, categoria_conductor, tipo_unidad, capacidad_tanque, estado_conductor, estado_unidad, creado_por
+                    ) VALUES (?, ?, ?, ?, ?, 'Disponible', 'Disponible', ?)
                 `;
 
-                const [resIns] = await tdb.promise().query(sqlInsert, [
-                    p.cliente || 'FLOTA PRINCIPAL',
+                tdb.query(sqlInsert, [
                     p.placa,
                     p.marca || '',
                     catConductor,
                     p.tipo || '',
                     capStr,
                     usuario || 'Sincronizador'
-                ]);
+                ], (errIns, resIns) => {
+                    procesados++;
+                    if (!errIns && resIns && resIns.affectedRows > 0) insertados++;
 
-                if (resIns.affectedRows > 0) insertados++;
-            }
-
-            auditar(req, 'SINCRONIZAR', `Sincronizadas ${insertados} placas a disponibilidad`);
-
-            res.json({
-                success: true,
-                message: `Sincronización completada. ${insertados} unidades agregadas a disponibilidad.`,
-                insertados
+                    if (procesados === placas.length) {
+                        auditar(req, 'SINCRONIZAR', `Sincronizadas ${insertados} placas a disponibilidad`);
+                        return res.json({
+                            success: true,
+                            message: `Sincronización completada. ${insertados} unidades agregadas a disponibilidad.`,
+                            insertados
+                        });
+                    }
+                });
             });
-        } catch (error) {
-            console.error('Error al sincronizar disponibilidad:', error);
-            res.status(500).json({ error: 'Error al sincronizar placas', detalle: error.message });
-        }
+        });
     });
 
     return router;
