@@ -834,9 +834,21 @@
                 </select>
             </div>
 
-            <div>
-                <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Observaciones</label>
-                <textarea class="form-control form-control-sm" id="sr-f-obs" rows="3" placeholder="Motivo del ingreso, notas..." style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);resize:vertical;"></textarea>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0;">Trabajos Asignados / Tareas *</label>
+                    <button type="button" class="btn btn-sm btn-link p-0 fw-bold text-decoration-none" style="font-size:0.72rem; color:#2563eb;" onclick="window.srAgregarFilaTrabajo()">
+                        <i class="bi bi-plus-circle me-1"></i>+ Agregar Fila
+                    </button>
+                </div>
+                <div id="sr-f-trabajos-container" class="d-flex flex-column gap-2 mb-2">
+                    <!-- Filas dinámicas generadas con srAgregarFilaTrabajo -->
+                </div>
+                <textarea class="form-control form-control-sm d-none" id="sr-f-obs"></textarea>
+                <div class="mt-2">
+                    <label style="font-size:.68rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;display:block;">Observaciones / Notas Adicionales (Opcional)</label>
+                    <textarea class="form-control form-control-sm" id="sr-f-obs-extra" rows="2" placeholder="Notas clave, avisos adicionales..." style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);resize:vertical;font-size:0.8rem;"></textarea>
+                </div>
             </div>
 
             <div class="mt-3">
