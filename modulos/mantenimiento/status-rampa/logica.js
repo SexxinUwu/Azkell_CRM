@@ -438,10 +438,7 @@ function srRenderTabla() {
                     obsTextoCol = Array.from(new Set(obsOTList)).join('\n');
                 }
             }
-            obsTextoCol = (obsTextoCol || '—')
-                .replace(/^\[Reporte\s+[^\]]+\]\s*(OT\s+OT-[^:]+:\s*)?/gim, '')
-                .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
-                .trim();
+            var obsFormateada = typeof window.srFormatearTareas === 'function' ? window.srFormatearTareas(obsTextoCol) : obsTextoCol;
 
             html += '<tr class="sr-ocupada' + (esActiva ? ' sr-activa' : '') + '" data-id="' + e._id + '" onclick="window.srAbrirDetalle(' + e._id + ')">';
             html += '<td style="white-space:nowrap;"><div style="display:flex;align-items:center;gap:5px;"><span class="sr-badge-rampa" style="background:' + color + ';flex-shrink:0;" title="' + _srEsc(rampaNom) + '">' + (idx+1) + '</span><span style="font-size:0.74rem;font-weight:700;color:var(--text);">' + _srEsc(rampaNom) + '</span></div></td>';
@@ -449,7 +446,7 @@ function srRenderTabla() {
             html += '<td>' + (e.horaIngreso || '') + '</td>';
             html += '<td style="font-weight:700;">' + (e.placa || '') + '</td>';
             html += '<td>' + srBadgeSituacion(e.situacion, true) + '</td>';
-            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + (obsTextoCol || '').replace(/"/g,'&quot;') + '">' + _srEsc(obsTextoCol || '—') + '</div></td>';
+            html += '<td><div style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;font-size:0.78rem;color:var(--text);line-height:1.4;" title="' + _srEsc(obsFormateada || '—').replace(/"/g,'&quot;') + '">' + _srEsc(obsFormateada || '—') + '</div></td>';
             html += '<td>' + (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '') + '</td>';
             html += '<td>' + (e.horaSalida || '') + '</td>';
             html += '<td style="font-weight:700;font-size:0.8rem;color:var(--primary,#5865F2);">' + srCalcHorasTaller(e) + '</td>';
@@ -619,7 +616,6 @@ window.srAbrirDetalle = function(id) {
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
             var mot = (det.motivo || o.observaciones || '').trim();
-            // Limpiar cabeceras [Reporte F-...] o prefijos "OT OT-..."
             mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
             if (mot) {
                 obsOTList.push(mot);
@@ -629,10 +625,29 @@ window.srAbrirDetalle = function(id) {
             obsTextoCompleto = Array.from(new Set(obsOTList)).join('\n');
         }
     }
-    obsTextoCompleto = (obsTextoCompleto || '')
-        .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
-        .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
-        .trim();
+    
+    var parsedDetalle = typeof window.srParsearTareasArray === 'function' 
+        ? window.srParsearTareasArray(obsTextoCompleto) 
+        : { tareas: obsTextoCompleto ? [obsTextoCompleto] : [], notas: [] };
+        
+    var htmlTareas = '';
+    if (parsedDetalle.tareas.length > 0) {
+        htmlTareas += '<div class="d-flex flex-column gap-2">';
+        parsedDetalle.tareas.forEach(function(t, idx) {
+            htmlTareas += '<div class="d-flex align-items-start gap-2 p-2 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">' +
+                          '  <span class="badge rounded-pill fw-bold" style="background:#2563eb; color:#fff; font-size:0.72rem; min-width:22px; height:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">' + (idx + 1) + '</span>' +
+                          '  <span style="font-size:0.82rem; color:#1e293b; font-weight:600; line-height:1.45; word-break:break-word;">' + _srEsc(t) + '</span>' +
+                          '</div>';
+        });
+        if (parsedDetalle.notas.length > 0) {
+            htmlTareas += '<div class="p-2 rounded-3 mt-1" style="background:#fffbeb; border:1px solid #fef3c7; font-size:0.78rem; color:#92400e; line-height:1.4;">' +
+                          '  <i class="bi bi-info-circle-fill me-1"></i><strong>Nota:</strong> ' + _srEsc(parsedDetalle.notas.join(' · ')) +
+                          '</div>';
+        }
+        htmlTareas += '</div>';
+    } else {
+        htmlTareas = '<div class="p-3 text-muted text-center" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem;">Sin tareas registradas.</div>';
+    }
 
     html += '  <div class="card-body p-3">';
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
@@ -2512,6 +2527,42 @@ window.srResetTrabajosFormulario = function() {
     window.srAgregarFilaTrabajo();
 };
 
+window.srParsearTareasArray = function(texto) {
+    if (!texto || !String(texto).trim()) return { tareas: [], notas: [] };
+    var raw = String(texto)
+        .replace(/^\[Reporte\s+[^\]]+\]\s*(OT\s+OT-[^:]+:\s*)?/gim, '')
+        .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+        .trim();
+    var lines = raw.split('\n');
+    var tareas = [];
+    var notas = [];
+    lines.forEach(function(l) {
+        var trimmed = l.trim();
+        if (!trimmed) return;
+        if (trimmed.toLowerCase().startsWith('nota:') || trimmed.toLowerCase().startsWith('obs:')) {
+            var nVal = trimmed.replace(/^(nota|obs):\s*/i, '').trim();
+            if (nVal) notas.push(nVal);
+        } else {
+            var tVal = trimmed.replace(/^[-*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+            if (tVal) tareas.push(tVal);
+        }
+    });
+    return { tareas: tareas, notas: notas };
+};
+
+window.srFormatearTareas = function(texto) {
+    var p = window.srParsearTareasArray(texto);
+    if (!p.tareas.length && !p.notas.length) return '';
+    var res = [];
+    p.tareas.forEach(function(t, idx) {
+        res.push((idx + 1) + '. ' + t);
+    });
+    p.notas.forEach(function(n) {
+        res.push('Nota: ' + n);
+    });
+    return res.join('\n');
+};
+
 window.srCargarFilasTrabajos = function(textoObs) {
     var container = document.getElementById('sr-f-trabajos-container');
     if (!container) return;
@@ -2519,37 +2570,17 @@ window.srCargarFilasTrabajos = function(textoObs) {
     var extraEl = document.getElementById('sr-f-obs-extra');
     if (extraEl) extraEl.value = '';
 
-    if (!textoObs || !String(textoObs).trim()) {
-        window.srAgregarFilaTrabajo();
-        return;
-    }
-
-    var lines = String(textoObs).split('\n');
-    var extraNotes = [];
-    var tareas = [];
-
-    lines.forEach(function(l) {
-        var trimmed = l.trim();
-        if (!trimmed) return;
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+[\.\)]\s*/.test(trimmed)) {
-            tareas.push(trimmed.replace(/^[-*]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim());
-        } else if (trimmed.toLowerCase().startsWith('nota:') || trimmed.toLowerCase().startsWith('obs:')) {
-            extraNotes.push(trimmed.replace(/^(nota|obs):\s*/i, '').trim());
-        } else {
-            tareas.push(trimmed);
-        }
-    });
-
-    if (tareas.length > 0) {
-        tareas.forEach(function(t) {
+    var parsed = window.srParsearTareasArray(textoObs);
+    if (parsed.tareas.length > 0) {
+        parsed.tareas.forEach(function(t) {
             window.srAgregarFilaTrabajo(t);
         });
     } else {
         window.srAgregarFilaTrabajo();
     }
 
-    if (extraEl && extraNotes.length > 0) {
-        extraEl.value = extraNotes.join('\n');
+    if (extraEl && parsed.notas.length > 0) {
+        extraEl.value = parsed.notas.join('\n');
     }
 };
 
@@ -2559,9 +2590,14 @@ window.srObtenerTextoObsFormulario = function() {
     var tareas = [];
     if (container) {
         var inputs = container.querySelectorAll('.sr-f-trabajo-item');
+        var count = 0;
         inputs.forEach(function(inp) {
             var val = (inp.value || '').trim();
-            if (val) tareas.push('- ' + val);
+            if (val) {
+                count++;
+                val = val.replace(/^[-*•]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+                tareas.push(count + '. ' + val);
+            }
         });
     }
     var extra = extraEl ? (extraEl.value || '').trim() : '';
@@ -2585,14 +2621,21 @@ window.srDescargarPlantillaParabrisas = function(id) {
         return;
     }
 
-    // Buscar OT vinculada
+    // Buscar todas las OTs vinculadas
     var otsPlaca = (window.srOtData || []).filter(function(o) {
         if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
         return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
     });
     var linkedOt = otsPlaca && otsPlaca.length > 0 ? otsPlaca[0] : null;
-    var otNumero = linkedOt ? (linkedOt.id_ot || linkedOt.ticket_entrada || '') : (e.ticket_entrada || e.id_ot || '');
-    var otCodigoStr = otNumero ? window.srFormatID(otNumero) : 'SIN OT';
+    var otCodigos = otsPlaca.map(function(o) {
+        var rawId = o.id_ot || o.ticket_entrada || '';
+        return rawId ? window.srFormatID(rawId) : '';
+    }).filter(Boolean);
+    if (!otCodigos.length && (e.ticket_entrada || e.id_ot)) {
+        otCodigos.push(window.srFormatID(e.ticket_entrada || e.id_ot));
+    }
+    otCodigos = Array.from(new Set(otCodigos));
+    var otCodigoStr = otCodigos.length ? otCodigos.join('  ·  ') : 'SIN OT';
 
     // Formatear Fecha y Hora
     var dtStr = '____/____/______';
@@ -2603,15 +2646,24 @@ window.srDescargarPlantillaParabrisas = function(id) {
     var horaStr = e.horaIngreso ? e.horaIngreso : '____:____';
     var kmStr = e.km ? Number(e.km).toLocaleString('es-PE') + ' KM' : '________________';
 
-    // Buscar conductor / chofer
-    var chofer = e.conductor || e.chofer || e.reportado_por || '';
+    // Buscar conductor / chofer exclusivamente desde el reporte o datos de conductor (dejar vacío si no existe)
+    var chofer = (e.conductor || e.chofer || e.reportado_por || '').trim();
+    if (!chofer && otsPlaca.length > 0) {
+        for (var k = 0; k < otsPlaca.length; k++) {
+            var otItem = otsPlaca[k];
+            var dObj = otItem.detalles_json ? (typeof otItem.detalles_json === 'string' ? JSON.parse(otItem.detalles_json) : otItem.detalles_json) : {};
+            var cFound = (dObj.conductor || dObj.chofer || dObj.reportado_por || otItem.conductor || otItem.chofer || otItem.reportado_por || '').trim();
+            if (cFound) { chofer = cFound; break; }
+        }
+    }
     if (!chofer && window.dataGlobalPlacas) {
         var pMatch = window.dataGlobalPlacas.find(function(p) {
             var pl = Array.isArray(p) ? (p[0]||'') : (p.placa||'');
             return pl.toUpperCase() === (e.placa||'').toUpperCase();
         });
         if (pMatch) {
-            chofer = Array.isArray(pMatch) ? (pMatch[1] || pMatch[3] || '') : (pMatch.cliente || pMatch.dueno || '');
+            var cond = Array.isArray(pMatch) ? (pMatch[3] || '') : (pMatch.conductor || pMatch.chofer || '');
+            if (cond) chofer = cond.trim();
         }
     }
 
@@ -2621,20 +2673,11 @@ window.srDescargarPlantillaParabrisas = function(id) {
         var det = linkedOt.detalles_json ? (typeof linkedOt.detalles_json === 'string' ? JSON.parse(linkedOt.detalles_json) : linkedOt.detalles_json) : {};
         obsTexto = (det.motivo || linkedOt.observaciones || '').trim();
     }
-    obsTexto = obsTexto.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
-
-    var lineas = obsTexto ? obsTexto.split('\n') : [];
-    var tareasArr = [];
-    var notasArr = [];
-    lineas.forEach(function(l) {
-        var t = l.trim();
-        if (!t) return;
-        if (t.toLowerCase().startsWith('nota:') || t.toLowerCase().startsWith('obs:')) {
-            notasArr.push(t.replace(/^(nota|obs):\s*/i, '').trim());
-        } else {
-            tareasArr.push(t.replace(/^[-*]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim());
-        }
-    });
+    var parsedP = typeof window.srParsearTareasArray === 'function' 
+        ? window.srParsearTareasArray(obsTexto)
+        : { tareas: obsTexto ? [obsTexto] : [], notas: [] };
+    var tareasArr = parsedP.tareas;
+    var notasArr = parsedP.notas;
 
     var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
     var empNombre = localStorage.getItem('fleet_empresa_nombre') || window._EMPRESA_NOMBRE || 'AZKELL FLEET';
@@ -2944,10 +2987,10 @@ window.srDescargarPlantillaParabrisas = function(id) {
         .signatures-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            gap: 40px;
             margin-top: 10px;
             margin-bottom: 12px;
-            padding: 0 10px;
+            padding: 0 15px;
         }
         .sign-col {
             text-align: center;
@@ -2955,20 +2998,32 @@ window.srDescargarPlantillaParabrisas = function(id) {
             flex-direction: column;
             align-items: center;
         }
+        .sign-user-name {
+            font-size: 11px;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+            min-height: 22px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
+        }
         .sign-divider {
             width: 100%;
-            border-top: 2.5px solid #000;
+            border-top: 2px solid #000;
             margin-bottom: 4px;
         }
         .sign-main-name {
-            font-size: 10.5px;
-            font-weight: 900;
+            font-size: 9.5px;
+            font-weight: 800;
             text-transform: uppercase;
             color: #000;
             margin-bottom: 1px;
         }
         .sign-sub-label {
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 600;
             color: #334155;
             font-style: italic;
@@ -3053,7 +3108,7 @@ window.srDescargarPlantillaParabrisas = function(id) {
                     </div>
                     <div class="sub-header-right">
                         <div class="doc-title-right">FORMATO DE CONTROL DE TALLER</div>
-                        <div class="doc-code-right">CÓDIGO: OT-FAST &nbsp;|&nbsp; OT: ${_srEsc(otCodigoStr)}</div>
+                        <div class="doc-code-right">OT: ${_srEsc(otCodigoStr)}</div>
                     </div>
                 </div>
                 <h1 class="main-title">TRABAJOS A REALIZAR</h1>
@@ -3131,11 +3186,13 @@ window.srDescargarPlantillaParabrisas = function(id) {
         <div>
             <div class="signatures-grid">
                 <div class="sign-col">
+                    <div class="sign-user-name">${_srEsc(plannerNombre)}</div>
                     <div class="sign-divider"></div>
-                    <div class="sign-main-name">FIRMA / NOMBRE DEL PLANNER: ${_srEsc(plannerNombre)}</div>
+                    <div class="sign-main-name">FIRMA / NOMBRE DEL PLANNER</div>
                     <div class="sign-sub-label">Autoriza ingreso y trabajos</div>
                 </div>
                 <div class="sign-col">
+                    <div class="sign-user-name" style="visibility:hidden;">TÉCNICO</div>
                     <div class="sign-divider"></div>
                     <div class="sign-main-name">FIRMA DEL TÉCNICO ASIGNADO</div>
                     <div class="sign-sub-label">Conformidad de finalización</div>
