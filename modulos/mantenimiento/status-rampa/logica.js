@@ -651,7 +651,7 @@ window.srAbrirDetalle = function(id) {
 
     html += '  <div class="card-body p-3">';
     html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
-    html += '    <div class="p-3" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem; color:#334155; line-height:1.5; white-space:pre-line; word-break:break-word;">' + _srEsc(obsTextoCompleto || 'Sin tareas registradas.') + '</div>';
+    html += '    ' + htmlTareas;
     if (e.evidencia_url) {
         html += '    <div class="mt-3"><a href="#" onclick="event.preventDefault(); window.srAbrirEvidencia(' + (e._id || e.id) + ')" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
     }
