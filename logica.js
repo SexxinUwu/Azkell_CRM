@@ -254,11 +254,14 @@ window.verificarSesionGuardada = function() {
 
     // FLOTA — hub: hub_flota
     var showFlotaHub = _cHub('hub_flota');
+    var vDisponibilidad = showFlotaHub && _cL('disponibilidad');
     var vGps       = showFlotaHub && _cL('gps');
     var vStatus    = showFlotaHub && _cL('status');
     var vPlacas    = showFlotaHub && _cL('placas');
     var vDocsFlota = showFlotaHub && _cL('docs_flota');
 
+    safe('nav-disponibilidad-flota',   vDisponibilidad);
+    safe('mbnav-disponibilidad-flota', vDisponibilidad);
     safe('nav-ubicacion',    vGps);
     safe('mbnav-ubicacion',  vGps);
     safe('nav-status-flota', vStatus);
@@ -268,7 +271,7 @@ window.verificarSesionGuardada = function() {
     safe('nav-documentos-flota',   vDocsFlota);
     safe('mbnav-documentos-flota', vDocsFlota);
 
-    var showFlota = vGps || vStatus || vPlacas || vDocsFlota;
+    var showFlota = vDisponibilidad || vGps || vStatus || vPlacas || vDocsFlota;
     safe('wrap-flota', showFlota);
 
     // MANTENIMIENTO
