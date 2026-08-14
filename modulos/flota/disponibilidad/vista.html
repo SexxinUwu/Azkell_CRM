@@ -315,6 +315,11 @@
                     <option value="Local">Local</option>
                     <option value="Nacional">Nacional</option>
                 </select>
+
+                <!-- Botón Toggle Conductor Eventual -->
+                <button id="btn-toggle-eventual" class="btn btn-sm btn-outline-secondary rounded-3" onclick="window.dispToggleColumnaEventual()" title="Mostrar u ocultar columna Conductor Eventual">
+                    <i class="bi bi-eye-slash me-1"></i>Cond. Eventual
+                </button>
             </div>
 
             <div>
@@ -330,8 +335,8 @@
                 <thead>
                     <tr>
                         <th style="width: 40px; text-align: center;">#</th>
-                        <th>CONDUCTOR EVENTUAL</th>
                         <th>CONDUCTOR ASIGNADO</th>
+                        <th id="th-cond-eventual" style="display: none;">CONDUCTOR EVENTUAL</th>
                         <th>PLACA CAMIÓN</th>
                         <th>PLACA CARRETA</th>
                         <th>CAPACIDAD TANQUE</th>
@@ -400,8 +405,8 @@
                         <input type="text" class="form-control form-control-sm bg-white" id="disp-f-marca" readonly placeholder="Auto">
                     </div>
                     <div class="col-6">
-                        <div class="disp-form-label">Capacidad de Tanque</div>
-                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-capacidad" placeholder="Ej: 150 Gln / 250 m³">
+                        <div class="disp-form-label">Capacidad Tanque <span id="disp-f-capacidad-unit" class="text-primary fw-bold ms-1" style="font-size:0.75rem;">(Gln)</span></div>
+                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-capacidad" placeholder="0">
                     </div>
                     <div class="col-6">
                         <div class="disp-form-label">Categoría Conductor</div>
