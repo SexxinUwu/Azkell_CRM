@@ -210,29 +210,45 @@ app.get('/api/proxy/geocode', async (req, res) => {
 
     try {
         let fetchCall = global.fetch || require('node-fetch');
-        let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+        
+        // 1. Intentar con BigDataCloud API (Rápido y sin límite de tasa)
+        try {
+            let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`);
+            if (rB.ok) {
+                let dB = await rB.json();
+                let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
+                let state = dB.principalSubdivision || dB.state || '';
+                let country = dB.countryName || 'Perú';
+
+                let parts = [loc, state, country].filter(Boolean);
+                if (parts.length > 0) {
+                    let resultB = { display_name: parts.join(', '), address: dB };
+                    _geoCacheMap.set(cacheKey, resultB);
+                    return res.json(resultB);
+                }
+            }
+        } catch (e1) {}
+
+        // 2. Intentar con OpenStreetMap Nominatim
+        let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
             headers: {
                 'User-Agent': 'AzkellERP/1.0 (contact@azkell.com)',
                 'Accept-Language': 'es'
             }
         });
-        if (!response.ok) {
-            let fallback = { display_name: `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} };
-            return res.json(fallback);
+        if (response.ok) {
+            let data = await response.json();
+            if (data.display_name) {
+                let resultN = { display_name: data.display_name, address: data.address || {} };
+                _geoCacheMap.set(cacheKey, resultN);
+                return res.json(resultN);
+            }
         }
-        let data = await response.json();
-        let result = {
-            display_name: data.display_name || data.name || `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
-            address: data.address || {}
-        };
-        _geoCacheMap.set(cacheKey, result);
-        if (_geoCacheMap.size > 1000) {
-            let firstKey = _geoCacheMap.keys().next().value;
-            _geoCacheMap.delete(firstKey);
-        }
-        res.json(result);
+
+        let fallback = { display_name: `Ubicación GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} };
+        res.json(fallback);
     } catch(err) {
-        res.json({ display_name: `Ubicación (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} });
+        res.json({ display_name: `Ubicación GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`, address: {} });
     }
 });
 
