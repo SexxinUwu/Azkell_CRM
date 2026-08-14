@@ -211,37 +211,38 @@ app.get('/api/proxy/geocode', async (req, res) => {
     try {
         let fetchCall = global.fetch || require('node-fetch');
         
-        // 1. Intentar con BigDataCloud API (Rápido y sin límite de tasa)
+        // 1. Intentar con OpenStreetMap Nominatim (Detalle completo de avenidas, calles y carreteras)
         try {
-            let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`);
-            if (rB.ok) {
-                let dB = await rB.json();
-                let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
-                let state = dB.principalSubdivision || dB.state || '';
-                let country = dB.countryName || 'Perú';
-
-                let parts = [loc, state, country].filter(Boolean);
-                if (parts.length > 0) {
-                    let resultB = { display_name: parts.join(', '), address: dB };
-                    _geoCacheMap.set(cacheKey, resultB);
-                    return res.json(resultB);
+            let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+                headers: {
+                    'User-Agent': 'AzkellERP/1.0 (contact@azkell.com)',
+                    'Accept-Language': 'es'
+                }
+            });
+            if (response.ok) {
+                let data = await response.json();
+                if (data.display_name) {
+                    let cleanName = data.display_name.replace(/^Sin nombre,\s*/i, '');
+                    let resultN = { display_name: cleanName, address: data.address || {} };
+                    _geoCacheMap.set(cacheKey, resultN);
+                    return res.json(resultN);
                 }
             }
-        } catch (e1) {}
+        } catch (eN) {}
 
-        // 2. Intentar con OpenStreetMap Nominatim
-        let response = await fetchCall(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
-            headers: {
-                'User-Agent': 'AzkellERP/1.0 (contact@azkell.com)',
-                'Accept-Language': 'es'
-            }
-        });
-        if (response.ok) {
-            let data = await response.json();
-            if (data.display_name) {
-                let resultN = { display_name: data.display_name, address: data.address || {} };
-                _geoCacheMap.set(cacheKey, resultN);
-                return res.json(resultN);
+        // 2. Intentar con BigDataCloud API como respaldo
+        let rB = await fetchCall(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=es`);
+        if (rB.ok) {
+            let dB = await rB.json();
+            let loc = dB.locality || dB.city || dB.localityInfo?.informative?.find(i => i.description)?.description || '';
+            let state = dB.principalSubdivision || dB.state || '';
+            let country = dB.countryName || 'Perú';
+
+            let parts = [loc, state, country].filter(Boolean);
+            if (parts.length > 0) {
+                let resultB = { display_name: parts.join(', '), address: dB };
+                _geoCacheMap.set(cacheKey, resultB);
+                return res.json(resultB);
             }
         }
 
