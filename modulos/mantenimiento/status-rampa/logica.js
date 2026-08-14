@@ -2646,7 +2646,7 @@ window.srDescargarPlantillaParabrisas = function(id) {
     var horaStr = e.horaIngreso ? e.horaIngreso : '____:____';
     var kmStr = e.km ? Number(e.km).toLocaleString('es-PE') + ' KM' : '________________';
 
-    // Buscar conductor / chofer exclusivamente desde el reporte o datos de conductor (dejar vacío si no existe)
+    // Buscar conductor / chofer exclusivamente desde el reporte de fallas o rampa (dejar vacío si no existe)
     var chofer = (e.conductor || e.chofer || e.reportado_por || '').trim();
     if (!chofer && otsPlaca.length > 0) {
         for (var k = 0; k < otsPlaca.length; k++) {
@@ -2654,16 +2654,6 @@ window.srDescargarPlantillaParabrisas = function(id) {
             var dObj = otItem.detalles_json ? (typeof otItem.detalles_json === 'string' ? JSON.parse(otItem.detalles_json) : otItem.detalles_json) : {};
             var cFound = (dObj.conductor || dObj.chofer || dObj.reportado_por || otItem.conductor || otItem.chofer || otItem.reportado_por || '').trim();
             if (cFound) { chofer = cFound; break; }
-        }
-    }
-    if (!chofer && window.dataGlobalPlacas) {
-        var pMatch = window.dataGlobalPlacas.find(function(p) {
-            var pl = Array.isArray(p) ? (p[0]||'') : (p.placa||'');
-            return pl.toUpperCase() === (e.placa||'').toUpperCase();
-        });
-        if (pMatch) {
-            var cond = Array.isArray(pMatch) ? (pMatch[3] || '') : (pMatch.conductor || pMatch.chofer || '');
-            if (cond) chofer = cond.trim();
         }
     }
 
@@ -2683,8 +2673,8 @@ window.srDescargarPlantillaParabrisas = function(id) {
     var empNombre = localStorage.getItem('fleet_empresa_nombre') || window._EMPRESA_NOMBRE || 'AZKELL FLEET';
     var plannerNombre = localStorage.getItem('fleet_user') || localStorage.getItem('fleet_nombre_usuario') || window.usuarioActual || 'Planner de Mantenimiento';
 
-    // Generar filas de trabajos (mínimo 5 filas)
-    var numRows = Math.max(5, tareasArr.length);
+    // Generar filas de trabajos dinámicas según la cantidad de observaciones ingresadas
+    var numRows = tareasArr.length > 0 ? tareasArr.length : 1;
     var trabajosRowsHtml = '';
     for (var i = 0; i < numRows; i++) {
         var num = i + 1;
