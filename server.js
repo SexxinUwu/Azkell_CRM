@@ -2642,6 +2642,7 @@ app.put('/api/integraciones', (req, res) => {
 // Módulo Directorio de Clientes (Fase 1 - ERP)
 app.use('/api/checklist', require('./routes/checklist')(db, broadcast, logAudit));
 app.use('/api/clientes', require('./routes/clientes')(db, logAudit));
+app.use('/api/disponibilidad-flota', require('./routes/disponibilidad')(db, logAudit));
 
 const legacyRoutes = require('./routes/legacy')(db, broadcast, logAudit);
 app.use('/api/script', legacyRoutes);

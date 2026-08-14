@@ -625,6 +625,32 @@ const TABLAS = [
     {
         nombre: "clientes",
         sql: "CREATE TABLE IF NOT EXISTS `clientes` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `ruc_dni` varchar(50) DEFAULT NULL,\n  `razon_social` varchar(255) NOT NULL,\n  `direccion` text,\n  `telefono` varchar(50) DEFAULT NULL,\n  `email` varchar(100) DEFAULT NULL,\n  `estado` varchar(20) DEFAULT 'Activo',\n  `notas` text,\n  `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_razon` (`razon_social`)\n) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    {
+        nombre: "flota_disponibilidad",
+        sql: `CREATE TABLE IF NOT EXISTS flota_disponibilidad (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            flota VARCHAR(100) NULL DEFAULT '',
+            conductor_eventual VARCHAR(150) NULL DEFAULT '',
+            conductor_asignado VARCHAR(150) NULL DEFAULT '',
+            placa_camion VARCHAR(20) NOT NULL,
+            placa_carreta VARCHAR(20) NULL DEFAULT '',
+            capacidad_tanque VARCHAR(50) NULL DEFAULT '',
+            marca VARCHAR(50) NULL DEFAULT '',
+            categoria_conductor VARCHAR(50) NULL DEFAULT '',
+            tipo_unidad VARCHAR(100) NULL DEFAULT '',
+            estado_conductor VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+            estado_unidad VARCHAR(50) NOT NULL DEFAULT 'Disponible',
+            ubicacion_manual TEXT NULL,
+            observaciones TEXT NULL,
+            creado_por VARCHAR(100) NULL DEFAULT '',
+            actualizado_por VARCHAR(100) NULL DEFAULT '',
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_placa_camion (placa_camion),
+            INDEX idx_estado_con (estado_conductor),
+            INDEX idx_estado_uni (estado_unidad)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
     }
 ];
 

@@ -1,0 +1,497 @@
+<!-- MÓDULO: DISPONIBILIDAD DE FLOTA -->
+<style>
+/* Estilos Específicos del Módulo Disponibilidad */
+.disp-container {
+    padding: 1.25rem 1.5rem;
+}
+.disp-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.disp-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.disp-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.disp-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+.disp-kpi-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #0f172a;
+}
+.disp-kpi-lbl {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+/* Tabla de Disponibilidad */
+.disp-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+.disp-table-header {
+    padding: 1rem 1.25rem;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.disp-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+.disp-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.disp-table td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #1e293b;
+}
+.disp-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* Badges de Estados */
+.badge-disp {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+.badge-disp-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Placa Badges */
+.disp-placa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #0f172a;
+}
+.disp-placa-carreta {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+/* Combos y Dropdowns */
+.disp-combo-wrap {
+    position: relative;
+}
+.disp-combo-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.6rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1050;
+    display: none;
+}
+.disp-combo-panel.show {
+    display: block;
+}
+.disp-combo-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+}
+.disp-combo-opt:last-child {
+    border-bottom: none;
+}
+.disp-combo-opt:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+.disp-combo-sub {
+    font-size: 0.72rem;
+    color: #64748b;
+}
+
+/* Modal Offcanvas */
+#offcanvasDisponibilidad {
+    width: min(560px, 100vw);
+}
+.disp-form-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+}
+.disp-calc-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+</style>
+
+<div class="disp-container">
+    <!-- Encabezado de Página -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div>
+            <h4 class="fw-bold mb-1" style="color:#0f172a; letter-spacing:-0.02em;">
+                <i class="bi bi-truck text-primary me-2"></i>Disponibilidad de Flota
+            </h4>
+            <div class="text-muted" style="font-size:0.83rem;">
+                Control de asignación de tractos, carretas, conductores, estados y ubicación GPS en tiempo real.
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm rounded-3 fw-bold" onclick="window.dispSincronizarPlacas()" title="Importar/Sincronizar placas motora">
+                <i class="bi bi-arrow-repeat me-1"></i>Sincronizar Placas
+            </button>
+            <button class="btn btn-outline-success btn-sm rounded-3 fw-bold" onclick="window.dispExportarExcel()" title="Exportar reporte a Excel">
+                <i class="bi bi-file-earmark-excel me-1"></i>Exportar
+            </button>
+            <button class="btn btn-primary btn-sm rounded-3 fw-bold px-3" onclick="window.dispAbrirModalNuevo()">
+                <i class="bi bi-plus-lg me-1"></i>Registrar Unidad
+            </button>
+        </div>
+    </div>
+
+    <!-- Tarjetas de KPIs -->
+    <div class="disp-kpi-grid">
+        <div class="disp-kpi-card">
+            <div class="disp-kpi-icon" style="background:#eff6ff; color:#2563eb;">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div>
+                <div class="disp-kpi-val" id="disp-kpi-total">0</div>
+                <div class="disp-kpi-lbl">Total Flota</div>
+            </div>
+        </div>
+        <div class="disp-kpi-card">
+            <div class="disp-kpi-icon" style="background:#ecfdf5; color:#10b981;">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div>
+                <div class="disp-kpi-val" id="disp-kpi-operativos">0</div>
+                <div class="disp-kpi-lbl">Operativos / Disp.</div>
+            </div>
+        </div>
+        <div class="disp-kpi-card">
+            <div class="disp-kpi-icon" style="background:#fef2f2; color:#ef4444;">
+                <i class="bi bi-tools"></i>
+            </div>
+            <div>
+                <div class="disp-kpi-val" id="disp-kpi-mantenimiento">0</div>
+                <div class="disp-kpi-lbl">En Taller / Mant.</div>
+            </div>
+        </div>
+        <div class="disp-kpi-card">
+            <div class="disp-kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+                <i class="bi bi-person-check-fill"></i>
+            </div>
+            <div>
+                <div class="disp-kpi-val" id="disp-kpi-cond-disp">0</div>
+                <div class="disp-kpi-lbl">Cond. Disponibles</div>
+            </div>
+        </div>
+        <div class="disp-kpi-card">
+            <div class="disp-kpi-icon" style="background:#fffbeb; color:#f59e0b;">
+                <i class="bi bi-person-x-fill"></i>
+            </div>
+            <div>
+                <div class="disp-kpi-val" id="disp-kpi-cond-nodisp">0</div>
+                <div class="disp-kpi-lbl">Descanso / Vac.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la Tabla -->
+    <div class="disp-table-card">
+        <!-- Filtros y Búsqueda -->
+        <div class="disp-table-header">
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                <!-- Buscador -->
+                <div class="position-relative" style="min-width: 240px; max-width: 320px;">
+                    <i class="bi bi-search position-absolute" style="left: 12px; top: 9px; color: #94a3b8; font-size: 0.85rem;"></i>
+                    <input type="text" id="disp-filtro-search" class="form-control form-control-sm ps-5 rounded-3" placeholder="Buscar placa, chofer, marca..." oninput="window.dispFiltrar()">
+                </div>
+
+                <!-- Filtro Estado Unidad -->
+                <select id="disp-filtro-est-uni" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 150px;" onchange="window.dispFiltrar()">
+                    <option value="">Todos los Estados Unidad</option>
+                    <option value="Disponible">Disponible</option>
+                    <option value="Operativo">Operativo</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Programado">Programado</option>
+                    <option value="Tránsito">Tránsito</option>
+                    <option value="Solo Placa">Solo Placa</option>
+                    <option value="Alquilado">Alquilado</option>
+                    <option value="Siniestro">Siniestro</option>
+                    <option value="Modificación">Modificación</option>
+                    <option value="En Proyecto">En Proyecto</option>
+                </select>
+
+                <!-- Filtro Estado Conductor -->
+                <select id="disp-filtro-est-con" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 150px;" onchange="window.dispFiltrar()">
+                    <option value="">Todos los Estados Conductor</option>
+                    <option value="Disponible">Disponible</option>
+                    <option value="Día Libre">Día Libre</option>
+                    <option value="Entra UTS">Entra UTS</option>
+                    <option value="Vacaciones">Vacaciones</option>
+                    <option value="Vacante">Vacante</option>
+                    <option value="Faltó">Faltó</option>
+                </select>
+
+                <!-- Filtro Categoría -->
+                <select id="disp-filtro-categoria" class="form-select form-select-sm rounded-3" style="width: auto; min-width: 130px;" onchange="window.dispFiltrar()">
+                    <option value="">Todas Categorías</option>
+                    <option value="Local">Local</option>
+                    <option value="Nacional">Nacional</option>
+                </select>
+            </div>
+
+            <div>
+                <button class="btn btn-sm btn-light border rounded-3 text-muted" onclick="window.dispCargarDatos()" title="Refrescar datos">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="disp-table" id="disp-main-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">#</th>
+                        <th>FLOTA</th>
+                        <th>CONDUCTOR EVENTUAL</th>
+                        <th>CONDUCTOR ASIGNADO</th>
+                        <th>PLACA CAMIÓN</th>
+                        <th>PLACA CARRETA</th>
+                        <th>CAPACIDAD TANQUE</th>
+                        <th>MARCA</th>
+                        <th>CATEGORÍA</th>
+                        <th>TIPO UNIDAD</th>
+                        <th>ESTADO CONDUCTOR</th>
+                        <th>ESTADO UNIDAD</th>
+                        <th style="min-width: 180px;">UBICACIÓN</th>
+                        <th style="width: 70px; text-align: center;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="disp-table-body">
+                    <tr>
+                        <td colspan="14" class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                            Cargando disponibilidad de flota...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Offcanvas Modal para Registrar / Editar Disponibilidad -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasDisponibilidad" aria-labelledby="offcanvasDisponibilidadLabel">
+    <div class="offcanvas-header bg-light border-bottom">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasDisponibilidadLabel">
+            <i class="bi bi-truck-front-fill text-primary me-2"></i><span id="disp-modal-title">Registrar Unidad</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-4">
+        <form id="disp-form" onsubmit="window.dispGuardarFormulario(event)">
+            <input type="hidden" id="disp-f-id">
+
+            <!-- FLOTA -->
+            <div class="mb-3">
+                <label class="disp-form-label">Flota / Empresa</label>
+                <input type="text" class="form-control rounded-3" id="disp-f-flota" placeholder="Ej: ROSYMAR PERU / MARSISA">
+            </div>
+
+            <div class="row g-3 mb-3">
+                <!-- PLACA CAMIÓN -->
+                <div class="col-md-6">
+                    <label class="disp-form-label">Placa Camión <span class="text-danger">*</span></label>
+                    <div class="disp-combo-wrap">
+                        <input type="text" class="form-control rounded-3 fw-bold text-uppercase" id="disp-f-placa-camion" placeholder="Buscar placa..." autocomplete="off" required oninput="window.dispBuscarPlacaCamion(this.value)" onfocus="window.dispBuscarPlacaCamion(this.value)">
+                        <div class="disp-combo-panel" id="disp-panel-camion"></div>
+                    </div>
+                </div>
+
+                <!-- PLACA CARRETA -->
+                <div class="col-md-6">
+                    <label class="disp-form-label">Placa Carreta / Programada</label>
+                    <div class="disp-combo-wrap">
+                        <input type="text" class="form-control rounded-3 fw-bold text-uppercase" id="disp-f-placa-carreta" placeholder="Buscar carreta..." autocomplete="off" oninput="window.dispBuscarPlacaCarreta(this.value)" onfocus="window.dispBuscarPlacaCarreta(this.value)">
+                        <div class="disp-combo-panel" id="disp-panel-carreta"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATOS CALCULADOS AUTOMÁTICAMENTE DE LAS PLACAS -->
+            <div class="p-3 mb-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                <div class="fw-bold text-muted mb-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+                    <i class="bi bi-cpu me-1"></i>Datos Calculados de la Unidad
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="disp-form-label">Marca (No editable)</div>
+                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-marca" readonly placeholder="Auto">
+                    </div>
+                    <div class="col-6">
+                        <div class="disp-form-label">Capacidad de Tanque</div>
+                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-capacidad" placeholder="Ej: 150 Gln / 250 m³">
+                    </div>
+                    <div class="col-6">
+                        <div class="disp-form-label">Categoría Conductor</div>
+                        <select class="form-select form-select-sm" id="disp-f-categoria">
+                            <option value="Local">Local</option>
+                            <option value="Nacional">Nacional</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <div class="disp-form-label">Tipo de Unidad</div>
+                        <input type="text" class="form-control form-control-sm bg-white" id="disp-f-tipo-unidad" placeholder="Auto">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONDUCTORES -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="disp-form-label">Conductor Asignado</label>
+                    <div class="disp-combo-wrap">
+                        <input type="text" class="form-control rounded-3" id="disp-f-conductor-asignado" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'asignado')" onfocus="window.dispBuscarConductor(this.value, 'asignado')">
+                        <div class="disp-combo-panel" id="disp-panel-cond-asignado"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="disp-form-label">Conductor Eventual</label>
+                    <div class="disp-combo-wrap">
+                        <input type="text" class="form-control rounded-3" id="disp-f-conductor-eventual" placeholder="Buscar conductor..." autocomplete="off" oninput="window.dispBuscarConductor(this.value, 'eventual')" onfocus="window.dispBuscarConductor(this.value, 'eventual')">
+                        <div class="disp-combo-panel" id="disp-panel-cond-eventual"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESTADOS -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="disp-form-label">Estado de Conductor <span class="text-danger">*</span></label>
+                    <select class="form-select rounded-3 fw-bold" id="disp-f-estado-conductor" required>
+                        <option value="Disponible">🟢 Disponible</option>
+                        <option value="Día Libre">🔵 Día Libre</option>
+                        <option value="Entra UTS">🟣 Entra UTS</option>
+                        <option value="Vacaciones">🟡 Vacaciones</option>
+                        <option value="Vacante">⚪ Vacante</option>
+                        <option value="Faltó">🔴 Faltó</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="disp-form-label">Estado de Unidad <span class="text-danger">*</span></label>
+                    <select class="form-select rounded-3 fw-bold" id="disp-f-estado-unidad" required>
+                        <option value="Disponible">🟢 Disponible</option>
+                        <option value="Operativo">🔵 Operativo</option>
+                        <option value="Mantenimiento">🔴 Mantenimiento</option>
+                        <option value="Programado">🟣 Programado</option>
+                        <option value="Tránsito">🟡 Tránsito</option>
+                        <option value="Solo Placa">⚪ Solo Placa</option>
+                        <option value="Alquilado">🟤 Alquilado</option>
+                        <option value="Siniestro">⛔ Siniestro</option>
+                        <option value="Modificación">🔧 Modificación</option>
+                        <option value="En Proyecto">📋 En Proyecto</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- UBICACIÓN / OBSERVACIONES -->
+            <div class="mb-3">
+                <label class="disp-form-label">Ubicación Actual / Dirección</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                    <input type="text" class="form-control" id="disp-f-ubicacion" placeholder="Dirección GPS o referencia manual">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="disp-form-label">Observaciones Adicionales</label>
+                <textarea class="form-control rounded-3" id="disp-f-observaciones" rows="2" placeholder="Notas de ruta, cliente o estado..."></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                <button type="button" class="btn btn-light rounded-3 fw-bold" data-bs-dismiss="offcanvas">Cancelar</button>
+                <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4" id="disp-btn-guardar">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
