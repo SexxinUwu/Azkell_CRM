@@ -39,10 +39,11 @@ module.exports = function (db, logAudit) {
                 UNIQUE KEY uq_placa_camion (placa_camion),
                 INDEX idx_estado_con (estado_conductor),
                 INDEX idx_estado_uni (estado_unidad)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `;
         tdb.query(sqlCreateTable, (err) => {
             if (err) console.warn('[Disponibilidad] Error asegurando tabla:', err.message);
+            tdb.query("ALTER TABLE flota_disponibilidad CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", () => {});
             next();
         });
     });

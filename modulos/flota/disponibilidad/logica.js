@@ -33,8 +33,9 @@ window.dispCargarDatos = async function () {
         window.dispPlacas = Array.isArray(resPlacas) ? resPlacas : (resPlacas.data || []);
         window.dispConductores = Array.isArray(resCond) ? resCond : (resCond.data || []);
 
-        // Si la tabla de disponibilidad está vacía pero hay placas registradas, sincronizar automáticamente
-        if (window.dispDatos.length === 0 && window.dispPlacas.length > 0) {
+        // Si la tabla de disponibilidad está vacía pero hay placas registradas, sincronizar automáticamente (máximo 1 intento)
+        if (window.dispDatos.length === 0 && window.dispPlacas.length > 0 && !window._dispAutoSyncAttempted) {
+            window._dispAutoSyncAttempted = true;
             console.log('📌 Tabla disponibilidad vacía. Sincronizando placas activas automáticamente...');
             await window.dispSincronizarPlacas(true);
             return;
