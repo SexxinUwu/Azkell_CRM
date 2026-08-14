@@ -22,11 +22,11 @@ window.dispCargarDatos = async function () {
     }
 
     try {
-        // Cargas en paralelo: Disponibilidad, Placas, Conductores y GPS
+        // Cargas en paralelo: Disponibilidad, Placas y Conductores
         const [resDisp, resPlacas, resCond] = await Promise.all([
             fetch('/api/disponibilidad-flota').then(r => r.json()).catch(() => []),
-            fetch('/api/placas').then(r => r.json()).catch(() => []),
-            fetch('/api/conductores').then(r => r.json()).catch(() => [])
+            fetch('/api/placas-lista').then(r => r.json()).catch(() => []),
+            fetch('/api/conductores-lista').then(r => r.json()).catch(() => [])
         ]);
 
         window.dispDatos = Array.isArray(resDisp) ? resDisp : (resDisp.data || []);
@@ -39,9 +39,6 @@ window.dispCargarDatos = async function () {
             await window.dispSincronizarPlacas(true);
             return;
         }
-
-        // Cargar datos de GPS/Wialon para autocompletar ubicaciones
-        window.dispCargarGpsMap();
 
         window.dispActualizarKPIs();
         window.dispFiltrar();
@@ -137,17 +134,9 @@ window.dispRenderTabla = function (lista) {
         // Badge de Estado Unidad
         const estUniBadge = window.dispObtenerBadgeEstadoUnidad(item.estado_unidad);
 
-        // Flota Badge
-        const flotaNombre = item.flota || 'GENERAL';
-
         html += `
             <tr data-disp-id="${item.id}">
                 <td class="text-center fw-bold text-muted" style="font-size:0.75rem;">${num}</td>
-                <td>
-                    <span class="badge bg-light text-dark border fw-bold" style="font-size:0.72rem; letter-spacing:0.3px;">
-                        ${_dispEsc(flotaNombre)}
-                    </span>
-                </td>
                 <td>
                     <div class="fw-semibold text-dark" style="font-size:0.82rem;">
                         ${item.conductor_eventual ? `<i class="bi bi-person me-1 text-primary"></i>${_dispEsc(item.conductor_eventual)}` : '<span class="text-muted">—</span>'}
@@ -523,7 +512,6 @@ window.dispEditar = function (id) {
     if (!item) return;
 
     document.getElementById('disp-f-id').value = item.id;
-    document.getElementById('disp-f-flota').value = item.flota || '';
     document.getElementById('disp-f-placa-camion').value = item.placa_camion || '';
     document.getElementById('disp-f-placa-carreta').value = item.placa_carreta || '';
     document.getElementById('disp-f-marca').value = item.marca || '';
@@ -554,7 +542,6 @@ window.dispGuardarFormulario = async function (e) {
 
     const id = document.getElementById('disp-f-id')?.value;
     const payload = {
-        flota: document.getElementById('disp-f-flota')?.value || '',
         placa_camion: document.getElementById('disp-f-placa-camion')?.value || '',
         placa_carreta: document.getElementById('disp-f-placa-carreta')?.value || '',
         marca: document.getElementById('disp-f-marca')?.value || '',
@@ -645,14 +632,13 @@ window.dispExportarExcel = function () {
     }
 
     let csvContent = '\uFEFF'; // BOM para tildes
-    csvContent += 'N°,FLOTA,CONDUCTOR EVENTUAL,CONDUCTOR ASIGNADO,PLACA CAMION,PLACA CARRETA,CAPACIDAD TANQUE,MARCA,CATEGORIA,TIPO UNIDAD,ESTADO CONDUCTOR,ESTADO UNIDAD,UBICACION\n';
+    csvContent += 'N°,CONDUCTOR EVENTUAL,CONDUCTOR ASIGNADO,PLACA CAMION,PLACA CARRETA,CAPACIDAD TANQUE,MARCA,CATEGORIA,TIPO UNIDAD,ESTADO CONDUCTOR,ESTADO UNIDAD,UBICACION\n';
 
     window.dispDatos.forEach((d, idx) => {
         const cleanPlaca = (d.placa_camion || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
         const ubi = (window.dispGpsMap[cleanPlaca] || d.ubicacion_manual || '').replace(/"/g, '""');
         const row = [
             idx + 1,
-            `"${d.flota || ''}"`,
             `"${d.conductor_eventual || ''}"`,
             `"${d.conductor_asignado || ''}"`,
             `"${d.placa_camion || ''}"`,

@@ -330,7 +330,6 @@
                 <thead>
                     <tr>
                         <th style="width: 40px; text-align: center;">#</th>
-                        <th>FLOTA</th>
                         <th>CONDUCTOR EVENTUAL</th>
                         <th>CONDUCTOR ASIGNADO</th>
                         <th>PLACA CAMIÓN</th>
@@ -347,7 +346,7 @@
                 </thead>
                 <tbody id="disp-table-body">
                     <tr>
-                        <td colspan="14" class="text-center py-4 text-muted">
+                        <td colspan="13" class="text-center py-4 text-muted">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Cargando disponibilidad de flota...
                         </td>
@@ -369,12 +368,6 @@
     <div class="offcanvas-body p-4">
         <form id="disp-form" onsubmit="window.dispGuardarFormulario(event)">
             <input type="hidden" id="disp-f-id">
-
-            <!-- FLOTA -->
-            <div class="mb-3">
-                <label class="disp-form-label">Flota / Empresa</label>
-                <input type="text" class="form-control rounded-3" id="disp-f-flota" placeholder="Ej: ROSYMAR PERU / MARSISA">
-            </div>
 
             <div class="row g-3 mb-3">
                 <!-- PLACA CAMIÓN -->
