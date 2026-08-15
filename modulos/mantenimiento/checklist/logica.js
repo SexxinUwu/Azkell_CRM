@@ -493,6 +493,53 @@ window.calcularEstadoDoc = function(rawDate) {
     return 'VIGENTE';
 };
 
+window.ckObtenerTelemetryGPS = async function(placa) {
+    if (!placa) return { km: 0, horas: 0 };
+    const pStr = placa.toString().trim().toUpperCase();
+
+    // 1. Probar CACHE.wialon local
+    if (typeof buscarWialonPorPlaca === 'function') {
+        const w = buscarWialonPorPlaca(pStr);
+        if (w && (w.km > 0 || w.horas > 0)) {
+            return { km: w.km || 0, horas: w.horas || 0 };
+        }
+    }
+
+    // 2. Fetch /api/disponibilidad-flota
+    try {
+        const r = await fetch('/api/disponibilidad-flota');
+        if (r.ok) {
+            const data = await r.json();
+            const list = Array.isArray(data) ? data : (data.data || []);
+            const match = list.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            if (match) {
+                return {
+                    km: parseFloat(match.km || match.kilometraje || match.km_wialon || 0),
+                    horas: parseFloat(match.horas_motor || match.horas_wialon || match.horas || 0)
+                };
+            }
+        }
+    } catch(e) {}
+
+    // 3. Fetch /api/vehiculos-flota
+    try {
+        const r2 = await fetch('/api/vehiculos-flota');
+        if (r2.ok) {
+            const data2 = await r2.json();
+            const list2 = Array.isArray(data2) ? data2 : [];
+            const match2 = list2.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr);
+            if (match2) {
+                return {
+                    km: parseFloat(match2.km || match2.kilometraje || match2.km_inicial || 0),
+                    horas: parseFloat(match2.horas_motor || match2.horas || 0)
+                };
+            }
+        }
+    } catch(e) {}
+
+    return { km: 0, horas: 0 };
+};
+
 window.ckObtenerFechasDocVehiculo = async function(placa) {
     if (!placa) return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
 
@@ -524,9 +571,12 @@ window.consultarGpsChecklist = function(placaManual) {
     if (window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();
 };
 
-window.ckConsultarDocumentosYGPS = function() {
-    const pT = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
-    const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
+window.ckConsultarDocumentosYGPS = async function() {
+    const inputTractoTxt = document.getElementById('ck_placa_tracto-txt');
+    const inputRemolqueTxt = document.getElementById('ck_placa_remolque-txt');
+
+    const pT = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (inputTractoTxt ? inputTractoTxt.value : '') || '';
+    const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (inputRemolqueTxt ? inputRemolqueTxt.value : '') || '';
 
     const placaT = pT.toString().trim().toUpperCase();
     const placaR = pR.toString().trim().toUpperCase();
@@ -537,6 +587,8 @@ window.ckConsultarDocumentosYGPS = function() {
     // 2. Documentos SOAT y Revisión Técnica por Placa
     const docBoxT = document.getElementById('ck-doc-box-tracto');
     const docBoxR = document.getElementById('ck-doc-box-remolque');
+    const inputKm = document.getElementById('ck_kilometraje');
+    const inputHorasR = document.getElementById('ck_horas_remolque');
 
     // TRACTO DOCS & GPS
     if (placaT) {
@@ -563,14 +615,14 @@ window.ckConsultarDocumentosYGPS = function() {
             }
         });
 
-        // Wialon GPS para Tracto (Kilometraje)
-        const inputKm = document.getElementById('ck_kilometraje');
-        const wDT = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placaT) : null;
-        if (wDT && inputKm && wDT.km > 0) {
-            inputKm.value = Math.round(wDT.km);
+        // Telemetría GPS Kilometraje Tracto
+        const teleT = await window.ckObtenerTelemetryGPS(placaT);
+        if (inputKm && teleT && teleT.km > 0) {
+            inputKm.value = Math.round(teleT.km);
         }
     } else {
         if (docBoxT) docBoxT.style.display = 'none';
+        if (inputKm) inputKm.value = '';
     }
 
     // REMOLQUE DOCS & GPS
@@ -598,14 +650,14 @@ window.ckConsultarDocumentosYGPS = function() {
             }
         });
 
-        // Wialon GPS para Remolque (Horas de motor / Termoking)
-        const inputHoras = document.getElementById('ck_horas_remolque');
-        const wDR = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placaR) : null;
-        if (wDR && inputHoras && wDR.horas > 0) {
-            inputHoras.value = Math.round(wDR.horas);
+        // Telemetría GPS Horas de motor Remolque
+        const teleR = await window.ckObtenerTelemetryGPS(placaR);
+        if (inputHorasR && teleR && teleR.horas > 0) {
+            inputHorasR.value = Math.round(teleR.horas);
         }
     } else {
         if (docBoxR) docBoxR.style.display = 'none';
+        if (inputHorasR) inputHorasR.value = '';
     }
 };
 
