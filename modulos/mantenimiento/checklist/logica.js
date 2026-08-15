@@ -12,7 +12,7 @@ var ctxFirmaChecklist = null;
 var estaFirmandoChecklist = false;
 
 // ── DEFINICIÓN DE ÍTEMS F-MAN-001 POR SISTEMA ───────────────────
-var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO || {
+window.SISTEMAS_TRACTO = {
     motor: [
         '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
         '05 Compresora de aire', '06 Fajas, poleas, templadores', '07 Turbo', '08 Múltiple de escape',
@@ -35,8 +35,9 @@ var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO || {
         '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Quinta rueda'
     ]
 };
+var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO;
 
-var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE || {
+window.SISTEMAS_REMOLQUE = {
     frenos: [
         '40 Revisar Zapatos', '41 Pulpo de Freno', '42 Tanque de Aire, líneas', '43 Fugas de aire',
         '44 Secador de aire', '45 Rachet de Freno'
@@ -55,6 +56,7 @@ var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE || {
         '79 Seguro de tuercas', '80 Llanta de repuesto'
     ]
 };
+var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE;
 
 // ── FUNCIÓN DE ARRANQUE DEL MÓDULO ──────────────────────────────
 window.init_checklist = function() {
@@ -134,23 +136,25 @@ window.poblarConductoresChecklist = function() {
 };
 
 window.asegurarGruposChecklist = function(forzar = false) {
-    if (typeof SISTEMAS_TRACTO === 'undefined' || typeof SISTEMAS_REMOLQUE === 'undefined') return;
+    const ST = window.SISTEMAS_TRACTO || SISTEMAS_TRACTO;
+    const SR = window.SISTEMAS_REMOLQUE || SISTEMAS_REMOLQUE;
+    if (!ST || !SR) return;
 
     const containers = [
-        ['group-motor', SISTEMAS_TRACTO.motor, 'Tracto', 'Motor'],
-        ['group-caja', SISTEMAS_TRACTO.caja, 'Tracto', 'Caja/Coronas'],
-        ['group-refri', SISTEMAS_TRACTO.refri, 'Tracto', 'Refrigeración'],
-        ['group-direccion', SISTEMAS_TRACTO.direccion, 'Tracto', 'Dirección'],
-        ['group-cabina', SISTEMAS_TRACTO.cabina, 'Tracto', 'Cabina/Chasis'],
-        ['group-frenos', SISTEMAS_REMOLQUE.frenos, 'Remolque', 'Frenos'],
-        ['group-electrico', SISTEMAS_REMOLQUE.electrico, 'Remolque', 'Sistema Eléctrico'],
-        ['group-suspension', SISTEMAS_REMOLQUE.suspension, 'Remolque', 'Suspensión'],
-        ['group-llantas', SISTEMAS_REMOLQUE.llantas, 'Remolque', 'Llantas']
+        ['group-motor', ST.motor, 'Tracto', 'Motor'],
+        ['group-caja', ST.caja, 'Tracto', 'Caja/Coronas'],
+        ['group-refri', ST.refri, 'Tracto', 'Refrigeración'],
+        ['group-direccion', ST.direccion, 'Tracto', 'Dirección'],
+        ['group-cabina', ST.cabina, 'Tracto', 'Cabina/Chasis'],
+        ['group-frenos', SR.frenos, 'Remolque', 'Frenos'],
+        ['group-electrico', SR.electrico, 'Remolque', 'Sistema Eléctrico'],
+        ['group-suspension', SR.suspension, 'Remolque', 'Suspensión'],
+        ['group-llantas', SR.llantas, 'Remolque', 'Llantas']
     ];
 
     containers.forEach(([id, items, unidad, sistema]) => {
         const el = document.getElementById(id);
-        if (el && (forzar || el.children.length === 0)) {
+        if (el && (forzar || !el.children || el.children.length === 0)) {
             window.renderizarGruposChecklist(id, items, unidad, sistema);
         }
     });
@@ -518,6 +522,9 @@ window.consultarGpsChecklist = function(placaManual) {
 
 // ── ABRIR MODAL NUEVO REPORTE ────────────────────────────────────
 window.abrirModalNuevoChecklist = function() {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+
     const form = document.getElementById('formNuevoChecklist');
     if (form) form.reset();
 
