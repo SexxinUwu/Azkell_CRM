@@ -556,6 +556,11 @@ window.abrirModalNuevoChecklist = function() {
     window.poblarPlacasChecklist();
     window.poblarConductoresChecklist();
 
+    const colViaje = document.getElementById('ck_collapse_viaje_asociado');
+    if (colViaje && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(colViaje, { toggle: false }).hide();
+    }
+
     const modalEl = document.getElementById('modalNuevoChecklist');
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
