@@ -1040,6 +1040,9 @@ window.filtrarChecklist = function() {
                     <button class="btn btn-outline-primary fw-bold" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Reporte F-MAN-001">
                         <i class="bi bi-eye-fill"></i> Detalle
                     </button>
+                    <button class="btn btn-outline-secondary fw-bold" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
+                    </button>
                     ${r.estado !== 'Finalizado' ? `
                     <button class="btn btn-warning fw-bold text-dark" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs e Integrar Taller">
                         <i class="bi bi-lightning-charge-fill me-1"></i> Generar OTs
@@ -1261,7 +1264,12 @@ window.abrirDetalleChecklist = function(id) {
                 <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:1rem;">
                     <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
                 </h6>
-                <div>${badgeEstado}</div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.generarPDF_Checklist(${r.id})">
+                        <i class="bi bi-printer-fill"></i> Imprimir PDF (F-MAN-001)
+                    </button>
+                    <div>${badgeEstado}</div>
+                </div>
             </div>
             <div class="row g-2 style-sm" style="font-size:0.85rem; color:#334155;">
                 <div class="col-12 col-md-6"><strong>Fecha:</strong> ${fechaFmt}</div>
@@ -1579,4 +1587,462 @@ window.enviarGeneracionOTs = function(e) {
         }
     })
     .catch(err => alert('Error de conexión: ' + err.message));
+};
+
+// ── GENERADOR DE PDF A4 F-MAN-001 REPORTE DE FALLAS FLOTA PESADA ───
+window.generarPDF_Checklist = async function(id) {
+    if (typeof window.rotToast === 'function') {
+        window.rotToast('Preparando formato PDF F-MAN-001...', 'bg-info');
+    }
+
+    let r = (window.dataGlobalChecklist || []).find(item => item.id === id);
+    if (!r) {
+        try {
+            const res = await fetch(`/api/checklist/${id}`);
+            if (res.ok) r = await res.json();
+        } catch(e) {}
+    }
+
+    if (!r) {
+        alert('No se encontró la información del reporte seleccionado.');
+        return;
+    }
+
+    // Logo de empresa según tenant
+    const empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+
+    // Parsear fallas de Tracto y Remolque
+    let fallasT = [];
+    let fallasR = [];
+    try {
+        if (r.fallas_tracto_json) {
+            fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+        } else if (r.fallas_tracto) {
+            fallasT = typeof r.fallas_tracto === 'string' ? JSON.parse(r.fallas_tracto) : r.fallas_tracto;
+        }
+    } catch(e) {}
+    try {
+        if (r.fallas_remolque_json) {
+            fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+        } else if (r.fallas_remolque) {
+            fallasR = typeof r.fallas_remolque === 'string' ? JSON.parse(r.fallas_remolque) : r.fallas_remolque;
+        }
+    } catch(e) {}
+
+    if (!Array.isArray(fallasT)) fallasT = [];
+    if (!Array.isArray(fallasR)) fallasR = [];
+
+    // Helper para verificar si un ítem tiene falla
+    function esFallaTracto(numOTexto) {
+        return fallasT.find(f => {
+            const it = (f.item || '').toUpperCase();
+            const ob = (f.obs || '').toUpperCase();
+            const search = numOTexto.toUpperCase();
+            return it.includes(search) || ob.includes(search);
+        });
+    }
+
+    function esFallaRemolque(numOTexto) {
+        return fallasR.find(f => {
+            const it = (f.item || '').toUpperCase();
+            const ob = (f.obs || '').toUpperCase();
+            const search = numOTexto.toUpperCase();
+            return it.includes(search) || ob.includes(search);
+        });
+    }
+
+    function renderItemT(itemTxt) {
+        const match = esFallaTracto(itemTxt);
+        if (match) {
+            return `<div class="chk-item item-falla"><span class="box-x">[ ✕ ]</span> <b class="text-danger">${itemTxt}</b></div>`;
+        }
+        return `<div class="chk-item"><span class="box-v">[ ✓ ]</span> <span>${itemTxt}</span></div>`;
+    }
+
+    function renderItemR(itemTxt) {
+        const match = esFallaRemolque(itemTxt);
+        if (match) {
+            return `<div class="chk-item item-falla"><span class="box-x">[ ✕ ]</span> <b class="text-danger">${itemTxt}</b></div>`;
+        }
+        return `<div class="chk-item"><span class="box-v">[ ✓ ]</span> <span>${itemTxt}</span></div>`;
+    }
+
+    // Fecha formateada
+    const fechaFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+    const folioStr = r.folio || ('F-' + String(r.id).padStart(5, '0'));
+
+    // Filas para la tabla "DETALLE DE FALLA DE TRACTO" (6 filas A y B)
+    let detalleTractoRows = '';
+    const maxFilasT = Math.max(5, Math.ceil(fallasT.length / 2));
+    for (let i = 0; i < maxFilasT; i++) {
+        const fA = fallasT[i];
+        const fB = fallasT[i + maxFilasT];
+
+        const numA = fA ? (fA.item.split(' ')[0] || (i + 1)) : '';
+        const descA = fA ? (fA.obs || fA.item) : '';
+        const numB = fB ? (fB.item.split(' ')[0] || (i + maxFilasT + 1)) : '';
+        const descB = fB ? (fB.obs || fB.item) : '';
+
+        detalleTractoRows += `
+            <tr>
+                <td class="text-center font-bold" style="width:5%;">${numA}</td>
+                <td style="width:45%;">${descA}</td>
+                <td class="text-center font-bold" style="width:5%;">${numB}</td>
+                <td style="width:45%;">${descB}</td>
+            </tr>
+        `;
+    }
+
+    // Filas para la tabla "FALLAS CARRETA" (6 filas A y B)
+    let detalleRemolqueRows = '';
+    const maxFilasR = Math.max(5, Math.ceil(fallasR.length / 2));
+    for (let i = 0; i < maxFilasR; i++) {
+        const fA = fallasR[i];
+        const fB = fallasR[i + maxFilasR];
+
+        const numA = fA ? (fA.item.split(' ')[0] || (i + 1)) : '';
+        const descA = fA ? (fA.obs || fA.item) : '';
+        const numB = fB ? (fB.item.split(' ')[0] || (i + maxFilasR + 1)) : '';
+        const descB = fB ? (fB.obs || fB.item) : '';
+
+        detalleRemolqueRows += `
+            <tr>
+                <td class="text-center" style="width:3%;">${fA ? ' ' : ''}</td>
+                <td class="text-center" style="width:3%;">${fA ? 'S' : ''}</td>
+                <td class="text-center font-bold" style="width:5%;">${numA}</td>
+                <td style="width:39%;">${descA}</td>
+                <td class="text-center" style="width:3%;">${fB ? ' ' : ''}</td>
+                <td class="text-center" style="width:3%;">${fB ? 'S' : ''}</td>
+                <td class="text-center font-bold" style="width:5%;">${numB}</td>
+                <td style="width:39%;">${descB}</td>
+            </tr>
+        `;
+    }
+
+    const htmlPDF = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Fallas Flota Pesada - ${folioStr}</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; font-family: 'Oswald', 'Inter', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background-color: #f1f5f9; margin: 0; padding: 10px; display: flex; justify-content: center; }
+    #btnPrint { position: fixed; top: 12px; right: 20px; background-color: #0284c7; color: #fff; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; z-index: 9999; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    #btnPrint:hover { background-color: #0369a1; }
+    
+    .page-a4 {
+        width: 210mm;
+        height: 294mm;
+        max-height: 294mm;
+        background: #ffffff;
+        padding: 4mm 7mm;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        color: #000;
+        font-size: 8px;
+        line-height: 1.15;
+    }
+
+    @media print {
+        @page { size: A4 portrait; margin: 2mm 3mm; }
+        body { background: transparent; padding: 0; margin: 0; display: block; }
+        #btnPrint { display: none !important; }
+        .page-a4 { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; height: 100% !important; }
+    }
+
+    /* Tablas y encabezados estilo ISO */
+    .iso-header { width: 100%; border-collapse: collapse; border: 1.5px solid #0056b3; margin-bottom: 2px; }
+    .iso-header td { border: 1px solid #0056b3; text-align: center; vertical-align: middle; }
+    .logo-cell { width: 22%; padding: 2px; }
+    .title-cell { width: 56%; font-size: 16px; font-weight: 700; color: #0056b3; letter-spacing: 0.5px; text-transform: uppercase; }
+    .qms-item { width: 22%; font-size: 8px; text-align: left !important; padding: 1px 4px; font-weight: 600; }
+
+    .folio-banner { display: flex; justify-content: flex-end; font-size: 13px; font-weight: 700; color: #c00; margin-bottom: 1px; }
+
+    .blue-bar {
+        background-color: #0056b3;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 9px;
+        letter-spacing: 0.5px;
+        padding: 2px 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #0056b3;
+    }
+
+    .sub-instructions {
+        background-color: #0056b3;
+        color: #ffffff;
+        font-size: 7px;
+        font-weight: 600;
+        padding: 1.5px 4px;
+        line-height: 1.1;
+        border: 1px solid #0056b3;
+    }
+
+    .table-grid { width: 100%; border-collapse: collapse; border: 1px solid #0056b3; margin-bottom: 2px; }
+    .table-grid td, .table-grid th { border: 1px solid #0056b3; padding: 1px 4px; font-size: 8px; }
+    .bg-light-blue { background-color: #eaf2fc; font-weight: 700; }
+    .text-center { text-align: center; }
+    .font-bold { font-weight: 700; }
+    .text-danger { color: #b91c1c !important; }
+
+    /* Grillas de 4 columnas para ítems */
+    .checklist-4col {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border: 1px solid #0056b3;
+        border-top: none;
+        margin-bottom: 2px;
+        gap: 0;
+    }
+    .col-sys {
+        border-right: 1px solid #0056b3;
+        padding: 1.5px 3px;
+        display: flex;
+        flex-direction: column;
+    }
+    .col-sys:last-child { border-right: none; }
+    .sys-title {
+        font-weight: 700;
+        font-size: 8px;
+        text-align: center;
+        color: #0056b3;
+        border-bottom: 1px solid #93c5fd;
+        padding-bottom: 1px;
+        margin-bottom: 1px;
+        text-transform: uppercase;
+    }
+    .chk-item {
+        font-size: 7px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+    .box-v { color: #64748b; font-size: 7px; font-weight: bold; }
+    .box-x { color: #dc2626; font-size: 7.5px; font-weight: 900; }
+    .item-falla { background-color: #fee2e2; border-radius: 2px; padding: 0 1px; }
+
+    /* Tablas de detalle de falla */
+    .table-fallas { width: 100%; border-collapse: collapse; border: 1px solid #0056b3; margin-bottom: 2px; }
+    .table-fallas th { background-color: #0056b3; color: #fff; font-size: 7.5px; font-weight: 700; padding: 1px 3px; border: 1px solid #0056b3; }
+    .table-fallas td { border: 1px solid #0056b3; padding: 1px 3px; font-size: 7.5px; height: 12px; vertical-align: middle; }
+
+    /* Firmas */
+    .conformidad-box {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border: 1px solid #0056b3;
+        border-top: none;
+        height: 48px;
+    }
+    .sign-col {
+        border-right: 1px solid #0056b3;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 2px 4px;
+        text-align: center;
+    }
+    .sign-col:last-child { border-right: none; }
+    .sign-img-area { height: 32px; display: flex; align-items: center; justify-content: center; }
+    .sign-img-area img { max-height: 30px; max-width: 140px; object-fit: contain; }
+    .sign-footer-text { background-color: #eaf2fc; font-size: 7.5px; font-weight: 700; padding: 1px 0; color: #0056b3; border-top: 1px solid #93c5fd; }
+</style>
+</head>
+<body>
+
+<button id="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+
+<div class="page-a4">
+    <!-- ENCABEZADO ISO -->
+    <div>
+        <table class="iso-header">
+            <tr>
+                <td class="logo-cell" rowspan="3">
+                    <img src="${empLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 36px; object-fit: contain;">
+                </td>
+                <td class="title-cell" rowspan="3">
+                    REPORTE DE FALLAS FLOTA PESADA
+                </td>
+                <td class="qms-item"><b>CÓDIGO:</b> F-MAN-001</td>
+            </tr>
+            <tr><td class="qms-item"><b>VERSIÓN:</b> 0</td></tr>
+            <tr><td class="qms-item"><b>EMISIÓN:</b> 10/11/2025</td></tr>
+        </table>
+        <div class="folio-banner">
+            Nº ${folioStr}
+        </div>
+    </div>
+
+    <!-- SECCIÓN 1: DATOS DE TRACTO Y CONDUCTOR -->
+    <div>
+        <div class="blue-bar">
+            <span>DATOS DE TRACTO Y CONDUCTOR</span>
+            <span>O.S. ${r.orden_servicio || '—'}</span>
+        </div>
+        <table class="table-grid">
+            <tr>
+                <td class="bg-light-blue" style="width:14%;">PROCEDENCIA:</td>
+                <td style="width:36%;">${r.procedencia || '—'}</td>
+                <td class="bg-light-blue text-center" style="width:16%;">DATOS UNIDAD</td>
+                <td class="bg-light-blue text-center" style="width:11%;">PLACA</td>
+                <td class="bg-light-blue text-center" style="width:11%;">KM INICIAL</td>
+                <td class="bg-light-blue text-center" style="width:12%;">KM FINAL / HRS</td>
+            </tr>
+            <tr>
+                <td class="bg-light-blue">CONDUCTOR:</td>
+                <td class="font-bold">${r.conductor || '—'}</td>
+                <td class="text-center font-bold">TRACTO</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:9.5px;">${r.placa_tracto || '—'}</td>
+                <td class="text-center">${r.km_inicial || '—'}</td>
+                <td class="text-center">${r.km_final || r.km_inicial || '—'}</td>
+            </tr>
+            <tr>
+                <td class="bg-light-blue">FECHA:</td>
+                <td>${fechaFmt}</td>
+                <td class="text-center font-bold">REMOLQUE</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:9.5px;">${r.placa_remolque || '—'}</td>
+                <td class="text-center">${r.horas_motor ? 'HRS: ' + r.horas_motor : '—'}</td>
+                <td class="text-center">—</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 2: TRACTO (SISTEMAS Y DETALLE DE FALLAS) -->
+    <div>
+        <div class="sub-instructions">
+            1.- MARQUE CON "✓" SI SE ENCUENTRA EN BUEN ESTADO, MARQUE CON "X" SI SE PRESENTA OBSERVACIÓN, LUEGO DETALLE LA OCURRENCIA EN EL RECUADRO COLOCANDO EL NÚMERO DEL ÍTEM OBSERVADO.
+        </div>
+        <div class="checklist-4col">
+            <!-- Col 1: MOTOR -->
+            <div class="col-sys">
+                <div class="sys-title">MOTOR</div>
+                ${(SISTEMAS_TRACTO.motor || []).map(it => renderItemT(it)).join('')}
+            </div>
+            <!-- Col 2: CAJA - CORONAS -->
+            <div class="col-sys">
+                <div class="sys-title">CAJA - CORONAS</div>
+                ${(SISTEMAS_TRACTO.caja || []).map(it => renderItemT(it)).join('')}
+            </div>
+            <!-- Col 3: REFRIGERACIÓN & DIRECCIÓN -->
+            <div class="col-sys">
+                <div class="sys-title">REFRIGERACIÓN</div>
+                ${(SISTEMAS_TRACTO.refri || []).map(it => renderItemT(it)).join('')}
+                <div class="sys-title" style="margin-top:1px;">DIRECCIÓN</div>
+                ${(SISTEMAS_TRACTO.direccion || []).map(it => renderItemT(it)).join('')}
+            </div>
+            <!-- Col 4: CABINA Y CHASIS -->
+            <div class="col-sys">
+                <div class="sys-title">CABINA Y CHASIS</div>
+                ${(SISTEMAS_TRACTO.cabina || []).map(it => renderItemT(it)).join('')}
+            </div>
+        </div>
+
+        <table class="table-fallas">
+            <thead>
+                <tr>
+                    <th style="width:5%;">Nº</th>
+                    <th style="width:45%;">DETALLE DE FALLA DE TRACTO</th>
+                    <th style="width:5%;">Nº</th>
+                    <th style="width:45%;">DETALLE DE FALLA DE TRACTO</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalleTractoRows}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 3: SEMIRREMOLQUE / CARRETA (SISTEMAS Y DETALLE DE FALLAS) -->
+    <div>
+        <div class="sub-instructions">
+            2.- MARQUE CON "✓" SI SE ENCUENTRA EN BUEN ESTADO, MARQUE CON "X" SI SE PRESENTA OBSERVACIÓN, LUEGO DETALLE LA OCURRENCIA EN EL RECUADRO MARCANDO "T" O "S" SI LA OBSERVACIÓN CORRESPONDE AL TRACTO O SEMIRREMOLQUE.
+        </div>
+        <div class="checklist-4col">
+            <!-- Col 1: FRENOS & CARRETA -->
+            <div class="col-sys">
+                <div class="sys-title">FRENOS</div>
+                ${(SISTEMAS_REMOLQUE.frenos || []).map(it => renderItemR(it)).join('')}
+                <div class="sys-title" style="margin-top:1px;">CARRETA</div>
+                ${(SISTEMAS_REMOLQUE.carreta || []).map(it => renderItemR(it)).join('')}
+            </div>
+            <!-- Col 2: SISTEMA ELÉCTRICO -->
+            <div class="col-sys">
+                <div class="sys-title">SISTEMA ELÉCTRICO</div>
+                ${(SISTEMAS_REMOLQUE.electrico || []).map(it => renderItemR(it)).join('')}
+            </div>
+            <!-- Col 3: SUSPENSIÓN & FURGÓN -->
+            <div class="col-sys">
+                <div class="sys-title">SUSPENSIÓN</div>
+                ${(SISTEMAS_REMOLQUE.suspension || []).map(it => renderItemR(it)).join('')}
+                <div class="sys-title" style="margin-top:1px;">FURGÓN</div>
+                ${(SISTEMAS_REMOLQUE.furgon || []).map(it => renderItemR(it)).join('')}
+            </div>
+            <!-- Col 4: LLANTAS & TERMOKING -->
+            <div class="col-sys">
+                <div class="sys-title">LLANTAS & ACCESORIOS</div>
+                ${(SISTEMAS_REMOLQUE.llantas || []).slice(0, 6).map(it => renderItemR(it)).join('')}
+                <div class="sys-title" style="margin-top:1px;">TERMOKING / OTROS</div>
+                ${(SISTEMAS_REMOLQUE.termoking || []).slice(0, 6).map(it => renderItemR(it)).join('')}
+            </div>
+        </div>
+
+        <table class="table-fallas">
+            <thead>
+                <tr>
+                    <th style="width:3%;">T</th>
+                    <th style="width:3%;">S</th>
+                    <th style="width:5%;">Nº</th>
+                    <th style="width:39%;">FALLAS CARRETA</th>
+                    <th style="width:3%;">T</th>
+                    <th style="width:3%;">S</th>
+                    <th style="width:5%;">Nº</th>
+                    <th style="width:39%;">FALLAS CARRETA</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalleRemolqueRows}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECCIÓN 4: CONFORMIDAD DEL REPORTE -->
+    <div>
+        <div class="blue-bar">
+            <span>3.- CONFORMIDAD DEL REPORTE</span>
+        </div>
+        <div class="conformidad-box">
+            <div class="sign-col">
+                <div class="sign-img-area">
+                    ${r.firma_conductor ? `<img src="${r.firma_conductor}" alt="Firma Conductor">` : '<span style="color:#94a3b8; font-size:7.5px;">(Sin firma digital)</span>'}
+                </div>
+                <div class="sign-footer-text">FIRMA DEL CONDUCTOR</div>
+            </div>
+            <div class="sign-col">
+                <div class="sign-img-area"></div>
+                <div class="sign-footer-text">SELLO Y FIRMA DE MANTENIMIENTO</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+    `;
+
+    const blob = new Blob([htmlPDF], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
 };
