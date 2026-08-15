@@ -103,16 +103,16 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 📋 MODAL REDISEÑADO: NUEVO REPORTE DE FALLAS (NUEVO F-MAN-001)   -->
+<!-- 📋 MODAL FORMULARIO DE NUEVO REPORTE (TAMAÑO DETALLE DE RAMPA)  -->
 <!-- ================================================================= -->
 <div class="modal fade" id="modalNuevoChecklist" tabindex="-1" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-    <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 720px; width: 100%; margin: 1.75rem auto;">
+    <div class="modal-content shadow-lg border-0" style="border-radius: 24px; overflow: hidden; background: #f8fafc;">
       
       <!-- Modal Header -->
       <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
         <div>
-          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.25rem;">
+          <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
             <span>Nuevo Reporte de Fallas</span>
             <span class="text-muted fw-normal fs-6" id="lbl-ck-folio-header">N° 2026-00000005</span>
           </h5>
@@ -120,25 +120,25 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
 
-      <div class="modal-body p-4 custom-scrollbar bg-white" style="font-family: inherit;">
+      <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit;">
         <form id="formNuevoChecklist" onsubmit="window.guardarChecklist(event)">
           
           <!-- ── SECCIÓN 1: VIAJE ASOCIADO (OPCIONAL) ───────────────── -->
-          <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1.05rem;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1rem;">
               <i class="bi bi-diagram-3-fill text-primary"></i> Viaje Asociado (Opcional)
             </h6>
             <p class="text-muted small mb-3">
               Si esta falla ocurrió durante un viaje, selecciónalo primero: autocompleta placa, remolque y conductor abajo. No es obligatorio ni bloquea el guardado.
             </p>
-            <div class="row g-3">
-              <div class="col-md-6">
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje</label>
                 <select class="form-select form-select-sm border-secondary-subtle" id="ck_orden_viaje" onchange="window.ckOnSeleccionarViaje(this)">
                   <option value="">Buscar por Serie-Número, fecha, placa...</option>
                 </select>
               </div>
-              <div class="col-md-6">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Orden de Servicio</label>
                 <select class="form-select form-select-sm border-secondary-subtle bg-light" id="ck_orden_servicio" disabled>
                   <option value="">Se habilita al elegir un viaje.</option>
@@ -148,36 +148,36 @@
           </div>
 
           <!-- ── SECCIÓN 2: DATOS DEL REPORTE ───────────────────────── -->
-          <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1.05rem;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
               <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
             </h6>
-            <div class="row g-3">
-              <div class="col-md-3">
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Fecha (<span class="text-danger">*</span>)</label>
                 <input type="date" class="form-control form-control-sm border-secondary-subtle bg-light" id="ck_fecha_reporte" name="fecha_reporte" required>
               </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Placa Principal (Tracto) (<span class="text-danger">*</span>)</label>
                 <div class="position-relative">
-                  <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="Seleccione placa..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto'); if(window.consultarGpsChecklist) window.consultarGpsChecklist();" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
+                  <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE PLACA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto'); if(window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
                   <input type="hidden" id="ck_placa_tracto" name="placa_tracto" required>
                   <div id="ck_placa_tracto-dd" class="cb-dropdown"></div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Placa Semirremolque / Remolque</label>
                 <div class="position-relative">
-                  <input type="text" id="ck_placa_remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="Seleccione carreta..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_remolque')" onfocus="window._cbFiltrar('ck_placa_remolque')" onblur="window._cbHide('ck_placa_remolque')">
+                  <input type="text" id="ck_placa_remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_remolque'); if(window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();" onfocus="window._cbFiltrar('ck_placa_remolque')" onblur="window._cbHide('ck_placa_remolque')">
                   <input type="hidden" id="ck_placa_remolque" name="placa_remolque">
                   <div id="ck_placa_remolque-dd" class="cb-dropdown"></div>
                 </div>
                 <div class="form-text text-muted" style="font-size:0.72rem;">Opcional. Si se selecciona, se generará una OT independiente para esta unidad.</div>
               </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Conductor (<span class="text-danger">*</span>)</label>
                 <div class="position-relative">
-                  <input type="text" id="ck_conductor-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="Seleccione conductor..." autocomplete="off" oninput="window._cbFiltrar('ck_conductor')" onfocus="window._cbFiltrar('ck_conductor')" onblur="window._cbHide('ck_conductor')">
+                  <input type="text" id="ck_conductor-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CONDUCTOR..." autocomplete="off" oninput="window._cbFiltrar('ck_conductor')" onfocus="window._cbFiltrar('ck_conductor')" onblur="window._cbHide('ck_conductor')">
                   <input type="hidden" id="ck_conductor" name="conductor">
                   <div id="ck_conductor-dd" class="cb-dropdown"></div>
                 </div>
@@ -188,69 +188,102 @@
               </div>
             </div>
 
-            <!-- Vistas de Documentos Actualizados (SOAT y Revisión Técnica) -->
-            <div class="row g-3 mt-1" id="ck-doc-badges-box" style="display:none;">
-              <div class="col-md-6">
-                <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
-                  <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-check text-success fs-5"></i>
-                    <div>
-                      <div class="fw-bold text-dark style-sm" style="font-size:0.8rem;">SOAT</div>
-                      <small class="text-muted" id="ck-soat-venc" style="font-size:0.72rem;">Vence el --/--/----</small>
-                    </div>
-                  </div>
-                  <span class="badge bg-success text-uppercase px-2 py-1" id="ck-soat-badge" style="font-size:0.7rem;">VIGENTE</span>
-                </div>
+            <!-- BLOQUE DOCUMENTOS TRACTO -->
+            <div class="mt-3 p-2 border rounded-3 bg-light" id="ck-doc-box-tracto" style="display:none;">
+              <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-1">
+                <i class="bi bi-truck text-primary"></i> DOCUMENTOS TRACTO (<span id="ck-lbl-doc-tracto-placa" class="text-primary">--</span>)
               </div>
-              <div class="col-md-6">
-                <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
-                  <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-journal-check text-success fs-5"></i>
-                    <div>
-                      <div class="fw-bold text-dark style-sm" style="font-size:0.8rem;">Revisión Técnica</div>
-                      <small class="text-muted" id="ck-rt-venc" style="font-size:0.72rem;">Vence el --/--/----</small>
+              <div class="row g-2">
+                <div class="col-12 col-md-6">
+                  <div class="p-2 bg-white border rounded-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-shield-check text-success fs-5"></i>
+                      <div>
+                        <div class="fw-bold text-dark style-sm" style="font-size:0.78rem;">SOAT</div>
+                        <small class="text-muted" id="ck-soat-venc-t" style="font-size:0.72rem;">Vence el --/--/----</small>
+                      </div>
                     </div>
+                    <span class="badge bg-success text-uppercase px-2 py-1" id="ck-soat-badge-t" style="font-size:0.68rem;">VIGENTE</span>
                   </div>
-                  <span class="badge bg-success text-uppercase px-2 py-1" id="ck-rt-badge" style="font-size:0.7rem;">VIGENTE</span>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="p-2 bg-white border rounded-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-journal-check text-success fs-5"></i>
+                      <div>
+                        <div class="fw-bold text-dark style-sm" style="font-size:0.78rem;">Revisión Técnica</div>
+                        <small class="text-muted" id="ck-rt-venc-t" style="font-size:0.72rem;">Vence el --/--/----</small>
+                      </div>
+                    </div>
+                    <span class="badge bg-success text-uppercase px-2 py-1" id="ck-rt-badge-t" style="font-size:0.68rem;">VIGENTE</span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <!-- BLOQUE DOCUMENTOS REMOLQUE / CARRETA -->
+            <div class="mt-2 p-2 border rounded-3 bg-light" id="ck-doc-box-remolque" style="display:none;">
+              <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-1">
+                <i class="bi bi-truck-flatbed text-warning"></i> DOCUMENTOS CARRETA / REMOLQUE (<span id="ck-lbl-doc-remolque-placa" class="text-warning">--</span>)
+              </div>
+              <div class="row g-2">
+                <div class="col-12 col-md-6">
+                  <div class="p-2 bg-white border rounded-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-shield-check text-success fs-5"></i>
+                      <div>
+                        <div class="fw-bold text-dark style-sm" style="font-size:0.78rem;">SOAT / Seguro</div>
+                        <small class="text-muted" id="ck-soat-venc-r" style="font-size:0.72rem;">Vence el --/--/----</small>
+                      </div>
+                    </div>
+                    <span class="badge bg-success text-uppercase px-2 py-1" id="ck-soat-badge-r" style="font-size:0.68rem;">VIGENTE</span>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="p-2 bg-white border rounded-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-journal-check text-success fs-5"></i>
+                      <div>
+                        <div class="fw-bold text-dark style-sm" style="font-size:0.78rem;">Revisión Técnica / CITV</div>
+                        <small class="text-muted" id="ck-rt-venc-r" style="font-size:0.72rem;">Vence el --/--/----</small>
+                      </div>
+                    </div>
+                    <span class="badge bg-success text-uppercase px-2 py-1" id="ck-rt-badge-r" style="font-size:0.68rem;">VIGENTE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- ── SECCIÓN 3: GPS / KILOMETRAJE / HORAS DE MOTOR ───────── -->
-          <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1.05rem;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1rem;">
               <i class="bi bi-wifi text-primary"></i> GPS / Kilometraje / Horas de Motor
             </h6>
             <p class="text-muted small mb-3">
               Se intenta leer automáticamente desde el GPS (Wialon) al elegir la placa. Si no hay dato disponible, complete manualmente.
             </p>
-            <div class="row g-3">
-              <div class="col-md-3">
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Kilometraje (Tracto)</label>
-                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_kilometraje" name="km_inicial" placeholder="">
+                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_kilometraje" name="km_inicial" placeholder="Ej: 118067">
               </div>
-              <div class="col-md-3">
-                <label class="form-label fw-semibold text-secondary small mb-1">Horas de Motor (Tracto)</label>
-                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_horas_motor" name="horas_motor" placeholder="">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label fw-semibold text-secondary small mb-1">Kilometraje (Remolque)</label>
-                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_km_remolque" name="km_remolque" placeholder="">
-              </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Horas de Motor (Remolque / Termoking)</label>
-                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_horas_remolque" name="horas_remolque" placeholder="">
+                <input type="number" class="form-control form-control-sm border-secondary-subtle" id="ck_horas_remolque" name="horas_motor" placeholder="Ej: 1250">
               </div>
               <div class="col-12" style="display:none;">
+                <input type="number" id="ck_horas_motor" name="horas_motor_tracto">
+                <input type="number" id="ck_km_remolque" name="km_remolque">
                 <input type="text" id="ck_ubicacion_gps" name="ubicacion_gps">
               </div>
             </div>
           </div>
 
           <!-- ── SECCIÓN 4: FALLAS ENCONTRADAS (CHECKLIST COMPLETO) ──── -->
-          <div class="mb-4 pb-3">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1.05rem;">
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1rem;">
               <i class="bi bi-card-checklist text-primary"></i> Fallas Encontradas
             </h6>
             <p class="text-muted small mb-3">
@@ -259,12 +292,12 @@
 
             <!-- Barra de Búsqueda de Ítems en Vivo y Acciones -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div class="flex-grow-1 position-relative" style="max-width: 480px;">
+              <div class="flex-grow-1 position-relative" style="min-width: 220px;">
                 <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-primary"></i>
                 <input type="text" id="ck_buscador_items" class="form-control form-control-sm ps-5 text-uppercase fw-semibold border-secondary-subtle" placeholder="BUSCAR ÍTEM POR NOMBRE... (EJ: FRENO, LUCES, ACEITE)" oninput="window.ckFiltrarItemsLive(this.value)">
               </div>
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill" id="ck_counter_fallas">0 fallas marcadas</span>
+              <div class="d-flex align-items-center gap-2 ms-auto">
+                <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill" id="ck_counter_fallas">0 fallas marcadas</span>
                 <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.ckExpandirTodosAccordeones(true)">Expandir todo</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="window.ckExpandirTodosAccordeones(false)">Colapsar todo</button>
               </div>
@@ -274,23 +307,23 @@
             <div id="ck_chips_fallas_marcadas" class="d-flex flex-wrap gap-2 mb-3" style="display:none!important;"></div>
 
             <!-- ACORDEÓN TRACTO (Placa Principal) -->
-            <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2">
+            <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2" id="ck_header_tracto_placa">
               <i class="bi bi-truck"></i> TRACTO (Placa Principal)
             </div>
             <div class="accordion mb-4" id="accTractoGlobal">
-              <!-- Renderizado dinámico desde JS con checkboxes y contadores -->
+              <!-- Renderizado dinámico desde JS -->
             </div>
 
             <!-- ACORDEÓN SEMIRREMOLQUE / CARRETA (Placa Secundaria) -->
-            <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2">
+            <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2" id="ck_header_remolque_placa">
               <i class="bi bi-truck-flatbed"></i> SEMIRREMOLQUE / CARRETA (Placa Secundaria)
             </div>
             <div class="accordion mb-4" id="accRemolqueGlobal">
-              <!-- Renderizado dinámico desde JS con checkboxes y contadores -->
+              <!-- Renderizado dinámico desde JS -->
             </div>
 
             <!-- FALLAS ADICIONALES MANUALES -->
-            <div class="border rounded p-3 bg-light">
+            <div class="border rounded-3 p-3 bg-light">
               <div class="fw-bold text-dark small mb-2">¿No encuentras el ítem? agrégalo aquí manualmente:</div>
               <div id="ck_contenedor_fallas_manuales"></div>
               <button type="button" class="btn btn-outline-primary btn-sm fw-bold mt-2" onclick="window.ckAgregarFallaManual()">
@@ -300,10 +333,10 @@
           </div>
 
           <!-- ── SECCIÓN 5: EVIDENCIA FOTOGRÁFICA & FIRMA ────────────── -->
-          <div class="mb-4 pb-3 border-top pt-3">
-            <div class="row g-4">
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <div class="row g-3">
               <!-- Fotos -->
-              <div class="col-md-6">
+              <div class="col-12 col-md-6">
                 <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
                   <i class="bi bi-camera-fill text-primary"></i> Evidencia Fotográfica (S3)
                 </h6>
@@ -312,34 +345,57 @@
                   <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 d-flex align-items-center gap-2" onclick="document.getElementById('ck_fotos_input').click()">
                     <i class="bi bi-camera"></i> <span>Adjuntar Fotos</span>
                   </button>
-                  <span class="text-muted small">Fotos de los componentes observados.</span>
+                  <span class="text-muted small">Fotos de la unidad/fallas.</span>
                 </div>
                 <div id="ck_preview_fotos" class="d-flex flex-wrap gap-2 mt-2"></div>
               </div>
 
               <!-- Firma Digital -->
-              <div class="col-md-6">
+              <div class="col-12 col-md-6">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                   <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-pencil-fill text-primary"></i> Firma Digital del Conductor
+                    <i class="bi bi-pencil-fill text-primary"></i> Firma Digital Conductor
                   </h6>
                   <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" onclick="window.limpiarFirmaChecklist()">Limpiar</button>
                 </div>
-                <div class="border rounded bg-white text-center p-1">
-                  <canvas id="ck_canvas_firma" width="380" height="130" style="touch-action: none; width:100%; max-width:380px; height:130px; background:#fff; cursor:crosshair;"></canvas>
+                <div class="border rounded-3 bg-white text-center p-1">
+                  <canvas id="ck_canvas_firma" width="340" height="120" style="touch-action: none; width:100%; max-width:340px; height:120px; background:#fff; cursor:crosshair;"></canvas>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Footer Buttons -->
-          <div class="d-flex align-items-center justify-content-end gap-2 border-top pt-3">
-            <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarChecklist">
+          <div class="d-flex align-items-center justify-content-end gap-2 pt-2">
+            <button type="button" class="btn btn-light fw-bold rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm rounded-3" id="btnGuardarChecklist">
               <i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas
             </button>
           </div>
         </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 🔍 MODAL DETALLE COMPLETO REPORTE (TAMAÑO DETALLE DE RAMPA)       -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalDetalleChecklistFull" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 720px; width: 100%; margin: 1.75rem auto;">
+    <div class="modal-content shadow-lg border-0" style="border-radius: 24px; overflow: hidden; background: #f8fafc;">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.2rem;">
+          <span id="det-full-folio">Reporte de Fallas 2026-00000004</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body p-3 p-md-4 custom-scrollbar" id="det-full-body" style="font-family: inherit;">
+        <!-- Renderizado dinámico estilo card overlay -->
       </div>
 
     </div>
@@ -397,29 +453,6 @@
           </button>
         </div>
       </form>
-    </div>
-  </div>
-</div>
-
-<!-- ================================================================= -->
-<!-- 🔍 MODAL DETALLE COMPLETO DEL REPORTE DE FALLAS (F-MAN-001)       -->
-<!-- ================================================================= -->
-<div class="modal fade" id="modalDetalleChecklistFull" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-    <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
-      
-      <!-- Modal Header -->
-      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
-        <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2 m-0" style="font-size: 1.25rem;">
-          <span id="det-full-folio">Reporte de Fallas 2026-00000004</span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-
-      <div class="modal-body p-4 custom-scrollbar bg-white" id="det-full-body" style="font-family: inherit;">
-        <!-- Renderizado dinámico con el diseño idéntico a las imágenes adjuntas -->
-      </div>
-
     </div>
   </div>
 </div>

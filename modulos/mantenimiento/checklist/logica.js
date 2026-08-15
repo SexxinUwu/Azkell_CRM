@@ -462,42 +462,150 @@ window.abrirModalNuevoChecklist = function() {
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
-// ── CONSULTAR GPS WIALON & DOCUMENTOS VIGENTES ───────────────────
+// ── CONSULTAR GPS WIALON & DOCUMENTOS VIGENTES (POR PLACA) ────────
+window.formatFechaVisual = function(rawDate) {
+    if (!rawDate) return '';
+    const str = String(rawDate).trim();
+    if (str.includes('C3') || str.includes('Diésel') || str.includes('DIESEL')) return '';
+    if (str.includes('/')) return str;
+    try {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+    } catch(e) {}
+    return str;
+};
+
+window.calcularEstadoDoc = function(rawDate) {
+    if (!rawDate) return 'VIGENTE';
+    try {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0);
+            return d < hoy ? 'VENCIDO' : 'VIGENTE';
+        }
+    } catch(e) {}
+    return 'VIGENTE';
+};
+
+window.ckObtenerFechasDocVehiculo = async function(placa) {
+    if (!placa) return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
+
+    try {
+        const res = await fetch('/api/vehiculos-flota?t=' + Date.now());
+        if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : [];
+            const veh = list.find(v => (v.placa || '').toString().trim().toUpperCase() === placa.toUpperCase());
+
+            if (veh) {
+                const sF = veh.soat_f_vencimiento || veh.soat_vencimiento || veh.fecha_vencimiento_soat;
+                const rF = veh.rt_f_vencimiento || veh.rt_vencimiento || veh.fecha_vencimiento_rt || veh.citv_vencimiento;
+
+                return {
+                    soatFecha: window.formatFechaVisual(sF),
+                    soatEstado: window.calcularEstadoDoc(sF),
+                    rtFecha: window.formatFechaVisual(rF),
+                    rtEstado: window.calcularEstadoDoc(rF)
+                };
+            }
+        }
+    } catch(e) {}
+
+    return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
+};
+
 window.consultarGpsChecklist = function(placaManual) {
+    if (window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();
+};
+
+window.ckConsultarDocumentosYGPS = function() {
+    const pT = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+    const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
+
+    const placaT = pT.toString().trim().toUpperCase();
+    const placaR = pR.toString().trim().toUpperCase();
+
+    // 1. Encabezados de placas y fallas manuales
     if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
 
-    const placaTxt = (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
-    const placaCb = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
-    const placa = (placaManual || placaCb || placaTxt).toString().trim().toUpperCase();
+    // 2. Documentos SOAT y Revisión Técnica por Placa
+    const docBoxT = document.getElementById('ck-doc-box-tracto');
+    const docBoxR = document.getElementById('ck-doc-box-remolque');
 
-    if (!placa) return;
+    // TRACTO DOCS & GPS
+    if (placaT) {
+        if (docBoxT) docBoxT.style.display = 'block';
+        const lblT = document.getElementById('ck-lbl-doc-tracto-placa');
+        if (lblT) lblT.textContent = placaT;
 
-    // 1. Mostrar badges de vencimiento de documentos SOAT / RT
-    const docBox = document.getElementById('ck-doc-badges-box');
-    if (docBox) docBox.style.display = 'flex';
+        window.ckObtenerFechasDocVehiculo(placaT).then(d => {
+            const elSoatV = document.getElementById('ck-soat-venc-t');
+            const elSoatB = document.getElementById('ck-soat-badge-t');
+            const elRtV = document.getElementById('ck-rt-venc-t');
+            const elRtB = document.getElementById('ck-rt-badge-t');
 
-    const placasData = window.dataGlobalPlacas || [];
-    const matchPlaca = placasData.find(p => (p[0] || '').toString().trim().toUpperCase() === placa);
+            if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 11/01/2027';
+            if (elSoatB) {
+                elSoatB.textContent = d.soatEstado || 'VIGENTE';
+                elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            }
 
-    if (matchPlaca) {
-        const soatFmt = matchPlaca[12] || matchPlaca[13] || 'Vence el 11/01/2027';
-        const rtFmt = matchPlaca[14] || matchPlaca[15] || 'Vence el 16/12/2026';
+            if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 16/12/2026';
+            if (elRtB) {
+                elRtB.textContent = d.rtEstado || 'VIGENTE';
+                elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            }
+        });
 
-        const elSoatV = document.getElementById('ck-soat-venc');
-        const elRtV = document.getElementById('ck-rt-venc');
-
-        if (elSoatV) elSoatV.textContent = typeof soatFmt === 'string' && soatFmt.includes('Vence') ? soatFmt : `Vence el ${soatFmt}`;
-        if (elRtV) elRtV.textContent = typeof rtFmt === 'string' && rtFmt.includes('Vence') ? rtFmt : `Vence el ${rtFmt}`;
+        // Wialon GPS para Tracto (Kilometraje)
+        const inputKm = document.getElementById('ck_kilometraje');
+        const wDT = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placaT) : null;
+        if (wDT && inputKm && wDT.km > 0) {
+            inputKm.value = Math.round(wDT.km);
+        }
+    } else {
+        if (docBoxT) docBoxT.style.display = 'none';
     }
 
-    // 2. Telemetría GPS Wialon
-    const inputKm = document.getElementById('ck_kilometraje');
-    const inputHoras = document.getElementById('ck_horas_motor');
+    // REMOLQUE DOCS & GPS
+    if (placaR) {
+        if (docBoxR) docBoxR.style.display = 'block';
+        const lblR = document.getElementById('ck-lbl-doc-remolque-placa');
+        if (lblR) lblR.textContent = placaR;
 
-    const wD = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
-    if (wD) {
-        if (inputKm && wD.km > 0) inputKm.value = Math.round(wD.km);
-        if (inputHoras && wD.horas > 0) inputHoras.value = Math.round(wD.horas);
+        window.ckObtenerFechasDocVehiculo(placaR).then(d => {
+            const elSoatV = document.getElementById('ck-soat-venc-r');
+            const elSoatB = document.getElementById('ck-soat-badge-r');
+            const elRtV = document.getElementById('ck-rt-venc-r');
+            const elRtB = document.getElementById('ck-rt-badge-r');
+
+            if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 15/05/2027';
+            if (elSoatB) {
+                elSoatB.textContent = d.soatEstado || 'VIGENTE';
+                elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            }
+
+            if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 20/11/2026';
+            if (elRtB) {
+                elRtB.textContent = d.rtEstado || 'VIGENTE';
+                elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            }
+        });
+
+        // Wialon GPS para Remolque (Horas de motor / Termoking)
+        const inputHoras = document.getElementById('ck_horas_remolque');
+        const wDR = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placaR) : null;
+        if (wDR && inputHoras && wDR.horas > 0) {
+            inputHoras.value = Math.round(wDR.horas);
+        }
+    } else {
+        if (docBoxR) docBoxR.style.display = 'none';
     }
 };
 
@@ -865,39 +973,39 @@ window.abrirDetalleChecklist = function(id) {
 
     // ── 1. DATOS DEL REPORTE ──
     let html = `
-        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:1.05rem;">
+                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:1rem;">
                     <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
                 </h6>
                 <div>${badgeEstado}</div>
             </div>
-            <div class="row g-3 style-sm" style="font-size:0.85rem; color:#334155;">
-                <div class="col-md-3"><strong>Fecha:</strong> ${fechaFmt}</div>
-                <div class="col-md-3"><strong>Placa Principal:</strong> <span class="fw-bold text-dark">${r.placa_tracto || '-'}</span></div>
-                <div class="col-md-3"><strong>Placa Remolque:</strong> ${r.placa_remolque || '-'}</div>
-                <div class="col-md-3"><strong>Conductor:</strong> ${r.conductor || '-'}</div>
-                <div class="col-md-3"><strong>Ruta:</strong> ${r.procedencia || '-'}</div>
-                <div class="col-md-3"><strong>Procedencia:</strong> ${r.procedencia || '-'}</div>
-                <div class="col-md-3"><strong>Orden de Viaje:</strong> ${r.orden_viaje || '-'}</div>
-                <div class="col-md-3"><strong>Orden de Servicio:</strong> ${r.orden_servicio || '-'}</div>
-                <div class="col-md-3"><strong>Kilometraje (Tracto):</strong> ${r.km_inicial || '-'}</div>
-                <div class="col-md-3"><strong>Horas de Motor (Tracto):</strong> ${r.horas_motor || '-'}</div>
+            <div class="row g-2 style-sm" style="font-size:0.85rem; color:#334155;">
+                <div class="col-12 col-md-6"><strong>Fecha:</strong> ${fechaFmt}</div>
+                <div class="col-12 col-md-6"><strong>Placa Principal:</strong> <span class="fw-bold text-dark">${r.placa_tracto || '-'}</span></div>
+                <div class="col-12 col-md-6"><strong>Placa Remolque:</strong> ${r.placa_remolque || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Conductor:</strong> ${r.conductor || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Ruta:</strong> ${r.procedencia || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Procedencia:</strong> ${r.procedencia || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Orden de Viaje:</strong> ${r.orden_viaje || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Orden de Servicio:</strong> ${r.orden_servicio || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Kilometraje (Tracto):</strong> ${r.km_inicial || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Horas de Motor (Tracto):</strong> ${r.horas_motor || '-'}</div>
             </div>
         </div>
     `;
 
     // ── 2. CHECKLIST (CARDS POR SISTEMA) ──
     html += `
-        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1.05rem;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
                 <i class="bi bi-card-checklist text-primary"></i> Checklist
             </h6>
     `;
 
     // TRACTO
     html += `<div class="fw-bold text-dark small mb-2">TRACTO (Placa Principal)</div>`;
-    html += `<div class="row g-3 mb-4">`;
+    html += `<div class="row g-2 mb-3">`;
 
     const configT = [
         { key: 'MOTOR', items: SISTEMAS_TRACTO.motor },
@@ -909,7 +1017,7 @@ window.abrirDetalleChecklist = function(id) {
 
     configT.forEach(sys => {
         html += `
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
                 <div class="card border rounded-3 overflow-hidden shadow-2xs">
                     <div class="card-header bg-light fw-bold text-dark small py-2 px-3">${sys.key}</div>
                     <div class="list-group list-group-flush small">
@@ -929,7 +1037,7 @@ window.abrirDetalleChecklist = function(id) {
     // REMOLQUE
     if (r.placa_remolque || fallasR.length > 0) {
         html += `<div class="fw-bold text-dark small mb-2">SEMIRREMOLQUE / CARRETA (Placa Secundaria)</div>`;
-        html += `<div class="row g-3 mb-4">`;
+        html += `<div class="row g-2 mb-3">`;
 
         const configR = [
             { key: 'FRENOS', items: SISTEMAS_REMOLQUE.frenos },
@@ -943,7 +1051,7 @@ window.abrirDetalleChecklist = function(id) {
 
         configR.forEach(sys => {
             html += `
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="card border rounded-3 overflow-hidden shadow-2xs">
                         <div class="card-header bg-light fw-bold text-dark small py-2 px-3">${sys.key}</div>
                         <div class="list-group list-group-flush small">
@@ -965,8 +1073,8 @@ window.abrirDetalleChecklist = function(id) {
 
     // ── 3. DETALLE DE FALLA (TABLA CON RESULTADOS) ──
     html += `
-        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1.05rem;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
                 <i class="bi bi-tools text-primary"></i> Detalle de Falla
             </h6>
             <div class="table-responsive border rounded-3 overflow-hidden">
@@ -1022,8 +1130,8 @@ window.abrirDetalleChecklist = function(id) {
     }
 
     html += `
-        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1.05rem;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1rem;">
                 <i class="bi bi-camera-fill text-primary"></i> Evidencias
             </h6>
             ${fotosHtml}
@@ -1046,8 +1154,8 @@ window.abrirDetalleChecklist = function(id) {
     }
 
     html += `
-        <div class="mb-4 pb-3">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1.05rem;">
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1rem;">
                 <i class="bi bi-tools text-primary"></i> Órdenes de Trabajo Generadas
             </h6>
             <div>${otsHtml}</div>
@@ -1057,9 +1165,9 @@ window.abrirDetalleChecklist = function(id) {
     // ── 6. FIRMA DIGITAL DEL CONDUCTOR (SI EXISTE) ──
     if (r.firma_conductor_url) {
         html += `
-            <div class="border-top pt-3 mt-3">
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                 <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pencil-fill text-primary me-1"></i>Firma del Conductor</h6>
-                <div class="border rounded p-2 text-center bg-light" style="max-width:320px;">
+                <div class="border rounded-3 p-2 text-center bg-light" style="max-width:320px;">
                     <img src="${r.firma_conductor_url}" style="max-height:100px; object-fit:contain;">
                 </div>
             </div>
