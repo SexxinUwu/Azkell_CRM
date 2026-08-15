@@ -1106,29 +1106,38 @@ window.guardarChecklist = function(event) {
     // Recolectar checkboxes marcados
     document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
         const itemId = chk.id.replace('chk_', '');
+        const isTracto = itemId.includes('_Tracto_');
         const parts = itemId.split('_');
-        const unidad = parts[0] || 'Tracto';
-        const sysKey = parts[1] || 'motor';
+        const sysKey = parts[2] || parts[1] || 'GENERAL';
         const txtEl = document.getElementById(`txt_${itemId}`);
         const lblEl = document.getElementById(`lbl_${itemId}`);
 
-        const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla';
-        const obsDesc = txtEl ? txtEl.value.trim() : '';
+        const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla Observada';
+        const obsDesc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : itemNombre;
 
         const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc };
-        if (unidad === 'Remolque' || unidad === 'Carreta') {
-            fallasRemolque.push(obj);
-        } else {
+        if (isTracto) {
             fallasTracto.push(obj);
+        } else {
+            fallasRemolque.push(obj);
         }
     });
 
     // Recolectar fallas manuales adicionadas
     document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
-        const sys = (row.querySelector('.ck-manual-sistema') || {}).value || 'OTROS';
-        const obs = (row.querySelector('.ck-manual-obs') || {}).value || '';
-        if (obs.trim()) {
-            fallasTracto.push({ sistema: sys, item: 'M - ' + obs.trim(), obs: obs.trim() });
+        const selectEl = row.querySelector('.ck-manual-sistema');
+        const descEl = row.querySelector('.ck-manual-desc') || row.querySelector('input[type="text"]');
+        const sysVal = selectEl ? selectEl.value : 'TRACTO';
+        const obs = descEl ? descEl.value.trim() : '';
+
+        if (obs) {
+            const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
+            const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs };
+            if (isRem) {
+                fallasRemolque.push(obj);
+            } else {
+                fallasTracto.push(obj);
+            }
         }
     });
 
@@ -1141,7 +1150,7 @@ window.guardarChecklist = function(event) {
     const placaRemolque = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
     const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
     const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
-    const horasMotorVal = (document.getElementById('ck_horas_motor') || {}).value || '';
+    const horasMotorVal = (document.getElementById('ck_horas_remolque') || {}).value || (document.getElementById('ck_horas_motor') || {}).value || '';
     const fechaRep = (document.getElementById('ck_fecha_reporte') || {}).value || new Date().toISOString().split('T')[0];
 
     const payload = {
@@ -1183,12 +1192,8 @@ window.guardarChecklist = function(event) {
 
             window.cargarTablaChecklist(true);
 
-            if (fallasTracto.length > 0 || fallasRemolque.length > 0) {
-                if (confirm(`✅ Reporte ${res.folio} guardado con éxito. ¿Deseas asignar rampa y generar las Órdenes de Trabajo (OT) ahora mismo?`)) {
-                    window.abrirModalGenerarOTs(res.id);
-                }
-            } else {
-                alert(`✅ Reporte de Fallas ${res.folio} guardado correctamente.`);
+            if (typeof window.rotToast === 'function') {
+                window.rotToast(`✅ Reporte de Fallas ${res.folio || ''} guardado con éxito.`, 'bg-success');
             }
         } else {
             alert('❌ Error guardando reporte: ' + (res.error || 'Desconocido'));
@@ -1221,15 +1226,26 @@ window.abrirDetalleChecklist = function(id) {
     let fallasT = [];
     let fallasR = [];
     try {
-        if (r.fallas_tracto_json) fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+        if (r.fallas_tracto_json) {
+            fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+        } else if (r.fallas_tracto) {
+            fallasT = typeof r.fallas_tracto === 'string' ? JSON.parse(r.fallas_tracto) : r.fallas_tracto;
+        }
     } catch(e) {}
     try {
-        if (r.fallas_remolque_json) fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+        if (r.fallas_remolque_json) {
+            fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+        } else if (r.fallas_remolque) {
+            fallasR = typeof r.fallas_remolque === 'string' ? JSON.parse(r.fallas_remolque) : r.fallas_remolque;
+        }
     } catch(e) {}
 
+    if (!Array.isArray(fallasT)) fallasT = [];
+    if (!Array.isArray(fallasR)) fallasR = [];
+
     const todasFallas = [
-        ...fallasT.map(f => ({ ...f, unidad: 'TRACTO' })),
-        ...fallasR.map(f => ({ ...f, unidad: 'SEMIRREMOLQUE' }))
+        ...fallasT.map(f => ({ ...f, unidad: 'TRACTO ' + (r.placa_tracto ? '(' + r.placa_tracto + ')' : '') })),
+        ...fallasR.map(f => ({ ...f, unidad: 'REMOLQUE ' + (r.placa_remolque ? '(' + r.placa_remolque + ')' : '') }))
     ];
 
     // Badge Estado
@@ -1251,14 +1267,14 @@ window.abrirDetalleChecklist = function(id) {
             <div class="row g-2 style-sm" style="font-size:0.85rem; color:#334155;">
                 <div class="col-12 col-md-6"><strong>Fecha:</strong> ${fechaFmt}</div>
                 <div class="col-12 col-md-6"><strong>Placa Principal:</strong> <span class="fw-bold text-dark">${r.placa_tracto || '-'}</span></div>
-                <div class="col-12 col-md-6"><strong>Placa Remolque:</strong> ${r.placa_remolque || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Placa Remolque:</strong> <span class="fw-bold text-dark">${r.placa_remolque || '-'}</span></div>
                 <div class="col-12 col-md-6"><strong>Conductor:</strong> ${r.conductor || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Ruta:</strong> ${r.procedencia || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Procedencia:</strong> ${r.procedencia || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Orden de Viaje:</strong> ${r.orden_viaje || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Orden de Servicio:</strong> ${r.orden_servicio || '-'}</div>
                 <div class="col-12 col-md-6"><strong>Kilometraje (Tracto):</strong> ${r.km_inicial || '-'}</div>
-                <div class="col-12 col-md-6"><strong>Horas de Motor (Tracto):</strong> ${r.horas_motor || '-'}</div>
+                <div class="col-12 col-md-6"><strong>Horas de Motor (Remolque):</strong> ${r.horas_motor || '-'}</div>
             </div>
         </div>
     `;
@@ -1272,7 +1288,7 @@ window.abrirDetalleChecklist = function(id) {
     `;
 
     // TRACTO
-    html += `<div class="fw-bold text-dark small mb-2">TRACTO (Placa Principal)</div>`;
+    html += `<div class="fw-bold text-dark small mb-2"><i class="bi bi-truck me-1 text-primary"></i> TRACTO (Placa Principal)</div>`;
     html += `<div class="row g-2 mb-3">`;
 
     const configT = [
@@ -1291,9 +1307,18 @@ window.abrirDetalleChecklist = function(id) {
                     <div class="list-group list-group-flush small">
         `;
         sys.items.forEach(itemTxt => {
-            const isFalla = fallasT.some(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || (f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase()));
-            if (isFalla) {
-                html += `<div class="list-group-item py-2 px-3 bg-warning bg-opacity-10 text-danger fw-bold d-flex align-items-center justify-content-between"><span>❌ ${itemTxt}</span> <span class="badge bg-danger">OBSERVADO</span></div>`;
+            const fallaMatch = fallasT.find(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || ((f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase())));
+            if (fallaMatch) {
+                const obsTxt = (fallaMatch.obs && fallaMatch.obs.trim() && fallaMatch.obs.trim().toUpperCase() !== itemTxt.toUpperCase()) ? fallaMatch.obs.trim() : '';
+                html += `
+                    <div class="list-group-item py-2 px-3 bg-danger bg-opacity-10 border-start border-3 border-danger">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-danger fw-bold">❌ ${itemTxt}</span>
+                            <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
+                        </div>
+                        ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
+                    </div>
+                `;
             } else {
                 html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
             }
@@ -1304,7 +1329,7 @@ window.abrirDetalleChecklist = function(id) {
 
     // REMOLQUE
     if (r.placa_remolque || fallasR.length > 0) {
-        html += `<div class="fw-bold text-dark small mb-2">SEMIRREMOLQUE / CARRETA (Placa Secundaria)</div>`;
+        html += `<div class="fw-bold text-dark small mb-2"><i class="bi bi-truck-flatbed me-1 text-warning"></i> SEMIRREMOLQUE / CARRETA (Placa Secundaria)</div>`;
         html += `<div class="row g-2 mb-3">`;
 
         const configR = [
@@ -1325,9 +1350,18 @@ window.abrirDetalleChecklist = function(id) {
                         <div class="list-group list-group-flush small">
             `;
             sys.items.forEach(itemTxt => {
-                const isFalla = fallasR.some(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || (f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase()));
-                if (isFalla) {
-                    html += `<div class="list-group-item py-2 px-3 bg-warning bg-opacity-10 text-danger fw-bold d-flex align-items-center justify-content-between"><span>❌ ${itemTxt}</span> <span class="badge bg-danger">OBSERVADO</span></div>`;
+                const fallaMatch = fallasR.find(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || ((f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase())));
+                if (fallaMatch) {
+                    const obsTxt = (fallaMatch.obs && fallaMatch.obs.trim() && fallaMatch.obs.trim().toUpperCase() !== itemTxt.toUpperCase()) ? fallaMatch.obs.trim() : '';
+                    html += `
+                        <div class="list-group-item py-2 px-3 bg-danger bg-opacity-10 border-start border-3 border-danger">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-danger fw-bold">❌ ${itemTxt}</span>
+                                <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
+                            </div>
+                            ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
+                        </div>
+                    `;
                 } else {
                     html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
                 }
@@ -1352,7 +1386,6 @@ window.abrirDetalleChecklist = function(id) {
                             <th class="py-2 ps-3">UNIDAD</th>
                             <th class="py-2">CATEGORÍA</th>
                             <th class="py-2">ÍTEM</th>
-                            <th class="py-2">POSICIÓN</th>
                             <th class="py-2 pe-3">DESCRIPCIÓN DE LA FALLA</th>
                         </tr>
                     </thead>
@@ -1360,7 +1393,7 @@ window.abrirDetalleChecklist = function(id) {
     `;
 
     if (todasFallas.length === 0) {
-        html += `<tr><td colspan="5" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
+        html += `<tr><td colspan="4" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
     } else {
         todasFallas.forEach(f => {
             html += `
@@ -1368,7 +1401,6 @@ window.abrirDetalleChecklist = function(id) {
                     <td class="ps-3 fw-bold text-primary">${f.unidad || 'TRACTO'}</td>
                     <td class="fw-semibold text-dark">${f.sistema || 'GENERAL'}</td>
                     <td class="fw-bold text-danger">${f.item || '—'}</td>
-                    <td>-</td>
                     <td class="pe-3 fw-semibold text-dark">${f.obs || 'SIN DESCRIPCIÓN'}</td>
                 </tr>
             `;
