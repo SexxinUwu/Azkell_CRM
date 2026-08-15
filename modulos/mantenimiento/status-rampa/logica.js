@@ -667,13 +667,6 @@ window.srAbrirDetalle = function(id) {
     html += '        <div style="width:42px;height:42px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.15rem;box-shadow:0 4px 10px rgba(245,158,11,0.3);"><i class="bi bi-file-earmark-ruled"></i></div>';
     html += '        <span style="font-size:0.7rem;font-weight:700;line-height:1.1;text-align:center;">OT<br>Parabrisa</span>';
     html += '      </button>';
-    var primerOtId = otsPlaca && otsPlaca.length > 0 ? (otsPlaca[0].id_ot || otsPlaca[0].ticket_entrada || '') : '';
-    if (primerOtId && typeof window.descargarPlantillaVaciaOT === 'function') {
-        html += '      <button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);padding:0;" onclick="event.stopPropagation(); window.descargarPlantillaVaciaOT(\'' + _srEsc(primerOtId) + '\', \'' + _srEsc(e.placa) + '\', \'' + _srEsc(e.fechaIngreso || '') + '\', \'' + (e.km || '') + '\', \'' + _srEsc(rampaNomDet || '') + '\')">';
-        html += '        <div style="width:42px;height:42px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.15rem;box-shadow:0 4px 10px rgba(22,163,74,0.3);"><i class="bi bi-card-checklist"></i></div>';
-        html += '        <span style="font-size:0.7rem;font-weight:700;line-height:1.1;text-align:center;">Plantilla<br>Inspecciones</span>';
-        html += '      </button>';
-    }
     html += '    </div>';
     html += '  </div>';
     html += '</div>';
