@@ -18,6 +18,7 @@ module.exports = function (db, broadcast, logAudit) {
             placa_remolque VARCHAR(20),
             km_inicial INT DEFAULT 0,
             km_final INT DEFAULT 0,
+            horas_motor VARCHAR(50) DEFAULT NULL,
             conductor VARCHAR(150),
             procedencia VARCHAR(150),
             ubicacion_gps VARCHAR(255),
@@ -35,7 +36,10 @@ module.exports = function (db, broadcast, logAudit) {
         `;
         tdb.query(createTableSql, (err) => {
             if (err) console.warn('⚠️ Error inicializando tabla reportes_fallas:', err.message);
-            next();
+            // Asegurar columna horas_motor en bases de datos existentes
+            tdb.query("ALTER TABLE reportes_fallas ADD COLUMN IF NOT EXISTS horas_motor VARCHAR(50) DEFAULT NULL", (errCol) => {
+                next();
+            });
         });
     });
 
@@ -43,9 +47,9 @@ module.exports = function (db, broadcast, logAudit) {
     router.get('/', (req, res) => {
         const tdb = getDb(req);
         const sql = `
-            SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final,
-                   conductor, procedencia, ubicacion_gps, fallas_libres_text, estado, id_rampa,
-                   ots_generadas_json, creado_por, creado_en
+            SELECT id, folio, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+                   conductor, procedencia, ubicacion_gps, fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
+                   fotos_json, firma_conductor, estado, id_rampa, ots_generadas_json, creado_por, creado_en
             FROM reportes_fallas
             ORDER BY id DESC;
         `;
