@@ -147,26 +147,41 @@
       <div class="modal-body p-3 p-md-4 custom-scrollbar" style="font-family: inherit;">
         <form id="formNuevoChecklist" onsubmit="window.guardarChecklist(event)">
           
-          <!-- ── SECCIÓN 1: VIAJE ASOCIADO (OPCIONAL) ───────────────── -->
+          <!-- ── SECCIÓN 1: VIAJE ASOCIADO (OPCIONAL - COLAPSABLE) ───────────────── -->
           <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-1" style="font-size:1rem;">
-              <i class="bi bi-diagram-3-fill text-primary"></i> Viaje Asociado (Opcional)
-            </h6>
-            <p class="text-muted small mb-3">
-              Si esta falla ocurrió durante un viaje, selecciónalo primero: autocompleta placa, remolque y conductor abajo. No es obligatorio ni bloquea el guardado.
-            </p>
-            <div class="row g-2">
-              <div class="col-12 col-md-6">
-                <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje</label>
-                <select class="form-select form-select-sm border-secondary-subtle" id="ck_orden_viaje" onchange="window.ckOnSeleccionarViaje(this)">
-                  <option value="">Buscar por Serie-Número, fecha, placa...</option>
-                </select>
+            <div class="d-flex align-items-center justify-content-between cursor-pointer" data-bs-toggle="collapse" data-bs-target="#ck_collapse_viaje_asociado" aria-expanded="false" style="user-select: none;">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
+                <div>
+                  <h6 class="fw-bold text-dark m-0" style="font-size:0.95rem;">
+                    Viaje Asociado <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1" style="font-size:0.7rem;">Opcional</span>
+                  </h6>
+                  <small class="text-muted" style="font-size:0.75rem;">Haga clic aquí si desea vincular con una Orden de Viaje / Servicio</small>
+                </div>
               </div>
-              <div class="col-12 col-md-6">
-                <label class="form-label fw-semibold text-secondary small mb-1">Orden de Servicio</label>
-                <select class="form-select form-select-sm border-secondary-subtle bg-light" id="ck_orden_servicio" disabled>
-                  <option value="">Se habilita al elegir un viaje.</option>
-                </select>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                <span>Vincular Viaje</span>
+                <i class="bi bi-chevron-down"></i>
+              </button>
+            </div>
+            
+            <div class="collapse mt-3 pt-3 border-top" id="ck_collapse_viaje_asociado">
+              <p class="text-muted small mb-3">
+                Si esta falla ocurrió durante un viaje, selecciónalo: autocompleta placa, remolque y conductor abajo. No es obligatorio ni bloquea el guardado.
+              </p>
+              <div class="row g-2">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-semibold text-secondary small mb-1">Orden de Viaje</label>
+                  <select class="form-select form-select-sm border-secondary-subtle" id="ck_orden_viaje" onchange="window.ckOnSeleccionarViaje(this)">
+                    <option value="">Buscar por Serie-Número, fecha, placa...</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-semibold text-secondary small mb-1">Orden de Servicio</label>
+                  <select class="form-select form-select-sm border-secondary-subtle bg-light" id="ck_orden_servicio" disabled>
+                    <option value="">Se habilita al elegir un viaje.</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
