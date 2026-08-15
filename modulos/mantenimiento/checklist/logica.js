@@ -3,15 +3,15 @@
 // Lógica aislada cargada dinámicamente por cargarModuloAislado
 // ================================================================
 
-var dataGlobalChecklist = window.dataGlobalChecklist || [];
-var datosFiltradosChecklist = window.datosFiltradosChecklist || [];
+window.dataGlobalChecklist = window.dataGlobalChecklist || [];
+window.datosFiltradosChecklist = window.datosFiltradosChecklist || [];
 var estadoFiltroActualChecklist = 'TODOS';
 var fotosChecklistBase64 = [];
 var canvasFirmaChecklist = null;
 var ctxFirmaChecklist = null;
 var estaFirmandoChecklist = false;
 
-// ── DEFINICIÓN DE ÍTEMS F-MAN-001 POR SISTEMA ───────────────────
+// ── DEFINICIÓN COMPLETA DE ÍTEMS F-MAN-001 SEGUNDO FORMATO FÍSICO ─────
 window.SISTEMAS_TRACTO = {
     motor: [
         '01 Nivel de aceite motor', '02 Fugas de fluidos', '03 Filtro de aire', '04 Pérdida de potencia',
@@ -20,7 +20,7 @@ window.SISTEMAS_TRACTO = {
     ],
     caja: [
         '11 Embrague', '12 Palanca de cambios', '13 Freno de Motor', '14 Ruido en la caja de cambios',
-        '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y mechas'
+        '15 Ruido en las coronas', '16 Retenes de Corona', '17 Templadores, soportes', '18 Cardan y crucetas'
     ],
     refri: [
         '19 Nivel de refrigerante', '20 Fugas de refrigerante', '21 Tanque de expansión', '22 Temperatura elevada',
@@ -32,15 +32,20 @@ window.SISTEMAS_TRACTO = {
     cabina: [
         '29 Tablero', '30 Lunas y parabrisas', '31 Suspensión de asiento', '32 Cinturones de seguridad',
         '33 Tablero e instrumentos', '34 Amortiguadores', '35 Tanques de combustible', '36 Puertas y manijas',
-        '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Quinta rueda'
+        '37 Timón', '38 Espejos laterales', '39 Soportes de cabina', '40 Control veloc. Crucero',
+        '41 Accesorios en general', '42 Autoradio y antenas', '43 Quinta rueda', '44 OTROS'
     ]
 };
 var SISTEMAS_TRACTO = window.SISTEMAS_TRACTO;
 
 window.SISTEMAS_REMOLQUE = {
     frenos: [
-        '40 Revisar Zapatos', '41 Pulpo de Freno', '42 Tanque de Aire, líneas', '43 Fugas de aire',
-        '44 Secador de aire', '45 Rachet de Freno'
+        '39 Revisar Zapatos', '40 Pulpo de Freno', '41 Tanque de Aire, líneas de aire', '42 Fugas de aire',
+        '43 Secador de aire', '44 Rachet de Freno'
+    ],
+    carreta: [
+        '45 Estado de triplay', '46 Estado de gebes de Puerta', '47 Filtración de Agua', '48 Pisos sin Oxido',
+        '49 Tiro de Remolque', '50 Templadores, Muelles y Soporte'
     ],
     electrico: [
         '51 Luces en general', '52 Faros delanteros', '53 Neblineros', '54 Claxon, alarma de retroceso',
@@ -51,9 +56,18 @@ window.SISTEMAS_REMOLQUE = {
         '64 Amortiguadores', '65 Bolsas de aire', '66 Reg. de bolsas de aire', '67 Muelles y grilletes',
         '68 Abrazaderas y bujes', '69 Templador, balancines'
     ],
+    furgon: [
+        '70 Remaches de Triplay', '71 Filtraciones de Agua', '72 Gebes de Puerta', '73 Piso sin oxido', '74 Bisagras de puerta'
+    ],
     llantas: [
         '75 Reparación de llantas', '76 Cambio de llantas', '77 Rotación de llantas', '78 Presión de aire',
-        '79 Seguro de tuercas', '80 Llanta de repuesto'
+        '79 Seguro de tuercas', '80 Llanta de repuesto', '81 Parachoques', '82 Tapabarros', '83 Escarpoint',
+        '84 Nivel de Gas en el Visor', '85 Bocamazas y rodamientos', '86 Lubricación, engrase',
+        '87 Aros, espárragos y tuercas', '88 Chasis'
+    ],
+    termoking: [
+        '89 Porta conos', '90 Porta tacos', '91 Placas de rodaje', '92 Barra antiempotramiento',
+        '93 Porta llantas', '94 Porta extintores', '95 Fajas de Ventilador', '96 OTROS'
     ]
 };
 var SISTEMAS_REMOLQUE = window.SISTEMAS_REMOLQUE;
@@ -70,21 +84,13 @@ window.init_checklist = function() {
     window.poblarPlacasChecklist();
     window.poblarConductoresChecklist();
 
-    // Callback de auto-consulta Wialon al seleccionar Placa Tracto
-    if (typeof window._cbOnSelect === 'function') {
-        window._cbOnSelect('ck_placa_tracto', function(val) {
-            window.consultarGpsChecklist(val);
-        });
-    }
-
-    // Renderizar grupos del checklist
-    window.asegurarGruposChecklist(true);
-    setTimeout(() => window.asegurarGruposChecklist(false), 150);
+    // Renderizar acordeones completos
+    window.ckRenderizarTodosAcordeones();
 
     // Inicializar firma digital
     window.initCanvasFirmaChecklist();
 
-    // Cargar datos principales
+    // Cargar tabla principal
     window.cargarTablaChecklist(true);
 };
 
@@ -107,11 +113,11 @@ window.poblarPlacasChecklist = function() {
         }
     });
 
-    window._cbInit('ck_placa_tracto', tractos, 'Buscar placa tracto…');
-    window._cbInit('ck_placa_remolque', carretas, 'Buscar placa carreta…');
+    window._cbInit('ck_placa_tracto', tractos, 'Seleccione placa…');
+    window._cbInit('ck_placa_remolque', carretas, 'Seleccione carreta…');
 };
 
-// ── POBLAR CONDUCTORES DESDE API ─────────────────────────────────
+// ── POBLAR CONDUCTORES ───────────────────────────────────────────
 window.poblarConductoresChecklist = function() {
     if (typeof window._cbInit !== 'function') return;
 
@@ -130,119 +136,449 @@ window.poblarConductoresChecklist = function() {
             });
 
             const items = [...itemsMap.values()].sort().map(n => ({ value: n, label: n }));
-            window._cbInit('ck_conductor', items, 'Buscar conductor de lista…');
+            window._cbInit('ck_conductor', items, 'Seleccione conductor…');
         })
         .catch(err => console.warn('Error poblando conductores:', err.message));
 };
 
-window.asegurarGruposChecklist = function(forzar = false) {
-    const ST = window.SISTEMAS_TRACTO || SISTEMAS_TRACTO;
-    const SR = window.SISTEMAS_REMOLQUE || SISTEMAS_REMOLQUE;
-    if (!ST || !SR) return;
+// ── RENDERIZAR TODOS LOS ACORDEONES ───────────────────────────────
+window.ckRenderizarTodosAcordeones = function() {
+    const accTracto = document.getElementById('accTractoGlobal');
+    const accRemolque = document.getElementById('accRemolqueGlobal');
 
-    const containers = [
-        ['group-motor', ST.motor, 'Tracto', 'Motor'],
-        ['group-caja', ST.caja, 'Tracto', 'Caja/Coronas'],
-        ['group-refri', ST.refri, 'Tracto', 'Refrigeración'],
-        ['group-direccion', ST.direccion, 'Tracto', 'Dirección'],
-        ['group-cabina', ST.cabina, 'Tracto', 'Cabina/Chasis'],
-        ['group-frenos', SR.frenos, 'Remolque', 'Frenos'],
-        ['group-electrico', SR.electrico, 'Remolque', 'Sistema Eléctrico'],
-        ['group-suspension', SR.suspension, 'Remolque', 'Suspensión'],
-        ['group-llantas', SR.llantas, 'Remolque', 'Llantas']
-    ];
+    if (accTracto) {
+        let htmlT = '';
+        const configT = [
+            { key: 'motor', title: 'MOTOR', icon: 'bi-gear-fill', items: SISTEMAS_TRACTO.motor },
+            { key: 'caja', title: 'CAJA-CORONAS', icon: 'bi-gear-wide-connected', items: SISTEMAS_TRACTO.caja },
+            { key: 'refri', title: 'REFRIGERACION', icon: 'bi-thermometer-half', items: SISTEMAS_TRACTO.refri },
+            { key: 'direccion', title: 'DIRECCION', icon: 'bi-compass', items: SISTEMAS_TRACTO.direccion },
+            { key: 'cabina', title: 'CABINA Y CHASIS', icon: 'bi-truck-front', items: SISTEMAS_TRACTO.cabina }
+        ];
 
-    containers.forEach(([id, items, unidad, sistema]) => {
-        const el = document.getElementById(id);
-        if (el && (forzar || !el.children || el.children.length === 0)) {
-            window.renderizarGruposChecklist(id, items, unidad, sistema);
+        configT.forEach(c => {
+            htmlT += window.ckGenerarAccordionCardHTML('Tracto', c.key, c.title, c.icon, c.items);
+        });
+        accTracto.innerHTML = htmlT;
+    }
+
+    if (accRemolque) {
+        let htmlR = '';
+        const configR = [
+            { key: 'frenos', title: 'FRENOS', icon: 'bi-hand-index-thumb', items: SISTEMAS_REMOLQUE.frenos },
+            { key: 'carreta', title: 'CARRETA', icon: 'bi-truck-flatbed', items: SISTEMAS_REMOLQUE.carreta },
+            { key: 'electrico', title: 'SISTEMA ELECTRICO', icon: 'bi-lightning-charge', items: SISTEMAS_REMOLQUE.electrico },
+            { key: 'suspension', title: 'SUSPENSION', icon: 'bi-arrows-expand', items: SISTEMAS_REMOLQUE.suspension },
+            { key: 'furgon', title: 'FURGON', icon: 'bi-box-seam', items: SISTEMAS_REMOLQUE.furgon },
+            { key: 'llantas', title: 'LLANTAS', icon: 'bi-vinyl', items: SISTEMAS_REMOLQUE.llantas },
+            { key: 'termoking', title: 'TERMOKING', icon: 'bi-snow', items: SISTEMAS_REMOLQUE.termoking }
+        ];
+
+        configR.forEach(c => {
+            htmlR += window.ckGenerarAccordionCardHTML('Remolque', c.key, c.title, c.icon, c.items);
+        });
+        accRemolque.innerHTML = htmlR;
+    }
+};
+
+window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, items) {
+    const accordionId = `acc_${unidad}_${sysKey}`;
+    const collapseId = `col_${unidad}_${sysKey}`;
+
+    let itemsHTML = '';
+    items.forEach((itemTxt, idx) => {
+        const itemId = `item_${unidad}_${sysKey}_${idx}`;
+        itemsHTML += `
+            <div class="ck-item-row border-bottom py-2 px-3 bg-white" data-item-text="${itemTxt.toUpperCase()}" id="row_${itemId}">
+                <div class="form-check d-flex align-items-center justify-content-between">
+                    <div class="flex-grow-1">
+                        <input class="form-check-input me-2 ck-checkbox-item" type="checkbox" id="chk_${itemId}" onchange="window.ckOnToggleFalla('${itemId}', '${unidad}', '${sysKey}', '${itemTxt.replace(/'/g, "\\'")}')">
+                        <label class="form-check-label fw-bold text-dark style-sm cursor-pointer" for="chk_${itemId}" id="lbl_${itemId}">
+                            ${itemTxt}
+                        </label>
+                    </div>
+                    <span class="badge bg-secondary-subtle text-secondary small style-none d-none" id="tag_${itemId}">MARCADO</span>
+                </div>
+                <div class="ck-item-textarea-box mt-2 d-none" id="box_${itemId}">
+                    <textarea class="form-control form-control-sm text-uppercase border-primary-subtle" id="txt_${itemId}" rows="2" placeholder="Describa la falla encontrada..." oninput="window.ckActualizarChipsFallas()"></textarea>
+                </div>
+            </div>
+        `;
+    });
+
+    return `
+        <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs ck-accordion-group" id="group_${accordionId}">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold py-2 bg-light text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                    <i class="bi ${iconClass} me-2 text-primary"></i> ${title}
+                    <span class="badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
+                </button>
+            </h2>
+            <div id="${collapseId}" class="accordion-collapse collapse" data-bs-parent="#acc${unidad}Global">
+                <div class="accordion-body p-0 border-top">
+                    ${itemsHTML}
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+// ── MANEJAR CHECKBOX DE FALLAS Y CHIPS ───────────────────────────
+window.ckOnToggleFalla = function(itemId, unidad, sysKey, itemTxt) {
+    const chk = document.getElementById(`chk_${itemId}`);
+    const box = document.getElementById(`box_${itemId}`);
+    const row = document.getElementById(`row_${itemId}`);
+
+    if (chk && chk.checked) {
+        if (box) box.classList.remove('d-none');
+        if (row) row.classList.add('bg-warning', 'bg-opacity-10');
+    } else {
+        if (box) box.classList.add('d-none');
+        if (row) row.classList.remove('bg-warning', 'bg-opacity-10');
+    }
+
+    window.ckActualizarContadores();
+    window.ckActualizarChipsFallas();
+};
+
+window.ckActualizarContadores = function() {
+    let totalMarcadas = 0;
+
+    document.querySelectorAll('.ck-accordion-group').forEach(group => {
+        const checkedInGroup = group.querySelectorAll('.ck-checkbox-item:checked').length;
+        const cntBadge = group.querySelector('.count-badge');
+        if (cntBadge) {
+            cntBadge.textContent = checkedInGroup;
+            if (checkedInGroup > 0) {
+                cntBadge.className = 'badge bg-primary rounded-pill ms-2 px-2 py-1 count-badge';
+            } else {
+                cntBadge.className = 'badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge';
+            }
+        }
+        totalMarcadas += checkedInGroup;
+    });
+
+    const cntManuales = document.querySelectorAll('.ck-manual-falla-row').length;
+    totalMarcadas += cntManuales;
+
+    const counterBtn = document.getElementById('ck_counter_fallas');
+    if (counterBtn) {
+        counterBtn.textContent = `${totalMarcadas} falla${totalMarcadas !== 1 ? 's' : ''} marcada${totalMarcadas !== 1 ? 's' : ''}`;
+        counterBtn.className = totalMarcadas > 0 ? 'badge bg-primary px-3 py-2 fs-6 rounded-pill' : 'badge bg-secondary px-3 py-2 fs-6 rounded-pill';
+    }
+};
+
+window.ckActualizarChipsFallas = function() {
+    const wrapChips = document.getElementById('ck_chips_fallas_marcadas');
+    if (!wrapChips) return;
+
+    let chipsHTML = '';
+    document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
+        const itemId = chk.id.replace('chk_', '');
+        const lbl = document.getElementById(`lbl_${itemId}`);
+        const txt = document.getElementById(`txt_${itemId}`);
+        const numTxt = lbl ? lbl.innerText.trim() : 'Ítem';
+        const numOnly = numTxt.split(' - ')[0] || numTxt;
+        const desc = (txt && txt.value.trim()) ? txt.value.trim() : '(sin describir)';
+
+        chipsHTML += `
+            <span class="badge bg-info text-dark d-inline-flex align-items-center gap-1 px-3 py-2 fs-6 rounded-3 shadow-2xs">
+                <span>${numOnly} - ${desc}</span>
+                <i class="bi bi-x-circle-fill ms-1 text-danger cursor-pointer" onclick="document.getElementById('chk_${itemId}').checked = false; window.ckOnToggleFalla('${itemId}');"></i>
+            </span>
+        `;
+    });
+
+    if (chipsHTML) {
+        wrapChips.style.display = 'flex';
+        wrapChips.style.setProperty('display', 'flex', 'important');
+        wrapChips.innerHTML = chipsHTML;
+    } else {
+        wrapChips.style.display = 'none';
+        wrapChips.style.setProperty('display', 'none', 'important');
+        wrapChips.innerHTML = '';
+    }
+};
+
+// ── BÚSQUEDA EN VIVO (LIVE SEARCH KEYWORD) ────────────────────────
+window.ckFiltrarItemsLive = function(query) {
+    const q = (query || '').toUpperCase().trim();
+
+    document.querySelectorAll('.ck-accordion-group').forEach(group => {
+        let matchCountInGroup = 0;
+        const items = group.querySelectorAll('.ck-item-row');
+        const collapseEl = group.querySelector('.accordion-collapse');
+
+        items.forEach(row => {
+            const text = row.getAttribute('data-item-text') || row.innerText.toUpperCase();
+            if (!q || text.includes(q)) {
+                row.style.display = 'block';
+                matchCountInGroup++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (q) {
+            if (matchCountInGroup > 0) {
+                group.style.display = 'block';
+                if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                    bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
+                }
+            } else {
+                group.style.display = 'none';
+            }
+        } else {
+            group.style.display = 'block';
+            if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).hide();
+            }
         }
     });
 };
 
-// ── RENDERIZAR FILAS DE CHECKLIST DINÁMICAS (MOBILE FIRST) ──────
-window.renderizarGruposChecklist = function(containerId, items, unidad, sistema) {
-    const wrap = document.getElementById(containerId);
-    if (!wrap) return;
+window.ckExpandirTodosAccordeones = function(expand = true) {
+    document.querySelectorAll('.ck-accordion-group').forEach(group => {
+        group.style.display = 'block';
+        const collapseEl = group.querySelector('.accordion-collapse');
+        const items = group.querySelectorAll('.ck-item-row');
+        items.forEach(r => r.style.display = 'block');
 
-    const listArr = Array.isArray(items) ? items : [];
-    let html = '';
-    listArr.forEach((itemText, idx) => {
-        const itemId = `${unidad}_${sistema}_${idx}`.replace(/[^a-zA-Z0-9_]/g, '_');
-        html += `
-        <div class="ck-item-card p-2 mb-2 rounded-3 border bg-white" id="card_${itemId}">
-            <div class="d-flex align-items-center justify-content-between gap-2">
-                <span class="fw-bold text-dark small flex-grow-1">${itemText}</span>
-                <div class="btn-group btn-group-sm" role="group">
-                    <input type="radio" class="btn-check" name="st_${itemId}" id="ok_${itemId}" value="BIEN" checked onchange="window.toggleObsItem('${itemId}', false)">
-                    <label class="btn btn-outline-success fw-bold py-1 px-2" for="ok_${itemId}">✓ Bien</label>
-
-                    <input type="radio" class="btn-check" name="st_${itemId}" id="obs_${itemId}" value="OBSERVADO" onchange="window.toggleObsItem('${itemId}', true)">
-                    <label class="btn btn-outline-warning fw-bold py-1 px-2" for="obs_${itemId}">⚠️ Obs</label>
-                </div>
-            </div>
-            
-            <div class="ck-obs-box mt-2 d-none" id="box_${itemId}">
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control text-uppercase" id="input_${itemId}" data-item="${itemText}" data-sistema="${sistema}" data-unidad="${unidad}" placeholder="Detalle de la falla...">
-                    <button class="btn btn-outline-danger" type="button" onclick="window.dictarVoz('input_${itemId}')" title="Dictar por voz">
-                        <i class="bi bi-mic-fill"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `;
+        if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+            const inst = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+            if (expand) inst.show(); else inst.hide();
+        }
     });
-    wrap.innerHTML = html;
 };
 
-window.toggleObsItem = function(itemId, show) {
-    const box = document.getElementById(`box_${itemId}`);
-    const card = document.getElementById(`card_${itemId}`);
-    if (box) box.classList.toggle('d-none', !show);
-    if (card) {
-        card.style.borderColor = show ? 'var(--bs-warning, #f59e0b)' : 'var(--bs-border-color, #e2e8f0)';
-        card.style.background = show ? '#fffbeb' : '#ffffff';
+// ── FALLAS ADICIONALES MANUALES ──────────────────────────────────
+window.ckObtenerPlacasSeleccionadas = function() {
+    const pT = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+    const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
+
+    const tractoLabel = pT ? `TRACTO (${pT.toUpperCase()})` : 'TRACTO';
+    const remolqueLabel = pR ? `SEMIRREMOLQUE (${pR.toUpperCase()})` : 'SEMIRREMOLQUE / CARRETA';
+
+    return {
+        placaTracto: pT ? pT.toUpperCase() : '',
+        placaRemolque: pR ? pR.toUpperCase() : '',
+        tractoLabel,
+        remolqueLabel
+    };
+};
+
+window.ckActualizarEncabezadosPlacas = function() {
+    const p = window.ckObtenerPlacasSeleccionadas();
+    const elT = document.getElementById('ck_header_tracto_placa');
+    const elR = document.getElementById('ck_header_remolque_placa');
+
+    if (elT) elT.innerHTML = `<i class="bi bi-truck me-1"></i> TRACTO ${p.placaTracto ? `(${p.placaTracto})` : '(Placa Principal)'}`;
+    if (elR) elR.innerHTML = `<i class="bi bi-truck-flatbed me-1"></i> SEMIRREMOLQUE / CARRETA ${p.placaRemolque ? `(${p.placaRemolque})` : '(Placa Secundaria)'}`;
+
+    document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
+        const select = row.querySelector('.ck-manual-sistema');
+        if (select) {
+            const valActual = select.value;
+            select.innerHTML = `
+                <option value="${p.placaTracto || 'TRACTO'}">${p.tractoLabel}</option>
+                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">${p.remolqueLabel}</option>
+            `;
+            if (valActual) select.value = valActual;
+        }
+    });
+};
+
+window.ckAgregarFallaManual = function() {
+    const container = document.getElementById('ck_contenedor_fallas_manuales');
+    if (!container) return;
+
+    const p = window.ckObtenerPlacasSeleccionadas();
+    const rowId = 'manual_' + Date.now();
+    const div = document.createElement('div');
+    div.className = 'row g-2 mb-2 align-items-center ck-manual-falla-row';
+    div.id = rowId;
+    div.innerHTML = `
+        <div class="col-md-4">
+            <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary">
+                <option value="${p.placaTracto || 'TRACTO'}">${p.tractoLabel}</option>
+                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">${p.remolqueLabel}</option>
+            </select>
+        </div>
+        <div class="col-md-7">
+            <input type="text" class="form-control form-control-sm text-uppercase ck-manual-obs" placeholder="DESCRIPCIÓN DE LA FALLA">
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.ck-manual-falla-row').remove(); window.ckActualizarContadores();">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(div);
+    window.ckActualizarContadores();
+};
+
+// ── ABRIR MODAL NUEVO REPORTE ────────────────────────────────────
+window.abrirModalNuevoChecklist = function() {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+
+    const form = document.getElementById('formNuevoChecklist');
+    if (form) form.reset();
+
+    const lblFolio = document.getElementById('lbl-ck-folio-header');
+    if (lblFolio) {
+        const num = Math.floor(Math.random() * 90000) + 10000;
+        lblFolio.textContent = `N° 2026-${num}`;
+    }
+
+    const inputFecha = document.getElementById('ck_fecha_reporte');
+    if (inputFecha) {
+        inputFecha.value = new Date().toISOString().split('T')[0];
+    }
+
+    // Resetear acordeones y campos
+    window.ckRenderizarTodosAcordeones();
+    window.ckActualizarContadores();
+    window.ckActualizarChipsFallas();
+
+    const buscador = document.getElementById('ck_buscador_items');
+    if (buscador) {
+        buscador.value = '';
+        window.ckFiltrarItemsLive('');
+    }
+
+    const wrapManuales = document.getElementById('ck_contenedor_fallas_manuales');
+    if (wrapManuales) wrapManuales.innerHTML = '';
+
+    fotosChecklistBase64 = [];
+    const wrapFotos = document.getElementById('ck_preview_fotos');
+    if (wrapFotos) wrapFotos.innerHTML = '';
+
+    window.limpiarFirmaChecklist();
+    window.poblarPlacasChecklist();
+    window.poblarConductoresChecklist();
+
+    const modalEl = document.getElementById('modalNuevoChecklist');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+// ── CONSULTAR GPS WIALON & DOCUMENTOS VIGENTES ───────────────────
+window.consultarGpsChecklist = function(placaManual) {
+    if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+
+    const placaTxt = (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+    const placaCb = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
+    const placa = (placaManual || placaCb || placaTxt).toString().trim().toUpperCase();
+
+    if (!placa) return;
+
+    // 1. Mostrar badges de vencimiento de documentos SOAT / RT
+    const docBox = document.getElementById('ck-doc-badges-box');
+    if (docBox) docBox.style.display = 'flex';
+
+    const placasData = window.dataGlobalPlacas || [];
+    const matchPlaca = placasData.find(p => (p[0] || '').toString().trim().toUpperCase() === placa);
+
+    if (matchPlaca) {
+        const soatFmt = matchPlaca[12] || matchPlaca[13] || 'Vence el 11/01/2027';
+        const rtFmt = matchPlaca[14] || matchPlaca[15] || 'Vence el 16/12/2026';
+
+        const elSoatV = document.getElementById('ck-soat-venc');
+        const elRtV = document.getElementById('ck-rt-venc');
+
+        if (elSoatV) elSoatV.textContent = typeof soatFmt === 'string' && soatFmt.includes('Vence') ? soatFmt : `Vence el ${soatFmt}`;
+        if (elRtV) elRtV.textContent = typeof rtFmt === 'string' && rtFmt.includes('Vence') ? rtFmt : `Vence el ${rtFmt}`;
+    }
+
+    // 2. Telemetría GPS Wialon
+    const inputKm = document.getElementById('ck_kilometraje');
+    const inputHoras = document.getElementById('ck_horas_motor');
+
+    const wD = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
+    if (wD) {
+        if (inputKm && wD.km > 0) inputKm.value = Math.round(wD.km);
+        if (inputHoras && wD.horas > 0) inputHoras.value = Math.round(wD.horas);
     }
 };
 
-// ── DICTADO POR VOZ (WEB SPEECH API) ────────────────────────────
-window.dictarVoz = function(targetInputId) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert('El dictado por voz no está soportado en este navegador. Por favor escribe el texto manualmente.');
-        return;
+// ── FIRMA DIGITAL CANVAS ──────────────────────────────────────────
+window.initCanvasFirmaChecklist = function() {
+    canvasFirmaChecklist = document.getElementById('ck_canvas_firma');
+    if (!canvasFirmaChecklist) return;
+    ctxFirmaChecklist = canvasFirmaChecklist.getContext('2d');
+
+    function getPos(e) {
+        const rect = canvasFirmaChecklist.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-PE';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    function startDraw(e) {
+        estaFirmandoChecklist = true;
+        const pos = getPos(e);
+        ctxFirmaChecklist.beginPath();
+        ctxFirmaChecklist.moveTo(pos.x, pos.y);
+    }
 
-    const el = document.getElementById(targetInputId);
-    if (!el) return;
+    function draw(e) {
+        if (!estaFirmandoChecklist) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctxFirmaChecklist.lineWidth = 2;
+        ctxFirmaChecklist.lineCap = 'round';
+        ctxFirmaChecklist.strokeStyle = '#0f172a';
+        ctxFirmaChecklist.lineTo(pos.x, pos.y);
+        ctxFirmaChecklist.stroke();
+    }
 
-    el.placeholder = '🎙️ Escuchando... Habla ahora...';
-    el.style.background = '#fef2f2';
+    function stopDraw() {
+        estaFirmandoChecklist = false;
+    }
 
-    recognition.start();
+    canvasFirmaChecklist.addEventListener('mousedown', startDraw);
+    canvasFirmaChecklist.addEventListener('mousemove', draw);
+    canvasFirmaChecklist.addEventListener('mouseup', stopDraw);
+    canvasFirmaChecklist.addEventListener('touchstart', startDraw);
+    canvasFirmaChecklist.addEventListener('touchmove', draw);
+    canvasFirmaChecklist.addEventListener('touchend', stopDraw);
+};
 
-    recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        el.value = (el.value ? el.value + ' ' : '') + text;
-        el.placeholder = 'Detalle de la falla...';
-        el.style.background = '';
-    };
+window.limpiarFirmaChecklist = function() {
+    if (canvasFirmaChecklist && ctxFirmaChecklist) {
+        ctxFirmaChecklist.clearRect(0, 0, canvasFirmaChecklist.width, canvasFirmaChecklist.height);
+    }
+};
 
-    recognition.onerror = function() {
-        el.placeholder = 'Detalle de la falla...';
-        el.style.background = '';
-    };
+// ── PROCESAR FOTOS AWS S3 PREVIEW ────────────────────────────────
+window.procesarFotosChecklist = function(input) {
+    const files = input.files;
+    if (!files || !files.length) return;
 
-    recognition.onend = function() {
-        el.placeholder = 'Detalle de la falla...';
-        el.style.background = '';
-    };
+    const wrap = document.getElementById('ck_preview_fotos');
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result;
+            fotosChecklistBase64.push(base64);
+
+            if (wrap) {
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'position-relative border rounded-3 overflow-hidden shadow-2xs';
+                imgDiv.style.width = '75px';
+                imgDiv.style.height = '75px';
+                imgDiv.innerHTML = `
+                    <img src="${base64}" style="width:100%; height:100%; object-fit:cover;">
+                    <button type="button" class="btn-close position-absolute top-0 end-0 bg-white p-1" style="font-size:0.6rem;" onclick="this.parentElement.remove();"></button>
+                `;
+                wrap.appendChild(imgDiv);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
 };
 
 // ── CARGAR Y FILTRAR TABLA DE CHECKLIST ─────────────────────────
@@ -262,7 +598,7 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
         .catch(err => {
             console.error('Error cargando checklist:', err);
             window.dataGlobalChecklist = [];
-            if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar reportes (Verifica permisos de usuario).</td></tr>';
+            if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Error al cargar reportes.</td></tr>';
         });
 };
 
@@ -283,34 +619,31 @@ window.filtrarChecklist = function() {
     let list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
 
     if (estadoFiltroActualChecklist !== 'TODOS') {
-        list = list.filter(r => (r.estado || 'Pendiente').toUpperCase() === estadoFiltroActualChecklist.toUpperCase());
+        list = list.filter(r => (r.estado || 'Pendiente') === estadoFiltroActualChecklist);
     }
 
     if (query) {
-        list = list.filter(r => 
-            (r.folio || '').toLowerCase().includes(query) ||
-            (r.placa_tracto || '').toLowerCase().includes(query) ||
-            (r.placa_remolque || '').toLowerCase().includes(query) ||
-            (r.conductor || '').toLowerCase().includes(query)
-        );
+        list = list.filter(r => {
+            const fol = (r.folio || '').toLowerCase();
+            const pt = (r.placa_tracto || '').toLowerCase();
+            const pr = (r.placa_remolque || '').toLowerCase();
+            const cond = (r.conductor || '').toLowerCase();
+            return fol.includes(query) || pt.includes(query) || pr.includes(query) || cond.includes(query);
+        });
     }
 
-    window.datosFiltradosChecklist = list;
-    window.renderizarTablaChecklist(list);
     window.actualizarKPIsChecklist(window.dataGlobalChecklist);
-};
 
-window.renderizarTablaChecklist = function(datos) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (!c) return;
 
-    if (!Array.isArray(datos) || datos.length === 0) {
+    if (!list.length) {
         c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron reportes de falla.</td></tr>';
         return;
     }
 
     let html = '';
-    datos.forEach(r => {
+    list.forEach(r => {
         let badgeEstado = '<span class="badge bg-warning text-dark rounded-pill fw-bold"><i class="bi bi-clock me-1"></i>Pendiente</span>';
         if (r.estado === 'En Proceso') badgeEstado = '<span class="badge bg-info rounded-pill fw-bold"><i class="bi bi-tools me-1"></i>En Taller</span>';
         if (r.estado === 'Finalizado') badgeEstado = '<span class="badge bg-success rounded-pill fw-bold"><i class="bi bi-check-circle me-1"></i>Finalizado</span>';
@@ -382,184 +715,7 @@ window.actualizarKPIsChecklist = function(datos) {
     if (elFin) elFin.textContent = finalizados;
 };
 
-// ── FIRMA CANVAS DIGITAL ─────────────────────────────────────────
-window.initCanvasFirmaChecklist = function() {
-    canvasFirmaChecklist = document.getElementById('ck_canvas_firma');
-    if (!canvasFirmaChecklist) return;
-    ctxFirmaChecklist = canvasFirmaChecklist.getContext('2d');
-
-    function getPos(e) {
-        const rect = canvasFirmaChecklist.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
-
-    function startDraw(e) {
-        estaFirmandoChecklist = true;
-        const pos = getPos(e);
-        ctxFirmaChecklist.beginPath();
-        ctxFirmaChecklist.moveTo(pos.x, pos.y);
-    }
-
-    function draw(e) {
-        if (!estaFirmandoChecklist) return;
-        e.preventDefault();
-        const pos = getPos(e);
-        ctxFirmaChecklist.lineWidth = 2;
-        ctxFirmaChecklist.lineCap = 'round';
-        ctxFirmaChecklist.strokeStyle = '#0f172a';
-        ctxFirmaChecklist.lineTo(pos.x, pos.y);
-        ctxFirmaChecklist.stroke();
-    }
-
-    function stopDraw() {
-        estaFirmandoChecklist = false;
-    }
-
-    canvasFirmaChecklist.addEventListener('mousedown', startDraw);
-    canvasFirmaChecklist.addEventListener('mousemove', draw);
-    canvasFirmaChecklist.addEventListener('mouseup', stopDraw);
-    canvasFirmaChecklist.addEventListener('touchstart', startDraw);
-    canvasFirmaChecklist.addEventListener('touchmove', draw);
-    canvasFirmaChecklist.addEventListener('touchend', stopDraw);
-};
-
-window.limpiarFirmaChecklist = function() {
-    if (canvasFirmaChecklist && ctxFirmaChecklist) {
-        ctxFirmaChecklist.clearRect(0, 0, canvasFirmaChecklist.width, canvasFirmaChecklist.height);
-    }
-};
-
-// ── PROCESAR FOTOS AWS S3 PREVIEW ────────────────────────────────
-window.procesarFotosChecklist = function(input) {
-    const files = input.files;
-    if (!files || !files.length) return;
-
-    const wrap = document.getElementById('ck_preview_fotos');
-    Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64 = e.target.result;
-            fotosChecklistBase64.push(base64);
-
-            if (wrap) {
-                const imgDiv = document.createElement('div');
-                imgDiv.className = 'position-relative border rounded-3 overflow-hidden';
-                imgDiv.style.width = '75px';
-                imgDiv.style.height = '75px';
-                imgDiv.innerHTML = `
-                    <img src="${base64}" style="width:100%; height:100%; object-fit:cover;">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 bg-white p-1" style="font-size:0.6rem;" onclick="this.parentElement.remove();"></button>
-                `;
-                wrap.appendChild(imgDiv);
-            }
-        };
-        reader.readAsDataURL(file);
-    });
-};
-
-// ── CONSULTAR GPS DESDE WIALON (KILOMETRAJE + UBICACIÓN AUTOMÁTICA) ──
-window.consultarGpsChecklist = function(placaManual) {
-    const placaTxt = (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
-    const placaCb = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
-    const placa = (placaManual || placaCb || placaTxt).toString().trim().toUpperCase();
-
-    if (!placa) return;
-
-    const inputGps = document.getElementById('ck_ubicacion_gps');
-    const inputKm = document.getElementById('ck_kilometraje');
-
-    if (inputGps) inputGps.value = 'Consultando GPS Wialon...';
-
-    // 1. Intentar obtener datos Wialon directamente desde caché o buscarWialonPorPlaca
-    const wD = (typeof buscarWialonPorPlaca === 'function') ? buscarWialonPorPlaca(placa) : null;
-    if (wD) {
-        if (inputKm && wD.km > 0) {
-            inputKm.value = Math.round(wD.km);
-        }
-
-        if (wD.lat && wD.lng && inputGps) {
-            (async () => {
-                let dirTxt = `${wD.lat.toFixed(5)}, ${wD.lng.toFixed(5)}`;
-                try {
-                    const res = await fetch(`/api/proxy/geocode?lat=${wD.lat}&lon=${wD.lng}`);
-                    const data = await res.json();
-                    const calle  = data.address?.road || data.address?.suburb || data.address?.neighbourhood || '';
-                    const ciudad = data.address?.city || data.address?.town || data.address?.county || '';
-                    if (calle || ciudad) {
-                        dirTxt = ciudad ? `${calle}, ${ciudad}` : calle;
-                    } else if (data.display_name) {
-                        dirTxt = data.display_name;
-                    }
-                } catch(e) {}
-                if (inputGps) inputGps.value = dirTxt || 'Ubicación actual en ruta';
-            })();
-            return;
-        }
-    }
-
-    // 2. Fallback a obtenerDatosStatusFlota
-    fetch('/api/script/obtenerDatosStatusFlota', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-        .then(r => r.json())
-        .then(j => {
-            const rows = j.data || [];
-            const match = rows.find(r => (r[3] || '').toString().trim().toUpperCase() === placa);
-            if (match) {
-                if (match[7] && inputGps) inputGps.value = match[7];
-                if (match[11] && inputKm && !inputKm.value) inputKm.value = match[11];
-            } else {
-                if (inputGps) inputGps.value = 'Ubicación actual en ruta';
-            }
-        })
-        .catch(() => {
-            if (inputGps) inputGps.value = 'Ubicación actual en ruta';
-        });
-};
-
-// ── ABRIR MODAL NUEVO REPORTE ────────────────────────────────────
-window.abrirModalNuevoChecklist = function() {
-    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-    document.body.classList.remove('modal-open');
-
-    const form = document.getElementById('formNuevoChecklist');
-    if (form) form.reset();
-
-    // Resetear Wizard al Paso 1
-    const tab1 = document.getElementById('ck-step1-tab');
-    if (tab1 && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-        try { bootstrap.Tab.getOrCreateInstance(tab1).show(); } catch(e){}
-    }
-
-    // Re-renderizar y verificar que todos los grupos de acordeón contengan sus ítems
-    window.asegurarGruposChecklist(true);
-
-    // Restablecer estilos e insumos visuales de tarjetas de fallas
-    document.querySelectorAll('#formNuevoChecklist .ck-obs-box').forEach(b => b.classList.add('d-none'));
-    document.querySelectorAll('#formNuevoChecklist .ck-obs-box input').forEach(inp => inp.value = '');
-    document.querySelectorAll('#formNuevoChecklist .ck-item-card').forEach(c => {
-        c.style.borderColor = 'var(--bs-border-color, #e2e8f0)';
-        c.style.background = '#ffffff';
-    });
-    document.querySelectorAll('#formNuevoChecklist .btn-check[id^="ok_"]').forEach(r => r.checked = true);
-    document.querySelectorAll('#formNuevoChecklist .btn-check[id^="obs_"]').forEach(r => r.checked = false);
-
-    fotosChecklistBase64 = [];
-    const wrapFotos = document.getElementById('ck_preview_fotos');
-    if (wrapFotos) wrapFotos.innerHTML = '';
-
-    window.limpiarFirmaChecklist();
-    window.poblarPlacasChecklist();
-    window.poblarConductoresChecklist();
-
-    const modalEl = document.getElementById('modalNuevoChecklist');
-    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-};
-
-// ── GUARDAR NUEVO REPORTE ────────────────────────────────────────
+// ── GUARDAR REPORTE ──────────────────────────────────────────────
 window.guardarChecklist = function(event) {
     event.preventDefault();
     if (!window.guardAction('checklist', 'c')) return;
@@ -568,23 +724,35 @@ window.guardarChecklist = function(event) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
 
-    // Recolectar fallas de Tracto y Remolque observadas
     const fallasTracto = [];
     const fallasRemolque = [];
 
-    document.querySelectorAll('.ck-obs-box:not(.d-none) input').forEach(input => {
-        const obsText = (input.value || '').trim();
-        if (obsText) {
-            const item = input.getAttribute('data-item');
-            const sistema = input.getAttribute('data-sistema');
-            const unidad = input.getAttribute('data-unidad');
+    // Recolectar checkboxes marcados
+    document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
+        const itemId = chk.id.replace('chk_', '');
+        const parts = itemId.split('_');
+        const unidad = parts[0] || 'Tracto';
+        const sysKey = parts[1] || 'motor';
+        const txtEl = document.getElementById(`txt_${itemId}`);
+        const lblEl = document.getElementById(`lbl_${itemId}`);
 
-            const obj = { sistema, item, obs: obsText };
-            if (unidad === 'Remolque' || unidad === 'Carreta') {
-                fallasRemolque.push(obj);
-            } else {
-                fallasTracto.push(obj);
-            }
+        const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla';
+        const obsDesc = txtEl ? txtEl.value.trim() : '';
+
+        const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc };
+        if (unidad === 'Remolque' || unidad === 'Carreta') {
+            fallasRemolque.push(obj);
+        } else {
+            fallasTracto.push(obj);
+        }
+    });
+
+    // Recolectar fallas manuales adicionadas
+    document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
+        const sys = (row.querySelector('.ck-manual-sistema') || {}).value || 'OTROS';
+        const obs = (row.querySelector('.ck-manual-obs') || {}).value || '';
+        if (obs.trim()) {
+            fallasTracto.push({ sistema: sys, item: 'M - ' + obs.trim(), obs: obs.trim() });
         }
     });
 
@@ -598,8 +766,10 @@ window.guardarChecklist = function(event) {
     const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
     const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
     const horasMotorVal = (document.getElementById('ck_horas_motor') || {}).value || '';
+    const fechaRep = (document.getElementById('ck_fecha_reporte') || {}).value || new Date().toISOString().split('T')[0];
 
     const payload = {
+        fecha_reporte: fechaRep,
         placa_tracto: placaTracto,
         placa_remolque: placaRemolque,
         km_inicial: kilometrajeVal,
@@ -610,7 +780,7 @@ window.guardarChecklist = function(event) {
         ubicacion_gps: (document.getElementById('ck_ubicacion_gps') || {}).value || '',
         fallas_tracto: fallasTracto,
         fallas_remolque: fallasRemolque,
-        fallas_libres_text: (document.getElementById('ck_fallas_libres') || {}).value || '',
+        fallas_libres_text: '',
         fotos_base64: fotosChecklistBase64,
         firma_conductor: firmaData,
         creado_por: window.usuarioLogueado || 'Sistema'
@@ -637,8 +807,7 @@ window.guardarChecklist = function(event) {
 
             window.cargarTablaChecklist(true);
 
-            // Si se registraron fallas, preguntar si desea generar OTs de inmediato
-            if (fallasTracto.length > 0 || fallasRemolque.length > 0 || payload.fallas_libres_text) {
+            if (fallasTracto.length > 0 || fallasRemolque.length > 0) {
                 if (confirm(`✅ Reporte ${res.folio} guardado con éxito. ¿Deseas asignar rampa y generar las Órdenes de Trabajo (OT) ahora mismo?`)) {
                     window.abrirModalGenerarOTs(res.id);
                 }
@@ -656,616 +825,351 @@ window.guardarChecklist = function(event) {
     });
 };
 
-// ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
-// ── MAPA DE SUBTIPOS POR TIPO DE OT ──────────────────────────────
-var CK_OT_SUBTIPOS = window.CK_OT_SUBTIPOS || {
-    'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
-    'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
-    'Predictivo': ['Por condición','Prueba'],
-    'Proactivo':  ['Mejora'],
-    'Servicio':   ['Stock','Taller']
-};
+// ── DETALLE DIGITAL COMPLETO DEL REPORTE (MODAL XL ESTILO REPORTES) ──
+window.abrirDetalleChecklist = function(id) {
+    const modalEl = document.getElementById('modalDetalleChecklistFull');
+    const body = document.getElementById('det-full-body');
+    const folioEl = document.getElementById('det-full-folio');
 
-window.ckCambiarTipoOT = function(selectEl) {
-    const tipo = selectEl.value;
-    const card = selectEl.closest('.card-body');
-    if (!card) return;
-    const subSel = card.querySelector('.ot-subtipo');
-    if (!subSel) return;
+    if (!modalEl || !body) return;
 
-    const opts = CK_OT_SUBTIPOS[tipo] || [];
-    subSel.innerHTML = '<option value="">-- Seleccionar Subtipo --</option>' + opts.map(s => `<option value="${s}">${s}</option>`).join('');
-    subSel.disabled = !opts.length;
-    if (opts.length > 0) subSel.value = opts[0];
-};
-
-window.filtrarTecnicosDropdown = function(inputEl) {
-    const q = inputEl.value.toLowerCase().trim();
-    const items = inputEl.closest('.tecnicos-dropdown-panel').querySelectorAll('.list-tecnicos-items .form-check');
-    items.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(q) ? 'flex' : 'none';
-    });
-};
-
-window.toggleTecnicosDropdown = function(cardId) {
-    const panel = document.getElementById(cardId + '_dropdown_panel');
-    if (!panel) return;
-    const isHidden = panel.style.display === 'none' || !panel.style.display;
-    
-    // Cerrar cualquier otro panel abierto para mantener UI impecable
-    document.querySelectorAll('.tecnicos-dropdown-panel').forEach(p => {
-        if (p !== panel) p.style.display = 'none';
-    });
-
-    panel.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) {
-        const searchInput = panel.querySelector('.search-tec-input');
-        if (searchInput) {
-            searchInput.value = '';
-            window.filtrarTecnicosDropdown(searchInput);
-            setTimeout(() => searchInput.focus(), 50);
-        }
+    const r = (window.dataGlobalChecklist || []).find(item => item.id === id);
+    if (!r) {
+        alert('No se encontró la información del reporte seleccionado.');
+        return;
     }
-};
 
-window.actualizarLabelTecnicos = function(cardId) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
+    if (folioEl) folioEl.textContent = `Reporte de Fallas ${r.folio || ('2026-' + String(id).padStart(8, '0'))}`;
 
-    const chks = card.querySelectorAll('.chk-tecnico:checked');
-    const label = card.querySelector('.sel-tec-label');
-    const cnt = card.querySelector('.cnt-tec-sel');
+    // Extraer array de fallas de Tracto y Remolque
+    let fallasT = [];
+    let fallasR = [];
+    try {
+        if (r.fallas_tracto_json) fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+    } catch(e) {}
+    try {
+        if (r.fallas_remolque_json) fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+    } catch(e) {}
 
-    const selected = Array.from(chks).map(c => c.value);
-    if (label) {
-        label.textContent = selected.length > 0 ? selected.join(', ') : 'Selecciona técnico(s)...';
-        label.className = selected.length > 0 ? 'text-truncate sel-tec-label fw-bold text-primary small' : 'text-truncate sel-tec-label text-muted small';
-    }
-    if (cnt) {
-        cnt.textContent = `${selected.length} seleccionados`;
-    }
-};
+    const todasFallas = [
+        ...fallasT.map(f => ({ ...f, unidad: 'TRACTO' })),
+        ...fallasR.map(f => ({ ...f, unidad: 'SEMIRREMOLQUE' }))
+    ];
 
-window.limpiarTecnicosDropdown = function(cardId) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
-    card.querySelectorAll('.chk-tecnico').forEach(c => c.checked = false);
-    window.actualizarLabelTecnicos(cardId);
-};
+    // Badge Estado
+    let badgeEstado = '<span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase" style="font-size:0.75rem;">PENDIENTE</span>';
+    if (r.estado === 'En Proceso') badgeEstado = '<span class="badge bg-primary px-3 py-2 fw-bold text-uppercase" style="font-size:0.75rem;">EN TALLER</span>';
+    if (r.estado === 'Finalizado') badgeEstado = '<span class="badge bg-success px-3 py-2 fw-bold text-uppercase" style="font-size:0.75rem;">FINALIZADO</span>';
 
-window.renderSupervisorOptions = function(listTecs) {
-    let opts = '<option value="">-- Selecciona Supervisor --</option>';
-    (listTecs || []).forEach(t => {
-        opts += `<option value="${t}">${t}</option>`;
-    });
-    return opts;
-};
-function renderSupervisorOptions(listTecs) {
-    return window.renderSupervisorOptions(listTecs);
-}
+    const fechaFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
 
-window.renderMultiTecnicosOptions = function(cardId, listTecnicos) {
-    const container = document.getElementById(cardId + '_tecnicos_container');
-    if (!container) return;
-
-    let itemsHtml = '';
-    (listTecnicos || []).forEach((tName, i) => {
-        itemsHtml += `
-        <div class="form-check py-1 px-2 rounded d-flex align-items-center gap-2 hover-bg-light" style="font-size:0.83rem;">
-            <input class="form-check-input chk-tecnico m-0 cursor-pointer" type="checkbox" value="${tName}" id="${cardId}_tec_${i}" onchange="window.actualizarLabelTecnicos('${cardId}')">
-            <label class="form-check-label w-100 cursor-pointer text-uppercase fw-semibold text-dark m-0" for="${cardId}_tec_${i}">${tName}</label>
-        </div>
-        `;
-    });
-
+    // ── 1. DATOS DEL REPORTE ──
     let html = `
-    <div class="position-relative w-100">
-        <div class="form-control form-control-sm d-flex justify-content-between align-items-center bg-white cursor-pointer py-2 px-3 shadow-2xs border rounded-3" 
-             onclick="window.toggleTecnicosDropdown('${cardId}')" style="min-height: 38px;">
-            <span class="text-truncate sel-tec-label text-muted small">Selecciona técnico(s)...</span>
-            <i class="bi bi-caret-down-fill text-secondary small ms-1"></i>
+        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size:1.05rem;">
+                    <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
+                </h6>
+                <div>${badgeEstado}</div>
+            </div>
+            <div class="row g-3 style-sm" style="font-size:0.85rem; color:#334155;">
+                <div class="col-md-3"><strong>Fecha:</strong> ${fechaFmt}</div>
+                <div class="col-md-3"><strong>Placa Principal:</strong> <span class="fw-bold text-dark">${r.placa_tracto || '-'}</span></div>
+                <div class="col-md-3"><strong>Placa Remolque:</strong> ${r.placa_remolque || '-'}</div>
+                <div class="col-md-3"><strong>Conductor:</strong> ${r.conductor || '-'}</div>
+                <div class="col-md-3"><strong>Ruta:</strong> ${r.procedencia || '-'}</div>
+                <div class="col-md-3"><strong>Procedencia:</strong> ${r.procedencia || '-'}</div>
+                <div class="col-md-3"><strong>Orden de Viaje:</strong> ${r.orden_viaje || '-'}</div>
+                <div class="col-md-3"><strong>Orden de Servicio:</strong> ${r.orden_servicio || '-'}</div>
+                <div class="col-md-3"><strong>Kilometraje (Tracto):</strong> ${r.km_inicial || '-'}</div>
+                <div class="col-md-3"><strong>Horas de Motor (Tracto):</strong> ${r.horas_motor || '-'}</div>
+            </div>
         </div>
-        
-        <div id="${cardId}_dropdown_panel" class="tecnicos-dropdown-panel border rounded-3 shadow-lg bg-white p-2 mt-1" style="display: none; border-color: #cbd5e1 !important; margin-bottom: 10px;">
-            <div class="p-1 mb-1">
-                <input type="text" class="form-control form-control-sm search-tec-input bg-light border-0" placeholder="🔍 Buscar técnico..." oninput="window.filtrarTecnicosDropdown(this)">
-            </div>
-            <div class="list-tecnicos-items custom-scrollbar pe-1" style="max-height: 180px; overflow-y: auto;">
-                ${itemsHtml || '<div class="text-muted small p-2 text-center">No hay técnicos disponibles</div>'}
-            </div>
-            <div class="d-flex justify-content-between align-items-center border-top pt-2 px-1 mt-2 bg-white">
-                <small class="text-muted cnt-tec-sel fw-bold" style="font-size: 0.78rem;">0 seleccionados</small>
-                <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none fw-bold small" onclick="window.limpiarTecnicosDropdown('${cardId}')">Limpiar todo</button>
-            </div>
-        </div>
-    </div>
     `;
-    container.innerHTML = html;
-};
 
-window.genOtCardCounter = 0;
-window.cacheGenReporteActual = null;
+    // ── 2. CHECKLIST (CARDS POR SISTEMA) ──
+    html += `
+        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1.05rem;">
+                <i class="bi bi-card-checklist text-primary"></i> Checklist
+            </h6>
+    `;
 
-// ── AGREGAR OTRAS OTS ADICIONALES PARA LA MISMA UNIDAD ───────────────
-window.agregarOTCardAdicional = function(unidad, placa) {
-    if (!window.cacheGenReporteActual) return;
-    const rep = window.cacheGenReporteActual.rep;
-    const fallas = (unidad === 'Remolque' || unidad === 'Carreta') ? (rep.fallas_remolque_json || []) : (rep.fallas_tracto_json || []);
-    const listTecs = window.cacheGenReporteActual.listTecs || [];
+    // TRACTO
+    html += `<div class="fw-bold text-dark small mb-2">TRACTO (Placa Principal)</div>`;
+    html += `<div class="row g-3 mb-4">`;
 
-    const container = document.getElementById('contenedorTarjetasOTsGen');
-    if (!container) return;
+    const configT = [
+        { key: 'MOTOR', items: SISTEMAS_TRACTO.motor },
+        { key: 'CAJA-CORONAS', items: SISTEMAS_TRACTO.caja },
+        { key: 'REFRIGERACION', items: SISTEMAS_TRACTO.refri },
+        { key: 'DIRECCION', items: SISTEMAS_TRACTO.direccion },
+        { key: 'CABINA Y CHASIS', items: SISTEMAS_TRACTO.cabina }
+    ];
 
-    window.genOtCardCounter++;
-    const cardId = `ot_card_${window.genOtCardCounter}`;
-
-    // Identificar fallas ya seleccionadas en tarjetas anteriores de la misma unidad
-    const fallasYaSeleccionadas = new Set();
-    document.querySelectorAll(`#contenedorTarjetasOTsGen .card-ot-gen`).forEach(card => {
-        if (card.querySelector('.ot-unidad').value === unidad) {
-            card.querySelectorAll('.chk-falla-ot:checked').forEach(c => fallasYaSeleccionadas.add(c.value));
-        }
+    configT.forEach(sys => {
+        html += `
+            <div class="col-md-6">
+                <div class="card border rounded-3 overflow-hidden shadow-2xs">
+                    <div class="card-header bg-light fw-bold text-dark small py-2 px-3">${sys.key}</div>
+                    <div class="list-group list-group-flush small">
+        `;
+        sys.items.forEach(itemTxt => {
+            const isFalla = fallasT.some(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || (f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase()));
+            if (isFalla) {
+                html += `<div class="list-group-item py-2 px-3 bg-warning bg-opacity-10 text-danger fw-bold d-flex align-items-center justify-content-between"><span>❌ ${itemTxt}</span> <span class="badge bg-danger">OBSERVADO</span></div>`;
+            } else {
+                html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
+            }
+        });
+        html += `</div></div></div>`;
     });
+    html += `</div>`;
 
-    let fallasHtml = '';
-    if (fallas.length > 0) {
-        fallasHtml = fallas.map((f, idx) => {
-            const valStr = `[${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs}`;
-            const yaUsada = fallasYaSeleccionadas.has(valStr);
-            const isChecked = !yaUsada ? 'checked' : '';
-            return `
-                <div class="form-check py-1">
-                    <input class="form-check-input chk-falla-ot" type="checkbox" value="${valStr}" id="${cardId}_falla_${idx}" ${isChecked}>
-                    <label class="form-check-label small text-dark fw-semibold" for="${cardId}_falla_${idx}">
-                        <strong>[${f.sistema || 'SISTEMA'}]</strong> ${f.item}: <span class="text-danger">${f.obs}</span>
-                        ${yaUsada ? '<span class="badge bg-secondary ms-1">Asignada en otra OT</span>' : ''}
-                    </label>
-                </div>
+    // REMOLQUE
+    if (r.placa_remolque || fallasR.length > 0) {
+        html += `<div class="fw-bold text-dark small mb-2">SEMIRREMOLQUE / CARRETA (Placa Secundaria)</div>`;
+        html += `<div class="row g-3 mb-4">`;
+
+        const configR = [
+            { key: 'FRENOS', items: SISTEMAS_REMOLQUE.frenos },
+            { key: 'CARRETA', items: SISTEMAS_REMOLQUE.carreta },
+            { key: 'SISTEMA ELECTRICO', items: SISTEMAS_REMOLQUE.electrico },
+            { key: 'SUSPENSION', items: SISTEMAS_REMOLQUE.suspension },
+            { key: 'FURGON', items: SISTEMAS_REMOLQUE.furgon },
+            { key: 'LLANTAS', items: SISTEMAS_REMOLQUE.llantas },
+            { key: 'TERMOKING', items: SISTEMAS_REMOLQUE.termoking }
+        ];
+
+        configR.forEach(sys => {
+            html += `
+                <div class="col-md-6">
+                    <div class="card border rounded-3 overflow-hidden shadow-2xs">
+                        <div class="card-header bg-light fw-bold text-dark small py-2 px-3">${sys.key}</div>
+                        <div class="list-group list-group-flush small">
             `;
-        }).join('');
+            sys.items.forEach(itemTxt => {
+                const isFalla = fallasR.some(f => (f.item || '').toUpperCase().includes(itemTxt.toUpperCase()) || (f.sistema || '').toUpperCase() === sys.key && (f.obs || '').toUpperCase().includes(itemTxt.toUpperCase()));
+                if (isFalla) {
+                    html += `<div class="list-group-item py-2 px-3 bg-warning bg-opacity-10 text-danger fw-bold d-flex align-items-center justify-content-between"><span>❌ ${itemTxt}</span> <span class="badge bg-danger">OBSERVADO</span></div>`;
+                } else {
+                    html += `<div class="list-group-item py-2 px-3 text-secondary">✓ ${itemTxt}</div>`;
+                }
+            });
+            html += `</div></div></div>`;
+        });
+        html += `</div>`;
     }
 
-    const repActual = window.cacheGenReporteActual ? window.cacheGenReporteActual.rep : null;
-    if (repActual && repActual.fallas_libres_text) {
-        const libreVal = `[REPORTE LIBRE] ${repActual.fallas_libres_text}`;
-        const yaUsada = fallasYaSeleccionadas.has(libreVal);
-        const isChecked = !yaUsada ? 'checked' : '';
-        fallasHtml += `
-            <div class="form-check py-1">
-                <input class="form-check-input chk-falla-ot" type="checkbox" value="${libreVal}" id="${cardId}_falla_libre" ${isChecked}>
-                <label class="form-check-label small text-danger fw-bold" for="${cardId}_falla_libre">
-                    [REPORTE LIBRE]: ${repActual.fallas_libres_text}
-                    ${yaUsada ? '<span class="badge bg-secondary ms-1">Asignada en otra OT</span>' : ''}
-                </label>
+    html += `</div>`;
+
+    // ── 3. DETALLE DE FALLA (TABLA CON RESULTADOS) ──
+    html += `
+        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1.05rem;">
+                <i class="bi bi-tools text-primary"></i> Detalle de Falla
+            </h6>
+            <div class="table-responsive border rounded-3 overflow-hidden">
+                <table class="table table-hover align-middle m-0 small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th class="py-2 ps-3">UNIDAD</th>
+                            <th class="py-2">CATEGORÍA</th>
+                            <th class="py-2">ÍTEM</th>
+                            <th class="py-2">POSICIÓN</th>
+                            <th class="py-2 pe-3">DESCRIPCIÓN DE LA FALLA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    if (todasFallas.length === 0) {
+        html += `<tr><td colspan="5" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
+    } else {
+        todasFallas.forEach(f => {
+            html += `
+                <tr>
+                    <td class="ps-3 fw-bold text-primary">${f.unidad || 'TRACTO'}</td>
+                    <td class="fw-semibold text-dark">${f.sistema || 'GENERAL'}</td>
+                    <td class="fw-bold text-danger">${f.item || '—'}</td>
+                    <td>-</td>
+                    <td class="pe-3 fw-semibold text-dark">${f.obs || 'SIN DESCRIPCIÓN'}</td>
+                </tr>
+            `;
+        });
+    }
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // ── 4. EVIDENCIAS FOTOGRÁFICAS ──
+    let fotosHtml = '<div class="text-muted small">Sin evidencias adjuntas.</div>';
+    if (r.fotos_json) {
+        try {
+            const fotos = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : r.fotos_json;
+            if (Array.isArray(fotos) && fotos.length) {
+                fotosHtml = '<div class="d-flex flex-wrap gap-2">' + fotos.map(url => `
+                    <a href="${url}" target="_blank" class="border rounded overflow-hidden shadow-2xs" style="width:90px; height:90px;">
+                        <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+                    </a>
+                `).join('') + '</div>';
+            }
+        } catch(e) {}
+    }
+
+    html += `
+        <div class="mb-4 pb-3" style="border-bottom: 2px solid #0099ff;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1.05rem;">
+                <i class="bi bi-camera-fill text-primary"></i> Evidencias
+            </h6>
+            ${fotosHtml}
+        </div>
+    `;
+
+    // ── 5. ÓRDENES DE TRABAJO GENERADAS ──
+    let otsHtml = '<div class="text-muted small">Sin órdenes de trabajo generadas.</div>';
+    if (r.ots_generadas_json) {
+        try {
+            const ots = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : r.ots_generadas_json;
+            if (Array.isArray(ots) && ots.length) {
+                otsHtml = ots.map(o => `
+                    <span class="badge bg-primary px-3 py-2 fs-6 rounded-3 me-2">
+                        ${o.idOt} <span class="badge bg-info text-dark ms-1">EN PROCESO</span>
+                    </span>
+                `).join('');
+            }
+        } catch(e) {}
+    }
+
+    html += `
+        <div class="mb-4 pb-3">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2" style="font-size:1.05rem;">
+                <i class="bi bi-tools text-primary"></i> Órdenes de Trabajo Generadas
+            </h6>
+            <div>${otsHtml}</div>
+        </div>
+    `;
+
+    // ── 6. FIRMA DIGITAL DEL CONDUCTOR (SI EXISTE) ──
+    if (r.firma_conductor_url) {
+        html += `
+            <div class="border-top pt-3 mt-3">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pencil-fill text-primary me-1"></i>Firma del Conductor</h6>
+                <div class="border rounded p-2 text-center bg-light" style="max-width:320px;">
+                    <img src="${r.firma_conductor_url}" style="max-height:100px; object-fit:contain;">
+                </div>
             </div>
         `;
     }
 
-    if (!fallasHtml) {
-        fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
-    }
-
-    const badgeBg = unidad === 'Tracto' ? 'bg-primary' : 'bg-success';
-    const titleIcon = unidad === 'Tracto' ? 'bi-truck' : 'bi-truck-flatbed';
-
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'card border mb-3 shadow-sm rounded-3 card-ot-gen position-relative';
-    cardDiv.id = cardId;
-    cardDiv.innerHTML = `
-        <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
-            <span><i class="bi ${titleIcon} me-1"></i> OT Adicional para ${unidad} (${placa})</span>
-            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-bold" onclick="this.closest('.card-ot-gen').remove()"><i class="bi bi-trash me-1"></i>Eliminar OT</button>
-        </div>
-        <div class="card-body p-3 overflow-visible">
-            <input type="hidden" class="ot-unidad" value="${unidad}">
-            <input type="hidden" class="ot-placa" value="${placa}">
-            
-            <div class="row g-2 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold small">Tipo de OT *</label>
-                    <select class="form-select form-select-sm ot-tipo" onchange="window.ckCambiarTipoOT(this)" required>
-                        <option value="Preventivo" selected>Preventivo</option>
-                        <option value="Correctivo">Correctivo</option>
-                        <option value="Predictivo">Predictivo</option>
-                        <option value="Proactivo">Proactivo</option>
-                        <option value="Servicio">Servicio</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold small">Subtipo de OT *</label>
-                    <select class="form-select form-select-sm ot-subtipo" required>
-                        <option value="Inspección Pre-PM" selected>Inspección Pre-PM</option>
-                        <option value="Campaña">Campaña</option>
-                        <option value="Limpieza Integral">Limpieza Integral</option>
-                        <option value="Rutina">Rutina</option>
-                        <option value="Programado">Programado</option>
-                        <option value="Oportuno">Oportuno</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold small text-dark"><i class="bi bi-person-badge text-primary me-1"></i> Supervisor *</label>
-                    <select class="form-select form-select-sm ot-supervisor" required>
-                        ${renderSupervisorOptions(listTecs)}
-                    </select>
-                </div>
-                <div class="col-md-6 position-relative">
-                    <label class="form-label fw-bold small text-dark"><i class="bi bi-people text-info me-1"></i> Personal / Técnico(s) Asignados *</label>
-                    <div id="${cardId}_tecnicos_container"></div>
-                </div>
-                ${(unidad === 'Remolque' || unidad === 'Carreta') ? `
-                <div class="col-md-6">
-                    <label class="form-label fw-bold small text-success"><i class="bi bi-clock-history me-1"></i> Horas Motor / Thermoking (Hrs)</label>
-                    <input type="number" class="form-control form-control-sm ot-horas-motor fw-bold text-success" value="${(window.cacheGenReporteActual && window.cacheGenReporteActual.rep ? window.cacheGenReporteActual.rep.horas_motor : '') || ''}" placeholder="Ej: 1250">
-                </div>
-                ` : ''}
-            </div>
-
-            <!-- Selección de Fallas para esta OT -->
-            <div class="p-2 border rounded-3 bg-light mb-2">
-                <label class="form-label fw-bold small text-dark d-block mb-1">
-                    <i class="bi bi-check2-square text-primary me-1"></i> Selecciona los trabajos / fallas a incluir en esta OT:
-                </label>
-                <div class="list-fallas-ot-container bg-white p-2 rounded border" style="max-height: 140px; overflow-y: auto;">
-                    ${fallasHtml}
-                </div>
-                <div class="mt-2">
-                    <input type="text" class="form-control form-control-sm ot-trabajo-custom" placeholder="✍️ Agregar otra falla o nota adicional manual para esta OT...">
-                </div>
-            </div>
-        </div>
-    `;
-
-    const buttonsWrapper = document.getElementById('wrapperBotonesAdicionales');
-    if (buttonsWrapper) {
-        container.insertBefore(cardDiv, buttonsWrapper);
-    } else {
-        container.appendChild(cardDiv);
-    }
-
-    window.renderMultiTecnicosOptions(cardId, listTecs);
-};
-
-// ── ABRIR MODAL GENERACIÓN DE OTS ────────────────────────────────
-window.abrirModalGenerarOTs = function(idReporte) {
-    fetch('/api/checklist/' + idReporte)
-        .then(r => r.json())
-        .then(rep => {
-            document.getElementById('gen_reporte_id').value = rep.id;
-            const wrap = document.getElementById('contenedorTarjetasOTsGen');
-            if (!wrap) return;
-
-            // Establecer fecha/hora actual por defecto
-            const now = new Date();
-            const nowIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            const inFing = document.getElementById('gen_fecha_ingreso');
-            if (inFing) inFing.value = nowIso;
-
-            // Poblar selector de rampas dinámicamente desde el catálogo de la empresa activa
-            fetch('/api/cat-rampas')
-                .then(r => r.ok ? r.json() : [])
-                .then(rampas => {
-                    const selRampa = document.getElementById('gen_id_rampa');
-                    if (selRampa) {
-                        let opts = '<option value="En Espera">-- Rampa de Espera / En Ruta --</option>';
-                        if (Array.isArray(rampas) && rampas.length) {
-                            rampas.forEach(r => {
-                                const nom = r.nombre_rampa || ('Rampa ' + r.id);
-                                opts += `<option value="${r.id}">${nom}</option>`;
-                            });
-                        }
-                        selRampa.innerHTML = opts;
-                    }
-                })
-                .catch(e => console.warn('Error cargando rampas:', e));
-
-            let fallasTracto = rep.fallas_tracto_json || [];
-            let fallasRemolque = rep.fallas_remolque_json || [];
-
-            // Obtener lista de personal / técnicos
-            fetch('/api/conductores')
-                .then(r => r.ok ? r.json() : [])
-                .then(conductoresData => {
-                    const listTecs = [];
-                    const listRaw = Array.isArray(conductoresData) ? conductoresData : (conductoresData.data || []);
-                    listRaw.forEach(c => {
-                        let name = typeof c === 'string' ? c : (c.nombres_apellidos || c.nombre || c.conductor || '');
-                        name = String(name).trim();
-                        if (name && !listTecs.includes(name)) listTecs.push(name);
-                    });
-                    listTecs.sort();
-
-                    const renderSupervisorOptions = (listTecs) => {
-                        let opts = '<option value="">-- Selecciona Supervisor --</option>';
-                        (listTecs || []).forEach(t => {
-                            opts += `<option value="${t}">${t}</option>`;
-                        });
-                        return opts;
-                    };
-
-                    window.cacheGenReporteActual = { rep, listTecs };
-                    window.genOtCardCounter = 0;
-
-                    let html = '';
-
-                    const renderOtCard = (unidad, placa, fallas) => {
-                        window.genOtCardCounter++;
-                        const cardId = `ot_card_${window.genOtCardCounter}`;
-
-                        let fallasHtml = '';
-                        if (fallas.length > 0) {
-                            fallasHtml = fallas.map((f, idx) => `
-                                <div class="form-check py-1">
-                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[${f.sistema || 'SISTEMA'}] ${f.item}: ${f.obs}" id="${cardId}_falla_${idx}" checked>
-                                    <label class="form-check-label small text-dark fw-semibold" for="${cardId}_falla_${idx}">
-                                        <strong>[${f.sistema || 'SISTEMA'}]</strong> ${f.item}: <span class="text-danger">${f.obs}</span>
-                                    </label>
-                                </div>
-                            `).join('');
-                        }
-                        
-                        if (rep.fallas_libres_text) {
-                            const isCheckedLibre = (window.genOtCardCounter === 1 && fallas.length === 0) ? 'checked' : '';
-                            fallasHtml += `
-                                <div class="form-check py-1">
-                                    <input class="form-check-input chk-falla-ot" type="checkbox" value="[REPORTE LIBRE] ${rep.fallas_libres_text}" id="${cardId}_falla_libre" ${isCheckedLibre}>
-                                    <label class="form-check-label small text-danger fw-bold" for="${cardId}_falla_libre">
-                                        [REPORTE LIBRE]: ${rep.fallas_libres_text}
-                                    </label>
-                                </div>
-                            `;
-                        }
-                        
-                        if (!fallasHtml) {
-                            fallasHtml = '<div class="text-muted small">Sin fallas registradas en checklist.</div>';
-                        }
-
-                        const badgeBg = unidad === 'Tracto' ? 'bg-primary' : 'bg-success';
-                        const titleIcon = unidad === 'Tracto' ? 'bi-truck' : 'bi-truck-flatbed';
-
-                        return `
-                        <div class="card border mb-3 shadow-sm rounded-3 card-ot-gen position-relative" id="${cardId}">
-                            <div class="card-header ${badgeBg} bg-opacity-10 fw-bold ${unidad === 'Tracto' ? 'text-primary' : 'text-success'} d-flex justify-content-between align-items-center py-2">
-                                <span><i class="bi ${titleIcon} me-1"></i> OT para ${unidad} (${placa})</span>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge ${badgeBg} rounded-pill">${fallas.length} trabajos reportados</span>
-                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-bold" onclick="this.closest('.card-ot-gen').remove()"><i class="bi bi-trash me-1"></i>Eliminar OT</button>
-                                </div>
-                            </div>
-                            <div class="card-body p-3 overflow-visible">
-                                <input type="hidden" class="ot-unidad" value="${unidad}">
-                                <input type="hidden" class="ot-placa" value="${placa}">
-                                
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold small">Tipo de OT *</label>
-                                        <select class="form-select form-select-sm ot-tipo" onchange="window.ckCambiarTipoOT(this)" required>
-                                            <option value="Correctivo" selected>Correctivo</option>
-                                            <option value="Preventivo">Preventivo</option>
-                                            <option value="Predictivo">Predictivo</option>
-                                            <option value="Proactivo">Proactivo</option>
-                                            <option value="Servicio">Servicio</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold small">Subtipo de OT *</label>
-                                        <select class="form-select form-select-sm ot-subtipo" required>
-                                            <option value="Falla" selected>Falla</option>
-                                            <option value="Varado">Varado</option>
-                                            <option value="Programado">Programado</option>
-                                            <option value="Garantía">Garantía</option>
-                                            <option value="Accidentabilidad">Accidentabilidad</option>
-                                            <option value="Mala Operación">Mala Operación</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold small text-dark"><i class="bi bi-person-badge text-primary me-1"></i> Supervisor *</label>
-                                        <select class="form-select form-select-sm ot-supervisor" required>
-                                            ${renderSupervisorOptions(listTecs)}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 position-relative">
-                                        <label class="form-label fw-bold small text-dark"><i class="bi bi-people text-info me-1"></i> Personal / Técnico(s) Asignados *</label>
-                                        <div id="${cardId}_tecnicos_container"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Selección de Fallas para esta OT -->
-                                <div class="p-2 border rounded-3 bg-light mb-2">
-                                    <label class="form-label fw-bold small text-dark d-block mb-1">
-                                        <i class="bi bi-check2-square text-primary me-1"></i> Selecciona los trabajos / fallas a incluir en esta OT:
-                                    </label>
-                                    <div class="list-fallas-ot-container bg-white p-2 rounded border" style="max-height: 140px; overflow-y: auto;">
-                                        ${fallasHtml}
-                                    </div>
-                                    <div class="mt-2">
-                                        <input type="text" class="form-control form-control-sm ot-trabajo-custom" placeholder="✍️ Agregar otra falla o nota adicional manual para esta OT...">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    };
-
-                    if (rep.placa_tracto) {
-                        html += renderOtCard('Tracto', rep.placa_tracto, fallasTracto);
-                    }
-
-                    if (rep.placa_remolque && (fallasRemolque.length > 0 || !rep.placa_tracto)) {
-                        html += renderOtCard('Remolque', rep.placa_remolque, fallasRemolque);
-                    }
-
-                    // Botones para agregar OTs adicionales por unidad
-                    html += `<div class="d-flex flex-wrap gap-2 mb-3" id="botonesAgregarOTsWrap">`;
-                    if (rep.placa_tracto) {
-                        html += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill" onclick="window.agregarOTCardAdicional('Tracto', '${rep.placa_tracto}')"><i class="bi bi-plus-circle-fill me-1"></i> Agregar otra OT para Tracto (${rep.placa_tracto})</button>`;
-                    }
-                    if (rep.placa_remolque) {
-                        html += `<button type="button" class="btn btn-outline-success btn-sm fw-bold rounded-pill" onclick="window.agregarOTCardAdicional('Remolque', '${rep.placa_remolque}')"><i class="bi bi-plus-circle-fill me-1"></i> Agregar otra OT para Remolque (${rep.placa_remolque})</button>`;
-                    }
-                    html += `</div>`;
-
-                    wrap.innerHTML = html;
-
-                    // Renderizar los dropdowns de multi-técnicos
-                    for (let i = 1; i <= window.genOtCardCounter; i++) {
-                        window.renderMultiTecnicosOptions(`ot_card_${i}`, listTecs);
-                    }
-
-                    const modalGenEl = document.getElementById('modalGenerarOTsFromChecklist');
-                    if (modalGenEl) bootstrap.Modal.getOrCreateInstance(modalGenEl).show();
-                });
-        })
-        .catch(err => alert('Error obteniendo reporte: ' + err.message));
-};
-
-window.enviarGeneracionOTs = function(event) {
-    event.preventDefault();
-    const idReporte = document.getElementById('gen_reporte_id').value;
-    const rampa = document.getElementById('gen_id_rampa').value;
-    const fecha_ingreso = (document.getElementById('gen_fecha_ingreso') || {}).value || '';
-    const fecha_salida = (document.getElementById('gen_fecha_salida') || {}).value || '';
-
-    const ots = [];
-    document.querySelectorAll('#contenedorTarjetasOTsGen .card-ot-gen').forEach(card => {
-        const unidad = card.querySelector('.ot-unidad').value;
-        const placa = card.querySelector('.ot-placa').value;
-        const tipo_ot = card.querySelector('.ot-tipo').value;
-        const subtipo_ot = card.querySelector('.ot-subtipo').value;
-        const supervisor = (card.querySelector('.ot-supervisor') || {}).value || '';
-        const trabajo_custom = (card.querySelector('.ot-trabajo-custom') || {}).value || '';
-        const horas_motor = (card.querySelector('.ot-horas-motor') || {}).value || '';
-
-        // Recolectar fallas seleccionadas
-        const fallasSeleccionadas = [];
-        card.querySelectorAll('.chk-falla-ot:checked').forEach(chk => {
-            fallasSeleccionadas.push(chk.value);
-        });
-
-        // Recolectar técnicos seleccionados
-        const tecnicos = [];
-        card.querySelectorAll('.chk-tecnico:checked').forEach(chk => {
-            tecnicos.push(chk.value);
-        });
-
-        ots.push({
-            unidad,
-            placa,
-            tipo_ot,
-            subtipo_ot,
-            supervisor,
-            tecnicos,
-            fallas_seleccionadas: fallasSeleccionadas,
-            trabajo_custom,
-            horas_motor
-        });
-    });
-
-    if (ots.length === 0) { alert('No hay OTs para generar.'); return; }
-
-    const btn = document.getElementById('btnConfirmarGenerarOTs');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando OTs...';
-
-    fetch(`/api/checklist/${idReporte}/generar-ots`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            ots,
-            id_rampa: rampa,
-            fecha_ingreso,
-            fecha_salida,
-            creado_por: window.usuarioLogueado || 'Sistema'
-        })
-    })
-    .then(r => r.json())
-    .then(res => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
-
-        if (res.ok) {
-            const modalGenEl = document.getElementById('modalGenerarOTsFromChecklist');
-            if (modalGenEl) {
-                const inst = bootstrap.Modal.getInstance(modalGenEl);
-                if (inst) inst.hide();
-            }
-            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-            document.body.classList.remove('modal-open');
-            window.cargarTablaChecklist(true);
-            alert(`🚀 Se generaron exitosamente ${res.total} Órdenes de Trabajo (OT) e integró con Status Rampa.`);
-        } else {
-            alert('❌ Error al generar OTs: ' + (res.error || 'Desconocido'));
-        }
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
-        alert('❌ Error de conexión: ' + err.message);
-    });
-};
-
-// ── VER DETALLE DIGITAL REPORTE F-MAN-001 ────────────────────────
-window.abrirDetalleChecklist = function(idReporte) {
-    fetch('/api/checklist/' + idReporte)
-        .then(r => r.json())
-        .then(rep => {
-            document.getElementById('det-ck-folio').textContent = rep.folio;
-            const body = document.getElementById('det-ck-body');
-            if (!body) return;
-
-            let fallasT = rep.fallas_tracto_json || [];
-            let fallasR = rep.fallas_remolque_json || [];
-            let fotos = rep.fotos || [];
-
-            let htmlT = fallasT.map(f => `<div class="p-2 border-bottom small"><strong>[${f.sistema}]</strong> ${f.item}: <span class="text-danger fw-bold">${f.obs}</span></div>`).join('') || '<div class="text-muted small p-2">Sin fallas observadas en Tracto.</div>';
-            let htmlR = fallasR.map(f => `<div class="p-2 border-bottom small"><strong>[${f.sistema}]</strong> ${f.item}: <span class="text-danger fw-bold">${f.obs}</span></div>`).join('') || '<div class="text-muted small p-2">Sin fallas observadas en Remolque.</div>';
-
-            let htmlFotos = fotos.map(u => `<a href="${u}" target="_blank"><img src="${u}" style="width:90px; height:90px; object-fit:cover;" class="rounded-3 border shadow-sm me-2 mb-2"></a>`).join('') || '<span class="text-muted small">Sin evidencias fotográficas.</span>';
-
-            body.innerHTML = `
-                <div class="card border-0 shadow-sm p-3 mb-3 bg-light">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold m-0 text-primary">${rep.folio}</h6>
-                        <span class="badge bg-primary rounded-pill">${rep.estado}</span>
-                    </div>
-                    <div class="small text-muted"><strong>Conductor:</strong> ${rep.conductor || '—'} | <strong>Ruta:</strong> ${rep.procedencia || '—'}</div>
-                    <div class="small text-muted"><strong>Tracto:</strong> ${rep.placa_tracto || '—'} | <strong>Carreta:</strong> ${rep.placa_remolque || '—'}</div>
-                    <div class="small text-muted"><strong>Ubicación GPS:</strong> ${rep.ubicacion_gps || '—'}</div>
-                </div>
-
-                <h6 class="fw-bold text-dark border-bottom pb-2">🚚 Fallas Observadas - Tracto</h6>
-                <div class="mb-3 bg-white border rounded-3">${htmlT}</div>
-
-                <h6 class="fw-bold text-dark border-bottom pb-2">🚛 Fallas Observadas - Remolque / Carreta</h6>
-                <div class="mb-3 bg-white border rounded-3">${htmlR}</div>
-
-                ${rep.fallas_libres_text ? `
-                <h6 class="fw-bold text-dark border-bottom pb-2">💡 Observaciones Generales / No Clasificadas</h6>
-                <div class="p-3 mb-3 bg-white border rounded-3 text-danger fw-bold small">${rep.fallas_libres_text}</div>
-                ` : ''}
-
-                <h6 class="fw-bold text-dark border-bottom pb-2">📷 Evidencia Fotográfica</h6>
-                <div class="mb-3">${htmlFotos}</div>
-
-                ${rep.firma_conductor ? `
-                <h6 class="fw-bold text-dark border-bottom pb-2">✍️ Firma Digital del Conductor</h6>
-                <div class="p-2 border rounded-3 bg-white text-center mb-3">
-                    <img src="${rep.firma_conductor}" style="max-width:250px; max-height:100px;">
-                </div>
-                ` : ''}
-
-                <button class="btn btn-outline-secondary w-100 fw-bold mt-2" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i> Imprimir Reporte F-MAN-001
-                </button>
-            `;
-
-            new bootstrap.Offcanvas(document.getElementById('offcanvasDetalleChecklist')).show();
-        });
+    body.innerHTML = html;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 };
 
 window.eliminarChecklist = function(id) {
+    if (!window.guardAction('checklist', 'd')) return;
     if (!confirm('¿Estás seguro de eliminar este reporte de fallas?')) return;
-    fetch('/api/checklist/' + id, { method: 'DELETE' })
+
+    fetch(`/api/checklist/${id}`, { method: 'DELETE' })
         .then(r => r.json())
-        .then(() => window.cargarTablaChecklist(true));
+        .then(res => {
+            if (res.ok) {
+                window.cargarTablaChecklist(true);
+            } else {
+                alert('Error al eliminar: ' + (res.error || 'Desconocido'));
+            }
+        })
+        .catch(err => alert('Error de red: ' + err.message));
+};
+
+window.abrirModalGenerarOTs = function(id) {
+    const r = (window.dataGlobalChecklist || []).find(item => item.id === id);
+    if (!r) return;
+
+    const modalEl = document.getElementById('modalGenerarOTsFromChecklist');
+    const inputId = document.getElementById('gen_reporte_id');
+    const wrapCards = document.getElementById('contenedorTarjetasOTsGen');
+
+    if (inputId) inputId.value = id;
+
+    let html = '';
+    if (r.placa_tracto) {
+        html += `
+            <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3 border-start border-4 border-primary">
+                <div class="fw-bold text-primary mb-2"><i class="bi bi-truck me-1"></i> OT Tracto — Placa ${r.placa_tracto}</div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Tipo OT</label>
+                        <select class="form-select form-select-sm" name="tipo_ot_tracto">
+                            <option value="Correctivo">Correctivo</option>
+                            <option value="Preventivo">Preventivo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Prioridad</label>
+                        <select class="form-select form-select-sm" name="prioridad_tracto">
+                            <option value="Alta">Alta</option>
+                            <option value="Media" selected>Media</option>
+                            <option value="Baja">Baja</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    if (r.placa_remolque) {
+        html += `
+            <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3 border-start border-4 border-warning">
+                <div class="fw-bold text-warning mb-2"><i class="bi bi-truck-flatbed me-1"></i> OT Remolque — Placa ${r.placa_remolque}</div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Tipo OT</label>
+                        <select class="form-select form-select-sm" name="tipo_ot_remolque">
+                            <option value="Correctivo">Correctivo</option>
+                            <option value="Preventivo">Preventivo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Prioridad</label>
+                        <select class="form-select form-select-sm" name="prioridad_remolque">
+                            <option value="Alta">Alta</option>
+                            <option value="Media" selected>Media</option>
+                            <option value="Baja">Baja</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    if (wrapCards) wrapCards.innerHTML = html;
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.enviarGeneracionOTs = function(e) {
+    e.preventDefault();
+    const id = document.getElementById('gen_reporte_id').value;
+    const rampa = document.getElementById('gen_id_rampa').value;
+
+    fetch('/api/checklist/generar-ots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_reporte: id, rampa })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.ok) {
+            const modalEl = document.getElementById('modalGenerarOTsFromChecklist');
+            if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
+            window.cargarTablaChecklist(true);
+            alert('🚀 Órdenes de Trabajo generadas correctamente.');
+        } else {
+            alert('Error al generar OTs: ' + (res.error || 'Desconocido'));
+        }
+    })
+    .catch(err => alert('Error de conexión: ' + err.message));
 };
