@@ -197,6 +197,10 @@ window.ckRenderizarTodosAcordeones = function() {
 window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, items) {
     const accordionId = `acc_${unidad}_${sysKey}`;
     const collapseId = `col_${unidad}_${sysKey}`;
+    const isTracto = unidad === 'Tracto';
+    const unitBadge = isTracto 
+        ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2" style="font-size:0.65rem;">TRACTO</span>`
+        : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-2" style="font-size:0.65rem;">REMOLQUE</span>`;
 
     let itemsHTML = '';
     items.forEach((itemTxt, idx) => {
@@ -204,16 +208,17 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
         itemsHTML += `
             <div class="ck-item-row border-bottom py-2 px-3 bg-white" data-item-text="${itemTxt.toUpperCase()}" id="row_${itemId}">
                 <div class="form-check d-flex align-items-center justify-content-between">
-                    <div class="flex-grow-1">
+                    <div class="flex-grow-1 d-flex align-items-center">
                         <input class="form-check-input me-2 ck-checkbox-item" type="checkbox" id="chk_${itemId}" onchange="window.ckOnToggleFalla('${itemId}', '${unidad}', '${sysKey}', '${itemTxt.replace(/'/g, "\\'")}')">
-                        <label class="form-check-label fw-bold text-dark style-sm cursor-pointer" for="chk_${itemId}" id="lbl_${itemId}">
+                        ${unitBadge}
+                        <label class="form-check-label fw-bold text-dark style-sm cursor-pointer mb-0" for="chk_${itemId}" id="lbl_${itemId}">
                             ${itemTxt}
                         </label>
                     </div>
                     <span class="badge bg-secondary-subtle text-secondary small style-none d-none" id="tag_${itemId}">MARCADO</span>
                 </div>
                 <div class="ck-item-textarea-box mt-2 d-none" id="box_${itemId}">
-                    <textarea class="form-control form-control-sm text-uppercase border-primary-subtle" id="txt_${itemId}" rows="2" placeholder="Describa la falla encontrada..." oninput="window.ckActualizarChipsFallas()"></textarea>
+                    <textarea class="form-control form-control-sm text-uppercase border-primary-subtle" id="txt_${itemId}" rows="2" placeholder="Describa la falla encontrada en ${unidad}..." oninput="window.ckActualizarChipsFallas()"></textarea>
                 </div>
             </div>
         `;
@@ -222,8 +227,8 @@ window.ckGenerarAccordionCardHTML = function(unidad, sysKey, title, iconClass, i
     return `
         <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-2xs ck-accordion-group" id="group_${accordionId}">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold py-2 bg-light text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                    <i class="bi ${iconClass} me-2 text-primary"></i> ${title}
+                <button class="accordion-button collapsed fw-bold py-2 ${isTracto ? 'bg-light' : 'bg-warning-subtle bg-opacity-25'} text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                    <i class="bi ${iconClass} me-2 ${isTracto ? 'text-primary' : 'text-warning-emphasis'}"></i> ${title}
                     <span class="badge bg-secondary rounded-pill ms-2 px-2 py-1 count-badge" id="cnt_${accordionId}">0</span>
                 </button>
             </h2>
@@ -285,7 +290,9 @@ window.ckActualizarChipsFallas = function() {
     const wrapChips = document.getElementById('ck_chips_fallas_marcadas');
     if (!wrapChips) return;
 
+    const p = window.ckObtenerPlacasSeleccionadas();
     let chipsHTML = '';
+
     document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
         const itemId = chk.id.replace('chk_', '');
         const lbl = document.getElementById(`lbl_${itemId}`);
@@ -294,10 +301,18 @@ window.ckActualizarChipsFallas = function() {
         const numOnly = numTxt.split(' - ')[0] || numTxt;
         const desc = (txt && txt.value.trim()) ? txt.value.trim() : '(sin describir)';
 
+        const isTracto = itemId.includes('_Tracto_');
+        const unitTag = isTracto
+            ? `<span class="badge bg-primary text-white text-uppercase px-2 py-1" style="font-size:0.68rem;"><i class="bi bi-truck me-1"></i>TRACTO ${p.placaTracto ? '('+p.placaTracto+')' : ''}</span>`
+            : `<span class="badge bg-warning text-dark text-uppercase px-2 py-1" style="font-size:0.68rem;"><i class="bi bi-truck-flatbed me-1"></i>REMOLQUE ${p.placaRemolque ? '('+p.placaRemolque+')' : ''}</span>`;
+        const cardBorder = isTracto ? 'border: 1px solid #93c5fd; background: #eff6ff;' : 'border: 1px solid #fde68a; background: #fffbeb;';
+
         chipsHTML += `
-            <span class="badge bg-info text-dark d-inline-flex align-items-center gap-1 px-3 py-2 fs-6 rounded-3 shadow-2xs">
-                <span>${numOnly} - ${desc}</span>
-                <i class="bi bi-x-circle-fill ms-1 text-danger cursor-pointer" onclick="document.getElementById('chk_${itemId}').checked = false; window.ckOnToggleFalla('${itemId}');"></i>
+            <span class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-3 shadow-2xs" style="${cardBorder}">
+                ${unitTag}
+                <span class="fw-bold text-dark" style="font-size:0.8rem;">${numOnly}:</span>
+                <span class="text-secondary small" style="font-size:0.78rem; max-width: 260px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${desc}</span>
+                <i class="bi bi-x-circle-fill text-danger cursor-pointer ms-1 fs-6" title="Quitar falla" onclick="document.getElementById('chk_${itemId}').checked = false; window.ckOnToggleFalla('${itemId}', '${isTracto ? 'Tracto' : 'Remolque'}');"></i>
             </span>
         `;
     });
@@ -316,11 +331,14 @@ window.ckActualizarChipsFallas = function() {
 // ── BÚSQUEDA EN VIVO (LIVE SEARCH KEYWORD) ────────────────────────
 window.ckFiltrarItemsLive = function(query) {
     const q = (query || '').toUpperCase().trim();
+    let matchesTracto = 0;
+    let matchesRemolque = 0;
 
     document.querySelectorAll('.ck-accordion-group').forEach(group => {
         let matchCountInGroup = 0;
         const items = group.querySelectorAll('.ck-item-row');
         const collapseEl = group.querySelector('.accordion-collapse');
+        const isTractoGroup = group.id.includes('_Tracto_');
 
         items.forEach(row => {
             const text = row.getAttribute('data-item-text') || row.innerText.toUpperCase();
@@ -335,6 +353,8 @@ window.ckFiltrarItemsLive = function(query) {
         if (q) {
             if (matchCountInGroup > 0) {
                 group.style.display = 'block';
+                if (isTractoGroup) matchesTracto += matchCountInGroup;
+                else matchesRemolque += matchCountInGroup;
                 if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
                     bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
                 }
@@ -348,6 +368,11 @@ window.ckFiltrarItemsLive = function(query) {
             }
         }
     });
+
+    const emptyT = document.getElementById('ck_empty_search_tracto');
+    const emptyR = document.getElementById('ck_empty_search_remolque');
+    if (emptyT) emptyT.style.display = (q && matchesTracto === 0) ? 'block' : 'none';
+    if (emptyR) emptyR.style.display = (q && matchesRemolque === 0) ? 'block' : 'none';
 };
 
 window.ckExpandirTodosAccordeones = function(expand = true) {
@@ -370,7 +395,7 @@ window.ckObtenerPlacasSeleccionadas = function() {
     const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
 
     const tractoLabel = pT ? `TRACTO (${pT.toUpperCase()})` : 'TRACTO';
-    const remolqueLabel = pR ? `SEMIRREMOLQUE (${pR.toUpperCase()})` : 'SEMIRREMOLQUE / CARRETA';
+    const remolqueLabel = pR ? `SEMIRREMOLQUE / CARRETA (${pR.toUpperCase()})` : 'SEMIRREMOLQUE / CARRETA';
 
     return {
         placaTracto: pT ? pT.toUpperCase() : '',
@@ -385,20 +410,22 @@ window.ckActualizarEncabezadosPlacas = function() {
     const elT = document.getElementById('ck_header_tracto_placa');
     const elR = document.getElementById('ck_header_remolque_placa');
 
-    if (elT) elT.innerHTML = `<i class="bi bi-truck me-1"></i> TRACTO ${p.placaTracto ? `(${p.placaTracto})` : '(Placa Principal)'}`;
-    if (elR) elR.innerHTML = `<i class="bi bi-truck-flatbed me-1"></i> SEMIRREMOLQUE / CARRETA ${p.placaRemolque ? `(${p.placaRemolque})` : '(Placa Secundaria)'}`;
+    if (elT) elT.innerHTML = `<i class="bi bi-truck fs-6 me-1"></i> <span>TRACTO ${p.placaTracto ? `(${p.placaTracto})` : '(Placa Principal)'}</span>`;
+    if (elR) elR.innerHTML = `<i class="bi bi-truck-flatbed fs-6 me-1"></i> <span>SEMIRREMOLQUE / CARRETA ${p.placaRemolque ? `(${p.placaRemolque})` : '(Placa Secundaria)'}</span>`;
 
     document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
         const select = row.querySelector('.ck-manual-sistema');
         if (select) {
             const valActual = select.value;
             select.innerHTML = `
-                <option value="${p.placaTracto || 'TRACTO'}">${p.tractoLabel}</option>
-                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">${p.remolqueLabel}</option>
+                <option value="${p.placaTracto || 'TRACTO'}">🚛 ${p.tractoLabel}</option>
+                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">🚛 ${p.remolqueLabel}</option>
             `;
             if (valActual) select.value = valActual;
         }
     });
+
+    window.ckActualizarChipsFallas();
 };
 
 window.ckAgregarFallaManual = function() {
@@ -412,17 +439,17 @@ window.ckAgregarFallaManual = function() {
     div.id = rowId;
     div.innerHTML = `
         <div class="col-md-4">
-            <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary">
-                <option value="${p.placaTracto || 'TRACTO'}">${p.tractoLabel}</option>
-                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">${p.remolqueLabel}</option>
+            <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary border-secondary-subtle">
+                <option value="${p.placaTracto || 'TRACTO'}">🚛 ${p.tractoLabel}</option>
+                <option value="${p.placaRemolque || 'SEMIRREMOLQUE'}">🚛 ${p.remolqueLabel}</option>
             </select>
         </div>
         <div class="col-md-7">
-            <input type="text" class="form-control form-control-sm text-uppercase ck-manual-obs" placeholder="DESCRIPCIÓN DE LA FALLA">
+            <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" placeholder="Describa el componente / falla no listada...">
         </div>
         <div class="col-md-1 text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.ck-manual-falla-row').remove(); window.ckActualizarContadores();">
-                <i class="bi bi-x-lg"></i>
+            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="document.getElementById('${rowId}').remove(); window.ckActualizarContadores();" title="Eliminar">
+                <i class="bi bi-trash-fill"></i>
             </button>
         </div>
     `;
@@ -611,31 +638,86 @@ window.ckObtenerTelemetryGPS = async function(placa) {
     return { km: 0, horas: 0 };
 };
 
-window.ckObtenerFechasDocVehiculo = async function(placa) {
-    if (!placa) return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
+window.calcularEstadoDocumentoOInsp = function(rawDate) {
+    if (!rawDate) return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '' };
+    
+    try {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0);
+            d.setHours(0,0,0,0);
+            
+            const diffTime = d.getTime() - hoy.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const fechaFmt = `${day}/${month}/${year}`;
+            
+            if (diffDays < 0) {
+                return { estado: 'VENCIDO', badgeClass: 'bg-danger text-white', fechaFmt };
+            } else if (diffDays <= 15) {
+                return { estado: 'PRÓXIMO A VENCER', badgeClass: 'bg-warning text-dark', fechaFmt };
+            } else {
+                return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt };
+            }
+        }
+    } catch(e) {}
+    
+    return { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: window.formatFechaVisual(rawDate) };
+};
 
+window.ckObtenerFechasDocVehiculo = async function(placa) {
+    if (!placa) return null;
+    const pStr = placa.toString().trim().toUpperCase();
+
+    let soatData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '11/01/2027' };
+    let rtData   = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '16/12/2026' };
+    let inspData = { estado: 'VIGENTE', badgeClass: 'bg-success text-white', fechaFmt: '28/08/2026' };
+
+    // 1. Consultar en vehículos flota
     try {
         const res = await fetch('/api/vehiculos-flota?t=' + Date.now());
         if (res.ok) {
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : [];
-            const veh = list.find(v => (v.placa || '').toString().trim().toUpperCase() === placa.toUpperCase());
-
+            const list = await res.json();
+            const veh = Array.isArray(list) ? list.find(v => (v.placa || '').toString().trim().toUpperCase() === pStr) : null;
             if (veh) {
                 const sF = veh.soat_f_vencimiento || veh.soat_vencimiento || veh.fecha_vencimiento_soat;
                 const rF = veh.rt_f_vencimiento || veh.rt_vencimiento || veh.fecha_vencimiento_rt || veh.citv_vencimiento;
+                const iF = veh.insp_vencimiento || veh.inspeccion_vencimiento || veh.fum_vencimiento;
 
-                return {
-                    soatFecha: window.formatFechaVisual(sF),
-                    soatEstado: window.calcularEstadoDoc(sF),
-                    rtFecha: window.formatFechaVisual(rF),
-                    rtEstado: window.calcularEstadoDoc(rF)
-                };
+                if (sF) soatData = window.calcularEstadoDocumentoOInsp(sF);
+                if (rF) rtData   = window.calcularEstadoDocumentoOInsp(rF);
+                if (iF) inspData = window.calcularEstadoDocumentoOInsp(iF);
             }
         }
     } catch(e) {}
 
-    return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
+    // 2. Consultar historial de inspecciones técnicas de la unidad
+    try {
+        const resInsp = await fetch('/api/mantenimiento/inspecciones');
+        if (resInsp.ok) {
+            const dataInsp = await resInsp.json();
+            const listInsp = Array.isArray(dataInsp) ? dataInsp : (dataInsp.data || []);
+            const ultInsp = listInsp.filter(i => (i.placa || '').toString().trim().toUpperCase() === pStr)
+                                    .sort((a, b) => new Date(b.fecha || b.created_at || 0) - new Date(a.fecha || a.created_at || 0))[0];
+            if (ultInsp) {
+                let fVenc = ultInsp.fecha_vencimiento;
+                if (!fVenc && ultInsp.fecha) {
+                    let d = new Date(ultInsp.fecha);
+                    d.setDate(d.getDate() + 30);
+                    fVenc = d.toISOString().split('T')[0];
+                }
+                if (fVenc) {
+                    inspData = window.calcularEstadoDocumentoOInsp(fVenc);
+                }
+            }
+        }
+    } catch(e) {}
+
+    return { soat: soatData, rt: rtData, insp: inspData };
 };
 
 window.ckEsPlacaValida = function(placaInput) {
@@ -684,23 +766,35 @@ window.ckSyncPlacaTracto = async function() {
 
     if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
 
-    // 1. Cargar fechas de documentos
+    // 1. Cargar fechas de documentos e inspección
     window.ckObtenerFechasDocVehiculo(visibleText).then(d => {
+        if (!d) return;
+
+        // SOAT
         const elSoatV = document.getElementById('ck-soat-venc-t');
         const elSoatB = document.getElementById('ck-soat-badge-t');
-        const elRtV = document.getElementById('ck-rt-venc-t');
-        const elRtB = document.getElementById('ck-rt-badge-t');
-
-        if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 11/01/2027';
+        if (elSoatV) elSoatV.textContent = d.soat.fechaFmt ? `Vence el ${d.soat.fechaFmt}` : 'Vence el 11/01/2027';
         if (elSoatB) {
-            elSoatB.textContent = d.soatEstado || 'VIGENTE';
-            elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            elSoatB.textContent = d.soat.estado;
+            elSoatB.className = `badge ${d.soat.badgeClass} text-uppercase px-2 py-1`;
         }
 
-        if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 16/12/2026';
+        // REVISIÓN TÉCNICA
+        const elRtV = document.getElementById('ck-rt-venc-t');
+        const elRtB = document.getElementById('ck-rt-badge-t');
+        if (elRtV) elRtV.textContent = d.rt.fechaFmt ? `Vence el ${d.rt.fechaFmt}` : 'Vence el 16/12/2026';
         if (elRtB) {
-            elRtB.textContent = d.rtEstado || 'VIGENTE';
-            elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            elRtB.textContent = d.rt.estado;
+            elRtB.className = `badge ${d.rt.badgeClass} text-uppercase px-2 py-1`;
+        }
+
+        // INSPECCIÓN GENERAL
+        const elInspV = document.getElementById('ck-insp-venc-t');
+        const elInspB = document.getElementById('ck-insp-badge-t');
+        if (elInspV) elInspV.textContent = d.insp.fechaFmt ? `Vence el ${d.insp.fechaFmt}` : 'Vence el 28/08/2026';
+        if (elInspB) {
+            elInspB.textContent = d.insp.estado;
+            elInspB.className = `badge ${d.insp.badgeClass} text-uppercase px-2 py-1`;
         }
     });
 
@@ -735,23 +829,35 @@ window.ckSyncPlacaRemolque = async function() {
 
     if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
 
-    // 1. Cargar fechas de documentos
+    // 1. Cargar fechas de documentos e inspección
     window.ckObtenerFechasDocVehiculo(visibleText).then(d => {
+        if (!d) return;
+
+        // SOAT / SEGURO
         const elSoatV = document.getElementById('ck-soat-venc-r');
         const elSoatB = document.getElementById('ck-soat-badge-r');
-        const elRtV = document.getElementById('ck-rt-venc-r');
-        const elRtB = document.getElementById('ck-rt-badge-r');
-
-        if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 15/05/2027';
+        if (elSoatV) elSoatV.textContent = d.soat.fechaFmt ? `Vence el ${d.soat.fechaFmt}` : 'Vence el 15/05/2027';
         if (elSoatB) {
-            elSoatB.textContent = d.soatEstado || 'VIGENTE';
-            elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            elSoatB.textContent = d.soat.estado;
+            elSoatB.className = `badge ${d.soat.badgeClass} text-uppercase px-2 py-1`;
         }
 
-        if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 20/11/2026';
+        // REVISIÓN TÉCNICA / CITV
+        const elRtV = document.getElementById('ck-rt-venc-r');
+        const elRtB = document.getElementById('ck-rt-badge-r');
+        if (elRtV) elRtV.textContent = d.rt.fechaFmt ? `Vence el ${d.rt.fechaFmt}` : 'Vence el 20/11/2026';
         if (elRtB) {
-            elRtB.textContent = d.rtEstado || 'VIGENTE';
-            elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+            elRtB.textContent = d.rt.estado;
+            elRtB.className = `badge ${d.rt.badgeClass} text-uppercase px-2 py-1`;
+        }
+
+        // INSPECCIÓN GENERAL
+        const elInspV = document.getElementById('ck-insp-venc-r');
+        const elInspB = document.getElementById('ck-insp-badge-r');
+        if (elInspV) elInspV.textContent = d.insp.fechaFmt ? `Vence el ${d.insp.fechaFmt}` : 'Vence el 28/08/2026';
+        if (elInspB) {
+            elInspB.textContent = d.insp.estado;
+            elInspB.className = `badge ${d.insp.badgeClass} text-uppercase px-2 py-1`;
         }
     });
 
