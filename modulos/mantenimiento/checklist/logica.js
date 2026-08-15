@@ -113,8 +113,21 @@ window.poblarPlacasChecklist = function() {
         }
     });
 
-    window._cbInit('ck_placa_tracto', tractos, 'Seleccione placa…');
-    window._cbInit('ck_placa_remolque', carretas, 'Seleccione carreta…');
+    window._cbInit('ck_placa_tracto', tractos, 'SELECCIONE PLACA...');
+    window._cbInit('ck_placa_remolque', carretas, 'SELECCIONE CARRETA...');
+
+    if (typeof window._cbOnSelect === 'function') {
+        window._cbOnSelect('ck_placa_tracto', function(val, lbl) {
+            const txtEl = document.getElementById('ck_placa_tracto-txt');
+            if (txtEl) txtEl.value = val || lbl || '';
+            window.ckSyncPlacaTracto();
+        });
+        window._cbOnSelect('ck_placa_remolque', function(val, lbl) {
+            const txtEl = document.getElementById('ck_placa_remolque-txt');
+            if (txtEl) txtEl.value = val || lbl || '';
+            window.ckSyncPlacaRemolque();
+        });
+    }
 };
 
 // ── POBLAR CONDUCTORES ───────────────────────────────────────────
@@ -449,6 +462,40 @@ window.abrirModalNuevoChecklist = function() {
     const form = document.getElementById('formNuevoChecklist');
     if (form) form.reset();
 
+    // Resetear comboboxes explícitamente
+    if (typeof window._cbSet === 'function') {
+        window._cbSet('ck_placa_tracto', '', '');
+        window._cbSet('ck_placa_remolque', '', '');
+        window._cbSet('ck_conductor', '', '');
+    }
+    const txtT = document.getElementById('ck_placa_tracto-txt');
+    if (txtT) txtT.value = '';
+    const hidT = document.getElementById('ck_placa_tracto');
+    if (hidT) hidT.value = '';
+
+    const txtR = document.getElementById('ck_placa_remolque-txt');
+    if (txtR) txtR.value = '';
+    const hidR = document.getElementById('ck_placa_remolque');
+    if (hidR) hidR.value = '';
+
+    const txtC = document.getElementById('ck_conductor-txt');
+    if (txtC) txtC.value = '';
+
+    // Ocultar tarjetas de documentos y limpiar inputs GPS
+    const docT = document.getElementById('ck-doc-box-tracto');
+    if (docT) docT.style.display = 'none';
+    const docR = document.getElementById('ck-doc-box-remolque');
+    if (docR) docR.style.display = 'none';
+
+    const inputKm = document.getElementById('ck_kilometraje');
+    if (inputKm) inputKm.value = '';
+    const inputHoras = document.getElementById('ck_horas_remolque');
+    if (inputHoras) inputHoras.value = '';
+
+    // Re-vincular selects
+    window.poblarPlacasChecklist();
+    window.poblarConductoresChecklist();
+
     const lblFolio = document.getElementById('lbl-ck-folio-header');
     if (lblFolio) {
         lblFolio.textContent = window.ckObtenerSiguienteFolio();
@@ -472,6 +519,7 @@ window.abrirModalNuevoChecklist = function() {
 
     const wrapManuales = document.getElementById('ck_contenedor_fallas_manuales');
     if (wrapManuales) wrapManuales.innerHTML = '';
+    window.fallasManualesChecklist = [];
 
     fotosChecklistBase64 = [];
     const wrapFotos = document.getElementById('ck_preview_fotos');
@@ -594,6 +642,7 @@ window.ckEsPlacaValida = function(placaInput) {
     if (!placaInput) return false;
     const pStr = placaInput.toString().trim().toUpperCase();
     if (pStr.length < 5) return false;
+    if (pStr.includes('SELECCIONE') || pStr.includes('BUSCAR') || pStr.includes('PLACA')) return false;
 
     const list = window.dataGlobalPlacas || [];
     if (list.length > 0) {
@@ -603,106 +652,123 @@ window.ckEsPlacaValida = function(placaInput) {
         });
     }
 
+    const cbItems = (window._cbData && window._cbData['ck_placa_tracto']) || [];
+    if (cbItems.length > 0) {
+        return cbItems.some(it => (it.value || it.label || '').toString().trim().toUpperCase() === pStr);
+    }
+
     return /^[A-Z0-9]{5,7}$/.test(pStr);
+};
+
+window.ckSyncPlacaTracto = async function() {
+    const txtEl = document.getElementById('ck_placa_tracto-txt');
+    const hidEl = document.getElementById('ck_placa_tracto');
+    const docBox = document.getElementById('ck-doc-box-tracto');
+    const inputKm = document.getElementById('ck_kilometraje');
+
+    const visibleText = (txtEl ? txtEl.value : '').trim().toUpperCase();
+    const esValida = window.ckEsPlacaValida(visibleText);
+
+    if (!esValida) {
+        if (hidEl) hidEl.value = '';
+        if (docBox) docBox.style.display = 'none';
+        if (inputKm) inputKm.value = '';
+        if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+        return;
+    }
+
+    if (hidEl) hidEl.value = visibleText;
+    if (docBox) docBox.style.display = 'block';
+    const lblT = document.getElementById('ck-lbl-doc-tracto-placa');
+    if (lblT) lblT.textContent = visibleText;
+
+    if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+
+    // 1. Cargar fechas de documentos
+    window.ckObtenerFechasDocVehiculo(visibleText).then(d => {
+        const elSoatV = document.getElementById('ck-soat-venc-t');
+        const elSoatB = document.getElementById('ck-soat-badge-t');
+        const elRtV = document.getElementById('ck-rt-venc-t');
+        const elRtB = document.getElementById('ck-rt-badge-t');
+
+        if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 11/01/2027';
+        if (elSoatB) {
+            elSoatB.textContent = d.soatEstado || 'VIGENTE';
+            elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+        }
+
+        if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 16/12/2026';
+        if (elRtB) {
+            elRtB.textContent = d.rtEstado || 'VIGENTE';
+            elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+        }
+    });
+
+    // 2. Cargar GPS Kilometraje
+    const tele = await window.ckObtenerTelemetryGPS(visibleText);
+    if (inputKm && tele && tele.km > 0) {
+        inputKm.value = Math.round(tele.km);
+    }
+};
+
+window.ckSyncPlacaRemolque = async function() {
+    const txtEl = document.getElementById('ck_placa_remolque-txt');
+    const hidEl = document.getElementById('ck_placa_remolque');
+    const docBox = document.getElementById('ck-doc-box-remolque');
+    const inputHoras = document.getElementById('ck_horas_remolque');
+
+    const visibleText = (txtEl ? txtEl.value : '').trim().toUpperCase();
+    const esValida = window.ckEsPlacaValida(visibleText);
+
+    if (!esValida) {
+        if (hidEl) hidEl.value = '';
+        if (docBox) docBox.style.display = 'none';
+        if (inputHoras) inputHoras.value = '';
+        if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+        return;
+    }
+
+    if (hidEl) hidEl.value = visibleText;
+    if (docBox) docBox.style.display = 'block';
+    const lblR = document.getElementById('ck-lbl-doc-remolque-placa');
+    if (lblR) lblR.textContent = visibleText;
+
+    if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
+
+    // 1. Cargar fechas de documentos
+    window.ckObtenerFechasDocVehiculo(visibleText).then(d => {
+        const elSoatV = document.getElementById('ck-soat-venc-r');
+        const elSoatB = document.getElementById('ck-soat-badge-r');
+        const elRtV = document.getElementById('ck-rt-venc-r');
+        const elRtB = document.getElementById('ck-rt-badge-r');
+
+        if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 15/05/2027';
+        if (elSoatB) {
+            elSoatB.textContent = d.soatEstado || 'VIGENTE';
+            elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+        }
+
+        if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 20/11/2026';
+        if (elRtB) {
+            elRtB.textContent = d.rtEstado || 'VIGENTE';
+            elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
+        }
+    });
+
+    // 2. Cargar GPS Horas de motor
+    const tele = await window.ckObtenerTelemetryGPS(visibleText);
+    if (inputHoras && tele && tele.horas > 0) {
+        inputHoras.value = Math.round(tele.horas);
+    }
 };
 
 window.consultarGpsChecklist = function(placaManual) {
     if (window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();
 };
 
-window.ckConsultarDocumentosYGPS = async function() {
-    const inputTractoTxt = document.getElementById('ck_placa_tracto-txt');
-    const inputRemolqueTxt = document.getElementById('ck_placa_remolque-txt');
-
-    const cbValT = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
-    const cbValR = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '';
-
-    const txtValT = inputTractoTxt ? inputTractoTxt.value : '';
-    const txtValR = inputRemolqueTxt ? inputRemolqueTxt.value : '';
-
-    const pT = window.ckEsPlacaValida(cbValT) ? cbValT : (window.ckEsPlacaValida(txtValT) ? txtValT : '');
-    const pR = window.ckEsPlacaValida(cbValR) ? cbValR : (window.ckEsPlacaValida(txtValR) ? txtValR : '');
-
-    const placaT = pT.toString().trim().toUpperCase();
-    const placaR = pR.toString().trim().toUpperCase();
-
-    // 1. Encabezados de placas y fallas manuales
-    if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
-
-    const docBoxT = document.getElementById('ck-doc-box-tracto');
-    const docBoxR = document.getElementById('ck-doc-box-remolque');
-    const inputKm = document.getElementById('ck_kilometraje');
-    const inputHorasR = document.getElementById('ck_horas_remolque');
-
-    // TRACTO DOCS & GPS
-    if (placaT && window.ckEsPlacaValida(placaT)) {
-        if (docBoxT) docBoxT.style.display = 'block';
-        const lblT = document.getElementById('ck-lbl-doc-tracto-placa');
-        if (lblT) lblT.textContent = placaT;
-
-        window.ckObtenerFechasDocVehiculo(placaT).then(d => {
-            const elSoatV = document.getElementById('ck-soat-venc-t');
-            const elSoatB = document.getElementById('ck-soat-badge-t');
-            const elRtV = document.getElementById('ck-rt-venc-t');
-            const elRtB = document.getElementById('ck-rt-badge-t');
-
-            if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 11/01/2027';
-            if (elSoatB) {
-                elSoatB.textContent = d.soatEstado || 'VIGENTE';
-                elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
-            }
-
-            if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 16/12/2026';
-            if (elRtB) {
-                elRtB.textContent = d.rtEstado || 'VIGENTE';
-                elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
-            }
-        });
-
-        // Telemetría GPS Kilometraje Tracto
-        const teleT = await window.ckObtenerTelemetryGPS(placaT);
-        if (inputKm && teleT && teleT.km > 0) {
-            inputKm.value = Math.round(teleT.km);
-        }
-    } else {
-        if (docBoxT) docBoxT.style.display = 'none';
-        if (inputKm) inputKm.value = '';
-    }
-
-    // REMOLQUE DOCS & GPS
-    if (placaR && window.ckEsPlacaValida(placaR)) {
-        if (docBoxR) docBoxR.style.display = 'block';
-        const lblR = document.getElementById('ck-lbl-doc-remolque-placa');
-        if (lblR) lblR.textContent = placaR;
-
-        window.ckObtenerFechasDocVehiculo(placaR).then(d => {
-            const elSoatV = document.getElementById('ck-soat-venc-r');
-            const elSoatB = document.getElementById('ck-soat-badge-r');
-            const elRtV = document.getElementById('ck-rt-venc-r');
-            const elRtB = document.getElementById('ck-rt-badge-r');
-
-            if (elSoatV) elSoatV.textContent = d.soatFecha ? `Vence el ${d.soatFecha}` : 'Vence el 15/05/2027';
-            if (elSoatB) {
-                elSoatB.textContent = d.soatEstado || 'VIGENTE';
-                elSoatB.className = `badge bg-${d.soatEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
-            }
-
-            if (elRtV) elRtV.textContent = d.rtFecha ? `Vence el ${d.rtFecha}` : 'Vence el 20/11/2026';
-            if (elRtB) {
-                elRtB.textContent = d.rtEstado || 'VIGENTE';
-                elRtB.className = `badge bg-${d.rtEstado === 'VENCIDO' ? 'danger' : 'success'} text-uppercase px-2 py-1`;
-            }
-        });
-
-        // Telemetría GPS Horas de motor Remolque
-        const teleR = await window.ckObtenerTelemetryGPS(placaR);
-        if (inputHorasR && teleR && teleR.horas > 0) {
-            inputHorasR.value = Math.round(teleR.horas);
-        }
-    } else {
-        if (docBoxR) docBoxR.style.display = 'none';
-        if (inputHorasR) inputHorasR.value = '';
-    }
+window.ckConsultarDocumentosYGPS = function() {
+    window.ckSyncPlacaTracto();
+    window.ckSyncPlacaRemolque();
 };
 
 // ── FIRMA DIGITAL CANVAS ──────────────────────────────────────────

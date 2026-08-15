@@ -184,7 +184,7 @@
               <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Placa Principal (Tracto) (<span class="text-danger">*</span>)</label>
                 <div class="position-relative">
-                  <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE PLACA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto'); if(window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto')">
+                  <input type="text" id="ck_placa_tracto-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE PLACA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_tracto'); if(window.ckSyncPlacaTracto) window.ckSyncPlacaTracto();" onfocus="window._cbFiltrar('ck_placa_tracto')" onblur="window._cbHide('ck_placa_tracto'); if(window.ckSyncPlacaTracto) setTimeout(window.ckSyncPlacaTracto, 200);">
                   <input type="hidden" id="ck_placa_tracto" name="placa_tracto" required>
                   <div id="ck_placa_tracto-dd" class="cb-dropdown"></div>
                 </div>
@@ -192,7 +192,7 @@
               <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold text-secondary small mb-1">Placa Semirremolque / Remolque</label>
                 <div class="position-relative">
-                  <input type="text" id="ck_placa_remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_remolque'); if(window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();" onfocus="window._cbFiltrar('ck_placa_remolque')" onblur="window._cbHide('ck_placa_remolque')">
+                  <input type="text" id="ck_placa_remolque-txt" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" placeholder="SELECCIONE CARRETA..." autocomplete="off" oninput="window._cbFiltrar('ck_placa_remolque'); if(window.ckSyncPlacaRemolque) window.ckSyncPlacaRemolque();" onfocus="window._cbFiltrar('ck_placa_remolque')" onblur="window._cbHide('ck_placa_remolque'); if(window.ckSyncPlacaRemolque) setTimeout(window.ckSyncPlacaRemolque, 200);">
                   <input type="hidden" id="ck_placa_remolque" name="placa_remolque">
                   <div id="ck_placa_remolque-dd" class="cb-dropdown"></div>
                 </div>
