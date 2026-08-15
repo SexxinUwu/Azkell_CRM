@@ -1671,9 +1671,9 @@ window.generarPDF_Checklist = async function(id) {
     const fechaFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
     const folioStr = r.folio || ('F-' + String(r.id).padStart(5, '0'));
 
-    // Filas para la tabla "DETALLE DE FALLA DE TRACTO" (6 filas A y B)
+    // Filas para la tabla "DETALLE DE FALLA DE TRACTO" (7 filas A y B)
     let detalleTractoRows = '';
-    const maxFilasT = Math.max(5, Math.ceil(fallasT.length / 2));
+    const maxFilasT = Math.max(7, Math.ceil(fallasT.length / 2));
     for (let i = 0; i < maxFilasT; i++) {
         const fA = fallasT[i];
         const fB = fallasT[i + maxFilasT];
@@ -1693,9 +1693,9 @@ window.generarPDF_Checklist = async function(id) {
         `;
     }
 
-    // Filas para la tabla "FALLAS CARRETA" (6 filas A y B)
+    // Filas para la tabla "FALLAS CARRETA" (7 filas A y B)
     let detalleRemolqueRows = '';
-    const maxFilasR = Math.max(5, Math.ceil(fallasR.length / 2));
+    const maxFilasR = Math.max(7, Math.ceil(fallasR.length / 2));
     for (let i = 0; i < maxFilasR; i++) {
         const fA = fallasR[i];
         const fB = fallasR[i + maxFilasR];
@@ -1728,67 +1728,67 @@ window.generarPDF_Checklist = async function(id) {
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
     * { box-sizing: border-box; font-family: 'Oswald', 'Inter', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { background-color: #f1f5f9; margin: 0; padding: 10px; display: flex; justify-content: center; }
-    #btnPrint { position: fixed; top: 12px; right: 20px; background-color: #0284c7; color: #fff; border: none; padding: 9px 18px; border-radius: 6px; cursor: pointer; z-index: 9999; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    body { background-color: #f1f5f9; margin: 0; padding: 15px; display: flex; justify-content: center; }
+    #btnPrint { position: fixed; top: 15px; right: 25px; background-color: #0284c7; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; cursor: pointer; z-index: 9999; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
     #btnPrint:hover { background-color: #0369a1; }
     
     .page-a4 {
         width: 210mm;
-        height: 294mm;
-        max-height: 294mm;
+        min-height: 292mm;
+        height: 292mm;
         background: #ffffff;
-        padding: 4mm 7mm;
+        padding: 4mm 8mm;
         border: 1px solid #cbd5e1;
         box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         color: #000;
-        font-size: 8px;
-        line-height: 1.15;
+        font-size: 9px;
+        line-height: 1.25;
     }
 
     @media print {
-        @page { size: A4 portrait; margin: 2mm 3mm; }
+        @page { size: A4 portrait; margin: 3mm 4mm; }
         body { background: transparent; padding: 0; margin: 0; display: block; }
         #btnPrint { display: none !important; }
-        .page-a4 { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; height: 100% !important; }
+        .page-a4 { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; min-height: 288mm !important; height: 288mm !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; }
     }
 
     /* Tablas y encabezados estilo ISO */
-    .iso-header { width: 100%; border-collapse: collapse; border: 1.5px solid #0056b3; margin-bottom: 2px; }
-    .iso-header td { border: 1px solid #0056b3; text-align: center; vertical-align: middle; }
-    .logo-cell { width: 22%; padding: 2px; }
-    .title-cell { width: 56%; font-size: 16px; font-weight: 700; color: #0056b3; letter-spacing: 0.5px; text-transform: uppercase; }
-    .qms-item { width: 22%; font-size: 8px; text-align: left !important; padding: 1px 4px; font-weight: 600; }
+    .iso-header { width: 100%; border-collapse: collapse; border: 2px solid #0056b3; margin-bottom: 2px; }
+    .iso-header td { border: 1.5px solid #0056b3; text-align: center; vertical-align: middle; }
+    .logo-cell { width: 22%; padding: 3px; }
+    .title-cell { width: 56%; font-size: 20px; font-weight: 700; color: #0056b3; letter-spacing: 0.5px; text-transform: uppercase; }
+    .qms-item { width: 22%; font-size: 9.5px; text-align: left !important; padding: 2px 6px; font-weight: 600; }
 
-    .folio-banner { display: flex; justify-content: flex-end; font-size: 13px; font-weight: 700; color: #c00; margin-bottom: 1px; }
+    .folio-banner { display: flex; justify-content: flex-end; font-size: 15px; font-weight: 700; color: #c00; margin: 2px 0; letter-spacing: 0.5px; }
 
     .blue-bar {
         background-color: #0056b3;
         color: #ffffff;
         font-weight: 700;
-        font-size: 9px;
+        font-size: 10.5px;
         letter-spacing: 0.5px;
-        padding: 2px 6px;
+        padding: 3px 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border: 1px solid #0056b3;
+        border: 1.5px solid #0056b3;
     }
 
     .sub-instructions {
         background-color: #0056b3;
         color: #ffffff;
-        font-size: 7px;
+        font-size: 8px;
         font-weight: 600;
-        padding: 1.5px 4px;
-        line-height: 1.1;
-        border: 1px solid #0056b3;
+        padding: 2.5px 6px;
+        line-height: 1.15;
+        border: 1.5px solid #0056b3;
     }
 
-    .table-grid { width: 100%; border-collapse: collapse; border: 1px solid #0056b3; margin-bottom: 2px; }
-    .table-grid td, .table-grid th { border: 1px solid #0056b3; padding: 1px 4px; font-size: 8px; }
+    .table-grid { width: 100%; border-collapse: collapse; border: 1.5px solid #0056b3; margin-bottom: 2px; }
+    .table-grid td, .table-grid th { border: 1px solid #0056b3; padding: 3px 6px; font-size: 9.5px; }
     .bg-light-blue { background-color: #eaf2fc; font-weight: 700; }
     .text-center { text-align: center; }
     .font-bold { font-weight: 700; }
@@ -1798,67 +1798,68 @@ window.generarPDF_Checklist = async function(id) {
     .checklist-4col {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        border: 1px solid #0056b3;
+        border: 1.5px solid #0056b3;
         border-top: none;
         margin-bottom: 2px;
         gap: 0;
     }
     .col-sys {
         border-right: 1px solid #0056b3;
-        padding: 1.5px 3px;
+        padding: 2px 4px;
         display: flex;
         flex-direction: column;
     }
     .col-sys:last-child { border-right: none; }
     .sys-title {
         font-weight: 700;
-        font-size: 8px;
+        font-size: 9px;
         text-align: center;
         color: #0056b3;
         border-bottom: 1px solid #93c5fd;
-        padding-bottom: 1px;
-        margin-bottom: 1px;
+        padding-bottom: 1.5px;
+        margin-bottom: 2px;
         text-transform: uppercase;
     }
     .chk-item {
-        font-size: 7px;
-        line-height: 1.2;
+        font-size: 8.2px;
+        line-height: 1.3;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         display: flex;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
+        padding: 0.5px 0;
     }
-    .box-v { color: #64748b; font-size: 7px; font-weight: bold; }
-    .box-x { color: #dc2626; font-size: 7.5px; font-weight: 900; }
+    .box-v { color: #64748b; font-size: 8px; font-weight: bold; }
+    .box-x { color: #dc2626; font-size: 9px; font-weight: 900; }
     .item-falla { background-color: #fee2e2; border-radius: 2px; padding: 0 1px; }
 
     /* Tablas de detalle de falla */
-    .table-fallas { width: 100%; border-collapse: collapse; border: 1px solid #0056b3; margin-bottom: 2px; }
-    .table-fallas th { background-color: #0056b3; color: #fff; font-size: 7.5px; font-weight: 700; padding: 1px 3px; border: 1px solid #0056b3; }
-    .table-fallas td { border: 1px solid #0056b3; padding: 1px 3px; font-size: 7.5px; height: 12px; vertical-align: middle; }
+    .table-fallas { width: 100%; border-collapse: collapse; border: 1.5px solid #0056b3; margin-bottom: 2px; }
+    .table-fallas th { background-color: #0056b3; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 4px; border: 1px solid #0056b3; }
+    .table-fallas td { border: 1px solid #0056b3; padding: 2px 5px; font-size: 8.8px; height: 18px; vertical-align: middle; }
 
     /* Firmas */
     .conformidad-box {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        border: 1px solid #0056b3;
+        border: 1.5px solid #0056b3;
         border-top: none;
-        height: 48px;
+        height: 70px;
     }
     .sign-col {
         border-right: 1px solid #0056b3;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: 2px 4px;
+        padding: 3px 6px;
         text-align: center;
     }
     .sign-col:last-child { border-right: none; }
-    .sign-img-area { height: 32px; display: flex; align-items: center; justify-content: center; }
-    .sign-img-area img { max-height: 30px; max-width: 140px; object-fit: contain; }
-    .sign-footer-text { background-color: #eaf2fc; font-size: 7.5px; font-weight: 700; padding: 1px 0; color: #0056b3; border-top: 1px solid #93c5fd; }
+    .sign-img-area { height: 48px; display: flex; align-items: center; justify-content: center; }
+    .sign-img-area img { max-height: 44px; max-width: 170px; object-fit: contain; }
+    .sign-footer-text { background-color: #eaf2fc; font-size: 9px; font-weight: 700; padding: 2.5px 0; color: #0056b3; border-top: 1px solid #93c5fd; }
 </style>
 </head>
 <body>
@@ -1871,7 +1872,7 @@ window.generarPDF_Checklist = async function(id) {
         <table class="iso-header">
             <tr>
                 <td class="logo-cell" rowspan="3">
-                    <img src="${empLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 36px; object-fit: contain;">
+                    <img src="${empLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 44px; object-fit: contain;">
                 </td>
                 <td class="title-cell" rowspan="3">
                     REPORTE DE FALLAS FLOTA PESADA
@@ -1905,7 +1906,7 @@ window.generarPDF_Checklist = async function(id) {
                 <td class="bg-light-blue">CONDUCTOR:</td>
                 <td class="font-bold">${r.conductor || '—'}</td>
                 <td class="text-center font-bold">TRACTO</td>
-                <td class="text-center font-bold" style="color:#0056b3; font-size:9.5px;">${r.placa_tracto || '—'}</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:11px;">${r.placa_tracto || '—'}</td>
                 <td class="text-center">${r.km_inicial || '—'}</td>
                 <td class="text-center">${r.km_final || r.km_inicial || '—'}</td>
             </tr>
@@ -1913,7 +1914,7 @@ window.generarPDF_Checklist = async function(id) {
                 <td class="bg-light-blue">FECHA:</td>
                 <td>${fechaFmt}</td>
                 <td class="text-center font-bold">REMOLQUE</td>
-                <td class="text-center font-bold" style="color:#0056b3; font-size:9.5px;">${r.placa_remolque || '—'}</td>
+                <td class="text-center font-bold" style="color:#0056b3; font-size:11px;">${r.placa_remolque || '—'}</td>
                 <td class="text-center">${r.horas_motor ? 'HRS: ' + r.horas_motor : '—'}</td>
                 <td class="text-center">—</td>
             </tr>
@@ -1940,7 +1941,7 @@ window.generarPDF_Checklist = async function(id) {
             <div class="col-sys">
                 <div class="sys-title">REFRIGERACIÓN</div>
                 ${(SISTEMAS_TRACTO.refri || []).map(it => renderItemT(it)).join('')}
-                <div class="sys-title" style="margin-top:1px;">DIRECCIÓN</div>
+                <div class="sys-title" style="margin-top:2px;">DIRECCIÓN</div>
                 ${(SISTEMAS_TRACTO.direccion || []).map(it => renderItemT(it)).join('')}
             </div>
             <!-- Col 4: CABINA Y CHASIS -->
@@ -1975,7 +1976,7 @@ window.generarPDF_Checklist = async function(id) {
             <div class="col-sys">
                 <div class="sys-title">FRENOS</div>
                 ${(SISTEMAS_REMOLQUE.frenos || []).map(it => renderItemR(it)).join('')}
-                <div class="sys-title" style="margin-top:1px;">CARRETA</div>
+                <div class="sys-title" style="margin-top:2px;">CARRETA</div>
                 ${(SISTEMAS_REMOLQUE.carreta || []).map(it => renderItemR(it)).join('')}
             </div>
             <!-- Col 2: SISTEMA ELÉCTRICO -->
@@ -1987,15 +1988,15 @@ window.generarPDF_Checklist = async function(id) {
             <div class="col-sys">
                 <div class="sys-title">SUSPENSIÓN</div>
                 ${(SISTEMAS_REMOLQUE.suspension || []).map(it => renderItemR(it)).join('')}
-                <div class="sys-title" style="margin-top:1px;">FURGÓN</div>
+                <div class="sys-title" style="margin-top:2px;">FURGÓN</div>
                 ${(SISTEMAS_REMOLQUE.furgon || []).map(it => renderItemR(it)).join('')}
             </div>
             <!-- Col 4: LLANTAS & TERMOKING -->
             <div class="col-sys">
                 <div class="sys-title">LLANTAS & ACCESORIOS</div>
-                ${(SISTEMAS_REMOLQUE.llantas || []).slice(0, 6).map(it => renderItemR(it)).join('')}
-                <div class="sys-title" style="margin-top:1px;">TERMOKING / OTROS</div>
-                ${(SISTEMAS_REMOLQUE.termoking || []).slice(0, 6).map(it => renderItemR(it)).join('')}
+                ${(SISTEMAS_REMOLQUE.llantas || []).slice(0, 8).map(it => renderItemR(it)).join('')}
+                <div class="sys-title" style="margin-top:2px;">TERMOKING / OTROS</div>
+                ${(SISTEMAS_REMOLQUE.termoking || []).slice(0, 7).map(it => renderItemR(it)).join('')}
             </div>
         </div>
 
@@ -2026,7 +2027,7 @@ window.generarPDF_Checklist = async function(id) {
         <div class="conformidad-box">
             <div class="sign-col">
                 <div class="sign-img-area">
-                    ${r.firma_conductor ? `<img src="${r.firma_conductor}" alt="Firma Conductor">` : '<span style="color:#94a3b8; font-size:7.5px;">(Sin firma digital)</span>'}
+                    ${r.firma_conductor ? `<img src="${r.firma_conductor}" alt="Firma Conductor">` : '<span style="color:#94a3b8; font-size:9px;">(Sin firma digital)</span>'}
                 </div>
                 <div class="sign-footer-text">FIRMA DEL CONDUCTOR</div>
             </div>
