@@ -417,6 +417,30 @@ window.ckAgregarFallaManual = function() {
     window.ckActualizarContadores();
 };
 
+window.ckObtenerSiguienteFolio = function() {
+    const list = Array.isArray(window.dataGlobalChecklist) ? window.dataGlobalChecklist : [];
+    let maxNum = 0;
+
+    list.forEach(r => {
+        const fol = (r.folio || '').toString();
+        const matches = fol.match(/\d+/g);
+        if (matches && matches.length > 0) {
+            const lastPart = matches[matches.length - 1];
+            const val = parseInt(lastPart, 10);
+            if (!isNaN(val) && val > maxNum && val < 99999) {
+                maxNum = val;
+            }
+        } else if (r.id && typeof r.id === 'number') {
+            if (r.id > maxNum) maxNum = r.id;
+        }
+    });
+
+    const nextNum = maxNum + 1;
+    const padded = String(nextNum).padStart(5, '0');
+    const anio = new Date().getFullYear();
+    return `N° ${anio}-${padded}`;
+};
+
 // ── ABRIR MODAL NUEVO REPORTE ────────────────────────────────────
 window.abrirModalNuevoChecklist = function() {
     document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
@@ -427,8 +451,7 @@ window.abrirModalNuevoChecklist = function() {
 
     const lblFolio = document.getElementById('lbl-ck-folio-header');
     if (lblFolio) {
-        const num = Math.floor(Math.random() * 90000) + 10000;
-        lblFolio.textContent = `N° 2026-${num}`;
+        lblFolio.textContent = window.ckObtenerSiguienteFolio();
     }
 
     const inputFecha = document.getElementById('ck_fecha_reporte');
@@ -567,6 +590,22 @@ window.ckObtenerFechasDocVehiculo = async function(placa) {
     return { soatFecha: '', soatEstado: 'VIGENTE', rtFecha: '', rtEstado: 'VIGENTE' };
 };
 
+window.ckEsPlacaValida = function(placaInput) {
+    if (!placaInput) return false;
+    const pStr = placaInput.toString().trim().toUpperCase();
+    if (pStr.length < 5) return false;
+
+    const list = window.dataGlobalPlacas || [];
+    if (list.length > 0) {
+        return list.some(p => {
+            const val = (p[0] || p.placa || '').toString().trim().toUpperCase();
+            return val === pStr;
+        });
+    }
+
+    return /^[A-Z0-9]{5,7}$/.test(pStr);
+};
+
 window.consultarGpsChecklist = function(placaManual) {
     if (window.ckConsultarDocumentosYGPS) window.ckConsultarDocumentosYGPS();
 };
@@ -575,8 +614,14 @@ window.ckConsultarDocumentosYGPS = async function() {
     const inputTractoTxt = document.getElementById('ck_placa_tracto-txt');
     const inputRemolqueTxt = document.getElementById('ck_placa_remolque-txt');
 
-    const pT = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (inputTractoTxt ? inputTractoTxt.value : '') || '';
-    const pR = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (inputRemolqueTxt ? inputRemolqueTxt.value : '') || '';
+    const cbValT = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '';
+    const cbValR = typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '';
+
+    const txtValT = inputTractoTxt ? inputTractoTxt.value : '';
+    const txtValR = inputRemolqueTxt ? inputRemolqueTxt.value : '';
+
+    const pT = window.ckEsPlacaValida(cbValT) ? cbValT : (window.ckEsPlacaValida(txtValT) ? txtValT : '');
+    const pR = window.ckEsPlacaValida(cbValR) ? cbValR : (window.ckEsPlacaValida(txtValR) ? txtValR : '');
 
     const placaT = pT.toString().trim().toUpperCase();
     const placaR = pR.toString().trim().toUpperCase();
@@ -584,14 +629,13 @@ window.ckConsultarDocumentosYGPS = async function() {
     // 1. Encabezados de placas y fallas manuales
     if (window.ckActualizarEncabezadosPlacas) window.ckActualizarEncabezadosPlacas();
 
-    // 2. Documentos SOAT y Revisión Técnica por Placa
     const docBoxT = document.getElementById('ck-doc-box-tracto');
     const docBoxR = document.getElementById('ck-doc-box-remolque');
     const inputKm = document.getElementById('ck_kilometraje');
     const inputHorasR = document.getElementById('ck_horas_remolque');
 
     // TRACTO DOCS & GPS
-    if (placaT) {
+    if (placaT && window.ckEsPlacaValida(placaT)) {
         if (docBoxT) docBoxT.style.display = 'block';
         const lblT = document.getElementById('ck-lbl-doc-tracto-placa');
         if (lblT) lblT.textContent = placaT;
@@ -626,7 +670,7 @@ window.ckConsultarDocumentosYGPS = async function() {
     }
 
     // REMOLQUE DOCS & GPS
-    if (placaR) {
+    if (placaR && window.ckEsPlacaValida(placaR)) {
         if (docBoxR) docBoxR.style.display = 'block';
         const lblR = document.getElementById('ck-lbl-doc-remolque-placa');
         if (lblR) lblR.textContent = placaR;
