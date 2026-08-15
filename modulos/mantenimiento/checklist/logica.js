@@ -700,28 +700,6 @@ window.ckObtenerFechasDocVehiculo = async function(placa) {
         }
     } catch(e) {}
 
-    // 2. Consultar historial de inspecciones técnicas de la unidad
-    try {
-        const resInsp = await fetch('/api/mantenimiento/inspecciones');
-        if (resInsp.ok) {
-            const dataInsp = await resInsp.json();
-            const listInsp = Array.isArray(dataInsp) ? dataInsp : (dataInsp.data || []);
-            const ultInsp = listInsp.filter(i => (i.placa || '').toString().trim().toUpperCase() === pStr)
-                                    .sort((a, b) => new Date(b.fecha || b.created_at || 0) - new Date(a.fecha || a.created_at || 0))[0];
-            if (ultInsp) {
-                let fVenc = ultInsp.fecha_vencimiento;
-                if (!fVenc && ultInsp.fecha) {
-                    let d = new Date(ultInsp.fecha);
-                    d.setDate(d.getDate() + 30);
-                    fVenc = d.toISOString().split('T')[0];
-                }
-                if (fVenc) {
-                    inspData = window.calcularEstadoDocumentoOInsp(fVenc);
-                }
-            }
-        }
-    } catch(e) {}
-
     return { soat: soatData, rt: rtData, insp: inspData };
 };
 
@@ -1097,118 +1075,134 @@ window.actualizarKPIsChecklist = function(datos) {
 };
 
 // ── GUARDAR REPORTE ──────────────────────────────────────────────
-window.guardarChecklist = function(event) {
-    event.preventDefault();
+window.guardarChecklist = function(e) {
+    if (e) e.preventDefault();
     if (!window.guardAction('checklist', 'c')) return;
 
     const btn = document.getElementById('btnGuardarChecklist');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
-
-    const fallasTracto = [];
-    const fallasRemolque = [];
-
-    // Recolectar checkboxes marcados
-    document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
-        const itemId = chk.id.replace('chk_', '');
-        const isTracto = itemId.includes('_Tracto_');
-        const parts = itemId.split('_');
-        const sysKey = parts[2] || parts[1] || 'GENERAL';
-        const txtEl = document.getElementById(`txt_${itemId}`);
-        const lblEl = document.getElementById(`lbl_${itemId}`);
-
-        const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla Observada';
-        const obsDesc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : itemNombre;
-
-        const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc };
-        if (isTracto) {
-            fallasTracto.push(obj);
-        } else {
-            fallasRemolque.push(obj);
-        }
-    });
-
-    // Recolectar fallas manuales adicionadas
-    document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
-        const selectEl = row.querySelector('.ck-manual-sistema');
-        const descEl = row.querySelector('.ck-manual-desc') || row.querySelector('input[type="text"]');
-        const sysVal = selectEl ? selectEl.value : 'TRACTO';
-        const obs = descEl ? descEl.value.trim() : '';
-
-        if (obs) {
-            const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
-            const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs };
-            if (isRem) {
-                fallasRemolque.push(obj);
-            } else {
-                fallasTracto.push(obj);
-            }
-        }
-    });
-
-    let firmaData = null;
-    if (canvasFirmaChecklist) {
-        firmaData = canvasFirmaChecklist.toDataURL();
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
     }
 
-    const placaTracto = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
-    const placaRemolque = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
-    const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
-    const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
-    const horasMotorVal = (document.getElementById('ck_horas_remolque') || {}).value || (document.getElementById('ck_horas_motor') || {}).value || '';
-    const fechaRep = (document.getElementById('ck_fecha_reporte') || {}).value || new Date().toISOString().split('T')[0];
+    try {
+        const placaTracto = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_tracto') : '') || (document.getElementById('ck_placa_tracto-txt') || {}).value || '';
+        const placaRemolque = (typeof window._cbGet === 'function' ? window._cbGet('ck_placa_remolque') : '') || (document.getElementById('ck_placa_remolque-txt') || {}).value || '';
+        const conductorNombre = (typeof window._cbGet === 'function' ? window._cbGet('ck_conductor') : '') || (document.getElementById('ck_conductor-txt') || {}).value || '';
+        const kilometrajeVal = (document.getElementById('ck_kilometraje') || {}).value || 0;
+        const horasMotorVal = (document.getElementById('ck_horas_remolque') || {}).value || (document.getElementById('ck_horas_motor') || {}).value || '';
+        const fechaRep = (document.getElementById('ck_fecha_reporte') || {}).value || new Date().toISOString().split('T')[0];
 
-    const payload = {
-        fecha_reporte: fechaRep,
-        placa_tracto: placaTracto,
-        placa_remolque: placaRemolque,
-        km_inicial: kilometrajeVal,
-        km_final: kilometrajeVal,
-        horas_motor: horasMotorVal,
-        conductor: conductorNombre,
-        procedencia: (document.getElementById('ck_procedencia') || {}).value || '',
-        ubicacion_gps: (document.getElementById('ck_ubicacion_gps') || {}).value || '',
-        fallas_tracto: fallasTracto,
-        fallas_remolque: fallasRemolque,
-        fallas_libres_text: '',
-        fotos_base64: fotosChecklistBase64,
-        firma_conductor: firmaData,
-        creado_por: window.usuarioLogueado || 'Sistema'
-    };
+        const fallasTracto = [];
+        const fallasRemolque = [];
 
-    fetch('/api/checklist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(res => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
+        // Recolectar checkboxes marcados
+        document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
+            const itemId = chk.id.replace('chk_', '');
+            const isTracto = itemId.includes('_Tracto_');
+            const parts = itemId.split('_');
+            const sysKey = parts[2] || parts[1] || 'GENERAL';
+            const txtEl = document.getElementById(`txt_${itemId}`);
+            const lblEl = document.getElementById(`lbl_${itemId}`);
 
-        if (res.ok) {
-            const modalEl = document.getElementById('modalNuevoChecklist');
-            if (modalEl) {
-                const inst = bootstrap.Modal.getInstance(modalEl);
-                if (inst) inst.hide();
+            const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla Observada';
+            const obsDesc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : itemNombre;
+
+            const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc };
+            if (isTracto) {
+                fallasTracto.push(obj);
+            } else {
+                fallasRemolque.push(obj);
             }
-            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-            document.body.classList.remove('modal-open');
+        });
 
-            window.cargarTablaChecklist(true);
+        // Recolectar fallas manuales adicionadas
+        document.querySelectorAll('.ck-manual-falla-row').forEach(row => {
+            const selectEl = row.querySelector('.ck-manual-sistema');
+            const descEl = row.querySelector('.ck-manual-desc') || row.querySelector('input[type="text"]');
+            const sysVal = selectEl ? selectEl.value : 'TRACTO';
+            const obs = descEl ? descEl.value.trim() : '';
 
-            if (typeof window.rotToast === 'function') {
-                window.rotToast(`✅ Reporte de Fallas ${res.folio || ''} guardado con éxito.`, 'bg-success');
+            if (obs) {
+                const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
+                const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs };
+                if (isRem) {
+                    fallasRemolque.push(obj);
+                } else {
+                    fallasTracto.push(obj);
+                }
             }
-        } else {
-            alert('❌ Error guardando reporte: ' + (res.error || 'Desconocido'));
+        });
+
+        let firmaData = null;
+        if (canvasFirmaChecklist) {
+            firmaData = canvasFirmaChecklist.toDataURL();
         }
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
-        alert('❌ Error de conexión: ' + err.message);
-    });
+
+        const payload = {
+            fecha_reporte: fechaRep,
+            placa_tracto: placaTracto,
+            placa_remolque: placaRemolque,
+            km_inicial: kilometrajeVal,
+            km_final: kilometrajeVal,
+            horas_motor: horasMotorVal,
+            conductor: conductorNombre,
+            procedencia: (document.getElementById('ck_procedencia') || {}).value || '',
+            ubicacion_gps: (document.getElementById('ck_ubicacion_gps') || {}).value || '',
+            fallas_tracto: fallasTracto,
+            fallas_remolque: fallasRemolque,
+            fallas_libres_text: '',
+            fotos_base64: fotosChecklistBase64,
+            firma_conductor: firmaData,
+            creado_por: window.usuarioLogueado || 'Sistema'
+        };
+
+        fetch('/api/checklist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
+            }
+
+            if (res.ok) {
+                const modalEl = document.getElementById('modalNuevoChecklist');
+                if (modalEl) {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+
+                window.cargarTablaChecklist(true);
+
+                if (typeof window.rotToast === 'function') {
+                    window.rotToast(`✅ Reporte de Fallas ${res.folio || ''} guardado con éxito.`, 'bg-success');
+                }
+            } else {
+                alert('❌ Error guardando reporte: ' + (res.error || 'Desconocido'));
+            }
+        })
+        .catch(err => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
+            }
+            alert('❌ Error de conexión: ' + err.message);
+        });
+
+    } catch (errSync) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
+        }
+        console.error('Error al preparar reporte:', errSync);
+        alert('❌ Ocurrió un error al procesar el reporte: ' + errSync.message);
+    }
 };
 
 // ── DETALLE DIGITAL COMPLETO DEL REPORTE (MODAL XL ESTILO REPORTES) ──
