@@ -1487,7 +1487,7 @@ window.guardarChecklist = function(e) {
 };
 
 // ── DETALLE DIGITAL COMPLETO DEL REPORTE (MODAL XL ESTILO REPORTES) ──
-window.abrirDetalleChecklist = function(id) {
+window.abrirDetalleChecklist = async function(id) {
     const modalEl = document.getElementById('modalDetalleChecklistFull');
     const body = document.getElementById('det-full-body');
     const folioEl = document.getElementById('det-full-folio');
@@ -1501,6 +1501,36 @@ window.abrirDetalleChecklist = function(id) {
     }
 
     if (folioEl) folioEl.textContent = `Reporte de Fallas ${r.folio || ('2026-' + String(id).padStart(8, '0'))}`;
+
+    // Obtener URLs presignadas de S3 para fotos y firma
+    let s3Urls = [];
+    let fotosList = [];
+    try {
+        fotosList = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : (r.fotos_json || []);
+        if (Array.isArray(fotosList)) {
+            fotosList.forEach(u => { if (u && typeof u === 'string') s3Urls.push(u); });
+        }
+    } catch(e) {}
+    if (r.firma_conductor_url && typeof r.firma_conductor_url === 'string') {
+        s3Urls.push(r.firma_conductor_url);
+    }
+
+    let signedMap = {};
+    if (s3Urls.length > 0) {
+        try {
+            const reqPresign = await fetch('/api/mantenimiento/checklist/presign-read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls: s3Urls })
+            });
+            const resPresign = await reqPresign.json();
+            if (resPresign.ok && resPresign.signed) {
+                signedMap = resPresign.signed;
+            }
+        } catch(e) {
+            console.error('Error al obtener URLs presignadas de checklist:', e);
+        }
+    }
 
     // Extraer array de fallas de Tracto y Remolque
     let fallasT = [];
@@ -1710,17 +1740,15 @@ window.abrirDetalleChecklist = function(id) {
 
     // ── 4. EVIDENCIAS FOTOGRÁFICAS ──
     let fotosHtml = '<div class="text-muted small">Sin evidencias adjuntas.</div>';
-    if (r.fotos_json) {
-        try {
-            const fotos = typeof r.fotos_json === 'string' ? JSON.parse(r.fotos_json) : r.fotos_json;
-            if (Array.isArray(fotos) && fotos.length) {
-                fotosHtml = '<div class="d-flex flex-wrap gap-2">' + fotos.map(url => `
-                    <a href="${url}" target="_blank" class="border rounded overflow-hidden shadow-2xs" style="width:90px; height:90px;">
-                        <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
-                    </a>
-                `).join('') + '</div>';
-            }
-        } catch(e) {}
+    if (Array.isArray(fotosList) && fotosList.length) {
+        fotosHtml = '<div class="d-flex flex-wrap gap-2">' + fotosList.map(rawUrl => {
+            const signedUrl = signedMap[rawUrl] || rawUrl;
+            return `
+                <a href="${signedUrl}" target="_blank" class="border rounded overflow-hidden shadow-2xs d-inline-block" style="width:90px; height:90px;">
+                    <img src="${signedUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://via.placeholder.com/90?text=Error';">
+                </a>
+            `;
+        }).join('') + '</div>';
     }
 
     html += `
@@ -1758,11 +1786,12 @@ window.abrirDetalleChecklist = function(id) {
 
     // ── 6. FIRMA DIGITAL DEL CONDUCTOR (SI EXISTE) ──
     if (r.firma_conductor_url) {
+        const signedFirma = signedMap[r.firma_conductor_url] || r.firma_conductor_url;
         html += `
             <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
                 <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pencil-fill text-primary me-1"></i>Firma del Conductor</h6>
                 <div class="border rounded-3 p-2 text-center bg-light" style="max-width:320px;">
-                    <img src="${r.firma_conductor_url}" style="max-height:100px; object-fit:contain;">
+                    <img src="${signedFirma}" style="max-height:100px; object-fit:contain;">
                 </div>
             </div>
         `;
