@@ -443,6 +443,29 @@ function mostrarFleetrunCards(datosAMostrar) {
         var falta_km   = km_prox - km_gps;
         var originalIndex = dataGlobalFleetrun.findIndex(function(x) { return x[0] === criticalMp[0]; });
 
+        var badgeCls = 'success', badgeTextCls = 'text-success', badgeLabel = 'VIGENTE';
+        if (criticalEstado === 'VENCIDO') {
+            badgeCls = 'danger'; badgeLabel = 'VENCIDO'; badgeTextCls = 'text-danger';
+        } else if (criticalEstado === 'PROXIMO') {
+            badgeCls = 'warning'; badgeLabel = 'POR VENCER'; badgeTextCls = 'text-warning-emphasis';
+        }
+
+        var numMPs = mantenimientos.length;
+        var frecuencia = parseFloat(criticalMp[10]) || 0;
+        var freqText = frecuencia > 0 ? `(${(frecuencia/1000).toFixed(0)}K)` : '';
+        var nombreMP = (criticalMp[8] || '') + ' ' + freqText;
+
+        var kmDesdeUlt = 0;
+        var desgastePct = 0;
+        if (frecuencia > 0) {
+            var kmUltimo = km_prox - frecuencia;
+            kmDesdeUlt = Math.max(0, km_gps - kmUltimo);
+            desgastePct = Math.min(100, Math.round((kmDesdeUlt / frecuencia) * 100));
+        }
+        var barColor = (criticalEstado === 'VENCIDO') ? '#ef4444' : ((criticalEstado === 'PROXIMO') ? '#f59e0b' : '#10b981');
+        var esHorasLocal = window._metricaMap && window._metricaMap[String(placaRaw||'').toUpperCase()] === 'horas';
+        var unitL = esHorasLocal ? ' h' : ' km';
+
         var badgePill = `<span class="badge bg-${badgeCls}-subtle ${badgeTextCls} border border-${badgeCls}-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">${badgeLabel}</span>`;
 
         html += `
@@ -783,8 +806,10 @@ window.recalcularTodosMultiDesdeAutocompletar = function() {
 };
 
 function abrirModalNuevoFleetrun() {
-    let offcanvasEl = document.getElementById('drawerFleetrun');
-    if (offcanvasEl) bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
+    let modalEl = document.getElementById('modalNuevoFleetrun');
+    if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
     setTimeout(function() {
         var form = document.getElementById('formFleetrun');
         if (form) form.reset();
@@ -1020,11 +1045,11 @@ function abrirModalEditarFleetrun(idReg) {
             btn.innerHTML = 'Actualizar Registro';
         }
         
-        let offcanvasEl = document.getElementById('drawerEditarFleetrun');
-        if (offcanvasEl) {
-            let bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-            if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
-            bsOffcanvas.show();
+        let modalEl = document.getElementById('modalEditarFleetrun');
+        if (modalEl) {
+            let bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
         } else {
             console.error("Modal de edicion no encontrado en el DOM");
         }
@@ -1101,15 +1126,15 @@ function enviarFleetrun(event, formObj) {
             formObj.reset();
             window.fleetrunTiposMulti = [];
             window.renderTiposMulti();
-            let offcanvasEl = document.getElementById('drawerFleetrun');
-            if (offcanvasEl) {
-                let instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+            let modalEl = document.getElementById('modalNuevoFleetrun');
+            if (modalEl) {
+                let instance = bootstrap.Modal.getInstance(modalEl);
                 if (instance) instance.hide();
             }
             cargarTablaFleetrun(true);
         } else {
-            let errors = results.filter(r => r.data !== 'Éxito').map(r => r.data).join('\\n');
-            alert("Algunos registros fallaron:\\n" + errors);
+            let errors = results.filter(r => r.data !== 'Éxito').map(r => r.data).join('\n');
+            alert("Algunos registros fallaron:\n" + errors);
             cargarTablaFleetrun(true);
         }
         btn.disabled = false; btn.innerHTML = 'Guardar Registro';
@@ -1148,7 +1173,11 @@ function enviarEdicionFleetrun(event, formObj) {
         .then(function(r) { return r.json(); })
         .then(function(r) {
             if (r.data === 'Éxito') {
-                bootstrap.Offcanvas.getInstance(document.getElementById('drawerEditarFleetrun')).hide();
+                let modalEl = document.getElementById('modalEditarFleetrun');
+                if (modalEl) {
+                    let instance = bootstrap.Modal.getInstance(modalEl);
+                    if (instance) instance.hide();
+                }
                 cargarTablaFleetrun(true);
             } else { alert(r.data); }
             btn.disabled = false; btn.innerHTML = 'Actualizar';
