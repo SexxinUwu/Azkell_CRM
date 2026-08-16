@@ -1091,60 +1091,56 @@ window.renderizarTablaChecklist = function(lista) {
         </tr>
         `;
 
-        // 2. Responsive Card (Mobile & Desktop)
+        // 2. Mobile Native Card
         htmlCards += `
-        <div class="col-12 col-md-6 col-xxl-4">
-            <div class="ck-mobile-card h-100 d-flex flex-column justify-content-between">
-                <div>
-                    <!-- Header Card: Folio + Fecha + Estado -->
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${r.folio}</span>
-                            <span class="text-muted small" style="font-size:0.75rem;">• ${fechaCorta}</span>
-                        </div>
-                        <div>${badgeEstadoMobile}</div>
-                    </div>
-
-                    <!-- Placas y Conductor -->
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        ${r.placa_tracto ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_tracto}</span>` : ''}
-                        ${r.placa_remolque ? `<span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_remolque}</span>` : ''}
-                    </div>
-
-                    <div class="mb-2">
-                        <div class="fw-bold text-dark" style="font-size:0.88rem;">${r.conductor || 'Sin Conductor asignado'}</div>
-                        <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${r.procedencia || 'Ruta no especificada'}</div>
-                    </div>
-
-                    <!-- Fallas & OTs pill -->
-                    <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
-                        <span class="badge bg-danger-subtle text-danger fw-semibold" style="font-size:0.72rem; border-radius:6px;">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>${countFallas} ${countFallas === 1 ? 'Falla reportada' : 'Fallas reportadas'}
-                        </span>
-                        ${r.km_inicial ? `<span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${Number(r.km_inicial).toLocaleString()} km</span>` : ''}
-                    </div>
+        <div class="ck-mobile-card">
+            <!-- Header Card: Folio + Fecha + Estado -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${r.folio}</span>
+                    <span class="text-muted small" style="font-size:0.75rem;">• ${fechaCorta}</span>
                 </div>
+                <div>${badgeEstadoMobile}</div>
+            </div>
 
-                <!-- Botones de Acción -->
-                <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
-                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirDetalleChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
-                        <i class="bi bi-eye"></i> Detalle
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirEditarChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
-                        <i class="bi bi-pencil"></i> Editar
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1" onclick="window.generarPDF_Checklist(${r.id})" title="PDF" style="border-radius:8px; font-size:0.78rem;">
-                        <i class="bi bi-file-earmark-pdf"></i>
-                    </button>
-                    ${r.estado !== 'Finalizado' ? `
-                    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark px-2 py-1 d-flex align-items-center gap-1" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs" style="border-radius:8px; font-size:0.78rem;">
-                        <i class="bi bi-lightning-charge-fill"></i> OTs
-                    </button>
-                    ` : ''}
-                    <button type="button" class="btn btn-sm btn-light border text-danger px-2 py-1" onclick="window.eliminarChecklist(${r.id})" title="Eliminar" style="border-radius:8px; font-size:0.78rem;">
-                        <i class="bi bi-trash3"></i>
-                    </button>
-                </div>
+            <!-- Placas y Conductor -->
+            <div class="d-flex align-items-center gap-2 mb-2">
+                ${r.placa_tracto ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_tracto}</span>` : ''}
+                ${r.placa_remolque ? `<span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_remolque}</span>` : ''}
+            </div>
+
+            <div class="mb-2">
+                <div class="fw-bold text-dark" style="font-size:0.88rem;">${r.conductor || 'Sin Conductor asignado'}</div>
+                <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${r.procedencia || 'Ruta no especificada'}</div>
+            </div>
+
+            <!-- Fallas & OTs pill -->
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
+                <span class="badge bg-danger-subtle text-danger fw-semibold" style="font-size:0.72rem; border-radius:6px;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>${countFallas} ${countFallas === 1 ? 'Falla reportada' : 'Fallas reportadas'}
+                </span>
+                ${r.km_inicial ? `<span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${Number(r.km_inicial).toLocaleString()} km</span>` : ''}
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="d-flex align-items-center justify-content-between gap-1 pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirDetalleChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-eye"></i> Detalle
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirEditarChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1" onclick="window.generarPDF_Checklist(${r.id})" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+                ${r.estado !== 'Finalizado' ? `
+                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark px-2 py-1 d-flex align-items-center gap-1" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-lightning-charge-fill"></i> OTs
+                </button>
+                ` : ''}
+                <button type="button" class="btn btn-sm btn-light border text-danger px-2 py-1" onclick="window.eliminarChecklist(${r.id})" title="Eliminar" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-trash3"></i>
+                </button>
             </div>
         </div>
         `;

@@ -39,7 +39,7 @@
     font-size: 1.3rem;
 }
 
-/* Control Bar (Search + Segmented) */
+/* Control Bar (Search + Apple Segmented Pill) */
 .ck-apple-search {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -58,18 +58,19 @@
     outline: none;
 }
 .ck-apple-segmented {
-    background: #e2e8f0;
-    padding: 3px;
-    border-radius: 12px;
-    display: inline-flex;
-    gap: 2px;
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
 }
 .ck-segment-item {
     border: none;
     background: transparent;
-    padding: 6px 14px;
-    border-radius: 9px;
-    font-size: 0.8rem;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
     font-weight: 600;
     color: #64748b;
     transition: all 0.18s ease;
@@ -78,23 +79,71 @@
 }
 .ck-segment-item:hover { color: #0f172a; }
 .ck-segment-item.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Universal Modern Card (Desktop & Mobile) */
+/* Desktop Table Styling */
+#checklist-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+/* Action Capsule Buttons (Desktop) */
+.ck-action-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    font-size: 0.88rem;
+    text-decoration: none;
+}
+.ck-btn-view { background: #eff6ff; color: #2563eb; }
+.ck-btn-view:hover { background: #2563eb; color: #ffffff; transform: translateY(-1px); }
+.ck-btn-edit { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.ck-btn-edit:hover { background: #0f172a; color: #ffffff; border-color: #0f172a; transform: translateY(-1px); }
+.ck-btn-pdf { background: #fef2f2; color: #dc2626; }
+.ck-btn-pdf:hover { background: #dc2626; color: #ffffff; transform: translateY(-1px); }
+.ck-btn-ots {
+    width: auto !important;
+    padding: 0 10px;
+    height: 32px;
+    background: #fffbeb;
+    color: #b45309;
+    font-weight: 700;
+    font-size: 0.76rem;
+    border: 1px solid #fef3c7;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.ck-btn-ots:hover { background: #f59e0b; color: #ffffff; border-color: #f59e0b; transform: translateY(-1px); }
+.ck-btn-delete { background: transparent; color: #94a3b8; }
+.ck-btn-delete:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
+
+/* Universal Modern Card (Mobile) */
 .ck-mobile-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 18px;
     padding: 16px;
+    margin-bottom: 12px;
     box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.ck-mobile-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.09);
+.ck-mobile-card:active {
+    transform: scale(0.99);
 }
 
 /* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
@@ -102,6 +151,12 @@
     .ck-app-container {
         padding: 0.5rem 0.5rem 100px 0.5rem !important;
         background: transparent !important;
+    }
+    #checklist-tabla-wrap {
+        display: none !important;
+    }
+    #checklistCardContainer {
+        display: block !important;
     }
     .ck-kpi-card {
         padding: 0.75rem 0.85rem !important;
@@ -126,6 +181,14 @@
         text-align: center !important;
         padding: 6px 4px !important;
         font-size: 0.75rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #checklistCardContainer {
+        display: none !important;
+    }
+    #checklist-tabla-wrap {
+        display: block !important;
     }
 }
 
@@ -240,14 +303,41 @@
     </div>
   </div>
 
-  <!-- ── 4. GRILLA UNIVERSAL DE REPORTES (CARDS WEB & MOBILE) ───────── -->
-  <div class="row g-3" id="checklistCardContainer">
-    <div class="col-12 text-center py-5 text-muted">
+  <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+  <div id="checklistCardContainer" class="d-md-none">
+    <div class="text-center py-5 text-muted">
       <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando reportes...
     </div>
   </div>
 
-  <!-- ── 5. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+  <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
+  <div id="checklist-tabla-wrap" class="flex-grow-1 d-none d-md-block">
+    <div class="custom-scrollbar overflow-auto">
+      <table class="table table-hover align-middle m-0" id="tablaChecklist" style="font-size: 0.88rem;">
+        <thead class="bg-light sticky-top shadow-2xs border-bottom">
+          <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+            <th class="ps-4 py-3">FOLIO</th>
+            <th class="py-3">FECHA</th>
+            <th class="py-3">TRACTO</th>
+            <th class="py-3">REMOLQUE</th>
+            <th class="py-3">CONDUCTOR / RUTA</th>
+            <th class="py-3 text-center">ESTADO</th>
+            <th class="py-3 text-center">OTs GENERADAS</th>
+            <th class="pe-4 py-3 text-end">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="contenedorChecklistDinamico">
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Cargando reportes de falla...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
   <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
     <button type="button" class="btn btn-primary rounded-4 shadow-lg d-flex align-items-center justify-content-center"
             onclick="window.abrirModalNuevoChecklist()"
