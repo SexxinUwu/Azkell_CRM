@@ -1,258 +1,399 @@
 <!-- Módulo Fleetrun - Aislado en SPA -->
 <style>
-/* Dropdown de filtros fleetrun: flex-column solo cuando está abierto */
+/* ── Reset root-dinamico padding for 100% full-bleed ─────────────── */
+#root-dinamico, .main-area {
+    padding: 0 !important;
+}
+
+/* ── Apple-like UI Tokens & Layout ────────────────────────────────── */
+.fl-app-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem 1.25rem 2.5rem 1.25rem !important;
+    background: transparent;
+    min-height: 100%;
+}
+
+/* KPIs Apple Cards */
+.fl-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+}
+.fl-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+.fl-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+/* Control Bar (Search + Apple Segmented Pill) */
+.fl-apple-search {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #1e293b;
+    width: 100%;
+}
+.fl-apple-search:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    outline: none;
+}
+.fl-apple-segmented {
+    background: #e2e8f0 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    gap: 3px !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.fl-segment-item {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    user-select: none;
+}
+.fl-segment-item:hover { color: #0f172a; }
+.fl-segment-item.active {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Desktop Table Styling */
+#fleetrun-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+/* Mobile Native Card */
+.fl-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+.fl-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* Dropdown de filtros fleetrun */
 #moduloFleetrun #btnFiltrosFleetrun ~ .dropdown-menu.show {
     display: flex !important;
     flex-direction: column;
 }
 
-.kpi-clickable {
-    cursor: pointer;
-    transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
-}
-.kpi-clickable:hover {
-    transform: scale(0.98);
-    opacity: 0.9;
-    filter: brightness(0.95);
-}
-
-
-/* Layout PC: 40% Dashboard, 60% Tabla */
-@media (min-width: 992px) {
-    #scaniaDashboard {
-        flex: 0 0 40%;
-        max-height: 40%;
-        margin-bottom: 0.5rem !important;
-    }
-    #scaniaDashboard .col-12 {
-        height: 100%;
-    }
-    #scaniaDashboard .kpi-card {
-        height: 100% !important;
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    .fl-app-container {
+        padding: 0.5rem 0.5rem 100px 0.5rem !important;
+        background: transparent !important;
     }
     #fleetrun-tabla-wrap {
-        flex: 1 1 auto;
-        min-height: 0; /* Important for flex-column scrolling */
-    }
-}
-/* Drawer mobile bottom slide */
-@media (max-width: 767px) {
-    #drawerFleetrun.offcanvas-end {
-        width: 100vw !important;
-        max-width: 100vw !important;
-        height: 92vh !important;
-        top: auto !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        transform: translateY(100%) !important;
-        border-radius: 20px 20px 0 0 !important;
-        transition: transform 0.3s ease-in-out !important;
-    }
-    #drawerFleetrun.offcanvas-end.show {
-        transform: none !important;
-    }
-    /* Eliminar márgenes y bordes de la tabla en móvil */
-    #fleetrun-tabla-wrap {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        border-radius: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
+        display: none !important;
     }
     #fleetrunCardContainer {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-        padding-bottom: 110px !important;
+        display: block !important;
+        padding: 0 !important;
+    }
+    .fl-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    .fl-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    .fl-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    .fl-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+    .fl-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.75rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #fleetrunCardContainer {
+        display: none !important;
+    }
+    #fleetrun-tabla-wrap {
+        display: flex !important;
     }
 }
 </style>
 
-<div id="moduloFleetrun" class="modulo-wrapper d-flex flex-column h-100 flex-grow-1">
-    <div id="scaniaDashboard" class="row mb-2 gx-2 flex-shrink-0" style="transition: all 0.3s ease; overflow: hidden;">
-        <!-- Logo y Datos de Empresa -->
-        <div class="col-12 col-xl-2 mb-2 d-none d-md-block">
-            <div class="kpi-card h-100 d-flex flex-column align-items-center justify-content-center p-2" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <img id="scania-logo-empresa" src="" alt="Logo Empresa" style="max-width: 100%; max-height: 50px; display: none; object-fit: contain;">
-                <h5 id="scania-nombre-empresa" class="fw-bold mt-1 mb-1 text-center" style="font-size: 0.85rem;">—</h5>
-                <div id="scania-fecha-actual" class="badge bg-dark text-white p-1 w-100 text-center" style="font-size: 0.75rem; border-radius: 4px;"></div>
+<div id="moduloFleetrun" class="fl-app-container d-flex flex-column" id="fleetrun-app">
+
+    <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-speedometer2 text-primary fs-5"></i>
+            </div>
+            <div>
+                <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
+                    Mantenimiento Preventivo
+                </h4>
+                <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Control de kilometraje, frecuencias de servicio y alertas de flota</small>
             </div>
         </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1 btn-reload-cache" onclick="recargarModulo('fleetrun')" title="Recargar">
+                <i class="bi bi-arrow-clockwise fs-6"></i>
+            </button>
+            <!-- Botón Registrar (visible en Desktop, en móvil usa el FAB) -->
+            <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="abrirModalNuevoFleetrun()" style="background: #0284c7; border-color: #0284c7;">
+                <i class="bi bi-plus-lg fs-6"></i> <span>Registrar Mantenimiento</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- Estado de Unidades (Dona) -->
-        <div class="col-12 col-md-5 col-xl-3 mb-2 d-none d-md-block">
-            <div class="kpi-card h-100 d-flex flex-column p-1" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <div class="fw-bold text-center mb-0" style="font-size: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 2px;">Estado de Unidades</div>
-                <div class="mt-1" style="position: relative; height: 100px; width: 100%; flex: 1;">
-                    <canvas id="chartFleetrunStatus"></canvas>
+    <!-- ── 2. BENTO KPIS ROW (CLICKABLE) ──────────────────────────────── -->
+    <div class="row g-2 g-md-3 mb-3" id="scaniaDashboard">
+        <!-- Flota Total -->
+        <div class="col-6 col-md-3">
+            <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('')">
+                <div>
+                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Flota Total</span>
+                    <h2 id="sca-kpi-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="fl-kpi-icon" style="background: #eff6ff; color: #2563eb;">
+                    <i class="bi bi-truck-front-fill"></i>
                 </div>
             </div>
         </div>
-
-        <!-- Situación de Mantenimientos de Flota -->
-        <div class="col-12 col-md-7 col-xl-7 mb-2">
-            <div class="kpi-card h-100 d-flex flex-column p-1" style="background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-                <div class="fw-bold text-center mb-1" style="font-size: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 2px;">Situación de Mantenimientos de Flota</div>
-                <div class="d-flex w-100 h-100 text-center align-items-stretch" style="gap: 4px;">
-                    <!-- Flota Total -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #1f2937; color: white; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('')">
-                        <div id="sca-kpi-total" class="fw-bold fs-4">0</div>
-                        <div style="font-size: 0.65rem; text-transform: uppercase;">Flota<br>Total</div>
+        <!-- Vencidos -->
+        <div class="col-6 col-md-3">
+            <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO')">
+                <div>
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vencidos</span>
+                        <span id="sca-pct-critico" class="badge bg-danger-subtle text-danger fw-bold" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <!-- Vencidos -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #fce7eb; color: #dc3545; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO')">
-                        <div id="sca-kpi-critico" class="fw-bold fs-4">0</div>
-                        <div style="font-size: 0.65rem; text-transform: uppercase;">Vencidos</div>
-                        <div id="sca-pct-critico" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
+                    <h2 id="sca-kpi-critico" class="fw-bolder m-0 text-danger" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="fl-kpi-icon" style="background: #fef2f2; color: #dc2626;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+            </div>
+        </div>
+        <!-- Próximos a Vencer -->
+        <div class="col-6 col-md-3">
+            <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO')">
+                <div>
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Por Vencer</span>
+                        <span id="sca-pct-riesgo" class="badge bg-warning-subtle text-warning-emphasis fw-bold" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <!-- Próximo a Vencer -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #fef1e6; color: #fd7e14; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO')">
-                        <div id="sca-kpi-riesgo" class="fw-bold fs-4">0</div>
-                        <div style="font-size: 0.65rem; text-transform: uppercase;">Próximos<br>a Vencer</div>
-                        <div id="sca-pct-riesgo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
+                    <h2 id="sca-kpi-riesgo" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="fl-kpi-icon" style="background: #fefce8; color: #ca8a04;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+        <!-- Vigentes -->
+        <div class="col-6 col-md-3">
+            <div class="fl-kpi-card" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE')">
+                <div>
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="text-secondary small fw-bold text-uppercase" style="font-size:0.7rem; letter-spacing: 0.5px;">Vigentes</span>
+                        <span id="sca-pct-operativo" class="badge bg-success-subtle text-success fw-bold" style="font-size:0.65rem;">0%</span>
                     </div>
-                    <!-- Vigentes -->
-                    <div class="d-flex flex-column justify-content-center flex-grow-1 py-1 kpi-clickable" style="background-color: #e6f6ec; color: #198754; border-radius: 6px;" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE')">
-                        <div id="sca-kpi-operativo" class="fw-bold fs-4">0</div>
-                        <div style="font-size: 0.65rem; text-transform: uppercase;">Vigentes</div>
-                        <div id="sca-pct-operativo" class="fw-bold mt-0" style="font-size: 0.7rem;">0%</div>
-                    </div>
+                    <h2 id="sca-kpi-operativo" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
+                </div>
+                <div class="fl-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
+                    <i class="bi bi-shield-check"></i>
                 </div>
             </div>
         </div>
     </div>
 
-        <div class="d-flex justify-content-between flex-wrap gap-2 px-3">
-            <!-- Izquierda: búsqueda + filtros embudo (siempre visible) -->
-            <div class="d-flex align-items-center gap-2">
-                <div class="input-group input-group-sm" style="max-width: 250px; height: 32px;">
-                    <input type="text" class="form-control shadow-sm h-100 rounded" style="border: 1px solid #e2e8f0; padding-left: 0.75rem;" id="buscadorFleetrun" onkeyup="debounceFiltrarFleetrunAvanzado()" placeholder="Buscar o ingresa la placa...">
-                </div>
-                <!-- Botón embudo — abre panel con todos los filtros -->
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-light border rounded shadow-sm position-relative d-flex align-items-center justify-content-center px-2" style="height: 32px;" id="btnFiltrosFleetrun" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filtros">
-                        <i class="bi bi-funnel"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle d-none" id="badge-filtros-fleet" style="width: 10px; height: 10px;"></span>
-                    </button>
-                    <div class="dropdown-menu shadow p-0" style="min-width:290px; max-height:calc(100dvh - 80px); overflow-y:auto;">
-                        <!-- Header fijo -->
-                        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="flex-shrink:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border);">
-                            <span class="fw-bold" style="font-size:0.82rem; color:var(--text);">Filtros</span>
-                            <button class="btn btn-sm btn-link text-danger p-0 fw-bold" style="font-size:0.78rem;" onclick="window.limpiarFiltrosFleetrun()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+    <!-- ── 3. BARRA DE CONTROL (BÚSQUEDA + SEGMENTED + ACCIONES) ─────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <!-- Izquierda: Búsqueda y Filtro rápido -->
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 480px;">
+            <div class="position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+                <input type="text" id="buscadorFleetrun" class="fl-apple-search" placeholder="Buscar placa, modelo, tipo..." onkeyup="debounceFiltrarFleetrunAvanzado()">
+            </div>
+            <!-- Dropdown embudo avanzado -->
+            <div class="dropdown">
+                <button class="btn btn-light bg-white border shadow-2xs rounded-3 d-flex align-items-center justify-content-center px-3" style="height: 38px;" id="btnFiltrosFleetrun" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filtros avanzados">
+                    <i class="bi bi-funnel text-secondary"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle d-none" id="badge-filtros-fleet" style="width: 10px; height: 10px;"></span>
+                </button>
+                <div class="dropdown-menu shadow-lg p-0 rounded-4 border" style="min-width:290px; max-height:calc(100dvh - 80px); overflow-y:auto;">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+                        <span class="fw-bold" style="font-size:0.82rem;">Filtros Avanzados</span>
+                        <button class="btn btn-sm btn-link text-danger p-0 fw-bold text-decoration-none" style="font-size:0.78rem;" onclick="window.limpiarFiltrosFleetrun()"><i class="bi bi-x-circle me-1"></i>Limpiar</button>
+                    </div>
+                    <div style="overflow-y:auto;">
+                        <!-- Fecha -->
+                        <div class="border-bottom p-2">
+                            <label class="fw-bold text-secondary text-uppercase small d-block mb-1" style="font-size:0.68rem;">Fecha</label>
+                            <input type="date" class="form-control form-control-sm fw-bold text-primary" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()">
                         </div>
-                        <!-- Contenido scrolleable -->
-                        <div style="overflow-y:auto; -webkit-overflow-scrolling:touch;">
-                        <!-- Acordeón: Fecha -->
-                        <div style="border-bottom:1px solid var(--border);">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.date">Fecha</span>
-                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 8px;">
-                                <input type="date" class="form-control form-control-sm fw-bold text-primary border-primary" id="buscadorFechaFleetrun" onchange="filtrarFleetrunAvanzado()">
-                            </div>
+                        <!-- Cliente -->
+                        <div class="border-bottom p-2">
+                            <label class="fw-bold text-secondary text-uppercase small d-block mb-1" style="font-size:0.68rem;">Cliente</label>
+                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                            <ul class="list-unstyled mb-0" id="filtroFleetCliente" style="max-height:100px;overflow-y:auto;"></ul>
                         </div>
-                        <!-- Acordeón: Cliente -->
-                        <div style="border-bottom:1px solid var(--border);">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.clients">Cliente</span>
-                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 8px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar cliente..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetCliente li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0" id="filtroFleetCliente" style="max-height:110px;overflow-y:auto;"></ul>
-                            </div>
+                        <!-- UTS -->
+                        <div class="border-bottom p-2">
+                            <label class="fw-bold text-secondary text-uppercase small d-block mb-1" style="font-size:0.68rem;">UTS</label>
+                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Buscar UTS..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetUts li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
+                            <ul class="list-unstyled mb-0" id="filtroFleetUts" style="max-height:100px;overflow-y:auto;"></ul>
                         </div>
-                        <!-- Acordeón: UTS -->
-                        <div style="border-bottom:1px solid var(--border);">
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="fleet.btn.uts">UTS</span>
-                                <i class="bi bi-chevron-down chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                            </button>
-                            <div style="display:none;padding:0 12px 8px;">
-                                <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar UTS..." oninput="var t=this.value.toLowerCase();this.parentElement.querySelectorAll('#filtroFleetUts li').forEach(function(li){li.style.display=li.textContent.toLowerCase().includes(t)?'':'none';})">
-                                <ul class="list-unstyled mb-0" id="filtroFleetUts"></ul>
-                            </div>
+                        <!-- Estado -->
+                        <div class="p-2">
+                            <label class="fw-bold text-secondary text-uppercase small d-block mb-1" style="font-size:0.68rem;">Estado</label>
+                            <ul class="list-unstyled mb-0" id="filtroFleetEstado">
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-success">Vigente</span></label></li>
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="PROXIMO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-warning">Próximo a Vencer</span></label></li>
+                                <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-danger">Vencido</span></label></li>
+                            </ul>
                         </div>
-                        <!-- Acordeón: Estado -->
-                        <div>
-                            <button type="button" class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center" style="color:var(--text);" onclick="var b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.chev').classList.toggle('bi-chevron-down');this.querySelector('.chev').classList.toggle('bi-chevron-up');">
-                                <span class="fw-bold" style="font-size:0.71rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtext);" data-i18n="common.status">Estado</span>
-                                <i class="bi bi-chevron-up chev" style="font-size:0.75rem;color:var(--subtext);"></i>
-                            </button>
-                            <div style="display:block;padding:0 12px 8px;">
-                                <ul class="list-unstyled mb-0" id="filtroFleetEstado">
-                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VIGENTE" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-success">Vigente</span></label></li>
-                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="PROXIMO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-warning">Próximo a Vencer</span></label></li>
-                                    <li><label class="d-flex align-items-center gap-2 py-1 px-1" style="cursor:pointer;font-size:0.85rem;"><input type="checkbox" class="form-check-input m-0" value="VENCIDO" onchange="filtrarFleetrunAvanzado()"> <span class="fw-semibold text-danger">Vencido</span></label></li>
-                                </ul>
-                            </div>
-                        </div>
-                        </div><!-- fin scroll -->
                     </div>
                 </div>
             </div>
-            <!-- Botones icono solo-móvil: gráfico + reload -->
-            <div class="d-flex d-md-none align-items-center gap-2 ms-auto">
-                <button class="btn btn-sm btn-light border fw-bold rounded shadow-sm d-none d-md-flex align-items-center justify-content-center px-2" style="height: 32px;" id="btnToggleGraficosFleetrunMob" onclick="toggleGraficosFleetrun()" title="Gráficos"><i class="bi bi-bar-chart-fill text-warning"></i></button>
-                <button class="btn btn-sm btn-light border fw-bold rounded shadow-sm btn-reload-cache d-flex align-items-center justify-content-center px-2" style="height: 32px;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-            </div>
-            <!-- Derecha: acciones (ocultas en móvil — el FAB las cubre) -->
-            <div class="d-none d-md-flex align-items-center gap-2">
-                <span id="cache-badge-fleetrun" class="cache-badge"><i class="bi bi-database"></i> <span id="cache-label-fleetrun" data-i18n="common.sinCargar">Sin cargar</span></span>
-                <button class="btn btn-sm btn-light border shadow-sm rounded btn-reload-cache d-flex align-items-center justify-content-center px-2" id="btn-reload-fleetrun" style="height: 32px;" onclick="recargarModulo('fleetrun')" title="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn btn-sm btn-light border fw-bold rounded shadow-sm d-flex align-items-center justify-content-center px-2 gap-1" id="btnToggleGraficosFleetrun" onclick="toggleGraficosFleetrun()" style="height: 32px;" title="Mostrar / Ocultar gráficos">
-                    <i class="bi bi-bar-chart-fill text-warning" id="iconToggleGraficos"></i>
-                </button>
-                <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 d-flex align-items-center" style="height: 32px;" onclick="toggleAllFleetrunGroups()"><i class="bi bi-arrows-expand me-1"></i> <span data-i18n="common.expand">Expandir</span></button>
-                <div id="col-picker-fleet"></div>
-                <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 text-info d-flex align-items-center" style="height: 32px;" id="btnToggleHistorial" onclick="toggleVistaFleetrun()"><i class="bi bi-clock-history me-1"></i> <span id="text-toggle-fleetrun" data-i18n="common.history">Historial</span></button>
-                <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 text-secondary d-flex align-items-center" style="height: 32px;" id="btn-activar-sel-fleetrun" onclick="activarModoSeleccionFleetrun()"><i class="bi bi-ui-checks me-1"></i> <span data-i18n="common.select">Seleccionar</span></button>
-                <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 text-primary d-flex align-items-center d-none" style="height: 32px;" id="btn-select-all-fleetrun" onclick="seleccionarTodasLasFleetrun()"><i class="bi bi-check-square me-1"></i> <span data-i18n="common.selectAll">Seleccionar Todo</span></button>
-                <button class="btn btn-danger fw-bold text-white btn-sm shadow-sm rounded px-3 d-flex align-items-center d-none" style="height: 32px;" id="btn-bulk-fleetrun" onclick="eliminarMasivo('Mantenimientos', 'fleetrun')"><i class="bi bi-trash me-1"></i> Eliminar (<span id="cnt-bulk-fleetrun">0</span>)</button>
-                <div class="dropdown">
-                    <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 text-info dropdown-toggle d-flex align-items-center" style="height: 32px;" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-upload me-1"></i> Importar</button>
-                    <ul class="dropdown-menu shadow rounded-3">
-                        <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaFleetrun()"><i class="bi bi-file-earmark-spreadsheet"></i> 1. Descargar Plantilla</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileFleetrun').click()"><i class="bi bi-cloud-upload"></i> 2. Subir Excel Lleno</a></li>
-                    </ul>
-                </div>
-                <input type="file" id="inputFileFleetrun" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelFleetrun(event)">
-                <button class="btn btn-light border fw-semibold btn-sm shadow-sm rounded px-3 text-success d-flex align-items-center" style="height: 32px;" onclick="exportarExcelFleetrun()"><i class="bi bi-download me-1"></i> <span data-i18n="common.export">Exportar</span></button>
-                <button class="btn btn-primary fw-bold btn-sm shadow-sm rounded px-3 d-flex align-items-center" style="height: 32px;" onclick="abrirModalNuevoFleetrun()"><i class="bi bi-plus-lg me-1"></i> <span data-i18n="fleet.btn.register">Registrar</span></button>
-            </div>
         </div>
-    <div id="fleetrunCardContainer" class="flex-grow-1 overflow-auto px-2 pb-2" style="display:none;"></div>
-    <div id="fleetrun-tabla-wrap" class="flex-grow-1 overflow-hidden d-flex flex-column mt-3 mx-3 mb-3 shadow-sm" style="background-color: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
-        <div class="table-container flex-grow-1 overflow-auto" style="border-radius: 12px 12px 0 0;">
-            <table class="table table-custom m-0 border-0" id="tablaFleetrun">
-                <thead style="position:sticky; top:0; background:var(--surface); z-index:1020"><tr><th>Placa</th><th>Fecha</th><th>Modelo</th><th>Tipo de Preventivo</th><th>Kilometraje de cambio</th><th>Kilometraje Actual (GPS)</th><th>Cuanto Falta</th><th>Kilometraje proximo</th><th>Frecuencia</th><th>Observacion</th><th>Kilometraje recorrido desde último servicio</th><th>Ubicación</th><th><i class="bi bi-three-dots-vertical"></i></th></tr></thead>
-                <tbody id="cuerpoTablaFleetrun"><tr><td colspan="12" class="text-center py-5" data-i18n="common.loading">Cargando módulo Fleetrun...</td></tr></tbody>
+
+        <!-- Segmented Control de Estados (Apple Capsule) -->
+        <div class="fl-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-fleetrun">
+            <button type="button" class="fl-segment-item active" data-filter="" onclick="window.filtrarDesdeKpiFleetrun('', this)">Todos</button>
+            <button type="button" class="fl-segment-item" data-filter="VIGENTE" onclick="window.filtrarDesdeKpiFleetrun('VIGENTE', this)">Vigentes</button>
+            <button type="button" class="fl-segment-item" data-filter="PROXIMO" onclick="window.filtrarDesdeKpiFleetrun('PROXIMO', this)">Por Vencer</button>
+            <button type="button" class="fl-segment-item" data-filter="VENCIDO" onclick="window.filtrarDesdeKpiFleetrun('VENCIDO', this)">Vencidos</button>
+        </div>
+
+        <!-- Acciones Desktop -->
+        <div class="d-none d-md-flex align-items-center gap-1">
+            <div id="col-picker-fleet"></div>
+            <button class="btn btn-light bg-white border fw-semibold btn-sm shadow-2xs rounded-3 px-3 d-flex align-items-center gap-1" style="height: 38px;" id="btnToggleHistorial" onclick="toggleVistaFleetrun()">
+                <i class="bi bi-clock-history text-info"></i> <span id="text-toggle-fleetrun">Historial</span>
+            </button>
+            <button class="btn btn-light bg-white border fw-semibold btn-sm shadow-2xs rounded-3 px-3 d-flex align-items-center gap-1" style="height: 38px;" id="btn-activar-sel-fleetrun" onclick="activarModoSeleccionFleetrun()">
+                <i class="bi bi-ui-checks text-secondary"></i> <span>Seleccionar</span>
+            </button>
+            <button class="btn btn-danger fw-bold text-white btn-sm shadow-2xs rounded-3 px-3 d-flex align-items-center gap-1 d-none" style="height: 38px;" id="btn-bulk-fleetrun" onclick="eliminarMasivo('Mantenimientos', 'fleetrun')">
+                <i class="bi bi-trash"></i> Eliminar (<span id="cnt-bulk-fleetrun">0</span>)
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-light bg-white border fw-semibold btn-sm shadow-2xs rounded-3 px-3 dropdown-toggle d-flex align-items-center gap-1" style="height: 38px;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-upload text-info"></i> Importar
+                </button>
+                <ul class="dropdown-menu shadow-lg rounded-3 border">
+                    <li><a class="dropdown-item fw-bold text-success" href="#" onclick="descargarPlantillaFleetrun()"><i class="bi bi-file-earmark-spreadsheet me-2"></i>1. Descargar Plantilla</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="document.getElementById('inputFileFleetrun').click()"><i class="bi bi-cloud-upload me-2"></i>2. Subir Excel Lleno</a></li>
+                </ul>
+            </div>
+            <input type="file" id="inputFileFleetrun" accept=".xlsx, .xls" style="display: none;" onchange="importarExcelFleetrun(event)">
+            <button class="btn btn-light bg-white border fw-semibold btn-sm shadow-2xs rounded-3 px-3 d-flex align-items-center gap-1" style="height: 38px;" onclick="exportarExcelFleetrun()">
+                <i class="bi bi-download text-success"></i> <span>Exportar</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+    <div id="fleetrunCardContainer" class="d-md-none">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando mantenimientos...
+        </div>
+    </div>
+
+    <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
+    <div id="fleetrun-tabla-wrap" class="flex-grow-1 overflow-hidden d-none d-md-flex flex-column">
+        <div class="custom-scrollbar overflow-auto flex-grow-1">
+            <table class="table table-hover align-middle m-0" id="tablaFleetrun" style="font-size: 0.88rem;">
+                <thead class="bg-light sticky-top shadow-2xs border-bottom">
+                    <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3">PLACA</th>
+                        <th class="py-3">FECHA</th>
+                        <th class="py-3">MODELO</th>
+                        <th class="py-3">TIPO PREVENTIVO</th>
+                        <th class="py-3">KM CAMBIO</th>
+                        <th class="py-3">KM ACTUAL (GPS)</th>
+                        <th class="py-3">CUÁNTO FALTA</th>
+                        <th class="py-3">KM PRÓXIMO</th>
+                        <th class="py-3">FRECUENCIA</th>
+                        <th class="py-3">OBSERVACIÓN</th>
+                        <th class="py-3">KM RECORRIDO</th>
+                        <th class="py-3">UBICACIÓN</th>
+                        <th class="pe-4 py-3 text-end"><i class="bi bi-three-dots-vertical"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaFleetrun">
+                    <tr><td colspan="13" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando registros...</td></tr>
+                </tbody>
             </table>
         </div>
         <!-- Paginación Footer -->
-        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top" style="background-color: var(--bg); border-radius: 0 0 12px 12px;">
-            <div class="text-muted" style="font-size: 0.8rem;" id="fleetrun-pag-info">Mostrando 0 a 0 de 0</div>
+        <div class="d-flex align-items-center justify-content-between px-4 py-2 border-top bg-light">
+            <div class="text-muted small" id="fleetrun-pag-info">Mostrando 0 a 0 de 0</div>
             <div class="d-flex gap-1 align-items-center" id="fleetrun-pag-controls">
-                <button class="btn btn-sm btn-light border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="fleetrun-btn-prev" onclick="fleetrunPaginar(-1)"><i class="bi bi-chevron-left" style="font-size: 0.75rem;"></i></button>
+                <button class="btn btn-sm btn-light border rounded-circle shadow-2xs d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="fleetrun-btn-prev" onclick="fleetrunPaginar(-1)"><i class="bi bi-chevron-left" style="font-size: 0.75rem;"></i></button>
                 <span class="d-flex align-items-center px-2 fw-bold text-primary" id="fleetrun-pag-page" style="font-size: 0.85rem;">1</span>
-                <button class="btn btn-sm btn-light border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="fleetrun-btn-next" onclick="fleetrunPaginar(1)"><i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i></button>
+                <button class="btn btn-sm btn-light border rounded-circle shadow-2xs d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; padding: 0;" id="fleetrun-btn-next" onclick="fleetrunPaginar(1)"><i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i></button>
             </div>
         </div>
     </div>
-    
-    <!-- Botón flotante móvil para registrar -->
-    <div class="d-md-none position-fixed" style="bottom: 104px; right: 1rem; z-index: 1030; display: flex; flex-direction: column; align-items: flex-end;">
-        <button onclick="abrirModalNuevoFleetrun()"
-                style="width: 60px; height: 60px; border-radius: 18px; background: #0d6efd; border: none; color: #fff;
-                       font-size: 1.5rem; box-shadow: 0 6px 24px rgba(13, 110, 253, 0.5);
-                       display: flex; align-items: center; justify-content: center;
-                       transition: transform .25s cubic-bezier(.4,0,.2,1), background .2s; margin-top: .5rem;
-                       flex-shrink: 0;">
+
+    <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+    <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+        <button type="button" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                onclick="abrirModalNuevoFleetrun()"
+                style="width: 58px; height: 58px; border-radius: 50% !important; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
             <i class="bi bi-plus-lg"></i>
         </button>
     </div>
+
 </div>
 
 <!-- Modales y Offcanvas de Fleetrun -->
