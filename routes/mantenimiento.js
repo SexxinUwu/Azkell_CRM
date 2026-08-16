@@ -97,9 +97,9 @@ module.exports = function (db, logAudit) {
         }
     });
 
-    // POST /api/mantenimiento/inspecciones/presign-read
-    // Generates presigned read URLs for S3 evidence photos
-    router.post('/inspecciones/presign-read', async (req, res) => {
+    // POST /api/mantenimiento/presign-read, /inspecciones/presign-read, /checklist/presign-read
+    // Generates presigned read URLs for S3 evidence photos & signatures
+    router.post(['/inspecciones/presign-read', '/checklist/presign-read', '/presign-read'], async (req, res) => {
         const { urls } = req.body; // array of S3 URLs
         if (!Array.isArray(urls) || !urls.length) return res.json({ ok: true, signed: {} });
         
