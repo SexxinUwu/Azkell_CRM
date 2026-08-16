@@ -1007,20 +1007,26 @@ window.filtrarChecklist = function() {
 
 window.renderizarTablaChecklist = function(lista) {
     const c = document.getElementById('contenedorChecklistDinamico');
-    if (!c) return;
+    const cardContainer = document.getElementById('checklistCardContainer');
 
     if (!lista || lista.length === 0) {
-        c.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>No se encontraron reportes registrados.</td></tr>`;
+        if (c) c.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>No se encontraron reportes registrados.</td></tr>`;
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>No se encontraron reportes registrados.</div>`;
         return;
     }
 
-    let html = '';
+    let htmlTable = '';
+    let htmlCards = '';
+
     lista.forEach(r => {
         let badgeEstado = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">Pendiente</span>';
+        let badgeEstadoMobile = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">Pendiente</span>';
         if (r.estado === 'En Proceso') {
             badgeEstado = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Taller</span>';
+            badgeEstadoMobile = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">En Taller</span>';
         } else if (r.estado === 'Finalizado') {
             badgeEstado = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">Finalizado</span>';
+            badgeEstadoMobile = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 fw-bold text-uppercase" style="font-size:0.68rem; border-radius:6px;">Finalizado</span>';
         }
 
         let otsHtml = '<span class="text-muted small">Sin OTs</span>';
@@ -1034,8 +1040,18 @@ window.renderizarTablaChecklist = function(lista) {
         }
 
         const fechaFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        const fechaCorta = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
 
-        html += `
+        // Conteo de fallas reportadas
+        let countFallas = 0;
+        try {
+            const fT = r.fallas_tracto_json ? (typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json) : [];
+            const fR = r.fallas_remolque_json ? (typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json) : [];
+            countFallas = (Array.isArray(fT) ? fT.length : 0) + (Array.isArray(fR) ? fR.length : 0);
+        } catch(e) {}
+
+        // 1. Table row (Desktop)
+        htmlTable += `
         <tr>
             <td class="ps-4 fw-bold text-primary font-monospace" style="min-width: 120px; font-size:0.9rem;">${r.folio}</td>
             <td style="min-width: 135px;"><span class="text-secondary fw-medium" style="font-size:0.82rem;">${fechaFmt}</span></td>
@@ -1067,15 +1083,71 @@ window.renderizarTablaChecklist = function(lista) {
                         <i class="bi bi-lightning-charge-fill"></i><span>OTs</span>
                     </button>
                     ` : ''}
-                    <button class="btn btn-outline-danger" onclick="window.eliminarChecklist(${r.id})" title="Eliminar Reporte">
-                        <i class="bi bi-trash"></i>
+                    <button type="button" class="ck-action-btn ck-btn-delete" onclick="window.eliminarChecklist(${r.id})" title="Eliminar Reporte">
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </div>
             </td>
         </tr>
         `;
+
+        // 2. Mobile Card
+        htmlCards += `
+        <div class="ck-mobile-card">
+            <!-- Header Card: Folio + Fecha + Estado -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bolder text-primary font-monospace" style="font-size:0.95rem;">${r.folio}</span>
+                    <span class="text-muted small" style="font-size:0.75rem;">• ${fechaCorta}</span>
+                </div>
+                <div>${badgeEstadoMobile}</div>
+            </div>
+
+            <!-- Placas y Conductor -->
+            <div class="d-flex align-items-center gap-2 mb-2">
+                ${r.placa_tracto ? `<span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_tracto}</span>` : ''}
+                ${r.placa_remolque ? `<span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size:0.8rem; border-radius:6px;">🚛 ${r.placa_remolque}</span>` : ''}
+            </div>
+
+            <div class="mb-2">
+                <div class="fw-bold text-dark" style="font-size:0.88rem;">${r.conductor || 'Sin Conductor asignado'}</div>
+                <div class="text-muted small" style="font-size:0.75rem;"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${r.procedencia || 'Ruta no especificada'}</div>
+            </div>
+
+            <!-- Fallas & OTs pill -->
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top mb-3">
+                <span class="badge bg-danger-subtle text-danger fw-semibold" style="font-size:0.72rem; border-radius:6px;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>${countFallas} ${countFallas === 1 ? 'Falla reportada' : 'Fallas reportadas'}
+                </span>
+                ${r.km_inicial ? `<span class="text-muted small font-monospace" style="font-size:0.75rem;"><i class="bi bi-speedometer2 me-1"></i>${Number(r.km_inicial).toLocaleString()} km</span>` : ''}
+            </div>
+
+            <!-- Botones de Acción Mobile -->
+            <div class="d-flex align-items-center justify-content-between gap-1 pt-1">
+                <button type="button" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirDetalleChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-eye"></i> Detalle
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-1" onclick="window.abrirEditarChecklist(${r.id})" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1" onclick="window.generarPDF_Checklist(${r.id})" title="PDF" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+                ${r.estado !== 'Finalizado' ? `
+                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark px-2 py-1 d-flex align-items-center gap-1" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-lightning-charge-fill"></i> OTs
+                </button>
+                ` : ''}
+                <button type="button" class="btn btn-sm btn-light border text-danger px-2 py-1" onclick="window.eliminarChecklist(${r.id})" title="Eliminar" style="border-radius:8px; font-size:0.78rem;">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        </div>
+        `;
     });
-    c.innerHTML = html;
+
+    if (c) c.innerHTML = htmlTable;
+    if (cardContainer) cardContainer.innerHTML = htmlCards;
 };
 
 window.actualizarKPIsChecklist = function(datos) {

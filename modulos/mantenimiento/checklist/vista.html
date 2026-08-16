@@ -4,20 +4,16 @@
     width: 100% !important;
     max-width: 100% !important;
     padding: 1.25rem 1.75rem;
-    background: #f8fafc;
+    background: transparent;
     min-height: 100%;
 }
-.ck-card-surface {
-    background: #ffffff;
-    border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.04) !important;
-}
+
+/* KPIs Apple Cards */
 .ck-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 18px;
-    padding: 1.1rem 1.3rem;
+    padding: 1rem 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -29,17 +25,19 @@
     box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
 }
 .ck-kpi-icon {
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
+    font-size: 1.3rem;
 }
+
+/* Control Bar (Search + Segmented) */
 .ck-apple-search {
-    background: #f1f5f9;
-    border: 1px solid transparent;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 8px 14px 8px 38px;
     font-size: 0.85rem;
@@ -47,21 +45,19 @@
     transition: all 0.2s ease;
     color: #1e293b;
     width: 100%;
-    max-width: 340px;
 }
 .ck-apple-search:focus {
     background: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     outline: none;
 }
 .ck-apple-segmented {
-    background: #f1f5f9;
-    padding: 4px;
+    background: #e2e8f0;
+    padding: 3px;
     border-radius: 12px;
     display: inline-flex;
-    gap: 3px;
-    border: 1px solid #e2e8f0;
+    gap: 2px;
 }
 .ck-segment-item {
     border: none;
@@ -75,56 +71,116 @@
     cursor: pointer;
     user-select: none;
 }
-.ck-segment-item:hover {
-    color: #0f172a;
-}
+.ck-segment-item:hover { color: #0f172a; }
 .ck-segment-item.active {
     background: #ffffff;
     color: #0f172a;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* Action Capsule Buttons */
+/* Desktop Table View */
+#checklist-tabla-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+/* Action Capsule Buttons (Desktop) */
 .ck-action-btn {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: 9px;
     border: 1px solid transparent;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     text-decoration: none;
 }
 .ck-btn-view { background: #eff6ff; color: #2563eb; }
-.ck-btn-view:hover { background: #2563eb; color: #ffffff; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(37,99,235,0.25); }
-
+.ck-btn-view:hover { background: #2563eb; color: #ffffff; transform: translateY(-1px); }
 .ck-btn-edit { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
-.ck-btn-edit:hover { background: #0f172a; color: #ffffff; border-color: #0f172a; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15,23,42,0.25); }
-
+.ck-btn-edit:hover { background: #0f172a; color: #ffffff; border-color: #0f172a; transform: translateY(-1px); }
 .ck-btn-pdf { background: #fef2f2; color: #dc2626; }
-.ck-btn-pdf:hover { background: #dc2626; color: #ffffff; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(220,38,38,0.25); }
-
+.ck-btn-pdf:hover { background: #dc2626; color: #ffffff; transform: translateY(-1px); }
 .ck-btn-ots {
     width: auto !important;
-    padding: 0 12px;
-    height: 34px;
+    padding: 0 10px;
+    height: 32px;
     background: #fffbeb;
     color: #b45309;
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     border: 1px solid #fef3c7;
-    border-radius: 10px;
+    border-radius: 9px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
 }
-.ck-btn-ots:hover { background: #f59e0b; color: #ffffff; border-color: #f59e0b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
-
+.ck-btn-ots:hover { background: #f59e0b; color: #ffffff; border-color: #f59e0b; transform: translateY(-1px); }
 .ck-btn-delete { background: transparent; color: #94a3b8; }
 .ck-btn-delete:hover { background: #fee2e2; color: #ef4444; transform: translateY(-1px); }
+
+/* Mobile Cards */
+.ck-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+    transition: transform 0.15s ease;
+}
+.ck-mobile-card:active {
+    transform: scale(0.99);
+}
+
+/* ── Mobile View Adaptations (@media max-width: 768px) ─────────────── */
+@media (max-width: 768px) {
+    .ck-app-container {
+        padding: 8px 10px 110px 10px !important;
+        background: transparent !important;
+    }
+    #checklist-tabla-wrap {
+        display: none !important;
+    }
+    #checklistCardContainer {
+        display: block !important;
+    }
+    .ck-kpi-card {
+        padding: 0.75rem 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    .ck-kpi-card h2 {
+        font-size: 1.35rem !important;
+    }
+    .ck-kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+    .ck-apple-segmented {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+    .ck-segment-item {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 6px 4px !important;
+        font-size: 0.75rem !important;
+    }
+}
+@media (min-width: 769px) {
+    #checklistCardContainer {
+        display: none !important;
+    }
+}
 
 .ck-floating-drawer-dialog {
     max-width: 740px !important;
@@ -151,69 +207,70 @@
 
 <div class="ck-app-container d-flex flex-column" id="checklist-app">
 
-  <!-- ── 1. ENCABEZADO PRINCIPAL ESTILO APPLE ───────────────────────── -->
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-    <div class="d-flex align-items-center gap-3">
-      <div class="p-2 px-3 rounded-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-        <i class="bi bi-clipboard2-check-fill text-primary fs-4"></i>
+  <!-- ── 1. ENCABEZADO PRINCIPAL (RESPONSIVE) ───────────────────────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+      <div class="p-2 rounded-3 rounded-md-4 bg-white shadow-2xs border d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+        <i class="bi bi-clipboard2-check-fill text-primary fs-5"></i>
       </div>
       <div>
-        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.45rem; letter-spacing: -0.3px;">
+        <h4 class="fw-bolder m-0 text-dark" style="font-size: 1.3rem; letter-spacing: -0.3px;">
           Reporte de Fallas
         </h4>
-        <small class="text-muted fw-medium" style="font-size: 0.82rem;">Control de incidencias de flota y órdenes de servicio</small>
+        <small class="text-muted fw-medium d-none d-md-inline" style="font-size: 0.8rem;">Control de incidencias de flota y órdenes de servicio</small>
       </div>
     </div>
     <div class="d-flex align-items-center gap-2">
       <button class="btn btn-light bg-white border shadow-2xs text-secondary rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1" onclick="window.cargarTablaChecklist(true)" title="Recargar">
         <i class="bi bi-arrow-clockwise fs-6"></i>
       </button>
-      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalNuevoChecklist()" style="background: #0284c7; border-color: #0284c7;">
+      <!-- Botón Nuevo Reporte (solo visible en Desktop, en móvil usa el FAB) -->
+      <button class="btn btn-primary shadow-sm px-3 py-2 fw-bold d-none d-md-flex align-items-center gap-2 rounded-3" onclick="window.abrirModalNuevoChecklist()" style="background: #0284c7; border-color: #0284c7;">
         <i class="bi bi-plus-lg fs-6"></i> <span>Nuevo Reporte</span>
       </button>
     </div>
   </div>
 
-  <!-- ── 2. BENTO KPIS APPLE ROW ───────────────────────────────────── -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-3">
+  <!-- ── 2. BENTO KPIS ROW ─────────────────────────────────────────── -->
+  <div class="row g-2 g-md-3 mb-3">
+    <div class="col-6 col-md-3">
       <div class="ck-kpi-card">
         <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing: 0.5px;">Total Reportes</span>
-          <h2 id="kpi-ck-total" class="fw-bolder m-0 text-dark" style="font-size: 1.75rem;">0</h2>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Total Reportes</span>
+          <h2 id="kpi-ck-total" class="fw-bolder m-0 text-dark" style="font-size: 1.6rem;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #eff6ff; color: #2563eb;">
           <i class="bi bi-file-earmark-text"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-xl-3">
+    <div class="col-6 col-md-3">
       <div class="ck-kpi-card">
         <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing: 0.5px;">Pendientes</span>
-          <h2 id="kpi-ck-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.75rem;">0</h2>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Pendientes</span>
+          <h2 id="kpi-ck-pendientes" class="fw-bolder m-0 text-warning" style="font-size: 1.6rem;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #fefce8; color: #ca8a04;">
           <i class="bi bi-clock-history"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-xl-3">
+    <div class="col-6 col-md-3">
       <div class="ck-kpi-card">
         <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing: 0.5px;">En Taller / OTs</span>
-          <h2 id="kpi-ck-proceso" class="fw-bolder m-0 text-primary" style="font-size: 1.75rem;">0</h2>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">En Taller / OTs</span>
+          <h2 id="kpi-ck-proceso" class="fw-bolder m-0 text-primary" style="font-size: 1.6rem;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #f0f9ff; color: #0284c7;">
           <i class="bi bi-tools"></i>
         </div>
       </div>
     </div>
-    <div class="col-6 col-xl-3">
+    <div class="col-6 col-md-3">
       <div class="ck-kpi-card">
         <div>
-          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.72rem; letter-spacing: 0.5px;">Finalizados</span>
-          <h2 id="kpi-ck-finalizados" class="fw-bolder m-0 text-success" style="font-size: 1.75rem;">0</h2>
+          <span class="text-secondary small fw-bold text-uppercase d-block mb-1" style="font-size:0.7rem; letter-spacing: 0.5px;">Finalizados</span>
+          <h2 id="kpi-ck-finalizados" class="fw-bolder m-0 text-success" style="font-size: 1.6rem;">0</h2>
         </div>
         <div class="ck-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <i class="bi bi-check2-circle"></i>
@@ -222,25 +279,30 @@
     </div>
   </div>
 
-  <!-- ── 3. CONTENEDOR PRINCIPAL: CONTROL INTEGRADO + TABLA ──────────── -->
-  <div class="ck-card-surface flex-grow-1 overflow-hidden d-flex flex-column">
-    
-    <!-- Barra Integrada de Búsqueda y Segmented Control -->
-    <div class="p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3 bg-white" style="border-radius: 20px 20px 0 0;">
-      <div class="position-relative flex-grow-1" style="max-width: 360px;">
-        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
-        <input type="text" id="buscadorChecklist" class="ck-apple-search" placeholder="Buscar folio, placa, conductor..." oninput="window.filtrarChecklist()">
-      </div>
-      <div class="ck-apple-segmented" id="btn-group-estados-checklist">
-        <button type="button" class="ck-segment-item active" onclick="window.filtrarEstadoChecklist('TODOS', this)">Todos</button>
-        <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Pendiente', this)">Pendientes</button>
-        <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('En Proceso', this)">En Taller</button>
-        <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Finalizado', this)">Finalizados</button>
-      </div>
+  <!-- ── 3. BARRA DE BÚSQUEDA Y FILTROS SEGMENTED (EDGE-TO-EDGE) ────── -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="position-relative flex-grow-1" style="max-width: 360px;">
+      <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.85rem;"></i>
+      <input type="text" id="buscadorChecklist" class="ck-apple-search" placeholder="Buscar folio, placa, conductor..." oninput="window.filtrarChecklist()">
     </div>
+    <div class="ck-apple-segmented flex-grow-1 flex-md-grow-0" id="btn-group-estados-checklist">
+      <button type="button" class="ck-segment-item active" onclick="window.filtrarEstadoChecklist('TODOS', this)">Todos</button>
+      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Pendiente', this)">Pendientes</button>
+      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('En Proceso', this)">En Taller</button>
+      <button type="button" class="ck-segment-item" onclick="window.filtrarEstadoChecklist('Finalizado', this)">Finalizados</button>
+    </div>
+  </div>
 
-    <!-- Tabla Edge-to-Edge -->
-    <div class="custom-scrollbar overflow-auto flex-grow-1">
+  <!-- ── 4. VISTA MÓVIL NATIVA (CARDS) ──────────────────────────────── -->
+  <div id="checklistCardContainer">
+    <div class="text-center py-5 text-muted">
+      <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando reportes...
+    </div>
+  </div>
+
+  <!-- ── 5. VISTA ESCRITORIO (TABLA FLUIDA) ─────────────────────────── -->
+  <div id="checklist-tabla-wrap" class="flex-grow-1">
+    <div class="custom-scrollbar overflow-auto">
       <table class="table table-hover align-middle m-0" id="tablaChecklist" style="font-size: 0.88rem;">
         <thead class="bg-light sticky-top shadow-2xs border-bottom">
           <tr class="text-secondary" style="font-size: 0.75rem; letter-spacing: 0.5px;">
@@ -264,6 +326,16 @@
       </table>
     </div>
   </div>
+
+  <!-- ── 6. BOTÓN FLOTANTE (FAB) PARA MÓVIL ─────────────────────────── -->
+  <div class="d-md-none position-fixed" style="bottom: 96px; right: 1.25rem; z-index: 1040;">
+    <button type="button" class="btn btn-primary rounded-4 shadow-lg d-flex align-items-center justify-content-center"
+            onclick="window.abrirModalNuevoChecklist()"
+            style="width: 58px; height: 58px; background: #0284c7; border: none; font-size: 1.6rem; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+  </div>
+
 </div>
 
 <!-- ================================================================= -->
