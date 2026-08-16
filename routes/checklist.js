@@ -469,6 +469,99 @@ module.exports = function (db, broadcast, logAudit) {
         });
     });
 
+    // ── PUT /api/checklist/:id — Actualizar/Editar reporte de fallas ────────
+    router.put('/:id', async (req, res) => {
+        const tdb = getDb(req);
+        const id = req.params.id;
+        const {
+            placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+            conductor, procedencia, ubicacion_gps,
+            fallas_tracto, fallas_remolque, fallas_libres_text,
+            fotos_base64, firma_conductor
+        } = req.body;
+
+        tdb.query('SELECT * FROM reportes_fallas WHERE id = ?', [id], async (errSel, rows) => {
+            if (errSel) return res.status(500).json({ error: errSel.message });
+            if (!rows.length) return res.status(404).json({ error: 'Reporte no encontrado' });
+
+            const rep = rows[0];
+            const folio = rep.folio;
+
+            // Procesar fotos existentes y nuevas en base64
+            let fotosUrls = [];
+            try {
+                if (rep.fotos_json) {
+                    const parsed = JSON.parse(rep.fotos_json);
+                    if (Array.isArray(parsed)) fotosUrls = parsed;
+                }
+            } catch(e) {}
+
+            if (Array.isArray(fotos_base64) && fotos_base64.length > 0) {
+                for (let i = 0; i < fotos_base64.length; i++) {
+                    const item = fotos_base64[i];
+                    if (typeof item === 'string' && item.startsWith('data:image')) {
+                        try {
+                            const matches = item.match(/^data:(image\/\w+);base64,(.+)$/);
+                            if (matches) {
+                                const buffer = Buffer.from(matches[2], 'base64');
+                                const ext = matches[1].split('/')[1] || 'jpg';
+                                const key = `checklist/${folio}_foto_${Date.now()}_${i}.${ext}`;
+                                const s3Url = await uploadToS3(buffer, key, matches[1]);
+                                fotosUrls.push(s3Url);
+                            }
+                        } catch (eS3) {
+                            console.error('⚠️ Error subiendo foto S3 en edición:', eS3.message);
+                        }
+                    } else if (typeof item === 'string' && item.startsWith('http') && !fotosUrls.includes(item)) {
+                        fotosUrls.push(item);
+                    }
+                }
+            }
+
+            const sql = `
+                UPDATE reportes_fallas SET
+                    placa_tracto = ?,
+                    placa_remolque = ?,
+                    km_inicial = ?,
+                    km_final = ?,
+                    horas_motor = ?,
+                    conductor = ?,
+                    procedencia = ?,
+                    ubicacion_gps = ?,
+                    fallas_tracto_json = ?,
+                    fallas_remolque_json = ?,
+                    fallas_libres_text = ?,
+                    fotos_json = ?,
+                    firma_conductor = COALESCE(?, firma_conductor)
+                WHERE id = ?
+            `;
+
+            const values = [
+                (placa_tracto || '').trim().toUpperCase(),
+                (placa_remolque || '').trim().toUpperCase(),
+                parseInt(km_inicial, 10) || 0,
+                parseInt(km_final, 10) || 0,
+                (horas_motor || '').trim() || null,
+                (conductor || '').trim(),
+                (procedencia || '').trim(),
+                (ubicacion_gps || '').trim(),
+                JSON.stringify(fallas_tracto || []),
+                JSON.stringify(fallas_remolque || []),
+                (fallas_libres_text || '').trim(),
+                JSON.stringify(fotosUrls),
+                firma_conductor || null,
+                id
+            ];
+
+            tdb.query(sql, values, (errUpd) => {
+                if (errUpd) return res.status(500).json({ error: errUpd.message });
+
+                if (typeof broadcast === 'function') broadcast('checklist', 'actualizar');
+                res.json({ ok: true, id, folio, fotos: fotosUrls });
+            });
+        });
+    });
+
     // ── DELETE /api/checklist/:id — Eliminar reporte de fallas ──────────
     router.delete('/:id', (req, res) => {
         const tdb = getDb(req);
