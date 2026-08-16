@@ -1518,21 +1518,32 @@ window.abrirDetalleChecklist = async function(id) {
     let signedMap = {};
     if (s3Urls.length > 0) {
         try {
-            let reqPresign = await fetch('/api/mantenimiento/inspecciones/presign-read', {
+            let reqPresign = await fetch('/api/checklist/presign-read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ urls: s3Urls })
             });
             if (!reqPresign.ok) {
-                reqPresign = await fetch('/api/mantenimiento/checklist/presign-read', {
+                reqPresign = await fetch('/api/documentos-flota/presign-read', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ urls: s3Urls })
                 });
             }
-            const resPresign = await reqPresign.json();
-            if (resPresign.ok && resPresign.signed) {
-                signedMap = resPresign.signed;
+            if (!reqPresign.ok) {
+                reqPresign = await fetch('/api/mantenimiento/inspecciones/presign-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls: s3Urls })
+                });
+            }
+            if (reqPresign.ok) {
+                const resPresign = await reqPresign.json();
+                if (resPresign.signed) {
+                    signedMap = resPresign.signed;
+                } else if (resPresign && typeof resPresign === 'object') {
+                    signedMap = resPresign;
+                }
             }
         } catch(e) {
             console.error('Error al obtener URLs presignadas de checklist:', e);
