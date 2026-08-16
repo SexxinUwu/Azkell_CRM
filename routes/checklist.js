@@ -248,9 +248,9 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // ── POST /api/checklist/:id/generar-ots — Generar OTs e integrar con Status Rampa ──
-    router.post('/:id/generar-ots', (req, res) => {
+    const handleGenerarOTs = (req, res) => {
         const tdb = getDb(req);
-        const idReporte = req.params.id;
+        const idReporte = req.params.id || req.body.id_reporte;
         const { ots, id_rampa, fecha_ingreso, fecha_salida, observaciones_generales, creado_por } = req.body;
         // ots es un array: [{ unidad: 'Tracto', placa: 'ABC-123', tipo_ot: 'Correctivo', subtipo_ot: 'Motor', supervisor: 'HECTOR', tecnicos: ['Juan'] }]
 
@@ -329,6 +329,8 @@ module.exports = function (db, broadcast, logAudit) {
                 const kmVal = item.unidad === 'Tracto' ? (rep.km_inicial || 0) : 0;
                 const horasMotorVal = item.horas_motor || ((item.unidad === 'Remolque' || item.unidad === 'Carreta') ? rep.horas_motor : null) || null;
 
+                const motivosArray = Array.isArray(item.motivos_array) ? item.motivos_array : [];
+
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
@@ -336,6 +338,7 @@ module.exports = function (db, broadcast, logAudit) {
                     km_tablero: kmVal,
                     horas_motor: horasMotorVal,
                     motivo: motivoLimpio,
+                    motivos_array: motivosArray,
                     observaciones: motivoLimpio,
                     tipo_ot: item.tipo_ot || 'Correctivo',
                     tipo_mantenimiento: item.tipo_ot || 'Correctivo',
@@ -484,7 +487,10 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(500).json({ error: errorCreacion || 'No se pudieron crear las OTs' });
             }
         });
-    });
+    };
+
+    router.post('/:id/generar-ots', handleGenerarOTs);
+    router.post('/generar-ots', handleGenerarOTs);
 
     // ── PUT /api/checklist/:id — Actualizar/Editar reporte de fallas ────────
     router.put('/:id', async (req, res) => {

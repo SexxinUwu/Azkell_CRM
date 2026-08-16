@@ -1835,79 +1835,520 @@ window.eliminarChecklist = function(id) {
         .catch(err => alert('Error de red: ' + err.message));
 };
 
-window.abrirModalGenerarOTs = function(id) {
+// ── ESTADO GLOBAL DE GENERACIÓN DE OTs DESDE CHECKLIST ──────────────
+window._genOT_Reporte = null;
+window._genOT_Rampas = [];
+window._genOT_Tecnicos = [];
+window._genOT_TodasFallas = [];
+window._genOT_Cards = [];
+
+window.abrirModalGenerarOTs = async function(id) {
     const r = (window.dataGlobalChecklist || []).find(item => item.id === id);
-    if (!r) return;
+    if (!r) {
+        alert('No se encontró la información del reporte seleccionado.');
+        return;
+    }
+    window._genOT_Reporte = r;
 
     const modalEl = document.getElementById('modalGenerarOTsFromChecklist');
     const inputId = document.getElementById('gen_reporte_id');
-    const wrapCards = document.getElementById('contenedorTarjetasOTsGen');
+    const selRampa = document.getElementById('gen_id_rampa');
 
     if (inputId) inputId.value = id;
 
-    let html = '';
-    if (r.placa_tracto) {
-        html += `
-            <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3 border-start border-4 border-primary">
-                <div class="fw-bold text-primary mb-2"><i class="bi bi-truck me-1"></i> OT Tracto — Placa ${r.placa_tracto}</div>
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Tipo OT</label>
-                        <select class="form-select form-select-sm" name="tipo_ot_tracto">
-                            <option value="Correctivo">Correctivo</option>
-                            <option value="Preventivo">Preventivo</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Prioridad</label>
-                        <select class="form-select form-select-sm" name="prioridad_tracto">
-                            <option value="Alta">Alta</option>
-                            <option value="Media" selected>Media</option>
-                            <option value="Baja">Baja</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    if (r.placa_remolque) {
-        html += `
-            <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-3 border-start border-4 border-warning">
-                <div class="fw-bold text-warning mb-2"><i class="bi bi-truck-flatbed me-1"></i> OT Remolque — Placa ${r.placa_remolque}</div>
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Tipo OT</label>
-                        <select class="form-select form-select-sm" name="tipo_ot_remolque">
-                            <option value="Correctivo">Correctivo</option>
-                            <option value="Preventivo">Preventivo</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Prioridad</label>
-                        <select class="form-select form-select-sm" name="prioridad_remolque">
-                            <option value="Alta">Alta</option>
-                            <option value="Media" selected>Media</option>
-                            <option value="Baja">Baja</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        `;
+    // 1. Resumen informativo
+    const folioTxt = document.getElementById('gen_folio_txt');
+    if (folioTxt) folioTxt.value = r.folio || ('F-2026-' + String(r.id).padStart(4, '0'));
+
+    const conductorTxt = document.getElementById('gen_conductor_txt');
+    if (conductorTxt) conductorTxt.value = r.conductor || 'Conductor no especificado';
+
+    const tractoTxt = document.getElementById('gen_tracto_txt');
+    if (tractoTxt) tractoTxt.value = r.placa_tracto || '—';
+
+    const remolqueTxt = document.getElementById('gen_remolque_txt');
+    if (remolqueTxt) remolqueTxt.value = r.placa_remolque || '—';
+
+    const kmHorasTxt = document.getElementById('gen_km_horas_txt');
+    if (kmHorasTxt) {
+        const kmStr = r.km_inicial ? Number(r.km_inicial).toLocaleString() + ' KM' : '—';
+        const horasStr = r.horas_motor ? r.horas_motor + ' Hrs' : '—';
+        kmHorasTxt.value = `${kmStr} / ${horasStr}`;
     }
 
-    if (wrapCards) wrapCards.innerHTML = html;
+    const rutaTxt = document.getElementById('gen_ruta_txt');
+    if (rutaTxt) rutaTxt.value = r.procedencia || r.ruta || '—';
+
+    // 2. Fechas por defecto (local)
+    const now = new Date();
+    const fIngreso = document.getElementById('gen_fecha_ingreso');
+    if (fIngreso) {
+        const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        fIngreso.value = localIso;
+    }
+    const fSalida = document.getElementById('gen_fecha_salida');
+    if (fSalida) {
+        const salDate = new Date(now.getTime() + 4 * 3600000 - now.getTimezoneOffset() * 60000);
+        fSalida.value = salDate.toISOString().slice(0, 16);
+    }
+
+    // 3. Cargar Rampas reales desde cat_rampas
+    try {
+        let resRampas = await fetch('/api/cat-rampas');
+        if (!resRampas.ok) resRampas = await fetch('/api/taller/rampas');
+        if (resRampas.ok) {
+            const dataRampas = await resRampas.json();
+            window._genOT_Rampas = Array.isArray(dataRampas) ? dataRampas : (dataRampas.data || []);
+        }
+    } catch(e) {
+        console.warn('Error al cargar cat_rampas:', e);
+    }
+
+    if (selRampa) {
+        let rampaOptions = '<option value="">-- Seleccionar Rampa / Ubicación --</option>';
+        if (window._genOT_Rampas && window._genOT_Rampas.length > 0) {
+            window._genOT_Rampas.forEach(rmp => {
+                const nombre = rmp.nombre_rampa || rmp.nombre || rmp.rampa || `Rampa ${rmp.id}`;
+                rampaOptions += `<option value="${nombre}">${nombre}</option>`;
+            });
+        } else {
+            rampaOptions += `
+                <option value="Rampa 1">Rampa 1</option>
+                <option value="Rampa 2">Rampa 2</option>
+                <option value="Rampa 3">Rampa 3</option>
+                <option value="Zona de Espera">Zona de Espera</option>
+                <option value="Auxilio Mecánico">Auxilio Mecánico</option>
+            `;
+        }
+        selRampa.innerHTML = rampaOptions;
+        if (r.id_rampa && r.id_rampa !== 'En Espera') {
+            selRampa.value = r.id_rampa;
+        }
+    }
+
+    // 4. Cargar Personal Técnico desde taller_personal
+    try {
+        let resTec = await fetch('/api/taller-personal');
+        if (!resTec.ok) resTec = await fetch('/api/catalogos_taller');
+        if (resTec.ok) {
+            const dataTec = await resTec.json();
+            const rawList = Array.isArray(dataTec) ? dataTec : (dataTec.personal || dataTec.data || []);
+            window._genOT_Tecnicos = rawList.map(t => typeof t === 'string' ? t : (t.nombre || t.personal || '')).filter(Boolean);
+        }
+    } catch(e) {
+        console.warn('Error al cargar taller_personal:', e);
+    }
+
+    // 5. Extraer todas las fallas reportadas
+    let fallasT = [];
+    let fallasR = [];
+    try {
+        if (r.fallas_tracto_json) fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+        else if (r.fallas_tracto) fallasT = typeof r.fallas_tracto === 'string' ? JSON.parse(r.fallas_tracto) : r.fallas_tracto;
+    } catch(e) {}
+    try {
+        if (r.fallas_remolque_json) fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+        else if (r.fallas_remolque) fallasR = typeof r.fallas_remolque === 'string' ? JSON.parse(r.fallas_remolque) : r.fallas_remolque;
+    } catch(e) {}
+
+    window._genOT_TodasFallas = [];
+    (fallasT || []).forEach((f, idx) => {
+        window._genOT_TodasFallas.push({
+            id: `ft_${idx}`,
+            unidad: 'Tracto',
+            placa: r.placa_tracto || 'TRACTO',
+            sistema: f.sistema || 'GENERAL',
+            item: f.item || f.nombre || 'Falla observada',
+            obs: f.obs || f.descripcion || 'Observado en checklist'
+        });
+    });
+    (fallasR || []).forEach((f, idx) => {
+        window._genOT_TodasFallas.push({
+            id: `fr_${idx}`,
+            unidad: 'Remolque',
+            placa: r.placa_remolque || 'REMOLQUE',
+            sistema: f.sistema || 'GENERAL',
+            item: f.item || f.nombre || 'Falla observada',
+            obs: f.obs || f.descripcion || 'Observado en checklist'
+        });
+    });
+    if (r.fallas_libres_text && r.fallas_libres_text.trim()) {
+        window._genOT_TodasFallas.push({
+            id: `fl_0`,
+            unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
+            placa: r.placa_tracto || r.placa_remolque || 'UNIDAD',
+            sistema: 'MANUAL / OTROS',
+            item: 'Falla Adicional',
+            obs: r.fallas_libres_text.trim()
+        });
+    }
+
+    // 6. Inicializar tarjetas de OT
+    window._genOT_Cards = [];
+    if (r.placa_tracto && fallasT.length > 0) {
+        window._genOT_Cards.push({
+            cardId: 'ot_card_0',
+            unidad: 'Tracto',
+            placa: r.placa_tracto,
+            tipo_ot: 'Correctivo',
+            subtipo_ot: 'Mecánica General',
+            prioridad: 'Media',
+            fallasSeleccionadas: fallasT.map((_, idx) => `ft_${idx}`),
+            tecnicoPorFalla: {}
+        });
+    }
+    if (r.placa_remolque && fallasR.length > 0) {
+        window._genOT_Cards.push({
+            cardId: 'ot_card_1',
+            unidad: 'Remolque',
+            placa: r.placa_remolque,
+            tipo_ot: 'Correctivo',
+            subtipo_ot: 'Mecánica General',
+            prioridad: 'Media',
+            fallasSeleccionadas: fallasR.map((_, idx) => `fr_${idx}`),
+            tecnicoPorFalla: {}
+        });
+    }
+    if (window._genOT_Cards.length === 0) {
+        window._genOT_Cards.push({
+            cardId: 'ot_card_0',
+            unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
+            placa: r.placa_tracto || r.placa_remolque || 'TRACTO',
+            tipo_ot: 'Correctivo',
+            subtipo_ot: 'Mecánica General',
+            prioridad: 'Media',
+            fallasSeleccionadas: window._genOT_TodasFallas.map(f => f.id),
+            tecnicoPorFalla: {}
+        });
+    }
+
+    window.ckRenderTarjetasOT();
     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.ckRenderTarjetasOT = function() {
+    const wrap = document.getElementById('contenedorTarjetasOTsGen');
+    if (!wrap) return;
+
+    const r = window._genOT_Reporte || {};
+    const tecnicos = window._genOT_Tecnicos || [];
+
+    if (window._genOT_Cards.length === 0) {
+        wrap.innerHTML = '<div class="alert alert-light border text-center py-4 text-muted small">No hay órdenes de trabajo agregadas. Haz clic en "Agregar otra OT" para comenzar.</div>';
+        return;
+    }
+
+    let html = '';
+    window._genOT_Cards.forEach((card, cIdx) => {
+        const isTracto = card.unidad === 'Tracto';
+        const borderCls = isTracto ? 'border-primary' : 'border-warning';
+        const badgeCls = isTracto ? 'bg-primary' : 'bg-warning text-dark';
+        const iconCls = isTracto ? 'bi-truck' : 'bi-truck-flatbed';
+
+        // Filtrar fallas relevantes para esta unidad (o todas si no hay filtro estricto)
+        const fallasUnidad = window._genOT_TodasFallas.filter(f => f.unidad === card.unidad || !f.unidad);
+        const fallasMostrar = fallasUnidad.length > 0 ? fallasUnidad : window._genOT_TodasFallas;
+
+        // Opciones de Técnicos
+        let tecOptions = '<option value="">-- Sin Asignar / Supervisor --</option>';
+        tecnicos.forEach(t => {
+            tecOptions += `<option value="${t}">${t}</option>`;
+        });
+
+        // Generar lista de fallas con checkboxes y selector de técnico
+        let fallasHtml = '';
+        if (fallasMostrar.length === 0) {
+            fallasHtml = '<div class="text-muted small py-2 px-3 bg-light rounded-3">Sin fallas específicas observadas en el checklist. Se generará OT general.</div>';
+        } else {
+            fallasMostrar.forEach(f => {
+                const isChecked = (card.fallasSeleccionadas || []).includes(f.id);
+                const tecAsignado = (card.tecnicoPorFalla && card.tecnicoPorFalla[f.id]) || '';
+
+                // Verificar si está asignada en otra tarjeta para exclusión
+                let asignadaEnOtra = null;
+                window._genOT_Cards.forEach((otherCard, otherIdx) => {
+                    if (otherIdx !== cIdx && (otherCard.fallasSeleccionadas || []).includes(f.id)) {
+                        asignadaEnOtra = otherIdx + 1;
+                    }
+                });
+
+                const isDisabled = asignadaEnOtra !== null;
+
+                fallasHtml += `
+                    <div class="p-2 mb-2 rounded-3 border ${isChecked ? 'bg-primary bg-opacity-10 border-primary-subtle' : (isDisabled ? 'bg-light opacity-50' : 'bg-white')} d-flex flex-wrap align-items-center justify-content-between gap-2" id="falla_row_${cIdx}_${f.id}">
+                        <div class="d-flex align-items-start gap-2 flex-grow-1" style="min-width: 220px;">
+                            <input type="checkbox" class="form-check-input mt-1 ck-falla-chk" 
+                                   data-card-index="${cIdx}" 
+                                   data-falla-id="${f.id}" 
+                                   id="chk_${cIdx}_${f.id}" 
+                                   ${isChecked ? 'checked' : ''} 
+                                   ${isDisabled ? 'disabled' : ''} 
+                                   onchange="window.ckToggleFallaOT(${cIdx}, '${f.id}', this.checked)">
+                            <label class="form-check-label small m-0" for="chk_${cIdx}_${f.id}" style="cursor: pointer;">
+                                <strong class="text-dark d-block">${f.item}</strong>
+                                <span class="text-muted" style="font-size: 0.76rem;">${f.sistema} — ${f.obs}</span>
+                                ${isDisabled ? `<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size: 0.68rem;">Asignado en OT #${asignadaEnOtra}</span>` : ''}
+                            </label>
+                        </div>
+                        
+                        <!-- Selector individual de Técnico Responsable -->
+                        <div class="d-flex align-items-center gap-1 ${isChecked ? '' : 'd-none'}" id="tec_wrap_${cIdx}_${f.id}" style="min-width: 200px; max-width: 260px;">
+                            <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
+                            <select class="form-select form-select-sm" style="font-size: 0.8rem; min-height: 36px !important; border-radius: 8px !important;"
+                                    onchange="window.ckOnCambiarTecnicoFalla(${cIdx}, '${f.id}', this.value)">
+                                <option value="">Técnico Responsable...</option>
+                                ${tecnicos.map(t => `<option value="${t}" ${t === tecAsignado ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white border-start border-4 ${borderCls}" style="border: 1px solid #e2e8f0 !important;" id="card_ot_${cIdx}">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${badgeCls} px-3 py-2 fw-bold text-uppercase rounded-3" style="font-size: 0.8rem;">
+                            <i class="bi ${iconCls} me-1"></i> OT #${cIdx + 1}
+                        </span>
+                        <span class="fw-bold text-dark" style="font-size: 0.95rem;">Unidad: ${card.placa || 'Sin Placa'}</span>
+                    </div>
+                    ${window._genOT_Cards.length > 1 ? `
+                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-2 py-1" onclick="window.ckEliminarTarjetaOT(${cIdx})" title="Eliminar esta OT">
+                            <i class="bi bi-trash me-1"></i> Quitar OT
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Unidad Destino</label>
+                        <select class="form-select" onchange="window.ckOnCambiarUnidadOT(${cIdx}, this)">
+                            ${r.placa_tracto ? `<option value="Tracto" ${card.unidad === 'Tracto' ? 'selected' : ''}>Tracto (${r.placa_tracto})</option>` : ''}
+                            ${r.placa_remolque ? `<option value="Remolque" ${card.unidad === 'Remolque' ? 'selected' : ''}>Remolque (${r.placa_remolque})</option>` : ''}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Tipo de OT</label>
+                        <select class="form-select" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'tipo_ot', this.value)">
+                            <option value="Correctivo" ${card.tipo_ot === 'Correctivo' ? 'selected' : ''}>Correctivo</option>
+                            <option value="Preventivo" ${card.tipo_ot === 'Preventivo' ? 'selected' : ''}>Preventivo</option>
+                            <option value="Auxilio Mecánico" ${card.tipo_ot === 'Auxilio Mecánico' ? 'selected' : ''}>Auxilio Mecánico</option>
+                            <option value="Modificación / Carrocería" ${card.tipo_ot === 'Modificación / Carrocería' ? 'selected' : ''}>Modificación</option>
+                            <option value="Inspección General" ${card.tipo_ot === 'Inspección General' ? 'selected' : ''}>Inspección General</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Subtipo / Especialidad</label>
+                        <select class="form-select" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'subtipo_ot', this.value)">
+                            <option value="Mecánica General" ${card.subtipo_ot === 'Mecánica General' ? 'selected' : ''}>Mecánica General</option>
+                            <option value="Sistema Eléctrico" ${card.subtipo_ot === 'Sistema Eléctrico' ? 'selected' : ''}>Sistema Eléctrico</option>
+                            <option value="Frenos" ${card.subtipo_ot === 'Frenos' ? 'selected' : ''}>Frenos</option>
+                            <option value="Suspensión" ${card.subtipo_ot === 'Suspensión' ? 'selected' : ''}>Suspensión</option>
+                            <option value="Motor" ${card.subtipo_ot === 'Motor' ? 'selected' : ''}>Motor</option>
+                            <option value="Neumáticos / Llantas" ${card.subtipo_ot === 'Neumáticos / Llantas' ? 'selected' : ''}>Neumáticos</option>
+                            <option value="Carrocería y Pintura" ${card.subtipo_ot === 'Carrocería y Pintura' ? 'selected' : ''}>Carrocería</option>
+                            <option value="Termoking" ${card.subtipo_ot === 'Termoking' ? 'selected' : ''}>Termoking</option>
+                            <option value="Lavado y Engrase" ${card.subtipo_ot === 'Lavado y Engrase' ? 'selected' : ''}>Lavado / Engrase</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Prioridad</label>
+                        <select class="form-select" onchange="window.ckOnCambiarCampoOT(${cIdx}, 'prioridad', this.value)">
+                            <option value="Urgente" ${card.prioridad === 'Urgente' ? 'selected' : ''}>🚨 Urgente</option>
+                            <option value="Alta" ${card.prioridad === 'Alta' ? 'selected' : ''}>Alta</option>
+                            <option value="Media" ${card.prioridad === 'Media' ? 'selected' : ''}>Media</option>
+                            <option value="Baja" ${card.prioridad === 'Baja' ? 'selected' : ''}>Baja</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold text-secondary text-uppercase small" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                            Selecciona los Trabajos / Motivos para esta OT (${card.fallasSeleccionadas.length} seleccionados):
+                        </span>
+                    </div>
+                    <div class="border rounded-3 p-2 bg-light overflow-auto" style="max-height: 220px;">
+                        ${fallasHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    wrap.innerHTML = html;
+};
+
+window.ckAgregarTarjetaOT = function() {
+    const r = window._genOT_Reporte || {};
+    const count = window._genOT_Cards.length;
+
+    // Decidir unidad por defecto alternando si hay remolque
+    let defUnidad = 'Tracto';
+    let defPlaca = r.placa_tracto || 'TRACTO';
+    if (count % 2 === 1 && r.placa_remolque) {
+        defUnidad = 'Remolque';
+        defPlaca = r.placa_remolque;
+    }
+
+    // Buscar fallas que aún no hayan sido asignadas en ninguna OT
+    const yaAsignadas = [];
+    window._genOT_Cards.forEach(c => {
+        (c.fallasSeleccionadas || []).forEach(fid => yaAsignadas.push(fid));
+    });
+
+    const fallasDisponibles = window._genOT_TodasFallas
+        .filter(f => (f.unidad === defUnidad || !f.unidad) && !yaAsignadas.includes(f.id))
+        .map(f => f.id);
+
+    window._genOT_Cards.push({
+        cardId: `ot_card_${Date.now()}`,
+        unidad: defUnidad,
+        placa: defPlaca,
+        tipo_ot: 'Correctivo',
+        subtipo_ot: 'Mecánica General',
+        prioridad: 'Media',
+        fallasSeleccionadas: fallasDisponibles,
+        tecnicoPorFalla: {}
+    });
+
+    window.ckRenderTarjetasOT();
+};
+
+window.ckEliminarTarjetaOT = function(index) {
+    if (window._genOT_Cards.length <= 1) return;
+    window._genOT_Cards.splice(index, 1);
+    window.ckRenderTarjetasOT();
+};
+
+window.ckOnCambiarUnidadOT = function(cardIndex, selectEl) {
+    const r = window._genOT_Reporte || {};
+    const nuevaUnidad = selectEl.value;
+    const card = window._genOT_Cards[cardIndex];
+    if (!card) return;
+
+    card.unidad = nuevaUnidad;
+    card.placa = (nuevaUnidad === 'Remolque' ? r.placa_remolque : r.placa_tracto) || (nuevaUnidad === 'Remolque' ? 'REMOLQUE' : 'TRACTO');
+    
+    // Filtrar fallas correspondientes
+    const yaAsignadas = [];
+    window._genOT_Cards.forEach((c, idx) => {
+        if (idx !== cardIndex) {
+            (c.fallasSeleccionadas || []).forEach(fid => yaAsignadas.push(fid));
+        }
+    });
+
+    card.fallasSeleccionadas = window._genOT_TodasFallas
+        .filter(f => f.unidad === nuevaUnidad && !yaAsignadas.includes(f.id))
+        .map(f => f.id);
+
+    window.ckRenderTarjetasOT();
+};
+
+window.ckOnCambiarCampoOT = function(cardIndex, campo, val) {
+    const card = window._genOT_Cards[cardIndex];
+    if (card) {
+        card[campo] = val;
+    }
+};
+
+window.ckToggleFallaOT = function(cardIndex, fallaId, isChecked) {
+    const card = window._genOT_Cards[cardIndex];
+    if (!card) return;
+
+    if (isChecked) {
+        if (!card.fallasSeleccionadas.includes(fallaId)) {
+            card.fallasSeleccionadas.push(fallaId);
+        }
+    } else {
+        card.fallasSeleccionadas = card.fallasSeleccionadas.filter(id => id !== fallaId);
+        if (card.tecnicoPorFalla) {
+            delete card.tecnicoPorFalla[fallaId];
+        }
+    }
+
+    window.ckRenderTarjetasOT();
+};
+
+window.ckOnCambiarTecnicoFalla = function(cardIndex, fallaId, tecnicoVal) {
+    const card = window._genOT_Cards[cardIndex];
+    if (card) {
+        if (!card.tecnicoPorFalla) card.tecnicoPorFalla = {};
+        card.tecnicoPorFalla[fallaId] = tecnicoVal;
+    }
 };
 
 window.enviarGeneracionOTs = function(e) {
     e.preventDefault();
     const id = document.getElementById('gen_reporte_id').value;
     const rampa = document.getElementById('gen_id_rampa').value;
+    const fIngreso = document.getElementById('gen_fecha_ingreso').value;
+    const fSalida = document.getElementById('gen_fecha_salida').value;
 
-    fetch('/api/checklist/generar-ots', {
+    if (!rampa) {
+        alert('⚠️ Por favor selecciona una ubicación o rampa de taller.');
+        return;
+    }
+
+    if (!window._genOT_Cards || window._genOT_Cards.length === 0) {
+        alert('⚠️ Debes configurar al menos una Orden de Trabajo.');
+        return;
+    }
+
+    // Preparar el array de OTs estructurado
+    const otsPayload = [];
+    for (let i = 0; i < window._genOT_Cards.length; i++) {
+        const c = window._genOT_Cards[i];
+        
+        // Obtener motivos y técnicos específicos seleccionados
+        const fallasObjs = window._genOT_TodasFallas.filter(f => (c.fallasSeleccionadas || []).includes(f.id));
+        
+        const motivosArray = fallasObjs.map(f => {
+            const tec = (c.tecnicoPorFalla && c.tecnicoPorFalla[f.id]) || '';
+            return {
+                motivo: `${f.item}: ${f.obs}`,
+                sistema: f.sistema,
+                item: f.item,
+                obs: f.obs,
+                tecnico: tec,
+                tecnico_nombre: tec
+            };
+        });
+
+        // Lista de técnicos únicos seleccionados para esta OT
+        const tecnicosUnicos = Array.from(new Set(motivosArray.map(m => m.tecnico).filter(Boolean)));
+
+        otsPayload.push({
+            unidad: c.unidad,
+            placa: c.placa,
+            tipo_ot: c.tipo_ot || 'Correctivo',
+            subtipo_ot: c.subtipo_ot || 'Mecánica General',
+            prioridad: c.prioridad || 'Media',
+            fallas_seleccionadas: fallasObjs.map(f => `${f.item}: ${f.obs}`),
+            motivos_array: motivosArray,
+            supervisor: tecnicosUnicos.length > 0 ? tecnicosUnicos[0] : 'Por Asignar',
+            tecnicos: tecnicosUnicos.length > 0 ? tecnicosUnicos : ['Por Asignar']
+        });
+    }
+
+    const btnSubmit = document.getElementById('btnConfirmarGenerarOTs');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando OTs...';
+    }
+
+    fetch(`/api/checklist/${id}/generar-ots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_reporte: id, rampa })
+        body: JSON.stringify({
+            id_reporte: id,
+            id_rampa: rampa,
+            fecha_ingreso: fIngreso,
+            fecha_salida: fSalida,
+            ots: otsPayload
+        })
     })
     .then(r => r.json())
     .then(res => {
@@ -1915,12 +2356,19 @@ window.enviarGeneracionOTs = function(e) {
             const modalEl = document.getElementById('modalGenerarOTsFromChecklist');
             if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
             window.cargarTablaChecklist(true);
-            alert('🚀 Órdenes de Trabajo generadas correctamente.');
+            const cant = (res.ots || res.ots_creadas || otsPayload).length;
+            alert(`🚀 ¡Éxito! Se generaron ${cant} Orden(es) de Trabajo correctamente.`);
         } else {
             alert('Error al generar OTs: ' + (res.error || 'Desconocido'));
         }
     })
-    .catch(err => alert('Error de conexión: ' + err.message));
+    .catch(err => alert('Error de conexión: ' + err.message))
+    .finally(() => {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs';
+        }
+    });
 };
 
 // ── GENERADOR DE PDF A4 F-MAN-001 REPORTE DE FALLAS FLOTA PESADA ───
