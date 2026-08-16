@@ -43,6 +43,23 @@ module.exports = function (db, broadcast, logAudit) {
         });
     });
 
+    // ── POST /api/checklist/presign-read — Firmar URLs de fotos y firma S3 ────
+    router.post('/presign-read', async (req, res) => {
+        const { urls } = req.body;
+        if (!Array.isArray(urls) || !urls.length) return res.json({ ok: true, signed: {} });
+
+        const signed = {};
+        for (const url of urls) {
+            const key = s3KeyFromUrl(url);
+            if (key) {
+                try { signed[url] = await getPresignedUrl(key, 3600); } catch(e) { signed[url] = url; }
+            } else {
+                signed[url] = url;
+            }
+        }
+        res.json({ ok: true, signed });
+    });
+
     // ── GET /api/checklist — Listar reportes de fallas ──────────────────
     router.get('/', (req, res) => {
         const tdb = getDb(req);
