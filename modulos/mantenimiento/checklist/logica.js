@@ -1518,11 +1518,18 @@ window.abrirDetalleChecklist = async function(id) {
     let signedMap = {};
     if (s3Urls.length > 0) {
         try {
-            const reqPresign = await fetch('/api/mantenimiento/checklist/presign-read', {
+            let reqPresign = await fetch('/api/mantenimiento/inspecciones/presign-read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ urls: s3Urls })
             });
+            if (!reqPresign.ok) {
+                reqPresign = await fetch('/api/mantenimiento/checklist/presign-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls: s3Urls })
+                });
+            }
             const resPresign = await reqPresign.json();
             if (resPresign.ok && resPresign.signed) {
                 signedMap = resPresign.signed;
