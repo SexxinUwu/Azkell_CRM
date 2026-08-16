@@ -940,13 +940,19 @@ window.procesarFotosChecklist = function(input) {
                 imgDiv.style.height = '75px';
                 imgDiv.innerHTML = `
                     <img src="${base64}" style="width:100%; height:100%; object-fit:cover;">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 bg-white p-1" style="font-size:0.6rem;" onclick="this.parentElement.remove();"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 bg-white p-1" style="font-size:0.6rem;"></button>
                 `;
+                imgDiv.querySelector('.btn-close').onclick = function() {
+                    const idx = fotosChecklistBase64.indexOf(base64);
+                    if (idx > -1) fotosChecklistBase64.splice(idx, 1);
+                    imgDiv.remove();
+                };
                 wrap.appendChild(imgDiv);
             }
         };
         reader.readAsDataURL(file);
     });
+    input.value = '';
 };
 
 // ── CARGAR Y FILTRAR TABLA DE CHECKLIST ─────────────────────────

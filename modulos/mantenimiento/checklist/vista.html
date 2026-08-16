@@ -714,10 +714,16 @@
                 <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
                   <i class="bi bi-camera-fill text-primary"></i> Evidencia Fotográfica
                 </h6>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                  <input type="file" id="ck_fotos_input" class="d-none" accept="image/*" multiple onchange="window.procesarFotosChecklist(this)">
-                  <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 d-flex align-items-center gap-2" onclick="document.getElementById('ck_fotos_input').click()">
-                    <i class="bi bi-camera"></i> <span>Adjuntar Fotos</span>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <!-- Inputs ocultos para Cámara y Galería -->
+                  <input type="file" id="ck_fotos_camara" class="d-none" accept="image/*" capture="environment" onchange="window.procesarFotosChecklist(this)">
+                  <input type="file" id="ck_fotos_galeria" class="d-none" accept="image/*" multiple onchange="window.procesarFotosChecklist(this)">
+                  
+                  <button type="button" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" onclick="document.getElementById('ck_fotos_camara').click()" style="background: #0284c7; border-color: #0284c7;">
+                    <i class="bi bi-camera-fill"></i> <span>Tomar Foto</span>
+                  </button>
+                  <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" onclick="document.getElementById('ck_fotos_galeria').click()">
+                    <i class="bi bi-images"></i> <span>Desde Galería</span>
                   </button>
                   <span class="text-muted small">Fotos de la unidad/fallas.</span>
                 </div>
