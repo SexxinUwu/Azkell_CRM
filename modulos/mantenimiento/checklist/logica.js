@@ -950,6 +950,16 @@ window.procesarFotosChecklist = function(input) {
 };
 
 // ── CARGAR Y FILTRAR TABLA DE CHECKLIST ─────────────────────────
+window.filtrarEstadoChecklist = function(estado, btn) {
+    estadoFiltroActualChecklist = estado;
+    const group = document.getElementById('btn-group-estados-checklist');
+    if (group) {
+        group.querySelectorAll('.ck-segment-item, .btn').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) btn.classList.add('active');
+    window.filtrarChecklist();
+};
+
 window.cargarTablaChecklist = function(forzarRefresh = false) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (c) c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2 text-primary"></span> Cargando reportes...</td></tr>';
@@ -970,16 +980,6 @@ window.cargarTablaChecklist = function(forzarRefresh = false) {
         });
 };
 
-window.filtrarEstadoChecklist = function(estado, btn) {
-    estadoFiltroActualChecklist = estado;
-    const group = document.getElementById('btn-group-estados-checklist');
-    if (group) {
-        group.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-    }
-    if (btn) btn.classList.add('active');
-    window.filtrarChecklist();
-};
-
 window.filtrarChecklist = function() {
     const q = (document.getElementById('buscadorChecklist') || {}).value || '';
     const query = q.toLowerCase().trim();
@@ -993,35 +993,42 @@ window.filtrarChecklist = function() {
     if (query) {
         list = list.filter(r => {
             const fol = (r.folio || '').toLowerCase();
-            const pt = (r.placa_tracto || '').toLowerCase();
-            const pr = (r.placa_remolque || '').toLowerCase();
+            const trac = (r.placa_tracto || '').toLowerCase();
+            const rem = (r.placa_remolque || '').toLowerCase();
             const cond = (r.conductor || '').toLowerCase();
-            return fol.includes(query) || pt.includes(query) || pr.includes(query) || cond.includes(query);
+            const proc = (r.procedencia || '').toLowerCase();
+            return fol.includes(query) || trac.includes(query) || rem.includes(query) || cond.includes(query) || proc.includes(query);
         });
     }
 
+    window.renderizarTablaChecklist(list);
     window.actualizarKPIsChecklist(window.dataGlobalChecklist);
+};
 
+window.renderizarTablaChecklist = function(lista) {
     const c = document.getElementById('contenedorChecklistDinamico');
     if (!c) return;
 
-    if (!list.length) {
-        c.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No se encontraron reportes de falla.</td></tr>';
+    if (!lista || lista.length === 0) {
+        c.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>No se encontraron reportes registrados.</td></tr>`;
         return;
     }
 
     let html = '';
-    list.forEach(r => {
-        let badgeEstado = '<span class="badge bg-warning text-dark rounded-pill fw-bold"><i class="bi bi-clock me-1"></i>Pendiente</span>';
-        if (r.estado === 'En Proceso') badgeEstado = '<span class="badge bg-info rounded-pill fw-bold"><i class="bi bi-tools me-1"></i>En Taller</span>';
-        if (r.estado === 'Finalizado') badgeEstado = '<span class="badge bg-success rounded-pill fw-bold"><i class="bi bi-check-circle me-1"></i>Finalizado</span>';
+    lista.forEach(r => {
+        let badgeEstado = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">Pendiente</span>';
+        if (r.estado === 'En Proceso') {
+            badgeEstado = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">En Taller</span>';
+        } else if (r.estado === 'Finalizado') {
+            badgeEstado = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1 fw-bold text-uppercase" style="font-size:0.72rem; border-radius:8px;">Finalizado</span>';
+        }
 
         let otsHtml = '<span class="text-muted small">Sin OTs</span>';
         if (r.ots_generadas_json) {
             try {
                 const ots = typeof r.ots_generadas_json === 'string' ? JSON.parse(r.ots_generadas_json) : r.ots_generadas_json;
                 if (Array.isArray(ots) && ots.length) {
-                    otsHtml = ots.map(o => `<span class="badge bg-secondary me-1 fw-normal">${o.idOt} (${o.placa})</span>`).join('');
+                    otsHtml = ots.map(o => `<span class="badge bg-secondary-subtle text-dark border me-1 fw-semibold" style="font-size:0.72rem; border-radius:6px;">${o.idOt} (${o.placa})</span>`).join('');
                 }
             } catch(e) {}
         }
@@ -1030,34 +1037,34 @@ window.filtrarChecklist = function() {
 
         html += `
         <tr>
-            <td class="ps-3 fw-bold text-primary" style="min-width: 110px;">${r.folio}</td>
-            <td style="min-width: 140px;"><small class="text-muted fw-semibold">${fechaFmt}</small></td>
-            <td style="min-width: 110px;">
-                ${r.placa_tracto ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 85px; font-size: 0.82rem; border-radius: 6px; letter-spacing: 0.5px;">${r.placa_tracto}</span>` : '<span class="text-muted small">—</span>'}
+            <td class="ps-4 fw-bold text-primary font-monospace" style="min-width: 120px; font-size:0.9rem;">${r.folio}</td>
+            <td style="min-width: 135px;"><span class="text-secondary fw-medium" style="font-size:0.82rem;">${fechaFmt}</span></td>
+            <td style="min-width: 105px;">
+                ${r.placa_tracto ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">${r.placa_tracto}</span>` : '<span class="text-muted small">—</span>'}
             </td>
-            <td style="min-width: 110px;">
-                ${r.placa_remolque ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 85px; font-size: 0.82rem; border-radius: 6px; letter-spacing: 0.5px;">${r.placa_remolque}</span>` : '<span class="text-muted small">—</span>'}
+            <td style="min-width: 105px;">
+                ${r.placa_remolque ? `<span class="badge bg-white text-dark border shadow-2xs fw-bolder px-2 py-2 text-center" style="min-width: 80px; font-size: 0.82rem; border-radius: 8px; letter-spacing: 0.5px;">${r.placa_remolque}</span>` : '<span class="text-muted small">—</span>'}
             </td>
             <td>
-                <div class="fw-bold text-dark" style="font-size: 0.85rem;">${r.conductor || 'Sin Conductor'}</div>
-                <div class="text-muted small" style="font-size: 0.75rem;"><i class="bi bi-geo-alt me-1"></i>${r.procedencia || 'En Ruta'}</div>
+                <div class="fw-bold text-dark" style="font-size: 0.86rem;">${r.conductor || 'Sin Conductor'}</div>
+                <div class="text-muted" style="font-size: 0.76rem;"><i class="bi bi-geo-alt me-1 text-primary"></i>${r.procedencia || 'En Ruta'}</div>
             </td>
             <td class="text-center" style="min-width: 110px;">${badgeEstado}</td>
-            <td class="text-center" style="min-width: 140px;">${otsHtml}</td>
-            <td class="pe-3 text-end" style="min-width: 180px;">
-                <div class="btn-group btn-group-sm shadow-2xs">
-                    <button class="btn btn-outline-primary fw-bold" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Reporte F-MAN-001">
-                        <i class="bi bi-eye-fill"></i> Detalle
+            <td class="text-center" style="min-width: 130px;">${otsHtml}</td>
+            <td class="pe-4 text-end" style="min-width: 190px;">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                    <button type="button" class="ck-action-btn ck-btn-view" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Detalle Digital">
+                        <i class="bi bi-eye"></i>
                     </button>
-                    <button class="btn btn-outline-primary fw-bold" onclick="window.abrirEditarChecklist(${r.id})" title="Editar Reporte y Añadir Fallas">
-                        <i class="bi bi-pencil-square"></i> Editar
+                    <button type="button" class="ck-action-btn ck-btn-edit" onclick="window.abrirEditarChecklist(${r.id})" title="Editar Reporte y Añadir Fallas">
+                        <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-outline-secondary fw-bold" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
-                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
+                    <button type="button" class="ck-action-btn ck-btn-pdf" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
+                        <i class="bi bi-file-earmark-pdf"></i>
                     </button>
                     ${r.estado !== 'Finalizado' ? `
-                    <button class="btn btn-warning fw-bold text-dark" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs e Integrar Taller">
-                        <i class="bi bi-lightning-charge-fill me-1"></i> Generar OTs
+                    <button type="button" class="ck-action-btn ck-btn-ots" onclick="window.abrirModalGenerarOTs(${r.id})" title="Generar OTs e Integrar Taller">
+                        <i class="bi bi-lightning-charge-fill"></i><span>OTs</span>
                     </button>
                     ` : ''}
                     <button class="btn btn-outline-danger" onclick="window.eliminarChecklist(${r.id})" title="Eliminar Reporte">
