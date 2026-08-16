@@ -507,7 +507,7 @@
             <div id="f_tipomp-tags" class="d-none"></div>
           </div>
 
-          <!-- Card 3: Datos Complementarios -->
+          <!-- Card 3: Datos Complementarios (Combustible & Modelo solo informativos) -->
           <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.9rem;">
               <i class="bi bi-person-gear text-primary"></i> Detalles Operativos
@@ -515,16 +515,11 @@
             <div class="row g-2 g-md-3">
               <div class="col-6">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Combustible</label>
-                <select class="form-select form-select-sm shadow-sm" style="border-radius: 12px; min-height: 42px;" name="f_combustible" id="f_combustible">
-                  <option value="">Seleccionar...</option>
-                  <option value="DIESEL">DIESEL</option>
-                  <option value="GNV">GNV</option>
-                  <option value="GASOLINA">GASOLINA</option>
-                </select>
+                <input type="text" class="form-control form-control-sm bg-light text-dark fw-semibold" style="border-radius: 12px; min-height: 42px;" name="f_combustible" id="f_combustible" placeholder="Autocompletado..." readonly>
               </div>
               <div class="col-6">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Modelo</label>
-                <input type="text" class="form-control form-control-sm text-uppercase shadow-sm" style="border-radius: 12px; min-height: 42px;" name="f_modelo" id="f_modelo" placeholder="Ej: FH 460">
+                <input type="text" class="form-control form-control-sm bg-light text-dark fw-semibold" style="border-radius: 12px; min-height: 42px;" name="f_modelo" id="f_modelo" placeholder="Autocompletado..." readonly>
               </div>
               <div class="col-12">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Técnico / Responsable</label>
@@ -636,12 +631,7 @@
               </div>
               <div class="col-6">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Combustible</label>
-                <select class="form-select form-select-sm shadow-sm" style="border-radius: 12px; min-height: 42px;" name="editF_combustible" id="eF_combustible">
-                  <option value="">Seleccionar...</option>
-                  <option value="DIESEL">DIESEL</option>
-                  <option value="GNV">GNV</option>
-                  <option value="GASOLINA">GASOLINA</option>
-                </select>
+                <input type="text" class="form-control form-control-sm bg-light text-dark fw-semibold" style="border-radius: 12px; min-height: 42px;" name="editF_combustible" id="eF_combustible" placeholder="Autocompletado..." readonly>
               </div>
             </div>
           </div>
@@ -654,7 +644,7 @@
             <div class="row g-2 g-md-3">
               <div class="col-6">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Modelo</label>
-                <input type="text" class="form-control form-control-sm text-uppercase shadow-sm" style="border-radius: 12px; min-height: 42px;" name="editF_modelo" id="eF_modelo" placeholder="Ej: FH 460">
+                <input type="text" class="form-control form-control-sm bg-light text-dark fw-semibold" style="border-radius: 12px; min-height: 42px;" name="editF_modelo" id="eF_modelo" placeholder="Autocompletado..." readonly>
               </div>
               <div class="col-6">
                 <label class="form-label fw-bold text-secondary text-uppercase small" style="font-size: 0.68rem;">Técnico Encargado</label>
