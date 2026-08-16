@@ -489,6 +489,15 @@ window.abrirModalNuevoChecklist = function() {
     const form = document.getElementById('formNuevoChecklist');
     if (form) form.reset();
 
+    const editIdEl = document.getElementById('ck_reporte_id_edit');
+    if (editIdEl) editIdEl.value = '';
+
+    const lblTitulo = document.getElementById('lbl-ck-modal-titulo');
+    if (lblTitulo) lblTitulo.textContent = 'Nuevo Reporte de Fallas';
+
+    const btn = document.getElementById('btnGuardarChecklist');
+    if (btn) btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
+
     // Resetear comboboxes explícitamente
     if (typeof window._cbSet === 'function') {
         window._cbSet('ck_placa_tracto', '', '');
@@ -1040,6 +1049,9 @@ window.filtrarChecklist = function() {
                     <button class="btn btn-outline-primary fw-bold" onclick="window.abrirDetalleChecklist(${r.id})" title="Ver Reporte F-MAN-001">
                         <i class="bi bi-eye-fill"></i> Detalle
                     </button>
+                    <button class="btn btn-outline-primary fw-bold" onclick="window.abrirEditarChecklist(${r.id})" title="Editar Reporte y Añadir Fallas">
+                        <i class="bi bi-pencil-square"></i> Editar
+                    </button>
                     <button class="btn btn-outline-secondary fw-bold" onclick="window.generarPDF_Checklist(${r.id})" title="Imprimir Formato PDF F-MAN-001">
                         <i class="bi bi-file-earmark-pdf-fill text-danger"></i> PDF
                     </button>
@@ -1077,15 +1089,188 @@ window.actualizarKPIsChecklist = function(datos) {
     if (elFin) elFin.textContent = finalizados;
 };
 
-// ── GUARDAR REPORTE ──────────────────────────────────────────────
+// ── ABRIR MODAL PARA EDITAR REPORTE EXISTENTE ────────────────────
+window.abrirEditarChecklist = async function(id) {
+    let r = (window.dataGlobalChecklist || []).find(item => item.id === id);
+    if (!r) {
+        try {
+            const res = await fetch(`/api/checklist/${id}`);
+            if (res.ok) r = await res.json();
+        } catch(e) {}
+    }
+    if (!r) {
+        alert('No se encontró la información del reporte a editar.');
+        return;
+    }
+
+    // Cerrar modal de detalle si estuviera abierto
+    const modalDet = document.getElementById('modalDetalleChecklistFull');
+    if (modalDet) {
+        const inst = bootstrap.Modal.getInstance(modalDet);
+        if (inst) inst.hide();
+    }
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+
+    // Resetear form y establecer ID de edición
+    const form = document.getElementById('formNuevoChecklist');
+    if (form) form.reset();
+
+    const editIdEl = document.getElementById('ck_reporte_id_edit');
+    if (editIdEl) editIdEl.value = r.id;
+
+    const lblTitulo = document.getElementById('lbl-ck-modal-titulo');
+    if (lblTitulo) lblTitulo.textContent = 'Editar Reporte de Fallas';
+
+    const lblFolio = document.getElementById('lbl-ck-folio-header');
+    if (lblFolio) lblFolio.textContent = r.folio || `N° ${r.id}`;
+
+    const btn = document.getElementById('btnGuardarChecklist');
+    if (btn) btn.innerHTML = '<i class="bi bi-save-fill me-1"></i> Actualizar Reporte de Fallas';
+
+    // Fecha del reporte original
+    const inputFecha = document.getElementById('ck_fecha_reporte');
+    if (inputFecha && r.fecha_reporte) {
+        inputFecha.value = r.fecha_reporte.split('T')[0];
+    }
+
+    // Población de Comboboxes
+    window.poblarPlacasChecklist();
+    window.poblarConductoresChecklist();
+
+    setTimeout(() => {
+        if (typeof window._cbSet === 'function') {
+            window._cbSet('ck_placa_tracto', r.placa_tracto || '', r.placa_tracto || '');
+            window._cbSet('ck_placa_remolque', r.placa_remolque || '', r.placa_remolque || '');
+            window._cbSet('ck_conductor', r.conductor || '', r.conductor || '');
+        }
+        const txtT = document.getElementById('ck_placa_tracto-txt');
+        if (txtT) txtT.value = r.placa_tracto || '';
+        const txtR = document.getElementById('ck_placa_remolque-txt');
+        if (txtR) txtR.value = r.placa_remolque || '';
+        const txtC = document.getElementById('ck_conductor-txt');
+        if (txtC) txtC.value = r.conductor || '';
+
+        const inputKm = document.getElementById('ck_kilometraje');
+        if (inputKm) inputKm.value = r.km_inicial || '';
+        const inputHoras = document.getElementById('ck_horas_remolque');
+        if (inputHoras) inputHoras.value = r.horas_motor || '';
+
+        const inputProc = document.getElementById('ck_procedencia');
+        if (inputProc) inputProc.value = r.procedencia || '';
+        const inputGps = document.getElementById('ck_ubicacion_gps');
+        if (inputGps) inputGps.value = r.ubicacion_gps || '';
+
+        if (r.placa_tracto) window.ckSyncPlacaTracto();
+        if (r.placa_remolque) window.ckSyncPlacaRemolque();
+    }, 100);
+
+    // Parsear fallas existentes
+    let fallasT = [];
+    let fallasR = [];
+    try {
+        if (r.fallas_tracto_json) fallasT = typeof r.fallas_tracto_json === 'string' ? JSON.parse(r.fallas_tracto_json) : r.fallas_tracto_json;
+        else if (r.fallas_tracto) fallasT = typeof r.fallas_tracto === 'string' ? JSON.parse(r.fallas_tracto) : r.fallas_tracto;
+    } catch(e) {}
+    try {
+        if (r.fallas_remolque_json) fallasR = typeof r.fallas_remolque_json === 'string' ? JSON.parse(r.fallas_remolque_json) : r.fallas_remolque_json;
+        else if (r.fallas_remolque) fallasR = typeof r.fallas_remolque === 'string' ? JSON.parse(r.fallas_remolque) : r.fallas_remolque;
+    } catch(e) {}
+
+    if (!Array.isArray(fallasT)) fallasT = [];
+    if (!Array.isArray(fallasR)) fallasR = [];
+
+    // Renderizar acordeones limpios
+    window.ckRenderizarTodosAcordeones();
+
+    // Marcar checkboxes y observaciones existentes preservando su fecha original
+    const todasF = [
+        ...fallasT.map(f => ({ ...f, esTracto: true })),
+        ...fallasR.map(f => ({ ...f, esTracto: false }))
+    ];
+
+    const wrapManuales = document.getElementById('ck_contenedor_fallas_manuales');
+    if (wrapManuales) wrapManuales.innerHTML = '';
+    window.fallasManualesChecklist = [];
+
+    const fechaGenFmt = r.fecha_reporte ? new Date(r.fecha_reporte).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+
+    todasF.forEach(f => {
+        const fechaOrig = f.fecha || fechaGenFmt;
+        if (f.sistema === 'MANUAL' || (f.item || '').includes('Falla Manual')) {
+            const rowId = 'manual_' + Date.now() + Math.floor(Math.random()*1000);
+            const div = document.createElement('div');
+            div.className = 'row g-2 mb-2 align-items-center ck-manual-falla-row';
+            div.id = rowId;
+            div.dataset.fecha = fechaOrig;
+            div.innerHTML = `
+                <div class="col-md-4">
+                    <select class="form-select form-select-sm ck-manual-sistema fw-bold text-primary border-secondary-subtle">
+                        <option value="${r.placa_tracto || 'TRACTO'}" ${f.esTracto ? 'selected' : ''}>🚛 TRACTO (${r.placa_tracto || '—'})</option>
+                        <option value="${r.placa_remolque || 'SEMIRREMOLQUE'}" ${!f.esTracto ? 'selected' : ''}>🚛 SEMIRREMOLQUE (${r.placa_remolque || '—'})</option>
+                    </select>
+                </div>
+                <div class="col-md-7">
+                    <input type="text" class="form-control form-control-sm text-uppercase ck-manual-desc border-secondary-subtle" value="${f.obs || ''}" placeholder="Describa el componente / falla no listada...">
+                    ${fechaOrig ? `<small class="text-muted d-block mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fechaOrig}</b></small>` : ''}
+                </div>
+                <div class="col-md-1 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" onclick="document.getElementById('${rowId}').remove(); window.ckActualizarContadores();" title="Eliminar">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </div>
+            `;
+            wrapManuales.appendChild(div);
+        } else {
+            const itemLimpio = (f.item || '').toUpperCase().trim();
+            document.querySelectorAll('.ck-checkbox-item').forEach(chk => {
+                const itemId = chk.id.replace('chk_', '');
+                const lblEl = document.getElementById(`lbl_${itemId}`);
+                if (lblEl && lblEl.innerText.trim().toUpperCase() === itemLimpio) {
+                    chk.checked = true;
+                    chk.dataset.fecha = fechaOrig;
+                    const txtEl = document.getElementById(`txt_${itemId}`);
+                    const obsWrap = document.getElementById(`obs_${itemId}`);
+                    if (obsWrap) obsWrap.classList.remove('d-none');
+                    if (txtEl && f.obs && f.obs !== f.item) txtEl.value = f.obs;
+                }
+            });
+        }
+    });
+
+    window.ckActualizarContadores();
+    window.ckActualizarChipsFallas();
+
+    // Fotos existentes
+    fotosChecklistBase64 = [];
+    const wrapFotos = document.getElementById('ck_preview_fotos');
+    if (wrapFotos) {
+        wrapFotos.innerHTML = '';
+        if (Array.isArray(r.fotos)) {
+            r.fotos.forEach(url => {
+                fotosChecklistBase64.push(url);
+                const div = document.createElement('div');
+                div.className = 'position-relative';
+                div.innerHTML = `<img src="${url}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid #ccc;">`;
+                wrapFotos.appendChild(div);
+            });
+        }
+    }
+
+    const modalEl = document.getElementById('modalNuevoChecklist');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+// ── GUARDAR O ACTUALIZAR REPORTE ─────────────────────────────────
 window.guardarChecklist = function(e) {
     if (e) e.preventDefault();
     if (!window.guardAction('checklist', 'c')) return;
 
+    const editId = (document.getElementById('ck_reporte_id_edit') || {}).value;
     const btn = document.getElementById('btnGuardarChecklist');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> ${editId ? 'Actualizando...' : 'Guardando...'}`;
     }
 
     try {
@@ -1096,10 +1281,13 @@ window.guardarChecklist = function(e) {
         const horasMotorVal = (document.getElementById('ck_horas_remolque') || {}).value || (document.getElementById('ck_horas_motor') || {}).value || '';
         const fechaRep = (document.getElementById('ck_fecha_reporte') || {}).value || new Date().toISOString().split('T')[0];
 
+        // Timestamp actual para nuevas fallas ingresadas hoy
+        const nowFmt = new Date().toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
         const fallasTracto = [];
         const fallasRemolque = [];
 
-        // Recolectar checkboxes marcados
+        // Recolectar checkboxes marcados con su fecha individual
         document.querySelectorAll('.ck-checkbox-item:checked').forEach(chk => {
             const itemId = chk.id.replace('chk_', '');
             const isTracto = itemId.includes('_Tracto_');
@@ -1110,8 +1298,9 @@ window.guardarChecklist = function(e) {
 
             const itemNombre = lblEl ? lblEl.innerText.trim() : 'Falla Observada';
             const obsDesc = txtEl && txtEl.value.trim() ? txtEl.value.trim() : itemNombre;
+            const fechaFalla = chk.dataset.fecha || nowFmt;
 
-            const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc };
+            const obj = { sistema: sysKey.toUpperCase(), item: itemNombre, obs: obsDesc, fecha: fechaFalla };
             if (isTracto) {
                 fallasTracto.push(obj);
             } else {
@@ -1125,10 +1314,11 @@ window.guardarChecklist = function(e) {
             const descEl = row.querySelector('.ck-manual-desc') || row.querySelector('input[type="text"]');
             const sysVal = selectEl ? selectEl.value : 'TRACTO';
             const obs = descEl ? descEl.value.trim() : '';
+            const fechaFalla = row.dataset.fecha || nowFmt;
 
             if (obs) {
                 const isRem = sysVal.toUpperCase().includes('REMOLQUE') || sysVal.toUpperCase().includes('CARRETA') || (placaRemolque && sysVal === placaRemolque);
-                const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs };
+                const obj = { sistema: 'MANUAL', item: 'Falla Manual', obs: obs, fecha: fechaFalla };
                 if (isRem) {
                     fallasRemolque.push(obj);
                 } else {
@@ -1160,8 +1350,11 @@ window.guardarChecklist = function(e) {
             creado_por: window.usuarioLogueado || 'Sistema'
         };
 
-        fetch('/api/checklist', {
-            method: 'POST',
+        const targetUrl = editId ? `/api/checklist/${editId}` : '/api/checklist';
+        const targetMethod = editId ? 'PUT' : 'POST';
+
+        fetch(targetUrl, {
+            method: targetMethod,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
@@ -1184,10 +1377,10 @@ window.guardarChecklist = function(e) {
                 window.cargarTablaChecklist(true);
 
                 if (typeof window.rotToast === 'function') {
-                    window.rotToast(`✅ Reporte de Fallas ${res.folio || ''} guardado con éxito.`, 'bg-success');
+                    window.rotToast(`✅ Reporte ${res.folio || ''} ${editId ? 'actualizado' : 'guardado'} con éxito.`, 'bg-success');
                 }
             } else {
-                alert('❌ Error guardando reporte: ' + (res.error || 'Desconocido'));
+                alert(`❌ Error ${editId ? 'actualizando' : 'guardando'} reporte: ` + (res.error || 'Desconocido'));
             }
         })
         .catch(err => {
@@ -1203,7 +1396,7 @@ window.guardarChecklist = function(e) {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Guardar Reporte de Fallas';
         }
-        console.error('Error al preparar reporte:', errSync);
+        console.error('Error al procesar reporte:', errSync);
         alert('❌ Ocurrió un error al procesar el reporte: ' + errSync.message);
     }
 };
@@ -1265,6 +1458,9 @@ window.abrirDetalleChecklist = function(id) {
                     <i class="bi bi-file-earmark-text-fill text-primary"></i> Datos del Reporte
                 </h6>
                 <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.abrirEditarChecklist(${r.id})">
+                        <i class="bi bi-pencil-square"></i> Editar Reporte
+                    </button>
                     <button type="button" class="btn btn-outline-danger btn-sm fw-bold d-flex align-items-center gap-1 shadow-2xs" onclick="window.generarPDF_Checklist(${r.id})">
                         <i class="bi bi-printer-fill"></i> Imprimir PDF (F-MAN-001)
                     </button>
@@ -1324,6 +1520,7 @@ window.abrirDetalleChecklist = function(id) {
                             <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
                         </div>
                         ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
+                        ${fallaMatch.fecha ? `<div class="text-muted mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fallaMatch.fecha}</b></div>` : ''}
                     </div>
                 `;
             } else {
@@ -1367,6 +1564,7 @@ window.abrirDetalleChecklist = function(id) {
                                 <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size:0.65rem;">OBSERVADO</span>
                             </div>
                             ${obsTxt ? `<div class="small text-dark fw-semibold mt-1 ps-2 border-start border-2 border-danger-subtle" style="font-size:0.78rem;">Obs: ${obsTxt}</div>` : ''}
+                            ${fallaMatch.fecha ? `<div class="text-muted mt-1" style="font-size:0.7rem;"><i class="bi bi-clock-history me-1 text-primary"></i>Reportado el: <b>${fallaMatch.fecha}</b></div>` : ''}
                         </div>
                     `;
                 } else {
@@ -1380,7 +1578,7 @@ window.abrirDetalleChecklist = function(id) {
 
     html += `</div>`;
 
-    // ── 3. DETALLE DE FALLA (TABLA CON RESULTADOS) ──
+    // ── 3. DETALLE DE FALLA (TABLA CON FECHA Y RESULTADOS) ──
     html += `
         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size:1rem;">
@@ -1390,7 +1588,8 @@ window.abrirDetalleChecklist = function(id) {
                 <table class="table table-hover align-middle m-0 small">
                     <thead class="table-light sticky-top">
                         <tr>
-                            <th class="py-2 ps-3">UNIDAD</th>
+                            <th class="py-2 ps-3" style="width: 140px;">FECHA REPORTE</th>
+                            <th class="py-2">UNIDAD</th>
                             <th class="py-2">CATEGORÍA</th>
                             <th class="py-2">ÍTEM</th>
                             <th class="py-2 pe-3">DESCRIPCIÓN DE LA FALLA</th>
@@ -1400,12 +1599,15 @@ window.abrirDetalleChecklist = function(id) {
     `;
 
     if (todasFallas.length === 0) {
-        html += `<tr><td colspan="4" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
+        html += `<tr><td colspan="5" class="text-center py-3 text-muted">Sin fallas observadas registradas.</td></tr>`;
     } else {
         todasFallas.forEach(f => {
             html += `
                 <tr>
-                    <td class="ps-3 fw-bold text-primary">${f.unidad || 'TRACTO'}</td>
+                    <td class="ps-3 fw-bold text-secondary font-monospace" style="font-size:0.78rem;">
+                        <i class="bi bi-clock-history me-1 text-primary"></i>${f.fecha || fechaFmt}
+                    </td>
+                    <td class="fw-bold text-primary">${f.unidad || 'TRACTO'}</td>
                     <td class="fw-semibold text-dark">${f.sistema || 'GENERAL'}</td>
                     <td class="fw-bold text-danger">${f.item || '—'}</td>
                     <td class="pe-3 fw-semibold text-dark">${f.obs || 'SIN DESCRIPCIÓN'}</td>
