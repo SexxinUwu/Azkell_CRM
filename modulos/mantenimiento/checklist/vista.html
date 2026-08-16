@@ -217,7 +217,9 @@
 
 /* Modal Form Inputs: Enlarge & Beautify for maximum legibility */
 #modalNuevoChecklist .form-control,
-#modalNuevoChecklist .form-select {
+#modalNuevoChecklist .form-select,
+#modalGenerarOTsFromChecklist .form-control,
+#modalGenerarOTsFromChecklist .form-select {
     min-height: 44px !important;
     border-radius: 12px !important;
     font-size: 0.92rem !important;
@@ -228,11 +230,14 @@
     transition: all 0.2s ease;
 }
 #modalNuevoChecklist .form-control:focus,
-#modalNuevoChecklist .form-select:focus {
+#modalNuevoChecklist .form-select:focus,
+#modalGenerarOTsFromChecklist .form-control:focus,
+#modalGenerarOTsFromChecklist .form-select:focus {
     border-color: #0284c7 !important;
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
 }
-#modalNuevoChecklist .form-label {
+#modalNuevoChecklist .form-label,
+#modalGenerarOTsFromChecklist .form-label {
     font-size: 0.74rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
@@ -240,7 +245,8 @@
     color: #475569 !important;
     margin-bottom: 0.35rem !important;
 }
-#modalNuevoChecklist .card {
+#modalNuevoChecklist .card,
+#modalGenerarOTsFromChecklist .card {
     border-radius: 18px !important;
     border: 1px solid #e2e8f0 !important;
     background: #ffffff !important;
@@ -783,53 +789,107 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- ⚡ MODAL: GENERAR ÓRDENES DE TRABAJO (OTs) -->
+<!-- ⚡ MODAL: GENERAR ÓRDENES DE TRABAJO (OTs) - BENTO FLOATING DRAWER -->
 <!-- ================================================================= -->
-<div class="modal fade" id="modalGenerarOTsFromChecklist" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content shadow-lg border-0" style="border-radius: 20px;">
-      <div class="modal-header border-bottom bg-primary bg-opacity-10 py-3">
-        <h5 class="modal-title fw-bolder text-primary d-flex align-items-center gap-2">
-          <i class="bi bi-lightning-charge-fill text-warning fs-4"></i> Generación Inteligente de Órdenes de Trabajo
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="modalGenerarOTsFromChecklist" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-scrollable ck-floating-drawer-dialog">
+    <div class="modal-content border-0 ck-floating-drawer-content">
+      
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="modal-title fw-bolder text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1.2rem;">
+            <i class="bi bi-lightning-charge-fill text-warning fs-4"></i> Generación de Órdenes de Trabajo (OT)
+          </h5>
+          <small class="text-muted" style="font-size: 0.78rem;">Asignación de rampa, distribución de trabajos y técnicos por motivo</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
-      <form id="formGenerarOTs" onsubmit="window.enviarGeneracionOTs(event)">
+
+      <form id="formGenerarOTs" onsubmit="window.enviarGeneracionOTs(event)" class="d-flex flex-column flex-grow-1 overflow-hidden m-0">
         <input type="hidden" id="gen_reporte_id">
-        <div class="modal-body p-3 p-md-4 custom-scrollbar" style="max-height: 82vh; overflow-y: auto;">
-          <div class="alert alert-warning py-2 small mb-3">
-            <i class="bi bi-info-circle me-1"></i> El sistema detectó fallas reportadas. Asigna la rampa y los parámetros para cada unidad.
-          </div>
-          <div class="card border-0 shadow-sm p-3 mb-3 bg-light rounded-3">
-            <label class="form-label fw-bold small text-dark mb-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Ubicación / Rampa de Taller *</label>
-            <select class="form-select fw-bold form-select-sm mb-2" id="gen_id_rampa" required>
-              <option value="En Espera">-- Rampa de Espera / En Ruta --</option>
-              <option value="Rampa 1">Rampa 1</option>
-              <option value="Rampa 2">Rampa 2</option>
-              <option value="Rampa 3">Rampa 3</option>
-              <option value="Rampa 4">Rampa 4</option>
-              <option value="Rampa 5">Rampa 5</option>
-              <option value="Rampa 6">Rampa 6</option>
-              <option value="Zona de Espera">Zona de Espera</option>
-              <option value="Auxilio Mecanico">Auxilio Mecánico</option>
-            </select>
-            <div class="row g-2">
-              <div class="col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar-event text-primary me-1"></i> Fecha / Hora Ingreso a Rampa</label>
-                <input type="datetime-local" id="gen_fecha_ingreso" class="form-control form-control-sm">
+        
+        <div class="modal-body p-3 p-md-4 overflow-auto custom-scrollbar">
+          
+          <!-- ── CARD 1: RESUMEN INFORMATIVO DEL REPORTE (BLOQUEADO) ──── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.95rem;">
+              <i class="bi bi-file-earmark-text-fill text-primary"></i> Información del Reporte
+            </h6>
+            <div class="row g-2 g-md-3">
+              <div class="col-12 col-md-4">
+                <label class="form-label">Folio Reporte</label>
+                <input type="text" id="gen_folio_txt" class="form-control bg-light text-dark fw-bold" readonly placeholder="F-2026-XXXX">
               </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-calendar-check text-success me-1"></i> Fecha / Hora Salida Estimada</label>
-                <input type="datetime-local" id="gen_fecha_salida" class="form-control form-control-sm">
+              <div class="col-12 col-md-8">
+                <label class="form-label">Reportado por (Conductor)</label>
+                <input type="text" id="gen_conductor_txt" class="form-control bg-light text-dark fw-bold" readonly placeholder="Conductor no especificado">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Tracto (Principal)</label>
+                <input type="text" id="gen_tracto_txt" class="form-control bg-light text-primary fw-bold text-uppercase" readonly placeholder="—">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Carreta (Semirremolque)</label>
+                <input type="text" id="gen_remolque_txt" class="form-control bg-light text-warning-emphasis fw-bold text-uppercase" readonly placeholder="—">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Kilometraje / Horas</label>
+                <input type="text" id="gen_km_horas_txt" class="form-control bg-light text-dark fw-bold" readonly placeholder="—">
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Procedencia / Ruta</label>
+                <input type="text" id="gen_ruta_txt" class="form-control bg-light text-dark fw-bold" readonly placeholder="—">
               </div>
             </div>
           </div>
+
+          <!-- ── CARD 2: PARÁMETROS DE INGRESO A TALLER Y RAMPA ─────── -->
+          <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.95rem;">
+              <i class="bi bi-geo-alt-fill text-danger"></i> Ubicación y Tiempos en Taller
+            </h6>
+            <div class="row g-2 g-md-3">
+              <div class="col-12">
+                <label class="form-label">Ubicación / Rampa de Taller (<span class="text-danger">*</span>)</label>
+                <select class="form-select fw-bold border-primary shadow-sm" id="gen_id_rampa" required>
+                  <option value="">Cargando rampas activas...</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Fecha / Hora Ingreso a Rampa</label>
+                <input type="datetime-local" id="gen_fecha_ingreso" class="form-control fw-bold border-secondary-subtle">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Fecha / Hora Salida Estimada</label>
+                <input type="datetime-local" id="gen_fecha_salida" class="form-control fw-bold border-secondary-subtle">
+              </div>
+            </div>
+          </div>
+
+          <!-- ── CARD 3: CONTENEDOR DINÁMICO DE ÓRDENES DE TRABAJO (OTs) ──── -->
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div>
+              <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size: 1rem;">
+                <i class="bi bi-tools text-primary"></i> Órdenes de Trabajo a Generar
+              </h6>
+              <small class="text-muted" style="font-size: 0.76rem;">Distribuye las fallas reportadas y asigna el técnico responsable para cada motivo</small>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-3 d-flex align-items-center gap-1 shadow-2xs" onclick="window.ckAgregarTarjetaOT()">
+              <i class="bi bi-plus-lg"></i> <span>Agregar otra OT</span>
+            </button>
+          </div>
+
+          <!-- Contenedor donde se inyectan las tarjetas de OTs dinámicas -->
           <div id="contenedorTarjetasOTsGen"></div>
+
         </div>
-        <div class="modal-footer border-top bg-white py-3">
-          <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-success fw-bold px-4" id="btnConfirmarGenerarOTs">
-            <i class="bi bi-rocket-takeoff-fill me-1"></i> Confirmar y Generar OTs
+
+        <!-- Modal Footer -->
+        <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-3 d-flex align-items-center gap-2 shadow-sm" id="btnConfirmarGenerarOTs">
+            <i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OTs</span>
           </button>
         </div>
       </form>

@@ -1214,8 +1214,30 @@ window.generarPDF_OT = function(ot, trabajos, materiales, isPlantilla, _onHtmlRe
     var finDT = formatDT(ot.fecha_hora_salida);
 
     var htmlMotivos = '';
-    if (det.motivo) {
-        htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(det.motivo)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
+    if (det.motivos_array && Array.isArray(det.motivos_array) && det.motivos_array.length > 0) {
+        htmlMotivos = det.motivos_array.map(function(m, idx) {
+            var motText = typeof m === 'string' ? m : (m.motivo || m.item || m.descripcion || '—');
+            var tecText = typeof m === 'object' ? (m.tecnico || m.tecnico_nombre || det.supervisor || '—') : (det.supervisor || '—');
+            return '<tr>'
+                + '<td class="text-center">' + (idx + 1) + '</td>'
+                + '<td>' + rotEscHtml(rotCleanObsText(motText)) + '</td>'
+                + '<td class="text-center">' + rotEscHtml(tecText) + '</td>'
+                + '</tr>';
+        }).join('');
+    } else if (det.motivo) {
+        var lineas = String(det.motivo).split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+        if (lineas.length > 1) {
+            htmlMotivos = lineas.map(function(l, idx) {
+                var cleanL = l.replace(/^[•\-\*]\s*/, '');
+                return '<tr>'
+                    + '<td class="text-center">' + (idx + 1) + '</td>'
+                    + '<td>' + rotEscHtml(rotCleanObsText(cleanL)) + '</td>'
+                    + '<td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td>'
+                    + '</tr>';
+            }).join('');
+        } else {
+            htmlMotivos = '<tr><td class="text-center">1</td><td>' + rotEscHtml(rotCleanObsText(det.motivo)) + '</td><td class="text-center">' + rotEscHtml(det.supervisor || '—') + '</td></tr>';
+        }
     } else {
         htmlMotivos = '<tr><td colspan="3" class="text-center" style="color:#888; font-style: italic; padding: 4px;">No hay motivos de ingreso registrados.</td></tr>';
     }
