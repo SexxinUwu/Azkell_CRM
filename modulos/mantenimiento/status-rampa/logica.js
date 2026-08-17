@@ -495,6 +495,8 @@ window.srAbrirDetalle = function(id) {
     }
     if (!e) return;
 
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('sr-panel-detalle');
+
     window.srDetalleId = id;
     srRenderTabla();
 
@@ -1227,6 +1229,8 @@ window.srAbrirDetalleHistorial = function(id) {
     var row = (window.srHistorialData || []).find(function(r) { return r.id === id; });
     if (!row) return;
 
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('sr-panel-detalle-hist');
+
     var fIng     = row.fecha_ingreso ? srFmtFecha(String(row.fecha_ingreso).split('T')[0], true) : '—';
     var hIng     = row.hora_ingreso ? String(row.hora_ingreso).slice(0,5) : '';
     var fSal     = row.fecha_salida ? srFmtFecha(String(row.fecha_salida).split('T')[0], true) : '—';
@@ -1414,7 +1418,7 @@ window.srAbrirDetalleHistorial = function(id) {
                         return `
                             <div class="p-3 rounded-4 border bg-light d-flex align-items-center justify-content-between gap-2 shadow-2xs" 
                                  style="cursor: pointer;" 
-                                 onclick="window.srCerrarDetalleHist(); setTimeout(function(){window.srAbrirDetalleOT('${idOt}')}, 300);">
+                                 onclick="window.srAbrirDetalleOT('${idOt}')">
                                 <div>
                                     <div class="fw-bold text-primary" style="font-size: 0.92rem;">${window.srFormatID(idOt)}</div>
                                     <small class="text-muted">Estado: <strong class="text-dark">${_srEsc(o.estado || '')}</strong></small>
@@ -2084,6 +2088,8 @@ window.srEnviarOT = async function() {
 window.srAbrirDetalleOT = function(idOt) {
     if (!idOt) return;
 
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('rot-drawer-detalle');
+
     var abrir = function() {
         if (typeof window.rotAbrirDetalle === 'function') {
             window.rotAbrirDetalle(idOt);
@@ -2648,6 +2654,7 @@ function _srEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 
 // ── Configurar Rampas ─────────────────────────────────────────────
 window.srAbrirConfigRampas = function() {
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer('sr-config-rampas');
     var panel = document.getElementById('sr-config-rampas');
     var bd    = document.getElementById('sr-config-bd');
     if (panel) { panel.classList.add('open'); }
@@ -2830,6 +2837,7 @@ window.srEliminarRampa = function(id) {
 };
 
 function srAbrirDrawer(id) {
+    if (typeof window.registrarAperturaDrawer === 'function') window.registrarAperturaDrawer(id);
     var back = document.getElementById('srDrawerBackdrop');
     if (back) back.classList.add('open');
     var d = document.getElementById(id);
