@@ -449,20 +449,52 @@ function srRenderTabla() {
 
             // Mobile Card
             var badgeSit = srBadgeSituacion(e.situacion, true);
-            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+            var fInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso) : '—') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
+            var fOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida) : '—') + (e.horaSalida ? ' • ' + e.horaSalida : '');
+            var kmStr = e.km ? Number(e.km).toLocaleString('es-PE') : '-';
+
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0 mb-3 bg-white" ' +
+                              'style="border-radius:1.15rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important; cursor:pointer;" ' +
+                              'onclick="window.srAbrirDetalle(' + e._id + ')">' +
                               '<div class="d-flex align-items-center justify-content-between mb-2">' +
                                   '<div class="d-flex align-items-center gap-2">' +
-                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:36px;height:36px;background:' + color + ';font-size:1rem;">' + (idx+1) + '</div>' +
-                                      '<div>' +
-                                          '<div class="fw-bold text-dark" style="font-size:1.05rem;line-height:1.1;">' + (e.placa || '—') + '</div>' +
-                                          '<div style="font-size:0.75rem; color:var(--subtext);">' + _srEsc(rampaNom) + '</div>' +
+                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold shadow-2xs" ' +
+                                           'style="width:38px;height:38px;background:' + color + ';font-size:1.05rem;flex-shrink:0;">' + (idx+1) + '</div>' +
+                                      '<div class="d-flex align-items-center gap-2">' +
+                                          '<span class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</span>' +
+                                          '<span class="fw-bold text-dark" style="font-size:1.05rem;letter-spacing:0.02em;">' + (e.placa || '—') + '</span>' +
                                       '</div>' +
                                   '</div>' +
-                                  badgeSit +
+                                  '<div>' + badgeSit + '</div>' +
                               '</div>' +
-                              '<div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2" style="font-size:0.78rem; color:var(--subtext);">' +
-                                  '<span><i class="bi bi-clock me-1"></i>Ingreso: ' + (e.horaIngreso || '—') + '</span>' +
-                                  '<span class="fw-bold text-primary">' + srCalcHorasTaller(e) + '</span>' +
+                              (obsFormateada ? (
+                                  '<div class="mb-2" style="font-size:0.73rem;font-weight:700;color:#475569;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
+                                      _srEsc(obsFormateada) +
+                                  '</div>'
+                              ) : '') +
+                              '<div class="p-2 mb-2 d-flex align-items-center justify-content-between" style="background:#f8fafc;border-radius:12px;border:1px solid #f1f5f9;">' +
+                                  '<div class="d-flex align-items-center gap-3">' +
+                                      '<div>' +
+                                          '<div style="font-size:0.62rem;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:1px;">' +
+                                              '<i class="bi bi-arrow-down-right-circle me-1"></i>ENTRADA' +
+                                          '</div>' +
+                                          '<div style="font-size:0.78rem;font-weight:700;color:#1e293b;">' + fInStr + '</div>' +
+                                      '</div>' +
+                                      '<div style="border-left:1px solid #e2e8f0;height:28px;"></div>' +
+                                      '<div>' +
+                                          '<div style="font-size:0.62rem;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:1px;">' +
+                                              '<i class="bi bi-arrow-up-right-circle me-1"></i>SALIDA (EST.)' +
+                                          '</div>' +
+                                          '<div style="font-size:0.78rem;font-weight:700;color:#1e293b;">' + fOutStr + '</div>' +
+                                      '</div>' +
+                                  '</div>' +
+                                  '<i class="bi bi-chevron-right text-muted" style="font-size:0.85rem;"></i>' +
+                              '</div>' +
+                              '<div class="d-flex justify-content-between align-items-center pt-1" style="font-size:0.75rem;color:#64748b;">' +
+                                  '<span class="fw-semibold">KM: ' + kmStr + '</span>' +
+                                  '<span class="badge rounded-pill d-inline-flex align-items-center gap-1" style="background:rgba(37,99,235,0.08);color:#2563eb;font-weight:700;font-size:0.74rem;padding:4px 10px;">' +
+                                      '<i class="bi bi-clock"></i> ' + srCalcHorasTaller(e) +
+                                  '</span>' +
                               '</div>' +
                           '</div>';
         });

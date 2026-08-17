@@ -628,49 +628,8 @@
 </div>
 
 
-<!-- FORMULARIO DE INSPECCIONES — CSS self-contained, no depende de reportes-ot -->
-<div id="drawerInspeccion" style="
-    position: fixed;
-    bottom: 0 !important;
-    left: 50% !important;
-    top: auto !important;
-    right: auto !important;
-    transform: translateX(-50%) translateY(100%);
-    width: 100% !important;
-    max-width: 700px !important;
-    height: 92vh !important;
-    max-height: 92vh !important;
-    background: var(--surface, #fff) !important;
-    border: 1px solid var(--border, #e2e8f0) !important;
-    border-bottom: none !important;
-    border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
-    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    z-index: 1150 !important;
-    display: flex;
-    flex-direction: column;
-    visibility: hidden;
-    overflow: hidden;
-    margin: 0 !important;
-">
-    <style>
-        #drawerInspeccion.open {
-            transform: translateX(-50%) translateY(0) !important;
-            visibility: visible !important;
-            display: flex !important;
-        }
-        @media (max-width: 767.98px) {
-            #drawerInspeccion {
-                max-width: 100% !important;
-                left: 0 !important;
-                transform: translateY(100%) !important;
-                border-radius: 28px 28px 0 0 !important;
-            }
-            #drawerInspeccion.open {
-                transform: translateY(0) !important;
-            }
-        }
-    </style>
+<!-- FORMULARIO DE INSPECCIONES — CSS self-contained, compatible con desktop y mobile -->
+<div id="drawerInspeccion" class="rot-sub-drawer">
     <div class="insp-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
