@@ -3456,8 +3456,13 @@ window.cargarModuloAislado = async function(rutaModulo) {
         window._navFromPopstate = false;
     }
 
-    // 🧹 LIMPIEZA BOOTSTRAP — elimina backdrops huérfanos y clases del body
-    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop').forEach(el => el.remove());
+    // 🧹 LIMPIEZA BOOTSTRAP Y DRAWERS — elimina backdrops huérfanos y drawers adjuntos al body
+    document.querySelectorAll('.modal-backdrop, .offcanvas-backdrop, #rotDrawerBackdrop').forEach(el => el.remove());
+    document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id^="rot-drawer-"]').forEach(function(el) {
+        var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
+        if (inst) inst.hide();
+        el.remove();
+    });
     document.body.classList.remove('modal-open', 'offcanvas-open');
     document.body.style.paddingRight = '';
     document.body.style.overflow = '';
@@ -3501,8 +3506,8 @@ window.cargarModuloAislado = async function(rutaModulo) {
         if(!respHTML.ok) throw new Error(`No se encontró vista.html en ${_rutaDisco}`);
         root.innerHTML = ''; // limpieza explícita — evita solapamiento si dos navegaciones se solapan
         // Cerrar y remover drawers zombies y backdrops residuales
-        document.querySelectorAll('.offcanvas-backdrop, .modal-backdrop').forEach(b => b.remove());
-        document.querySelectorAll('#drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion').forEach(function(el) {
+        document.querySelectorAll('.offcanvas-backdrop, .modal-backdrop, #rotDrawerBackdrop').forEach(b => b.remove());
+        document.querySelectorAll('.rot-drawer, .rot-sub-drawer, .sr-drawer-global, #drawerFleetrun, #drawerEditarFleetrun, #drawerInspeccion, [id^="rot-drawer-"]').forEach(function(el) {
             if (el && !root.contains(el)) {
                 var inst = typeof bootstrap !== 'undefined' && bootstrap.Offcanvas ? bootstrap.Offcanvas.getInstance(el) : null;
                 if (inst) inst.hide();

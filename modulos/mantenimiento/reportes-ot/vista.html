@@ -382,7 +382,7 @@
     right: auto !important;
     transform: translateX(-50%) translateY(100%);
     width: 100% !important;
-    max-width: 720px !important;
+    max-width: 700px !important;
     height: 92vh !important;
     max-height: 92vh !important;
     background: var(--surface, #ffffff) !important;
@@ -568,7 +568,7 @@
 
 
 <!-- ═══════════════ DRAWER: Detalle de OT (MODERNO BENTO) ═══════════════ -->
-<div class="rot-drawer" id="rot-drawer-detalle" style="max-width: 720px; width: 100%;">
+<div class="rot-drawer" id="rot-drawer-detalle" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -594,7 +594,7 @@
 
 
 <!-- ═══════════════ SUB-DRAWER: Agregar / Editar Trabajo (MODERNO BENTO) ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-trabajo" style="max-width: 720px; width: 100%;">
+<div class="rot-sub-drawer" id="rot-drawer-trabajo" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -619,7 +619,7 @@
         <input type="hidden" id="rot-tr-ticket-hid">
 
         <!-- Card 1: Descripción y Personal -->
-        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
             <div class="mb-3">
                 <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
                     Descripción del Trabajo Realizado (*)
@@ -630,22 +630,22 @@
                           placeholder="DETALLA LA LABOR, CAMBIO O REPARACIÓN REALIZADA..."></textarea>
             </div>
 
-            <div>
+            <div style="overflow: visible !important;">
                 <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
                     Personal / Técnico(s) Ejecutores
                 </label>
                 <input type="hidden" id="rot-tr-personal">
-                <div style="position:relative;" id="rot-ms-wrapper">
+                <div style="position:relative; overflow: visible !important;" id="rot-ms-wrapper">
                     <div id="rot-ms-box" onclick="rotMsToggle()"
                         style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; min-height:40px; padding:6px 36px 6px 10px; cursor:pointer; display:flex; flex-wrap:wrap; gap:5px; align-items:center; transition:border-color .2s;">
                         <span style="color:#94a3b8; font-size:.82rem;">Seleccionar técnico(s)...</span>
                     </div>
                     <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:.8rem;"><i class="bi bi-chevron-down"></i></span>
-                    <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; z-index:1200; box-shadow:0 10px 30px rgba(0,0,0,.15); overflow:hidden;">
+                    <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; z-index:1300; box-shadow:0 12px 36px rgba(0,0,0,.22); overflow:hidden;">
                         <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
                             oninput="rotMsFiltrar(this.value)"
                             style="width:100%; border:none; border-bottom:1px solid #e2e8f0; background:#f8fafc; color:#1e293b; padding:9px 12px; font-size:.84rem; outline:none;">
-                        <div id="rot-ms-options" style="max-height:190px; overflow-y:auto;"></div>
+                        <div id="rot-ms-options" style="max-height:220px; overflow-y:auto;"></div>
                         <div style="padding:7px 12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
                             <span id="rot-ms-count" style="font-size:.76rem; color:#64748b; font-weight:600;">0 seleccionados</span>
                             <span onclick="rotMsLimpiar()" style="font-size:.76rem; color:#ef4444; font-weight:700; cursor:pointer;">Limpiar todo</span>
@@ -699,7 +699,7 @@
 
 
 <!-- ═══════════════ SUB-DRAWER: Agregar Material / Salida (MODERNO BENTO) ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-material" style="max-width: 720px; width: 100%;">
+<div class="rot-sub-drawer" id="rot-drawer-material" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -811,7 +811,7 @@
 
 
 <!-- ═══════════════ SUB-DRAWER: Agregar Mantenimiento Pendiente (MODERNO BENTO) ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-backlog" style="max-width: 720px; width: 100%;">
+<div class="rot-sub-drawer" id="rot-drawer-backlog" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -880,7 +880,7 @@
 
 
 <!-- ═══════════════ SUB-DRAWER: Editar OT (MODERNO BENTO) ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-editar-ot" style="max-width: 720px; width: 100%;">
+<div class="rot-sub-drawer" id="rot-drawer-editar-ot" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
@@ -990,7 +990,7 @@
 
 
 <!-- ═══════════════ SUB-DRAWER: Editar Fechas (MODERNO BENTO) ═══════════════ -->
-<div class="rot-sub-drawer" id="rot-drawer-editar-fechas" style="max-width: 720px; width: 100%;">
+<div class="rot-sub-drawer" id="rot-drawer-editar-fechas" style="max-width: 700px; width: 100%;">
     <div class="rot-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 

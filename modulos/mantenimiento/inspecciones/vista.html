@@ -637,7 +637,7 @@
     right: auto !important;
     transform: translateX(-50%) translateY(100%);
     width: 100% !important;
-    max-width: 720px !important;
+    max-width: 700px !important;
     height: 92vh !important;
     max-height: 92vh !important;
     background: var(--surface, #fff) !important;
@@ -670,56 +670,40 @@
                 transform: translateY(0) !important;
             }
         }
-        #drawerInspeccion .insp-hd {
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border, #e2e8f0);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            background: var(--surface, #fff);
-            flex-shrink: 0;
-        }
-        #drawerInspeccion .insp-hd-title {
-            font-size: 1rem;
-            font-weight: 800;
-            color: var(--text, #1e293b);
-            letter-spacing: -0.01em;
-        }
-        #drawerInspeccion .insp-body {
-            flex: 1;
-            overflow-y: auto;
-            background: #f8fafc;
-        }
-        #drawerInspeccion .insp-footer {
-            padding: 12px 20px;
-            border-top: 1px solid var(--border, #e2e8f0);
-            background: var(--surface, #fff);
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            flex-shrink: 0;
-            box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);
-        }
     </style>
-    <div class="insp-hd">
-        <div>
-            <div class="insp-hd-title">Formulario de Inspecciones</div>
-            <div style="font-size:.75rem;color:var(--subtext,#64748b);margin-top:2px;" id="insp-header-ot-lbl"></div>
+    <div class="insp-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                    onclick="document.getElementById('drawerInspeccion').classList.remove('open')" 
+                    title="Volver" 
+                    style="width: 34px; height: 34px; color: var(--subtext, #64748b);">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <span class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+                    <i class="bi bi-clipboard2-check-fill text-purple" style="color: #7c3aed;"></i> Formulario de Inspecciones
+                </span>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="insp-header-ot-lbl">Inspección técnica integral de unidad</small>
+            </div>
         </div>
-        <button class="btn btn-sm" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext,#64748b);">
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="document.getElementById('drawerInspeccion').classList.remove('open')" style="color:var(--subtext, #64748b);">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="insp-body">
+    <div class="insp-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc; flex: 1;">
         <form id="formNuevaInspeccion" class="d-flex flex-column h-100">
-            <div id="wizard-dynamic-tabs" class="p-3" style="flex-grow:1;">
+            <div id="wizard-dynamic-tabs" style="flex-grow:1;">
                 <!-- El contenido se generará dinámicamente aquí -->
             </div>
         </form>
     </div>
-    <div class="insp-footer">
-        <button type="button" class="btn btn-light fw-bold px-4 border text-muted" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">Cancelar</button>
-        <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()"><i class="bi bi-save me-1"></i> Guardar Registro</button>
+    <div class="insp-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="document.getElementById('drawerInspeccion').classList.remove('open')">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary fw-bold rounded-3 px-4 py-2 shadow-2xs" id="btnWizGuardar" onclick="procesarGuardadoInspeccion()">
+            <i class="bi bi-check-lg me-1"></i> Guardar Registro
+        </button>
     </div>
 </div>
 

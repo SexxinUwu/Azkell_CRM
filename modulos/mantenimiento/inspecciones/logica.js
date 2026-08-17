@@ -1424,124 +1424,167 @@ window.renderModernInspForm = function() {
     let html = '<input type="hidden" id="i_id_inspeccion" value="">'
              + '<input type="hidden" id="i_id_ot" value="">';
     
-    // Tarjeta 1: Registro Fijo
-    html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
-    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-card-heading me-1"></i> 1. DATOS DE REGISTRO</div>
-    <div style="padding:1rem;">
-            <div class="row g-3">
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">N° Registro</label>
-                    <input type="text" class="form-control form-control-sm bg-light text-uppercase" id="i_id_inspeccion_show" readonly placeholder="Automático" >
+    // Tarjeta 1: Registro Fijo (Bento Card)
+    html += `
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;">
+                <i class="bi bi-card-checklist me-1"></i> 1. DATOS DE REGISTRO
+            </span>
+        </div>
+        <div class="row g-2">
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">N° Registro</label>
+                <input type="text" class="form-control form-control-sm bg-light text-uppercase fw-semibold" id="i_id_inspeccion_show" readonly placeholder="Automático" style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">Fecha de Ingreso</label>
+                <input type="date" class="form-control form-control-sm bg-white" id="i_fecha" required style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">
+                    <i class="bi bi-truck me-1 text-primary"></i> Placa de Unidad *
+                </label>
+                <div class="position-relative">
+                    <input type="text" id="i_placa-txt" class="form-control form-control-sm bg-white fw-bold"
+                           placeholder="BUSCAR PLACA..." autocomplete="off" required
+                           style="text-transform:uppercase; border-radius:8px; font-size:0.82rem;"
+                           oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_placa')"
+                           onfocus="window._cbFiltrar('i_placa')"
+                           onblur="window._cbHide('i_placa')">
+                    <input type="hidden" id="i_placa" name="i_placa">
+                    <div id="i_placa-dd" class="cb-dropdown shadow-sm" style="border-radius:10px; font-size:0.82rem;"></div>
                 </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Fecha de Ingreso</label>
-                    <input type="date" class="form-control form-control-sm" id="i_fecha" required >
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">Kilometraje de Tablero</label>
+                <input type="number" class="form-control form-control-sm bg-white fw-semibold" id="i_kmtablero" placeholder="Ej: 150000" style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">Cliente / Operación</label>
+                <input type="text" class="form-control form-control-sm bg-light fw-medium" id="i_cliente" readonly style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">Tipo de Unidad</label>
+                <input type="text" class="form-control form-control-sm bg-light text-uppercase fw-medium" id="i_modelo" readonly style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">
+                    <i class="bi bi-geo-alt-fill me-1 text-danger"></i> Kilometraje GPS
+                </label>
+                <input type="number" class="form-control form-control-sm bg-light fw-medium" id="i_kmgps" readonly placeholder="Calculando..." style="border-radius:8px; font-size:0.82rem;">
+            </div>
+            <div class="col-md-6 col-12 d-flex flex-column justify-content-end">
+                <div class="form-check form-switch p-2 bg-light rounded-3 border d-flex align-items-center gap-2 mb-1" style="min-height:38px;">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="chk_30dias" checked onchange="document.getElementById('i_dias_container').style.display = this.checked ? 'none' : 'block'; document.getElementById('i_dias').value = this.checked ? '30' : '';" style="cursor:pointer;">
+                    <label class="form-check-label fw-bold text-dark mb-0" style="font-size:0.78rem; cursor:pointer;" for="chk_30dias">Válido por 30 Días</label>
                 </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">
-                        <i class="bi bi-truck"></i> Placa *
-                    </label>
-                    <div class="position-relative">
-                        <input type="text" id="i_placa-txt" class="form-control form-control-sm"
-                               placeholder="Buscar placa..." autocomplete="off" required
-                               style="text-transform:uppercase;"
-                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_placa')"
-                               onfocus="window._cbFiltrar('i_placa')"
-                               onblur="window._cbHide('i_placa')">
-                        <input type="hidden" id="i_placa" name="i_placa">
-                        <div id="i_placa-dd" class="cb-dropdown"></div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Kilometraje de Tablero</label>
-                    <input type="number" class="form-control form-control-sm" id="i_kmtablero" placeholder="Ej: 150000" >
-                </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Cliente</label>
-                    <input type="text" class="form-control form-control-sm bg-light" id="i_cliente" readonly >
-                </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Tipo</label>
-                    <input type="text" class="form-control form-control-sm bg-light text-uppercase" id="i_modelo" readonly >
-                </div>
-                <div class="col-md-6 col-12">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;"><i class="bi bi-geo-alt-fill"></i> GPS</label>
-                    <input type="number" class="form-control form-control-sm bg-light" id="i_kmgps" readonly placeholder="Calculando..." >
-                </div>
-                <div class="col-md-6 col-12">
-                    <div class="form-check form-switch mb-2 mt-md-4">
-                        <input class="form-check-input" type="checkbox" id="chk_30dias" checked onchange="document.getElementById('i_dias_container').style.display = this.checked ? 'none' : 'block'; document.getElementById('i_dias').value = this.checked ? '30' : '';">
-                        <label class="form-check-label" style="font-size:0.85rem;font-weight:600;color:#1e293b;" for="chk_30dias">Inspección Válida por 30 Días</label>
-                    </div>
-                    <div id="i_dias_container" style="display: none;">
-                        <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Días Personalizados</label>
-                        <input type="number" class="form-control form-control-sm" id="i_dias" value="30" placeholder="Ej: 15" >
-                    </div>
+                <div id="i_dias_container" style="display: none;" class="mt-1">
+                    <input type="number" class="form-control form-control-sm bg-white" id="i_dias" value="30" placeholder="Días vigencia" style="border-radius:8px; font-size:0.82rem;">
                 </div>
             </div>
         </div>
     </div>`;
 
-    // Tarjetas Dinámicas de Categorías
-    window.DYNAMIC_INSP_SCHEMA.forEach((sec, i) => {
-        html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
-    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-list-check me-1"></i> ${i+2}. ${sec.tab}</div>
-    <div style="padding:1rem;">`;
-            
-        sec.items.forEach((item, j) => {
+    // Tarjetas Dinámicas de Categorías (Bento Cards)
+    (window.DYNAMIC_INSP_SCHEMA || []).forEach((sec, i) => {
+        let secNum = i + 2;
+        let secTitle = (sec.tab || '').toUpperCase();
+        html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1.5" style="font-size:0.75rem;">
+                    <i class="bi bi-ui-checks-grid text-primary"></i> ${secNum}. ${secTitle}
+                </span>
+                <small class="text-muted" style="font-size:0.7rem;">${(sec.items || []).length} ítems</small>
+            </div>
+            <div>`;
+                
+        (sec.items || []).forEach((item, j) => {
             let lbl = typeof item === 'string' ? item : item.label; 
             let t = typeof item === 'string' ? 'okfalla' : item.type; 
             let uid = `p_${i}_${j}`;
+            let isLast = j === sec.items.length - 1;
             
-            html += `<div class="mb-4 border-bottom pb-3 last-border-0">
-                <label class="fw-bold text-dark d-block mb-2" style="font-size:0.9rem;">${lbl}</label>`;
+            html += `
+            <div class="mb-3 ${isLast ? '' : 'pb-3 border-bottom'}" style="border-color:#f1f5f9 !important;">
+                <label class="fw-bold text-dark d-block mb-2" style="font-size:0.84rem; letter-spacing:-0.01em;">${lbl}</label>`;
 
             if (t === 'okfalla') {
-                html += `<div class="d-flex gap-2 w-100 position-relative">
+                html += `
+                <div class="d-flex gap-2 w-100 position-relative">
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_ok" value="OK" onclick="toggleRadioOkFalla(this, 'f_${uid}', false)">
-                    <label class="btn btn-outline-success fw-bold flex-grow-1" for="${uid}_ok" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;">OK</label>
+                    <label class="btn btn-sm btn-outline-success fw-bold flex-grow-1 rounded-3 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" 
+                           for="${uid}_ok" style="font-size:0.78rem; border-width:1.5px; text-transform:uppercase;">
+                        <i class="bi bi-check-circle-fill"></i> OK
+                    </label>
                     <input type="radio" class="btn-check" name="${uid}" id="${uid}_fa" value="FALLA" onclick="toggleRadioOkFalla(this, 'f_${uid}', true)">
-                    <label class="btn btn-outline-danger fw-bold flex-grow-1" for="${uid}_fa" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;">FALLA</label>
+                    <label class="btn btn-sm btn-outline-danger fw-bold flex-grow-1 rounded-3 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-2xs" 
+                           for="${uid}_fa" style="font-size:0.78rem; border-width:1.5px; text-transform:uppercase;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> FALLA
+                    </label>
                 </div>
-                <div id="f_${uid}" style="display:none;" class="mt-2 p-3 bg-light rounded border-start border-danger border-4 shadow-sm">
-                    <label class="form-label text-danger fw-bold" style="font-size:0.8rem;"><i class="bi bi-pencil-square"></i> Observación</label>
-                    <textarea class="form-control mb-2 border-danger" rows="2" id="obs_${uid}" placeholder="Describe la falla..."></textarea>
-                    <label class="form-label text-danger fw-bold mt-2" style="font-size:0.8rem;"><i class="bi bi-camera"></i> Evidencia (Opcional)</label>
-                    <input type="file" class="form-control border-danger form-control-sm" id="foto_${uid}" accept="image/*">
+                <div id="f_${uid}" style="display:none;" class="mt-2.5 p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25 shadow-2xs">
+                    <label class="form-label text-danger fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                        <i class="bi bi-pencil-square"></i> Detalle de la Falla / Observación
+                    </label>
+                    <textarea class="form-control form-control-sm mb-2 border-danger bg-white" rows="2" id="obs_${uid}" 
+                              placeholder="Describe el defecto, anomalía o recomendación..." style="border-radius:8px; font-size:0.8rem;"></textarea>
+                    <label class="form-label text-danger fw-bold mb-1 d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                        <i class="bi bi-camera-fill"></i> Evidencia Fotográfica (Opcional)
+                    </label>
+                    <input type="file" class="form-control form-control-sm border-danger bg-white" id="foto_${uid}" accept="image/*" style="border-radius:8px; font-size:0.75rem;">
                 </div>`;
             } else if (t === 'percent') {
-                html += `<input type="hidden" id="val_${uid}" value="">
+                html += `
+                <input type="hidden" id="val_${uid}" value="">
                 <div class="d-flex flex-wrap gap-1">`;
                 [10,20,30,40,50,60,70,80,90,100].forEach(pct => { 
-                    html += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold pct-btn pct-${uid} flex-grow-1 shadow-sm" style="border-radius:6px; min-width:40px;" onclick="seleccionarPorcentaje('${uid}', ${pct}, this)">${pct}%</button>`; 
+                    html += `<button type="button" class="btn btn-outline-primary btn-sm fw-bold pct-btn pct-${uid} flex-grow-1 shadow-2xs" 
+                                     style="border-radius:6px; min-width:40px; font-size:0.75rem; padding:4px 6px;" 
+                                     onclick="seleccionarPorcentaje('${uid}', ${pct}, this)">${pct}%</button>`; 
                 });
                 html += `</div>`;
             } else if (t === 'text') {
-                html += `<textarea class="form-control border-primary shadow-sm" rows="2" id="txt_${uid}" placeholder="Ingresa el detalle..." style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;"></textarea>`;
+                html += `<textarea class="form-control form-control-sm bg-white border" rows="2" id="txt_${uid}" 
+                                   placeholder="Ingresa los comentarios o medidas..." style="border-radius:8px; text-transform:uppercase; font-size:0.8rem; font-weight:600;"></textarea>`;
             }
             html += `</div>`;
         });
         html += `</div></div>`;
     });
 
-    // Tarjeta Final: Firma
-    html += `<div class="rot-sec" style="background:#fff;border:1px solid #e1e4e8;border-radius:12px;margin-bottom:1rem;overflow:hidden;">
-    <div class="rot-sec-hd" style="background:#f8f9fa;border-bottom:1px solid #e1e4e8;padding:0.75rem 1rem;font-weight:800;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#5865F2;"><i class="bi bi-pen me-1"></i> ${window.DYNAMIC_INSP_SCHEMA.length + 2}. FIRMAS</div>
-    <div style="padding:1rem;">
-            <div class="row g-3">
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-bold" style="font-size:0.75rem;color:#64748b;">Técnico Inspector *</label>
-                    <div class="position-relative">
-                        <input type="text" class="form-control form-control-sm" id="i_tecnico-txt" placeholder="Ej. Juan Pérez" autocomplete="off" oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" onfocus="window._cbFiltrar('i_tecnico')" onblur="window._cbHide('i_tecnico')" required style="text-transform:uppercase;">
-                        <input type="hidden" id="i_tecnico">
-                        <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:20px; text-transform:uppercase; font-size:0.8rem; font-weight:800;"></div>
-                    </div>
-                    <div class="mt-3">
-                        <label class="fw-bold text-primary mb-2" style="font-size:0.8rem;"><i class="bi bi-pen"></i> Firma del Técnico</label>
-                        <canvas id="canvasFirma" class="firma-pad shadow-sm border rounded w-100" style="height: 150px; background:#f8fafc;"></canvas>
-                        <button type="button" class="btn btn-sm btn-outline-danger mt-2 w-100 fw-bold" onclick="limpiarFirmaCanvas('canvasFirma')"><i class="bi bi-eraser"></i> Borrar</button>
-                    </div>
+    // Tarjeta Final: Firma del Técnico Inspector
+    let firmNum = (window.DYNAMIC_INSP_SCHEMA || []).length + 2;
+    html += `
+    <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+            <span class="badge bg-purple bg-opacity-10 text-purple rounded-pill px-2.5 py-1 fw-bold" style="color:#7c3aed; background:rgba(124,58,237,0.1); font-size:0.75rem;">
+                <i class="bi bi-pen-fill me-1"></i> ${firmNum}. FIRMA Y VALIDACIÓN TÉCNICA
+            </span>
+        </div>
+        <div>
+            <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:3px;">Técnico Inspector *</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control form-control-sm bg-white fw-bold" id="i_tecnico-txt" 
+                           placeholder="BUSCAR O INGRESAR TÉCNICO..." autocomplete="off" 
+                           oninput="this.value=this.value.toUpperCase();window._cbFiltrar('i_tecnico')" 
+                           onfocus="window._cbFiltrar('i_tecnico')" 
+                           onblur="window._cbHide('i_tecnico')" required 
+                           style="text-transform:uppercase; border-radius:8px; font-size:0.82rem;">
+                    <input type="hidden" id="i_tecnico">
+                    <div id="i_tecnico-dd" class="cb-dropdown shadow-sm" style="border-radius:10px; font-size:0.82rem;"></div>
                 </div>
+            </div>
+            <div>
+                <label class="form-label fw-bold d-flex align-items-center justify-content-between" style="font-size:0.72rem; color:#475569; text-transform:uppercase; margin-bottom:4px;">
+                    <span><i class="bi bi-pen me-1 text-primary"></i> Trazo de Firma del Inspector</span>
+                    <button type="button" class="btn btn-link p-0 text-danger fw-bold text-decoration-none" style="font-size:0.72rem;" onclick="limpiarFirmaCanvas('canvasFirma')">
+                        <i class="bi bi-eraser me-1"></i> Limpiar firma
+                    </button>
+                </label>
+                <canvas id="canvasFirma" class="firma-pad shadow-2xs border rounded-3 w-100" style="height: 140px; background:#f8fafc; cursor:crosshair;"></canvas>
             </div>
         </div>
     </div>`;
