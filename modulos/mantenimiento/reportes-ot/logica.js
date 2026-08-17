@@ -2531,23 +2531,35 @@ window._rotAgregarItemMat = function() {
     var idx = window._rotMatIdx++;
     var tr = document.createElement('tr');
     tr.id = 'rot-mat-item-' + idx;
-    tr.innerHTML =
-        '<td>' +
-            '<div style="display:flex;gap:4px;align-items:center;">' +
-                '<input type="text" class="form-control form-control-sm rot-mat-item-desc" list="rot-mat-inv-list" placeholder="Artículo…" data-idx="' + idx + '" oninput="window._rotBuscarArtMat(this,' + idx + ')">' +
-                '<button type="button" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0;padding:2px 7px;" ' +
-                    'onclick="window._rotAbrirQR(' + idx + ')" title="Escanear código de barras">' +
-                    '<i class="bi bi-upc-scan"></i>' +
-                '</button>' +
-            '</div>' +
-            '<input type="hidden" class="rot-mat-item-inv-id" data-idx="' + idx + '">' +
-            '<input type="hidden" class="rot-mat-item-stock" data-idx="' + idx + '" value="">' +
-            '<div class="rot-mat-item-stock-lbl" data-idx="' + idx + '" style="font-size:0.71rem;margin-top:2px;display:none;"></div>' +
-        '</td>' +
-        '<td><input type="number" class="form-control form-control-sm rot-mat-item-cant" data-idx="' + idx + '" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(' + idx + ')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm rot-mat-item-cu" data-idx="' + idx + '" value="0" min="0" step="0.01" oninput="window._rotCalcItemMat(' + idx + ')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm rot-mat-item-imp" data-idx="' + idx + '" value="0" readonly></td>' +
-        '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="window._rotQuitarItemMat(' + idx + ')"><i class="bi bi-x"></i></button></td>';
+    tr.innerHTML = `
+        <td style="padding:6px 8px;">
+            <div style="display:flex;gap:4px;align-items:center;">
+                <input type="text" class="form-control form-control-sm rot-mat-item-desc bg-white fw-medium" list="rot-mat-inv-list" placeholder="Buscar artículo…" 
+                    data-idx="${idx}" oninput="window._rotBuscarArtMat(this, ${idx})" style="border-radius:8px; font-size:0.8rem;">
+                <button type="button" class="btn btn-sm btn-light border text-primary shadow-2xs" style="flex-shrink:0; padding:3px 8px; border-radius:8px;" 
+                    onclick="window._rotAbrirQR(${idx})" title="Escanear código de barras o QR">
+                    <i class="bi bi-upc-scan"></i>
+                </button>
+            </div>
+            <input type="hidden" class="rot-mat-item-inv-id" data-idx="${idx}">
+            <input type="hidden" class="rot-mat-item-stock" data-idx="${idx}" value="">
+            <div class="rot-mat-item-stock-lbl" data-idx="${idx}" style="font-size:0.71rem;margin-top:2px;display:none;"></div>
+        </td>
+        <td style="padding:6px 8px; width:75px;">
+            <input type="number" class="form-control form-control-sm rot-mat-item-cant bg-white fw-bold text-center" data-idx="${idx}" value="1" min="0.001" step="0.001" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.8rem;">
+        </td>
+        <td style="padding:6px 8px; width:105px;">
+            <input type="number" class="form-control form-control-sm rot-mat-item-cu bg-white fw-semibold" data-idx="${idx}" value="0" min="0" step="0.01" oninput="window._rotCalcItemMat(${idx})" style="border-radius:8px; font-size:0.8rem;">
+        </td>
+        <td style="padding:6px 8px; width:100px;">
+            <input type="number" class="form-control form-control-sm rot-mat-item-imp bg-light fw-bold text-success" data-idx="${idx}" value="0" readonly style="border-radius:8px; font-size:0.8rem;">
+        </td>
+        <td style="padding:6px 8px; width:38px; text-align:center;">
+            <button type="button" class="btn btn-sm btn-light border-0 text-danger rounded-circle p-1" onclick="window._rotQuitarItemMat(${idx})" title="Eliminar fila">
+                <i class="bi bi-x-lg" style="font-size:0.75rem;"></i>
+            </button>
+        </td>
+    `;
     tbody.appendChild(tr);
 };
 
@@ -2708,6 +2720,7 @@ window.rotGuardarMaterial = function() {
         body: JSON.stringify({
             ticket_ot:    idOt,
             fecha:        fecha || null,
+            tipo_orden:   ((document.getElementById('rot-mat-tipo-orden') || {}).value || 'Orden de Salida'),
             tipo_destino: tipo,
             placa:        placa,
             responsable:  solic,

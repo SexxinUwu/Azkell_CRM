@@ -619,7 +619,7 @@
         <input type="hidden" id="rot-tr-ticket-hid">
 
         <!-- Card 1: Descripción y Personal -->
-        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; overflow: visible !important; position: relative !important; z-index: 50 !important;">
             <div class="mb-3">
                 <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
                     Descripción del Trabajo Realizado (*)
@@ -641,7 +641,7 @@
                         <span style="color:#94a3b8; font-size:.82rem;">Seleccionar técnico(s)...</span>
                     </div>
                     <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:.8rem;"><i class="bi bi-chevron-down"></i></span>
-                    <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; z-index:1300; box-shadow:0 12px 36px rgba(0,0,0,.22); overflow:hidden;">
+                    <div id="rot-ms-dropdown" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; z-index:9999 !important; box-shadow:0 16px 48px rgba(0,0,0,.25); overflow:hidden;">
                         <input type="text" id="rot-ms-search" placeholder="Buscar técnico..." autocomplete="off"
                             oninput="rotMsFiltrar(this.value)"
                             style="width:100%; border:none; border-bottom:1px solid #e2e8f0; background:#f8fafc; color:#1e293b; padding:9px 12px; font-size:.84rem; outline:none;">
@@ -656,7 +656,7 @@
         </div>
 
         <!-- Card 2: Horarios y Costo -->
-        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important; position: relative !important; z-index: 10 !important;">
             <div class="row g-2 mb-2">
                 <div class="col-6">
                     <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">
@@ -710,9 +710,9 @@
             </button>
             <div>
                 <span class="rot-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
-                    <i class="bi bi-box-seam-fill text-success"></i> Salida de Almacén (Repuestos)
+                    <i class="bi bi-box-seam-fill text-success"></i> Nueva Solicitud de Salida
                 </span>
-                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-mat-ot-lbl">Solicitud de piezas y materiales para la OT</small>
+                <small class="text-muted d-block" style="font-size: 0.72rem;" id="rot-mat-ot-lbl">Despacho de piezas y repuestos para la OT</small>
             </div>
         </div>
         <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.rotCerrarSubDrawer('rot-drawer-material')" style="color:var(--subtext);">
@@ -724,43 +724,50 @@
 
         <!-- Card 1: Datos de la Solicitud -->
         <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
-            <div class="row g-2 mb-2">
+            <div class="row g-2 mb-1">
                 <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT (*)</label>
-                    <input type="text" class="form-control form-control-sm fw-bold bg-light" id="rot-mat-ot-vis" readonly style="min-height: 40px; border-radius: 8px;">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT (*)</label>
+                    <input type="text" class="form-control form-control-sm fw-bold bg-light" id="rot-mat-ot-vis" readonly style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                 </div>
                 <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
-                    <input type="date" class="form-control form-control-sm bg-white" id="rot-mat-fecha" style="min-height: 40px; border-radius: 8px;">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
+                    <input type="date" class="form-control form-control-sm bg-white" id="rot-mat-fecha" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                 </div>
                 <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo" style="min-height: 40px; border-radius: 8px;">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo-orden" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
+                        <option value="Orden de Salida">Orden de Salida (Normal)</option>
+                        <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
+                    <select class="form-select form-select-sm fw-bold bg-white" id="rot-mat-tipo" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                         <option value="Vehiculo">Vehículo / Unidad</option>
                         <option value="Personal">Personal / Taller</option>
                     </select>
                 </div>
                 <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
                     <div class="position-relative">
                         <input type="text" id="rot-mat-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
                                placeholder="BUSCAR PLACA…" autocomplete="off"
-                               style="min-height: 40px; border-radius: 8px;"
+                               style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;"
                                oninput="this.value=this.value.toUpperCase();window._cbFiltrar('rot-mat-placa')"
                                onfocus="window._cbFiltrar('rot-mat-placa')"
                                onblur="window._cbHide('rot-mat-placa')">
                         <input type="hidden" id="rot-mat-placa" name="rot-mat-placa">
-                        <div id="rot-mat-placa-dd" class="cb-dropdown"></div>
+                        <div id="rot-mat-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
                     </div>
                 </div>
-                <div class="col-12">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." list="rot-mat-list-personal" autocomplete="off" style="min-height: 40px; border-radius: 8px;">
+                <div class="col-6">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-solicitante" placeholder="Nombre del solicitante..." list="rot-mat-list-personal" autocomplete="off" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                     <datalist id="rot-mat-list-personal"></datalist>
                 </div>
                 <div class="col-12">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-obs" placeholder="Referencia o notas de la salida…" style="min-height: 40px; border-radius: 8px;">
+                    <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
+                    <input type="text" class="form-control form-control-sm bg-white" id="rot-mat-obs" placeholder="Motivo, referencia, notas…" style="min-height: 40px; border-radius: 8px; font-size: 0.82rem;">
                 </div>
             </div>
         </div>

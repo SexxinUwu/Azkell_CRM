@@ -195,24 +195,58 @@
 #moduloSalidas .sal-field-val { width:60%; color:var(--text); font-weight:600; word-break:break-word; }
 
 /* Drawer */
-#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:1059; }
+#salNuevoBackdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1089; }
 #salNuevoBackdrop.open { display:block; }
 #moduloSalidas .sal-drawer {
-    position:fixed; top:auto; bottom:-100vh; right:0; left:0; margin:0 auto;
-    width:650px; max-width:100vw; height:85vh;
-    border-radius:16px 16px 0 0;
-    background:var(--surface); border:1px solid var(--border); border-bottom:none;
-    box-shadow:0 -8px 40px rgba(0,0,0,.18);
-    transition:bottom .3s cubic-bezier(.4,0,.2,1); z-index:1060;
-    display:flex; flex-direction:column; visibility:hidden;
+    position: fixed;
+    bottom: 0 !important;
+    left: 50% !important;
+    top: auto !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(100%);
+    width: 100% !important;
+    max-width: 700px !important;
+    height: 92vh !important;
+    max-height: 92vh !important;
+    background: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-bottom: none !important;
+    border-radius: 28px 28px 0 0 !important;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
+    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 1090 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    visibility: hidden;
+    margin: 0 !important;
 }
-#moduloSalidas .sal-drawer.open { bottom:0; visibility:visible; }
-#moduloSalidas .sal-drawer-hd {
+#moduloSalidas .sal-drawer.open {
+    transform: translateX(-50%) translateY(0) !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+@media (max-width: 767.98px) {
+    #moduloSalidas .sal-drawer {
+        max-width: 100% !important;
+        left: 0 !important;
+        transform: translateY(100%) !important;
+        border-radius: 28px 28px 0 0 !important;
+    }
+    #moduloSalidas .sal-drawer.open {
+        transform: translateY(0) !important;
+    }
+}
+.sal-drawer-hd {
     display:flex; align-items:center; justify-content:space-between;
-    padding:0 1.25rem; height:52px; border-bottom:1px solid var(--border); flex-shrink:0;
+    padding:0 1.25rem; height:54px; border-bottom:1px solid var(--border); flex-shrink:0;
 }
-#moduloSalidas .sal-drawer-title { font-size:.95rem; font-weight:800; color:var(--text); }
-#moduloSalidas .sal-drawer-body { flex:1; overflow-y:auto; padding:1.25rem; }
+.sal-drawer-title { font-size:1.05rem; font-weight:800; color:var(--text); }
+.sal-drawer-body { flex:1; overflow-y:auto; padding:1.25rem; }
+.sal-drawer-footer {
+    padding: .75rem 1.25rem; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: .5rem; background: var(--surface, #fff);
+}
 </style>
 
 <!-- Backdrop -->
@@ -476,125 +510,142 @@
   </div>
   </div> <!-- Cierre del sal-desktop-card -->
 
-  <!-- DRAWER: Nueva Solicitud -->
+  <!-- DRAWER: Nueva Solicitud (MODERNO BENTO) -->
   <div class="sal-drawer" id="sal-drawer-nuevo">
-    <div class="sal-drawer-hd">
-      <span class="sal-drawer-title"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i>Nueva Solicitud</span>
-      <button class="btn btn-sm" onclick="window.salCerrarNuevo()" style="color:var(--subtext)">
+    <div class="sal-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white" style="height: auto; min-height: 54px;">
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center me-1 shadow-2xs" 
+                onclick="window.salCerrarNuevo()" 
+                title="Volver" 
+                style="width: 34px; height: 34px; color: var(--subtext);">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div>
+          <span class="sal-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+            <i class="bi bi-box-seam-fill text-success"></i> Nueva Solicitud de Salida
+          </span>
+          <small class="text-muted d-block" style="font-size: 0.72rem;">Despacho de piezas y repuestos del almacén</small>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.salCerrarNuevo()" style="color:var(--subtext);">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
-    <div class="sal-drawer-body">
-      <div class="row g-2 mb-3">
-        <div class="col-6" id="sal-col-ot">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">N° OT</label>
-          <div class="position-relative">
-            <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm"
-                   placeholder="Buscar N° OT o placa…" autocomplete="off"
-                   style="border-radius:12px;min-height:44px;text-transform:uppercase;"
-                   oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
-                   onfocus="window._cbFiltrar('sal-f-ot')"
-                   onblur="window._cbHide('sal-f-ot')">
-            <input type="hidden" id="sal-f-ot" name="sal-f-ot">
-            <div id="sal-f-ot-dd" class="cb-dropdown"></div>
+
+    <div class="sal-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
+      <!-- Card 1: Datos de la Solicitud -->
+      <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="row g-2 mb-1">
+          <div class="col-6" id="sal-col-ot">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">N° OT</label>
+            <div class="position-relative">
+              <input type="text" id="sal-f-ot-txt" class="form-control form-control-sm bg-white fw-bold"
+                     placeholder="BUSCAR N° OT O PLACA…" autocomplete="off"
+                     style="border-radius: 8px; min-height: 40px; text-transform: uppercase; font-size: 0.82rem;"
+                     oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-ot')"
+                     onfocus="window._cbFiltrar('sal-f-ot')"
+                     onblur="window._cbHide('sal-f-ot')">
+              <input type="hidden" id="sal-f-ot" name="sal-f-ot">
+              <div id="sal-f-ot-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+            </div>
           </div>
-        </div>
-        <div class="col-6">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Fecha *</label>
-          <input type="date" class="form-control form-control-sm" id="sal-f-fecha"
-                 style="border-radius:12px;min-height:44px;">
-        </div>
-        <div class="col-6">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo de Orden *</label>
-          <select class="form-select form-select-sm" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
-                  style="border-radius:12px;min-height:44px;font-weight:700;">
-            <option value="Orden de Salida">Orden de Salida (Normal)</option>
-            <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
-          </select>
-        </div>
-        <div class="col-6" id="sal-col-tipo-destino">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Tipo Destino</label>
-          <select class="form-select form-select-sm" id="sal-f-tipo" onchange="window.salToggleTipo()"
-                  style="border-radius:12px;min-height:44px;">
-            <option value="Vehiculo">Vehículo</option>
-            <option value="Personal">Personal</option>
-          </select>
-        </div>
-        <div class="col-6" id="sal-row-placa">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Placa</label>
-          <div class="position-relative">
-            <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm"
-                   placeholder="Buscar placa…" autocomplete="off"
-                   style="border-radius:12px;min-height:44px;"
-                   oninput="window._cbFiltrar('sal-f-placa')"
-                   onfocus="window._cbFiltrar('sal-f-placa')"
-                   onblur="window._cbHide('sal-f-placa')">
-            <input type="hidden" id="sal-f-placa" name="sal-f-placa">
-            <div id="sal-f-placa-dd" class="cb-dropdown"></div>
+          <div class="col-6">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha de Salida (*)</label>
+            <input type="date" class="form-control form-control-sm bg-white" id="sal-f-fecha"
+                   style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
           </div>
-        </div>
-        <div class="col-12">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Responsable</label>
-          <div class="position-relative">
-            <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm"
-                   placeholder="Nombre del responsable / solicitante"
-                   autocomplete="off" style="border-radius:12px;min-height:44px;"
-                   oninput="window._cbFiltrar('sal-f-responsable')"
-                   onfocus="window._cbFiltrar('sal-f-responsable')"
-                   onblur="window._cbHide('sal-f-responsable')">
-            <input type="hidden" id="sal-f-responsable">
-            <div id="sal-f-responsable-dd" class="cb-dropdown"></div>
+          <div class="col-6">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Orden (*)</label>
+            <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo-orden" onchange="window.salToggleTipoOrden()"
+                    style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+              <option value="Orden de Salida">Orden de Salida (Normal)</option>
+              <option value="Ajuste de Inventario (Resta)">Ajuste de Inventario (Resta)</option>
+            </select>
           </div>
-        </div>
-        <div class="col-12">
-          <label class="form-label fw-bold" style="font-size:.62rem;color:var(--subtext);text-transform:uppercase;letter-spacing:.08em;">Observaciones</label>
-          <input type="text" class="form-control form-control-sm" id="sal-f-obs"
-                 placeholder="Motivo, referencia, notas…"
-                 style="border-radius:12px;min-height:44px;">
+          <div class="col-6" id="sal-col-tipo-destino">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo Destino</label>
+            <select class="form-select form-select-sm fw-bold bg-white" id="sal-f-tipo" onchange="window.salToggleTipo()"
+                    style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+              <option value="Vehiculo">Vehículo / Unidad</option>
+              <option value="Personal">Personal / Taller</option>
+            </select>
+          </div>
+          <div class="col-6" id="sal-row-placa">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa Destino</label>
+            <div class="position-relative">
+              <input type="text" id="sal-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white"
+                     placeholder="BUSCAR PLACA…" autocomplete="off"
+                     style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                     oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sal-f-placa')"
+                     onfocus="window._cbFiltrar('sal-f-placa')"
+                     onblur="window._cbHide('sal-f-placa')">
+              <input type="hidden" id="sal-f-placa" name="sal-f-placa">
+              <div id="sal-f-placa-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Solicitante / Responsable</label>
+            <div class="position-relative">
+              <input type="text" id="sal-f-responsable-txt" class="form-control form-control-sm bg-white"
+                     placeholder="NOMBRE DEL SOLICITANTE..."
+                     autocomplete="off" style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;"
+                     oninput="window._cbFiltrar('sal-f-responsable')"
+                     onfocus="window._cbFiltrar('sal-f-responsable')"
+                     onblur="window._cbHide('sal-f-responsable')">
+              <input type="hidden" id="sal-f-responsable">
+              <div id="sal-f-responsable-dd" class="cb-dropdown shadow-sm" style="border-radius: 10px; font-size: 0.82rem;"></div>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold" style="font-size: 0.74rem; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Observaciones / Motivo</label>
+            <input type="text" class="form-control form-control-sm bg-white" id="sal-f-obs"
+                   placeholder="Motivo, referencia, notas…"
+                   style="border-radius: 8px; min-height: 40px; font-size: 0.82rem;">
+          </div>
         </div>
       </div>
 
-      <hr style="border-color:var(--border);">
-
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="fw-bold" style="font-size:.83rem;color:var(--text);">
-          <i class="bi bi-list-ul me-1"></i>Artículos
-        </span>
-        <button type="button"
-                style="padding:.4rem .9rem;border-radius:12px;border:1.5px solid #5865F2;
-                       background:transparent;color:#5865F2;font-weight:700;font-size:.78rem;cursor:pointer;"
-                onclick="window._salAgregarItem()">
-          <i class="bi bi-plus-lg me-1"></i>Agregar
-        </button>
+      <!-- Card 2: Artículos y Materiales -->
+      <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+          <span class="fw-bold d-flex align-items-center gap-1" style="font-size: 0.76rem; color: #475569; text-transform: uppercase;">
+            <i class="bi bi-list-check text-success"></i> Lista de Artículos / Repuestos:
+          </span>
+          <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size: 0.72rem;" onclick="window._salAgregarItem()">
+            <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
+          </button>
+        </div>
+        <div class="table-responsive rounded-3 border">
+          <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem; min-width: 480px;">
+            <thead style="background: #f8fafc;">
+              <tr>
+                <th style="min-width:200px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Artículo</th>
+                <th style="width:75px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Cant.</th>
+                <th style="width:105px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">P. Unit</th>
+                <th style="width:100px; padding:8px 10px; font-size:.68rem; text-transform:uppercase; font-weight:800; color:#64748b;">Importe</th>
+                <th style="width:38px;"></th>
+              </tr>
+            </thead>
+            <tbody id="sal-items-tbody"></tbody>
+            <tfoot style="background: #f8fafc;">
+              <tr>
+                <td colspan="3" style="text-align:right; font-weight:700; padding:8px 10px; font-size:.82rem; color:#64748b;">Total Solicitud:</td>
+                <td style="font-weight:800; color:#16a34a; font-size:.9rem; padding:8px 10px;" id="sal-items-total">S/. 0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <datalist id="sal-inv-list"></datalist>
       </div>
-      <div style="border-radius:12px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <table class="table table-sm mb-0" style="font-size:.8rem;min-width:480px;">
-          <thead style="background:var(--bg);">
-            <tr>
-              <th style="min-width:220px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--subtext);">Artículo</th>
-              <th style="width:80px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Cantidad</th>
-              <th style="width:110px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Costo Unit.</th>
-              <th style="width:100px;padding:10px 12px;font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--subtext);">Importe</th>
-              <th style="width:38px;"></th>
-            </tr>
-          </thead>
-          <tbody id="sal-items-tbody"></tbody>
-          <tfoot style="background:var(--bg);">
-            <tr>
-              <td colspan="3" style="text-align:right;font-weight:700;padding:10px 12px;font-size:.82rem;color:var(--subtext);">Total:</td>
-              <td style="font-weight:800;color:#16a34a;padding:10px 12px;" id="sal-items-total">S/. 0.00</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <datalist id="sal-inv-list"></datalist>
+    </div>
 
-      <button style="width:100%;margin-top:1rem;border-radius:14px;border:none;background:#5865F2;
-                     color:#fff;font-weight:700;font-size:.9rem;min-height:48px;cursor:pointer;
-                     display:flex;align-items:center;justify-content:center;gap:.4rem;"
-              onclick="window.salGuardarNuevo()">
-        <i class="bi bi-save"></i>Guardar Solicitud
+    <div class="sal-drawer-footer bg-white border-top px-3 py-2 d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-light border fw-bold rounded-3 px-4 py-2" onclick="window.salCerrarNuevo()">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-success fw-bold rounded-3 px-4 py-2 shadow-2xs" onclick="window.salGuardarNuevo()">
+        <i class="bi bi-check-lg me-1"></i> Guardar Solicitud
       </button>
     </div>
   </div>
