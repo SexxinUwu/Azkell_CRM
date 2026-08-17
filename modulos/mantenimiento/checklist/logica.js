@@ -1904,15 +1904,16 @@ window.abrirModalGenerarOTs = async function(id) {
         console.warn('Error al cargar cat_rampas:', e);
     }
 
-    if (selRampa) {
-        let rampaOptions = '<option value="">-- Seleccionar Rampa / Ubicación --</option>';
+    const dlRampas = document.getElementById('gen_lista_rampas');
+    if (dlRampas) {
+        let rampaOptions = '';
         if (window._genOT_Rampas && window._genOT_Rampas.length > 0) {
             window._genOT_Rampas.forEach(rmp => {
                 const nombre = rmp.nombre_rampa || rmp.nombre || rmp.rampa || `Rampa ${rmp.id}`;
                 rampaOptions += `<option value="${nombre}">${nombre}</option>`;
             });
         } else {
-            rampaOptions += `
+            rampaOptions = `
                 <option value="Rampa 1">Rampa 1</option>
                 <option value="Rampa 2">Rampa 2</option>
                 <option value="Rampa 3">Rampa 3</option>
@@ -1922,9 +1923,17 @@ window.abrirModalGenerarOTs = async function(id) {
                 <option value="Auxilio Mecanico">Auxilio Mecánico</option>
             `;
         }
-        selRampa.innerHTML = rampaOptions;
-        if (r.id_rampa && r.id_rampa !== 'En Espera') {
-            selRampa.value = r.id_rampa;
+        dlRampas.innerHTML = rampaOptions;
+    }
+
+    const inputRampa = document.getElementById('gen_id_rampa');
+    if (inputRampa) {
+        if (r.id_rampa && r.id_rampa !== 'En Espera' && r.id_rampa !== 'En Ruta') {
+            inputRampa.value = r.id_rampa;
+        } else if (window._genOT_Rampas && window._genOT_Rampas.length > 0) {
+            inputRampa.value = window._genOT_Rampas[0].nombre_rampa || window._genOT_Rampas[0].nombre || 'Rampa 1';
+        } else {
+            inputRampa.value = 'Rampa 1';
         }
     }
 
@@ -1948,6 +1957,12 @@ window.abrirModalGenerarOTs = async function(id) {
         if (window.dataGlobalConductores && Array.isArray(window.dataGlobalConductores)) {
             window._genOT_Tecnicos = window.dataGlobalConductores.map(c => (c[1] || c.nombre || '').trim()).filter(Boolean);
         }
+    }
+
+    // Actualizar datalist global de personal
+    const dlPersonal = document.getElementById('gen_lista_personal');
+    if (dlPersonal) {
+        dlPersonal.innerHTML = window._genOT_Tecnicos.map(t => `<option value="${t}">${t}</option>`).join('');
     }
 
     // 5. Extraer todas las fallas reportadas
@@ -2117,14 +2132,16 @@ window.ckRenderTarjetasOT = function() {
                             </label>
                         </div>
                         
-                        <!-- Selector individual de Técnico Responsable -->
+                        <!-- Selector individual de Técnico Responsable con Datalist Autocomplete -->
                         <div class="d-flex align-items-center gap-1 ${isChecked ? '' : 'd-none'}" id="tec_wrap_${cIdx}_${f.id}" style="min-width: 200px; max-width: 280px;">
                             <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
-                            <select class="form-select form-select-sm" style="font-size: 0.8rem; min-height: 36px !important; border-radius: 8px !important;"
-                                    onchange="window.ckOnCambiarTecnicoFalla(${cIdx}, '${f.id}', this.value)">
-                                <option value="">Técnico Responsable...</option>
-                                ${tecnicos.map(t => `<option value="${t}" ${t === tecAsignado ? 'selected' : ''}>${t}</option>`).join('')}
-                            </select>
+                            <input type="text" list="gen_lista_personal" 
+                                   class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                                   style="font-size: 0.8rem; min-height: 36px !important; border-radius: 8px !important;"
+                                   placeholder="SELECCIONE TÉCNICO..." 
+                                   value="${tecAsignado}" 
+                                   autocomplete="off" 
+                                   oninput="window.ckOnCambiarTecnicoFalla(${cIdx}, '${f.id}', this.value)">
                         </div>
                     </div>
                 `;
@@ -2168,7 +2185,7 @@ window.ckRenderTarjetasOT = function() {
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label">Supervisor Responsable</label>
-                        <input type="text" class="form-control bg-white" value="${card.supervisor || ''}" placeholder="Ej. HECTOR / Supervisor" oninput="window.ckOnCambiarCampoOT(${cIdx}, 'supervisor', this.value)">
+                        <input type="text" list="gen_lista_personal" class="form-control bg-white text-uppercase fw-bold" value="${card.supervisor || ''}" placeholder="SELECCIONE SUPERVISOR..." autocomplete="off" oninput="window.ckOnCambiarCampoOT(${cIdx}, 'supervisor', this.value)">
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label">Situación (Status Rampa)</label>

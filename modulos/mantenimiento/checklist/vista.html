@@ -856,9 +856,9 @@
             <div class="row g-2 g-md-3">
               <div class="col-12">
                 <label class="form-label">Ubicación / Rampa de Taller (<span class="text-danger">*</span>)</label>
-                <select class="form-select fw-bold border-primary shadow-sm" id="gen_id_rampa" required>
-                  <option value="">Cargando rampas activas...</option>
-                </select>
+                <input type="text" id="gen_id_rampa" list="gen_lista_rampas" class="form-control fw-bold border-primary shadow-sm text-uppercase" placeholder="SELECCIONAR RAMPA / UBICACIÓN..." autocomplete="off" required>
+                <datalist id="gen_lista_rampas"></datalist>
+                <datalist id="gen_lista_personal"></datalist>
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Fecha / Hora Ingreso a Rampa</label>

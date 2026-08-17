@@ -333,6 +333,14 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const situacionVal = item.situacion || 'En atención';
 
+                let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
+                let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
+                let dtIngreso = `${fIngDate} ${fIngTime}:00`;
+
+                let fSalDate = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[0] : null;
+                let fSalTime = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[1].substring(0, 5) : null;
+                let dtSalida = fSalDate && fSalTime ? `${fSalDate} ${fSalTime}:00` : null;
+
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
@@ -358,15 +366,18 @@ module.exports = function (db, broadcast, logAudit) {
                     sistema_afectado: item.subtipo_ot || 'Mecánica',
                     id_reporte_falla: rep.id,
                     folio_reporte: rep.folio,
-                    fecha_ingreso_rampa: fecha_ingreso || new Date(),
-                    fecha_salida_estimada: fecha_salida || null
+                    fecha_ingreso: dtIngreso,
+                    fecha_inicio_ot: dtIngreso,
+                    fecha_hora_salida: dtSalida,
+                    fecha_ingreso_rampa: dtIngreso,
+                    fecha_salida_estimada: dtSalida
                 };
 
                 // Insertar OT en ordenes_trabajo con relación Padre-Hijo y detalles_json
                 const sqlOt = `
                     INSERT INTO ordenes_trabajo (
-                        ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso
-                    ) VALUES (?, ?, ?, 'Abierto', ?, ?, NOW());
+                        ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, fecha_inicio_ot, fecha_hora_salida
+                    ) VALUES (?, ?, ?, 'Abierto', ?, ?, ?, ?, ?);
                 `;
 
                 try {
@@ -375,7 +386,10 @@ module.exports = function (db, broadcast, logAudit) {
                         idOt,
                         placa,
                         JSON.stringify(detallesObj),
-                        creado_por || 'Sistema'
+                        creado_por || 'Sistema',
+                        dtIngreso,
+                        dtIngreso,
+                        dtSalida
                     ]);
 
                     otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, supervisor: supervisorStr, tecnicos: tecnicosStr, id: resOt.insertId });
