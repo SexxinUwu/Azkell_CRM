@@ -2160,17 +2160,17 @@ window.ckRenderTarjetasOT = function() {
 
         html += `
             <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 border-start border-4 ${borderCls}" style="background: ${cardBg} !important; border: 1px solid ${cardBorder} !important; overflow: visible !important;" id="card_ot_${cIdx}">
-                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge ${badgeCls} px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem;">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 border-bottom pb-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                        <span class="badge ${badgeCls} px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs text-nowrap flex-shrink-0" style="font-size: 0.82rem; white-space: nowrap !important;">
                             <i class="bi ${iconCls} me-1"></i> OT #${cIdx + 1} (${unidadNombre})
                         </span>
-                        <span class="fw-bold text-dark" style="font-size: 0.95rem;">Placa: <span class="${isTracto ? 'text-primary' : 'text-warning-emphasis'}">${card.placa || 'Sin Placa'}</span></span>
-                        ${metricaBadge}
+                        <span class="fw-bold text-dark text-nowrap flex-shrink-0" style="font-size: 0.92rem; white-space: nowrap !important;">Placa: <span class="${isTracto ? 'text-primary' : 'text-warning-emphasis'}">${card.placa || 'Sin Placa'}</span></span>
+                        <div class="text-nowrap flex-shrink-0">${metricaBadge}</div>
                     </div>
                     ${window._genOT_Cards.length > 1 ? `
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-2 py-1" onclick="window.ckEliminarTarjetaOT(${cIdx})" title="Eliminar esta OT">
-                            <i class="bi bi-trash me-1"></i> Quitar OT
+                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-bold text-nowrap flex-shrink-0 d-flex align-items-center gap-1 shadow-2xs" style="white-space: nowrap !important; font-size: 0.78rem;" onclick="window.ckEliminarTarjetaOT(${cIdx})" title="Eliminar esta OT">
+                            <i class="bi bi-trash"></i> <span>Quitar OT</span>
                         </button>
                     ` : ''}
                 </div>
