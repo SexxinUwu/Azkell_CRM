@@ -3557,3 +3557,15 @@ html, body { width: 100vw !important; max-width: 100vw !important; margin: 0 !im
 
 /* Fix btn-reload focus ring */
 .btn-reload-cache:focus, .btn-reload-cache:active, .btn-outline-secondary:focus, .btn-outline-secondary:active { box-shadow: none !important; outline: none !important; }
+
+/* ================================================================
+   DRAWERS & SUB-DRAWERS GLOBAL SAFETY RULES (ERP)
+   ================================================================ */
+.rot-drawer:not(.open),
+.rot-sub-drawer:not(.open),
+.sr-drawer-global:not(.open),
+#drawerInspeccion:not(.open) {
+    display: none !important;
+    visibility: hidden !important;
+    transform: translateY(100%) !important;
+}

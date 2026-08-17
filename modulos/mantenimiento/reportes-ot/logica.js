@@ -2224,7 +2224,11 @@ window.rotGuardarTrabajo = function() {
     .catch(function() { if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al guardar trabajo', 'danger'); });
 };
 
-// ── Multiselect Personal ──────────────────────────────────────────────────
+// ── Multiselect Personal (Agregar/Editar Trabajo) ──────────────────────────
+window._rotSeleccionados = [];
+window._rotPersonalLista = [];
+window._rotPersonalDatos = {};
+
 window.rotMsInit = function(valorActual) {
     window._rotSeleccionados = valorActual ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean) : [];
     window.rotMsRenderBox();
@@ -2232,9 +2236,19 @@ window.rotMsInit = function(valorActual) {
     var s = document.getElementById('rot-ms-search'); if (s) s.value = '';
     var cnt = document.getElementById('rot-ms-count'); if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
 
-    var doRender = function() { window.rotMsRenderOptions(''); window.rotCalcularCostoAuto(); };
-    window._rotPersonalDatos = {};
-    window._rotPersonalLista = [];
+    // Cargar inmediatamente desde cache si existe para renderizado instantáneo
+    var listaInicial = [];
+    if (window._rotPersonalItems && window._rotPersonalItems.length) {
+        listaInicial = window._rotPersonalItems.map(function(x){ return x.value || x.label || x; });
+    } else if (window.dataGlobalConductores && window.dataGlobalConductores.length) {
+        listaInicial = window.dataGlobalConductores.map(function(c){ return (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || ''); }).filter(Boolean);
+    }
+    if (listaInicial.length) {
+        window._rotPersonalLista = Array.from(new Set(listaInicial)).sort();
+        window.rotMsRenderOptions('');
+    }
+
+    // Refrescar lista completa desde el servidor
     Promise.all([
         fetch('/api/taller-personal').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
         fetch('/api/conductores').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
@@ -2255,17 +2269,24 @@ window.rotMsInit = function(valorActual) {
             var n = (p.nombre_completo || p.nombre || '').trim();
             if (n && !nombresSet[n.toUpperCase()]) {
                 nombresSet[n.toUpperCase()] = true;
-                window._rotPersonalDatos[n] = 0;
+                window._rotPersonalDatos[n] = window._rotPersonalDatos[n] || 0;
                 lista.push(n);
             }
         });
-        window._rotPersonalLista = lista.sort();
-        doRender();
+        if (lista.length) {
+            window._rotPersonalLista = lista.sort();
+        }
+        window.rotMsRenderOptions('');
+        window.rotCalcularCostoAuto();
     });
 };
+
 window.rotCalcularCostoAuto = function() {
-    var fIni = document.getElementById('rot-tr-fecha-ini').value;
-    var fFin = document.getElementById('rot-tr-fecha-fin').value;
+    var fiEl = document.getElementById('rot-tr-fecha-ini');
+    var ffEl = document.getElementById('rot-tr-fecha-fin');
+    if (!fiEl || !ffEl) return;
+    var fIni = fiEl.value;
+    var fFin = ffEl.value;
     if (!fIni || !fFin) return;
     var inicio = new Date(fIni); var fin = new Date(fFin);
     if (fin <= inicio) return;
@@ -2294,55 +2315,117 @@ window.rotCalcularCostoAuto = function() {
     window._rotSeleccionados.forEach(function(n) { costoHoraTotal += window._rotPersonalDatos[n] || 0; });
     var total = (minutosNetos / 60) * costoHoraTotal;
     var costoInput = document.getElementById('rot-tr-costo');
-    if (costoInput) costoInput.value = total.toFixed(2);
+    if (costoInput && (!costoInput.value || parseFloat(costoInput.value) === 0)) costoInput.value = total.toFixed(2);
 };
+
 window.rotMsToggle = function() {
-    var dd = document.getElementById('rot-ms-dropdown'); var box = document.getElementById('rot-ms-box');
+    var dd = document.getElementById('rot-ms-dropdown');
+    var box = document.getElementById('rot-ms-box');
     if (!dd) return;
     var isOpen = dd.style.display !== 'none';
-    if (isOpen) { dd.style.display = 'none'; if (box) box.style.borderColor = ''; }
-    else { dd.style.display = 'block'; if (box) box.style.borderColor = 'var(--primary, #5865F2)'; var s = document.getElementById('rot-ms-search'); if (s) { s.value = ''; s.focus(); } window.rotMsRenderOptions(''); }
+    if (isOpen) {
+        dd.style.display = 'none';
+        if (box) box.style.borderColor = '#cbd5e1';
+    } else {
+        dd.style.display = 'block';
+        if (box) box.style.borderColor = '#3b82f6';
+        var s = document.getElementById('rot-ms-search');
+        if (s) { s.value = ''; s.focus(); }
+        window.rotMsRenderOptions('');
+    }
 };
+
 window.rotMsFiltrar = function(q) { window.rotMsRenderOptions(q || ''); };
+
 window.rotMsRenderOptions = function(query) {
-    var cont = document.getElementById('rot-ms-options'); if (!cont) return;
-    var q = query.toLowerCase();
+    var cont = document.getElementById('rot-ms-options');
+    if (!cont) return;
+    var q = (query || '').toLowerCase();
     var html = '';
-    window._rotPersonalLista.forEach(function(n) {
+    var lista = window._rotPersonalLista || [];
+    var count = 0;
+    lista.forEach(function(n) {
         if (q && n.toLowerCase().indexOf(q) === -1) return;
+        count++;
         var chk = window._rotSeleccionados.indexOf(n) !== -1;
-        var bg = chk ? 'var(--bg-active, rgba(88,101,242,0.1))' : 'transparent';
-        var fw = chk ? '600' : '400';
-        html += '<div onclick="window.rotMsToggleItem(\'' + window.rotEscHtml(n).replace(/'/g, "\\'") + '\')" style="padding:6px 12px; cursor:pointer; font-size:.82rem; background:'+bg+'; font-weight:'+fw+'; display:flex; align-items:center; transition:background .15s;">' +
-            '<div style="width:16px; height:16px; border:1px solid '+(chk?'var(--primary,#5865F2)':'var(--subtext)')+'; border-radius:3px; margin-right:8px; display:flex; align-items:center; justify-content:center; background:'+(chk?'var(--primary,#5865F2)':'transparent')+'">' +
-            (chk?'<i class="bi bi-check2" style="color:#fff;font-size:.7rem;"></i>':'') + '</div>' + n + '</div>';
+        var bg = chk ? '#eff6ff' : 'transparent';
+        var fw = chk ? '700' : '500';
+        var nEsc = window.rotEscHtml(n).replace(/'/g, "\\'");
+        html += `
+            <div onclick="window.rotMsToggleItem('${nEsc}')" 
+                 style="padding:8px 12px; cursor:pointer; font-size:.82rem; background:${bg}; font-weight:${fw}; display:flex; align-items:center; justify-content:space-between; transition:background .15s; border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:18px; height:18px; border:1.5px solid ${chk ? '#2563eb' : '#94a3b8'}; border-radius:4px; display:flex; align-items:center; justify-content:center; background:${chk ? '#2563eb' : 'transparent'}; flex-shrink:0;">
+                        ${chk ? '<i class="bi bi-check-lg" style="color:#fff; font-size:.75rem;"></i>' : ''}
+                    </div>
+                    <span style="color:#1e293b; text-transform:uppercase;">${window.rotEscHtml(n)}</span>
+                </div>
+                ${chk ? '<span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-0" style="font-size:0.65rem;">Asignado</span>' : ''}
+            </div>
+        `;
     });
-    if (!html) html = '<div style="padding:8px 12px; font-size:.8rem; color:var(--subtext); text-align:center;">No hay resultados</div>';
+    if (!count) {
+        html = '<div style="padding:16px 12px; font-size:.8rem; color:#94a3b8; text-align:center;"><i class="bi bi-person-x fs-5 d-block mb-1"></i>No se encontraron técnicos</div>';
+    }
     cont.innerHTML = html;
 };
+
 window.rotMsToggleItem = function(n) {
     var idx = window._rotSeleccionados.indexOf(n);
-    if (idx === -1) window._rotSeleccionados.push(n); else window._rotSeleccionados.splice(idx,1);
-    window.rotMsRenderOptions(document.getElementById('rot-ms-search') ? document.getElementById('rot-ms-search').value : '');
+    if (idx === -1) {
+        window._rotSeleccionados.push(n);
+    } else {
+        window._rotSeleccionados.splice(idx, 1);
+    }
+    var searchVal = document.getElementById('rot-ms-search') ? document.getElementById('rot-ms-search').value : '';
+    window.rotMsRenderOptions(searchVal);
     window.rotMsRenderBox();
     window.rotCalcularCostoAuto();
 };
-window.rotMsLimpiar = function() { window._rotSeleccionados = []; window.rotMsRenderOptions(''); window.rotMsRenderBox(); window.rotCalcularCostoAuto(); };
+
+window.rotMsLimpiar = function() {
+    window._rotSeleccionados = [];
+    window.rotMsRenderOptions('');
+    window.rotMsRenderBox();
+    window.rotCalcularCostoAuto();
+};
+
 window.rotMsRenderBox = function() {
-    var box = document.getElementById('rot-ms-box'); if (!box) return;
-    var h = document.getElementById('rot-tr-personal'); if (h) h.value = window._rotSeleccionados.join(',');
-    var cnt = document.getElementById('rot-ms-count'); if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+    var box = document.getElementById('rot-ms-box');
+    if (!box) return;
+    var h = document.getElementById('rot-tr-personal');
+    if (h) h.value = window._rotSeleccionados.join(', ');
+    var cnt = document.getElementById('rot-ms-count');
+    if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
+    
     if (window._rotSeleccionados.length === 0) {
-        box.innerHTML = '<span style="color:var(--subtext); font-size:.85rem;">Selecciona técnico(s)...</span>';
+        box.innerHTML = '<span style="color:#94a3b8; font-size:.82rem;">Seleccionar técnico(s)...</span>';
     } else {
         var html = '';
         window._rotSeleccionados.forEach(function(n) {
-            html += '<span style="background:var(--primary, #5865F2); color:#fff; padding:2px 6px; border-radius:6px; font-size:.72rem; display:flex; align-items:center; gap:4px;">' +
-                window.rotEscHtml(n) + '<i class="bi bi-x" onclick="event.stopPropagation(); window.rotMsToggleItem(\'' + window.rotEscHtml(n).replace(/'/g, "\\'") + '\')" style="cursor:pointer; font-size:.85rem; opacity:.8;"></i></span>';
+            var nEsc = window.rotEscHtml(n).replace(/'/g, "\\'");
+            html += `
+                <span class="badge bg-light text-dark border d-inline-flex align-items-center gap-1 text-uppercase fw-bold shadow-2xs" 
+                      style="font-size:0.72rem; padding:3px 8px; border-radius:6px;">
+                    <i class="bi bi-person-fill text-secondary"></i> ${window.rotEscHtml(n)}
+                    <i class="bi bi-x-lg text-danger ms-1" onclick="event.stopPropagation(); window.rotMsToggleItem('${nEsc}')" style="cursor:pointer; font-size:.7rem;"></i>
+                </span>
+            `;
         });
         box.innerHTML = html;
     }
 };
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    var wrapper = document.getElementById('rot-ms-wrapper');
+    var dd = document.getElementById('rot-ms-dropdown');
+    if (wrapper && dd && dd.style.display !== 'none' && !wrapper.contains(e.target)) {
+        dd.style.display = 'none';
+        var box = document.getElementById('rot-ms-box');
+        if (box) box.style.borderColor = '#cbd5e1';
+    }
+});
 
 // ── Eliminar Trabajo ──────────────────────────────────────────────
 window.rotEliminarTrabajo = function() {
@@ -2684,147 +2767,7 @@ window.rotCerrarSubDrawer = function(drawerId) {
     if (d) d.classList.remove('open');
 };
 
-// ── Multiselect Personal (Agregar/Editar Trabajo) ────────────────
-window._rotPersonalLista = window._rotPersonalLista || [];
-window._rotSeleccionados = window._rotSeleccionados || [];
 
-function rotMsInit(valorActual) {
-    window._rotSeleccionados = valorActual
-        ? valorActual.split(',').map(function(n){ return n.trim(); }).filter(Boolean)
-        : [];
-    rotMsRenderBox();
-    var dd = document.getElementById('rot-ms-dropdown');
-    if (dd) dd.style.display = 'none';
-    var s = document.getElementById('rot-ms-search');
-    if (s) s.value = '';
-    var cnt = document.getElementById('rot-ms-count');
-    if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
-    var hidden = document.getElementById('rot-tr-personal');
-    if (hidden) hidden.value = window._rotSeleccionados.join(', ');
-
-    var doRender = function() { rotMsRenderOptions(''); };
-    // Siempre recargar para obtener lista completa (conductores + personal taller)
-    window._rotPersonalLista = [];
-    Promise.all([
-        fetch('/api/conductores').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
-        fetch('/api/taller-personal').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
-    ]).then(function(results) {
-        var conductores = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
-        var tallerPers  = Array.isArray(results[1]) ? results[1] : [];
-        var nombresSet = {};
-        var lista = [];
-        conductores.forEach(function(p) {
-            var n = (p.nombre_completo || p.nombre || '').trim();
-            if (n && !nombresSet[n.toUpperCase()]) {
-                nombresSet[n.toUpperCase()] = true;
-                lista.push(n);
-            }
-        });
-        tallerPers.forEach(function(p) {
-            var n = (p.nombre || '').trim();
-            if (n && !nombresSet[n.toUpperCase()]) {
-                nombresSet[n.toUpperCase()] = true;
-                lista.push(n);
-            }
-        });
-        window._rotPersonalLista = lista.sort();
-        doRender();
-    });
-}
-
-window.rotMsToggle = function() {
-    var dd = document.getElementById('rot-ms-dropdown');
-    var box = document.getElementById('rot-ms-box');
-    if (!dd) return;
-    var isOpen = dd.style.display !== 'none';
-    if (isOpen) {
-        dd.style.display = 'none';
-        if (box) box.style.borderColor = '';
-    } else {
-        dd.style.display = 'block';
-        if (box) box.style.borderColor = 'var(--primary, #5865F2)';
-        var search = document.getElementById('rot-ms-search');
-        if (search) { search.value = ''; search.focus(); }
-        rotMsRenderOptions('');
-    }
-};
-
-window.rotMsFiltrar = function(query) { rotMsRenderOptions(query || ''); };
-
-function rotMsRenderOptions(query) {
-    var container = document.getElementById('rot-ms-options');
-    if (!container) return;
-    var q = (query || '').toLowerCase();
-    var filtrados = window._rotPersonalLista.filter(function(n) {
-        return !q || n.toLowerCase().indexOf(q) !== -1;
-    });
-    if (filtrados.length === 0) {
-        container.innerHTML = '<div style="padding:10px 14px; color:var(--subtext); font-size:0.83rem; text-align:center;">Sin resultados</div>';
-        return;
-    }
-    container.innerHTML = filtrados.map(function(n) {
-        var checked = window._rotSeleccionados.indexOf(n) !== -1;
-        var nEsc = n.replace(/'/g, "\\'");
-        return '<label style="display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:0.85rem; color:var(--text);" '
-            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
-            + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
-            + 'onclick="event.stopPropagation(); rotMsToggleItem(\'' + nEsc + '\')" '
-            + 'style="accent-color:var(--primary, #5865F2); width:14px; height:14px; cursor:pointer; flex-shrink:0;">'
-            + n + '</label>';
-    }).join('');
-}
-
-window.rotMsToggleItem = function(nombre) {
-    var idx = window._rotSeleccionados.indexOf(nombre);
-    if (idx === -1) window._rotSeleccionados.push(nombre);
-    else window._rotSeleccionados.splice(idx, 1);
-    rotMsRenderBox();
-    rotMsRenderOptions((document.getElementById('rot-ms-search') || {}).value || '');
-    var cnt = document.getElementById('rot-ms-count');
-    if (cnt) cnt.textContent = window._rotSeleccionados.length + ' seleccionados';
-    var hidden = document.getElementById('rot-tr-personal');
-    if (hidden) hidden.value = window._rotSeleccionados.join(', ');
-};
-
-window.rotMsLimpiar = function() {
-    window._rotSeleccionados = [];
-    rotMsRenderBox();
-    rotMsRenderOptions('');
-    var cnt = document.getElementById('rot-ms-count');
-    if (cnt) cnt.textContent = '0 seleccionados';
-    var hidden = document.getElementById('rot-tr-personal');
-    if (hidden) hidden.value = '';
-};
-
-function rotMsRenderBox() {
-    var box = document.getElementById('rot-ms-box');
-    if (!box) return;
-    var sel = window._rotSeleccionados;
-    if (sel.length === 0) {
-        box.innerHTML = '<span style="color:var(--subtext); font-size:0.85rem;">Selecciona técnico(s)...</span>';
-    } else {
-        box.innerHTML = sel.map(function(n) {
-            var nEsc = n.replace(/'/g, "\\'");
-            return '<span style="display:inline-flex; align-items:center; gap:4px; background:var(--primary, #5865F2); color:#fff; padding:3px 8px 3px 10px; border-radius:6px; font-size:0.76rem; font-weight:600;">'
-                + n
-                + '<span style="cursor:pointer; opacity:0.8; font-size:1rem; line-height:1;" '
-                + 'onmousedown="event.stopPropagation(); event.preventDefault(); rotMsToggleItem(\'' + nEsc + '\')">&times;</span>'
-                + '</span>';
-        }).join('');
-    }
-}
-
-window._rotMsOutsideClick = function(e) {
-    var wrapper = document.getElementById('rot-ms-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        var dd = document.getElementById('rot-ms-dropdown');
-        var box = document.getElementById('rot-ms-box');
-        if (dd) dd.style.display = 'none';
-        if (box) box.style.borderColor = '';
-    }
-};
-document.removeEventListener('click', window._rotMsOutsideClick);
-document.addEventListener('click', window._rotMsOutsideClick);
 
 
 // ── Render sección Backlog ────────────────────────────────────────
