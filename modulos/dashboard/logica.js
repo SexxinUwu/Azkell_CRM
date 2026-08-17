@@ -268,16 +268,14 @@ window.initGraficoInspDash = function() {
     });
 };
 
-window.procesarInspeccionesParaDashboard = async function() {
-    // Si no hay datos de placas, reintentar
-    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
-        setTimeout(procesarInspeccionesParaDashboard, 600);
-        return;
+window.obtenerInspeccionesGlobales = async function() {
+    if (window.dataGlobalInspecciones && window.dataGlobalInspecciones.length > 0) {
+        return window.dataGlobalInspecciones;
     }
-
-    // Si no hay datos de inspecciones en caché, fetchear del API directamente
-    let inspData = window.dataGlobalInspecciones;
-    if (!inspData || inspData.length === 0) {
+    if (window._peticionInspeccionesInFlight) {
+        return await window._peticionInspeccionesInFlight;
+    }
+    window._peticionInspeccionesInFlight = (async () => {
         try {
             const res = await fetch('/api/script/obtenerDatosInspecciones', {
                 method: 'POST',
@@ -286,13 +284,27 @@ window.procesarInspeccionesParaDashboard = async function() {
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
-            inspData = json.data || [];
-            window.dataGlobalInspecciones = inspData; // guardar para otros módulos
+            const data = json.data || [];
+            window.dataGlobalInspecciones = data;
+            return data;
         } catch(e) {
-            console.warn('Dashboard: no se pudo cargar inspecciones:', e);
-            return;
+            console.warn('Dashboard: error cargando inspecciones:', e);
+            return [];
+        } finally {
+            window._peticionInspeccionesInFlight = null;
         }
+    })();
+    return await window._peticionInspeccionesInFlight;
+};
+
+window.procesarInspeccionesParaDashboard = async function() {
+    // Si no hay datos de placas, reintentar
+    if (!window.dataGlobalPlacas || window.dataGlobalPlacas.length === 0) {
+        setTimeout(procesarInspeccionesParaDashboard, 600);
+        return;
     }
+
+    let inspData = await window.obtenerInspeccionesGlobales();
 
     let hoy = new Date(); hoy.setHours(0,0,0,0);
     let vigentes = 0, vencidas = 0;
@@ -475,23 +487,8 @@ window.renderKpiMetrics = async function() {
     }
 
     // Cargar inspecciones si no hay en caché
-    var inspData = window.dataGlobalInspecciones;
-    if (!inspData || inspData.length === 0) {
-        try {
-            var res = await fetch('/api/script/obtenerDatosInspecciones', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            var json = await res.json();
-            inspData = json.data || [];
-            window.dataGlobalInspecciones = inspData;
-        } catch(e) {
-            console.warn('KPI dashboard: error cargando inspecciones', e);
-            return;
-        }
-    }
+    // Cargar inspecciones reutilizando la caché / promesa única
+    var inspData = await window.obtenerInspeccionesGlobales();
 
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var inspecciones = (inspData || []).filter(function(i) { return i.estado !== 'Eliminada' && i.tipo_inspeccion !== 'Solo Frenos'; });
