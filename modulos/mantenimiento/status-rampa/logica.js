@@ -168,23 +168,11 @@ function srPoblarPlacas() {
 
 // ── Personal / Supervisor ────────────────────────────────────────
 function srPoblarPersonal() {
-    fetch('/api/conductores')
-        .then(function(r) { return r.ok ? r.json() : []; })
-        .then(function(d) {
-            var lista = Array.isArray(d) ? d : (d.data || []);
-            var nombres = lista.map(function(p) {
-                return (p.nombre_completo || p.nombre || (p[1] ? p[1] + ' ' + (p[2] || '') : '')).trim();
-            }).filter(Boolean).sort();
-            window._srDropData['sr-ot-supervisor-drop'] = nombres;
-            var drop = document.getElementById('sr-ot-supervisor-drop');
-            if (drop) {
-                drop.innerHTML = nombres.map(function(n) {
-                    var nEsc = n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                    return '<div class="sr-drop-item" onmousedown="srSeleccionarDrop(\'sr-ot-supervisor-drop\',\'' + n.replace(/'/g,"\\'") + '\')">' + nEsc + '</div>';
-                }).join('');
-            }
-        })
-        .catch(function() {});
+    window.srCargarPersonal().then(function(items) {
+        if (typeof window._cbInit === 'function' && items && items.length) {
+            window._cbInit('sr-f-conductor', items, 'SELECCIONE CHOFER...');
+        }
+    });
 }
 
 // ── Multiselect Personal Técnico (Agregar Trabajo) ────────────────
@@ -366,7 +354,7 @@ function srRenderTabla() {
     rampas.forEach(function(rampaObj, idx) {
         var rampaId   = rampaObj.id;
         var rampaNom  = rampaObj.nombre_rampa || ('Rampa ' + rampaId);
-        var color     = SR_COLORES[idx % SR_COLORES.length];
+        var color     = rampaObj.color || '#ef4444';
         var entradas  = window.srEntradas.filter(function(e) { 
             var rStr = String(e.rampa || '').trim().toLowerCase();
             var nomLower = String(rampaNom || '').trim().toLowerCase();
@@ -391,7 +379,7 @@ function srRenderTabla() {
                 htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important;">' +
                                   '<div class="d-flex align-items-center justify-content-between">' +
                                       '<div class="d-flex align-items-center gap-3">' +
-                                          '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:#10b981;font-size:1.1rem;">' + (idx+1) + '</div>' +
+                                          '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
                                           '<div>' +
                                               '<div class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</div>' +
                                               '<div style="font-size:0.75rem; color:#059669; font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:0.4rem;"></i>Libre & Disponible</div>' +
@@ -460,49 +448,27 @@ function srRenderTabla() {
 
             // Mobile Card
             var badgeSit = srBadgeSituacion(e.situacion, true);
-            var kmStr = e.km ? 'KM: ' + Number(e.km).toLocaleString('en-US') : 'KM: -';
-            var fechaInStr = (e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '-') + (e.horaIngreso ? ' • ' + e.horaIngreso : '');
-            var fechaOutStr = (e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '-') + (e.horaSalida ? ' • ' + e.horaSalida : '');
-            
-            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="background:var(--surface); border-radius:1rem; border:1px solid var(--border)!important; cursor:pointer; flex-shrink:0!important; min-height: fit-content!important;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
-                '<div class="d-flex align-items-center justify-content-between mb-2">' +
-                    '<div class="d-flex align-items-center gap-2">' +
-                        '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:40px;height:40px;background:' + color + ';font-size:1.1rem;">' + (idx+1) + '</div>' +
-                        '<div class="d-flex align-items-baseline gap-2">' +
-                            '<span class="fw-bold text-dark" style="font-size:0.95rem;">' + _srEsc(rampaNom) + '</span>' +
-                            '<span class="fw-bold" style="color:#2563eb; font-size:0.95rem;">' + _srEsc(e.placa || '') + '</span>' +
-                        '</div>' +
-                    '</div>' +
-                    badgeSit +
-                '</div>' +
-                '<div class="text-muted mb-3" style="font-size:0.8rem; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">' +
-                    _srEsc(e.obs || 'Sin observaciones') +
-                '</div>' +
-                '<div class="d-flex gap-2 mb-3">' +
-                    '<div class="flex-fill rounded-3 p-2" style="background:#f8fafc; border:1px solid #f1f5f9;">' +
-                        '<div class="text-success fw-bold d-flex align-items-center mb-1" style="font-size:0.65rem; letter-spacing:0.05em;"><i class="bi bi-box-arrow-in-right me-1"></i>ENTRADA</div>' +
-                        '<div class="text-dark fw-bold" style="font-size:0.75rem;">' + fechaInStr + '</div>' +
-                    '</div>' +
-                    '<div class="flex-fill rounded-3 p-2" style="background:#f8fafc; border:1px solid #f1f5f9;">' +
-                        '<div class="text-danger fw-bold d-flex align-items-center mb-1" style="font-size:0.65rem; letter-spacing:0.05em;"><i class="bi bi-box-arrow-right me-1"></i>SALIDA (EST.)</div>' +
-                        '<div class="text-dark fw-bold" style="font-size:0.75rem;">' + fechaOutStr + '</div>' +
-                    '</div>' +
-                    '<div class="d-flex align-items-center text-muted"><i class="bi bi-chevron-right"></i></div>' +
-                '</div>' +
-                '<div class="d-flex justify-content-between align-items-center border-top pt-2 mt-1">' +
-                    '<div class="text-muted" style="font-size:0.75rem;">' + kmStr + '</div>' +
-                    '<div class="fw-bold" style="color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:1rem; font-size:0.75rem;"><i class="bi bi-clock me-1"></i>' + srCalcHorasTaller(e) + '</div>' +
-                '</div>' +
-            '</div>';
+            htmlMobile += '<div class="sr-mobile-card p-3 border-0 shadow-sm flex-shrink-0" style="border-radius:1rem; border:1px solid var(--border)!important; flex-shrink:0!important; min-height:fit-content!important; cursor:pointer;" onclick="window.srAbrirDetalle(' + e._id + ')">' +
+                              '<div class="d-flex align-items-center justify-content-between mb-2">' +
+                                  '<div class="d-flex align-items-center gap-2">' +
+                                      '<div class="rounded-circle text-white d-flex justify-content-center align-items-center fw-bold" style="width:36px;height:36px;background:' + color + ';font-size:1rem;">' + (idx+1) + '</div>' +
+                                      '<div>' +
+                                          '<div class="fw-bold text-dark" style="font-size:1.05rem;line-height:1.1;">' + (e.placa || '—') + '</div>' +
+                                          '<div style="font-size:0.75rem; color:var(--subtext);">' + _srEsc(rampaNom) + '</div>' +
+                                      '</div>' +
+                                  '</div>' +
+                                  badgeSit +
+                              '</div>' +
+                              '<div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2" style="font-size:0.78rem; color:var(--subtext);">' +
+                                  '<span><i class="bi bi-clock me-1"></i>Ingreso: ' + (e.horaIngreso || '—') + '</span>' +
+                                  '<span class="fw-bold text-primary">' + srCalcHorasTaller(e) + '</span>' +
+                              '</div>' +
+                          '</div>';
         });
     });
 
-    if (!html) {
-        html = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</td></tr>';
-        htmlMobile = '<div style="text-align:center;padding:2rem;color:var(--subtext);font-size:0.85rem;">Sin resultados.</div>';
-    }
-    if (tbody) tbody.innerHTML = html;
-    if (gridMobile) gridMobile.innerHTML = htmlMobile;
+    if (tbody) tbody.innerHTML = html || '<tr><td colspan="10" class="text-center py-4 text-muted">No se encontraron registros</td></tr>';
+    if (gridMobile) gridMobile.innerHTML = htmlMobile || '<div class="text-center py-4 text-muted">No se encontraron registros</div>';
 }
 
 // ── Buscador ─────────────────────────────────────────────────────
@@ -523,7 +489,10 @@ window.srBuscar = function() {
 
 // ── Panel detalle ────────────────────────────────────────────────
 window.srAbrirDetalle = function(id) {
-    var e = window.srEntradas.find(function(x) { return x._id === id; });
+    var e = (window.srEntradas || []).find(function(x) { return x._id === id; });
+    if (!e && window.srData) {
+        e = window.srData.find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
+    }
     if (!e) return;
 
     window.srDetalleId = id;
@@ -538,175 +507,350 @@ window.srAbrirDetalle = function(id) {
     if (bd) bd.classList.add('open');
 
     var rampaIdx = window.srCatRampas.findIndex(function(r) { return r.id === e.rampa; });
-    var color = SR_COLORES[(rampaIdx >= 0 ? rampaIdx : e.rampa - 1) % SR_COLORES.length];
     var rampaDetObj = rampaIdx >= 0 ? window.srCatRampas[rampaIdx] : null;
-    var rampaNomDet = rampaDetObj ? rampaDetObj.nombre_rampa : ('Rampa ' + e.rampa);
+    var rampaNomDet = rampaDetObj ? (rampaDetObj.nombre_rampa || rampaDetObj.descripcion || 'Rampa ' + e.rampa) : ('Rampa ' + e.rampa);
+    var rNum = (rampaIdx >= 0 ? (rampaIdx + 1) : e.rampa);
+    var rampaCol = (rampaDetObj && rampaDetObj.color) ? rampaDetObj.color : '#ef4444';
 
-    // Horas: entre ingreso y salida estimada (o hasta ahora si no hay salida)
-    var horasTexto = '';
-    if (e.fechaIngreso && e.horaIngreso) {
-        var entrada = new Date(e.fechaIngreso + 'T' + e.horaIngreso);
-        var referencia = (e.fechaSalida && e.horaSalida)
-            ? new Date(e.fechaSalida + 'T' + e.horaSalida)
-            : new Date();
-        var diffH = Math.round((referencia - entrada) / 36e5);
-        var label = (e.fechaSalida && e.horaSalida) ? ' h estimadas' : ' h en taller';
-        horasTexto = '<span style="font-size:0.78rem;color:var(--subtext);"><i class="bi bi-clock me-1"></i>' + diffH + label + '</span>';
-    }
-
-    var otsPlaca = window.srOtData.filter(function(o) {
-        if (o.id_rampa) return String(o.id_rampa) === String(e._id);
-        return (o.placa || '').toUpperCase() === e.placa.toUpperCase();
-    });
-
-    var html = '';
-    
-    // Header (Hero)
-    var badgeSit = srBadgeSituacion(e.situacion, true).replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill').replace(/padding:[^;]*;/g, '').replace(/font-size:[^;]*;/g, 'font-size:0.65rem; padding: 2px 8px; font-weight:700;');
-    html += '<div class="sr-modal-card border-0 mb-3" style="background:var(--surface); border-radius:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); display:flex; flex-direction:column;">';
-    html += '  <div class="card-body d-flex align-items-center gap-3 p-3">';
-    html += '    <div class="rounded-3 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" style="width:48px; height:48px; background:' + color + '; font-size:1.4rem;">' + (rampaIdx + 1) + '</div>';
-    html += '    <div>';
-    html += '      <div class="d-flex align-items-center gap-2 mb-1">';
-    html += '        <h4 class="mb-0 fw-bold text-dark" style="letter-spacing:0.5px;">' + _srEsc(e.placa || '') + '</h4>';
-    html += '        ' + badgeSit;
-    html += '      </div>';
-    html += '      <div style="font-size:0.8rem; color:#64748b; font-weight:500;">' + _srEsc(rampaNomDet) + '</div>';
-    html += '    </div>';
-    html += '  </div>';
-    html += '</div>';
-
-    // Cronología de Servicio
+    // Horas y Permanencia
+    var horas = e.fechaIngreso ? srCalcHorasTaller(e).replace('h', '') : '0.0';
     var fIn = e.fechaIngreso ? srFmtFecha(e.fechaIngreso, true) : '—';
     var hIn = e.horaIngreso ? e.horaIngreso : '';
     var fOut = e.fechaSalida ? srFmtFecha(e.fechaSalida, true) : '—';
     var hOut = e.horaSalida ? e.horaSalida : '';
-    var horas = e.fechaIngreso ? srCalcHorasTaller(e).replace('h', '') : '0.0';
 
-    html += '<div class="mb-4">';
-    html += '  <h6 class="fw-bold mb-3" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Cronología de Servicio</h6>';
-    html += '  <div class="sr-modal-card border-0" style="background:#f8fafc; border-radius:1rem; display:flex; flex-direction:column;">';
-    html += '    <div class="card-body p-3 position-relative">';
-    html += '      <div style="position:absolute; left:31px; top:32px; bottom:32px; width:2px; background:#e2e8f0; z-index:1;"></div>';
-    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2 mb-4">';
-    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center text-white" style="width:32px; height:32px; background:#10b981; flex-shrink:0;"><i class="bi bi-box-arrow-in-right"></i></div>';
-    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Fecha y hora de entrada</div><div class="fw-bold text-dark" style="font-size:0.85rem;">' + fIn + (hIn ? ' — ' + hIn : '') + '</div></div>';
-    html += '      </div>';
-    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2 mb-4">';
-    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center" style="width:32px; height:32px; background:#eff6ff; color:#3b82f6; flex-shrink:0;"><i class="bi bi-hourglass-split"></i></div>';
-    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Permanencia estimada</div><div class="fw-bold" style="color:#2563eb; font-size:0.85rem;">' + horas + 'h Totales en Rampa</div></div>';
-    html += '      </div>';
-    html += '      <div class="d-flex align-items-start gap-3 position-relative z-2">';
-    html += '        <div class="rounded-circle d-flex justify-content-center align-items-center text-white" style="width:32px; height:32px; background:#ef4444; flex-shrink:0;"><i class="bi bi-box-arrow-right"></i></div>';
-    html += '        <div><div style="font-size:0.65rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Fecha y hora de salida (compromiso)</div><div class="fw-bold text-dark" style="font-size:0.85rem;">' + fOut + (hOut ? ' — ' + hOut : '') + '</div></div>';
-    html += '      </div>';
-    html += '    </div>';
-    html += '  </div>';
-    html += '</div>';
+    var otsPlaca = window.srOtData.filter(function(o) {
+        if (o.id_rampa) return String(o.id_rampa) === String(e._id || e.id);
+        return (o.placa || '').toUpperCase() === (e.placa || '').toUpperCase();
+    });
 
-    // Detalles adicionales
-    html += '<div class="sr-modal-card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem; display:flex; flex-direction:column;">';
-    html += '  <div class="card-body p-3 d-flex justify-content-between align-items-center border-bottom">';
-    html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b;">Kilometraje de Ingreso</div>';
-    html += '    <div class="fw-bold text-dark" style="font-size:0.85rem;">' + (e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : '—') + '</div>';
-    html += '  </div>';
+    var choferNom = (e.conductor || e.chofer || e.reportado_por || '').trim();
+    if (!choferNom && otsPlaca.length > 0) {
+        for (var k = 0; k < otsPlaca.length; k++) {
+            var oDet = otsPlaca[k].detalles_json ? (typeof otsPlaca[k].detalles_json === 'string' ? JSON.parse(otsPlaca[k].detalles_json) : otsPlaca[k].detalles_json) : {};
+            if (oDet.conductor || oDet.chofer || oDet.reportado_por) {
+                choferNom = (oDet.conductor || oDet.chofer || oDet.reportado_por).trim();
+                break;
+            }
+        }
+    }
+
+    var html = '';
+    
+    // ── 1. Hero Card: Identidad y Rampa ──────────────────────────────
+    var sitBadge = srBadgeSituacion(e.situacion, true)
+        .replace(/<span class="sr-semaforo/g, '<span class="badge rounded-pill shadow-2xs')
+        .replace(/padding:[^;]*;/g, 'padding: 4px 10px;')
+        .replace(/font-size:[^;]*;/g, 'font-size: 0.75rem; font-weight: 700;');
+
+    html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-4 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" 
+                         style="width: 52px; height: 52px; background: ${rampaCol}; font-size: 1.5rem; flex-shrink: 0;">
+                        ${rNum}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <h4 class="m-0 fw-bold text-dark text-uppercase" style="letter-spacing: 0.5px; font-size: 1.35rem;">
+                                ${_srEsc(e.placa || '—')}
+                            </h4>
+                            ${sitBadge}
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-muted small fw-semibold">
+                            <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>${_srEsc(rampaNomDet)}</span>
+                            <span>•</span>
+                            <span class="badge bg-light text-secondary border fw-bold text-uppercase" style="font-size: 0.68rem;">Unidad en Taller</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-bold shadow-2xs d-none d-sm-flex align-items-center gap-1" onclick="window.srGenerarOT(${id})">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> + Generar OT
+                </button>
+            </div>
+        </div>
+    `;
+
+    // ── 2. Bento Grid: Métricas Clave (KM, Conductor, Estancia) ──────
+    var kmFmt = e.km ? Number(e.km).toLocaleString('en-US') + ' KM' : 'NO REGISTRADO';
+    html += `
+        <div class="row g-2 mb-3">
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:26px; height:26px;">
+                            <i class="bi bi-speedometer2" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Odómetro</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;" title="${kmFmt}">
+                        ${kmFmt}
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 text-purple d-flex align-items-center justify-content-center" style="width:26px; height:26px; background: rgba(124, 58, 237, 0.1); color: #7c3aed;">
+                            <i class="bi bi-person-badge-fill" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Chofer</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate text-uppercase" style="font-size: 0.82rem;" title="${choferNom || 'No asignado'}">
+                        ${choferNom || '<span class="text-muted fw-normal">Sin asignar</span>'}
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width:26px; height:26px;">
+                            <i class="bi bi-stopwatch-fill" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Estancia</span>
+                    </div>
+                    <div class="fw-bold text-primary text-truncate" style="font-size: 0.85rem;">
+                        ${horas}h <span class="small fw-semibold text-muted">en rampa</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // ── 3. Cronología de Servicio (Timeline Visual) ──────────────────
+    html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-clock-history text-primary"></i> Cronología de Servicio
+                </h6>
+                <span class="badge bg-light text-dark border fw-bold px-2 py-1" style="font-size: 0.7rem;">Control Horario</span>
+            </div>
+
+            <div class="position-relative ps-2">
+                <div style="position:absolute; left:21px; top:20px; bottom:20px; width:2px; background:#e2e8f0; z-index:1;"></div>
+                
+                <!-- Punto 1: Entrada -->
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#10b981; flex-shrink:0;">
+                        <i class="bi bi-box-arrow-in-right" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;">Fecha y Hora de Entrada</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">${fIn} ${hIn ? '<span class="text-primary">— ' + hIn + '</span>' : ''}</div>
+                    </div>
+                </div>
+
+                <!-- Punto 2: Permanencia -->
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center shadow-2xs" 
+                         style="width:28px; height:28px; background:#eff6ff; color:#2563eb; border: 1px solid #bfdbfe; flex-shrink:0;">
+                        <i class="bi bi-hourglass-split" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;">Permanencia Estimada</div>
+                        <div class="fw-bold text-primary" style="font-size: 0.88rem;">${horas}h Totales en Rampa</div>
+                    </div>
+                </div>
+
+                <!-- Punto 3: Salida Compromiso -->
+                <div class="d-flex align-items-start gap-3 position-relative" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#ef4444; flex-shrink:0;">
+                        <i class="bi bi-box-arrow-right" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;">Fecha y Hora de Salida (Compromiso)</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">${fOut} ${hOut ? '<span class="text-danger">— ' + hOut + '</span>' : ''}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // ── 4. Tareas y Motivos de Ingreso (Limpio y Bento) ─────────────
     var obsTextoCompleto = (e.obs || '').trim();
     if (!obsTextoCompleto && otsPlaca && otsPlaca.length > 0) {
         var obsOTList = [];
         otsPlaca.forEach(function(o) {
             var det = o.detalles_json ? (typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : o.detalles_json) : {};
             var mot = (det.motivo || o.observaciones || '').trim();
-            mot = mot.replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '').replace(/^OT\s+OT-[^:]+:\s*/gim, '').trim();
-            if (mot) {
-                obsOTList.push(mot);
-            }
+            if (mot) obsOTList.push(mot);
         });
         if (obsOTList.length > 0) {
             obsTextoCompleto = Array.from(new Set(obsOTList)).join('\n');
         }
     }
-    
-    var parsedDetalle = typeof window.srParsearTareasArray === 'function' 
-        ? window.srParsearTareasArray(obsTextoCompleto) 
-        : { tareas: obsTextoCompleto ? [obsTextoCompleto] : [], notas: [] };
-        
+
+    var parsedDetalle = window.srParsearTareasArray(obsTextoCompleto);
     var htmlTareas = '';
     if (parsedDetalle.tareas.length > 0) {
         htmlTareas += '<div class="d-flex flex-column gap-2">';
         parsedDetalle.tareas.forEach(function(t, idx) {
-            htmlTareas += '<div class="d-flex align-items-start gap-2 p-2 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">' +
-                          '  <span class="badge rounded-pill fw-bold" style="background:#2563eb; color:#fff; font-size:0.72rem; min-width:22px; height:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">' + (idx + 1) + '</span>' +
-                          '  <span style="font-size:0.82rem; color:#1e293b; font-weight:600; line-height:1.45; word-break:break-word;">' + _srEsc(t) + '</span>' +
-                          '</div>';
+            htmlTareas += `
+                <div class="p-2 rounded-3 border bg-light d-flex align-items-start gap-2 shadow-2xs">
+                    <span class="badge rounded-pill bg-primary fw-bold text-white d-flex align-items-center justify-content-center flex-shrink-0 mt-1" 
+                          style="width: 22px; height: 22px; font-size: 0.72rem;">
+                        ${idx + 1}
+                    </span>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark text-uppercase" style="font-size: 0.84rem; line-height: 1.4;">
+                            ${_srEsc(t)}
+                        </div>
+                    </div>
+                </div>
+            `;
         });
         if (parsedDetalle.notas.length > 0) {
-            htmlTareas += '<div class="p-2 rounded-3 mt-1" style="background:#fffbeb; border:1px solid #fef3c7; font-size:0.78rem; color:#92400e; line-height:1.4;">' +
-                          '  <i class="bi bi-info-circle-fill me-1"></i><strong>Nota:</strong> ' + _srEsc(parsedDetalle.notas.join(' · ')) +
-                          '</div>';
+            htmlTareas += `
+                <div class="p-2 rounded-3 mt-1 bg-warning bg-opacity-10 border border-warning-subtle text-dark" style="font-size:0.78rem; line-height:1.4;">
+                    <i class="bi bi-info-circle-fill text-warning me-1"></i><strong>Nota / Observación:</strong> ${_srEsc(parsedDetalle.notas.join(' · '))}
+                </div>
+            `;
         }
         htmlTareas += '</div>';
     } else {
-        htmlTareas = '<div class="p-3 text-muted text-center" style="background:#f8fafc; border-radius:0.5rem; font-size:0.8rem;">Sin tareas registradas.</div>';
+        htmlTareas = '<div class="p-3 text-muted text-center rounded-3 bg-light" style="font-size:0.8rem;">Sin tareas registradas.</div>';
     }
 
-    html += '  <div class="card-body p-3">';
-    html += '    <div class="fw-bold" style="font-size:0.75rem; color:#1e293b; margin-bottom:8px;">Tareas y Motivo de Ingreso</div>';
-    html += '    ' + htmlTareas;
-    if (e.evidencia_url) {
-        html += '    <div class="mt-3"><a href="#" onclick="event.preventDefault(); window.srAbrirEvidencia(' + (e._id || e.id) + ')" class="btn btn-sm" style="font-size:0.75rem; border-radius:8px; border:1px solid #2563eb; color:#2563eb; background:#eff6ff; font-weight:bold;"><i class="bi bi-download me-1"></i>Ver / Descargar Evidencia</a></div>';
-    }
-    html += '  </div>';
-    html += '</div>';
+    html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-tools text-primary"></i> Tareas y Motivo de Ingreso
+                </h6>
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                    ${parsedDetalle.tareas.length} ${parsedDetalle.tareas.length === 1 ? 'Trabajo' : 'Trabajos'}
+                </span>
+            </div>
+            
+            ${htmlTareas}
 
-    // Acciones Rápidas (Formatos de Control / Plantillas)
-    html += '<div class="sr-modal-card border-0 mb-4" style="background:#fff; border:1px solid #f1f5f9!important; border-radius:1rem; display:flex; flex-direction:column;">';
-    html += '  <div class="card-body p-3">';
-    html += '    <div class="fw-bold mb-2" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Formatos de Control</div>';
-    html += '    <div class="d-flex align-items-center gap-3">';
-    html += '      <button class="btn btn-sm" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;color:var(--text);padding:0;" onclick="event.stopPropagation(); window.srDescargarPlantillaParabrisas(' + id + ')">';
-    html += '        <div style="width:42px;height:42px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:6px;font-size:1.15rem;box-shadow:0 4px 10px rgba(245,158,11,0.3);"><i class="bi bi-file-earmark-ruled"></i></div>';
-    html += '        <span style="font-size:0.7rem;font-weight:700;line-height:1.1;text-align:center;">OT<br>Parabrisa</span>';
-    html += '      </button>';
-    html += '    </div>';
-    html += '  </div>';
-    html += '</div>';
+            ${e.evidencia_url ? `
+                <div class="mt-3 pt-2 border-top">
+                    <a href="#" onclick="event.preventDefault(); window.srAbrirEvidencia(${e._id || e.id})" 
+                       class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.78rem;">
+                        <i class="bi bi-image-fill"></i> Ver / Descargar Evidencia Adjunta
+                    </a>
+                </div>
+            ` : ''}
+        </div>
+    `;
 
-    // OTs
-    html += '<div class="mb-4">';
-    html += '  <div class="d-flex justify-content-between align-items-center mb-3">';
-    html += '    <h6 class="fw-bold mb-0" style="font-size:0.75rem; color:#1e293b; letter-spacing:0.5px; text-transform:uppercase;">Órdenes de Trabajo vinculadas</h6>';
-    html += '    <button class="btn btn-link p-0 text-decoration-none fw-bold" style="font-size:0.75rem; color:#2563eb;" onclick="window.srGenerarOT(' + id + ')">+ Generar OT</button>';
-    html += '  </div>';
+    // ── 5. Formatos de Control y Plantillas ──────────────────────────
+    html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-file-earmark-pdf-fill text-warning"></i> Formatos de Control
+                </h6>
+                <span class="text-muted small fw-semibold">Impresión Rápida</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn border-0 p-2 rounded-4 bg-light d-flex align-items-center gap-3 text-start flex-grow-1 shadow-2xs" 
+                        onclick="event.stopPropagation(); window.srDescargarPlantillaParabrisas(${id})" 
+                        style="transition: all 0.2s ease;">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm flex-shrink-0" 
+                         style="width: 44px; height: 44px; background: linear-gradient(135deg, #f59e0b, #d97706); font-size: 1.25rem;">
+                        <i class="bi bi-file-earmark-ruled"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">OT Parabrisas (F-MAN-002)</div>
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Formato de control impreso para el parabrisas de la unidad</small>
+                    </div>
+                    <i class="bi bi-printer-fill text-muted ms-auto pe-2" style="font-size: 1.1rem;"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // ── 6. Órdenes de Trabajo Vinculadas ─────────────────────────────
+    html += `
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i> Órdenes de Trabajo Vinculadas
+                    </h6>
+                    <span class="badge bg-dark rounded-pill fw-bold text-white px-2 py-0" style="font-size: 0.7rem;">${otsPlaca.length}</span>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3 py-1 shadow-2xs d-flex align-items-center gap-1" style="font-size: 0.75rem;" onclick="window.srGenerarOT(${id})">
+                    <i class="bi bi-plus-lg"></i> + Generar OT
+                </button>
+            </div>
+    `;
+
     if (!otsPlaca.length) {
-        html += '  <div class="text-muted" style="font-size:0.8rem;">No hay OTs vinculadas.</div>';
+        html += '<div class="p-3 text-muted text-center rounded-3 bg-light" style="font-size:0.8rem;">No hay OTs vinculadas a esta entrada.</div>';
     } else {
+        html += '<div class="d-flex flex-column gap-2">';
         otsPlaca.forEach(function(ot) {
             var idOt = ot.id_ot || ot.ticket_entrada || '—';
-            html += '  <div class="sr-modal-card border-0 mb-2" style="background:#f8fafc; border:1px solid #f1f5f9!important; border-radius:0.75rem; cursor:pointer; display:flex; flex-direction:column;" onclick="window.srAbrirDetalleOT(\'' + idOt + '\')">';
-            html += '    <div class="card-body p-3 d-flex justify-content-between align-items-center">';
-            html += '      <div>';
-            html += '        <div class="fw-bold mb-1" style="color:#2563eb; font-size:0.85rem;">' + window.srFormatID(idOt) + '</div>';
-            html += '        <div style="font-size:0.7rem; color:#64748b;">Aprobación: <span class="text-dark">' + _srEsc(ot.estado || 'Pendiente') + '</span></div>';
-            html += '      </div>';
-            html += '      <span class="badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;">' + (ot.estado === 'Aprobada' ? 'En taller' : 'En atención') + '</span>';
-            html += '    </div>';
-            html += '  </div>';
+            var otDet = ot.detalles_json ? (typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : ot.detalles_json) : {};
+            var tipoStr = otDet.tipo_ot || otDet.tipo_mantenimiento || 'Correctivo';
+            var subStr = otDet.subtipo_ot || otDet.sub_tipo || '';
+            var supStr = otDet.supervisor || otDet.tecnico_lider || '';
+
+            html += `
+                <div class="p-3 rounded-4 border bg-light d-flex align-items-center justify-content-between gap-2 shadow-2xs" 
+                     style="cursor: pointer; transition: all 0.2s ease;" 
+                     onclick="window.srAbrirDetalleOT('${idOt}')">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fw-bold text-primary" style="font-size: 0.92rem;">${window.srFormatID(idOt)}</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-bold text-uppercase" style="font-size: 0.68rem;">${tipoStr}${subStr ? ' • ' + subStr : ''}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-muted small">
+                            ${supStr ? `<span><i class="bi bi-person-gear text-secondary me-1"></i>${_srEsc(supStr)}</span> • ` : ''}
+                            <span>Estado: <strong class="text-dark">${_srEsc(ot.estado || 'Pendiente')}</strong></span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; font-size: 0.75rem; padding: 4px 8px;">
+                            ${ot.estado === 'Aprobada' ? 'En taller' : 'En atención'}
+                        </span>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </div>
+                </div>
+            `;
         });
+        html += '</div>';
     }
     html += '</div>';
 
     scroll.innerHTML = html;
     
+    // ── 7. Footer Actions ───────────────────────────────────────────
     footer.innerHTML = '';
     footer.style.padding = '0';
     footer.style.borderTop = 'none';
     if (window.checkPerm('ot', 'e')) {
-        footer.innerHTML = 
-            '<div class="d-flex w-100 gap-2 bg-white" style="padding:1rem;">' +
-            '  <button class="btn btn-danger text-danger bg-danger bg-opacity-10 border-0 flex-shrink-0 d-flex justify-content-center align-items-center" style="width:48px; height:48px; border-radius:0.75rem;" onclick="window.srEliminarRegistroGeneral(' + id + ', \'' + (e.ticket_entrada || e.id_ot || '') + '\')" title="Eliminar"><i class="bi bi-trash"></i></button>' +
-            '  <button class="btn btn-primary bg-opacity-10 text-primary border-0 flex-shrink-0 d-flex justify-content-center align-items-center" style="width:48px; height:48px; border-radius:0.75rem;" onclick="window.srEditarRampa(' + id + ')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-            '  <button class="btn flex-fill fw-bold border-0 d-flex justify-content-center align-items-center gap-2" style="background:#1e293b; color:#fff; border-radius:0.75rem; height:48px;" onclick="window.srLiberarRampa(' + id + ')"><i class="bi bi-check-circle-fill text-success"></i> Liberar y Archivar</button>' +
-            '</div>';
+        footer.innerHTML = `
+            <div class="d-flex w-100 gap-2 bg-white border-top px-3 py-3" style="border-color: #e2e8f0 !important;">
+                <button type="button" class="btn btn-outline-danger border-0 d-flex justify-content-center align-items-center rounded-3 p-2" 
+                        style="width: 44px; height: 44px; background: rgba(239, 68, 68, 0.1);" 
+                        onclick="window.srEliminarRegistroGeneral(${id}, '${(e.ticket_entrada || e.id_ot || '')}')" title="Eliminar de Rampa">
+                    <i class="bi bi-trash-fill text-danger fs-5"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary border-0 d-flex justify-content-center align-items-center rounded-3 p-2" 
+                        style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.1);" 
+                        onclick="window.srEditarRampa(${id})" title="Editar Datos de Rampa">
+                    <i class="bi bi-pencil-square text-primary fs-5"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary fw-bold rounded-3 d-flex align-items-center justify-content-center gap-1 flex-grow-1" 
+                        style="height: 44px; font-size: 0.85rem;" 
+                        onclick="window.srGenerarOT(${id})">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> + Generar OT
+                </button>
+                <button type="button" class="btn btn-dark fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 flex-grow-1 shadow-sm" 
+                        style="height: 44px; font-size: 0.85rem; background: #0f172a;" 
+                        onclick="window.srLiberarRampa(${id})">
+                    <i class="bi bi-check-circle-fill text-success"></i> Liberar Rampa
+                </button>
+            </div>
+        `;
     }
     footer.style.display = 'block';
 };
@@ -1041,10 +1185,11 @@ function srRenderHistorial() {
         var rIdx = window.srCatRampas ? window.srCatRampas.findIndex(function(c) { return c.id == rampaId; }) : -1;
         var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
         var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || String(rampaId)) : String(rampaId);
+        var rCol = (rObj && rObj.color) ? rObj.color : '#64748b';
         var textRampa = (rampaId >= 1 && rampaId <= 3) ? String(rampaId) : rNom;
         var styleRampa = (rampaId >= 1 && rampaId <= 3) 
-            ? 'background:#64748b;' 
-            : 'background:#64748b; padding:2px 8px; border-radius:10px; font-size:0.65rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block; vertical-align:middle;';
+            ? 'background:' + rCol + ';' 
+            : 'background:' + rCol + '; padding:2px 8px; border-radius:10px; font-size:0.65rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; display:inline-block; vertical-align:middle;';
             
         return '<tr style="cursor:pointer;border-bottom:1px solid var(--border);" onclick="window.srAbrirDetalleHistorial(' + r.id + ')">'
             + '<td style="padding:5px 8px;"><span class="' + ((rampaId >= 1 && rampaId <= 3) ? 'sr-badge-rampa' : '') + '" style="' + styleRampa + ' color:#fff; font-weight:700;" title="' + _srEsc(rNom) + '">' + _srEsc(textRampa) + '</span></td>'
@@ -1082,78 +1227,219 @@ window.srAbrirDetalleHistorial = function(id) {
     var row = (window.srHistorialData || []).find(function(r) { return r.id === id; });
     if (!row) return;
 
-    var fIng     = row.fecha_ingreso ? String(row.fecha_ingreso).split('T')[0] : '';
-    var fLibDate = row.fecha_liberado ? String(row.fecha_liberado).split('T')[0] : '';
+    var fIng     = row.fecha_ingreso ? srFmtFecha(String(row.fecha_ingreso).split('T')[0], true) : '—';
+    var hIng     = row.hora_ingreso ? String(row.hora_ingreso).slice(0,5) : '';
+    var fSal     = row.fecha_salida ? srFmtFecha(String(row.fecha_salida).split('T')[0], true) : '—';
+    var hSal     = row.hora_salida ? String(row.hora_salida).slice(0,5) : '';
+    var fLibDate = row.fecha_liberado ? srFmtFecha(String(row.fecha_liberado).split('T')[0], true) : '—';
     var fLibTime = row.fecha_liberado ? String(row.fecha_liberado).slice(11, 16) : '';
 
-    function fld(lbl, val) {
-        return '<div style="display:flex;padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.82rem;">'
-            + '<span style="width:40%;color:var(--subtext);font-weight:600;font-size:0.78rem;">' + lbl + '</span>'
-            + '<span style="width:60%;color:var(--text);font-weight:600;word-break:break-word;">' + val + '</span>'
-            + '</div>';
+    var rampaId = parseInt(row.rampa, 10);
+    var rIdx = window.srCatRampas ? window.srCatRampas.findIndex(function(c) { return c.id == rampaId; }) : -1;
+    var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
+    var rNom = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + row.rampa) : ('Rampa ' + (row.rampa || '1'));
+    var rNum = (rIdx >= 0 ? (rIdx + 1) : (row.rampa || '1'));
+    var rCol = (rObj && rObj.color) ? rObj.color : '#64748b';
+
+    // Calcular permanencia total
+    var hTaller = '—';
+    if (row.fecha_ingreso && row.hora_ingreso && row.fecha_salida && row.hora_salida) {
+        var hStart = new Date(String(row.fecha_ingreso).split('T')[0] + 'T' + String(row.hora_ingreso).slice(0,5) + ':00');
+        var hEnd   = new Date(String(row.fecha_salida).split('T')[0] + 'T' + String(row.hora_salida).slice(0,5) + ':00');
+        var diffH  = (hEnd - hStart) / 3600000;
+        if (diffH > 0) hTaller = diffH.toFixed(1) + 'h';
     }
-    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    var html = '';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
-    html += '<div style="font-size:1.1rem;font-weight:900;color:var(--text);margin-right:8px;display:flex;align-items:center;">Rampa <span class="sr-badge-rampa" style="background:#64748b;font-size:0.9rem;margin-left:6px;">' + esc(row.rampa || '?') + '</span></div>';
-    html += '<span style="background:#16a34a22;color:#16a34a;border-radius:9px;padding:2px 10px;font-size:0.75rem;font-weight:800;">Liberada</span>';
-    html += '</div>';
+    var choferNom = (row.conductor || row.chofer || row.reportado_por || '').trim();
 
-    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
-    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Datos del Vehículo</div>';
-    html += fld('Placa', '<strong>' + esc(row.placa || '—') + '</strong>');
-    html += fld('Kilometraje', esc(row.km || '—'));
-    html += fld('Situación', esc(row.situacion || '—'));
-    html += fld('Observaciones', esc(row.obs || '—'));
-    html += '</div>';
+    var ots = (window.srOtData || []).filter(function(o) {
+        if (o.id_rampa) return String(o.id_rampa) === String(row.id);
+        return (o.placa || '').toUpperCase() === (row.placa || '').toUpperCase();
+    });
 
-    html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
-    html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Fechas</div>';
-    html += fld('Ingreso', srFmtFecha(fIng) + (row.hora_ingreso ? ' ' + String(row.hora_ingreso).slice(0,5) : ''));
-    html += fld('Salida programada', row.fecha_salida ? srFmtFecha(String(row.fecha_salida).split('T')[0]) + (row.hora_salida ? ' ' + String(row.hora_salida).slice(0,5) : '') : '—');
-    html += fld('Liberado el', fLibDate ? srFmtFecha(fLibDate) + (fLibTime ? ' ' + fLibTime : '') : '—');
-    html += fld('Liberado por', esc(row.liberado_por || '—'));
-    html += '</div>';
+    var parsedDetalle = window.srParsearTareasArray(row.obs || '');
 
-    // Buscar OTs generadas en el intervalo de esta rampa para esta placa
-    if (window.srOtData && window.srOtData.length) {
-        var fStart = new Date(row.fecha_ingreso);
-        var fEnd = row.fecha_liberado ? new Date(row.fecha_liberado) : new Date();
-        fStart.setHours(0,0,0,0);
-        fEnd.setHours(23,59,59,999);
+    var html = `
+        <!-- Hero Card -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-4 d-flex justify-content-center align-items-center fw-bold text-white shadow-sm" 
+                     style="width: 52px; height: 52px; background: ${rCol}; font-size: 1.5rem; flex-shrink: 0;">
+                    ${rNum}
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <h4 class="m-0 fw-bold text-dark text-uppercase" style="letter-spacing: 0.5px; font-size: 1.35rem;">
+                            ${_srEsc(row.placa || '—')}
+                        </h4>
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle fw-bold px-3 py-1" style="font-size: 0.75rem;">
+                            <i class="bi bi-check2-circle me-1"></i>Liberada
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 text-muted small fw-semibold">
+                        <span><i class="bi bi-geo-alt-fill text-secondary me-1"></i>${_srEsc(rNom)}</span>
+                        <span>•</span>
+                        <span class="badge bg-light text-secondary border fw-bold text-uppercase" style="font-size: 0.68rem;">Registro Histórico</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        var ots = window.srOtData.filter(function(o) {
-            if (o.id_rampa) return String(o.id_rampa) === String(row.id);
-            if (String(o.placa).toUpperCase() !== String(row.placa).toUpperCase()) return false;
-            var otD = new Date(o.fecha_ingreso);
-            return otD >= fStart && otD <= fEnd;
-        });
+        <!-- Bento Grid Metrics -->
+        <div class="row g-2 mb-3">
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:26px; height:26px;">
+                            <i class="bi bi-speedometer2" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Odómetro</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;">
+                        ${row.km ? Number(row.km).toLocaleString('en-US') + ' KM' : 'NO REGISTRADO'}
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 text-purple d-flex align-items-center justify-content-center" style="width:26px; height:26px; background: rgba(124, 58, 237, 0.1); color: #7c3aed;">
+                            <i class="bi bi-person-badge-fill" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Chofer</span>
+                    </div>
+                    <div class="fw-bold text-dark text-truncate text-uppercase" style="font-size: 0.82rem;" title="${choferNom || 'No asignado'}">
+                        ${choferNom || '<span class="text-muted fw-normal">Sin asignar</span>'}
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="rounded-3 p-1 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width:26px; height:26px;">
+                            <i class="bi bi-stopwatch-fill" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Estancia Total</span>
+                    </div>
+                    <div class="fw-bold text-primary text-truncate" style="font-size: 0.85rem;">
+                        ${hTaller}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        if (ots.length) {
-            html += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">';
-            html += '<div style="background:var(--bg);padding:8px 12px;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--subtext);border-bottom:1px solid var(--border);">Órdenes Generadas</div>';
-            ots.forEach(function(o) {
-                var idOt = o.id_ot || o.ticket_entrada;
-                html += '<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
-                html += '<div>';
-                html += '<div style="font-weight:700;color:var(--primary,#5865F2);font-size:0.85rem;">' + (window.srFormatID ? window.srFormatID(idOt) : idOt) + '</div>';
-                html += '<div style="font-size:0.75rem;color:var(--subtext);">' + esc(o.estado || '') + '</div>';
-                html += '</div>';
-                html += '<button class="btn btn-sm btn-light" style="padding:4px 8px;font-size:0.75rem;" onclick="window.srCerrarDetalleHist(); setTimeout(function(){window.srAbrirDetalleOT(\'' + idOt + '\')}, 300);"><i class="bi bi-eye"></i></button>';
-                html += '</div>';
-            });
-            html += '</div>';
-        }
-    }
+        <!-- Cronología -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="m-0 fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                <i class="bi bi-clock-history text-primary"></i> Cronología de Servicio
+            </h6>
+
+            <div class="position-relative ps-2">
+                <div style="position:absolute; left:21px; top:20px; bottom:20px; width:2px; background:#e2e8f0; z-index:1;"></div>
+                
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#10b981; flex-shrink:0;">
+                        <i class="bi bi-box-arrow-in-right" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Fecha y Hora de Entrada</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">${fIng} ${hIng ? '— ' + hIng : ''}</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start gap-3 position-relative mb-3" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#0284c7; flex-shrink:0;">
+                        <i class="bi bi-check-lg" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Fecha y Hora de Salida Programada</div>
+                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">${fSal} ${hSal ? '— ' + hSal : ''}</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start gap-3 position-relative" style="z-index:2;">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center text-white shadow-2xs" 
+                         style="width:28px; height:28px; background:#059669; flex-shrink:0;">
+                        <i class="bi bi-shield-check" style="font-size: 0.85rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-muted" style="font-size: 0.68rem; text-transform: uppercase;">Liberado en Patio</div>
+                        <div class="fw-bold text-success" style="font-size: 0.88rem;">${fLibDate} ${fLibTime ? '— ' + fLibTime : ''} ${row.liberado_por ? `<span class="text-muted fw-normal">por ${_srEsc(row.liberado_por)}</span>` : ''}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tareas Realizadas -->
+        <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-tools text-primary"></i> Trabajos Realizados
+                </h6>
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                    ${parsedDetalle.tareas.length} Trabajos
+                </span>
+            </div>
+            
+            ${parsedDetalle.tareas.length > 0 ? `
+                <div class="d-flex flex-column gap-2">
+                    ${parsedDetalle.tareas.map(function(t, idx) {
+                        return `
+                            <div class="p-2 rounded-3 border bg-light d-flex align-items-start gap-2 shadow-2xs">
+                                <span class="badge rounded-pill bg-primary fw-bold text-white d-flex align-items-center justify-content-center flex-shrink-0 mt-1" 
+                                      style="width: 22px; height: 22px; font-size: 0.72rem;">
+                                    ${idx + 1}
+                                </span>
+                                <div class="flex-grow-1 fw-bold text-dark text-uppercase" style="font-size: 0.84rem; line-height: 1.4;">
+                                    ${_srEsc(t)}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '<div class="p-3 text-muted text-center rounded-3 bg-light" style="font-size:0.8rem;">Sin tareas registradas.</div>'}
+        </div>
+
+        <!-- OTs Vinculadas -->
+        ${ots.length > 0 ? `
+            <div class="card border-0 rounded-4 p-3 mb-3 bg-white shadow-2xs" style="border: 1px solid #e2e8f0 !important;">
+                <h6 class="m-0 fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2" style="font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> Órdenes de Trabajo del Historial
+                </h6>
+                <div class="d-flex flex-column gap-2">
+                    ${ots.map(function(o) {
+                        var idOt = o.id_ot || o.ticket_entrada;
+                        return `
+                            <div class="p-3 rounded-4 border bg-light d-flex align-items-center justify-content-between gap-2 shadow-2xs" 
+                                 style="cursor: pointer;" 
+                                 onclick="window.srCerrarDetalleHist(); setTimeout(function(){window.srAbrirDetalleOT('${idOt}')}, 300);">
+                                <div>
+                                    <div class="fw-bold text-primary" style="font-size: 0.92rem;">${window.srFormatID(idOt)}</div>
+                                    <small class="text-muted">Estado: <strong class="text-dark">${_srEsc(o.estado || '')}</strong></small>
+                                </div>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 py-1 fw-bold">Ver OT</button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        ` : ''}
+    `;
 
     var scroll  = document.getElementById('sr-hist-detalle-scroll');
     var footer  = document.getElementById('sr-hist-detalle-footer');
     var panel   = document.getElementById('sr-panel-detalle-hist');
     if (scroll) scroll.innerHTML = html;
     if (footer) {
-        footer.innerHTML = '<button class="btn btn-sm btn-outline-warning w-100" onclick="window.srReactivarRampa(' + row.id + ')">'
-            + '<i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar en Rampa</button>';
+        footer.innerHTML = `
+            <div class="d-flex w-100 gap-2 bg-white border-top px-3 py-3" style="border-color: #e2e8f0 !important;">
+                <button type="button" class="btn btn-outline-warning fw-bold rounded-3 w-100 d-flex align-items-center justify-content-center gap-2" style="height: 44px; font-size: 0.85rem;" onclick="window.srReactivarRampa(${row.id})">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reactivar en Rampa
+                </button>
+            </div>
+        `;
     }
     if (panel) panel.classList.add('open');
 };
@@ -1298,10 +1584,35 @@ window.srGuardarRegistro = function() {
     }
 };
 
-// ── Generar OT desde Rampa (MODERNO BENTO Y TRABAJOS CON TÉCNICO) ──
+// ── Personal Directory & Multi-OT Management ──
+window._srPersonalItems = [];
+window._srOT_Cards = [];
+window._srOT_TodasFallas = [];
 window._srOT_TrabajosCount = 0;
 
-window.srGenerarOT = function(id) {
+window.srCargarPersonal = async function() {
+    if (window._srPersonalItems && window._srPersonalItems.length > 0) {
+        return window._srPersonalItems;
+    }
+    try {
+        var res = await fetch('/api/conductores-lista');
+        if (res.ok) {
+            var data = await res.json();
+            var list = (Array.isArray(data) ? data : (data.data || [])).map(function(c) {
+                return (typeof c === 'string' ? c : (c.nombre || c.conductor || c[1] || '')).trim();
+            }).filter(Boolean);
+            window._srPersonalItems = Array.from(new Set(list)).map(function(p) { return { value: p, label: p }; });
+            window.dataGlobalConductores = list;
+            return window._srPersonalItems;
+        }
+    } catch(e) {}
+    return [];
+};
+
+// ── Generar OTs desde Rampa (MODERNO BENTO Y MULTI-OT) ──
+window.srGenerarOT = async function(id) {
+    await window.srCargarPersonal();
+
     var e = (window.srEntradas || []).find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
     if (!e && window.srData) {
         e = window.srData.find(function(x) { return x._id === id || String(x.id) === String(id) || String(x._id) === String(id); });
@@ -1323,241 +1634,450 @@ window.srGenerarOT = function(id) {
     var kmEl = document.getElementById('sr-ot-km');        if (kmEl) kmEl.value = e.km || '0';
     var chEl = document.getElementById('sr-ot-chofer');    if (chEl) chEl.value = e.conductor || e.chofer || e.reportado_por || '';
 
-    var tipoEl = document.getElementById('sr-ot-tipo');
-    if (tipoEl) tipoEl.value = 'Correctivo';
-    window.srCambiarTipoOT();
-
-    // Inicializar Supervisor Combobox
-    var personalList = (window.dataGlobalConductores || []).map(function(c) {
-        var n = (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || '');
-        return n.trim();
-    }).filter(Boolean);
-    if (!personalList.length && window._genOT_Tecnicos) personalList = window._genOT_Tecnicos;
-    window._srPersonalItems = Array.from(new Set(personalList)).map(function(p) { return { value: p, label: p }; });
-
-    if (typeof window._cbInit === 'function') {
-        window._cbInit('sr-ot-supervisor', window._srPersonalItems, 'SELECCIONE SUPERVISOR...');
-        window._cbSet('sr-ot-supervisor', '', '');
-    }
-
-    var sitEl = document.getElementById('sr-ot-situacion');
-    if (sitEl) sitEl.value = e.situacion || 'En atención';
-
     // Desglosar trabajos desde e.obs de forma limpia
-    var listaCont = document.getElementById('sr-ot-trabajos-lista');
-    if (listaCont) listaCont.innerHTML = '';
+    window._srOT_TodasFallas = [];
     window._srOT_TrabajosCount = 0;
 
     var rawObs = (e.obs || '').trim();
-    var tareas = [];
     if (rawObs) {
         var lines = rawObs.split('\n');
         lines.forEach(function(line) {
             var clean = line.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
-            if (clean) tareas.push(clean);
+            if (clean) {
+                window._srOT_TodasFallas.push({
+                    id: 'sr_f_' + (window._srOT_TrabajosCount++),
+                    desc: clean
+                });
+            }
         });
     }
 
-    if (!tareas.length) {
-        tareas.push('MANTENIMIENTO / REVISIÓN GENERAL');
+    if (!window._srOT_TodasFallas.length) {
+        window._srOT_TodasFallas.push({
+            id: 'sr_f_' + (window._srOT_TrabajosCount++),
+            desc: 'MANTENIMIENTO / REVISIÓN GENERAL'
+        });
     }
 
-    tareas.forEach(function(t) {
-        window.srAgregarFilaTrabajoOT(t);
-    });
+    // Inicializar primera tarjeta de OT
+    window._srOT_Cards = [{
+        id: 1,
+        tipo_ot: 'Correctivo',
+        subtipo_ot: 'Falla',
+        supervisor: '',
+        situacion: e.situacion || 'En atención',
+        fallasSeleccionadas: window._srOT_TodasFallas.map(function(f){ return f.id; }),
+        tecnicoPorFalla: {}
+    }];
 
+    window.srRenderTarjetasOT();
     srAbrirDrawer('sr-drawer-ot');
 };
 
-window.srAgregarFilaTrabajoOT = function(textoDefecto) {
-    var listaCont = document.getElementById('sr-ot-trabajos-lista');
-    if (!listaCont) return;
+// Diccionario oficial de subtipos en cascada
+var SR_SUBTIPOS = {
+    'Correctivo': ['Falla', 'Varado', 'Programado', 'Garantía', 'Accidentabilidad', 'Mala Operación'],
+    'Preventivo': ['Inspección Pre-PM', 'Campaña', 'Limpieza Integral', 'Rutina', 'Programado', 'Oportuno'],
+    'Predictivo': ['Por condición', 'Prueba'],
+    'Proactivo':  ['Mejora'],
+    'Servicio':   ['Stock', 'Taller']
+};
 
-    var idx = window._srOT_TrabajosCount++;
-    var rowId = 'sr_ot_job_' + idx;
-    var tecId = 'sr_ot_tec_' + idx;
-    var desc = textoDefecto || '';
-
-    var div = document.createElement('div');
-    div.className = 'p-2 rounded-3 border bg-white shadow-2xs d-flex flex-wrap align-items-center justify-content-between gap-2';
-    div.id = rowId;
-    div.style.overflow = 'visible';
-
-    div.innerHTML = `
-        <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 220px;">
-            <input type="checkbox" class="form-check-input mt-0 sr-ot-job-chk" id="chk_${rowId}" checked style="cursor:pointer; width:18px; height:18px;">
-            <input type="text" class="form-control form-control-sm text-uppercase fw-bold border-secondary-subtle" 
-                   id="txt_${rowId}" value="${desc}" placeholder="Descripción del trabajo / motivo..." 
-                   style="font-size: 0.82rem; min-height: 38px; border-radius: 8px;">
-        </div>
-        <div class="d-flex align-items-center gap-1" style="min-width: 200px; max-width: 260px; position: relative;">
-            <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
-            <div class="position-relative flex-grow-1">
-                <input type="text" id="${tecId}-txt" 
-                       class="form-control form-control-sm bg-white text-uppercase fw-bold" 
-                       style="font-size: 0.78rem; min-height: 38px; border-radius: 8px;"
-                       placeholder="SELECCIONE TÉCNICO..." 
-                       autocomplete="off" 
-                       oninput="window._cbFiltrar('${tecId}')" 
-                       onfocus="window._cbFiltrar('${tecId}')" 
-                       onblur="window._cbHide('${tecId}')">
-                <input type="hidden" id="${tecId}">
-                <div id="${tecId}-dd" class="cb-dropdown"></div>
-            </div>
-            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 border-0" onclick="document.getElementById('${rowId}').remove();" title="Eliminar fila">
-                <i class="bi bi-trash-fill"></i>
-            </button>
-        </div>
-    `;
-
-    listaCont.appendChild(div);
-
-    if (typeof window._cbInit === 'function' && window._srPersonalItems) {
-        window._cbInit(tecId, window._srPersonalItems, 'SELECCIONE TÉCNICO...');
-        window._cbSet(tecId, '', '');
+window.srOnCambiarTipoOTCard = function(cIdx, selectEl) {
+    if (!window._srOT_Cards[cIdx]) return;
+    var nuevoTipo = selectEl.value;
+    window._srOT_Cards[cIdx].tipo_ot = nuevoTipo;
+    var subtipos = SR_SUBTIPOS[nuevoTipo] || [];
+    window._srOT_Cards[cIdx].subtipo_ot = subtipos.length ? subtipos[0] : '';
+    
+    var subSelect = document.getElementById('sr_ot_subtipo_' + cIdx);
+    if (subSelect) {
+        subSelect.innerHTML = subtipos.map(function(s) {
+            return '<option value="' + s + '">' + s + '</option>';
+        }).join('');
+        subSelect.disabled = !subtipos.length;
+        if (subtipos.length) subSelect.value = subtipos[0];
     }
 };
 
-// ── Cascade Sub Tipo ─────────────────────────────────────────────
-var SR_SUBTIPOS = {
-    'Preventivo': ['Inspección Pre-PM','Campaña','Limpieza Integral','Rutina','Programado','Oportuno'],
-    'Correctivo': ['Falla','Varado','Programado','Garantía','Accidentabilidad','Mala Operación'],
-    'Predictivo': ['Por condición','Prueba'],
-    'Proactivo':  ['Mejora'],
-    'Servicio':   ['Stock','Taller']
+window.srOnCambiarSubtipoOTCard = function(cIdx, selectEl) {
+    if (window._srOT_Cards[cIdx]) window._srOT_Cards[cIdx].subtipo_ot = selectEl.value;
 };
 
-window.srCambiarTipoOT = function() {
-    var tipo = (document.getElementById('sr-ot-tipo') || {}).value || '';
-    var sel  = document.getElementById('sr-ot-subtipo');
-    if (!sel) return;
-    var opts = SR_SUBTIPOS[tipo] || [];
-    sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(function(s) {
-        return '<option value="' + s + '">' + s + '</option>';
-    }).join('');
-    sel.disabled = !opts.length;
-    if (opts.length) sel.value = opts[0];
+window.srOnCambiarSituacionCard = function(cIdx, selectEl) {
+    if (window._srOT_Cards[cIdx]) window._srOT_Cards[cIdx].situacion = selectEl.value;
 };
 
-// ── Enviar OT ────────────────────────────────────────────────────
-window.srEnviarOT = function() {
+window.srToggleFallaOT = function(cIdx, fId, checked) {
+    if (!window._srOT_Cards[cIdx]) return;
+    var card = window._srOT_Cards[cIdx];
+    card.fallasSeleccionadas = card.fallasSeleccionadas || [];
+    if (checked) {
+        if (!card.fallasSeleccionadas.includes(fId)) card.fallasSeleccionadas.push(fId);
+        // Remover de las demás tarjetas
+        window._srOT_Cards.forEach(function(otherCard, oIdx) {
+            if (oIdx !== cIdx && otherCard.fallasSeleccionadas) {
+                otherCard.fallasSeleccionadas = otherCard.fallasSeleccionadas.filter(function(id){ return id !== fId; });
+            }
+        });
+    } else {
+        card.fallasSeleccionadas = card.fallasSeleccionadas.filter(function(id){ return id !== fId; });
+    }
+    window.srRenderTarjetasOT();
+};
+
+window.srAgregarTarjetaOT = function() {
+    // Buscar fallas que aún no están asignadas
+    var todasAsignadas = [];
+    window._srOT_Cards.forEach(function(c) {
+        (c.fallasSeleccionadas || []).forEach(function(fId){ todasAsignadas.push(fId); });
+    });
+    var fallasDisponibles = window._srOT_TodasFallas.filter(function(f){ return !todasAsignadas.includes(f.id); });
+    var fallasNuevas = fallasDisponibles.map(function(f){ return f.id; });
+
+    window._srOT_Cards.push({
+        id: window._srOT_Cards.length + 1,
+        tipo_ot: 'Correctivo',
+        subtipo_ot: 'Falla',
+        supervisor: '',
+        situacion: 'En atención',
+        fallasSeleccionadas: fallasNuevas,
+        tecnicoPorFalla: {}
+    });
+
+    window.srRenderTarjetasOT();
+};
+
+window.srQuitarTarjetaOT = function(cIdx) {
+    if (window._srOT_Cards.length <= 1) return;
+    window._srOT_Cards.splice(cIdx, 1);
+    window.srRenderTarjetasOT();
+};
+
+window.srAgregarNuevoTrabajoGeneral = function() {
+    var nuevoTexto = prompt('Ingresa la descripción del nuevo trabajo / motivo:');
+    if (!nuevoTexto || !nuevoTexto.trim()) return;
+    var clean = nuevoTexto.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
+    var fObj = {
+        id: 'sr_f_' + (window._srOT_TrabajosCount++),
+        desc: clean
+    };
+    window._srOT_TodasFallas.push(fObj);
+    // Asignar por defecto a la última tarjeta activa
+    if (window._srOT_Cards.length > 0) {
+        var lastCard = window._srOT_Cards[window._srOT_Cards.length - 1];
+        lastCard.fallasSeleccionadas = lastCard.fallasSeleccionadas || [];
+        lastCard.fallasSeleccionadas.push(fObj.id);
+    }
+    window.srRenderTarjetasOT();
+};
+
+window.srRenderTarjetasOT = function() {
+    var container = document.getElementById('sr-ot-cards-container');
+    if (!container) return;
+
+    // Guardar valores actuales de supervisores y técnicos antes de re-render
+    window._srOT_Cards.forEach(function(card, cIdx) {
+        var supVal = (typeof window._cbGet === 'function' ? window._cbGet('sr_ot_sup_' + cIdx) : '') || (document.getElementById('sr_ot_sup_' + cIdx + '-txt') || {}).value;
+        if (supVal) card.supervisor = supVal.trim();
+
+        card.tecnicoPorFalla = card.tecnicoPorFalla || {};
+        window._srOT_TodasFallas.forEach(function(f) {
+            var tecVal = (typeof window._cbGet === 'function' ? window._cbGet('sr_ot_tec_' + cIdx + '_' + f.id) : '') || (document.getElementById('sr_ot_tec_' + cIdx + '_' + f.id + '-txt') || {}).value;
+            if (tecVal) card.tecnicoPorFalla[f.id] = tecVal.trim();
+        });
+    });
+
+    var html = '';
+    window._srOT_Cards.forEach(function(card, cIdx) {
+        var currentTipo = card.tipo_ot || 'Correctivo';
+        var subtipos = SR_SUBTIPOS[currentTipo] || [];
+        if (!card.subtipo_ot && subtipos.length) card.subtipo_ot = subtipos[0];
+
+        // Construir HTML de fallas para esta tarjeta
+        var fallasHtml = '';
+        window._srOT_TodasFallas.forEach(function(f) {
+            var isChecked = (card.fallasSeleccionadas || []).includes(f.id);
+            var tecAsignado = (card.tecnicoPorFalla && card.tecnicoPorFalla[f.id]) || '';
+
+            // Verificar si está asignada en otra tarjeta
+            var asignadaEnOtra = null;
+            window._srOT_Cards.forEach(function(otherCard, otherIdx) {
+                if (otherIdx !== cIdx && (otherCard.fallasSeleccionadas || []).includes(f.id)) {
+                    asignadaEnOtra = otherIdx + 1;
+                }
+            });
+
+            var isDisabled = asignadaEnOtra !== null;
+            var tecInputId = 'sr_ot_tec_' + cIdx + '_' + f.id;
+
+            fallasHtml += `
+                <div class="p-2 mb-2 rounded-3 border ${isChecked ? 'bg-primary bg-opacity-10 border-primary-subtle' : (isDisabled ? 'bg-light opacity-50' : 'bg-white')} d-flex flex-wrap align-items-center justify-content-between gap-2" id="sr_falla_row_${cIdx}_${f.id}" style="overflow:visible !important;">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 220px;">
+                        <input type="checkbox" class="form-check-input mt-0 sr-falla-chk" 
+                               id="chk_sr_${cIdx}_${f.id}" 
+                               ${isChecked ? 'checked' : ''} 
+                               ${isDisabled ? 'disabled' : ''} 
+                               onchange="window.srToggleFallaOT(${cIdx}, '${f.id}', this.checked)"
+                               style="cursor:pointer; width:18px; height:18px;">
+                        <label class="form-check-label small m-0 flex-grow-1" for="chk_sr_${cIdx}_${f.id}" style="cursor: pointer;">
+                            <strong class="text-dark d-block text-uppercase">${f.desc}</strong>
+                            ${isDisabled ? `<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.68rem;">Asignado en OT #${asignadaEnOtra}</span>` : ''}
+                        </label>
+                    </div>
+
+                    ${isChecked ? `
+                        <div class="d-flex align-items-center gap-1" style="min-width: 200px; max-width: 260px; position: relative;">
+                            <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
+                            <div class="position-relative flex-grow-1">
+                                <input type="text" id="${tecInputId}-txt" 
+                                       class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                                       style="font-size: 0.78rem; min-height: 38px; border-radius: 8px;"
+                                       placeholder="SELECCIONE TÉCNICO..." 
+                                       autocomplete="off" 
+                                       oninput="window._cbFiltrar('${tecInputId}')" 
+                                       onfocus="window._cbFiltrar('${tecInputId}')" 
+                                       onblur="window._cbHide('${tecInputId}')">
+                                <input type="hidden" id="${tecInputId}">
+                                <div id="${tecInputId}-dd" class="cb-dropdown"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="card border-0 shadow-2xs rounded-4 p-3 bg-white" style="border: 1.5px solid #e2e8f0 !important; overflow: visible !important;">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-dark px-3 py-2 fw-bold text-uppercase rounded-3 shadow-2xs" style="font-size: 0.82rem;">
+                            <i class="bi bi-file-earmark-text-fill text-warning me-1"></i> OT #${cIdx + 1}
+                        </span>
+                        <span class="text-muted fw-semibold small">Configuración de Orden</span>
+                    </div>
+                    ${window._srOT_Cards.length > 1 ? `
+                        <button type="button" class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3 py-1 d-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.75rem;" onclick="window.srQuitarTarjetaOT(${cIdx})">
+                            <i class="bi bi-trash3-fill"></i> <span>Quitar OT</span>
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Fila 1: Tipo y Subtipo -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de OT (*)</label>
+                        <select class="form-select form-select-sm fw-bold bg-white" style="min-height: 40px; border-radius: 8px;" onchange="window.srOnCambiarTipoOTCard(${cIdx}, this)">
+                            <option value="Correctivo" ${currentTipo === 'Correctivo' ? 'selected' : ''}>Correctivo</option>
+                            <option value="Preventivo" ${currentTipo === 'Preventivo' ? 'selected' : ''}>Preventivo</option>
+                            <option value="Predictivo" ${currentTipo === 'Predictivo' ? 'selected' : ''}>Predictivo</option>
+                            <option value="Proactivo" ${currentTipo === 'Proactivo' ? 'selected' : ''}>Proactivo</option>
+                            <option value="Servicio" ${currentTipo === 'Servicio' ? 'selected' : ''}>Servicio</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Sub Tipo de OT (*)</label>
+                        <select class="form-select form-select-sm fw-bold bg-white" id="sr_ot_subtipo_${cIdx}" style="min-height: 40px; border-radius: 8px;" onchange="window.srOnCambiarSubtipoOTCard(${cIdx}, this)">
+                            ${subtipos.map(function(s) {
+                                return '<option value="' + s + '" ' + (card.subtipo_ot === s ? 'selected' : '') + '>' + s + '</option>';
+                            }).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Fila 2: Supervisor y Situación -->
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-7">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Supervisor Responsable (*)</label>
+                        <div class="position-relative">
+                            <input type="text" id="sr_ot_sup_${cIdx}-txt" 
+                                   class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                                   style="min-height: 40px; border-radius: 8px;" 
+                                   placeholder="SELECCIONE SUPERVISOR..." 
+                                   autocomplete="off" 
+                                   oninput="window._cbFiltrar('sr_ot_sup_${cIdx}')" 
+                                   onfocus="window._cbFiltrar('sr_ot_sup_${cIdx}')" 
+                                   onblur="window._cbHide('sr_ot_sup_${cIdx}')">
+                            <input type="hidden" id="sr_ot_sup_${cIdx}">
+                            <div id="sr_ot_sup_${cIdx}-dd" class="cb-dropdown"></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Situación</label>
+                        <select class="form-select form-select-sm fw-bold bg-white" style="min-height: 40px; border-radius: 8px;" onchange="window.srOnCambiarSituacionCard(${cIdx}, this)">
+                            <option value="En atención" ${card.situacion === 'En atención' ? 'selected' : ''}>En atención</option>
+                            <option value="Finalizado" ${card.situacion === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+                            <option value="En espera de reparación" ${card.situacion === 'En espera de reparación' ? 'selected' : ''}>En espera de reparación</option>
+                            <option value="Taller Tercero" ${card.situacion === 'Taller Tercero' ? 'selected' : ''}>Taller Tercero</option>
+                            <option value="Inoperativo" ${card.situacion === 'Inoperativo' ? 'selected' : ''}>Inoperativo</option>
+                            <option value="Anulado" ${card.situacion === 'Anulado' ? 'selected' : ''}>Anulado</option>
+                            <option value="Operativo" ${card.situacion === 'Operativo' ? 'selected' : ''}>Operativo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Lista de Trabajos -->
+                <div>
+                    <label class="form-label mb-2 d-flex align-items-center justify-content-between" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+                        <span><i class="bi bi-tools text-primary me-1"></i> Seleccionar Trabajos para esta OT:</span>
+                        <span class="text-muted" style="font-size: 0.7rem; font-weight: 600;">(Marca las casillas a incluir)</span>
+                    </label>
+                    <div class="d-flex flex-column gap-1" style="overflow: visible !important;">
+                        ${fallasHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Inicializar comboboxes _cbInit para supervisores y técnicos
+    if (typeof window._cbInit === 'function' && window._srPersonalItems && window._srPersonalItems.length) {
+        window._srOT_Cards.forEach(function(card, cIdx) {
+            var supId = 'sr_ot_sup_' + cIdx;
+            window._cbInit(supId, window._srPersonalItems, 'SELECCIONE SUPERVISOR...');
+            if (card.supervisor) window._cbSet(supId, card.supervisor, card.supervisor);
+
+            window._srOT_TodasFallas.forEach(function(f) {
+                var tecId = 'sr_ot_tec_' + cIdx + '_' + f.id;
+                var tecInp = document.getElementById(tecId + '-txt');
+                if (tecInp) {
+                    window._cbInit(tecId, window._srPersonalItems, 'SELECCIONE TÉCNICO...');
+                    var prevTec = (card.tecnicoPorFalla && card.tecnicoPorFalla[f.id]) || '';
+                    if (prevTec) window._cbSet(tecId, prevTec, prevTec);
+                }
+            });
+        });
+    }
+};
+
+window.srEnviarOT = async function() {
     var placa      = (document.getElementById('sr-ot-placa-hid') || {}).value || '';
     var rampaId    = (document.getElementById('sr-ot-rampa-hid') || {}).value || '';
     var idRampa    = (document.getElementById('sr-ot-id-rampa-hid') || {}).value || null;
     var rIdx = (window.srCatRampas || []).findIndex(function(r) { return r.id == rampaId; });
     var rObj = rIdx >= 0 ? window.srCatRampas[rIdx] : null;
     var rampa = rObj ? (rObj.nombre_rampa || rObj.descripcion || 'Rampa ' + rampaId) : ('Rampa ' + rampaId);
-    var tipo       = (document.getElementById('sr-ot-tipo')       || {}).value || '';
-    var subtipo    = (document.getElementById('sr-ot-subtipo')    || {}).value || '';
-    var supervisor = ((typeof window._cbGet === 'function' ? window._cbGet('sr-ot-supervisor') : '') || (document.getElementById('sr-ot-supervisor-inp') || {}).value || '').trim();
     var km         = (document.getElementById('sr-ot-km')         || {}).value || '0';
     var chofer     = (document.getElementById('sr-ot-chofer')     || {}).value || '';
-    var sitIni     = (document.getElementById('sr-ot-situacion')  || {}).value || 'En atención';
     var fechaIng   = (document.getElementById('sr-ot-fecha-ing')  || {}).value || '';
 
-    if (!tipo)    { alert('⚠️ Por favor selecciona el Tipo de OT.'); return; }
-    if (!subtipo) { alert('⚠️ Por favor selecciona el Sub Tipo de OT.'); return; }
-    if (!supervisor) { alert('⚠️ Por favor selecciona el Supervisor Responsable.'); return; }
+    if (!placa) { alert('⚠️ No se encontró la placa.'); return; }
+    if (!window._srOT_Cards || !window._srOT_Cards.length) { alert('⚠️ Debe existir al menos una Orden de Trabajo.'); return; }
 
     var personalNombres = (window._srPersonalItems || []).map(function(p){ return p.value.toLowerCase(); });
-    if (personalNombres.length && !personalNombres.includes(supervisor.toLowerCase())) {
-        alert('⚠️ El supervisor "' + supervisor + '" no existe en el directorio de personal.\nPor favor selecciona un personal válido.');
-        return;
-    }
 
-    // Extraer motivos y técnicos asignados
-    var motivosArray = [];
-    var rows = document.querySelectorAll('#sr-ot-trabajos-lista > div');
-    for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var chk = row.querySelector('.sr-ot-job-chk');
-        if (chk && !chk.checked) continue;
+    // Validar cada tarjeta
+    var payloads = [];
+    for (var i = 0; i < window._srOT_Cards.length; i++) {
+        var card = window._srOT_Cards[i];
+        var supVal = ((typeof window._cbGet === 'function' ? window._cbGet('sr_ot_sup_' + i) : '') || (document.getElementById('sr_ot_sup_' + i + '-txt') || {}).value || card.supervisor || '').trim();
 
-        var txt = (row.querySelector('input[type="text"]') || {}).value || '';
-        var cleanTxt = txt.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '').trim();
-        if (!cleanTxt) continue;
+        if (!card.tipo_ot) { alert('⚠️ Selecciona el Tipo de OT en la tarjeta OT #' + (i + 1)); return; }
+        if (!card.subtipo_ot) { alert('⚠️ Selecciona el Sub Tipo de OT en la tarjeta OT #' + (i + 1)); return; }
+        if (!supVal) { alert('⚠️ Por favor selecciona el Supervisor Responsable en la OT #' + (i + 1)); return; }
 
-        var tecInput = row.querySelector('input[type="hidden"]');
-        var tecId = tecInput ? tecInput.id : '';
-        var tecVal = ((typeof window._cbGet === 'function' && tecId ? window._cbGet(tecId) : '') || (row.querySelector('.cb-dropdown')?.previousElementSibling?.value) || '').trim();
-
-        if (tecVal && personalNombres.length && !personalNombres.includes(tecVal.toLowerCase())) {
-            alert('⚠️ El técnico "' + tecVal + '" asignado a "' + cleanTxt + '" no existe en el directorio de personal.');
+        if (personalNombres.length && !personalNombres.includes(supVal.toLowerCase())) {
+            alert('⚠️ El supervisor "' + supVal + '" en la OT #' + (i + 1) + ' no existe en el directorio de personal.\nPor favor selecciona un personal válido.');
             return;
         }
 
-        motivosArray.push({
-            motivo: cleanTxt,
-            item: cleanTxt,
-            obs: cleanTxt,
-            tecnico: tecVal,
-            tecnico_nombre: tecVal
+        var fallasSeleccionadasObjs = window._srOT_TodasFallas.filter(function(f){ return (card.fallasSeleccionadas || []).includes(f.id); });
+        if (!fallasSeleccionadasObjs.length) {
+            alert('⚠️ Debes seleccionar al menos un trabajo o motivo en la OT #' + (i + 1));
+            return;
+        }
+
+        var motivosArray = [];
+        for (var j = 0; j < fallasSeleccionadasObjs.length; j++) {
+            var f = fallasSeleccionadasObjs[j];
+            var tecId = 'sr_ot_tec_' + i + '_' + f.id;
+            var tecVal = ((typeof window._cbGet === 'function' ? window._cbGet(tecId) : '') || (document.getElementById(tecId + '-txt') || {}).value || (card.tecnicoPorFalla && card.tecnicoPorFalla[f.id]) || '').trim();
+
+            if (tecVal && personalNombres.length && !personalNombres.includes(tecVal.toLowerCase())) {
+                alert('⚠️ El técnico "' + tecVal + '" asignado a "' + f.desc + '" en la OT #' + (i + 1) + ' no existe en el directorio de personal.');
+                return;
+            }
+
+            motivosArray.push({
+                motivo: f.desc,
+                item: f.desc,
+                obs: f.desc,
+                tecnico: tecVal,
+                tecnico_nombre: tecVal
+            });
+        }
+
+        var cleanMotivoStr = motivosArray.map(function(m){ return '• ' + m.motivo; }).join('\n');
+        var tecnicosUnicos = Array.from(new Set(motivosArray.map(function(m){ return m.tecnico; }).filter(Boolean)));
+
+        payloads.push({
+            placa: placa,
+            estado: 'Pendiente',
+            fecha_ingreso: fechaIng,
+            id_rampa: idRampa,
+            detalles_json: JSON.stringify({
+                tipo_ot: card.tipo_ot,
+                tipo_mantenimiento: card.tipo_ot,
+                sub_tipo: card.subtipo_ot,
+                subtipo_ot: card.subtipo_ot,
+                motivo: cleanMotivoStr,
+                observaciones: cleanMotivoStr,
+                motivos_array: motivosArray,
+                conductor: chofer,
+                chofer: chofer,
+                reportado_por: chofer,
+                rampa_origen: rampa,
+                rampa: rampa,
+                supervisor: supVal,
+                tecnico_lider: supVal,
+                tecnicos: tecnicosUnicos.length ? tecnicosUnicos : [supVal],
+                tecnicos_str: tecnicosUnicos.join(', '),
+                km: km,
+                situacion_inicial: card.situacion || 'En atención',
+                situacion: card.situacion || 'En atención',
+                sistema: card.subtipo_ot,
+                sub_sistema: card.subtipo_ot
+            })
         });
     }
-
-    if (!motivosArray.length) {
-        alert('⚠️ Debes incluir al menos un trabajo o motivo para esta OT.');
-        return;
-    }
-
-    var cleanMotivoStr = motivosArray.map(function(m){ return '• ' + m.motivo; }).join('\n');
-    var tecnicosUnicos = Array.from(new Set(motivosArray.map(function(m){ return m.tecnico; }).filter(Boolean)));
 
     var btnSubmit = document.getElementById('sr-btn-confirmar-ot');
     if (btnSubmit) {
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando OT...';
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando OTs...';
     }
 
-    fetch('/api/ordenes-trabajo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            placa:        placa,
-            estado:       'Pendiente',
-            fecha_ingreso: fechaIng,
-            id_rampa:     idRampa,
-            detalles_json: JSON.stringify({
-                tipo_ot:           tipo,
-                tipo_mantenimiento: tipo,
-                sub_tipo:          subtipo,
-                subtipo_ot:        subtipo,
-                motivo:            cleanMotivoStr,
-                observaciones:     cleanMotivoStr,
-                motivos_array:     motivosArray,
-                conductor:         chofer,
-                chofer:            chofer,
-                reportado_por:     chofer,
-                rampa_origen:      rampa,
-                rampa:             rampa,
-                supervisor:        supervisor,
-                tecnico_lider:     supervisor,
-                tecnicos:          tecnicosUnicos.length ? tecnicosUnicos : [supervisor],
-                tecnicos_str:      tecnicosUnicos.join(', '),
-                km:                km,
-                situacion_inicial: sitIni,
-                situacion:         sitIni,
-                sistema:           subtipo,
-                sub_sistema:       subtipo
-            })
-        })
-    })
-    .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-    .then(function(d) {
+    try {
+        var promesas = payloads.map(function(p) {
+            return fetch('/api/ordenes-trabajo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p)
+            }).then(function(res){
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            });
+        });
+
+        var resultados = await Promise.all(promesas);
+        var otsGeneradas = resultados.map(function(r){ return r.id_ot || ''; }).filter(Boolean).join(', ');
+
         srCerrarDrawers();
-        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('🚀 ¡Éxito! OT ' + (d.id_ot || '') + ' generada correctamente', 'success');
+        if (typeof window.mostrarAlerta === 'function') {
+            window.mostrarAlerta('🚀 ¡Éxito! OTs generadas correctamente: ' + otsGeneradas, 'success');
+        }
         srCargarOTs();
-    })
-    .catch(function(err) {
-        console.error('Error generando OT:', err);
-        alert('Error al generar la OT: ' + err.message);
-    })
-    .finally(function() {
+    } catch(err) {
+        console.error('Error generando OTs:', err);
+        alert('Error al generar las OTs: ' + err.message);
+    } finally {
         if (btnSubmit) {
             btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OT</span>';
+            btnSubmit.innerHTML = '<i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OTs</span>';
         }
-    });
+    }
 };
 
 // ── Detalle OT ───────────────────────────────────────────────────
@@ -2161,22 +2681,43 @@ function srRenderConfigRampas() {
         return;
     }
     list.innerHTML = rampas.map(function(r) {
-        return '<div class="sr-cfg-row" data-id="' + r.id + '" draggable="true" ' +
-               'style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:default;">' +
-            '<span class="sr-cfg-drag" title="Arrastrar para reordenar" ' +
-               'style="cursor:grab;color:var(--subtext);padding:0 4px;font-size:1rem;flex-shrink:0;">⠿</span>' +
+        var col = r.color || '#ef4444';
+        return '<div class="sr-cfg-row p-2 rounded-3 mb-2 bg-white border d-flex align-items-center gap-2 shadow-2xs" data-id="' + r.id + '" draggable="true" style="cursor:default;">' +
+            '<span class="sr-cfg-drag text-muted" title="Arrastrar para reordenar" style="cursor:grab; font-size:1.1rem; flex-shrink:0;">⠿</span>' +
+            '<input type="color" value="' + col + '" id="sr-cfg-col-' + r.id + '" ' +
+                'style="width:32px; height:32px; border:none; border-radius:50%; cursor:pointer; background:none; padding:0; flex-shrink:0;" ' +
+                'title="Cambiar color de rampa" ' +
+                'onchange="window.srGuardarColorRampa(' + r.id + ', this.value)">' +
             '<input type="text" value="' + _srEsc(r.nombre_rampa) + '" id="sr-cfg-nom-' + r.id + '" ' +
-                'style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.85rem;" ' +
+                'class="form-control form-control-sm bg-light fw-bold" ' +
+                'style="flex:1; border-radius:8px; font-size:0.85rem;" ' +
                 'onblur="window.srGuardarNombreRampa(' + r.id + ')" ' +
                 'onkeydown="if(event.key===\'Enter\')this.blur()">' +
-            '<button onclick="window.srEliminarRampa(' + r.id + ')" title="Eliminar" ' +
-                'style="border:none;background:none;color:#ef4444;cursor:pointer;padding:4px 6px;border-radius:6px;" ' +
-                'onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'none\'">' +
-                '<i class="bi bi-trash"></i></button>' +
+            '<button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 border-0" onclick="window.srEliminarRampa(' + r.id + ')" title="Eliminar rampa">' +
+                '<i class="bi bi-trash-fill"></i></button>' +
         '</div>';
     }).join('');
     srInitDragRampas(list);
 }
+
+window.srGuardarColorRampa = function(id, nuevoColor) {
+    if (!nuevoColor) return;
+    var r = (window.srCatRampas || []).find(function(x){ return x.id === id; });
+    if (r) r.color = nuevoColor;
+
+    fetch('/api/cat-rampas/' + id, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ color: nuevoColor })
+    })
+    .then(function(res) {
+        if (res.ok) {
+            srRenderTabla();
+            if (window.srDetalleId) srAbrirDetalle(window.srDetalleId);
+        }
+    })
+    .catch(function(){});
+};
 
 function srInitDragRampas(list) {
     var dragSrc = null;
@@ -2253,18 +2794,20 @@ window.srGuardarNombreRampa = function(id) {
 
 window.srAgregarRampa = function() {
     var inp = document.getElementById('sr-cfg-nueva');
+    var colInp = document.getElementById('sr-cfg-color');
     if (!inp) return;
     var nombre = inp.value.trim();
+    var color = colInp ? colInp.value : '#ef4444';
     if (!nombre) { inp.focus(); return; }
     fetch('/api/cat-rampas', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ nombre_rampa: nombre })
+        body: JSON.stringify({ nombre_rampa: nombre, color: color })
     })
     .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
     .then(function(res) {
         inp.value = '';
-        window.srCatRampas.push({ id: res.id, nombre_rampa: nombre, sede: 'Principal', estado: 'Disponible' });
+        window.srCatRampas.push({ id: res.id, nombre_rampa: nombre, sede: 'Principal', estado: 'Disponible', color: color });
         srRenderConfigRampas();
         srRenderTabla();
         var sel = document.getElementById('sr-f-rampa');

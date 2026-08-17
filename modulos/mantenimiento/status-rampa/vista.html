@@ -14,24 +14,24 @@
     flex-direction: column !important;
 }
 
-/* ── Combobox cb-dropdown scoped en sr-drawer-ot ── */
-#sr-drawer-ot .cb-dropdown {
+/* ── Combobox cb-dropdown scoped en drawers de Status Rampa ── */
+#sr-drawer-registro .cb-dropdown, #sr-drawer-ot .cb-dropdown {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 10px !important;
     box-shadow: 0 12px 28px -5px rgba(0, 0, 0, 0.18), 0 8px 12px -6px rgba(0, 0, 0, 0.12) !important;
-    z-index: 1090 !important;
+    z-index: 1190 !important;
     max-height: 240px !important;
     overflow-y: auto !important;
 }
-#sr-drawer-ot .cb-opt {
+#sr-drawer-registro .cb-opt, #sr-drawer-ot .cb-opt {
     color: #1e293b !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     padding: 8px 12px !important;
     border-bottom: 1px solid #f8fafc;
 }
-#sr-drawer-ot .cb-opt:hover {
+#sr-drawer-registro .cb-opt:hover, #sr-drawer-ot .cb-opt:hover {
     background-color: #f0f9ff !important;
     color: #0284c7 !important;
 }
@@ -653,16 +653,21 @@
         <!-- FAB REGISTRAR MÓVIL (Eliminado duplicado) -->
 
 
-        <!-- PANEL DETALLE LATERAL -->
-        <div class="sr-drawer-global" id="sr-panel-detalle">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
-                <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle de Rampa</span>
-                <button class="btn btn-sm" onclick="window.srCerrarDetalle()" style="color:var(--subtext);">
+        <!-- PANEL DETALLE LATERAL (MODERNO BENTO) -->
+        <div class="sr-drawer-global" id="sr-panel-detalle" style="max-width: 660px; width: 100%;">
+            <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
+                <div>
+                    <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
+                        <i class="bi bi-speedometer text-primary fs-5"></i> Detalle de Rampa
+                    </span>
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Información en vivo, tiempos de estancia y órdenes de trabajo</small>
+                </div>
+                <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDetalle()" style="color:var(--subtext);">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
-            <div class="sr-drawer-body" id="sr-detalle-scroll"></div>
-            <div class="sr-drawer-footer" id="sr-detalle-footer" style="padding: 0.75rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+            <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" id="sr-detalle-scroll" style="background: #f8fafc;"></div>
+            <div class="sr-drawer-footer bg-white border-top" id="sr-detalle-footer"></div>
         </div>
 
     </div><!-- fin pane rampas -->
@@ -705,15 +710,20 @@
                 </table>
                 </div>
                 <!-- PANEL DETALLE HISTORIAL -->
-                <div class="sr-drawer-global" id="sr-panel-detalle-hist">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 1rem; height:48px; border-bottom:1px solid var(--border); flex-shrink:0;">
-                        <span style="font-size:0.88rem; font-weight:800; color:var(--text);">Detalle Historial</span>
-                        <button class="btn btn-sm" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
+                <div class="sr-drawer-global" id="sr-panel-detalle-hist" style="max-width: 660px; width: 100%;">
+                    <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
+                        <div>
+                            <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
+                                <i class="bi bi-archive-fill text-secondary fs-5"></i> Detalle Historial de Rampa
+                            </span>
+                            <small class="text-muted d-block" style="font-size: 0.75rem;">Registro consolidado de estancia y servicio liberado</small>
+                        </div>
+                        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDetalleHist()" style="color:var(--subtext);">
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    <div class="sr-drawer-body" id="sr-hist-detalle-scroll"></div>
-                    <div class="sr-drawer-footer" id="sr-hist-detalle-footer" style="padding: 0.75rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+                    <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" id="sr-hist-detalle-scroll" style="background: #f8fafc;"></div>
+                    <div class="sr-drawer-footer bg-white border-top" id="sr-hist-detalle-footer"></div>
                 </div>
             </div>
             <!-- PAGINACIÓN HISTORIAL -->
@@ -729,22 +739,27 @@
 
 <!-- ═══════════════ PANEL: Configurar Rampas ═══════════════ -->
 <div id="sr-config-bd" onclick="window.srCerrarConfigRampas()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1050;"></div>
-<div id="sr-config-rampas" style="position:fixed;top:0;right:-500px;height:100%;width:360px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:1051;transition:right .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;visibility:hidden;box-shadow:-8px 0 30px rgba(0,0,0,.14);">
+<div id="sr-config-rampas" style="position:fixed;top:0;right:-500px;height:100%;width:380px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:1051;transition:right .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;visibility:hidden;box-shadow:-8px 0 30px rgba(0,0,0,.14);">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <span style="font-size:1rem;font-weight:800;color:var(--text);"><i class="bi bi-gear me-2"></i>Configurar Rampas</span>
+        <span style="font-size:1rem;font-weight:800;color:var(--text);"><i class="bi bi-gear-fill me-2 text-primary"></i>Configurar Rampas</span>
         <button onclick="window.srCerrarConfigRampas()" style="border:none;background:none;font-size:1.2rem;color:var(--subtext);cursor:pointer;"><i class="bi bi-x-lg"></i></button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:20px;">
-        <p style="font-size:.82rem;color:var(--subtext);margin-bottom:16px;">Edita el nombre de cada espacio directamente o agrega nuevos. Solo puedes eliminar rampas que estén libres.</p>
+        <p style="font-size:.82rem;color:var(--subtext);margin-bottom:16px;">Personaliza el nombre y color de cada rampa o añade nuevos espacios. Arrastra para reordenar.</p>
         <div id="sr-config-list"></div>
-        <div style="display:flex;gap:8px;margin-top:16px;">
-            <input type="text" id="sr-cfg-nueva" placeholder="Ej: Zona espera, Auxilio mecánico…"
-                style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:.85rem;"
-                onkeydown="if(event.key==='Enter')window.srAgregarRampa()">
-            <button onclick="window.srAgregarRampa()"
-                style="padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:.85rem;">
-                <i class="bi bi-plus-lg me-1"></i>Agregar
-            </button>
+        <div class="card border-0 rounded-3 p-2 mt-3 bg-light shadow-2xs">
+            <label class="form-label mb-1 fw-bold text-dark" style="font-size:0.75rem; text-transform:uppercase;">+ Agregar Nueva Rampa</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="color" id="sr-cfg-color" value="#ef4444" 
+                       style="width:38px;height:38px;border:none;border-radius:8px;cursor:pointer;background:none;padding:0;flex-shrink:0;" title="Elegir color">
+                <input type="text" id="sr-cfg-nueva" placeholder="Ej: Rampa 4, Zona espera…"
+                    style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.85rem;"
+                    onkeydown="if(event.key==='Enter')window.srAgregarRampa()">
+                <button onclick="window.srAgregarRampa()"
+                    style="padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem;white-space:nowrap;">
+                    <i class="bi bi-plus-lg me-1"></i>Agregar
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -758,67 +773,66 @@
 </button>
 
 
-<!-- ═══════════════ DRAWER: Registrar / Editar Unidad ═══════════════ -->
-<div class="sr-drawer-global" id="sr-drawer-registro">
-    <div class="sr-drawer-hd">
-        <span class="sr-drawer-title" id="sr-drawer-titulo">Registrar Unidad en Rampa</span>
-        <button class="btn btn-sm" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
+<!-- ═══════════════ DRAWER: Registrar / Editar Unidad (MODERNO BENTO) ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-registro" style="max-width: 640px; width: 100%;">
+    <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
+        <div>
+            <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;" id="sr-drawer-titulo">
+                <i class="bi bi-truck-front-fill text-primary fs-5"></i> Registrar Unidad en Rampa
+            </span>
+            <small class="text-muted d-block" style="font-size: 0.75rem;">Ingreso a patio, rampa asignada y trabajos iniciales</small>
+        </div>
+        <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="sr-drawer-body">
+    
+    <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
         <input type="hidden" id="sr-f-idx">
 
-        <!-- Sección: Ubicación -->
-        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #2563eb;">
-            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#2563eb;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
-                <i class="bi bi-geo-alt-fill"></i> Ubicación
-            </div>
-
-            <div class="mb-3">
-                <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Rampa *</label>
-                <input type="hidden" id="sr-f-rampa-id">
-                <select class="form-select form-select-sm" id="sr-f-rampa"
-                    style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);"
-                    onchange="var h=document.getElementById('sr-f-rampa-id');if(h)h.value=this.value;">
-                    <option value="">— Seleccionar —</option>
-                </select>
-            </div>
-
-            <div>
-                <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Placa *</label>
-                <div class="position-relative">
-                    <input type="text" id="sr-f-placa-txt" class="form-control form-control-sm" placeholder="Buscar placa..."
-                        autocomplete="off"
-                        style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);min-height:44px;"
-                        oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sr-f-placa')"
-                        onfocus="window._cbFiltrar('sr-f-placa')"
-                        onblur="window._cbHide('sr-f-placa')">
-                    <input type="hidden" id="sr-f-placa" name="sr-f-placa">
-                    <div id="sr-f-placa-dd" class="cb-dropdown"></div>
+        <!-- Card 1: Ubicación y Vehículo -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                <i class="bi bi-geo-alt-fill text-primary"></i> Ubicación y Vehículo
+            </h6>
+            
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rampa Asignada (*)</label>
+                    <input type="hidden" id="sr-f-rampa-id">
+                    <select class="form-select form-select-sm fw-bold bg-white" id="sr-f-rampa" style="min-height: 40px; border-radius: 8px;" onchange="var h=document.getElementById('sr-f-rampa-id');if(h)h.value=this.value;">
+                        <option value="">— Seleccionar Rampa —</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Placa (*)</label>
+                    <div class="position-relative">
+                        <input type="text" id="sr-f-placa-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white" 
+                               placeholder="BUSCAR PLACA..." autocomplete="off"
+                               style="min-height: 40px; border-radius: 8px;"
+                               oninput="this.value=this.value.toUpperCase();window._cbFiltrar('sr-f-placa')"
+                               onfocus="window._cbFiltrar('sr-f-placa')"
+                               onblur="window._cbHide('sr-f-placa')">
+                        <input type="hidden" id="sr-f-placa" name="sr-f-placa">
+                        <div id="sr-f-placa-dd" class="cb-dropdown"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Sección: Vehículo y Conductor -->
-        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #7c3aed; overflow: visible !important;">
-            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#7c3aed;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
-                <i class="bi bi-speedometer2"></i> Vehículo y Conductor
-            </div>
             <div class="row g-2">
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Kilometraje / Horas</label>
-                    <input type="number" class="form-control form-control-sm" id="sr-f-km" placeholder="0" min="0" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Kilometraje / Horas</label>
+                    <input type="number" class="form-control form-control-sm fw-bold bg-white" id="sr-f-km" placeholder="0" min="0" style="min-height: 40px; border-radius: 8px;">
                 </div>
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Chofer / Reportado por</label>
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Chofer / Reportado por</label>
                     <div class="position-relative">
-                        <input type="text" id="sr-f-conductor-txt" class="form-control form-control-sm text-uppercase" placeholder="Buscar chofer..."
-                            autocomplete="off"
-                            style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);"
-                            oninput="window._cbFiltrar('sr-f-conductor')"
-                            onfocus="window._cbFiltrar('sr-f-conductor')"
-                            onblur="window._cbHide('sr-f-conductor')">
+                        <input type="text" id="sr-f-conductor-txt" class="form-control form-control-sm text-uppercase fw-bold bg-white" 
+                               placeholder="BUSCAR CHOFER..." autocomplete="off"
+                               style="min-height: 40px; border-radius: 8px;"
+                               oninput="window._cbFiltrar('sr-f-conductor')"
+                               onfocus="window._cbFiltrar('sr-f-conductor')"
+                               onblur="window._cbHide('sr-f-conductor')">
                         <input type="hidden" id="sr-f-conductor">
                         <div id="sr-f-conductor-dd" class="cb-dropdown"></div>
                     </div>
@@ -826,93 +840,99 @@
             </div>
         </div>
 
-        <!-- Sección: Tiempo -->
-        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:.85rem;border-left:4px solid #0891b2;">
-            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#0891b2;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
-                <i class="bi bi-clock-history"></i> Tiempo
-            </div>
+        <!-- Card 2: Tiempos de Ingreso y Salida Estimada -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                <i class="bi bi-clock-history text-info"></i> Tiempos de Estancia
+            </h6>
 
             <div class="row g-2 mb-2">
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Fecha Ingreso</label>
-                    <input type="date" class="form-control form-control-sm" id="sr-f-fecha-ing" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Fecha Ingreso</label>
+                    <input type="date" class="form-control form-control-sm fw-bold bg-white" id="sr-f-fecha-ing" style="min-height: 40px; border-radius: 8px;">
                 </div>
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Hora Ingreso</label>
-                    <input type="time" class="form-control form-control-sm" id="sr-f-hora-ing" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Hora Ingreso</label>
+                    <input type="time" class="form-control form-control-sm fw-bold bg-white" id="sr-f-hora-ing" style="min-height: 40px; border-radius: 8px;">
                 </div>
             </div>
 
             <div class="row g-2">
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Fecha Salida (Est.)</label>
-                    <input type="date" class="form-control form-control-sm" id="sr-f-fecha-sal" style="border-radius:10px;background:var(--bg);border-color:#0891b2;color:var(--text);">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #0284c7; text-transform: uppercase; margin-bottom: 4px;">Fecha Salida (Est.)</label>
+                    <input type="date" class="form-control form-control-sm fw-bold bg-white" id="sr-f-fecha-sal" style="min-height: 40px; border-radius: 8px; border-color: #93c5fd;">
                 </div>
                 <div class="col-6">
-                    <label style="font-size:.72rem;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Hora Salida (Est.)</label>
-                    <input type="time" class="form-control form-control-sm" id="sr-f-hora-sal" style="border-radius:10px;background:var(--bg);border-color:#0891b2;color:var(--text);">
+                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #0284c7; text-transform: uppercase; margin-bottom: 4px;">Hora Salida (Est.)</label>
+                    <input type="time" class="form-control form-control-sm fw-bold bg-white" id="sr-f-hora-sal" style="min-height: 40px; border-radius: 8px; border-color: #93c5fd;">
                 </div>
             </div>
         </div>
 
-        <!-- Sección: Estado y Notas -->
-        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1rem .75rem;margin-bottom:1.25rem;border-left:4px solid #059669;">
-            <div style="font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#059669;margin-bottom:.7rem;display:flex;align-items:center;gap:.35rem;">
-                <i class="bi bi-clipboard2-check-fill"></i> Estado y Notas
-            </div>
+        <!-- Card 3: Estado, Trabajos y Evidencias -->
+        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.88rem;">
+                <i class="bi bi-clipboard2-check-fill text-success"></i> Estado y Trabajos
+            </h6>
 
             <div class="mb-3">
-                <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Situación *</label>
-                <select class="form-select form-select-sm" id="sr-f-situacion" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
-                    <option value="En espera">En espera</option>
+                <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Situación Inicial (*)</label>
+                <select class="form-select form-select-sm fw-bold bg-white" id="sr-f-situacion" style="min-height: 40px; border-radius: 8px;">
+                    <option value="En espera" selected>En espera</option>
                     <option value="En proceso">En proceso</option>
+                    <option value="En atención">En atención</option>
                     <option value="Listo">Listo</option>
                     <option value="Finalizado">Finalizado</option>
                 </select>
             </div>
 
             <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0;">Trabajos Asignados / Tareas *</label>
-                    <button type="button" class="btn btn-sm btn-link p-0 fw-bold text-decoration-none" style="font-size:0.72rem; color:#2563eb;" onclick="window.srAgregarFilaTrabajo()">
-                        <i class="bi bi-plus-circle me-1"></i>+ Agregar Fila
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label m-0" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase;">Trabajos Asignados / Tareas (*)</label>
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-bold shadow-2xs" style="font-size: 0.74rem;" onclick="window.srAgregarFilaTrabajo()">
+                        <i class="bi bi-plus-lg me-1"></i>+ Agregar Fila
                     </button>
                 </div>
                 <div id="sr-f-trabajos-container" class="d-flex flex-column gap-2 mb-2">
                     <!-- Filas dinámicas generadas con srAgregarFilaTrabajo -->
                 </div>
                 <textarea class="form-control form-control-sm d-none" id="sr-f-obs"></textarea>
-                <div class="mt-2">
-                    <label style="font-size:.68rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;display:block;">Observaciones / Notas Adicionales (Opcional)</label>
-                    <textarea class="form-control form-control-sm" id="sr-f-obs-extra" rows="2" placeholder="Notas clave, avisos adicionales..." style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);resize:vertical;font-size:0.8rem;"></textarea>
-                </div>
             </div>
 
-            <div class="mt-3">
-                <label style="font-size:.72rem;font-weight:700;color:var(--subtext);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block;">Adjuntar Evidencia (Max 15MB)</label>
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Observaciones Adicionales (Opcional)</label>
+                <textarea class="form-control form-control-sm bg-white" id="sr-f-obs-extra" rows="2" placeholder="Notas clave, avisos adicionales..." style="border-radius: 8px; resize: vertical; font-size: 0.82rem;"></textarea>
+            </div>
+
+            <div class="pt-2 border-top">
+                <label class="form-label" style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Adjuntar Evidencia (Max 15MB)</label>
                 <input type="hidden" id="sr-f-evidencia-url">
-                <input type="file" class="form-control form-control-sm" id="sr-f-evidencia" accept="image/*,application/pdf" style="border-radius:10px;background:var(--bg);border-color:var(--border);color:var(--text);">
+                <input type="file" class="form-control form-control-sm bg-white" id="sr-f-evidencia" accept="image/*,application/pdf" style="border-radius: 8px;">
                 <div class="d-flex justify-content-between align-items-center mt-1">
-                    <small id="sr-f-evidencia-help" class="text-muted" style="font-size:0.65rem;">Fotos o PDF (15MB máx.)</small>
-                    <a href="#" id="sr-f-evidencia-link" target="_blank" style="display:none; font-size:0.75rem; color:#2563eb; text-decoration:none;"><i class="bi bi-box-arrow-up-right"></i> Ver actual</a>
+                    <small id="sr-f-evidencia-help" class="text-muted" style="font-size: 0.7rem;">Fotos o PDF (15MB máx.)</small>
+                    <a href="#" id="sr-f-evidencia-link" target="_blank" style="display:none; font-size: 0.75rem; color: #2563eb; text-decoration: none; font-weight: 600;"><i class="bi bi-box-arrow-up-right me-1"></i>Ver adjunto</a>
                 </div>
             </div>
         </div>
+    </div>
 
-        <button class="btn w-100 fw-bold" onclick="window.srGuardarRegistro()" style="border-radius:12px;padding:.65rem 1rem;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;color:#fff;font-size:.88rem;letter-spacing:.03em;box-shadow:0 4px 14px rgba(37,99,235,.35);">
-            <i class="bi bi-check-lg me-1"></i>Guardar
+    <!-- Drawer Footer -->
+    <div class="sr-drawer-footer bg-white border-top px-3 py-3 d-flex flex-row justify-content-between align-items-center gap-2">
+        <button type="button" class="btn btn-light border px-3 py-2 fw-semibold rounded-3 text-nowrap" onclick="window.srCerrarDrawers()">Cancelar</button>
+        <button type="button" class="btn btn-primary px-4 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-sm text-nowrap" onclick="window.srGuardarRegistro()">
+            <i class="bi bi-check-circle-fill"></i> <span>Guardar Registro</span>
         </button>
     </div>
 </div>
 
-<!-- ═══════════════ DRAWER: Generar OT desde Rampa (MODERNO BENTO) ═══════════════ -->
-<div class="sr-drawer-global" id="sr-drawer-ot" style="max-width: 620px; width: 100%;">
+<!-- ═══════════════ DRAWER: Generar OTs desde Rampa (MODERNO BENTO MULTI-OT) ═══════════════ -->
+<div class="sr-drawer-global" id="sr-drawer-ot" style="max-width: 680px; width: 100%;">
     <div class="sr-drawer-hd d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
         <div>
             <span class="sr-drawer-title fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 1.1rem;">
-                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i> Generar Orden de Trabajo
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i> Generar Órdenes de Trabajo
             </span>
-            <small class="text-muted d-block" style="font-size: 0.75rem;">Configura parámetros, asigna supervisor y técnicos por trabajo</small>
+            <small class="text-muted d-block" style="font-size: 0.75rem;">Configura parámetros, asigna supervisor y distribuye trabajos en múltiples OTs</small>
         </div>
         <button class="btn btn-sm btn-light border-0 rounded-circle p-1" onclick="window.srCerrarDrawers()" style="color:var(--subtext)">
             <i class="bi bi-x-lg"></i>
@@ -921,7 +941,7 @@
     
     <div class="sr-drawer-body p-3 overflow-auto custom-scrollbar" style="background: #f8fafc;">
 
-        <!-- Hero Card 1: Resumen de Unidad y Rampa -->
+        <!-- Hero Card: Resumen de Unidad y Rampa -->
         <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="d-flex align-items-center gap-2">
@@ -953,82 +973,24 @@
         <input type="hidden" id="sr-ot-rampa-hid">
         <input type="hidden" id="sr-ot-id-rampa-hid">
 
-        <!-- Card 2: Parámetros de la Orden de Trabajo -->
-        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
-            <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-3" style="font-size: 0.9rem;">
-                <i class="bi bi-gear-wide-connected text-primary"></i> Clasificación y Asignación
-            </h6>
-
-            <!-- Fila 1: Tipo y Subtipo de OT -->
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de OT (*)</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="sr-ot-tipo" onchange="window.srCambiarTipoOT()" style="min-height: 40px; border-radius: 8px;">
-                        <option value="">— Seleccionar —</option>
-                        <option value="Correctivo">Correctivo</option>
-                        <option value="Preventivo">Preventivo</option>
-                        <option value="Predictivo">Predictivo</option>
-                        <option value="Proactivo">Proactivo</option>
-                        <option value="Servicio">Servicio</option>
-                    </select>
-                </div>
-                <div class="col-6">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Sub Tipo de OT (*)</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="sr-ot-subtipo" disabled style="min-height: 40px; border-radius: 8px;">
-                        <option value="">— Seleccionar tipo primero —</option>
-                    </select>
-                </div>
+        <!-- Barra de Gestión de OTs Dinámicas -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 px-1">
+            <div>
+                <h6 class="fw-bold text-dark m-0" style="font-size: 0.95rem;">Órdenes de Trabajo a Generar</h6>
+                <small class="text-muted" style="font-size: 0.75rem;">Puedes crear varias OTs distribuyendo los trabajos por especialidad o técnico</small>
             </div>
-
-            <!-- Fila 2: Supervisor y Situación -->
-            <div class="row g-2">
-                <div class="col-12 col-md-7">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Supervisor Responsable (*)</label>
-                    <div class="position-relative">
-                        <input type="text" id="sr-ot-supervisor-inp" 
-                               class="form-control form-control-sm bg-white text-uppercase fw-bold" 
-                               style="min-height: 40px; border-radius: 8px;" 
-                               placeholder="SELECCIONE SUPERVISOR..." 
-                               autocomplete="off" 
-                               oninput="window._cbFiltrar('sr-ot-supervisor')" 
-                               onfocus="window._cbFiltrar('sr-ot-supervisor')" 
-                               onblur="window._cbHide('sr-ot-supervisor')">
-                        <input type="hidden" id="sr-ot-supervisor">
-                        <div id="sr-ot-supervisor-dd" class="cb-dropdown"></div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-5">
-                    <label class="form-label" style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Situación (Status Rampa)</label>
-                    <select class="form-select form-select-sm fw-bold bg-white" id="sr-ot-situacion" style="min-height: 40px; border-radius: 8px;">
-                        <option value="En atención" selected>En atención</option>
-                        <option value="Finalizado">Finalizado</option>
-                        <option value="En espera de reparación">En espera de reparación</option>
-                        <option value="Taller Tercero">Taller Tercero</option>
-                        <option value="Inoperativo">Inoperativo</option>
-                        <option value="Anulado">Anulado</option>
-                        <option value="Operativo">Operativo</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Trabajos Asignados con Técnico Responsable -->
-        <div class="card border-0 shadow-2xs rounded-4 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-1 border-bottom">
-                <div>
-                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size: 0.9rem;">
-                        <i class="bi bi-tools text-primary"></i> Trabajos / Motivos a Realizar
-                    </h6>
-                    <small class="text-muted d-block" style="font-size: 0.72rem;">Asigna el técnico responsable para cada motivo</small>
-                </div>
-                <button type="button" class="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3 py-1 d-flex align-items-center gap-1 shadow-2xs" style="white-space: nowrap !important; font-size: 0.75rem;" onclick="window.srAgregarFilaTrabajoOT()">
-                    <i class="bi bi-plus-lg"></i> <span>+ Agregar Trabajo</span>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold rounded-pill px-3 py-1 shadow-2xs d-flex align-items-center gap-1" style="white-space: nowrap !important; font-size: 0.78rem;" onclick="window.srAgregarNuevoTrabajoGeneral()">
+                    <i class="bi bi-plus-circle text-primary"></i> <span>+ Agregar Trabajo</span>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 py-1 shadow-2xs d-flex align-items-center gap-1" style="white-space: nowrap !important; font-size: 0.78rem;" onclick="window.srAgregarTarjetaOT()">
+                    <i class="bi bi-plus-lg"></i> <span>+ Agregar otra OT</span>
                 </button>
             </div>
-
-            <!-- Contenedor donde se inyectan las filas de trabajo interactivas -->
-            <div id="sr-ot-trabajos-lista" class="d-flex flex-column gap-2" style="overflow: visible !important;"></div>
         </div>
+
+        <!-- Contenedor donde se inyectan las tarjetas de cada OT -->
+        <div id="sr-ot-cards-container" class="d-flex flex-column gap-3" style="overflow: visible !important;"></div>
 
     </div>
 
@@ -1036,7 +998,7 @@
     <div class="sr-drawer-footer bg-white border-top px-3 py-3 d-flex flex-row justify-content-between align-items-center gap-2">
         <button type="button" class="btn btn-light border px-3 py-2 fw-semibold rounded-3 text-nowrap" onclick="window.srCerrarDrawers()">Cancelar</button>
         <button type="button" class="btn btn-success px-4 py-2 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-sm text-nowrap" id="sr-btn-confirmar-ot" onclick="window.srEnviarOT()">
-            <i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OT</span>
+            <i class="bi bi-rocket-takeoff-fill"></i> <span>Confirmar y Generar OTs</span>
         </button>
     </div>
 </div>

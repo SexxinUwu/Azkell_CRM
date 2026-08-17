@@ -746,18 +746,20 @@ router.get('/taller-rampas', (req, res) => {
     const historial = req.query.historial === '1';
     targetDb.query("ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'Activo'", () => {
         targetDb.query("ALTER TABLE taller_rampas ADD COLUMN creado_en TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP", () => {
-            const sql = historial
-                ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY id DESC"
-                : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, id ASC";
-            targetDb.query(sql, (err, rows) => {
-                if (err) {
-                    targetDb.query("SELECT * FROM taller_rampas ORDER BY id ASC", (err2, rows2) => {
-                        if (err2) return res.json([]);
-                        return res.json(rows2 || []);
-                    });
-                    return;
-                }
-                res.json(rows || []);
+            targetDb.query("ALTER TABLE taller_rampas ADD COLUMN conductor VARCHAR(255) NULL", () => {
+                const sql = historial
+                    ? "SELECT * FROM taller_rampas WHERE estado = 'Liberado' ORDER BY id DESC"
+                    : "SELECT * FROM taller_rampas WHERE estado != 'Liberado' ORDER BY rampa ASC, id ASC";
+                targetDb.query(sql, (err, rows) => {
+                    if (err) {
+                        targetDb.query("SELECT * FROM taller_rampas ORDER BY id ASC", (err2, rows2) => {
+                            if (err2) return res.json([]);
+                            return res.json(rows2 || []);
+                        });
+                        return;
+                    }
+                    res.json(rows || []);
+                });
             });
         });
     });
@@ -765,45 +767,57 @@ router.get('/taller-rampas', (req, res) => {
 
 router.post('/taller-rampas/upload-url', async (req, res) => {
     try {
-        const { getPresignedUploadUrl } = require('../utils/s3');
-        const { fileType, fileName } = req.body;
-        const ext = fileName ? fileName.split('.').pop() : 'jpg';
-        const s3Key = `taller_rampas/evidencia_${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
-        const uploadUrl = await getPresignedUploadUrl(s3Key, fileType || 'application/octet-stream', 300);
-        const finalUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-        res.json({ ok: true, uploadUrl, s3Key, finalUrl });
-    } catch(e) {
-        res.status(500).json({ error: e.message });
+        const { fileName, fileType } = req.body;
+        if (!fileName) return res.status(400).json({ error: 'fileName requerido' });
+        const ext = path.extname(fileName) || '.jpg';
+        const uniqueKey = `status-rampa/evidencia_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+        const uploadUrl = await s3Service.getUploadUrl(uniqueKey, fileType || 'image/jpeg');
+        res.json({ uploadUrl, key: uniqueKey, finalUrl: uniqueKey });
+    } catch(err) {
+        console.error('Error generando S3 presigned PUT para taller_rampas:', err);
+        res.status(500).json({ error: 'No se pudo generar la URL de subida' });
     }
 });
 
 router.get('/taller-rampas/:id/evidencia', async (req, res) => {
-    db.query('SELECT evidencia_url FROM taller_rampas WHERE id = ?', [req.params.id], async (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Error BD' });
-        if (!rows.length || !rows[0].evidencia_url) return res.status(404).json({ error: 'Sin evidencia' });
-        const url = rows[0].evidencia_url;
+    const targetDb = req.db || db;
+    targetDb.query('SELECT evidencia_url FROM taller_rampas WHERE id = ?', [req.params.id], async (err, rows) => {
+        if (err || !rows || !rows.length || !rows[0].evidencia_url) {
+            return res.status(404).json({ error: 'Evidencia no encontrada' });
+        }
         try {
-            const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
-            const key = s3KeyFromUrl(url);
-            if (!key) return res.json({ url });
-            const signed = await getPresignedUrl(key, 3600);
-            res.json({ url: signed });
+            const rawUrl = rows[0].evidencia_url;
+            if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+                return res.json({ url: rawUrl });
+            }
+            const presigned = await s3Service.getPresignedUrl(rawUrl, 3600);
+            return res.json({ url: presigned });
         } catch(e) {
-            console.error('S3 Presign Error:', e);
-            res.json({ url }); // fallback
+            return res.status(500).json({ error: 'Error firmando URL de evidencia' });
         }
     });
 });
 
 router.post('/taller-rampas', (req, res) => {
-    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
+    const { rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
     if (!rampa || !placa) return res.status(400).json({ error: 'rampa y placa son requeridos' });
     db.query(
-        `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
-        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
+        `INSERT INTO taller_rampas (rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+        [rampa, placa, km || null, conductor || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
         (err, result) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                db.query(
+                    `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+                    [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', creado_por || '', evidencia_url || null],
+                    (err2, result2) => {
+                        if (err2) return res.status(500).json({ error: err2.message });
+                        return res.json({ ok: true, id: result2.insertId });
+                    }
+                );
+                return;
+            }
             if(typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, id: result.insertId });
         }
     );
@@ -840,12 +854,18 @@ router.put('/taller-rampas/:id', (req, res) => {
         );
         return;
     }
-    const { rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, evidencia_url } = req.body;
+    const { rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, evidencia_url } = req.body;
     db.query(
-        `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
-        [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
+        `UPDATE taller_rampas SET rampa=?, placa=?, km=?, conductor=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
+        [rampa, placa, km || null, conductor || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
         (err) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                db.query(
+                    `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, evidencia_url=? WHERE id=?`,
+                    [rampa, placa, km || null, fecha_ingreso || null, hora_ingreso || null, fecha_salida || null, hora_salida || null, situacion || '', obs || '', evidencia_url || null, req.params.id],
+                    () => {}
+                );
+            }
             if (obs !== undefined) {
                 db.query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ? OR (UPPER(placa) = UPPER(?) AND estado != "Finalizado")', [req.params.id, placa], (errOTs, rowsOTs) => {
                     if (!errOTs && rowsOTs && rowsOTs.length) {
@@ -853,6 +873,11 @@ router.put('/taller-rampas/:id', (req, res) => {
                             let det = {};
                             try { det = typeof row.detalles_json === 'string' ? JSON.parse(row.detalles_json) : (row.detalles_json || {}); } catch(e) {}
                             det.motivo = obs;
+                            if (conductor) {
+                                det.conductor = conductor;
+                                det.chofer = conductor;
+                                det.reportado_por = conductor;
+                            }
                             db.query('UPDATE ordenes_trabajo SET detalles_json = ? WHERE ticket_entrada = ?', [JSON.stringify(det), row.ticket_entrada]);
                         });
                     }
