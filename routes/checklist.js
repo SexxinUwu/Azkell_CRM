@@ -298,11 +298,15 @@ module.exports = function (db, broadcast, logAudit) {
                 let descFallasClean = '';
                 if (Array.isArray(item.fallas_seleccionadas) && item.fallas_seleccionadas.length > 0) {
                     descFallasClean = item.fallas_seleccionadas.map(f => {
-                        return `• ` + f.replace(/^\[[^\]]+\]\s*/, '');
+                        let clean = f.replace(/^\[[^\]]+\]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '');
+                        return `• ` + clean;
                     }).join('\n');
                 } else {
                     let itemsFalla = (item.unidad === 'Remolque' || item.unidad === 'Carreta') ? fallasRemolque : fallasTracto;
-                    descFallasClean = itemsFalla.map(f => `• ${f.item}: ${f.obs || 'Observado'}`).join('\n');
+                    descFallasClean = itemsFalla.map(f => {
+                        let clean = (f.sistema === 'MANUAL' || (f.item || '').toLowerCase() === 'falla manual') ? (f.obs || 'Observación') : `${f.item}: ${f.obs || 'Observado'}`;
+                        return `• ${clean}`;
+                    }).join('\n');
                 }
 
                 if (item.trabajo_custom) {
@@ -347,6 +351,9 @@ module.exports = function (db, broadcast, logAudit) {
                     km: kmVal,
                     km_tablero: kmVal,
                     horas_motor: horasMotorVal,
+                    conductor: rep.conductor || '',
+                    chofer: rep.conductor || '',
+                    reportado_por: rep.conductor || '',
                     motivo: motivoLimpio,
                     motivos_array: motivosArray,
                     observaciones: motivoLimpio,
