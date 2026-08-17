@@ -16,6 +16,42 @@ window._rotMatIdx            = window._rotMatIdx            || 0;
 window._rotInvData           = window._rotInvData           || [];
 window._rotCatSituaciones    = window._rotCatSituaciones    || [];
 
+window.rotBuscarOT = function(idOT) {
+    if (!idOT) return null;
+    var target = String(idOT).trim().toUpperCase();
+    var match = (window.rotData || []).find(function(o){ 
+        return String(o.ticket_entrada || o.id_ot || '').trim().toUpperCase() === target; 
+    });
+    if (match) return match;
+    if (window.srOtData && Array.isArray(window.srOtData)) {
+        match = window.srOtData.find(function(o){ 
+            return String(o.ticket_entrada || o.id_ot || '').trim().toUpperCase() === target; 
+        });
+        if (match) return match;
+    }
+    return null;
+};
+
+window.rotObtenerOTAsync = async function(idOT) {
+    var ot = window.rotBuscarOT(idOT);
+    if (ot) return ot;
+    try {
+        var r1 = await fetch('/api/ordenes/by-ticket?id=' + encodeURIComponent(idOT));
+        if (r1.ok) {
+            ot = await r1.json();
+            if (ot) return ot;
+        }
+    } catch(e) {}
+    try {
+        var r2 = await fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT));
+        if (r2.ok) {
+            ot = await r2.json();
+            if (ot) return ot;
+        }
+    } catch(e) {}
+    return null;
+};
+
 // ── Entry point ──────────────────────────────────────────────────
 window.init_reportes_ot = function() {
     if (!window.checkPerm('reportes_ot', 'l')) {
@@ -1013,9 +1049,21 @@ function rotPromptKm(currentKm, onConfirm) {
 }
 
 // ── Acciones del drawer (Editar, Eliminar, Cerrar, PDF) ──
-window.rotAccion = function(accion, idOT) {
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+window.rotAccion = async function(accion, idOT) {
+    var ot = await window.rotObtenerOTAsync(idOT);
     if (!ot && accion !== 'pdf') return;
+
+    var refrescar = function() {
+        if (typeof window.rotCargar === 'function' && document.getElementById('moduloReportesOT')) {
+            window.rotCargar();
+        }
+        if (typeof window.srCargarOTs === 'function') {
+            window.srCargarOTs();
+        }
+        if (typeof window.srCargarEntradas === 'function') {
+            window.srCargarEntradas();
+        }
+    };
 
     if (accion === 'reactivar') {
         if (!window.guardAction('ot', 'e')) return;
@@ -1029,7 +1077,7 @@ window.rotAccion = function(accion, idOT) {
             .then(function() {
                 if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT reactivada', 'success');
                 window.rotCerrarDetalle();
-                window.rotCargar();
+                refrescar();
             })
             .catch(function(err) {
                 if(typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al reactivar OT', 'danger');
@@ -1046,7 +1094,7 @@ window.rotAccion = function(accion, idOT) {
                 .then(function() {
                     window.rotCerrarDetalle();
                     if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT eliminada', 'success');
-                    window.rotCargar();
+                    refrescar();
                 })
                 .catch(function(err) {
                     console.error('Error eliminando OT:', err);
@@ -1077,7 +1125,7 @@ window.rotAccion = function(accion, idOT) {
             .then(function() {
                 window.rotCerrarDetalle();
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT iniciada', 'success');
-                window.rotCargar();
+                refrescar();
             })
             .catch(function(err) {
                 console.error('Error iniciando OT:', err);
@@ -1099,7 +1147,7 @@ window.rotAccion = function(accion, idOT) {
             .then(function() {
                 window.rotCerrarDetalle();
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT pausada', 'warning');
-                window.rotCargar();
+                refrescar();
             })
             .catch(function(err) {
                 console.error('Error pausando OT:', err);
@@ -1120,7 +1168,7 @@ window.rotAccion = function(accion, idOT) {
         .then(function() {
             window.rotCerrarDetalle();
             if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT reanudada', 'success');
-            window.rotCargar();
+            refrescar();
         })
         .catch(function(err) {
             console.error('Error reanudando OT:', err);
@@ -1150,7 +1198,7 @@ window.rotAccion = function(accion, idOT) {
             .then(function() {
                 window.rotCerrarDetalle();
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT cerrada', 'success');
-                window.rotCargar();
+                refrescar();
             })
             .catch(function(err) {
                 console.error('Error cerrando OT:', err);
@@ -1178,7 +1226,7 @@ window.rotAccion = function(accion, idOT) {
             .then(function() {
                 window.rotCerrarDetalle();
                 if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT anulada', 'success');
-                window.rotCargar();
+                refrescar();
             })
             .catch(function(err) {
                 console.error('Error anulando OT:', err);
@@ -2923,11 +2971,11 @@ window._rotEotTrabajos = [];
 window._rotEotTrabajosCount = 0;
 
 window.rotAbrirEditarOT = async function(idOT) {
-    var ot = (window.rotData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-    if (!ot && window.srOtData) {
-        ot = (window.srOtData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    var ot = await window.rotObtenerOTAsync(idOT);
+    if (!ot) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se encontró la información de la OT ' + idOT, 'warning');
+        return;
     }
-    if (!ot) return;
     var det = rotDetalles(ot);
 
     // Asegurar que el select de situaciones tenga las opciones cargadas
@@ -3153,8 +3201,14 @@ window.rotGuardarEdicionOT = function() {
             .then(function(r){ return r.ok ? r.json() : []; })
             .then(function(data) {
                 window.rotData = Array.isArray(data) ? data : [];
-                if (typeof window.rotRenderTabla === 'function') {
+                if (typeof window.rotRenderTabla === 'function' && document.getElementById('moduloReportesOT')) {
                     window.rotRenderTabla(window.rotDatosFiltrados || window.rotData);
+                }
+                if (typeof window.srCargarOTs === 'function') {
+                    window.srCargarOTs();
+                }
+                if (typeof window.srCargarEntradas === 'function') {
+                    window.srCargarEntradas();
                 }
                 window.rotAbrirDetalle(idOT);
             }).catch(function(){});
@@ -3592,10 +3646,13 @@ window.rotVerFormatoOT = function(idOT) {
 
 
 
-window.rotAbrirEditarFechas = function(idOT) {
+window.rotAbrirEditarFechas = async function(idOT) {
     if (!window.guardAction('ot', 'e')) return;
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
-    if (!ot) return;
+    var ot = await window.rotObtenerOTAsync(idOT);
+    if (!ot) {
+        if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('No se encontró la información de la OT ' + idOT, 'warning');
+        return;
+    }
     
     window.rotEditFechasId = idOT;
     
@@ -3644,7 +3701,15 @@ window.rotGuardarFechas = function() {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Fechas actualizadas correctamente.', 'success');
         window.rotCerrarSubDrawer('rot-drawer-editar-fechas');
         window.rotCerrarDetalle();
-        window.rotCargar();
+        if (typeof window.rotCargar === 'function' && document.getElementById('moduloReportesOT')) {
+            window.rotCargar();
+        }
+        if (typeof window.srCargarOTs === 'function') {
+            window.srCargarOTs();
+        }
+        if (typeof window.srCargarEntradas === 'function') {
+            window.srCargarEntradas();
+        }
     })
     .catch(function(e) {
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('Error al actualizar las fechas.', 'danger');
