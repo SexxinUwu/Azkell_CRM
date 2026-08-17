@@ -4,6 +4,17 @@ const router = express.Router();
 
 module.exports = (db, broadcast, logAudit) => {
 
+// ── IN-MEMORY CACHE (HIGH PERFORMANCE ERP SPEEDUP) ───────────────
+let _inspeccionesCache = null;
+let _inspeccionesCacheTime = 0;
+let _inspeccionesInFlight = null;
+const INSP_CACHE_TTL = 45000; // 45s
+
+let _wialonCache = null;
+let _wialonCacheTime = 0;
+let _wialonInFlightPromise = null;
+const WIALON_CACHE_TTL = 30000; // 30s
+
 function parseMesInt(val) {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'number') return isNaN(val) ? null : val;
@@ -515,19 +526,45 @@ router.post('/:metodo', async (req, res) => {
     }
 
     if (metodo === 'obtenerDatosInspecciones') {
-        reqDb.query('SELECT * FROM inspecciones', (err, results) => {
-            if (err) return res.json({ data: [] });
-            const _fmtFechaInsp = (f) => {
-                if (!f) return '';
-                const d = f instanceof Date ? f : new Date(String(f).split('T')[0]);
-                if (!isNaN(d.getTime())) {
-                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        const now = Date.now();
+        if (_inspeccionesCache && (now - _inspeccionesCacheTime < INSP_CACHE_TTL)) {
+            return res.json({ data: _inspeccionesCache });
+        }
+
+        if (_inspeccionesInFlight) {
+            _inspeccionesInFlight.then(data => {
+                return res.json({ data });
+            }).catch(err => {
+                return res.json({ data: [] });
+            });
+            return;
+        }
+
+        _inspeccionesInFlight = new Promise((resolve) => {
+            reqDb.query('SELECT * FROM inspecciones', (err, results) => {
+                _inspeccionesInFlight = null;
+                if (err) {
+                    console.error('Error BD inspecciones:', err);
+                    return resolve([]);
                 }
-                return String(f);
-            };
-            const data = results.map(r => Object.assign({}, r, {
-                fecha_ingreso: _fmtFechaInsp(r.fecha_ingreso)
-            }));
+                const _fmtFechaInsp = (f) => {
+                    if (!f) return '';
+                    const d = f instanceof Date ? f : new Date(String(f).split('T')[0]);
+                    if (!isNaN(d.getTime())) {
+                        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                    }
+                    return String(f);
+                };
+                const data = results.map(r => Object.assign({}, r, {
+                    fecha_ingreso: _fmtFechaInsp(r.fecha_ingreso)
+                }));
+                _inspeccionesCache = data;
+                _inspeccionesCacheTime = Date.now();
+                resolve(data);
+            });
+        });
+
+        _inspeccionesInFlight.then(data => {
             return res.json({ data });
         });
         return;
@@ -625,6 +662,7 @@ router.post('/:metodo', async (req, res) => {
                             return res.json({ data: "Error al guardar inspección" });
                         }
                         
+                        _inspeccionesCache = null;
                         console.log("✅ Inspección creada correctamente con ID:", nextId);
                         broadcast('inspecciones', metodo);
                         const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
@@ -653,6 +691,7 @@ router.post('/:metodo', async (req, res) => {
                     console.error("Error BD Inspecciones (UPDATE):", updateErr);
                     return res.json({ data: "Error al actualizar inspección" });
                 }
+                _inspeccionesCache = null;
                 console.log("✅ Inspección actualizada correctamente:", datos.id);
                 broadcast('inspecciones', metodo);
                 const usuario = (req.body && req.body.usuario) || datos.tecnico || 'sistema';
@@ -723,12 +762,13 @@ router.post('/:metodo', async (req, res) => {
             d.sv_entidad || null, d.sv_asesor || null, formatearFecha(d.sv_vencimiento),
             d.sc_entidad || null, d.sc_asesor || null, formatearFecha(d.sc_emision), formatearFecha(d.sc_vencimiento),
             formatearFecha(d.fum_emision), formatearFecha(d.fum_vencimiento),
-            formatearFecha(d.ext_vencimiento), d.ext_cantidad || 1
+            formatearFecha(d.ext_vencimiento), d.ext_cantidad || null
         ];
 
         db.query(query, values, (err) => {
-            if (err) { console.error("Error BD vehiculos_flota:", err); return res.json({ data: "Error al guardar el vehículo" }); }
-            broadcast('vehiculosflota', 'guardar');
+            if (err) { console.error("❌ Error en BD vehiculos_flota:", err); return res.json({ data: "Error al guardar vehículo" }); }
+            console.log("✅ Vehículo guardado correctamente:", placa);
+            broadcast('vehiculos_flota', metodo);
             return res.json({ data: "Éxito" });
         });
         return;
@@ -744,7 +784,10 @@ router.post('/:metodo', async (req, res) => {
         let sql = '';
 
         if (coleccion === 'Placas') sql = 'DELETE FROM placas WHERE placa IN (?)';
-        else if (coleccion === 'Inspecciones') sql = 'DELETE FROM inspecciones WHERE id IN (?)';
+        else if (coleccion === 'Inspecciones') {
+            sql = 'DELETE FROM inspecciones WHERE id IN (?)';
+            _inspeccionesCache = null;
+        }
         else if (coleccion === 'Fleetrun') sql = 'DELETE FROM fleetrun WHERE idRegistro IN (?)';
         else if (coleccion === 'StatusFlota') sql = 'DELETE FROM status_flota WHERE idRegistro IN (?)';
         else if (coleccion === 'Usuarios') sql = 'DELETE FROM usuarios WHERE idUsuario IN (?)';
@@ -1071,40 +1114,54 @@ router.post('/:metodo', async (req, res) => {
 
 
     if (metodo === 'obtenerDatosWialon') {
-        // Lee token desde DB; si no hay, cae en .env como fallback
-        const obtenerTokenWialon = () => new Promise((resolve) => {
-            db.query(
-                "SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1",
-                (err, rows) => {
-                    const tokenDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
-                    resolve(tokenDB || process.env.WIALON_TOKEN || '');
-                }
-            );
-        });
-        const obtenerUrlWialon = () => new Promise((resolve) => {
-            db.query(
-                "SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1",
-                (err, rows) => {
-                    const urlDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
-                    resolve(urlDB || 'https://hst-api.wialon.us/wialon/ajax.html');
-                }
-            );
-        });
+        const now = Date.now();
+        if (_wialonCache && (now - _wialonCacheTime < WIALON_CACHE_TTL)) {
+            return res.json({ data: _wialonCache });
+        }
 
-        try {
+        if (_wialonInFlightPromise) {
+            try {
+                const data = await _wialonInFlightPromise;
+                return res.json({ data });
+            } catch(e) {
+                return res.json({ data: [] });
+            }
+        }
+
+        _wialonInFlightPromise = (async () => {
+            // Lee token desde DB; si no hay, cae en .env como fallback
+            const obtenerTokenWialon = () => new Promise((resolve) => {
+                db.query(
+                    "SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1",
+                    (err, rows) => {
+                        const tokenDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
+                        resolve(tokenDB || process.env.WIALON_TOKEN || '');
+                    }
+                );
+            });
+            const obtenerUrlWialon = () => new Promise((resolve) => {
+                db.query(
+                    "SELECT valor FROM integraciones_api WHERE clave = 'wialon_url' LIMIT 1",
+                    (err, rows) => {
+                        const urlDB = rows && rows[0] && rows[0].valor ? rows[0].valor.trim() : null;
+                        resolve(urlDB || 'https://hst-api.wialon.us/wialon/ajax.html');
+                    }
+                );
+            });
+
             const [token, baseUrl] = await Promise.all([obtenerTokenWialon(), obtenerUrlWialon()]);
-            if (!token) return res.json({ data: { error: 'Token Wialon no configurado. Configúralo en Sistema → Integraciones.' } });
+            if (!token) return { error: 'Token Wialon no configurado. Configúralo en Sistema → Integraciones.' };
 
             const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token: token}))}`);
             const loginData = await loginRes.json();
-            if (!loginData.eid) return res.json({ data: { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." }});
+            if (!loginData.eid) return { error: "Fallo Login Wialon. Verifica el token en Sistema → Integraciones." };
 
             const sid = loginData.eid;
             const searchParams = { "spec": { "itemsType": "avl_unit", "propName": "sys_name", "propValueMask": "*", "sortType": "sys_name" }, "force": 1, "flags": 9221, "from": 0, "to": 0 };
             const searchRes = await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify(searchParams))}&sid=${sid}`);
             const searchData = await searchRes.json();
 
-            if (!searchData.items) return res.json({ data: [] });
+            if (!searchData.items) return [];
 
             const vehiculosLive = [];
             searchData.items.forEach(item => {
@@ -1137,8 +1194,17 @@ router.post('/:metodo', async (req, res) => {
                 );
             });
 
-            return res.json({ data: vehiculosLive });
+            _wialonCache = vehiculosLive;
+            _wialonCacheTime = Date.now();
+            return vehiculosLive;
+        })();
+
+        try {
+            const data = await _wialonInFlightPromise;
+            _wialonInFlightPromise = null;
+            return res.json({ data });
         } catch (error) {
+            _wialonInFlightPromise = null;
             console.error("Error Wialon:", error);
             return res.json({ data: { error: error.toString() }});
         }
