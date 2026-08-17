@@ -1783,7 +1783,7 @@ window.abrirModalNuevaInspeccion = async function (placaPreselect, idOtPreselect
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1080';
+        offEl.style.zIndex = '1150';
         offEl.classList.add("open");
     }
 };
@@ -1930,7 +1930,7 @@ window.abrirModalEditarInspeccion = async function (idBusqueda) {
         if (offEl.parentElement !== document.body) {
             document.body.appendChild(offEl);
         }
-        offEl.style.zIndex = '1080';
+        offEl.style.zIndex = '1150';
         offEl.classList.add("open");
     }
 };

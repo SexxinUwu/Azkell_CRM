@@ -381,6 +381,12 @@ window.rotAbrirDetalle = function(idOT) {
     var rObj = (window._rotCatRampas || []).find(function(x) { return x.id == rId; });
     var rName = rObj ? (rObj.descripcion || rObj.nombre_rampa || rObj.nombre || rId) : (rId ? 'Rampa ' + rId : 'Sin Rampa');
     var tecsStr = det.tecnicos ? (Array.isArray(det.tecnicos) ? det.tecnicos.join(', ') : det.tecnicos) : (det.tecnicos_str || det.tecnico_lider || '—');
+    var tecsArray = [];
+    if (det.tecnicos && Array.isArray(det.tecnicos)) {
+        tecsArray = det.tecnicos;
+    } else if (tecsStr && tecsStr !== '—') {
+        tecsArray = tecsStr.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
     var t = rotCalcularTiempos(ot);
 
     var html = `
@@ -446,15 +452,22 @@ window.rotAbrirDetalle = function(idOT) {
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100" style="border: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex align-items-center gap-1 mb-1">
-                        <div class="rounded-3 p-1 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
-                            <i class="bi bi-people-fill" style="font-size:0.8rem;"></i>
+                <div class="card border-0 rounded-4 p-2 bg-white shadow-2xs h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="d-flex align-items-center gap-1">
+                            <div class="rounded-3 p-1 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width:24px; height:24px;">
+                                <i class="bi bi-people-fill" style="font-size:0.8rem;"></i>
+                            </div>
+                            <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Técnicos</span>
                         </div>
-                        <span class="text-muted fw-bold" style="font-size: 0.65rem; text-transform: uppercase;">Técnicos</span>
+                        ${tecsArray.length > 1 ? `<span class="badge bg-info bg-opacity-10 text-info rounded-pill px-1" style="font-size:0.65rem;">${tecsArray.length}</span>` : ''}
                     </div>
-                    <div class="fw-bold text-dark text-truncate text-uppercase" style="font-size: 0.82rem;" title="${esc(tecsStr)}">
-                        ${esc(tecsStr)}
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        ${tecsArray.length ? tecsArray.map(function(tName){
+                            return `<span class="badge bg-light text-dark border fw-bold text-uppercase" style="font-size:0.68rem; padding: 2px 6px; white-space: normal; text-align: left; line-height: 1.2;">
+                                <i class="bi bi-person-fill text-secondary me-1"></i>${esc(tName)}
+                            </span>`;
+                        }).join('') : '<span class="text-muted small">Sin asignar</span>'}
                     </div>
                 </div>
             </div>
@@ -2655,10 +2668,16 @@ window.rotEliminarMaterial = function(idSolicitud, idOt) {
 };
 
 // ── Sub-drawer helpers ────────────────────────────────────────────
-function rotAbrirSubDrawer(id) {
+window.rotAbrirSubDrawer = function(id) {
     var d = document.getElementById(id);
-    if (d) d.classList.add('open');
-}
+    if (d) {
+        if (d.parentElement !== document.body) {
+            document.body.appendChild(d);
+        }
+        d.style.zIndex = '1150';
+        d.classList.add('open');
+    }
+};
 
 window.rotCerrarSubDrawer = function(drawerId) {
     var d = document.getElementById(drawerId);
@@ -2944,59 +2963,216 @@ var ROT_SUBTIPOS = {
     'Servicio':   ['Stock','Taller']
 };
 
-function rotAbrirEditarOT(idOT) {
-    var ot = window.rotData.find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+window._rotEotTrabajos = [];
+window._rotEotTrabajosCount = 0;
+
+window.rotAbrirEditarOT = async function(idOT) {
+    var ot = (window.rotData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    if (!ot && window.srOtData) {
+        ot = (window.srOtData || []).find(function(o){ return String(o.ticket_entrada || o.id_ot || '') === String(idOT); });
+    }
     if (!ot) return;
     var det = rotDetalles(ot);
 
     // Asegurar que el select de situaciones tenga las opciones cargadas
     rotPoblarSelectSituacion();
 
+    // Inicializar Personal Directory
+    var personalList = (window.dataGlobalConductores || []).map(function(c) {
+        var n = (typeof c === 'string') ? c : (c[1] || c.nombre || c.conductor || '');
+        return n.trim();
+    }).filter(Boolean);
+    if (!personalList.length && window._genOT_Tecnicos) personalList = window._genOT_Tecnicos;
+    var personalItems = Array.from(new Set(personalList)).map(function(p) { return { value: p, label: p }; });
+    window._rotPersonalItems = personalItems;
+
     var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
-    set('rot-eot-id',         idOT);
-    set('rot-eot-supervisor', det.supervisor || ot.supervisor || '');
-    set('rot-eot-motivo',     det.motivo || ot.observaciones || '');
+    set('rot-eot-id', idOT);
+
+    var badgeId = document.getElementById('rot-eot-badge-id');
+    if (badgeId) badgeId.textContent = idOT;
+    var lbl = document.getElementById('rot-eot-id-lbl');
+    if (lbl) lbl.textContent = 'Unidad: ' + (ot.placa || '—') + ' • ' + (det.rampa_origen ? 'Rampa ' + det.rampa_origen : 'Sin Rampa');
+
+    // Supervisor combobox
+    var supVal = (det.supervisor || ot.supervisor || '').trim();
+    if (typeof window._cbInit === 'function') {
+        window._cbInit('rot-eot-sup', personalItems, 'SELECCIONE SUPERVISOR...');
+        if (supVal) window._cbSet('rot-eot-sup', supVal, supVal);
+    } else {
+        set('rot-eot-supervisor', supVal);
+    }
 
     // Situación
     var sitEl = document.getElementById('rot-eot-situacion');
-    if (sitEl) sitEl.value = det.situacion_inicial || ot.situacion || '';
+    if (sitEl) sitEl.value = det.situacion_inicial || ot.situacion || 'En atención';
 
     // Tipo OT
     var tipoEl = document.getElementById('rot-eot-tipo');
     if (tipoEl) {
-        tipoEl.value = det.tipo_ot || '';
-        // Disparar cascade
+        tipoEl.value = det.tipo_ot || ot.tipo || 'Correctivo';
         rotCambiarTipoEOT();
     }
-    // Sub tipo (after cascade)
+    // Sub tipo
     setTimeout(function() {
         var subEl = document.getElementById('rot-eot-subtipo');
-        if (subEl) subEl.value = det.sub_tipo || '';
+        if (subEl) subEl.value = det.sub_tipo || det.subtipo_ot || (subEl.options[0] ? subEl.options[0].value : '');
     }, 50);
 
+    // Desglosar trabajos existentes
+    window._rotEotTrabajos = [];
+    window._rotEotTrabajosCount = 0;
+
+    var rawMotivo = rotCleanObsText(det.motivo || ot.observaciones || '');
+    var parsed = (typeof window.srParsearTareasArray === 'function') 
+        ? window.srParsearTareasArray(rawMotivo) 
+        : { tareas: rawMotivo ? rawMotivo.split('\n').map(function(s){ return s.trim(); }).filter(Boolean) : [], notas: [] };
+
+    // Mapear técnicos asignados
+    var tecsArray = [];
+    if (det.tecnicos && Array.isArray(det.tecnicos)) tecsArray = det.tecnicos;
+    else if (det.tecnicos_str) tecsArray = det.tecnicos_str.split(',').map(function(s){ return s.trim(); });
+
+    parsed.tareas.forEach(function(tDesc, tIdx) {
+        window._rotEotTrabajos.push({
+            id: 'rot_eot_t_' + (window._rotEotTrabajosCount++),
+            desc: tDesc,
+            tecnico: tecsArray[tIdx] || tecsArray[0] || ''
+        });
+    });
+
+    if (!window._rotEotTrabajos.length) {
+        window._rotEotTrabajos.push({
+            id: 'rot_eot_t_' + (window._rotEotTrabajosCount++),
+            desc: 'MANTENIMIENTO / REVISIÓN GENERAL',
+            tecnico: tecsArray[0] || ''
+        });
+    }
+
+    set('rot-eot-motivo', parsed.notas ? parsed.notas.join('\n') : '');
+
+    window.rotEotRenderTrabajos();
     rotAbrirSubDrawer('rot-drawer-editar-ot');
-}
+};
+
+window.rotEotRenderTrabajos = function() {
+    var container = document.getElementById('rot-eot-fallas-container');
+    if (!container) return;
+
+    var html = '';
+    window._rotEotTrabajos.forEach(function(t, idx) {
+        var tecInputId = 'rot_eot_tec_' + t.id;
+        html += `
+            <div class="p-2 rounded-3 border bg-white shadow-2xs d-flex flex-wrap align-items-center justify-content-between gap-2" id="row_${t.id}" style="border: 1px solid #e2e8f0 !important; overflow: visible !important;">
+                <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 220px;">
+                    <span class="badge bg-primary rounded-pill d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0" style="width: 22px; height: 22px; font-size: 0.72rem;">
+                        ${idx + 1}
+                    </span>
+                    <input type="text" class="form-control form-control-sm text-uppercase fw-bold border-0 bg-light" 
+                           id="desc_${t.id}" 
+                           value="${rotEscHtml(t.desc)}" 
+                           placeholder="DESCRIPCIÓN DEL TRABAJO..." 
+                           style="font-size: 0.8rem; min-height: 38px; border-radius: 8px;" 
+                           oninput="window._rotEotTrabajos[${idx}].desc = this.value">
+                </div>
+
+                <div class="d-flex align-items-center gap-1" style="min-width: 200px; max-width: 260px; position: relative;">
+                    <i class="bi bi-person-gear text-secondary" style="font-size: 0.85rem;"></i>
+                    <div class="position-relative flex-grow-1">
+                        <input type="text" id="${tecInputId}-txt" 
+                               class="form-control form-control-sm bg-white text-uppercase fw-bold" 
+                               style="font-size: 0.78rem; min-height: 38px; border-radius: 8px;"
+                               placeholder="SELECCIONE TÉCNICO..." 
+                               autocomplete="off" 
+                               oninput="window._cbFiltrar('${tecInputId}')" 
+                               onfocus="window._cbFiltrar('${tecInputId}')" 
+                               onblur="window._cbHide('${tecInputId}')">
+                        <input type="hidden" id="${tecInputId}">
+                        <div id="${tecInputId}-dd" class="cb-dropdown"></div>
+                    </div>
+                </div>
+
+                ${window._rotEotTrabajos.length > 1 ? `
+                    <button type="button" class="btn btn-outline-danger btn-sm border-0 p-1" onclick="window.rotEotQuitarTrabajoFila(${idx})" title="Eliminar fila">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Inicializar comboboxes de técnicos para cada fila
+    if (typeof window._cbInit === 'function' && window._rotPersonalItems && window._rotPersonalItems.length) {
+        window._rotEotTrabajos.forEach(function(t) {
+            var tecInputId = 'rot_eot_tec_' + t.id;
+            window._cbInit(tecInputId, window._rotPersonalItems, 'SELECCIONE TÉCNICO...');
+            if (t.tecnico) {
+                window._cbSet(tecInputId, t.tecnico, t.tecnico);
+            }
+        });
+    }
+};
+
+window.rotEotAgregarTrabajoFila = function() {
+    window._rotEotTrabajos.push({
+        id: 'rot_eot_t_' + (window._rotEotTrabajosCount++),
+        desc: '',
+        tecnico: ''
+    });
+    window.rotEotRenderTrabajos();
+};
+
+window.rotEotQuitarTrabajoFila = function(idx) {
+    if (window._rotEotTrabajos.length <= 1) return;
+    window._rotEotTrabajos.splice(idx, 1);
+    window.rotEotRenderTrabajos();
+};
 
 window.rotCambiarTipoEOT = function() {
     var tipo = ((document.getElementById('rot-eot-tipo') || {}).value || '');
     var sel  = document.getElementById('rot-eot-subtipo');
     if (!sel) return;
     var opts = ROT_SUBTIPOS[tipo] || [];
-    sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(function(s) {
+    sel.innerHTML = opts.map(function(s) {
         return '<option value="' + s + '">' + s + '</option>';
     }).join('');
     sel.disabled = !opts.length;
+    if (opts.length) sel.value = opts[0];
 };
 
 window.rotGuardarEdicionOT = function() {
     var idOT       = ((document.getElementById('rot-eot-id')         || {}).value || '').trim();
     var tipo       = ((document.getElementById('rot-eot-tipo')       || {}).value || '').trim();
     var subtipo    = ((document.getElementById('rot-eot-subtipo')    || {}).value || '').trim();
-    var supervisor = ((document.getElementById('rot-eot-supervisor') || {}).value || '').trim();
+    var supervisor = (typeof window._cbGet === 'function' ? window._cbGet('rot-eot-sup') : '') || ((document.getElementById('rot-eot-sup-txt') || {}).value || '').trim();
     var situacion  = ((document.getElementById('rot-eot-situacion')  || {}).value || '').trim();
-    var motivo     = ((document.getElementById('rot-eot-motivo')     || {}).value || '').trim();
+    var notasExtra = ((document.getElementById('rot-eot-motivo')     || {}).value || '').trim();
 
     if (!idOT) return;
+
+    // Recopilar trabajos y técnicos
+    var tareasFinales = [];
+    var tecnicosFinales = [];
+    window._rotEotTrabajos.forEach(function(t) {
+        var inputDesc = document.getElementById('desc_' + t.id);
+        var descVal = (inputDesc ? inputDesc.value : t.desc).trim();
+        var tecInputId = 'rot_eot_tec_' + t.id;
+        var tecVal = (typeof window._cbGet === 'function' ? window._cbGet(tecInputId) : '') || ((document.getElementById(tecInputId + '-txt') || {}).value || '').trim();
+
+        if (descVal) {
+            tareasFinales.push(descVal);
+            if (tecVal && !tecnicosFinales.includes(tecVal)) {
+                tecnicosFinales.push(tecVal);
+            }
+        }
+    });
+
+    var motivoFinal = tareasFinales.map(function(t, i){ return (i + 1) + '. ' + t; }).join('\n');
+    if (notasExtra) {
+        motivoFinal += '\nNota: ' + notasExtra;
+    }
 
     fetch('/api/ordenes-trabajo/' + encodeURIComponent(idOT), {
         method: 'PUT',
@@ -3007,14 +3183,25 @@ window.rotGuardarEdicionOT = function() {
             sub_tipo:           subtipo,
             supervisor:         supervisor,
             situacion_inicial:  situacion,
-            motivo:             motivo
+            motivo:             motivoFinal,
+            tecnicos:           tecnicosFinales
         })
     })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function() {
         window.rotCerrarSubDrawer('rot-drawer-editar-ot');
         if (typeof window.mostrarAlerta === 'function') window.mostrarAlerta('OT actualizada correctamente', 'success');
-        window.rotCargar();
+        
+        // Recargar datos y refrescar la vista de detalle
+        fetch('/api/ordenes-trabajo')
+            .then(function(r){ return r.ok ? r.json() : []; })
+            .then(function(data) {
+                window.rotData = Array.isArray(data) ? data : [];
+                if (typeof window.rotRenderTabla === 'function') {
+                    window.rotRenderTabla(window.rotDatosFiltrados || window.rotData);
+                }
+                window.rotAbrirDetalle(idOT);
+            }).catch(function(){});
     })
     .catch(function(err) {
         console.error('Error editando OT:', err);

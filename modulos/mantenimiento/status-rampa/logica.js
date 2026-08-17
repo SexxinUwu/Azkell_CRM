@@ -2130,15 +2130,19 @@ window.srAbrirDetalleOT = function(idOt) {
             .then(function(htmlStr) {
                 if (!document.getElementById('rot-drawer-detalle')) {
                     var container = document.createElement('div');
-                    container.id = 'rot-shared-drawers-container';
-                    container.style.display = 'none';
                     container.innerHTML = htmlStr;
-                    document.body.appendChild(container);
+
+                    var styles = container.querySelectorAll('style');
+                    styles.forEach(function(st) { document.head.appendChild(st); });
 
                     var backdrop = container.querySelector('#rotDrawerBackdrop');
                     var drawers  = container.querySelectorAll('.rot-drawer, .rot-sub-drawer');
-                    if (backdrop) document.body.appendChild(backdrop);
-                    drawers.forEach(function(d) { document.body.appendChild(d); });
+                    if (backdrop && !document.getElementById('rotDrawerBackdrop')) document.body.appendChild(backdrop);
+                    drawers.forEach(function(d) {
+                        if (!document.getElementById(d.id)) {
+                            document.body.appendChild(d);
+                        }
+                    });
                 }
                 if (typeof window.rotAbrirDetalle === 'function') {
                     abrir();

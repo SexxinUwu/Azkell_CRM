@@ -637,16 +637,16 @@
     right: auto !important;
     transform: translateX(-50%) translateY(100%);
     width: 100% !important;
-    max-width: 700px !important;
+    max-width: 720px !important;
     height: 92vh !important;
     max-height: 92vh !important;
     background: var(--surface, #fff) !important;
     border: 1px solid var(--border, #e2e8f0) !important;
     border-bottom: none !important;
     border-radius: 28px 28px 0 0 !important;
-    box-shadow: 0 -12px 48px rgba(0,0,0,.22) !important;
-    transition: transform .25s ease !important;
-    z-index: 1066 !important;
+    box-shadow: 0 -16px 56px rgba(0,0,0,.35) !important;
+    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 1150 !important;
     display: flex;
     flex-direction: column;
     visibility: hidden;
@@ -657,6 +657,7 @@
         #drawerInspeccion.open {
             transform: translateX(-50%) translateY(0) !important;
             visibility: visible !important;
+            display: flex !important;
         }
         @media (max-width: 767.98px) {
             #drawerInspeccion {
