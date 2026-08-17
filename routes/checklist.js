@@ -331,6 +331,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const motivosArray = Array.isArray(item.motivos_array) ? item.motivos_array : [];
 
+                const situacionVal = item.situacion || 'En atención';
+
                 const detallesObj = {
                     cliente: clienteNombre,
                     ruc_dni: rucDni,
@@ -349,8 +351,8 @@ module.exports = function (db, broadcast, logAudit) {
                     tecnicos: Array.isArray(item.tecnicos) ? item.tecnicos : [tecnicosStr],
                     tecnicos_str: tecnicosStr,
                     rampa: id_rampa || rep.id_rampa || 'En Espera',
-                    situacion_inicial: 'En Atención',
-                    situacion: 'En Atención',
+                    situacion_inicial: situacionVal,
+                    situacion: situacionVal,
                     id_rampa: id_rampa || rep.id_rampa || 'En Espera',
                     sistema: item.subtipo_ot || 'Mecánica',
                     sistema_afectado: item.subtipo_ot || 'Mecánica',
@@ -414,14 +416,14 @@ module.exports = function (db, broadcast, logAudit) {
                                     }
                                 }
                                 await tdb.promise().query(
-                                    `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion='En atención', obs=?, creado_por=?, estado='Activo' WHERE id=?`,
-                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, newObs, creado_por || 'Sistema', rId]
+                                    `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, creado_por=?, estado='Activo' WHERE id=?`,
+                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, situacionVal, newObs, creado_por || 'Sistema', rId]
                                 );
                             } else {
                                 await tdb.promise().query(
                                     `INSERT INTO taller_rampas (rampa, placa, km, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, estado)
-                                     VALUES (?, ?, ?, ?, ?, ?, ?, 'En atención', ?, ?, 'Activo')`,
-                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, obsRampa, creado_por || 'Sistema']
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+                                    [targetRampaVal, placa, kmVal || null, fIngDate, fIngTime, fSalDate, fSalTime, situacionVal, obsRampa, creado_por || 'Sistema']
                                 );
                             }
                         } catch(eRampa) {

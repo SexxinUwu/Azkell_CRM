@@ -33,8 +33,13 @@ module.exports = function globalRBAC(req, res, next) {
         '/tipos-preventivo',
         '/tipos-mantenimiento',
         '/mantenimiento-kits',
+        '/cat-rampas',
+        '/taller/rampas',
         '/taller-rampas',
         '/taller-personal',
+        '/taller/personal',
+        '/conductores',
+        '/conductores-lista',
         '/roles',
         '/usuarios-v2'
     ];
