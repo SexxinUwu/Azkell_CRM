@@ -1363,16 +1363,18 @@ const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);
 
 function getCatRampasSafe(targetDb, cb) {
-    targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
-        if (err) {
-            targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
-                targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
-                    cb(err2, rows2 || []);
-                });
+    targetDb.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+            targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
+                if (err) {
+                    targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {
+                        cb(err2, rows2 || []);
+                    });
+                } else {
+                    cb(null, rows || []);
+                }
             });
-        } else {
-            cb(null, rows || []);
-        }
+        });
     });
 }
 
@@ -1384,13 +1386,15 @@ app.get('/api/cat-rampas', (req, res) => {
 });
 
 app.post('/api/cat-rampas', (req, res) => {
-    const { nombre_rampa, sede } = req.body;
+    const { nombre_rampa, sede, color } = req.body;
     if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
-    db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
-        db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado) VALUES (?,?,?)',
-            [nombre_rampa.trim(), sede || 'Principal', 'Disponible'], (err, r) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true, id: r.insertId });
+    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+            db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado, color) VALUES (?,?,?,?)',
+                [nombre_rampa.trim(), sede || 'Principal', 'Disponible', color || '#ef4444'], (err, r) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, id: r.insertId });
+            });
         });
     });
 });
@@ -1413,16 +1417,19 @@ app.put('/api/cat-rampas/reorder', (req, res) => {
 });
 
 app.put('/api/cat-rampas/:id', (req, res) => {
-    const { nombre_rampa, estado } = req.body;
+    const { nombre_rampa, estado, color } = req.body;
     const sets = [];
     const vals = [];
     if (nombre_rampa !== undefined) { sets.push('nombre_rampa=?'); vals.push(nombre_rampa.trim()); }
     if (estado !== undefined) { sets.push('estado=?'); vals.push(estado); }
+    if (color !== undefined) { sets.push('color=?'); vals.push(color.trim()); }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
     vals.push(req.params.id);
-    db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ ok: true });
+    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        });
     });
 });
 
