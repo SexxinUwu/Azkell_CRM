@@ -1959,35 +1959,52 @@ window.abrirModalGenerarOTs = async function(id) {
 
     window._genOT_TodasFallas = [];
     (fallasT || []).forEach((f, idx) => {
+        const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
+        const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
+        const obsClean = isManual ? 'Observación reportada' : (f.obs || f.descripcion || '');
+        const motivoDesc = isManual ? (f.obs || itemClean) : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || ''}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+
         window._genOT_TodasFallas.push({
             id: `ft_${idx}`,
             unidad: 'Tracto',
             placa: r.placa_tracto || 'TRACTO',
             sistema: f.sistema || 'TRACTO',
-            item: f.item || f.nombre || 'Falla observada',
-            obs: f.obs || f.descripcion || 'Observado en checklist'
+            item: itemClean,
+            obs: obsClean,
+            esManual: isManual,
+            motivoDesc: motivoDesc
         });
     });
     (fallasR || []).forEach((f, idx) => {
+        const isManual = f.sistema === 'MANUAL' || (f.item || '').toLowerCase().includes('falla manual');
+        const itemClean = isManual ? (f.obs || 'Observación adicional') : (f.item || f.nombre || 'Falla observada');
+        const obsClean = isManual ? 'Observación reportada' : (f.obs || f.descripcion || '');
+        const motivoDesc = isManual ? (f.obs || itemClean) : `${f.sistema ? f.sistema + ' — ' : ''}${f.item || ''}${f.obs && f.obs !== f.item ? ': ' + f.obs : ''}`;
+
         window._genOT_TodasFallas.push({
             id: `fr_${idx}`,
             unidad: 'Remolque',
             placa: r.placa_remolque || 'REMOLQUE',
             sistema: f.sistema || 'REMOLQUE',
-            item: f.item || f.nombre || 'Falla observada',
-            obs: f.obs || f.descripcion || 'Observado en checklist'
+            item: itemClean,
+            obs: obsClean,
+            esManual: isManual,
+            motivoDesc: motivoDesc
         });
     });
     if (r.fallas_libres_text && r.fallas_libres_text.trim()) {
         const lineasLibres = r.fallas_libres_text.split('\n').map(l => l.trim()).filter(Boolean);
         lineasLibres.forEach((ll, lIdx) => {
+            const cleanTxt = ll.replace(/^[•\-\*]\s*/, '').replace(/^(Falla Manual|MANUAL):\s*/i, '');
             window._genOT_TodasFallas.push({
                 id: `fl_${lIdx}`,
                 unidad: r.placa_tracto ? 'Tracto' : 'Remolque',
                 placa: r.placa_tracto || r.placa_remolque || 'UNIDAD',
                 sistema: 'TRABAJO ADICIONAL',
-                item: ll.replace(/^[•\-\*]\s*/, ''),
-                obs: 'Reportado en checklist'
+                item: cleanTxt,
+                obs: 'Observación reportada',
+                esManual: true,
+                motivoDesc: cleanTxt
             });
         });
     }
@@ -2130,7 +2147,7 @@ window.ckRenderTarjetasOT = function() {
                                    onchange="window.ckToggleFallaOT(${cIdx}, '${f.id}', this.checked)">
                             <label class="form-check-label small m-0" for="chk_${cIdx}_${f.id}" style="cursor: pointer;">
                                 <strong class="text-dark d-block">${f.item}</strong>
-                                <span class="text-muted" style="font-size: 0.76rem;">${f.sistema} — ${f.obs}</span>
+                                <span class="text-muted" style="font-size: 0.76rem;">${f.esManual ? 'Observación adicional' : (f.sistema + (f.obs && f.obs !== f.item && f.obs !== 'Observado en checklist' ? ' — ' + f.obs : ''))}</span>
                                 ${isDisabled ? `<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size: 0.68rem;">Asignado en OT #${asignadaEnOtra}</span>` : ''}
                             </label>
                         </div>
@@ -2463,7 +2480,7 @@ window.enviarGeneracionOTs = function(e) {
             }
 
             motivosArray.push({
-                motivo: `${f.item}: ${f.obs}`,
+                motivo: f.motivoDesc || f.item,
                 sistema: f.sistema,
                 item: f.item,
                 obs: f.obs,
@@ -2484,7 +2501,7 @@ window.enviarGeneracionOTs = function(e) {
             subtipo_ot: c.subtipo_ot || 'Falla',
             supervisor: supVal,
             situacion: c.situacion || 'En atención',
-            fallas_seleccionadas: fallasObjs.map(f => `${f.item}: ${f.obs}`),
+            fallas_seleccionadas: fallasObjs.map(f => f.motivoDesc || f.item),
             motivos_array: motivosArray,
             tecnicos: tecnicosUnicos.length > 0 ? tecnicosUnicos : [supVal]
         });
